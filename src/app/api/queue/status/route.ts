@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuthUser } from '@/lib/auth';
 import { createServiceClient } from '@/lib/supabase';
+import { runMatchmaking } from '@/lib/matchmaking';
 
 export async function GET(request: NextRequest) {
   const authUser = getAuthUser(request);
@@ -11,17 +12,17 @@ export async function GET(request: NextRequest) {
   try {
     const supabase = createServiceClient();
 
-    // Get current queue entry
+    // Get current queue entry (check both waiting and matched)
     const { data: queueEntry } = await supabase
       .from('queue')
       .select('*')
       .eq('user_id', authUser.sub)
-      .eq('status', 'waiting')
+      .in('status', ['waiting', 'matched'])
       .order('joined_at', { ascending: false })
       .limit(1)
-      .single();
+      .maybeSingle();
 
-    // Also check for active match
+    // Check for active match
     const { data: activeMatch } = await supabase
       .from('matches')
       .select('id, game, status')
@@ -29,10 +30,15 @@ export async function GET(request: NextRequest) {
       .eq('status', 'pending')
       .order('created_at', { ascending: false })
       .limit(1)
-      .single();
+      .maybeSingle();
+
+    // If still waiting, re-run matchmaking on each poll (keeps trying until match found)
+    if (queueEntry?.status === 'waiting' && !activeMatch) {
+      runMatchmaking(supabase).catch(console.error);
+    }
 
     return NextResponse.json({
-      inQueue: !!queueEntry,
+      inQueue: queueEntry?.status === 'waiting',
       queueEntry: queueEntry ?? null,
       activeMatch: activeMatch ?? null,
     });

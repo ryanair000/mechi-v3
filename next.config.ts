@@ -13,11 +13,20 @@ const nextConfig: NextConfig = {
         hostname: "res.cloudinary.com",
         pathname: "/**",
       },
+      {
+        protocol: "https",
+        hostname: "shared.cloudflare.steamstatic.com",
+        pathname: "/**",
+      },
     ],
   },
   experimental: {
     serverActions: {
-      allowedOrigins: ["localhost:3000"],
+      allowedOrigins: [
+        "localhost:3000",
+        "mechi-v3.vercel.app",
+        "mechi.club",
+      ],
     },
   },
 };

@@ -36,13 +36,13 @@ export async function POST(request: NextRequest) {
     const ratingKey = `rating_${game}`;
     const rating = (profile[ratingKey] as number) ?? 1000;
 
-    // Check if already in queue or has active match
+    // Check if already in queue
     const { data: existingQueue } = await supabase
       .from('queue')
       .select('id, status')
       .eq('user_id', authUser.sub)
       .eq('status', 'waiting')
-      .single();
+      .maybeSingle();
 
     if (existingQueue) {
       return NextResponse.json({ error: 'Already in queue' }, { status: 409 });
@@ -54,7 +54,7 @@ export async function POST(request: NextRequest) {
       .select('id')
       .or(`player1_id.eq.${authUser.sub},player2_id.eq.${authUser.sub}`)
       .eq('status', 'pending')
-      .single();
+      .maybeSingle();
 
     if (activeMatch) {
       return NextResponse.json(
@@ -68,7 +68,7 @@ export async function POST(request: NextRequest) {
       .insert({
         user_id: authUser.sub,
         game,
-        region: profile.region as string,
+        region: (profile.region as string) ?? 'kenya',
         rating,
         status: 'waiting',
       })
@@ -80,8 +80,12 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to join queue' }, { status: 500 });
     }
 
-    // Run matchmaking immediately on queue join (no cron needed)
-    runMatchmaking(supabase).catch(console.error);
+    // AWAIT matchmaking — must complete before response on Vercel serverless
+    try {
+      await runMatchmaking(supabase);
+    } catch (e) {
+      console.error('[Queue Join] Matchmaking error:', e);
+    }
 
     return NextResponse.json({ entry });
   } catch (err) {

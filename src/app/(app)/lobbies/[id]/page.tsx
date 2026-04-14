@@ -50,25 +50,15 @@ export default function LobbyDetailPage() {
     setLeaving(true);
     try {
       const res = await authFetch(`/api/lobbies/${lobbyId}/leave`, { method: 'POST' });
-      if (res.ok) {
-        toast.success('Left lobby');
-        router.push('/lobbies');
-      } else {
-        const data = await res.json();
-        toast.error(data.error ?? 'Failed to leave');
-      }
-    } finally {
-      setLeaving(false);
-    }
+      if (res.ok) { toast.success('Left lobby'); router.push('/lobbies'); }
+      else { const data = await res.json(); toast.error(data.error ?? 'Failed to leave'); }
+    } finally { setLeaving(false); }
   };
 
   const handleClose = async () => {
     if (!confirm('Close this lobby?')) return;
     const res = await authFetch(`/api/lobbies/${lobbyId}`, { method: 'DELETE' });
-    if (res.ok) {
-      toast.success('Lobby closed');
-      router.push('/lobbies');
-    }
+    if (res.ok) { toast.success('Lobby closed'); router.push('/lobbies'); }
   };
 
   const copyRoomCode = () => {
@@ -97,56 +87,47 @@ export default function LobbyDetailPage() {
 
   return (
     <div className="page-container">
-      <button
-        onClick={() => router.back()}
-        className="flex items-center gap-2 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 mb-4 text-sm font-medium"
-      >
-        <ArrowLeft size={16} /> Back to Lobbies
+      <button onClick={() => router.back()}
+        className="flex items-center gap-2 text-white/40 hover:text-white/70 mb-5 text-sm font-medium transition-colors">
+        <ArrowLeft size={15} /> Back to Lobbies
       </button>
 
-      {/* Lobby card */}
-      <div className="bg-blue-600 rounded-2xl p-5 mb-5 text-white">
+      {/* Lobby header */}
+      <div className="bg-blue-500/15 border border-blue-500/25 rounded-2xl p-5 mb-5">
         <div className="flex items-start justify-between mb-3">
           <div>
-            <p className="text-blue-200 text-xs font-semibold uppercase tracking-wide mb-1">
-              {game?.label}
-            </p>
-            <h1 className="font-black text-2xl">{lobby.title}</h1>
+            <p className="text-blue-400 text-xs font-bold uppercase tracking-wide mb-1">{game?.label}</p>
+            <h1 className="font-black text-2xl text-white">{lobby.title}</h1>
           </div>
           <span className={`text-xs font-bold px-3 py-1 rounded-full ${
-            lobby.status === 'open' ? 'bg-emerald-500' :
-            lobby.status === 'full' ? 'bg-red-500' :
-            'bg-gray-500'
+            lobby.status === 'open' ? 'bg-emerald-500/20 text-emerald-400' :
+            lobby.status === 'full' ? 'bg-red-500/20 text-red-400' :
+            'bg-white/8 text-white/40'
           }`}>
             {lobby.status}
           </span>
         </div>
 
-        <div className="flex items-center gap-4 text-sm">
+        <div className="flex items-center gap-4 text-sm text-white/60">
           <div className="flex items-center gap-1.5">
-            <Users size={14} />
+            <Users size={13} />
             <span>{members.length}/{lobby.max_players} players</span>
           </div>
           <div className="flex gap-1">
-            {game?.platforms.map((p) => (
-              <span key={p}>{PLATFORMS[p]?.icon}</span>
-            ))}
+            {game?.platforms.map((p) => <span key={p}>{PLATFORMS[p]?.icon}</span>)}
           </div>
         </div>
 
-        {/* Room code */}
-        <button
-          onClick={copyRoomCode}
-          className="mt-4 flex items-center gap-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-xl px-4 py-2 text-sm font-mono font-bold transition-colors"
-        >
+        <button onClick={copyRoomCode}
+          className="mt-4 flex items-center gap-2 bg-white/8 hover:bg-white/12 border border-white/10 rounded-xl px-4 py-2.5 text-sm font-mono font-bold text-white transition-all active:scale-95 w-full justify-center">
           <span>Room Code: {lobby.room_code}</span>
-          <Copy size={14} />
+          <Copy size={13} className="text-white/40" />
         </button>
       </div>
 
       {/* Members list */}
       <div className="card p-4 mb-4">
-        <h2 className="font-bold text-gray-900 dark:text-white mb-3 text-sm">
+        <h2 className="font-bold text-white text-sm mb-3">
           Players ({members.length}/{lobby.max_players})
         </h2>
         <div className="space-y-2">
@@ -154,36 +135,29 @@ export default function LobbyDetailPage() {
             const isHostMember = member.user_id === lobby.host_id;
             const isMe = member.user_id === user?.id;
             return (
-              <div
-                key={member.id}
-                className={`flex items-center gap-3 p-2.5 rounded-xl ${
-                  isMe ? 'bg-emerald-50 dark:bg-emerald-900/10' : 'bg-gray-50 dark:bg-gray-800/50'
-                }`}
-              >
-                <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-bold text-sm ${
-                  isHostMember ? 'bg-blue-600 text-white' : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300'
+              <div key={member.id} className={`flex items-center gap-3 p-2.5 rounded-xl ${
+                isMe ? 'bg-emerald-500/8' : 'bg-white/3'
+              }`}>
+                <div className={`w-8 h-8 rounded-xl flex items-center justify-center font-bold text-sm ${
+                  isHostMember ? 'bg-blue-500/20 text-blue-400' : 'bg-white/8 text-white/50'
                 }`}>
                   {member.user?.username?.[0]?.toUpperCase() ?? '?'}
                 </div>
-                <span className="font-medium text-sm text-gray-900 dark:text-white flex-1">
+                <span className="font-medium text-sm text-white flex-1">
                   {member.user?.username ?? 'Unknown'}
-                  {isMe && <span className="text-emerald-600 dark:text-emerald-400"> (You)</span>}
+                  {isMe && <span className="text-emerald-400 text-xs"> (You)</span>}
                 </span>
-                {isHostMember && (
-                  <Crown size={14} className="text-yellow-500" />
-                )}
+                {isHostMember && <Crown size={13} className="text-yellow-400" />}
               </div>
             );
           })}
 
           {/* Empty slots */}
           {Array.from({ length: lobby.max_players - members.length }).map((_, i) => (
-            <div
-              key={`empty-${i}`}
-              className="flex items-center gap-3 p-2.5 rounded-xl border-2 border-dashed border-gray-200 dark:border-gray-700"
-            >
-              <div className="w-8 h-8 rounded-lg bg-gray-100 dark:bg-gray-800" />
-              <span className="text-sm text-gray-400">Waiting for player...</span>
+            <div key={`empty-${i}`}
+              className="flex items-center gap-3 p-2.5 rounded-xl border border-dashed border-white/8">
+              <div className="w-8 h-8 rounded-xl bg-white/4" />
+              <span className="text-sm text-white/20">Waiting for player...</span>
             </div>
           ))}
         </div>
@@ -193,30 +167,22 @@ export default function LobbyDetailPage() {
       <div className="space-y-3">
         {isHost ? (
           <button onClick={handleClose} className="w-full btn-danger">
-            <Trash2 size={16} /> Close Lobby
+            <Trash2 size={15} /> Close Lobby
           </button>
         ) : isMember ? (
           <button onClick={handleLeave} disabled={leaving} className="w-full btn-danger">
-            <LogOut size={16} /> {leaving ? 'Leaving...' : 'Leave Lobby'}
+            <LogOut size={15} /> {leaving ? 'Leaving...' : 'Leave Lobby'}
           </button>
         ) : lobby.status === 'open' ? (
-          <button
-            onClick={async () => {
-              const res = await authFetch(`/api/lobbies/${lobbyId}/join`, { method: 'POST' });
-              if (res.ok) {
-                toast.success('Joined lobby!');
-                fetchLobby();
-              } else {
-                const d = await res.json();
-                toast.error(d.error ?? 'Failed to join');
-              }
-            }}
-            className="w-full btn-primary"
-          >
+          <button onClick={async () => {
+            const res = await authFetch(`/api/lobbies/${lobbyId}/join`, { method: 'POST' });
+            if (res.ok) { toast.success('Joined lobby!'); fetchLobby(); }
+            else { const d = await res.json(); toast.error(d.error ?? 'Failed to join'); }
+          }} className="w-full btn-primary">
             Join Lobby
           </button>
         ) : (
-          <p className="text-center text-gray-400 text-sm">This lobby is {lobby.status}</p>
+          <p className="text-center text-white/30 text-sm">This lobby is {lobby.status}</p>
         )}
       </div>
     </div>

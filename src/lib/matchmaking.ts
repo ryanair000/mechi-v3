@@ -5,9 +5,16 @@ import type { GameKey, PlatformKey } from '@/types';
 import { notifyMatchFound } from './whatsapp';
 import { sendMatchFoundEmail } from './email';
 
-const RATING_TOLERANCE = 200;
+const RATING_TOLERANCE = 300; // wider tolerance for small player base
 
 export async function runMatchmaking(supabase: SupabaseClient): Promise<number> {
+  // First clean up stale entries older than 30 minutes
+  await supabase
+    .from('queue')
+    .update({ status: 'cancelled' })
+    .eq('status', 'waiting')
+    .lt('joined_at', new Date(Date.now() - 30 * 60 * 1000).toISOString());
+
   // Get all waiting queue entries ordered by join time
   const { data: queueEntries, error } = await supabase
     .from('queue')
@@ -31,10 +38,10 @@ export async function runMatchmaking(supabase: SupabaseClient): Promise<number> 
       const opponent = queueEntries[j];
       if (matched.has(opponent.id)) continue;
 
-      // Must be same game and region
-      if (entry.game !== opponent.game || entry.region !== opponent.region) continue;
+      // Must be same game
+      if (entry.game !== opponent.game) continue;
 
-      // Rating tolerance check
+      // Rating tolerance check (relaxed for small player base)
       if (Math.abs(entry.rating - opponent.rating) > RATING_TOLERANCE) continue;
 
       // Create the match
@@ -44,7 +51,7 @@ export async function runMatchmaking(supabase: SupabaseClient): Promise<number> 
           player1_id: entry.user_id,
           player2_id: opponent.user_id,
           game: entry.game,
-          region: entry.region,
+          region: entry.region ?? 'kenya',
           status: 'pending',
         })
         .select()
@@ -65,7 +72,7 @@ export async function runMatchmaking(supabase: SupabaseClient): Promise<number> 
       matched.add(opponent.id);
       matchesCreated++;
 
-      // Send notifications
+      // Send notifications async (don't block matchmaking)
       const game = GAMES[entry.game as GameKey];
       const gamePlatforms = game?.platforms ?? [];
 
@@ -147,19 +154,16 @@ export async function finalizeMatch(
   const winsKey = `wins_${game}`;
   const lossesKey = `losses_${game}`;
 
-  // Get ratings
   const { data: profilesRaw } = await supabase
     .from('profiles')
-    .select('id, rating_efootball, rating_fc26, rating_mk11, rating_nba2k26, rating_tekken8, rating_sf6')
+    .select(`id, ${ratingKey}, ${winsKey}, ${lossesKey}`)
     .in('id', [winnerId, loserId]);
 
   const profiles = profilesRaw as Record<string, unknown>[] | null;
-
   if (!profiles || profiles.length < 2) return;
 
   const winnerProfile = profiles.find((p) => p.id === winnerId);
   const loserProfile = profiles.find((p) => p.id === loserId);
-
   if (!winnerProfile || !loserProfile) return;
 
   const winnerRating = (winnerProfile[ratingKey] as number) ?? 1000;
@@ -170,29 +174,22 @@ export async function finalizeMatch(
     loserRating
   );
 
-  // Update winner
   await supabase
     .from('profiles')
     .update({
       [ratingKey]: newRatingWinner,
-      [winsKey]: supabase.rpc('increment', { row_id: winnerId, column_name: winsKey }),
+      [winsKey]: ((winnerProfile[winsKey] as number) ?? 0) + 1,
     })
     .eq('id', winnerId);
 
-  // Optional RPC — ignore if not available
-  void supabase.rpc('update_match_result', {
-    p_winner_id: winnerId,
-    p_loser_id: loserId,
-    p_game: game,
-    p_winner_rating: newRatingWinner,
-    p_loser_rating: newRatingLoser,
-  });
+  await supabase
+    .from('profiles')
+    .update({
+      [ratingKey]: newRatingLoser,
+      [lossesKey]: ((loserProfile[lossesKey] as number) ?? 0) + 1,
+    })
+    .eq('id', loserId);
 
-  // Direct update fallback
-  await supabase.from('profiles').update({ [ratingKey]: newRatingWinner }).eq('id', winnerId);
-  await supabase.from('profiles').update({ [ratingKey]: newRatingLoser }).eq('id', loserId);
-
-  // Update match
   await supabase
     .from('matches')
     .update({

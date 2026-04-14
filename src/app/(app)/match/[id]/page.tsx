@@ -9,9 +9,7 @@ import { RatingBadge } from '@/components/RatingBadge';
 import { PlatformBadge } from '@/components/PlatformBadge';
 import type { GameKey, PlatformKey } from '@/types';
 import toast from 'react-hot-toast';
-import {
-  Swords, Check, X, Upload, ImageIcon, ExternalLink, Clock, AlertTriangle
-} from 'lucide-react';
+import { Swords, Check, X, Upload, ImageIcon, ExternalLink, Clock, AlertTriangle } from 'lucide-react';
 import Image from 'next/image';
 
 interface MatchPlayer {
@@ -68,29 +66,14 @@ export default function MatchPage() {
 
   useEffect(() => {
     fetchMatch();
-
-    // Real-time subscription
     const supabase = createClient();
     const channel = supabase
       .channel(`match_${matchId}`)
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'matches',
-          filter: `id=eq.${matchId}`,
-        },
-        () => {
-          fetchMatch();
-        }
-      )
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'matches', filter: `id=eq.${matchId}` },
+        () => { fetchMatch(); })
       .subscribe();
     channelRef.current = channel;
-
-    return () => {
-      channel.unsubscribe();
-    };
+    return () => { channel.unsubscribe(); };
   }, [matchId, fetchMatch]);
 
   const handleReport = async (winnerId: string) => {
@@ -101,67 +84,35 @@ export default function MatchPage() {
         body: JSON.stringify({ winner_id: winnerId }),
       });
       const data = await res.json();
-
-      if (!res.ok) {
-        toast.error(data.error ?? 'Failed to report result');
-        return;
-      }
-
-      if (data.status === 'completed') {
-        toast.success('Match completed! Rating updated.');
-        fetchMatch();
-      } else if (data.status === 'disputed') {
-        toast.error('Result disputed! Upload a screenshot to resolve.');
-        fetchMatch();
-      } else {
-        toast.success('Result reported. Waiting for opponent...');
-        fetchMatch();
-      }
-    } catch {
-      toast.error('Network error');
-    } finally {
-      setReporting(null);
-    }
+      if (!res.ok) { toast.error(data.error ?? 'Failed to report result'); return; }
+      if (data.status === 'completed') { toast.success('Match completed! Rating updated.'); fetchMatch(); }
+      else if (data.status === 'disputed') { toast.error('Result disputed! Upload a screenshot to resolve.'); fetchMatch(); }
+      else { toast.success('Result reported. Waiting for opponent...'); fetchMatch(); }
+    } catch { toast.error('Network error'); }
+    finally { setReporting(null); }
   };
 
   const handleScreenshotUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-
-    if (!file.type.startsWith('image/')) {
-      toast.error('Please upload an image file');
-      return;
-    }
-
-    if (file.size > 10 * 1024 * 1024) {
-      toast.error('Image must be under 10MB');
-      return;
-    }
-
+    if (!file.type.startsWith('image/')) { toast.error('Please upload an image file'); return; }
+    if (file.size > 10 * 1024 * 1024) { toast.error('Image must be under 10MB'); return; }
     setUploadingScreenshot(true);
     try {
       const formData = new FormData();
       formData.append('screenshot', file);
-
       const token = localStorage.getItem('mechi_token');
       const res = await fetch(`/api/matches/${matchId}/dispute`, {
         method: 'POST',
         headers: token ? { Authorization: `Bearer ${token}` } : {},
         body: formData,
       });
-
       const data = await res.json();
-
-      if (!res.ok) {
-        toast.error(data.error ?? 'Upload failed');
-        return;
-      }
-
+      if (!res.ok) { toast.error(data.error ?? 'Upload failed'); return; }
       toast.success('Screenshot uploaded successfully');
       fetchMatch();
-    } catch {
-      toast.error('Upload failed');
-    } finally {
+    } catch { toast.error('Upload failed'); }
+    finally {
       setUploadingScreenshot(false);
       if (fileInputRef.current) fileInputRef.current.value = '';
     }
@@ -172,24 +123,17 @@ export default function MatchPage() {
     setCancelling(true);
     try {
       const res = await authFetch(`/api/matches/${matchId}/cancel`, { method: 'POST' });
-      if (res.ok) {
-        toast.success('Match cancelled');
-        router.push('/dashboard');
-      } else {
-        const data = await res.json();
-        toast.error(data.error ?? 'Failed to cancel');
-      }
-    } finally {
-      setCancelling(false);
-    }
+      if (res.ok) { toast.success('Match cancelled'); router.push('/dashboard'); }
+      else { const data = await res.json(); toast.error(data.error ?? 'Failed to cancel'); }
+    } finally { setCancelling(false); }
   };
 
   if (loading) {
     return (
       <div className="page-container flex items-center justify-center min-h-[60vh]">
         <div className="text-center">
-          <div className="w-12 h-12 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
-          <p className="text-gray-400 text-sm">Loading match...</p>
+          <div className="w-12 h-12 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
+          <p className="text-white/30 text-sm">Loading match...</p>
         </div>
       </div>
     );
@@ -200,171 +144,122 @@ export default function MatchPage() {
   const isPlayer1 = user.id === match.player1_id;
   const me = isPlayer1 ? match.player1 : match.player2;
   const opponent = isPlayer1 ? match.player2 : match.player1;
-
   const game = GAMES[match.game];
   const gamePlatforms = game?.platforms ?? [];
-
-  // Determine shared platform for the match
   const myPlatform = getMatchingPlatform(me.platforms, gamePlatforms);
   const opponentPlatform = getMatchingPlatform(opponent.platforms, gamePlatforms);
   const displayPlatform = opponentPlatform ?? myPlatform;
   const opponentPlatformId = displayPlatform ? (opponent.game_ids?.[displayPlatform] || 'Not set') : 'Not set';
-
-  // Rating info
   const myRatingChange = isPlayer1 ? match.rating_change_p1 : match.rating_change_p2;
   const iWon = match.winner_id === user.id;
-
-  // What I reported
   const myReport = isPlayer1 ? match.player1_reported_winner : match.player2_reported_winner;
   const opponentReport = isPlayer1 ? match.player2_reported_winner : match.player1_reported_winner;
-
   const platformAddUrl = displayPlatform ? getPlatformAddUrl(displayPlatform, opponentPlatformId) : null;
 
   return (
     <div className="page-container">
       {/* Game header */}
-      <div className="bg-emerald-600 rounded-2xl p-5 mb-5 text-white">
-        <div className="flex items-center gap-2 mb-1">
-          <Swords size={18} />
-          <span className="font-black text-sm uppercase tracking-wide">{game?.label}</span>
+      <div className="bg-emerald-500/15 border border-emerald-500/25 rounded-2xl p-5 mb-5">
+        <div className="flex items-center gap-2 mb-3">
+          <Swords size={16} className="text-emerald-400" />
+          <span className="font-black text-sm uppercase tracking-wide text-emerald-400">{game?.label}</span>
+          <div className="ml-auto">
+            <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold ${
+              match.status === 'pending' ? 'bg-white/10 text-white/60' :
+              match.status === 'completed' ? 'bg-emerald-500/20 text-emerald-400' :
+              match.status === 'disputed' ? 'bg-red-500/20 text-red-400' :
+              'bg-white/8 text-white/30'
+            }`}>
+              {match.status === 'pending' && <Clock size={10} />}
+              {match.status === 'completed' && <Check size={10} />}
+              {match.status === 'disputed' && <AlertTriangle size={10} />}
+              {match.status.charAt(0).toUpperCase() + match.status.slice(1)}
+            </span>
+          </div>
         </div>
         <div className="flex items-center gap-3">
-          <div>
-            <p className="font-black text-2xl">{me.username}</p>
-            <p className="text-emerald-200 text-sm">You</p>
+          <div className="flex-1">
+            <p className="font-black text-xl text-white">{me.username}</p>
+            <p className="text-white/40 text-xs mt-0.5">You</p>
           </div>
-          <div className="flex-1 text-center">
-            <span className="text-xl font-black text-emerald-200">VS</span>
+          <div className="text-center px-4">
+            <span className="text-lg font-black text-white/30">VS</span>
           </div>
-          <div className="text-right">
-            <p className="font-black text-2xl">{opponent.username}</p>
-            <p className="text-emerald-200 text-sm">Opponent</p>
+          <div className="flex-1 text-right">
+            <p className="font-black text-xl text-white">{opponent.username}</p>
+            <p className="text-white/40 text-xs mt-0.5">Opponent</p>
           </div>
-        </div>
-
-        {/* Status badge */}
-        <div className="mt-3 flex items-center gap-2">
-          <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold ${
-            match.status === 'pending' ? 'bg-white/20 text-white' :
-            match.status === 'completed' ? 'bg-emerald-800 text-emerald-200' :
-            match.status === 'disputed' ? 'bg-red-900/50 text-red-200' :
-            'bg-gray-700 text-gray-300'
-          }`}>
-            {match.status === 'pending' && <Clock size={10} />}
-            {match.status === 'completed' && <Check size={10} />}
-            {match.status === 'disputed' && <AlertTriangle size={10} />}
-            {match.status.charAt(0).toUpperCase() + match.status.slice(1)}
-          </span>
-          <span className="text-emerald-200 text-xs">{match.region}</span>
         </div>
       </div>
 
       {/* Opponent connect info */}
       <div className="card p-4 mb-4">
-        <h3 className="font-bold text-gray-900 dark:text-white mb-3 text-sm uppercase tracking-wide">
-          Connect with Opponent
-        </h3>
-
+        <h3 className="font-bold text-white text-sm mb-3">Connect with Opponent</h3>
         {displayPlatform ? (
           <>
             <div className="flex items-start gap-3 mb-3">
               <span className="text-2xl mt-0.5">{PLATFORMS[displayPlatform]?.icon}</span>
               <div className="flex-1">
-                <p className="text-xs text-gray-500 dark:text-gray-400">
+                <p className="text-xs text-white/40">
                   Playing {game?.label} on {PLATFORMS[displayPlatform]?.label}
                 </p>
-                <p className="font-bold text-gray-900 dark:text-white text-sm mt-0.5">
+                <p className="font-bold text-white text-sm mt-0.5">
                   {PLATFORMS[displayPlatform]?.idLabel}:{' '}
-                  <span className="text-emerald-600 dark:text-emerald-400">{opponentPlatformId}</span>
+                  <span className="text-emerald-400">{opponentPlatformId}</span>
                 </p>
-                <p className="text-xs text-gray-400 mt-1">Add them to start your match</p>
+                <p className="text-xs text-white/25 mt-1">Add them to start your match</p>
               </div>
             </div>
-
             {platformAddUrl && (
-              <a
-                href={platformAddUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="btn-outline w-full text-sm"
-              >
+              <a href={platformAddUrl} target="_blank" rel="noopener noreferrer"
+                className="flex items-center justify-center gap-2 w-full py-2.5 rounded-2xl border border-white/10 bg-white/5 hover:bg-white/8 text-white/70 text-sm font-semibold transition-all active:scale-95">
                 <ExternalLink size={14} />
                 Add on {PLATFORMS[displayPlatform]?.label}
               </a>
             )}
           </>
         ) : (
-          <div className="text-center py-4 text-gray-400 text-sm">
-            <p>Platform info not available</p>
-          </div>
+          <p className="text-center py-4 text-white/30 text-sm">Platform info not available</p>
         )}
-
-        {/* Platform badges */}
-        <div className="mt-3 pt-3 border-t border-gray-100 dark:border-gray-800">
-          <p className="text-xs text-gray-400 mb-2">Opponent&apos;s platforms</p>
+        <div className="mt-3 pt-3 border-t border-white/5">
+          <p className="text-xs text-white/30 mb-2">Opponent&apos;s platforms</p>
           <div className="flex flex-wrap gap-2">
             {opponent.platforms.map((p) => (
-              <PlatformBadge
-                key={p}
-                platform={p}
-                platformId={opponent.game_ids?.[p]}
-                size="sm"
-              />
+              <PlatformBadge key={p} platform={p} platformId={opponent.game_ids?.[p]} size="sm" />
             ))}
           </div>
         </div>
       </div>
 
-      {/* Match result section */}
+      {/* Report result */}
       {match.status === 'pending' && (
         <div className="card p-4 mb-4">
-          <h3 className="font-bold text-gray-900 dark:text-white mb-1 text-sm uppercase tracking-wide">
-            Report Result
-          </h3>
-          <p className="text-xs text-gray-500 dark:text-gray-400 mb-4">
-            Who won the match? Both players must agree.
-          </p>
-
+          <h3 className="font-bold text-white text-sm mb-1">Report Result</h3>
+          <p className="text-xs text-white/40 mb-4">Who won the match? Both players must agree.</p>
           {myReport ? (
-            <div className="bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-xl p-3 mb-3 text-sm">
-              <p className="text-emerald-700 dark:text-emerald-400 font-medium">
-                You reported: <strong>
-                  {myReport === user.id ? 'You won' : `${opponent.username} won`}
-                </strong>
+            <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-3 mb-3">
+              <p className="text-emerald-400 text-sm font-semibold">
+                You reported: <strong>{myReport === user.id ? 'You won' : `${opponent.username} won`}</strong>
               </p>
               {!opponentReport && (
-                <p className="text-emerald-600 dark:text-emerald-500 text-xs mt-1">
-                  Waiting for opponent to report...
-                </p>
+                <p className="text-white/40 text-xs mt-1">Waiting for opponent to report...</p>
               )}
             </div>
           ) : (
             <div className="grid grid-cols-2 gap-3">
-              <button
-                onClick={() => handleReport(user.id)}
-                disabled={!!reporting}
-                className="btn-primary flex flex-col items-center py-4 gap-1"
-              >
+              <button onClick={() => handleReport(user.id)} disabled={!!reporting}
+                className="btn-primary flex flex-col items-center py-4 gap-1">
                 <Check size={20} />
                 <span className="text-sm">I Won</span>
               </button>
-              <button
-                onClick={() => handleReport(opponent.id)}
-                disabled={!!reporting}
-                className="btn-ghost flex flex-col items-center py-4 gap-1"
-              >
+              <button onClick={() => handleReport(opponent.id)} disabled={!!reporting}
+                className="flex flex-col items-center py-4 gap-1 rounded-2xl border border-white/10 bg-white/5 hover:bg-white/8 text-white font-semibold transition-all active:scale-95">
                 <X size={20} />
                 <span className="text-sm">{opponent.username} Won</span>
               </button>
             </div>
           )}
-
-          {/* Cancel */}
-          <button
-            onClick={handleCancel}
-            disabled={cancelling}
-            className="w-full btn-danger mt-3 text-sm"
-          >
+          <button onClick={handleCancel} disabled={cancelling} className="w-full btn-danger mt-3 text-sm">
             {cancelling ? 'Cancelling...' : 'Cancel Match'}
           </button>
         </div>
@@ -374,57 +269,33 @@ export default function MatchPage() {
       {match.status === 'disputed' && (
         <div className="card p-4 mb-4">
           <div className="flex items-center gap-2 mb-3">
-            <AlertTriangle size={18} className="text-red-500" />
-            <h3 className="font-bold text-gray-900 dark:text-white text-sm uppercase tracking-wide">
-              Match Disputed
-            </h3>
+            <AlertTriangle size={16} className="text-red-400" />
+            <h3 className="font-bold text-white text-sm">Match Disputed</h3>
           </div>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
-            You and your opponent reported different results. Upload a screenshot of the match result to help resolve.
+          <p className="text-sm text-white/40 mb-4">
+            You and your opponent reported different results. Upload a screenshot to resolve.
           </p>
-
           {match.dispute_screenshot_url ? (
             <div className="mb-4">
-              <p className="text-xs text-gray-500 mb-2 font-medium">Uploaded Screenshot:</p>
-              <div className="relative aspect-video rounded-xl overflow-hidden border border-gray-200 dark:border-gray-700">
-                <Image
-                  src={match.dispute_screenshot_url}
-                  alt="Dispute screenshot"
-                  fill
-                  className="object-contain"
-                />
+              <p className="text-xs text-white/30 mb-2 font-medium">Uploaded Screenshot:</p>
+              <div className="relative aspect-video rounded-xl overflow-hidden border border-white/8">
+                <Image src={match.dispute_screenshot_url} alt="Dispute screenshot" fill className="object-contain" />
               </div>
-              <p className="text-xs text-emerald-600 dark:text-emerald-400 mt-2 font-medium text-center">
+              <p className="text-xs text-emerald-400 mt-2 font-medium text-center">
                 Under Review — Admin will resolve within 24 hours
               </p>
             </div>
           ) : (
-            <div
-              className="border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-xl p-6 text-center cursor-pointer hover:border-emerald-500 transition-colors mb-3"
-              onClick={() => fileInputRef.current?.click()}
-            >
-              <ImageIcon size={32} className="text-gray-400 mx-auto mb-2" />
-              <p className="text-sm font-medium text-gray-600 dark:text-gray-400">
-                Click to upload screenshot
-              </p>
-              <p className="text-xs text-gray-400 mt-1">PNG, JPG, WEBP up to 10MB</p>
+            <div className="border-2 border-dashed border-white/10 rounded-xl p-6 text-center cursor-pointer hover:border-emerald-500/40 transition-colors mb-3"
+              onClick={() => fileInputRef.current?.click()}>
+              <ImageIcon size={28} className="text-white/20 mx-auto mb-2" />
+              <p className="text-sm font-medium text-white/40">Tap to upload screenshot</p>
+              <p className="text-xs text-white/20 mt-1">PNG, JPG, WEBP up to 10MB</p>
             </div>
           )}
-
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/*"
-            onChange={handleScreenshotUpload}
-            className="hidden"
-          />
-
+          <input ref={fileInputRef} type="file" accept="image/*" onChange={handleScreenshotUpload} className="hidden" />
           {!match.dispute_screenshot_url && (
-            <button
-              onClick={() => fileInputRef.current?.click()}
-              disabled={uploadingScreenshot}
-              className="w-full btn-primary"
-            >
+            <button onClick={() => fileInputRef.current?.click()} disabled={uploadingScreenshot} className="w-full btn-primary">
               <Upload size={16} />
               {uploadingScreenshot ? 'Uploading...' : 'Upload Screenshot'}
             </button>
@@ -434,60 +305,39 @@ export default function MatchPage() {
 
       {/* Completed */}
       {match.status === 'completed' && (
-        <div className={`card p-5 mb-4 text-center ${
-          iWon
-            ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-900/10'
-            : 'border-gray-300 dark:border-gray-700'
-        }`}>
+        <div className={`card p-5 mb-4 text-center ${iWon ? 'border-emerald-500/30 bg-emerald-500/5' : ''}`}>
           <div className="text-4xl mb-2">{iWon ? '🏆' : '😔'}</div>
-          <h3 className="font-black text-xl text-gray-900 dark:text-white mb-1">
-            {iWon ? 'Victory!' : 'Defeat'}
-          </h3>
+          <h3 className="font-black text-xl text-white mb-1">{iWon ? 'Victory!' : 'Defeat'}</h3>
           {myRatingChange !== null && (
-            <p className={`text-lg font-bold ${
-              myRatingChange >= 0 ? 'text-emerald-600' : 'text-red-500'
-            }`}>
+            <p className={`text-lg font-bold ${myRatingChange >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
               {myRatingChange >= 0 ? '+' : ''}{myRatingChange} rating
             </p>
           )}
           {match.winner_id && (
-            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-              Winner: <strong className="text-gray-900 dark:text-white">
-                {match.winner_id === user.id ? 'You' : opponent.username}
-              </strong>
+            <p className="text-sm text-white/40 mt-1">
+              Winner: <strong className="text-white">{match.winner_id === user.id ? 'You' : opponent.username}</strong>
             </p>
           )}
-
-          <button
-            onClick={() => router.push('/dashboard')}
-            className="btn-primary mt-4"
-          >
+          <button onClick={() => router.push('/dashboard')} className="btn-primary mt-4">
             Play Again
           </button>
         </div>
       )}
 
-      {/* Rating badges */}
+      {/* Match info */}
       <div className="card p-4">
-        <h3 className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3">
-          Match Info
-        </h3>
+        <h3 className="text-xs font-bold text-white/30 uppercase tracking-wide mb-3">Match Info</h3>
         <div className="grid grid-cols-2 gap-3">
           <div className="text-center">
-            <p className="text-xs text-gray-400 mb-1">Your Rating</p>
-            <RatingBadge
-              rating={
-                (user as unknown as Record<string, unknown>)[`rating_${match.game}`] as number ?? 1000
-              }
-              size="sm"
-            />
+            <p className="text-xs text-white/30 mb-1">Your Rating</p>
+            <RatingBadge rating={(user as unknown as Record<string, unknown>)[`rating_${match.game}`] as number ?? 1000} size="sm" />
           </div>
           <div className="text-center">
-            <p className="text-xs text-gray-400 mb-1">Game Mode</p>
-            <span className="badge-emerald text-xs">{game?.mode}</span>
+            <p className="text-xs text-white/30 mb-1">Game Mode</p>
+            <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-emerald-500/15 text-emerald-400">{game?.mode}</span>
           </div>
         </div>
-        <p className="text-xs text-gray-400 text-center mt-3">
+        <p className="text-xs text-white/20 text-center mt-3">
           Started {new Date(match.created_at).toLocaleString()}
         </p>
       </div>

@@ -5,10 +5,10 @@ import { useRouter } from 'next/navigation';
 import { useAuth, useAuthFetch } from '@/components/AuthProvider';
 import { GameCard } from '@/components/GameCard';
 import { RatingBadge } from '@/components/RatingBadge';
-import { GAMES, PLATFORMS } from '@/lib/config';
+import { GAMES, PLATFORMS, getTier } from '@/lib/config';
 import type { GameKey, Match, PlatformKey } from '@/types';
 import toast from 'react-hot-toast';
-import { Swords, AlertCircle } from 'lucide-react';
+import { Swords, AlertCircle, ChevronRight } from 'lucide-react';
 import Link from 'next/link';
 
 interface UserProfile {
@@ -29,84 +29,46 @@ export default function DashboardPage() {
   const [activeMatch, setActiveMatch] = useState<Match | null>(null);
   const [queueCounts, setQueueCounts] = useState<Record<string, number>>({});
   const [queuingGame, setQueuingGame] = useState<GameKey | null>(null);
-  const [loadingProfile, setLoadingProfile] = useState(true);
+  const [loading, setLoading] = useState(true);
 
   const fetchProfile = useCallback(async () => {
     const res = await authFetch('/api/users/profile');
-    if (res.ok) {
-      const data = await res.json();
-      setProfile(data.profile);
-    }
-    setLoadingProfile(false);
+    if (res.ok) { const d = await res.json(); setProfile(d.profile); }
+    setLoading(false);
   }, [authFetch]);
 
   const fetchActiveMatch = useCallback(async () => {
     const res = await authFetch('/api/matches/current');
-    if (res.ok) {
-      const data = await res.json();
-      setActiveMatch(data.match);
-    }
+    if (res.ok) { const d = await res.json(); setActiveMatch(d.match); }
   }, [authFetch]);
 
   const fetchQueueCounts = useCallback(async (games: GameKey[]) => {
     const results = await Promise.allSettled(
       games.map(async (game) => {
         const res = await fetch(`/api/queue/count/${game}`);
-        if (res.ok) {
-          const data = await res.json();
-          return { game, count: data.count };
-        }
+        if (res.ok) { const d = await res.json(); return { game, count: d.count }; }
         return { game, count: 0 };
       })
     );
-
     const counts: Record<string, number> = {};
-    results.forEach((r) => {
-      if (r.status === 'fulfilled') {
-        counts[r.value.game] = r.value.count;
-      }
-    });
+    results.forEach((r) => { if (r.status === 'fulfilled') counts[r.value.game] = r.value.count; });
     setQueueCounts(counts);
   }, []);
 
-  useEffect(() => {
-    fetchProfile();
-    fetchActiveMatch();
-  }, [fetchProfile, fetchActiveMatch]);
-
-  useEffect(() => {
-    if (profile?.selected_games) {
-      fetchQueueCounts(profile.selected_games);
-    }
-  }, [profile, fetchQueueCounts]);
+  useEffect(() => { fetchProfile(); fetchActiveMatch(); }, [fetchProfile, fetchActiveMatch]);
+  useEffect(() => { if (profile?.selected_games) fetchQueueCounts(profile.selected_games); }, [profile, fetchQueueCounts]);
 
   const handleJoinQueue = async (game: GameKey) => {
-    if (activeMatch) {
-      toast.error('You have an active match');
-      router.push(`/match/${activeMatch.id}`);
-      return;
-    }
-
+    if (activeMatch) { toast.error('You have an active match'); router.push(`/match/${activeMatch.id}`); return; }
     setQueuingGame(game);
     try {
-      const res = await authFetch('/api/queue/join', {
-        method: 'POST',
-        body: JSON.stringify({ game }),
-      });
-
+      const res = await authFetch('/api/queue/join', { method: 'POST', body: JSON.stringify({ game }) });
       const data = await res.json();
-
       if (!res.ok) {
-        if (data.matchId) {
-          router.push(`/match/${data.matchId}`);
-        } else {
-          toast.error(data.error ?? 'Failed to join queue');
-          setQueuingGame(null);
-        }
+        if (data.matchId) { router.push(`/match/${data.matchId}`); }
+        else { toast.error(data.error ?? 'Failed to join queue'); setQueuingGame(null); }
         return;
       }
-
-      toast.success(`Searching for ${GAMES[game].label} opponent...`);
       router.push(`/queue?game=${game}`);
     } catch {
       toast.error('Network error');
@@ -119,125 +81,129 @@ export default function DashboardPage() {
     (g) => GAMES[g].mode === 'lobby' && GAMES[g].platforms.some((p) => profile?.platforms?.includes(p))
   );
 
-  if (loadingProfile) {
+  // Best rating across selected games
+  const bestRating = userGames.reduce((best, g) => {
+    const r = (profile?.[`rating_${g}`] as number) ?? 1000;
+    return r > best ? r : best;
+  }, 1000);
+  const tier = getTier(bestRating);
+
+  if (loading) {
     return (
-      <div className="page-container">
-        <div className="space-y-4">
-          {[1, 2, 3].map((i) => (
-            <div key={i} className="h-48 shimmer rounded-2xl" />
-          ))}
-        </div>
+      <div className="page-container space-y-4">
+        {[1, 2, 3].map((i) => <div key={i} className="h-48 shimmer" />)}
       </div>
     );
   }
 
   return (
     <div className="page-container">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-4">
-        <div>
-          <h1 className="text-2xl font-black text-gray-900 dark:text-white">
-            Hey, {user?.username} 👋
-          </h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400">{profile?.region}</p>
-        </div>
-        <div className="flex gap-1 flex-wrap justify-end max-w-[120px]">
-          {(profile?.platforms ?? []).map((p) => (
-            <span key={p} title={PLATFORMS[p]?.label} className="text-lg">
-              {PLATFORMS[p]?.icon}
-            </span>
-          ))}
+      {/* Hero header */}
+      <div className="mb-6 pt-2">
+        <div className="flex items-start justify-between">
+          <div>
+            <p className="text-white/40 text-xs font-semibold mb-1">
+              {new Date().toLocaleDateString('en-KE', { weekday: 'long', month: 'short', day: 'numeric' })}
+            </p>
+            <h1 className="text-2xl font-black text-white leading-tight">
+              Hey, {user?.username ?? 'Player'} 👋
+            </h1>
+          </div>
+          <div className="flex flex-col items-end gap-1">
+            <div className={`px-3 py-1 rounded-full text-xs font-bold`} style={{ background: tier.color + '25', color: tier.color }}>
+              {tier.name}
+            </div>
+            <div className="flex gap-1">
+              {(profile?.platforms ?? []).slice(0, 3).map((p) => (
+                <span key={p} title={PLATFORMS[p]?.label} className="text-base">{PLATFORMS[p]?.icon}</span>
+              ))}
+            </div>
+          </div>
         </div>
       </div>
 
       {/* Active match banner */}
       {activeMatch && (
-        <Link href={`/match/${activeMatch.id}`}>
-          <div className="mb-5 bg-emerald-600 text-white rounded-2xl p-4 flex items-center gap-3">
-            <Swords size={24} className="flex-shrink-0" />
-            <div className="flex-1 min-w-0">
-              <p className="font-bold text-sm">Active Match</p>
-              <p className="text-xs text-emerald-100 truncate">
-                {GAMES[activeMatch.game]?.label} · Tap to view
-              </p>
+        <Link href={`/match/${activeMatch.id}`} className="block mb-5">
+          <div className="bg-emerald-500/15 border border-emerald-500/30 rounded-2xl p-4 flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-emerald-500/20 flex items-center justify-center flex-shrink-0">
+              <Swords size={20} className="text-emerald-400" />
             </div>
-            <span className="text-emerald-200 text-xl">→</span>
+            <div className="flex-1 min-w-0">
+              <p className="font-bold text-white text-sm">Active Match</p>
+              <p className="text-xs text-white/50 truncate">{GAMES[activeMatch.game]?.label} · Tap to view</p>
+            </div>
+            <ChevronRight size={18} className="text-white/30 flex-shrink-0" />
           </div>
         </Link>
       )}
 
-      {/* No games selected warning */}
+      {/* No games warning */}
       {userGames.length === 0 && (
-        <div className="mb-5 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-2xl p-4 flex items-start gap-3">
-          <AlertCircle size={20} className="text-yellow-600 dark:text-yellow-400 flex-shrink-0 mt-0.5" />
+        <div className="mb-5 bg-yellow-500/8 border border-yellow-500/20 rounded-2xl p-4 flex items-start gap-3">
+          <AlertCircle size={18} className="text-yellow-400 flex-shrink-0 mt-0.5" />
           <div>
-            <p className="font-semibold text-yellow-800 dark:text-yellow-300 text-sm">No games selected</p>
-            <p className="text-xs text-yellow-700 dark:text-yellow-400 mt-0.5">
-              Go to your profile to select games to play.
-            </p>
-            <Link href="/profile" className="text-xs font-bold text-yellow-700 dark:text-yellow-300 underline mt-1 inline-block">
+            <p className="font-bold text-yellow-300 text-sm">No games selected</p>
+            <p className="text-xs text-white/40 mt-0.5">Head to your profile to choose up to 3 games.</p>
+            <Link href="/profile" className="text-xs font-bold text-yellow-400 mt-2 inline-block">
               Update Profile →
             </Link>
           </div>
         </div>
       )}
 
-      {/* 1v1 Games */}
+      {/* 1v1 games */}
       {userGames.length > 0 && (
         <section className="mb-6">
-          <h2 className="section-title mb-3">Your 1v1 Games</h2>
-          <div className="grid grid-cols-2 gap-3">
-            {userGames.map((gameKey) => {
-              const ratingKey = `rating_${gameKey}`;
-              const winsKey = `wins_${gameKey}`;
-              const lossesKey = `losses_${gameKey}`;
-              return (
-                <GameCard
-                  key={gameKey}
-                  gameKey={gameKey}
-                  rating={(profile?.[ratingKey] as number) ?? 1000}
-                  wins={(profile?.[winsKey] as number) ?? 0}
-                  losses={(profile?.[lossesKey] as number) ?? 0}
-                  queueCount={queueCounts[gameKey]}
-                  onJoinQueue={() => handleJoinQueue(gameKey)}
-                  isQueuing={queuingGame === gameKey}
-                  isDisabled={!!activeMatch || (queuingGame !== null && queuingGame !== gameKey)}
-                />
-              );
-            })}
+          <div className="flex items-center justify-between mb-3">
+            <p className="section-title">Your Games</p>
+            <Link href="/leaderboard" className="text-xs text-emerald-400 font-semibold">View Ranks →</Link>
           </div>
-        </section>
-      )}
-
-      {/* Lobby Games */}
-      {lobbyGames.length > 0 && (
-        <section>
-          <h2 className="section-title mb-3">Lobby Games</h2>
           <div className="grid grid-cols-2 gap-3">
-            {lobbyGames.map((gameKey) => (
+            {userGames.map((gameKey) => (
               <GameCard
                 key={gameKey}
                 gameKey={gameKey}
-                onViewLobby={() => router.push(`/lobbies?game=${gameKey}`)}
+                rating={(profile?.[`rating_${gameKey}`] as number) ?? 1000}
+                wins={(profile?.[`wins_${gameKey}`] as number) ?? 0}
+                losses={(profile?.[`losses_${gameKey}`] as number) ?? 0}
+                queueCount={queueCounts[gameKey]}
+                onJoinQueue={() => handleJoinQueue(gameKey)}
+                isQueuing={queuingGame === gameKey}
+                isDisabled={!!activeMatch || (queuingGame !== null && queuingGame !== gameKey)}
               />
             ))}
           </div>
         </section>
       )}
 
-      {/* Quick rating overview */}
+      {/* Lobby games */}
+      {lobbyGames.length > 0 && (
+        <section className="mb-6">
+          <p className="section-title mb-3">Lobby Games</p>
+          <div className="grid grid-cols-2 gap-3">
+            {lobbyGames.map((gameKey) => (
+              <GameCard key={gameKey} gameKey={gameKey} onViewLobby={() => router.push(`/lobbies?game=${gameKey}`)} />
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* Rating overview */}
       {userGames.length > 0 && (
-        <section className="mt-6">
-          <h2 className="section-title mb-3">Your Ratings</h2>
+        <section>
+          <p className="section-title mb-3">Your Ratings</p>
           <div className="space-y-2">
             {userGames.map((gameKey) => {
-              const ratingKey = `rating_${gameKey}`;
-              const rating = (profile?.[ratingKey] as number) ?? 1000;
+              const rating = (profile?.[`rating_${gameKey}`] as number) ?? 1000;
+              const wins = (profile?.[`wins_${gameKey}`] as number) ?? 0;
+              const losses = (profile?.[`losses_${gameKey}`] as number) ?? 0;
               return (
-                <div key={gameKey} className="card px-4 py-3 flex items-center justify-between">
-                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                    {GAMES[gameKey].label}
-                  </span>
+                <div key={gameKey} className="card px-4 py-3.5 flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-bold text-white">{GAMES[gameKey].label}</p>
+                    <p className="text-xs text-white/30 mt-0.5">{wins}W · {losses}L</p>
+                  </div>
                   <RatingBadge rating={rating} size="sm" />
                 </div>
               );

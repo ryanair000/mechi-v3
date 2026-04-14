@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getAuthUser } from '@/lib/auth';
 import { createServiceClient } from '@/lib/supabase';
 import { GAMES } from '@/lib/config';
+import { runMatchmaking } from '@/lib/matchmaking';
 import type { GameKey } from '@/types';
 
 export async function POST(request: NextRequest) {
@@ -78,6 +79,9 @@ export async function POST(request: NextRequest) {
       console.error('[Queue Join] Insert error:', insertError);
       return NextResponse.json({ error: 'Failed to join queue' }, { status: 500 });
     }
+
+    // Run matchmaking immediately on queue join (no cron needed)
+    runMatchmaking(supabase).catch(console.error);
 
     return NextResponse.json({ entry });
   } catch (err) {

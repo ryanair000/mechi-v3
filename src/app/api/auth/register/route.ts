@@ -3,11 +3,27 @@ import { createServiceClient } from '@/lib/supabase';
 import { hashPassword, signToken } from '@/lib/auth';
 import { sendWelcomeEmail } from '@/lib/email';
 import { DEFAULT_RATING } from '@/lib/config';
+import { getPhoneLookupVariants, isValidPhoneNumber, normalizePhoneNumber } from '@/lib/phone';
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { username, phone, email, password, region, platforms, game_ids, selected_games } = body;
+    const {
+      username,
+      phone,
+      email,
+      password,
+      region,
+      platforms,
+      game_ids,
+      selected_games,
+      whatsapp_number,
+      whatsapp_notifications,
+    } = body;
+    const normalizedPhone = normalizePhoneNumber(phone ?? '');
+    const normalizedWhatsappNumber = normalizePhoneNumber(
+      whatsapp_number || normalizedPhone
+    );
 
     // Validation
     if (!username || !phone || !password || !region) {
@@ -22,8 +38,15 @@ export async function POST(request: NextRequest) {
     if (!selected_games || selected_games.length === 0) {
       return NextResponse.json({ error: 'Select at least one game' }, { status: 400 });
     }
+    if (!isValidPhoneNumber(phone)) {
+      return NextResponse.json({ error: 'Enter a valid phone number' }, { status: 400 });
+    }
+    if (whatsapp_notifications && !isValidPhoneNumber(normalizedWhatsappNumber)) {
+      return NextResponse.json({ error: 'Enter a valid WhatsApp number' }, { status: 400 });
+    }
 
     const supabase = createServiceClient();
+    const phoneVariants = getPhoneLookupVariants(phone);
 
     // Check username uniqueness
     const { data: existingUser } = await supabase
@@ -37,13 +60,13 @@ export async function POST(request: NextRequest) {
     }
 
     // Check phone uniqueness
-    const { data: existingPhone } = await supabase
+    const { data: existingPhoneMatches } = await supabase
       .from('profiles')
       .select('id')
-      .eq('phone', phone)
-      .single();
+      .in('phone', phoneVariants)
+      .limit(1);
 
-    if (existingPhone) {
+    if (existingPhoneMatches?.length) {
       return NextResponse.json({ error: 'Phone number already registered' }, { status: 409 });
     }
 
@@ -53,8 +76,10 @@ export async function POST(request: NextRequest) {
       .from('profiles')
       .insert({
         username,
-        phone,
+        phone: normalizedPhone,
         email: email || null,
+        whatsapp_number: normalizedWhatsappNumber || null,
+        whatsapp_notifications: whatsapp_notifications ?? false,
         password_hash,
         region,
         platforms,
@@ -101,10 +126,17 @@ export async function POST(request: NextRequest) {
         username: profile.username,
         phone: profile.phone,
         email: profile.email,
+        whatsapp_number: profile.whatsapp_number ?? null,
+        whatsapp_notifications: profile.whatsapp_notifications ?? false,
         region: profile.region,
         platforms: profile.platforms,
         game_ids: profile.game_ids,
         selected_games: profile.selected_games,
+        xp: profile.xp ?? 0,
+        level: profile.level ?? 1,
+        mp: profile.mp ?? 0,
+        win_streak: profile.win_streak ?? 0,
+        max_win_streak: profile.max_win_streak ?? 0,
       },
     });
 

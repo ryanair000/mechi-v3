@@ -32,14 +32,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const refresh = useCallback(async () => {
     const storedToken = localStorage.getItem('mechi_token');
-    if (!storedToken) {
-      setLoading(false);
-      return;
-    }
 
     try {
       const res = await fetch('/api/auth/me', {
-        headers: { Authorization: `Bearer ${storedToken}` },
+        headers: storedToken ? { Authorization: `Bearer ${storedToken}` } : undefined,
       });
 
       if (res.ok) {

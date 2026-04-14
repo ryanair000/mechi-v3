@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServiceClient } from '@/lib/supabase';
 import { GAMES } from '@/lib/config';
+import { getRankDivision } from '@/lib/gamification';
 import type { GameKey } from '@/types';
 
 export async function GET(
@@ -21,7 +22,7 @@ export async function GET(
 
     const { data: playersRaw, error } = await supabase
       .from('profiles')
-      .select('id, username, rating_efootball, rating_fc26, rating_mk11, rating_nba2k26, rating_tekken8, rating_sf6, wins_efootball, wins_fc26, wins_mk11, wins_nba2k26, wins_tekken8, wins_sf6, losses_efootball, losses_fc26, losses_mk11, losses_nba2k26, losses_tekken8, losses_sf6')
+      .select('*')
       .limit(100);
 
     if (error) {
@@ -38,6 +39,8 @@ export async function GET(
       id: p.id,
       username: p.username,
       rating: p[ratingKey] ?? 1000,
+      division: getRankDivision((p[ratingKey] as number) ?? 1000).label,
+      level: (p.level as number) ?? 1,
       wins: p[winsKey] ?? 0,
       losses: p[lossesKey] ?? 0,
     }));

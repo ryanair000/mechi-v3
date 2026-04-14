@@ -1,9 +1,10 @@
 'use client';
 
 import Image from 'next/image';
-import { GAMES, getGameImage, PLATFORMS } from '@/lib/config';
-import type { GameKey } from '@/types';
 import { Loader2, Swords, Users } from 'lucide-react';
+import { GAMES, PLATFORMS, getGameImage } from '@/lib/config';
+import { getRankDivision } from '@/lib/gamification';
+import type { GameKey } from '@/types';
 
 interface GameCardProps {
   gameKey: GameKey;
@@ -18,95 +19,128 @@ interface GameCardProps {
 }
 
 export function GameCard({
-  gameKey, rating, wins, losses, queueCount,
-  onJoinQueue, onViewLobby, isQueuing = false, isDisabled = false,
+  gameKey,
+  rating,
+  wins,
+  losses,
+  queueCount,
+  onJoinQueue,
+  onViewLobby,
+  isQueuing = false,
+  isDisabled = false,
 }: GameCardProps) {
   const game = GAMES[gameKey];
   if (!game) return null;
 
   const imageUrl = getGameImage(gameKey);
   const isLobby = game.mode === 'lobby';
-  const winRate = wins !== undefined && losses !== undefined && wins + losses > 0
-    ? Math.round((wins / (wins + losses)) * 100) : null;
+  const winRate =
+    wins !== undefined && losses !== undefined && wins + losses > 0
+      ? Math.round((wins / (wins + losses)) * 100)
+      : null;
+  const division = getRankDivision(rating ?? 1000);
 
   return (
-    <div className="bg-white/[0.03] border border-white/[0.06] rounded-2xl overflow-hidden group hover:border-white/10 transition-all duration-200">
-      {/* Cover */}
-      <div className="relative h-36 bg-white/[0.03] overflow-hidden">
+    <div className="card overflow-hidden transition-all duration-200 hover:-translate-y-0.5 hover:border-[rgba(50,224,196,0.22)]">
+      <div className="relative h-32 overflow-hidden bg-[var(--surface-elevated)]">
         {imageUrl ? (
-          <Image src={imageUrl} alt={game.label} fill
-            className="object-cover transition-transform duration-500 group-hover:scale-105"
-            sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw" />
+          <Image
+            src={imageUrl}
+            alt={game.label}
+            fill
+            className="object-cover transition-transform duration-500 hover:scale-[1.03]"
+            sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
+          />
         ) : (
-          <div className="flex items-center justify-center h-full text-4xl">🎮</div>
+          <div className="flex h-full items-center justify-center text-4xl">Game</div>
         )}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-t from-[rgba(11,17,33,0.88)] via-[rgba(11,17,33,0.24)] to-transparent" />
 
-        {/* Mode badge */}
-        <div className="absolute top-2.5 right-2.5">
-          <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-md ${isLobby ? 'bg-blue-500/80' : 'bg-emerald-500/80'} text-white`}>
-            {isLobby ? 'LOBBY' : '1v1'}
+        <div className="absolute right-2.5 top-2.5">
+          <span
+            className={`rounded-full px-2 py-1 text-[9px] font-semibold uppercase tracking-[0.16em] ${
+              isLobby
+                ? 'bg-[rgba(50,224,196,0.16)] text-[var(--accent-secondary-text)]'
+                : 'bg-[rgba(255,107,107,0.18)] text-[var(--brand-night)]'
+            }`}
+          >
+            {isLobby ? 'Lobby' : '1v1'}
           </span>
         </div>
 
-        {/* Live count */}
         {queueCount !== undefined && queueCount > 0 && (
-          <div className="absolute top-2.5 left-2.5">
-            <span className="flex items-center gap-1 text-[10px] font-medium bg-black/50 backdrop-blur-sm text-emerald-400 px-2 py-0.5 rounded-md">
-              <span className="w-1 h-1 rounded-full bg-emerald-400 animate-pulse" />
+          <div className="absolute left-2.5 top-2.5">
+            <span className="flex items-center gap-1 rounded-full bg-[rgba(11,17,33,0.7)] px-2 py-1 text-[9px] font-semibold uppercase tracking-[0.14em] text-[var(--brand-teal)] backdrop-blur-sm">
+              <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-[var(--brand-teal)]" />
               {queueCount} in queue
             </span>
           </div>
         )}
 
-        {/* Game name */}
         <div className="absolute bottom-2.5 left-3 right-3">
-          <p className="text-white font-semibold text-sm leading-tight drop-shadow">{game.label}</p>
-          <div className="flex gap-1 mt-1">
-            {game.platforms.map((p) => (
-              <span key={p} title={PLATFORMS[p]?.label} className="text-xs">{PLATFORMS[p]?.icon}</span>
+          <p className="text-[13px] font-black leading-tight text-white drop-shadow-sm">{game.label}</p>
+          <div className="mt-1 flex gap-1">
+            {game.platforms.map((platform) => (
+              <span key={platform} title={PLATFORMS[platform]?.label} className="text-xs">
+                {PLATFORMS[platform]?.icon}
+              </span>
             ))}
           </div>
         </div>
       </div>
 
-      {/* Body */}
-      <div className="p-3">
-        {/* Stats */}
+      <div className="p-2.5">
         {rating !== undefined && (
-          <div className="grid grid-cols-4 gap-1 mb-3">
+          <div className="mb-2.5 grid grid-cols-4 gap-1">
             <div className="text-center">
-              <div className="text-sm font-bold text-white">{rating}</div>
-              <div className="text-[9px] text-white/20 uppercase">ELO</div>
+              <div
+                className="text-[12px] font-black"
+                style={{ color: division.color }}
+              >
+                {division.label}
+              </div>
+              <div className="text-[9px] uppercase tracking-[0.12em] text-[var(--text-soft)]">Rank</div>
             </div>
             <div className="text-center">
-              <div className="text-sm font-bold text-emerald-400">{wins ?? 0}</div>
-              <div className="text-[9px] text-white/20 uppercase">W</div>
+              <div className="text-[13px] font-black text-[var(--accent-secondary-text)]">{wins ?? 0}</div>
+              <div className="text-[9px] uppercase tracking-[0.12em] text-[var(--text-soft)]">W</div>
             </div>
             <div className="text-center">
-              <div className="text-sm font-bold text-red-400">{losses ?? 0}</div>
-              <div className="text-[9px] text-white/20 uppercase">L</div>
+              <div className="text-[13px] font-black text-red-500">{losses ?? 0}</div>
+              <div className="text-[9px] uppercase tracking-[0.12em] text-[var(--text-soft)]">L</div>
             </div>
             <div className="text-center">
-              <div className="text-sm font-bold text-blue-400">{winRate !== null ? `${winRate}%` : '-'}</div>
-              <div className="text-[9px] text-white/20 uppercase">WR</div>
+              <div className="text-[13px] font-black text-[var(--brand-coral)]">
+                {winRate !== null ? `${winRate}%` : '-'}
+              </div>
+              <div className="text-[9px] uppercase tracking-[0.12em] text-[var(--text-soft)]">Win rate</div>
             </div>
           </div>
         )}
 
-        {/* Action */}
         {isLobby ? (
-          <button onClick={onViewLobby} disabled={isDisabled} className="w-full btn-ghost text-xs py-2 min-h-[36px]">
-            <Users size={13} /> View Lobbies
+          <button onClick={onViewLobby} disabled={isDisabled} className="btn-ghost min-h-[34px] w-full py-1.5 text-xs">
+            <Users size={13} /> View lobbies
           </button>
         ) : (
-          <button onClick={onJoinQueue} disabled={isDisabled || isQueuing}
-            className={`w-full text-xs py-2 min-h-[36px] rounded-xl font-semibold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+          <button
+            onClick={onJoinQueue}
+            disabled={isDisabled || isQueuing}
+            className={`flex min-h-[34px] w-full items-center justify-center gap-1.5 rounded-lg py-1.5 text-xs font-semibold transition-all ${
               isQueuing
-                ? 'bg-white/[0.04] text-white/30 cursor-not-allowed'
-                : 'bg-emerald-500 hover:bg-emerald-400 active:scale-[0.98] text-white'
-            }`}>
-            {isQueuing ? <><Loader2 size={12} className="animate-spin" /> Searching...</> : <><Swords size={12} /> Find Match</>}
+                ? 'cursor-not-allowed border border-[var(--border-color)] bg-[var(--surface-elevated)] text-[var(--text-soft)]'
+                : 'btn-primary'
+            }`}
+          >
+            {isQueuing ? (
+              <>
+                <Loader2 size={12} className="animate-spin" /> Searching...
+              </>
+            ) : (
+              <>
+                <Swords size={12} /> Find match
+              </>
+            )}
           </button>
         )}
       </div>

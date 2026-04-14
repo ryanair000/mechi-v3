@@ -1,10 +1,237 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuthUser } from '@/lib/auth';
-import { createServiceClient } from '@/lib/supabase';
 import { calculateElo } from '@/lib/elo';
+import {
+  evaluateAchievements,
+  getLevelFromXp,
+  getNairobiDateStamp,
+  getRankDivision,
+  MP_RULES,
+  toAchievementUnlock,
+  TRACKED_RANKED_GAMES,
+  XP_RULES,
+} from '@/lib/gamification';
+import { createServiceClient } from '@/lib/supabase';
+import { sendMatchDisputeEmail, sendResultConfirmedEmail } from '@/lib/email';
 import { notifyResultConfirmed } from '@/lib/whatsapp';
-import { sendResultConfirmedEmail } from '@/lib/email';
-import type { GameKey } from '@/types';
+import { GAMES, getGameLossesKey, getGameRatingKey, getGameWinsKey } from '@/lib/config';
+import type { GameKey, GamificationResult, Match } from '@/types';
+
+type ProfileRow = Record<string, unknown> & {
+  id: string;
+  username: string;
+  phone?: string | null;
+  email?: string | null;
+  whatsapp_number?: string | null;
+  whatsapp_notifications?: boolean | null;
+  xp?: number | null;
+  level?: number | null;
+  mp?: number | null;
+  win_streak?: number | null;
+  max_win_streak?: number | null;
+  last_match_date?: string | null;
+};
+
+type RpcResult = {
+  status: 'completed';
+  winner_id: string;
+  gamification_summary_p1?: GamificationResult | null;
+  gamification_summary_p2?: GamificationResult | null;
+};
+
+function getNumericValue(profile: ProfileRow, key: string, fallback = 0): number {
+  const value = profile[key];
+  return typeof value === 'number' ? value : fallback;
+}
+
+function getDateStamp(value: unknown): string | null {
+  if (!value) return null;
+  if (typeof value === 'string') return value.slice(0, 10);
+  return null;
+}
+
+function getTotalWins(profile: ProfileRow): number {
+  return TRACKED_RANKED_GAMES.reduce(
+    (total, game) => total + getNumericValue(profile, getGameWinsKey(game)),
+    0
+  );
+}
+
+function getTotalLosses(profile: ProfileRow): number {
+  return TRACKED_RANKED_GAMES.reduce(
+    (total, game) => total + getNumericValue(profile, getGameLossesKey(game)),
+    0
+  );
+}
+
+function getGameWinsMap(profile: ProfileRow, game: GameKey, didWin: boolean) {
+  const winsByGame: Record<string, number> = {};
+
+  for (const currentGame of TRACKED_RANKED_GAMES) {
+    const wins = getNumericValue(profile, getGameWinsKey(currentGame));
+    winsByGame[currentGame] =
+      didWin && currentGame === game ? wins + 1 : wins;
+  }
+
+  return winsByGame;
+}
+
+function getGamificationSummaryForUser(match: Match, userId: string) {
+  if (userId === match.player1_id) {
+    return match.gamification_summary_p1 ?? null;
+  }
+
+  if (userId === match.player2_id) {
+    return match.gamification_summary_p2 ?? null;
+  }
+
+  return null;
+}
+
+function shouldUseLegacyFallback(error: { message?: string; code?: string } | null) {
+  const message = error?.message?.toLowerCase() ?? '';
+  return (
+    message.includes('finalize_match_with_gamification') ||
+    message.includes('gamification_summary') ||
+    message.includes('column') ||
+    error?.code === 'PGRST202'
+  );
+}
+
+async function finalizeLegacyMatch(params: {
+  supabase: ReturnType<typeof createServiceClient>;
+  matchId: string;
+  winnerId: string;
+  loserId: string;
+  game: GameKey;
+  newRatingWinner: number;
+  newRatingLoser: number;
+  ratingChangeP1: number;
+  ratingChangeP2: number;
+}) {
+  const { supabase, matchId, winnerId, loserId, game, newRatingWinner, newRatingLoser, ratingChangeP1, ratingChangeP2 } = params;
+  const ratingKey = getGameRatingKey(game);
+  const winsKey = getGameWinsKey(game);
+  const lossesKey = getGameLossesKey(game);
+
+  const { data: profilesRaw } = await supabase
+    .from('profiles')
+    .select('*')
+    .in('id', [winnerId, loserId]);
+
+  const profiles = (profilesRaw ?? []) as ProfileRow[];
+  const winnerProfile = profiles.find((profile) => profile.id === winnerId);
+  const loserProfile = profiles.find((profile) => profile.id === loserId);
+
+  if (!winnerProfile || !loserProfile) {
+    return false;
+  }
+
+  const { error: winnerError } = await supabase
+    .from('profiles')
+    .update({
+      [ratingKey]: newRatingWinner,
+      [winsKey]: getNumericValue(winnerProfile, winsKey) + 1,
+    })
+    .eq('id', winnerId);
+
+  if (winnerError) {
+    return false;
+  }
+
+  const { error: loserError } = await supabase
+    .from('profiles')
+    .update({
+      [ratingKey]: newRatingLoser,
+      [lossesKey]: getNumericValue(loserProfile, lossesKey) + 1,
+    })
+    .eq('id', loserId);
+
+  if (loserError) {
+    return false;
+  }
+
+  const { error: matchError } = await supabase
+    .from('matches')
+    .update({
+      status: 'completed',
+      winner_id: winnerId,
+      rating_change_p1: ratingChangeP1,
+      rating_change_p2: ratingChangeP2,
+      completed_at: new Date().toISOString(),
+    })
+    .eq('id', matchId);
+
+  return !matchError;
+}
+
+async function sendCompletionNotifications(params: {
+  winnerProfile: ProfileRow;
+  loserProfile: ProfileRow;
+  gameLabel: string;
+  winnerRankLabel: string;
+  loserRankLabel: string;
+  winnerLevel: number;
+  loserLevel: number;
+}) {
+  const {
+    winnerProfile,
+    loserProfile,
+    gameLabel,
+    winnerRankLabel,
+    loserRankLabel,
+    winnerLevel,
+    loserLevel,
+  } = params;
+
+  if (winnerProfile.whatsapp_notifications && winnerProfile.whatsapp_number) {
+    notifyResultConfirmed({
+      whatsappNumber: winnerProfile.whatsapp_number,
+      username: winnerProfile.username,
+      opponentUsername: loserProfile.username,
+      game: gameLabel,
+      won: true,
+      rankLabel: winnerRankLabel,
+      level: winnerLevel,
+    }).catch(console.error);
+  }
+
+  if (winnerProfile.email) {
+    sendResultConfirmedEmail({
+      to: winnerProfile.email,
+      username: winnerProfile.username,
+      opponentUsername: loserProfile.username,
+      game: gameLabel,
+      won: true,
+      rankLabel: winnerRankLabel,
+      level: winnerLevel,
+    }).catch(console.error);
+  }
+
+  if (loserProfile.whatsapp_notifications && loserProfile.whatsapp_number) {
+    notifyResultConfirmed({
+      whatsappNumber: loserProfile.whatsapp_number,
+      username: loserProfile.username,
+      opponentUsername: winnerProfile.username,
+      game: gameLabel,
+      won: false,
+      rankLabel: loserRankLabel,
+      level: loserLevel,
+    }).catch(console.error);
+  }
+
+  if (loserProfile.email) {
+    sendResultConfirmedEmail({
+      to: loserProfile.email,
+      username: loserProfile.username,
+      opponentUsername: winnerProfile.username,
+      game: gameLabel,
+      won: false,
+      rankLabel: loserRankLabel,
+      level: loserLevel,
+    }).catch(console.error);
+  }
+}
 
 export async function POST(
   request: NextRequest,
@@ -27,11 +254,13 @@ export async function POST(
 
     const supabase = createServiceClient();
 
-    const { data: match, error: matchError } = await supabase
+    const { data: matchRaw, error: matchError } = await supabase
       .from('matches')
       .select('*')
       .eq('id', id)
       .single();
+
+    const match = matchRaw as Match | null;
 
     if (matchError || !match) {
       return NextResponse.json({ error: 'Match not found' }, { status: 404 });
@@ -39,6 +268,14 @@ export async function POST(
 
     if (match.player1_id !== authUser.sub && match.player2_id !== authUser.sub) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
+    if (match.status === 'completed') {
+      return NextResponse.json({
+        status: 'completed',
+        winner_id: match.winner_id,
+        gamification: getGamificationSummaryForUser(match, authUser.sub),
+      });
     }
 
     if (match.status !== 'pending') {
@@ -52,13 +289,14 @@ export async function POST(
     const isPlayer1 = authUser.sub === match.player1_id;
     const reportField = isPlayer1 ? 'player1_reported_winner' : 'player2_reported_winner';
 
-    // Update the report field
-    const { data: updatedMatch, error: updateError } = await supabase
+    const { data: updatedMatchRaw, error: updateError } = await supabase
       .from('matches')
       .update({ [reportField]: winner_id })
       .eq('id', id)
-      .select()
+      .select('*')
       .single();
+
+    const updatedMatch = updatedMatchRaw as Match | null;
 
     if (updateError || !updatedMatch) {
       return NextResponse.json({ error: 'Failed to submit report' }, { status: 500 });
@@ -67,106 +305,8 @@ export async function POST(
     const p1Reported = updatedMatch.player1_reported_winner;
     const p2Reported = updatedMatch.player2_reported_winner;
 
-    // Both reported
     if (p1Reported && p2Reported) {
-      if (p1Reported === p2Reported) {
-        // Agreement — finalize match
-        const winnerId = p1Reported;
-        const loserId = winnerId === match.player1_id ? match.player2_id : match.player1_id;
-        const game = match.game as GameKey;
-        const ratingKey = `rating_${game}`;
-
-        const { data: profilesRaw } = await supabase
-          .from('profiles')
-          .select('id, rating_efootball, rating_fc26, rating_mk11, rating_nba2k26, rating_tekken8, rating_sf6, wins_efootball, wins_fc26, wins_mk11, wins_nba2k26, wins_tekken8, wins_sf6, losses_efootball, losses_fc26, losses_mk11, losses_nba2k26, losses_tekken8, losses_sf6, phone, email, username')
-          .in('id', [winnerId, loserId]);
-
-        const profiles = profilesRaw as Record<string, unknown>[] | null;
-        const winnerProfile = profiles?.find((p) => p.id === winnerId);
-        const loserProfile = profiles?.find((p) => p.id === loserId);
-
-        if (winnerProfile && loserProfile) {
-          const winnerRating = (winnerProfile[ratingKey] as number) ?? 1000;
-          const loserRating = (loserProfile[ratingKey] as number) ?? 1000;
-
-          const { newRatingWinner, newRatingLoser, changeWinner, changeLoser } = calculateElo(
-            winnerRating,
-            loserRating
-          );
-
-          // Update profiles
-          await supabase
-            .from('profiles')
-            .update({
-              [ratingKey]: newRatingWinner,
-              [`wins_${game}`]: (winnerProfile[`wins_${game}`] as number ?? 0) + 1,
-            })
-            .eq('id', winnerId);
-
-          await supabase
-            .from('profiles')
-            .update({
-              [ratingKey]: newRatingLoser,
-              [`losses_${game}`]: (loserProfile[`losses_${game}`] as number ?? 0) + 1,
-            })
-            .eq('id', loserId);
-
-          // Finalize match
-          await supabase
-            .from('matches')
-            .update({
-              status: 'completed',
-              winner_id: winnerId,
-              rating_change_p1: isPlayer1 ? changeWinner : changeLoser,
-              rating_change_p2: isPlayer1 ? changeLoser : changeWinner,
-              completed_at: new Date().toISOString(),
-            })
-            .eq('id', id);
-
-          // Notify winner
-          if (winnerProfile.phone as string) {
-            notifyResultConfirmed({
-              phone: winnerProfile.phone as string,
-              ratingChange: changeWinner,
-              won: true,
-            }).catch(console.error);
-          }
-          if (winnerProfile.email as string) {
-            sendResultConfirmedEmail({
-              to: winnerProfile.email as string,
-              username: winnerProfile.username as string,
-              opponentUsername: loserProfile.username as string,
-              game,
-              won: true,
-              ratingChange: changeWinner,
-              newRating: newRatingWinner,
-            }).catch(console.error);
-          }
-
-          // Notify loser
-          if (loserProfile.phone as string) {
-            notifyResultConfirmed({
-              phone: loserProfile.phone as string,
-              ratingChange: changeLoser,
-              won: false,
-            }).catch(console.error);
-          }
-          if (loserProfile.email as string) {
-            sendResultConfirmedEmail({
-              to: loserProfile.email as string,
-              username: loserProfile.username as string,
-              opponentUsername: winnerProfile.username as string,
-              game,
-              won: false,
-              ratingChange: changeLoser,
-              newRating: newRatingLoser,
-            }).catch(console.error);
-          }
-        }
-
-        return NextResponse.json({ status: 'completed', winner_id: winnerId });
-      } else {
-        // Disagreement — mark as disputed
+      if (p1Reported !== p2Reported) {
         await supabase
           .from('matches')
           .update({
@@ -175,8 +315,263 @@ export async function POST(
           })
           .eq('id', id);
 
+        const gameLabel = GAMES[updatedMatch.game as GameKey]?.label ?? updatedMatch.game;
+        const { data: disputeProfilesRaw } = await supabase
+          .from('profiles')
+          .select('id, username, email')
+          .in('id', [match.player1_id, match.player2_id]);
+
+        const disputeProfiles = (disputeProfilesRaw ?? []) as Array<Pick<ProfileRow, 'id' | 'username' | 'email'>>;
+        const player1 = disputeProfiles.find((profile) => profile.id === match.player1_id);
+        const player2 = disputeProfiles.find((profile) => profile.id === match.player2_id);
+
+        if (player1?.email && player2) {
+          sendMatchDisputeEmail({
+            to: player1.email,
+            username: player1.username,
+            opponentUsername: player2.username,
+            game: gameLabel,
+            matchId: id,
+          }).catch(console.error);
+        }
+
+        if (player2?.email && player1) {
+          sendMatchDisputeEmail({
+            to: player2.email,
+            username: player2.username,
+            opponentUsername: player1.username,
+            game: gameLabel,
+            matchId: id,
+          }).catch(console.error);
+        }
+
         return NextResponse.json({ status: 'disputed' });
       }
+
+      const winnerId = p1Reported;
+      const loserId = winnerId === match.player1_id ? match.player2_id : match.player1_id;
+      const winnerIsPlayer1 = winnerId === match.player1_id;
+      const game = match.game as GameKey;
+      const gameLabel = GAMES[game]?.label ?? game;
+      const ratingKey = getGameRatingKey(game);
+      const winsKey = getGameWinsKey(game);
+      const lossesKey = getGameLossesKey(game);
+
+      const { data: profilesRaw, error: profilesError } = await supabase
+        .from('profiles')
+        .select('*')
+        .in('id', [winnerId, loserId]);
+
+      const profiles = (profilesRaw ?? []) as ProfileRow[];
+      const winnerProfile = profiles.find((profile) => profile.id === winnerId);
+      const loserProfile = profiles.find((profile) => profile.id === loserId);
+
+      if (profilesError || !winnerProfile || !loserProfile) {
+        return NextResponse.json({ error: 'Failed to load player profiles' }, { status: 500 });
+      }
+
+      const winnerRating = getNumericValue(winnerProfile, ratingKey, 1000);
+      const loserRating = getNumericValue(loserProfile, ratingKey, 1000);
+      const { newRatingWinner, newRatingLoser, changeWinner, changeLoser } = calculateElo(
+        winnerRating,
+        loserRating
+      );
+
+      const winnerCurrentLevel = getNumericValue(winnerProfile, 'level', 1) || 1;
+      const loserCurrentLevel = getNumericValue(loserProfile, 'level', 1) || 1;
+      const todayNairobi = getNairobiDateStamp();
+      const winnerFirstMatchToday = getDateStamp(winnerProfile.last_match_date) !== todayNairobi;
+      const loserFirstMatchToday = getDateStamp(loserProfile.last_match_date) !== todayNairobi;
+
+      const winnerNewStreak = getNumericValue(winnerProfile, 'win_streak') + 1;
+      const loserNewStreak = 0;
+      const winnerNewMaxStreak = Math.max(
+        getNumericValue(winnerProfile, 'max_win_streak'),
+        winnerNewStreak
+      );
+      const loserNewMaxStreak = getNumericValue(loserProfile, 'max_win_streak');
+
+      const winnerBaseXp =
+        XP_RULES.win +
+        (winnerNewStreak >= 3 ? XP_RULES.winStreakBonus : 0) +
+        (winnerFirstMatchToday ? XP_RULES.firstMatchOfDayBonus : 0);
+      const loserBaseXp =
+        XP_RULES.loss + (loserFirstMatchToday ? XP_RULES.firstMatchOfDayBonus : 0);
+      const winnerBaseMp = MP_RULES.win;
+      const loserBaseMp = MP_RULES.loss;
+
+      const { data: achievementRows, error: achievementError } = await supabase
+        .from('achievements')
+        .select('user_id, achievement_key')
+        .in('user_id', [winnerId, loserId]);
+
+      const achievementsSupported = !achievementError;
+      const unlockedRows =
+        ((achievementRows as Array<{ user_id: string; achievement_key: string }> | null) ?? []);
+      const winnerUnlocked = unlockedRows
+        .filter((row) => row.user_id === winnerId)
+        .map((row) => row.achievement_key);
+      const loserUnlocked = unlockedRows
+        .filter((row) => row.user_id === loserId)
+        .map((row) => row.achievement_key);
+
+      const winnerTotalWins = getTotalWins(winnerProfile) + 1;
+      const winnerTotalLosses = getTotalLosses(winnerProfile);
+      const loserTotalWins = getTotalWins(loserProfile);
+      const loserTotalLosses = getTotalLosses(loserProfile) + 1;
+
+      const winnerAchievements = achievementsSupported
+        ? evaluateAchievements({
+            totalWins: winnerTotalWins,
+            winStreak: winnerNewStreak,
+            gameWins: getGameWinsMap(winnerProfile, game, true),
+            totalMatches: winnerTotalWins + winnerTotalLosses,
+            achievementsUnlocked: winnerUnlocked,
+            eloAfterWin: newRatingWinner,
+          })
+        : [];
+
+      const loserAchievements = achievementsSupported
+        ? evaluateAchievements({
+            totalWins: loserTotalWins,
+            winStreak: loserNewStreak,
+            gameWins: getGameWinsMap(loserProfile, game, false),
+            totalMatches: loserTotalWins + loserTotalLosses,
+            achievementsUnlocked: loserUnlocked,
+          })
+        : [];
+
+      const winnerAchievementXp = winnerAchievements.reduce(
+        (total, achievement) => total + achievement.xpReward,
+        0
+      );
+      const loserAchievementXp = loserAchievements.reduce(
+        (total, achievement) => total + achievement.xpReward,
+        0
+      );
+      const winnerAchievementMp = winnerAchievements.reduce(
+        (total, achievement) => total + achievement.mpReward,
+        0
+      );
+      const loserAchievementMp = loserAchievements.reduce(
+        (total, achievement) => total + achievement.mpReward,
+        0
+      );
+
+      const winnerXpEarned = winnerBaseXp + winnerAchievementXp;
+      const loserXpEarned = loserBaseXp + loserAchievementXp;
+      const winnerMpEarned = winnerBaseMp + winnerAchievementMp;
+      const loserMpEarned = loserBaseMp + loserAchievementMp;
+
+      const winnerNewLevel = getLevelFromXp(
+        getNumericValue(winnerProfile, 'xp') + winnerXpEarned
+      );
+      const loserNewLevel = getLevelFromXp(
+        getNumericValue(loserProfile, 'xp') + loserXpEarned
+      );
+
+      const winnerSummary: GamificationResult = {
+        xpEarned: winnerXpEarned,
+        mpEarned: winnerMpEarned,
+        newLevel: winnerNewLevel,
+        leveledUp: winnerNewLevel > winnerCurrentLevel,
+        newStreak: winnerNewStreak,
+        newAchievements: winnerAchievements.map(toAchievementUnlock),
+      };
+
+      const loserSummary: GamificationResult = {
+        xpEarned: loserXpEarned,
+        mpEarned: loserMpEarned,
+        newLevel: loserNewLevel,
+        leveledUp: loserNewLevel > loserCurrentLevel,
+        newStreak: loserNewStreak,
+        newAchievements: loserAchievements.map(toAchievementUnlock),
+      };
+
+      const ratingChangeP1 = winnerIsPlayer1 ? changeWinner : changeLoser;
+      const ratingChangeP2 = winnerIsPlayer1 ? changeLoser : changeWinner;
+      const gamificationSummaryP1 = winnerIsPlayer1 ? winnerSummary : loserSummary;
+      const gamificationSummaryP2 = winnerIsPlayer1 ? loserSummary : winnerSummary;
+
+      const { data: finalizeData, error: finalizeError } = await supabase.rpc(
+        'finalize_match_with_gamification',
+        {
+          p_match_id: id,
+          p_winner_id: winnerId,
+          p_winner_rating: newRatingWinner,
+          p_loser_rating: newRatingLoser,
+          p_rating_change_p1: ratingChangeP1,
+          p_rating_change_p2: ratingChangeP2,
+          p_rating_key: ratingKey,
+          p_wins_key: winsKey,
+          p_losses_key: lossesKey,
+          p_winner_xp_gain: winnerXpEarned,
+          p_loser_xp_gain: loserXpEarned,
+          p_winner_mp_gain: winnerMpEarned,
+          p_loser_mp_gain: loserMpEarned,
+          p_winner_level: winnerNewLevel,
+          p_loser_level: loserNewLevel,
+          p_winner_streak: winnerNewStreak,
+          p_loser_streak: loserNewStreak,
+          p_winner_max_streak: winnerNewMaxStreak,
+          p_loser_max_streak: loserNewMaxStreak,
+          p_match_date: todayNairobi,
+          p_winner_achievement_keys: winnerAchievements.map((achievement) => achievement.key),
+          p_loser_achievement_keys: loserAchievements.map((achievement) => achievement.key),
+          p_gamification_summary_p1: gamificationSummaryP1,
+          p_gamification_summary_p2: gamificationSummaryP2,
+        }
+      );
+
+      let responseSummary: GamificationResult | null = isPlayer1
+        ? gamificationSummaryP1
+        : gamificationSummaryP2;
+
+      if (finalizeError) {
+        if (!shouldUseLegacyFallback(finalizeError)) {
+          console.error('[Match Report] RPC finalize error:', finalizeError);
+          return NextResponse.json({ error: 'Failed to finalize match' }, { status: 500 });
+        }
+
+        const legacyCompleted = await finalizeLegacyMatch({
+          supabase,
+          matchId: id,
+          winnerId,
+          loserId,
+          game,
+          newRatingWinner,
+          newRatingLoser,
+          ratingChangeP1,
+          ratingChangeP2,
+        });
+
+        if (!legacyCompleted) {
+          return NextResponse.json({ error: 'Failed to finalize match' }, { status: 500 });
+        }
+
+        responseSummary = null;
+      } else if (finalizeData) {
+        const rpcResult = finalizeData as RpcResult;
+        responseSummary = isPlayer1
+          ? rpcResult.gamification_summary_p1 ?? responseSummary
+          : rpcResult.gamification_summary_p2 ?? responseSummary;
+      }
+
+      await sendCompletionNotifications({
+        winnerProfile,
+        loserProfile,
+        gameLabel,
+        winnerRankLabel: getRankDivision(newRatingWinner).label,
+        loserRankLabel: getRankDivision(newRatingLoser).label,
+        winnerLevel: winnerNewLevel,
+        loserLevel: loserNewLevel,
+      });
+
+      return NextResponse.json({
+        status: 'completed',
+        winner_id: winnerId,
+        gamification: responseSummary,
+      });
     }
 
     return NextResponse.json({ status: 'waiting_for_opponent' });

@@ -1,0 +1,3 @@
+{
+  "/api/queue/count/[game]/route": "app/api/queue/count/[game]/route.js"
+}

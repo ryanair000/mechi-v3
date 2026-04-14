@@ -2,14 +2,19 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
+import toast from 'react-hot-toast';
+import { ArrowLeft, Copy, Crown, LogOut, Trash2, Users } from 'lucide-react';
 import { useAuth, useAuthFetch } from '@/components/AuthProvider';
 import { GAMES, PLATFORMS } from '@/lib/config';
 import type { GameKey, Lobby, LobbyMember } from '@/types';
-import toast from 'react-hot-toast';
-import { Users, Copy, ArrowLeft, LogOut, Crown, Trash2 } from 'lucide-react';
 
-interface LobbyDetail extends Lobby { host: { id: string; username: string }; }
-interface MemberWithUser extends LobbyMember { user: { id: string; username: string }; }
+interface LobbyDetail extends Lobby {
+  host: { id: string; username: string };
+}
+
+interface MemberWithUser extends LobbyMember {
+  user: { id: string; username: string };
+}
 
 export default function LobbyDetailPage() {
   const params = useParams();
@@ -25,115 +30,193 @@ export default function LobbyDetailPage() {
 
   const fetchLobby = useCallback(async () => {
     const res = await authFetch(`/api/lobbies/${lobbyId}`);
-    if (res.ok) { const data = await res.json(); setLobby(data.lobby); setMembers(data.members ?? []); }
-    else router.push('/lobbies');
+    if (res.ok) {
+      const data = await res.json();
+      setLobby(data.lobby);
+      setMembers(data.members ?? []);
+    } else {
+      router.push('/lobbies');
+    }
     setLoading(false);
   }, [authFetch, lobbyId, router]);
 
-  useEffect(() => { fetchLobby(); const i = setInterval(fetchLobby, 10000); return () => clearInterval(i); }, [fetchLobby]);
+  useEffect(() => {
+    void fetchLobby();
+    const interval = setInterval(() => {
+      void fetchLobby();
+    }, 10000);
+
+    return () => clearInterval(interval);
+  }, [fetchLobby]);
 
   const handleLeave = async () => {
     setLeaving(true);
     try {
       const res = await authFetch(`/api/lobbies/${lobbyId}/leave`, { method: 'POST' });
-      if (res.ok) { toast.success('Left lobby'); router.push('/lobbies'); }
-      else { const d = await res.json(); toast.error(d.error ?? 'Failed to leave'); }
-    } finally { setLeaving(false); }
+      if (res.ok) {
+        toast.success('Left lobby');
+        router.push('/lobbies');
+      } else {
+        const data = await res.json();
+        toast.error(data.error ?? 'Failed to leave');
+      }
+    } finally {
+      setLeaving(false);
+    }
   };
 
   const handleClose = async () => {
     if (!confirm('Close this lobby?')) return;
     const res = await authFetch(`/api/lobbies/${lobbyId}`, { method: 'DELETE' });
-    if (res.ok) { toast.success('Lobby closed'); router.push('/lobbies'); }
+    if (res.ok) {
+      toast.success('Lobby closed');
+      router.push('/lobbies');
+    }
   };
 
   const copyRoomCode = () => {
-    if (lobby?.room_code) { navigator.clipboard.writeText(lobby.room_code); toast.success('Room code copied!'); }
+    if (!lobby?.room_code) return;
+    navigator.clipboard.writeText(lobby.room_code);
+    toast.success('Room code copied!');
   };
 
   if (loading) {
-    return <div className="page-container"><div className="max-w-2xl mx-auto space-y-4"><div className="h-32 shimmer" /><div className="h-48 shimmer" /></div></div>;
+    return (
+      <div className="page-container">
+        <div className="mx-auto max-w-2xl space-y-4">
+          <div className="h-32 shimmer" />
+          <div className="h-48 shimmer" />
+        </div>
+      </div>
+    );
   }
+
   if (!lobby) return null;
 
   const game = GAMES[lobby.game as GameKey];
   const isHost = lobby.host_id === user?.id;
-  const isMember = members.some((m) => m.user_id === user?.id);
+  const isMember = members.some((member) => member.user_id === user?.id);
 
   return (
     <div className="page-container">
-      <div className="max-w-2xl mx-auto">
-        <button onClick={() => router.back()} className="flex items-center gap-2 text-white/30 hover:text-white/60 mb-5 text-sm font-medium transition-colors">
+      <div className="mx-auto max-w-2xl">
+        <button onClick={() => router.back()} className="brand-link mb-5 inline-flex items-center gap-2 text-sm font-medium">
           <ArrowLeft size={14} /> Back to Lobbies
         </button>
 
-        {/* Lobby header */}
-        <div className="bg-blue-500/8 border border-blue-500/15 rounded-2xl p-6 mb-6">
-          <div className="flex items-start justify-between mb-3">
+        <div className="card circuit-panel mb-6 p-6">
+          <div className="mb-3 flex items-start justify-between gap-3">
             <div>
-              <p className="text-blue-400 text-xs font-medium uppercase tracking-wide mb-1">{game?.label}</p>
-              <h1 className="font-bold text-2xl text-white">{lobby.title}</h1>
+              <p className="brand-kicker">{game?.label}</p>
+              <h1 className="mt-3 text-3xl font-black tracking-[-0.05em] text-[var(--text-primary)]">
+                {lobby.title}
+              </h1>
             </div>
-            <span className={`text-xs font-medium px-3 py-1 rounded-lg ${
-              lobby.status === 'open' ? 'bg-emerald-500/15 text-emerald-400' :
-              lobby.status === 'full' ? 'bg-red-500/15 text-red-400' :
-              'bg-white/[0.06] text-white/30'
-            }`}>{lobby.status}</span>
+            <span
+              className={`rounded-full border px-3 py-1 text-xs font-medium ${
+                lobby.status === 'open'
+                  ? 'border-[rgba(50,224,196,0.22)] bg-[rgba(50,224,196,0.12)] text-[var(--brand-teal)]'
+                  : lobby.status === 'full'
+                    ? 'border-red-500/20 bg-red-500/10 text-red-500'
+                    : 'border-[var(--border-color)] bg-[var(--surface-elevated)] text-[var(--text-soft)]'
+              }`}
+            >
+              {lobby.status}
+            </span>
           </div>
-          <div className="flex items-center gap-4 text-sm text-white/40">
-            <div className="flex items-center gap-1.5"><Users size={13} /><span>{members.length}/{lobby.max_players}</span></div>
-            <div className="flex gap-1">{game?.platforms.map((p) => <span key={p}>{PLATFORMS[p]?.icon}</span>)}</div>
+          <div className="flex items-center gap-4 text-sm text-[var(--text-secondary)]">
+            <div className="flex items-center gap-1.5">
+              <Users size={13} />
+              <span>
+                {members.length}/{lobby.max_players}
+              </span>
+            </div>
+            <div className="flex gap-1">
+              {game?.platforms.map((platform) => (
+                <span key={platform}>{PLATFORMS[platform]?.icon}</span>
+              ))}
+            </div>
           </div>
-          <button onClick={copyRoomCode}
-            className="mt-4 flex items-center gap-2 bg-white/[0.06] hover:bg-white/[0.1] border border-white/[0.08] rounded-xl px-4 py-2.5 text-sm font-mono font-medium text-white transition-all active:scale-[0.98] w-full sm:w-auto justify-center">
-            Room Code: {lobby.room_code} <Copy size={12} className="text-white/30" />
+          <button onClick={copyRoomCode} className="btn-outline mt-4 w-full sm:w-auto">
+            Room Code: {lobby.room_code} <Copy size={12} className="text-[var(--text-soft)]" />
           </button>
         </div>
 
-        {/* Members */}
-        <div className="card p-5 mb-4">
-          <h2 className="font-semibold text-white text-sm mb-3">Players ({members.length}/{lobby.max_players})</h2>
+        <div className="card mb-4 p-5">
+          <h2 className="mb-3 text-sm font-semibold text-[var(--text-primary)]">
+            Players ({members.length}/{lobby.max_players})
+          </h2>
           <div className="space-y-2">
-            {members.map((m) => {
-              const isHostM = m.user_id === lobby.host_id;
-              const isMe = m.user_id === user?.id;
+            {members.map((member) => {
+              const memberIsHost = member.user_id === lobby.host_id;
+              const isMe = member.user_id === user?.id;
+
               return (
-                <div key={m.id} className={`flex items-center gap-3 p-2.5 rounded-xl ${isMe ? 'bg-emerald-500/[0.06]' : 'bg-white/[0.02]'}`}>
-                  <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-bold text-xs ${isHostM ? 'bg-blue-500/15 text-blue-400' : 'bg-white/[0.06] text-white/40'}`}>
-                    {m.user?.username?.[0]?.toUpperCase() ?? '?'}
+                <div
+                  key={member.id}
+                  className={`flex items-center gap-3 rounded-xl p-2.5 ${
+                    isMe ? 'surface-live' : 'bg-[var(--surface-strong)]'
+                  }`}
+                >
+                  <div
+                    className={`flex h-8 w-8 items-center justify-center rounded-lg text-xs font-bold ${
+                      memberIsHost
+                        ? 'bg-[rgba(255,107,107,0.14)] text-[var(--brand-coral)]'
+                        : 'bg-[var(--surface-elevated)] text-[var(--text-secondary)]'
+                    }`}
+                  >
+                    {member.user?.username?.[0]?.toUpperCase() ?? '?'}
                   </div>
-                  <span className="font-medium text-sm text-white flex-1">
-                    {m.user?.username ?? 'Unknown'}
-                    {isMe && <span className="text-emerald-400 text-xs"> (You)</span>}
+                  <span className="flex-1 text-sm font-medium text-[var(--text-primary)]">
+                    {member.user?.username ?? 'Unknown'}
+                    {isMe && <span className="text-xs text-[var(--brand-teal)]"> (You)</span>}
                   </span>
-                  {isHostM && <Crown size={12} className="text-yellow-400" />}
+                  {memberIsHost && <Crown size={12} className="text-[var(--brand-coral)]" />}
                 </div>
               );
             })}
-            {Array.from({ length: lobby.max_players - members.length }).map((_, i) => (
-              <div key={`e-${i}`} className="flex items-center gap-3 p-2.5 rounded-xl border border-dashed border-white/[0.06]">
-                <div className="w-8 h-8 rounded-lg bg-white/[0.03]" />
-                <span className="text-sm text-white/15">Waiting for player...</span>
+            {Array.from({ length: lobby.max_players - members.length }).map((_, index) => (
+              <div
+                key={`empty-${index}`}
+                className="flex items-center gap-3 rounded-xl border border-dashed border-[var(--border-color)] p-2.5"
+              >
+                <div className="h-8 w-8 rounded-lg bg-[var(--surface-strong)]" />
+                <span className="text-sm text-[var(--text-soft)]">Waiting for player...</span>
               </div>
             ))}
           </div>
         </div>
 
-        {/* Actions */}
         <div className="space-y-3">
           {isHost ? (
-            <button onClick={handleClose} className="w-full btn-danger"><Trash2 size={14} /> Close Lobby</button>
+            <button onClick={handleClose} className="btn-danger w-full">
+              <Trash2 size={14} /> Close Lobby
+            </button>
           ) : isMember ? (
-            <button onClick={handleLeave} disabled={leaving} className="w-full btn-danger">
+            <button onClick={handleLeave} disabled={leaving} className="btn-danger w-full">
               <LogOut size={14} /> {leaving ? 'Leaving...' : 'Leave Lobby'}
             </button>
           ) : lobby.status === 'open' ? (
-            <button onClick={async () => {
-              const res = await authFetch(`/api/lobbies/${lobbyId}/join`, { method: 'POST' });
-              if (res.ok) { toast.success('Joined lobby!'); fetchLobby(); }
-              else { const d = await res.json(); toast.error(d.error ?? 'Failed to join'); }
-            }} className="w-full btn-primary">Join Lobby</button>
-          ) : <p className="text-center text-white/20 text-sm">This lobby is {lobby.status}</p>}
+            <button
+              onClick={async () => {
+                const res = await authFetch(`/api/lobbies/${lobbyId}/join`, { method: 'POST' });
+                if (res.ok) {
+                  toast.success('Joined lobby!');
+                  void fetchLobby();
+                } else {
+                  const data = await res.json();
+                  toast.error(data.error ?? 'Failed to join');
+                }
+              }}
+              className="btn-primary w-full"
+            >
+              Join Lobby
+            </button>
+          ) : (
+            <p className="text-center text-sm text-[var(--text-soft)]">
+              This lobby is {lobby.status}
+            </p>
+          )}
         </div>
       </div>
     </div>

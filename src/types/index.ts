@@ -41,11 +41,31 @@ export interface Tier {
   bgColor: string;
 }
 
+export interface GamificationAchievement {
+  key: string;
+  title: string;
+  description: string;
+  emoji: string;
+  xpReward: number;
+  mpReward: number;
+}
+
+export interface GamificationResult {
+  xpEarned: number;
+  mpEarned: number;
+  newLevel: number;
+  leveledUp: boolean;
+  newStreak: number;
+  newAchievements: GamificationAchievement[];
+}
+
 export interface Profile {
   id: string;
   username: string;
   phone: string;
   email?: string;
+  whatsapp_number?: string | null;
+  whatsapp_notifications?: boolean;
   password_hash: string;
   region: string;
   platforms: PlatformKey[];
@@ -69,6 +89,12 @@ export interface Profile {
   losses_nba2k26: number;
   losses_tekken8: number;
   losses_sf6: number;
+  xp?: number;
+  level?: number;
+  mp?: number;
+  win_streak?: number;
+  max_win_streak?: number;
+  last_match_date?: string | null;
   created_at: string;
 }
 
@@ -98,6 +124,8 @@ export interface Match {
   rating_change_p2: number | null;
   dispute_screenshot_url: string | null;
   dispute_requested_by: string | null;
+  gamification_summary_p1?: GamificationResult | null;
+  gamification_summary_p2?: GamificationResult | null;
   created_at: string;
   completed_at: string | null;
 }
@@ -145,10 +173,17 @@ export interface AuthUser {
   username: string;
   phone: string;
   email?: string;
+  whatsapp_number?: string | null;
+  whatsapp_notifications?: boolean;
   region: string;
   platforms: PlatformKey[];
   game_ids: Record<string, string>;
   selected_games: GameKey[];
+  xp?: number;
+  level?: number;
+  mp?: number;
+  win_streak?: number;
+  max_win_streak?: number;
 }
 
 export interface JWTPayload {

@@ -1,6 +1,12 @@
 'use client';
 
-import { createContext, useContext, useEffect, useState } from 'react';
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  useSyncExternalStore,
+} from 'react';
 
 type Theme = 'light' | 'dark' | 'system';
 
@@ -16,46 +22,79 @@ const ThemeContext = createContext<ThemeContextValue>({
   setTheme: () => {},
 });
 
+const STORAGE_KEY = 'mechi-theme';
+const DARK_MEDIA_QUERY = '(prefers-color-scheme: dark)';
+
+function isTheme(value: string | null): value is Theme {
+  return value === 'light' || value === 'dark' || value === 'system';
+}
+
+function getStoredTheme(): Theme {
+  if (typeof window === 'undefined') {
+    return 'system';
+  }
+
+  const storedTheme = localStorage.getItem(STORAGE_KEY);
+  return isTheme(storedTheme) ? storedTheme : 'system';
+}
+
+function getSystemTheme(): 'light' | 'dark' {
+  if (typeof window === 'undefined') {
+    return 'dark';
+  }
+
+  return window.matchMedia(DARK_MEDIA_QUERY).matches ? 'dark' : 'light';
+}
+
+function subscribeToSystemTheme(onStoreChange: () => void) {
+  if (typeof window === 'undefined') {
+    return () => {};
+  }
+
+  const mediaQuery = window.matchMedia(DARK_MEDIA_QUERY);
+  mediaQuery.addEventListener('change', onStoreChange);
+  return () => mediaQuery.removeEventListener('change', onStoreChange);
+}
+
+function applyThemeToDocument(theme: 'light' | 'dark') {
+  const root = document.documentElement;
+  root.classList.toggle('dark', theme === 'dark');
+  root.dataset.theme = theme;
+  root.style.colorScheme = theme;
+}
+
 export function useTheme() {
   return useContext(ThemeContext);
 }
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [theme, setThemeState] = useState<Theme>('system');
-  const [resolvedTheme, setResolvedTheme] = useState<'light' | 'dark'>('dark');
+  const [theme, setThemeState] = useState<Theme>(() => getStoredTheme());
+  const systemTheme = useSyncExternalStore<'light' | 'dark'>(
+    subscribeToSystemTheme,
+    getSystemTheme,
+    () => 'dark'
+  );
+  const resolvedTheme: 'light' | 'dark' =
+    theme === 'system' ? systemTheme : theme;
 
   useEffect(() => {
-    const stored = (localStorage.getItem('mechi-theme') as Theme) || 'system';
-    setThemeState(stored);
+    applyThemeToDocument(resolvedTheme);
+  }, [resolvedTheme]);
+
+  useEffect(() => {
+    const handleStorage = (event: StorageEvent) => {
+      if (event.key === STORAGE_KEY) {
+        setThemeState(getStoredTheme());
+      }
+    };
+
+    window.addEventListener('storage', handleStorage);
+    return () => window.removeEventListener('storage', handleStorage);
   }, []);
 
-  useEffect(() => {
-    const root = document.documentElement;
-
-    function applyTheme(t: Theme) {
-      if (t === 'system') {
-        const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-        root.classList.toggle('dark', isDark);
-        setResolvedTheme(isDark ? 'dark' : 'light');
-      } else {
-        root.classList.toggle('dark', t === 'dark');
-        setResolvedTheme(t);
-      }
-    }
-
-    applyTheme(theme);
-
-    if (theme === 'system') {
-      const mq = window.matchMedia('(prefers-color-scheme: dark)');
-      const handler = () => applyTheme('system');
-      mq.addEventListener('change', handler);
-      return () => mq.removeEventListener('change', handler);
-    }
-  }, [theme]);
-
-  const setTheme = (t: Theme) => {
-    localStorage.setItem('mechi-theme', t);
-    setThemeState(t);
+  const setTheme = (nextTheme: Theme) => {
+    localStorage.setItem(STORAGE_KEY, nextTheme);
+    setThemeState(nextTheme);
   };
 
   return (

@@ -1,26 +1,61 @@
 'use client';
 
+import Image from 'next/image';
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { useRouter, useParams } from 'next/navigation';
+import toast from 'react-hot-toast';
+import {
+  AlertTriangle,
+  Check,
+  Clock,
+  ExternalLink,
+  ImageIcon,
+  Swords,
+  Trophy,
+  Upload,
+  X,
+} from 'lucide-react';
 import { useAuth, useAuthFetch } from '@/components/AuthProvider';
 import { createClient } from '@/lib/supabase';
-import { GAMES, PLATFORMS, getPlatformAddUrl, getMatchingPlatform } from '@/lib/config';
-import { RatingBadge } from '@/components/RatingBadge';
+import {
+  GAMES,
+  PLATFORMS,
+  getMatchingPlatform,
+  getPlatformAddUrl,
+} from '@/lib/config';
 import { PlatformBadge } from '@/components/PlatformBadge';
-import type { GameKey, PlatformKey } from '@/types';
-import toast from 'react-hot-toast';
-import { Swords, Check, X, Upload, ImageIcon, ExternalLink, Clock, AlertTriangle } from 'lucide-react';
-import Image from 'next/image';
+import { RatingBadge } from '@/components/RatingBadge';
+import type { GameKey, GamificationResult, PlatformKey } from '@/types';
 
-interface MatchPlayer { id: string; username: string; game_ids: Record<string, string>; platforms: PlatformKey[]; }
-interface MatchData {
-  id: string; player1_id: string; player2_id: string; game: GameKey; region: string;
-  status: 'pending' | 'completed' | 'disputed' | 'cancelled'; winner_id: string | null;
-  player1_reported_winner: string | null; player2_reported_winner: string | null;
-  rating_change_p1: number | null; rating_change_p2: number | null;
-  dispute_screenshot_url: string | null; dispute_requested_by: string | null;
-  created_at: string; player1: MatchPlayer; player2: MatchPlayer;
+interface MatchPlayer {
+  id: string;
+  username: string;
+  game_ids: Record<string, string>;
+  platforms: PlatformKey[];
 }
+
+interface MatchData {
+  id: string;
+  player1_id: string;
+  player2_id: string;
+  game: GameKey;
+  region: string;
+  status: 'pending' | 'completed' | 'disputed' | 'cancelled';
+  winner_id: string | null;
+  player1_reported_winner: string | null;
+  player2_reported_winner: string | null;
+  rating_change_p1: number | null;
+  rating_change_p2: number | null;
+  gamification_summary_p1?: GamificationResult | null;
+  gamification_summary_p2?: GamificationResult | null;
+  dispute_screenshot_url: string | null;
+  dispute_requested_by: string | null;
+  created_at: string;
+  player1: MatchPlayer;
+  player2: MatchPlayer;
+}
+
+const QUICK_RESULT_COMMENTS = ['GG', 'Close one', 'Lucky', 'Run it back'] as const;
 
 export default function MatchPage() {
   const params = useParams();
@@ -34,56 +69,190 @@ export default function MatchPage() {
   const [reporting, setReporting] = useState<string | null>(null);
   const [uploadingScreenshot, setUploadingScreenshot] = useState(false);
   const [cancelling, setCancelling] = useState(false);
+  const [selectedQuickComment, setSelectedQuickComment] = useState<string | null>(null);
+  const [sentQuickComment, setSentQuickComment] = useState<string | null>(null);
+  const [receivedQuickComment, setReceivedQuickComment] = useState<{
+    from: string;
+    comment: string;
+  } | null>(null);
+  const [keepResultOpen, setKeepResultOpen] = useState(false);
+  const [autoCloseCountdown, setAutoCloseCountdown] = useState<number | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const channelRef = useRef<ReturnType<ReturnType<typeof createClient>['channel']> | null>(null);
+  const channelRef = useRef<{ send: (payload: unknown) => Promise<unknown> } | null>(null);
 
   const fetchMatch = useCallback(async () => {
     const res = await authFetch(`/api/matches/${matchId}`);
-    if (res.ok) { const data = await res.json(); setMatch(data.match); }
-    else router.push('/dashboard');
+    if (res.ok) {
+      const data = await res.json();
+      setMatch(data.match);
+    } else {
+      router.push('/dashboard');
+    }
     setLoading(false);
   }, [authFetch, matchId, router]);
 
   useEffect(() => {
-    fetchMatch();
+    void fetchMatch();
     const supabase = createClient();
-    const channel = supabase.channel(`match_${matchId}`)
-      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'matches', filter: `id=eq.${matchId}` }, () => fetchMatch())
+    const channel = supabase
+      .channel(`match_${matchId}`)
+      .on(
+        'broadcast',
+        { event: 'result-comment' },
+        ({ payload }) => {
+          const nextPayload = payload as
+            | {
+                comment?: string;
+                fromUserId?: string;
+                fromUsername?: string;
+              }
+            | undefined;
+
+          if (!nextPayload?.comment || nextPayload.fromUserId === user?.id) {
+            return;
+          }
+
+          const note = {
+            from: nextPayload.fromUsername ?? 'Opponent',
+            comment: nextPayload.comment,
+          };
+
+          setReceivedQuickComment(note);
+          toast(`${note.from}: ${note.comment}`, {
+            icon: '💬',
+          });
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'matches',
+          filter: `id=eq.${matchId}`,
+        },
+        () => {
+          void fetchMatch();
+        }
+      )
       .subscribe();
-    channelRef.current = channel;
-    return () => { channel.unsubscribe(); };
-  }, [matchId, fetchMatch]);
+
+    channelRef.current = channel as unknown as { send: (payload: unknown) => Promise<unknown> };
+
+    return () => {
+      channelRef.current = null;
+      channel.unsubscribe();
+    };
+  }, [matchId, fetchMatch, user?.id]);
+
+  useEffect(() => {
+    if (match?.status !== 'completed') {
+      setAutoCloseCountdown(null);
+      setKeepResultOpen(false);
+      return;
+    }
+
+    if (!keepResultOpen) {
+      setAutoCloseCountdown((current) => current ?? 8);
+    }
+  }, [match?.status, keepResultOpen]);
+
+  useEffect(() => {
+    if (autoCloseCountdown === null || keepResultOpen) {
+      return;
+    }
+
+    if (autoCloseCountdown <= 0) {
+      router.push('/dashboard');
+      return;
+    }
+
+    const timer = window.setTimeout(() => {
+      setAutoCloseCountdown((current) =>
+        current === null ? null : current - 1
+      );
+    }, 1000);
+
+    return () => window.clearTimeout(timer);
+  }, [autoCloseCountdown, keepResultOpen, router]);
 
   const handleReport = async (winnerId: string) => {
     setReporting(winnerId);
     try {
-      const res = await authFetch(`/api/matches/${matchId}/report`, { method: 'POST', body: JSON.stringify({ winner_id: winnerId }) });
+      const res = await authFetch(`/api/matches/${matchId}/report`, {
+        method: 'POST',
+        body: JSON.stringify({ winner_id: winnerId }),
+      });
       const data = await res.json();
-      if (!res.ok) { toast.error(data.error ?? 'Failed to report'); return; }
-      if (data.status === 'completed') toast.success('Match completed! Rating updated.');
-      else if (data.status === 'disputed') toast.error('Result disputed! Upload a screenshot.');
-      else toast.success('Result reported. Waiting for opponent...');
-      fetchMatch();
-    } catch { toast.error('Network error'); }
-    finally { setReporting(null); }
+      if (!res.ok) {
+        toast.error(data.error ?? 'Failed to report');
+        return;
+      }
+
+      if (selectedQuickComment && channelRef.current) {
+        void channelRef.current.send({
+          type: 'broadcast',
+          event: 'result-comment',
+          payload: {
+            comment: selectedQuickComment,
+            fromUserId: user?.id,
+            fromUsername: user?.username ?? 'Player',
+          },
+        });
+        setSentQuickComment(selectedQuickComment);
+        setSelectedQuickComment(null);
+      }
+
+      if (data.status === 'completed') {
+        toast.success('Match completed! Your climb is updated.');
+      } else if (data.status === 'disputed') {
+        toast.error('Result disputed! Upload a screenshot.');
+      } else {
+        toast.success('Result reported. Waiting for opponent...');
+      }
+      void fetchMatch();
+    } catch {
+      toast.error('Network error');
+    } finally {
+      setReporting(null);
+    }
   };
 
-  const handleScreenshotUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
+  const handleScreenshotUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
     if (!file) return;
-    if (!file.type.startsWith('image/')) { toast.error('Please upload an image'); return; }
-    if (file.size > 10 * 1024 * 1024) { toast.error('Image must be under 10MB'); return; }
+    if (!file.type.startsWith('image/')) {
+      toast.error('Please upload an image');
+      return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error('Image must be under 10MB');
+      return;
+    }
+
     setUploadingScreenshot(true);
     try {
       const formData = new FormData();
       formData.append('screenshot', file);
-      const token = localStorage.getItem('mechi_token');
-      const res = await fetch(`/api/matches/${matchId}/dispute`, { method: 'POST', headers: token ? { Authorization: `Bearer ${token}` } : {}, body: formData });
+      const res = await fetch(`/api/matches/${matchId}/dispute`, {
+        method: 'POST',
+        body: formData,
+      });
       const data = await res.json();
-      if (!res.ok) { toast.error(data.error ?? 'Upload failed'); return; }
-      toast.success('Screenshot uploaded'); fetchMatch();
-    } catch { toast.error('Upload failed'); }
-    finally { setUploadingScreenshot(false); if (fileInputRef.current) fileInputRef.current.value = ''; }
+      if (!res.ok) {
+        toast.error(data.error ?? 'Upload failed');
+        return;
+      }
+      toast.success('Screenshot uploaded');
+      void fetchMatch();
+    } catch {
+      toast.error('Upload failed');
+    } finally {
+      setUploadingScreenshot(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
   };
 
   const handleCancel = async () => {
@@ -91,17 +260,24 @@ export default function MatchPage() {
     setCancelling(true);
     try {
       const res = await authFetch(`/api/matches/${matchId}/cancel`, { method: 'POST' });
-      if (res.ok) { toast.success('Match cancelled'); router.push('/dashboard'); }
-      else { const data = await res.json(); toast.error(data.error ?? 'Failed to cancel'); }
-    } finally { setCancelling(false); }
+      if (res.ok) {
+        toast.success('Match cancelled');
+        router.push('/dashboard');
+      } else {
+        const data = await res.json();
+        toast.error(data.error ?? 'Failed to cancel');
+      }
+    } finally {
+      setCancelling(false);
+    }
   };
 
   if (loading) {
     return (
-      <div className="page-container flex items-center justify-center min-h-[60vh]">
+      <div className="page-container flex min-h-[60vh] items-center justify-center">
         <div className="text-center">
-          <div className="w-10 h-10 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
-          <p className="text-white/20 text-sm">Loading match...</p>
+          <div className="mx-auto mb-3 h-10 w-10 animate-spin rounded-full border-2 border-[var(--brand-teal)] border-t-transparent" />
+          <p className="text-sm text-[var(--text-soft)]">Loading match...</p>
         </div>
       </div>
     );
@@ -117,27 +293,42 @@ export default function MatchPage() {
   const myPlatform = getMatchingPlatform(me.platforms, gamePlatforms);
   const opponentPlatform = getMatchingPlatform(opponent.platforms, gamePlatforms);
   const displayPlatform = opponentPlatform ?? myPlatform;
-  const opponentPlatformId = displayPlatform ? (opponent.game_ids?.[displayPlatform] || 'Not set') : 'Not set';
-  const myRatingChange = isPlayer1 ? match.rating_change_p1 : match.rating_change_p2;
+  const opponentPlatformId = displayPlatform
+    ? opponent.game_ids?.[displayPlatform] || 'Not set'
+    : 'Not set';
+  const gamificationResult = isPlayer1
+    ? match.gamification_summary_p1 ?? null
+    : match.gamification_summary_p2 ?? null;
   const iWon = match.winner_id === user.id;
   const myReport = isPlayer1 ? match.player1_reported_winner : match.player2_reported_winner;
   const opponentReport = isPlayer1 ? match.player2_reported_winner : match.player1_reported_winner;
-  const platformAddUrl = displayPlatform ? getPlatformAddUrl(displayPlatform, opponentPlatformId) : null;
+  const platformAddUrl = displayPlatform
+    ? getPlatformAddUrl(displayPlatform, opponentPlatformId)
+    : null;
+  const resultHeading = iWon ? 'Victory locked in' : 'Tough one';
+  const resultCopy = iWon
+    ? 'Both players confirmed it. Your win, streak, and climb progress are now locked in.'
+    : 'Both players confirmed the result. The match is closed and your climb progress is updated.';
+
+  const statusTone =
+    match.status === 'completed'
+      ? 'bg-[rgba(50,224,196,0.12)] text-[var(--brand-teal)]'
+      : match.status === 'disputed'
+        ? 'bg-red-500/10 text-red-500'
+        : match.status === 'pending'
+          ? 'bg-[var(--surface-elevated)] text-[var(--text-secondary)]'
+          : 'bg-[var(--surface-elevated)] text-[var(--text-soft)]';
 
   return (
     <div className="page-container">
-      <div className="max-w-2xl mx-auto">
-        {/* Game header */}
-        <div className="bg-emerald-500/8 border border-emerald-500/15 rounded-2xl p-6 mb-6">
-          <div className="flex items-center gap-2 mb-4">
-            <Swords size={16} className="text-emerald-400" />
-            <span className="font-semibold text-sm text-emerald-400">{game?.label}</span>
-            <span className={`ml-auto inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium ${
-              match.status === 'pending' ? 'bg-white/[0.06] text-white/50' :
-              match.status === 'completed' ? 'bg-emerald-500/15 text-emerald-400' :
-              match.status === 'disputed' ? 'bg-red-500/15 text-red-400' :
-              'bg-white/[0.04] text-white/25'
-            }`}>
+      <div className="mx-auto max-w-2xl">
+        <div className="card circuit-panel mb-6 p-6">
+          <div className="mb-4 flex items-center gap-2">
+            <Swords size={16} className="text-[var(--brand-coral)]" />
+            <span className="text-sm font-semibold text-[var(--brand-coral)]">
+              {game?.label}
+            </span>
+            <span className={`ml-auto inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium ${statusTone}`}>
               {match.status === 'pending' && <Clock size={10} />}
               {match.status === 'completed' && <Check size={10} />}
               {match.status === 'disputed' && <AlertTriangle size={10} />}
@@ -146,139 +337,332 @@ export default function MatchPage() {
           </div>
           <div className="flex items-center gap-4">
             <div className="flex-1">
-              <p className="font-bold text-xl text-white">{me.username}</p>
-              <p className="text-white/30 text-xs mt-0.5">You</p>
+              <p className="text-xl font-bold text-[var(--text-primary)]">{me.username}</p>
+              <p className="mt-0.5 text-xs text-[var(--text-secondary)]">You</p>
             </div>
-            <span className="text-lg font-bold text-white/20 px-4">VS</span>
+            <span className="px-4 text-lg font-bold text-[var(--text-soft)]">VS</span>
             <div className="flex-1 text-right">
-              <p className="font-bold text-xl text-white">{opponent.username}</p>
-              <p className="text-white/30 text-xs mt-0.5">Opponent</p>
+              <p className="text-xl font-bold text-[var(--text-primary)]">{opponent.username}</p>
+              <p className="mt-0.5 text-xs text-[var(--text-secondary)]">Opponent</p>
             </div>
           </div>
         </div>
 
-        {/* Opponent connect */}
-        <div className="card p-5 mb-4">
-          <h3 className="font-semibold text-white text-sm mb-3">Connect with Opponent</h3>
+        <div className="card mb-4 p-5">
+          <h3 className="mb-3 text-sm font-semibold text-[var(--text-primary)]">Connect with Opponent</h3>
           {displayPlatform ? (
             <>
-              <div className="flex items-start gap-3 mb-3">
-                <span className="text-2xl mt-0.5">{PLATFORMS[displayPlatform]?.icon}</span>
+              <div className="mb-3 flex items-start gap-3">
+                <span className="mt-0.5 text-2xl">{PLATFORMS[displayPlatform]?.icon}</span>
                 <div className="flex-1">
-                  <p className="text-xs text-white/30">Playing {game?.label} on {PLATFORMS[displayPlatform]?.label}</p>
-                  <p className="font-semibold text-white text-sm mt-0.5">
-                    {PLATFORMS[displayPlatform]?.idLabel}: <span className="text-emerald-400">{opponentPlatformId}</span>
+                  <p className="text-xs text-[var(--text-secondary)]">
+                    Playing {game?.label} on {PLATFORMS[displayPlatform]?.label}
+                  </p>
+                  <p className="mt-0.5 text-sm font-semibold text-[var(--text-primary)]">
+                    {PLATFORMS[displayPlatform]?.idLabel}:{' '}
+                    <span className="text-[var(--brand-teal)]">{opponentPlatformId}</span>
                   </p>
                 </div>
               </div>
               {platformAddUrl && (
-                <a href={platformAddUrl} target="_blank" rel="noopener noreferrer" className="btn-outline w-full text-sm">
+                <a
+                  href={platformAddUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="btn-outline w-full text-sm"
+                >
                   <ExternalLink size={14} /> Add on {PLATFORMS[displayPlatform]?.label}
                 </a>
               )}
             </>
-          ) : <p className="text-center py-4 text-white/20 text-sm">Platform info not available</p>}
-          <div className="mt-3 pt-3 border-t border-white/[0.04]">
-            <p className="text-xs text-white/20 mb-2">Opponent&apos;s platforms</p>
+          ) : (
+            <p className="py-4 text-center text-sm text-[var(--text-soft)]">
+              Platform info not available
+            </p>
+          )}
+          <div className="mt-3 border-t border-[var(--border-color)] pt-3">
+            <p className="mb-2 text-xs text-[var(--text-soft)]">Opponent&apos;s platforms</p>
             <div className="flex flex-wrap gap-2">
-              {opponent.platforms.map((p) => <PlatformBadge key={p} platform={p} platformId={opponent.game_ids?.[p]} size="sm" />)}
+              {opponent.platforms.map((platform) => (
+                <PlatformBadge
+                  key={platform}
+                  platform={platform}
+                  platformId={opponent.game_ids?.[platform]}
+                  size="sm"
+                />
+              ))}
             </div>
           </div>
         </div>
 
-        {/* Report result */}
         {match.status === 'pending' && (
-          <div className="card p-5 mb-4">
-            <h3 className="font-semibold text-white text-sm mb-1">Report Result</h3>
-            <p className="text-xs text-white/30 mb-4">Both players must agree on the result.</p>
-            {myReport ? (
-              <div className="bg-emerald-500/8 border border-emerald-500/15 rounded-xl p-3 mb-3">
-                <p className="text-emerald-400 text-sm font-medium">
-                  You reported: <strong>{myReport === user.id ? 'You won' : `${opponent.username} won`}</strong>
+          <div className="card mb-4 p-5">
+            <h3 className="mb-1 text-sm font-semibold text-[var(--text-primary)]">Report Result</h3>
+            <p className="mb-4 text-xs text-[var(--text-secondary)]">
+              Both players must agree on the result.
+            </p>
+            {!myReport && (
+              <div className="mb-4 rounded-2xl border border-[var(--border-color)] bg-[var(--surface-elevated)] p-3.5">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--text-soft)]">
+                  Quick comment
                 </p>
-                {!opponentReport && <p className="text-white/30 text-xs mt-1">Waiting for opponent...</p>}
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {QUICK_RESULT_COMMENTS.map((comment) => {
+                    const isSelected = selectedQuickComment === comment;
+
+                    return (
+                      <button
+                        key={comment}
+                        type="button"
+                        onClick={() =>
+                          setSelectedQuickComment((current) =>
+                            current === comment ? null : comment
+                          )
+                        }
+                        className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition-all ${
+                          isSelected
+                            ? 'border-[rgba(50,224,196,0.26)] bg-[rgba(50,224,196,0.14)] text-[var(--accent-secondary-text)]'
+                            : 'border-[var(--border-color)] bg-[var(--surface)] text-[var(--text-secondary)] hover:border-[rgba(255,107,107,0.22)] hover:text-[var(--text-primary)]'
+                        }`}
+                      >
+                        {comment}
+                      </button>
+                    );
+                  })}
+                </div>
+                <p className="mt-2 text-xs text-[var(--text-soft)]">
+                  Optional. Pick one and Mechi sends it live with your report.
+                </p>
+              </div>
+            )}
+            {myReport ? (
+              <div className="surface-live mb-3 rounded-xl p-3">
+                <p className="text-sm font-medium text-[var(--accent-secondary-text)]">
+                  You reported:{' '}
+                  <strong>{myReport === user.id ? 'You won' : `${opponent.username} won`}</strong>
+                </p>
+                {sentQuickComment && (
+                  <p className="mt-1 text-xs text-[var(--text-secondary)]">
+                    Your note: <span className="font-semibold text-[var(--text-primary)]">{sentQuickComment}</span>
+                  </p>
+                )}
+                {!opponentReport && (
+                  <p className="mt-1 text-xs text-[var(--text-secondary)]">
+                    Waiting for opponent...
+                  </p>
+                )}
               </div>
             ) : (
               <div className="grid grid-cols-2 gap-3">
-                <button onClick={() => handleReport(user.id)} disabled={!!reporting} className="btn-primary flex flex-col items-center py-4 gap-1">
-                  <Check size={18} /><span className="text-sm">I Won</span>
+                <button
+                  onClick={() => handleReport(user.id)}
+                  disabled={!!reporting}
+                  className="btn-primary flex flex-col items-center gap-1 py-4"
+                >
+                  <Check size={18} />
+                  <span className="text-sm">I Won</span>
                 </button>
-                <button onClick={() => handleReport(opponent.id)} disabled={!!reporting} className="btn-outline flex flex-col items-center py-4 gap-1">
-                  <X size={18} /><span className="text-sm">{opponent.username} Won</span>
+                <button
+                  onClick={() => handleReport(opponent.id)}
+                  disabled={!!reporting}
+                  className="btn-outline flex flex-col items-center gap-1 py-4"
+                >
+                  <X size={18} />
+                  <span className="text-sm">{opponent.username} Won</span>
                 </button>
               </div>
             )}
-            <button onClick={handleCancel} disabled={cancelling} className="w-full btn-danger mt-3 text-sm">
+            {receivedQuickComment && (
+              <div className="mt-3 rounded-xl border border-[var(--border-color)] bg-[var(--surface-elevated)] px-3 py-2.5">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--text-soft)]">
+                  Opponent note
+                </p>
+                <p className="mt-1 text-sm font-semibold text-[var(--text-primary)]">
+                  {receivedQuickComment.from}: {receivedQuickComment.comment}
+                </p>
+              </div>
+            )}
+            <button onClick={handleCancel} disabled={cancelling} className="btn-danger mt-3 w-full text-sm">
               {cancelling ? 'Cancelling...' : 'Cancel Match'}
             </button>
           </div>
         )}
 
-        {/* Disputed */}
         {match.status === 'disputed' && (
-          <div className="card p-5 mb-4">
-            <div className="flex items-center gap-2 mb-3">
-              <AlertTriangle size={15} className="text-red-400" />
-              <h3 className="font-semibold text-white text-sm">Match Disputed</h3>
+          <div className="card mb-4 p-5">
+            <div className="mb-3 flex items-center gap-2">
+              <AlertTriangle size={15} className="text-red-500" />
+              <h3 className="text-sm font-semibold text-[var(--text-primary)]">Match Disputed</h3>
             </div>
-            <p className="text-sm text-white/30 mb-4">Upload a screenshot of the result to resolve.</p>
+            <p className="mb-4 text-sm text-[var(--text-secondary)]">
+              Upload a screenshot of the result to help resolve the dispute.
+            </p>
             {match.dispute_screenshot_url ? (
               <div className="mb-4">
-                <div className="relative aspect-video rounded-xl overflow-hidden border border-white/[0.06]">
-                  <Image src={match.dispute_screenshot_url} alt="Dispute screenshot" fill className="object-contain" />
+                <div className="relative aspect-video overflow-hidden rounded-xl border border-[var(--border-color)]">
+                  <Image
+                    src={match.dispute_screenshot_url}
+                    alt="Dispute screenshot"
+                    fill
+                    className="object-contain"
+                  />
                 </div>
-                <p className="text-xs text-emerald-400 mt-2 font-medium text-center">Under Review — Admin will resolve within 24 hours</p>
+                <p className="mt-2 text-center text-xs font-medium text-[var(--brand-teal)]">
+                  Under review. Admin will resolve within 24 hours.
+                </p>
               </div>
             ) : (
-              <div className="border-2 border-dashed border-white/[0.08] rounded-xl p-6 text-center cursor-pointer hover:border-emerald-500/30 transition-colors mb-3"
-                onClick={() => fileInputRef.current?.click()}>
-                <ImageIcon size={24} className="text-white/15 mx-auto mb-2" />
-                <p className="text-sm font-medium text-white/30">Click to upload screenshot</p>
-                <p className="text-xs text-white/15 mt-1">PNG, JPG, WEBP up to 10MB</p>
+              <div
+                className="mb-3 cursor-pointer rounded-xl border-2 border-dashed border-[var(--border-color)] p-6 text-center transition-colors hover:border-[rgba(255,107,107,0.28)]"
+                onClick={() => fileInputRef.current?.click()}
+              >
+                <ImageIcon size={24} className="mx-auto mb-2 text-[var(--text-soft)]" />
+                <p className="text-sm font-medium text-[var(--text-secondary)]">
+                  Click to upload screenshot
+                </p>
+                <p className="mt-1 text-xs text-[var(--text-soft)]">
+                  PNG, JPG, WEBP up to 10MB
+                </p>
               </div>
             )}
-            <input ref={fileInputRef} type="file" accept="image/*" onChange={handleScreenshotUpload} className="hidden" />
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              onChange={handleScreenshotUpload}
+              className="hidden"
+            />
             {!match.dispute_screenshot_url && (
-              <button onClick={() => fileInputRef.current?.click()} disabled={uploadingScreenshot} className="w-full btn-primary">
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                disabled={uploadingScreenshot}
+                className="btn-primary w-full"
+              >
                 <Upload size={14} /> {uploadingScreenshot ? 'Uploading...' : 'Upload Screenshot'}
               </button>
             )}
           </div>
         )}
 
-        {/* Completed */}
         {match.status === 'completed' && (
-          <div className={`card p-6 mb-4 text-center ${iWon ? 'border-emerald-500/20 bg-emerald-500/[0.04]' : ''}`}>
-            <div className="text-4xl mb-2">{iWon ? '🏆' : '😔'}</div>
-            <h3 className="font-bold text-xl text-white mb-1">{iWon ? 'Victory!' : 'Defeat'}</h3>
-            {myRatingChange !== null && (
-              <p className={`text-lg font-bold ${myRatingChange >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                {myRatingChange >= 0 ? '+' : ''}{myRatingChange} rating
+          <div
+            className={`card result-panel mb-4 overflow-hidden p-6 text-center ${
+              iWon ? 'result-panel-win' : 'result-panel-loss'
+            }`}
+          >
+            <div className={`result-burst ${iWon ? 'result-burst-win' : 'result-burst-loss'}`} />
+            <div className="relative">
+              <div className={`result-emblem ${iWon ? 'result-emblem-win' : 'result-emblem-loss'}`}>
+                {iWon ? <Trophy size={30} /> : <X size={30} />}
+              </div>
+              <h3 className="mb-1 text-2xl font-black text-[var(--text-primary)]">
+                {resultHeading}
+              </h3>
+              <p className="mx-auto max-w-md text-sm leading-6 text-[var(--text-secondary)]">
+                {resultCopy}
               </p>
+            </div>
+            {gamificationResult && (
+              <div className="mt-5 flex flex-wrap items-center justify-center gap-2">
+                <span className="brand-chip px-2.5 py-1">+{gamificationResult.xpEarned} XP</span>
+                <span className="brand-chip-coral px-2.5 py-1">+{gamificationResult.mpEarned} MP</span>
+                <span className="rounded-full border border-[var(--border-color)] bg-[var(--surface-elevated)] px-2.5 py-1 text-xs font-semibold text-[var(--text-primary)]">
+                  Lv. {gamificationResult.newLevel}
+                </span>
+                <span className="rounded-full border border-[rgba(50,224,196,0.22)] bg-[rgba(50,224,196,0.14)] px-2.5 py-1 text-xs font-semibold text-[var(--accent-secondary-text)]">
+                  Streak {gamificationResult.newStreak}
+                </span>
+                {gamificationResult.leveledUp && (
+                  <span className="rounded-full border border-[rgba(255,107,107,0.24)] bg-[rgba(255,107,107,0.14)] px-2.5 py-1 text-xs font-semibold text-[var(--brand-coral)]">
+                    Level up
+                  </span>
+                )}
+              </div>
             )}
             {match.winner_id && (
-              <p className="text-sm text-white/30 mt-1">
-                Winner: <strong className="text-white">{match.winner_id === user.id ? 'You' : opponent.username}</strong>
+              <p className="mt-1 text-sm text-[var(--text-secondary)]">
+                Winner:{' '}
+                <strong className="text-[var(--text-primary)]">
+                  {match.winner_id === user.id ? 'You' : opponent.username}
+                </strong>
               </p>
             )}
-            <button onClick={() => router.push('/dashboard')} className="btn-primary mt-4">Play Again</button>
+            {gamificationResult?.newAchievements?.length ? (
+              <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
+                {gamificationResult.newAchievements.map((achievement) => (
+                  <span
+                    key={achievement.key}
+                    className="rounded-full border border-[var(--border-color)] bg-[var(--surface-elevated)] px-3 py-1 text-xs font-semibold text-[var(--text-primary)]"
+                  >
+                    {achievement.emoji} {achievement.title}
+                  </span>
+                ))}
+              </div>
+            ) : null}
+            {sentQuickComment && (
+              <p className="mt-3 text-xs text-[var(--text-secondary)]">
+                Your note: <span className="font-semibold text-[var(--text-primary)]">{sentQuickComment}</span>
+              </p>
+            )}
+            {receivedQuickComment && (
+              <p className="mt-2 text-xs text-[var(--text-secondary)]">
+                {receivedQuickComment.from} said:{' '}
+                <span className="font-semibold text-[var(--text-primary)]">{receivedQuickComment.comment}</span>
+              </p>
+            )}
+            {!keepResultOpen && autoCloseCountdown !== null && (
+              <p className="mt-3 text-xs font-semibold uppercase tracking-[0.16em] text-[var(--text-soft)]">
+                Closing match in {autoCloseCountdown}s
+              </p>
+            )}
+            <div className="mt-5 flex flex-wrap items-center justify-center gap-3">
+              <button onClick={() => router.push('/dashboard')} className="btn-primary">
+                Back to dashboard
+              </button>
+              {!keepResultOpen && autoCloseCountdown !== null && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setKeepResultOpen(true);
+                    setAutoCloseCountdown(null);
+                  }}
+                  className="btn-outline"
+                >
+                  Keep result open
+                </button>
+              )}
+            </div>
           </div>
         )}
 
-        {/* Match info */}
         <div className="card p-5">
-          <h3 className="text-xs font-medium text-white/20 uppercase tracking-wide mb-3">Match Info</h3>
+          <h3 className="mb-3 text-xs font-medium uppercase tracking-wide text-[var(--text-soft)]">
+            Match Info
+          </h3>
           <div className="grid grid-cols-2 gap-4">
             <div className="text-center">
-              <p className="text-xs text-white/20 mb-1">Your Rating</p>
-              <RatingBadge rating={(user as unknown as Record<string, unknown>)[`rating_${match.game}`] as number ?? 1000} size="sm" />
+              <p className="mb-1 text-xs text-[var(--text-soft)]">Your Rank</p>
+              <RatingBadge
+                rating={
+                  ((user as unknown as Record<string, unknown>)[`rating_${match.game}`] as number) ??
+                  1000
+                }
+                size="sm"
+              />
             </div>
             <div className="text-center">
-              <p className="text-xs text-white/20 mb-1">Game Mode</p>
-              <span className="badge-emerald text-xs">{game?.mode}</span>
+              <p className="mb-1 text-xs text-[var(--text-soft)]">Game Mode</p>
+              <span className="brand-chip justify-center">{game?.mode}</span>
             </div>
           </div>
-          <p className="text-xs text-white/15 text-center mt-3">Started {new Date(match.created_at).toLocaleString()}</p>
+          {gamificationResult && (
+            <p className="mt-3 text-center text-xs text-[var(--text-secondary)]">
+              Match payout: {gamificationResult.xpEarned} XP / {gamificationResult.mpEarned} MP
+            </p>
+          )}
+          <p className="mt-3 text-center text-xs text-[var(--text-soft)]">
+            Started {new Date(match.created_at).toLocaleString()}
+          </p>
         </div>
       </div>
     </div>

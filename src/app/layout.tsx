@@ -1,51 +1,91 @@
 import type { Metadata, Viewport } from 'next';
+import { Montserrat, Open_Sans, Geist } from 'next/font/google';
 import './globals.css';
-import { AuthProvider } from '@/components/AuthProvider';
-import { Toaster } from 'react-hot-toast';
+import { AppProviders } from '@/components/AppProviders';
+import { cn } from "@/lib/utils";
+
+const geist = Geist({subsets:['latin'],variable:'--font-sans'});
+
+const montserrat = Montserrat({
+  subsets: ['latin'],
+  variable: '--font-display',
+  display: 'swap',
+});
+
+const openSans = Open_Sans({
+  subsets: ['latin'],
+  variable: '--font-body',
+  display: 'swap',
+});
 
 export const metadata: Metadata = {
-  title: 'Mechi — Kenya Gaming Matchmaking',
-  description: 'Find your opponent. Prove you\'re the best. 1v1 matchmaking for Kenyan gamers across PlayStation, Xbox, PC, Mobile & Nintendo.',
-  keywords: ['gaming', 'matchmaking', 'kenya', 'esports', 'efootball', 'ea fc', 'tekken', '1v1'],
+  title: 'Mechi | Compete. Connect. Rise.',
+  description:
+    'Mechi is the competitive gaming platform for Kenyan players who want organized 1v1s, clean matchmaking, and a better way to rise.',
+  keywords: [
+    'mechi',
+    'gaming',
+    'matchmaking',
+    'kenya',
+    'esports',
+    '1v1',
+    'competitive gaming',
+    'efootball',
+    'ea fc',
+    'tekken',
+  ],
   openGraph: {
-    title: 'Mechi — Kenya Gaming Matchmaking',
-    description: '1v1 matchmaking for Kenyan gamers. Climb the ELO ladder.',
-    url: 'https://mechi-v3.vercel.app',
+    title: 'Mechi | Compete. Connect. Rise.',
+    description:
+      'Organized 1v1 matchmaking for Kenyan players across football, fighters, sports, and mobile competition.',
+    url: 'https://mechi.club',
     siteName: 'Mechi',
     locale: 'en_KE',
     type: 'website',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Mechi | Compete. Connect. Rise.',
+    description:
+      'Organized 1v1 matchmaking for Kenyan players who want better competition and cleaner progression.',
   },
 };
 
 export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
-  maximumScale: 1,
-  themeColor: '#030712',
+  themeColor: [
+    { media: '(prefers-color-scheme: light)', color: '#f8fbfd' },
+    { media: '(prefers-color-scheme: dark)', color: '#0B1121' },
+  ],
 };
+
+const themeScript = `
+  (() => {
+    try {
+      const root = document.documentElement;
+      const storedTheme = localStorage.getItem('mechi-theme');
+      const systemTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+      const theme = storedTheme === 'light' || storedTheme === 'dark' ? storedTheme : systemTheme;
+      root.classList.toggle('dark', theme === 'dark');
+      root.dataset.theme = theme;
+      root.style.colorScheme = theme;
+    } catch {}
+  })();
+`;
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className="dark">
+    <html
+      lang="en"
+      className={cn(montserrat.variable, openSans.variable, "font-sans", geist.variable)}
+      suppressHydrationWarning
+    >
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: themeScript }} />
+      </head>
       <body>
-        <AuthProvider>
-          {children}
-          <Toaster
-            position="top-center"
-            toastOptions={{
-              style: {
-                background: '#111827',
-                color: '#fff',
-                border: '1px solid rgba(255,255,255,0.08)',
-                borderRadius: '16px',
-                fontSize: '14px',
-                fontWeight: '600',
-              },
-              success: { iconTheme: { primary: '#10b981', secondary: '#fff' } },
-              error: { iconTheme: { primary: '#ef4444', secondary: '#fff' } },
-            }}
-          />
-        </AuthProvider>
+        <AppProviders>{children}</AppProviders>
       </body>
     </html>
   );

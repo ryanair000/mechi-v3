@@ -18,7 +18,7 @@ export async function runMatchmaking(supabase: SupabaseClient): Promise<number> 
   // Get all waiting queue entries ordered by join time
   const { data: queueEntries, error } = await supabase
     .from('queue')
-    .select('*, profiles:user_id(id, username, phone, email, platforms, game_ids, selected_games)')
+    .select('*, profiles:user_id(id, username, phone, email, whatsapp_number, whatsapp_notifications, platforms, game_ids, selected_games)')
     .eq('status', 'waiting')
     .order('joined_at', { ascending: true });
 
@@ -74,6 +74,7 @@ export async function runMatchmaking(supabase: SupabaseClient): Promise<number> 
 
       // Send notifications async (don't block matchmaking)
       const game = GAMES[entry.game as GameKey];
+      const gameLabel = game?.label ?? entry.game;
       const gamePlatforms = game?.platforms ?? [];
 
       const p1Profile = entry.profiles as Record<string, unknown> | null;
@@ -90,14 +91,18 @@ export async function runMatchmaking(supabase: SupabaseClient): Promise<number> 
 
         const p1PlatformId = p1Platform ? (p1GameIds[p1Platform] ?? 'Not set') : 'Not set';
         const p2PlatformId = p2Platform ? (p2GameIds[p2Platform] ?? 'Not set') : 'Not set';
+        const p1WhatsAppNumber = (p1Profile.whatsapp_number as string | undefined) ?? '';
+        const p2WhatsAppNumber = (p2Profile.whatsapp_number as string | undefined) ?? '';
+        const p1WhatsAppEnabled = Boolean(p1Profile.whatsapp_notifications) && Boolean(p1WhatsAppNumber);
+        const p2WhatsAppEnabled = Boolean(p2Profile.whatsapp_notifications) && Boolean(p2WhatsAppNumber);
 
         // Notify player 1
-        if (p1Profile.phone) {
+        if (p1WhatsAppEnabled) {
           notifyMatchFound({
-            phone: p1Profile.phone as string,
-            game: game?.label ?? entry.game,
+            whatsappNumber: p1WhatsAppNumber,
+            username: p1Profile.username as string,
+            game: gameLabel,
             opponentUsername: p2Profile.username as string,
-            opponentPlatformId: p2PlatformId,
             matchId: match.id,
           }).catch(console.error);
         }
@@ -106,7 +111,7 @@ export async function runMatchmaking(supabase: SupabaseClient): Promise<number> 
             to: p1Profile.email as string,
             username: p1Profile.username as string,
             opponentUsername: p2Profile.username as string,
-            game: game?.label ?? entry.game,
+            game: gameLabel,
             platform: p2Platform ?? 'Unknown',
             opponentPlatformId: p2PlatformId,
             matchId: match.id,
@@ -114,12 +119,12 @@ export async function runMatchmaking(supabase: SupabaseClient): Promise<number> 
         }
 
         // Notify player 2
-        if (p2Profile.phone) {
+        if (p2WhatsAppEnabled) {
           notifyMatchFound({
-            phone: p2Profile.phone as string,
-            game: game?.label ?? entry.game,
+            whatsappNumber: p2WhatsAppNumber,
+            username: p2Profile.username as string,
+            game: gameLabel,
             opponentUsername: p1Profile.username as string,
-            opponentPlatformId: p1PlatformId,
             matchId: match.id,
           }).catch(console.error);
         }
@@ -128,7 +133,7 @@ export async function runMatchmaking(supabase: SupabaseClient): Promise<number> 
             to: p2Profile.email as string,
             username: p2Profile.username as string,
             opponentUsername: p1Profile.username as string,
-            game: game?.label ?? entry.game,
+            game: gameLabel,
             platform: p1Platform ?? 'Unknown',
             opponentPlatformId: p1PlatformId,
             matchId: match.id,

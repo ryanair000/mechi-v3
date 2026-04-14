@@ -3,8 +3,9 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/components/AuthProvider';
-import { Navbar } from '@/components/Navbar';
+import { BrandLogo } from '@/components/BrandLogo';
 import { BottomNav } from '@/components/BottomNav';
+import { Navbar } from '@/components/Navbar';
 import { Sidebar } from '@/components/Sidebar';
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
@@ -19,12 +20,10 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-950">
+      <div className="page-base flex items-center justify-center">
         <div className="flex flex-col items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-emerald-500/15 flex items-center justify-center font-bold text-emerald-400 text-lg">
-            M
-          </div>
-          <p className="text-white/20 text-sm">Loading...</p>
+          <BrandLogo variant="symbol" size="md" />
+          <p className="text-sm font-semibold text-[var(--text-secondary)]">Loading your Mechi space...</p>
         </div>
       </div>
     );
@@ -33,7 +32,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   if (!user) return null;
 
   return (
-    <div className="min-h-screen bg-gray-950">
+    <div className="page-base">
       <Sidebar />
       <Navbar />
       <div className="lg:pl-60">

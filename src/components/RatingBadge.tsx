@@ -1,4 +1,4 @@
-import { getTier } from '@/lib/config';
+import { getRankDivision, withAlpha } from '@/lib/gamification';
 
 interface RatingBadgeProps {
   rating: number;
@@ -6,8 +6,12 @@ interface RatingBadgeProps {
   showRating?: boolean;
 }
 
-export function RatingBadge({ rating, size = 'md', showRating = true }: RatingBadgeProps) {
-  const tier = getTier(rating);
+export function RatingBadge({
+  rating,
+  size = 'md',
+  showRating = true,
+}: RatingBadgeProps) {
+  const division = getRankDivision(rating);
 
   const sizeClasses = {
     sm: 'text-xs px-2 py-0.5',
@@ -17,11 +21,14 @@ export function RatingBadge({ rating, size = 'md', showRating = true }: RatingBa
 
   return (
     <span
-      className={`inline-flex items-center gap-1 rounded-full font-bold ${sizeClasses[size]} ${tier.color} ${tier.bgColor}`}
+      className={`inline-flex items-center gap-1 rounded-full border font-bold ${sizeClasses[size]}`}
+      style={{
+        color: division.color,
+        backgroundColor: withAlpha(division.color, '14'),
+        borderColor: withAlpha(division.color, '30'),
+      }}
     >
-      {tier.name}
-      {showRating && <span className="opacity-70 font-normal">·</span>}
-      {showRating && <span>{rating}</span>}
+      {showRating ? division.label : division.tier}
     </span>
   );
 }

@@ -20,6 +20,8 @@ interface FormData {
   platforms: PlatformKey[];
   game_ids: Record<string, string>;
   selected_games: GameKey[];
+  whatsapp_notifications: boolean;
+  whatsapp_number: string;
 }
 
 export default function RegisterPage() {
@@ -32,6 +34,7 @@ export default function RegisterPage() {
   const [formData, setFormData] = useState<FormData>({
     username: '', phone: '', email: '', password: '', region: 'Nairobi',
     platforms: [], game_ids: {}, selected_games: [],
+    whatsapp_notifications: false, whatsapp_number: '',
   });
 
   const step1Valid = formData.username.trim().length >= 3 && formData.phone.trim().length >= 9 && formData.password.length >= 6;
@@ -121,8 +124,49 @@ export default function RegisterPage() {
                     onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                     placeholder="0712 345 678" className="input" inputMode="tel" />
                 </div>
+                {/* WhatsApp opt-in */}
+                <div className="bg-white/[0.02] border border-white/[0.06] rounded-xl p-4">
+                  <label className="flex items-start gap-3 cursor-pointer">
+                    <div className="relative mt-0.5 flex-shrink-0">
+                      <input
+                        type="checkbox"
+                        checked={formData.whatsapp_notifications}
+                        onChange={(e) => setFormData({
+                          ...formData,
+                          whatsapp_notifications: e.target.checked,
+                          whatsapp_number: e.target.checked ? formData.phone : '',
+                        })}
+                        className="sr-only"
+                      />
+                      <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center transition-colors ${
+                        formData.whatsapp_notifications ? 'border-green-500 bg-green-500' : 'border-white/20'
+                      }`}>
+                        {formData.whatsapp_notifications && <Check size={11} className="text-white" />}
+                      </div>
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-white">📲 WhatsApp match alerts</p>
+                      <p className="text-xs text-white/30 mt-0.5">Get notified when a match is found or result is confirmed</p>
+                    </div>
+                  </label>
+                  {formData.whatsapp_notifications && (
+                    <div className="mt-3 pt-3 border-t border-white/[0.06]">
+                      <label className="label">WhatsApp Number</label>
+                      <input
+                        type="tel"
+                        value={formData.whatsapp_number}
+                        onChange={(e) => setFormData({ ...formData, whatsapp_number: e.target.value })}
+                        placeholder="0712 345 678"
+                        className="input"
+                        inputMode="tel"
+                      />
+                      <p className="text-xs text-white/20 mt-1.5">Leave as-is if same as your phone above</p>
+                    </div>
+                  )}
+                </div>
+
                 <div>
-                  <label className="label">Email <span className="text-white/15 font-normal">(optional)</span></label>
+                  <label className="label">Email <span className="text-white/15 font-normal">(optional — for match notifications)</span></label>
                   <input type="email" value={formData.email}
                     onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                     placeholder="you@example.com" className="input" />

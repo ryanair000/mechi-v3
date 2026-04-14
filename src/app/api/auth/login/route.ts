@@ -2,30 +2,44 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createServiceClient } from '@/lib/supabase';
 import { verifyPassword, signToken } from '@/lib/auth';
 
+function detectIdentifierType(identifier: string): 'email' | 'phone' | 'username' {
+  if (identifier.includes('@')) return 'email';
+  if (/^[\+\d][\d\s\-\(\)]{6,}$/.test(identifier)) return 'phone';
+  return 'username';
+}
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { phone, password } = body;
+    const { identifier, password } = body;
 
-    if (!phone || !password) {
-      return NextResponse.json({ error: 'Phone and password are required' }, { status: 400 });
+    if (!identifier || !password) {
+      return NextResponse.json({ error: 'Identifier and password are required' }, { status: 400 });
     }
 
     const supabase = createServiceClient();
+    const type = detectIdentifierType(identifier.trim());
 
-    const { data: profile, error } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('phone', phone)
-      .single();
+    let query = supabase.from('profiles').select('*');
+
+    if (type === 'email') {
+      query = query.eq('email', identifier.trim().toLowerCase());
+    } else if (type === 'phone') {
+      const normalised = identifier.trim().replace(/[\s\-\(\)]/g, '');
+      query = query.eq('phone', normalised);
+    } else {
+      query = query.ilike('username', identifier.trim());
+    }
+
+    const { data: profile, error } = await query.single();
 
     if (error || !profile) {
-      return NextResponse.json({ error: 'Invalid phone number or password' }, { status: 401 });
+      return NextResponse.json({ error: 'Account not found. Check your details.' }, { status: 401 });
     }
 
     const isValid = await verifyPassword(password, profile.password_hash);
     if (!isValid) {
-      return NextResponse.json({ error: 'Invalid phone number or password' }, { status: 401 });
+      return NextResponse.json({ error: 'Incorrect password' }, { status: 401 });
     }
 
     const token = signToken({ sub: profile.id, username: profile.username });

@@ -64,7 +64,14 @@ export default function ProfilePage() {
     try {
       const res = await authFetch('/api/users/profile', {
         method: 'PATCH',
-        body: JSON.stringify({ region, platforms, game_ids: gameIds, selected_games: selectedGames }),
+        body: JSON.stringify({
+          region,
+          platforms,
+          game_ids: gameIds,
+          selected_games: selectedGames,
+          whatsapp_notifications: profile?.whatsapp_notifications ?? false,
+          whatsapp_number: profile?.whatsapp_number ?? null,
+        }),
       });
       if (res.ok) { toast.success('Profile updated!'); fetchProfile(); }
       else { const d = await res.json(); toast.error(d.error ?? 'Failed to save'); }
@@ -185,6 +192,40 @@ export default function ProfilePage() {
               <select value={region} onChange={(e) => setRegion(e.target.value)} className="input max-w-xs">
                 {REGIONS.map((r) => <option key={r} value={r}>{r}</option>)}
               </select>
+            </div>
+
+            {/* WhatsApp notifications */}
+            <div className="bg-white/[0.02] border border-white/[0.06] rounded-xl p-4">
+              <label className="flex items-center justify-between gap-4 cursor-pointer">
+                <div>
+                  <p className="text-sm font-medium text-white">📲 WhatsApp match alerts</p>
+                  <p className="text-xs text-white/30 mt-0.5">Notify when matches are found or results confirmed</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setProfile((p) => p ? { ...p, whatsapp_notifications: !(p.whatsapp_notifications as boolean) } : p)}
+                  className={`relative w-11 h-6 rounded-full transition-colors flex-shrink-0 ${
+                    (profile?.whatsapp_notifications as boolean) ? 'bg-green-500' : 'bg-white/10'
+                  }`}
+                >
+                  <span className={`absolute top-1 w-4 h-4 bg-white rounded-full shadow transition-transform ${
+                    (profile?.whatsapp_notifications as boolean) ? 'translate-x-6' : 'translate-x-1'
+                  }`} />
+                </button>
+              </label>
+              {(profile?.whatsapp_notifications as boolean) && (
+                <div className="mt-3 pt-3 border-t border-white/[0.06]">
+                  <label className="label">WhatsApp Number</label>
+                  <input
+                    type="tel"
+                    value={(profile?.whatsapp_number as string) ?? ''}
+                    onChange={(e) => setProfile((p) => p ? { ...p, whatsapp_number: e.target.value } : p)}
+                    placeholder="0712 345 678"
+                    className="input"
+                    inputMode="tel"
+                  />
+                </div>
+              )}
             </div>
 
             <div>

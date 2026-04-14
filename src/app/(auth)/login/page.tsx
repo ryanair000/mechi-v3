@@ -10,20 +10,20 @@ import { Eye, EyeOff, Loader2 } from 'lucide-react';
 export default function LoginPage() {
   const router = useRouter();
   const { login } = useAuth();
-  const [phone, setPhone] = useState('');
+  const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!phone.trim() || !password) { toast.error('Enter your phone and password'); return; }
+    if (!identifier.trim() || !password) { toast.error('Enter your details and password'); return; }
     setLoading(true);
     try {
       const res = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone: phone.trim(), password }),
+        body: JSON.stringify({ identifier: identifier.trim(), password }),
       });
       const data = await res.json();
       if (!res.ok) { toast.error(data.error ?? 'Login failed'); return; }
@@ -36,7 +36,6 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen bg-gray-950 flex flex-col">
-      {/* Nav */}
       <nav className="px-5 sm:px-8 h-16 flex items-center">
         <Link href="/" className="flex items-center gap-2">
           <div className="w-7 h-7 rounded-lg bg-emerald-500 flex items-center justify-center font-bold text-white text-xs">M</div>
@@ -53,19 +52,35 @@ export default function LoginPage() {
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="label">Phone Number</label>
-              <input type="tel" value={phone} onChange={(e) => setPhone(e.target.value)}
-                placeholder="0712 345 678" className="input" autoComplete="tel" inputMode="tel" />
+              <label className="label">Phone, username, or email</label>
+              <input
+                type="text"
+                value={identifier}
+                onChange={(e) => setIdentifier(e.target.value)}
+                placeholder="0712 345 678 · GameKing254 · you@mail.com"
+                className="input"
+                autoComplete="username"
+                autoCapitalize="none"
+                spellCheck={false}
+              />
             </div>
 
             <div>
               <label className="label">Password</label>
               <div className="relative">
-                <input type={showPassword ? 'text' : 'password'} value={password}
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="••••••••" className="input pr-12" autoComplete="current-password" />
-                <button type="button" onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-white/20 hover:text-white/40 p-1.5 transition-colors">
+                  placeholder="••••••••"
+                  className="input pr-12"
+                  autoComplete="current-password"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-white/20 hover:text-white/40 p-1.5 transition-colors"
+                >
                   {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                 </button>
               </div>

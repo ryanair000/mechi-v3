@@ -7,7 +7,7 @@ import { DEFAULT_RATING } from '@/lib/config';
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { username, phone, email, password, region, platforms, game_ids, selected_games } = body;
+    const { username, phone, email, password, region, platforms, game_ids, selected_games, whatsapp_number, whatsapp_notifications } = body;
 
     // Validation
     if (!username || !phone || !password || !region) {
@@ -78,6 +78,8 @@ export async function POST(request: NextRequest) {
         losses_nba2k26: 0,
         losses_tekken8: 0,
         losses_sf6: 0,
+        whatsapp_number: whatsapp_number || phone || null,
+        whatsapp_notifications: whatsapp_notifications ?? false,
       })
       .select()
       .single();

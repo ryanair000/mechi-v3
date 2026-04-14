@@ -1,7 +1,7 @@
 import { Resend } from 'resend';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
-const FROM = 'noreply@mechi.club';
+const FROM = 'Mechi <noreply@mechi.club>';
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'https://mechi.club';
 
 function baseLayout(title: string, content: string): string {
@@ -177,5 +177,44 @@ export async function sendResultConfirmedEmail(params: {
     });
   } catch (err) {
     console.error('[Email] Result confirmed send error:', err);
+  }
+}
+
+export async function sendMatchDisputeEmail(params: {
+  to: string;
+  username: string;
+  opponentUsername: string;
+  game: string;
+  matchId: string;
+}): Promise<void> {
+  const content = `
+    <h2>Match Disputed ⚠️</h2>
+    <p>Your match against <strong>${params.opponentUsername}</strong> in <strong>${params.game}</strong> has been disputed.</p>
+    <p>Upload a screenshot of the result so our team can resolve it within 24 hours.</p>
+    <div class="info-box">
+      <div class="info-row">
+        <span class="info-label">Game</span>
+        <span class="info-value">${params.game}</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">Opponent</span>
+        <span class="info-value">${params.opponentUsername}</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">Status</span>
+        <span class="info-value"><span class="badge badge-red">DISPUTED</span></span>
+      </div>
+    </div>
+    <a href="${APP_URL}/match/${params.matchId}" class="btn">Upload Screenshot →</a>
+  `;
+  try {
+    await resend.emails.send({
+      from: FROM,
+      to: params.to,
+      subject: `Match disputed — upload a screenshot to resolve`,
+      html: baseLayout('Match Disputed', content),
+    });
+  } catch (err) {
+    console.error('[Email] Dispute send error:', err);
   }
 }

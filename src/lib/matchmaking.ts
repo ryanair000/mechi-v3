@@ -18,7 +18,7 @@ export async function runMatchmaking(supabase: SupabaseClient): Promise<number> 
   // Get all waiting queue entries ordered by join time
   const { data: queueEntries, error } = await supabase
     .from('queue')
-    .select('*, profiles:user_id(id, username, phone, email, platforms, game_ids, selected_games)')
+    .select('*, profiles:user_id(id, username, phone, email, platforms, game_ids, selected_games, whatsapp_number, whatsapp_notifications)')
     .eq('status', 'waiting')
     .order('joined_at', { ascending: true });
 
@@ -91,11 +91,13 @@ export async function runMatchmaking(supabase: SupabaseClient): Promise<number> 
         const p1PlatformId = p1Platform ? (p1GameIds[p1Platform] ?? 'Not set') : 'Not set';
         const p2PlatformId = p2Platform ? (p2GameIds[p2Platform] ?? 'Not set') : 'Not set';
 
+        const gameLabel = game?.label ?? entry.game;
+
         // Notify player 1
-        if (p1Profile.phone) {
+        if (p1Profile.whatsapp_notifications && p1Profile.whatsapp_number) {
           notifyMatchFound({
-            phone: p1Profile.phone as string,
-            game: game?.label ?? entry.game,
+            phone: p1Profile.whatsapp_number as string,
+            game: gameLabel,
             opponentUsername: p2Profile.username as string,
             opponentPlatformId: p2PlatformId,
             matchId: match.id,
@@ -106,7 +108,7 @@ export async function runMatchmaking(supabase: SupabaseClient): Promise<number> 
             to: p1Profile.email as string,
             username: p1Profile.username as string,
             opponentUsername: p2Profile.username as string,
-            game: game?.label ?? entry.game,
+            game: gameLabel,
             platform: p2Platform ?? 'Unknown',
             opponentPlatformId: p2PlatformId,
             matchId: match.id,
@@ -114,10 +116,10 @@ export async function runMatchmaking(supabase: SupabaseClient): Promise<number> 
         }
 
         // Notify player 2
-        if (p2Profile.phone) {
+        if (p2Profile.whatsapp_notifications && p2Profile.whatsapp_number) {
           notifyMatchFound({
-            phone: p2Profile.phone as string,
-            game: game?.label ?? entry.game,
+            phone: p2Profile.whatsapp_number as string,
+            game: gameLabel,
             opponentUsername: p1Profile.username as string,
             opponentPlatformId: p1PlatformId,
             matchId: match.id,
@@ -128,7 +130,7 @@ export async function runMatchmaking(supabase: SupabaseClient): Promise<number> 
             to: p2Profile.email as string,
             username: p2Profile.username as string,
             opponentUsername: p1Profile.username as string,
-            game: game?.label ?? entry.game,
+            game: gameLabel,
             platform: p1Platform ?? 'Unknown',
             opponentPlatformId: p1PlatformId,
             matchId: match.id,

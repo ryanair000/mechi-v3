@@ -1,16 +1,18 @@
-const WHATSAPP_TOKEN = process.env.WHATSAPP_TOKEN!;
-const PHONE_NUMBER_ID = process.env.WHATSAPP_PHONE_NUMBER_ID!;
+const WHATSAPP_TOKEN = process.env.WHATSAPP_TOKEN;
+const PHONE_NUMBER_ID = process.env.WHATSAPP_PHONE_NUMBER_ID;
 const API_VERSION = 'v25.0';
+const WHATSAPP_ENABLED = !!(WHATSAPP_TOKEN && PHONE_NUMBER_ID);
 
 async function sendWhatsApp(to: string, message: string): Promise<boolean> {
-  // Normalize phone number — ensure it starts with country code (254 for Kenya)
+  if (!WHATSAPP_ENABLED) {
+    console.log('[WhatsApp] Skipped — WHATSAPP_TOKEN or WHATSAPP_PHONE_NUMBER_ID not set');
+    return false;
+  }
+
+  // Normalize: ensure country code 254 (Kenya)
   let phone = to.replace(/\D/g, '');
-  if (phone.startsWith('0')) {
-    phone = '254' + phone.slice(1);
-  }
-  if (!phone.startsWith('254')) {
-    phone = '254' + phone;
-  }
+  if (phone.startsWith('0')) phone = '254' + phone.slice(1);
+  if (!phone.startsWith('254')) phone = '254' + phone;
 
   try {
     const response = await fetch(
@@ -31,11 +33,9 @@ async function sendWhatsApp(to: string, message: string): Promise<boolean> {
     );
 
     if (!response.ok) {
-      const err = await response.text();
-      console.error('[WhatsApp] Send error:', err);
+      console.error('[WhatsApp] Send error:', await response.text());
       return false;
     }
-
     return true;
   } catch (err) {
     console.error('[WhatsApp] Network error:', err);
@@ -50,6 +50,7 @@ export async function notifyMatchFound(params: {
   opponentPlatformId: string;
   matchId: string;
 }): Promise<boolean> {
+  if (!WHATSAPP_ENABLED) return false;
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://mechi.club';
   const message =
     `🎮 Mechi Inaanza!\n` +
@@ -65,11 +66,29 @@ export async function notifyResultConfirmed(params: {
   ratingChange: number;
   won: boolean;
 }): Promise<boolean> {
+  if (!WHATSAPP_ENABLED) return false;
   const sign = params.ratingChange >= 0 ? '+' : '';
   const message =
-    `✅ Match result confirmed.\n` +
+    `✅ Match confirmed.\n` +
     `Result: ${params.won ? 'Victory! 🏆' : 'Defeat 😔'}\n` +
-    `Rating change: ${sign}${params.ratingChange}`;
+    `Rating: ${sign}${params.ratingChange}`;
+  return sendWhatsApp(params.phone, message);
+}
+
+export async function notifyMatchDisputed(params: {
+  phone: string;
+  game: string;
+  opponentUsername: string;
+  matchId: string;
+}): Promise<boolean> {
+  if (!WHATSAPP_ENABLED) return false;
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://mechi.club';
+  const message =
+    `⚠️ Match Disputed\n` +
+    `Game: ${params.game}\n` +
+    `vs ${params.opponentUsername}\n` +
+    `Upload screenshot to resolve:\n` +
+    `${appUrl}/match/${params.matchId}`;
   return sendWhatsApp(params.phone, message);
 }
 

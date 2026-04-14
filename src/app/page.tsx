@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { Gamepad2, Trophy, Shield, Monitor, Smartphone, Zap, Users, ArrowRight } from 'lucide-react';
+import { Gamepad2, Trophy, Shield, Monitor, Smartphone, Zap, ArrowRight } from 'lucide-react';
 
 const GAMES = [
   { emoji: '⚽', name: 'eFootball', platforms: 'PS · Mobile · PC' },

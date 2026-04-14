@@ -6,6 +6,8 @@ import { PLATFORMS, GAMES, REGIONS, getGamesForPlatforms, getTier } from '@/lib/
 import type { PlatformKey, GameKey } from '@/types';
 import toast from 'react-hot-toast';
 import { Settings, BarChart2, Check, Loader2, LogOut } from 'lucide-react';
+import { ShareMenu } from '@/components/ShareMenu';
+import { profileShareText, getProfileShareUrl, getProfileOgImageUrl } from '@/lib/share';
 
 interface Profile { [key: string]: unknown; }
 
@@ -82,6 +84,11 @@ export default function ProfilePage() {
 
   const selectedGamesForPlatforms = getGamesForPlatforms(platforms).filter((g) => GAMES[g].mode === '1v1');
   const userGames = (profile?.selected_games as GameKey[]) ?? [];
+  const bestRating = userGames.reduce((best, g) => {
+    const r = (profile?.[`rating_${g}`] as number) ?? 1000;
+    return r > best ? r : best;
+  }, 1000);
+  const bestTier = getTier(bestRating);
 
   return (
     <div className="page-container">
@@ -95,10 +102,22 @@ export default function ProfilePage() {
             <div className="flex-1 min-w-0">
               <h1 className="text-lg font-bold text-white truncate">{user?.username}</h1>
               <p className="text-xs text-white/25 mt-0.5">{profile?.region as string} · {(profile?.platforms as string[])?.length ?? 0} platforms</p>
-              <div className="flex gap-1.5 mt-2">
-                {((profile?.platforms ?? []) as PlatformKey[]).map((p) => (
-                  <span key={p} className="text-base" title={PLATFORMS[p]?.label}>{PLATFORMS[p]?.icon}</span>
-                ))}
+              <div className="flex items-center gap-3 mt-2">
+                <div className="flex gap-1.5">
+                  {((profile?.platforms ?? []) as PlatformKey[]).map((p) => (
+                    <span key={p} className="text-base" title={PLATFORMS[p]?.label}>{PLATFORMS[p]?.icon}</span>
+                  ))}
+                </div>
+                {user?.username && (
+                  <ShareMenu
+                    text={profileShareText(user.username, bestTier.name, bestRating)}
+                    url={getProfileShareUrl(user.username)}
+                    title="My Mechi Profile"
+                    imageUrl={getProfileOgImageUrl(user.username)}
+                    imageFilename={`mechi-profile-${user.username}.png`}
+                    variant="inline"
+                  />
+                )}
               </div>
             </div>
           </div>

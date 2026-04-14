@@ -8,8 +8,10 @@ import { RatingBadge } from '@/components/RatingBadge';
 import { GAMES, PLATFORMS, getTier } from '@/lib/config';
 import type { GameKey, Match, PlatformKey } from '@/types';
 import toast from 'react-hot-toast';
-import { Swords, AlertCircle, ChevronRight } from 'lucide-react';
+import { Swords, AlertCircle, ChevronRight, Users } from 'lucide-react';
 import Link from 'next/link';
+import { ShareMenu } from '@/components/ShareMenu';
+import { inviteShareText, getInviteUrl } from '@/lib/share';
 
 interface UserProfile {
   id: string;
@@ -201,6 +203,27 @@ export default function DashboardPage() {
                 </div>
               );
             })}
+          </div>
+        </section>
+      )}
+
+      {/* Invite friends */}
+      {user?.username && (
+        <section className="mt-8">
+          <div className="bg-emerald-500/[0.06] border border-emerald-500/15 rounded-2xl p-5 flex items-center gap-4">
+            <div className="w-10 h-10 rounded-xl bg-emerald-500/15 flex items-center justify-center flex-shrink-0">
+              <Users size={18} className="text-emerald-400" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="font-semibold text-white text-sm">Invite Friends</p>
+              <p className="text-xs text-white/30 mt-0.5">Bring your squad to Mechi — earn your rank together</p>
+            </div>
+            <ShareMenu
+              text={inviteShareText(user.username)}
+              url={getInviteUrl()}
+              title="Join Mechi"
+              variant="ghost"
+            />
           </div>
         </section>
       )}

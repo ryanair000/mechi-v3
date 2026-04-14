@@ -11,6 +11,8 @@ import type { GameKey, PlatformKey } from '@/types';
 import toast from 'react-hot-toast';
 import { Swords, Check, X, Upload, ImageIcon, ExternalLink, Clock, AlertTriangle } from 'lucide-react';
 import Image from 'next/image';
+import { ShareMenu } from '@/components/ShareMenu';
+import { matchResultShareText, getMatchShareUrl, getMatchOgImageUrl } from '@/lib/share';
 
 interface MatchPlayer { id: string; username: string; game_ids: Record<string, string>; platforms: PlatformKey[]; }
 interface MatchData {
@@ -261,7 +263,19 @@ export default function MatchPage() {
                 Winner: <strong className="text-white">{match.winner_id === user.id ? 'You' : opponent.username}</strong>
               </p>
             )}
-            <button onClick={() => router.push('/dashboard')} className="btn-primary mt-4">Play Again</button>
+            <div className="flex gap-3 justify-center mt-4">
+              <button onClick={() => router.push('/dashboard')} className="btn-primary">Play Again</button>
+              {iWon && (
+                <ShareMenu
+                  text={matchResultShareText(me.username, opponent.username, game?.label ?? match.game, myRatingChange ?? 0)}
+                  url={getMatchShareUrl(matchId)}
+                  title="Match Result"
+                  imageUrl={getMatchOgImageUrl(matchId)}
+                  imageFilename={`mechi-match-${matchId}.png`}
+                  variant="ghost"
+                />
+              )}
+            </div>
           </div>
         )}
 

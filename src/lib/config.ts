@@ -1,0 +1,191 @@
+import type { Platform, Game, Tier, PlatformKey, GameKey } from '@/types';
+
+export const PLATFORMS: Record<PlatformKey, Platform> = {
+  ps: {
+    label: 'PlayStation',
+    idLabel: 'PSN ID',
+    placeholder: 'YourPSN',
+    icon: '🎮',
+  },
+  xbox: {
+    label: 'Xbox',
+    idLabel: 'Xbox Gamertag',
+    placeholder: 'YourGamertag',
+    icon: '🟢',
+  },
+  nintendo: {
+    label: 'Nintendo',
+    idLabel: 'Friend Code',
+    placeholder: 'SW-XXXX-XXXX-XXXX',
+    icon: '🔴',
+  },
+  mobile: {
+    label: 'Mobile',
+    idLabel: 'In-Game ID',
+    placeholder: 'Username#1234',
+    icon: '📱',
+  },
+  pc: {
+    label: 'PC',
+    idLabel: 'Steam/Epic ID',
+    placeholder: 'YourUsername',
+    icon: '🖥️',
+  },
+};
+
+export const GAMES: Record<GameKey, Game> = {
+  efootball: {
+    label: 'eFootball 2025',
+    platforms: ['ps', 'xbox', 'pc', 'mobile'],
+    mode: '1v1',
+    steamAppId: 1665460,
+  },
+  fc26: {
+    label: 'EA FC 26',
+    platforms: ['ps', 'xbox', 'pc'],
+    mode: '1v1',
+    steamAppId: 2669320,
+  },
+  mk11: {
+    label: 'Mortal Kombat 11',
+    platforms: ['ps', 'xbox', 'pc', 'nintendo'],
+    mode: '1v1',
+    steamAppId: 976310,
+  },
+  nba2k26: {
+    label: 'NBA 2K26',
+    platforms: ['ps', 'xbox', 'pc'],
+    mode: '1v1',
+    steamAppId: 2338490,
+  },
+  tekken8: {
+    label: 'Tekken 8',
+    platforms: ['ps', 'xbox', 'pc'],
+    mode: '1v1',
+    steamAppId: 1778820,
+  },
+  sf6: {
+    label: 'Street Fighter 6',
+    platforms: ['ps', 'xbox', 'pc'],
+    mode: '1v1',
+    steamAppId: 1364780,
+  },
+  codm: {
+    label: 'COD Mobile',
+    platforms: ['mobile'],
+    mode: 'lobby',
+    maxPlayers: 5,
+  },
+  pubgm: {
+    label: 'PUBG Mobile',
+    platforms: ['mobile'],
+    mode: 'lobby',
+    maxPlayers: 4,
+  },
+  cs2: {
+    label: 'CS2',
+    platforms: ['pc'],
+    mode: '1v1',
+    steamAppId: 730,
+  },
+  valorant: {
+    label: 'Valorant',
+    platforms: ['pc'],
+    mode: '1v1',
+    steamAppId: 1343400,
+  },
+  mariokart: {
+    label: 'Mario Kart 8',
+    platforms: ['nintendo'],
+    mode: '1v1',
+  },
+  smashbros: {
+    label: 'Super Smash Bros',
+    platforms: ['nintendo'],
+    mode: '1v1',
+  },
+  freefirm: {
+    label: 'Free Fire',
+    platforms: ['mobile'],
+    mode: 'lobby',
+    maxPlayers: 4,
+  },
+  rocketleague: {
+    label: 'Rocket League',
+    platforms: ['ps', 'xbox', 'pc'],
+    mode: '1v1',
+    steamAppId: 252950,
+  },
+};
+
+export const TIERS: Tier[] = [
+  { name: 'Bronze', min: 0, max: 899, color: 'text-amber-700', bgColor: 'bg-amber-100 dark:bg-amber-900/30' },
+  { name: 'Silver', min: 900, max: 1099, color: 'text-gray-500', bgColor: 'bg-gray-100 dark:bg-gray-800' },
+  { name: 'Gold', min: 1100, max: 1299, color: 'text-yellow-500', bgColor: 'bg-yellow-50 dark:bg-yellow-900/30' },
+  { name: 'Platinum', min: 1300, max: 1499, color: 'text-cyan-500', bgColor: 'bg-cyan-50 dark:bg-cyan-900/30' },
+  { name: 'Diamond', min: 1500, max: 1699, color: 'text-blue-500', bgColor: 'bg-blue-50 dark:bg-blue-900/30' },
+  { name: 'Legend', min: 1700, max: Infinity, color: 'text-purple-500', bgColor: 'bg-purple-50 dark:bg-purple-900/30' },
+];
+
+export const REGIONS = ['Nairobi', 'Mombasa', 'Kisumu', 'Nakuru', 'Eldoret', 'Other'];
+
+export const DEFAULT_RATING = 1000;
+
+export function getTier(rating: number): Tier {
+  return TIERS.find((t) => rating >= t.min && rating <= t.max) ?? TIERS[0];
+}
+
+export function getGameImage(gameKey: GameKey): string | null {
+  const game = GAMES[gameKey];
+  if (game.steamAppId) {
+    return `https://cdn.cloudflare.steamstatic.com/steam/apps/${game.steamAppId}/header.jpg`;
+  }
+  return null;
+}
+
+export function getGameRatingKey(game: GameKey): string {
+  return `rating_${game}`;
+}
+
+export function getGameWinsKey(game: GameKey): string {
+  return `wins_${game}`;
+}
+
+export function getGameLossesKey(game: GameKey): string {
+  return `losses_${game}`;
+}
+
+export function getGamesForPlatforms(platforms: PlatformKey[]): GameKey[] {
+  return (Object.keys(GAMES) as GameKey[]).filter((gameKey) => {
+    const game = GAMES[gameKey];
+    return game.platforms.some((p) => platforms.includes(p));
+  });
+}
+
+export function getPlatformAddUrl(platform: PlatformKey, platformId: string): string | null {
+  switch (platform) {
+    case 'ps':
+      return `https://psnprofiles.com/${encodeURIComponent(platformId)}`;
+    case 'xbox':
+      return `https://account.xbox.com/en-us/profile?gamertag=${encodeURIComponent(platformId)}`;
+    case 'nintendo':
+      return null;
+    case 'pc':
+      return `https://steamcommunity.com/id/${encodeURIComponent(platformId)}`;
+    case 'mobile':
+      return null;
+    default:
+      return null;
+  }
+}
+
+export function getPlatformLabel(platform: PlatformKey): string {
+  return PLATFORMS[platform]?.label ?? platform;
+}
+
+export function getMatchingPlatform(
+  userPlatforms: PlatformKey[],
+  gamePlatforms: PlatformKey[]
+): PlatformKey | null {
+  return userPlatforms.find((p) => gamePlatforms.includes(p)) ?? null;
+}

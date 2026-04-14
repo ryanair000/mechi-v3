@@ -30,40 +30,38 @@ export function GameCard({
     ? Math.round((wins / (wins + losses)) * 100) : null;
 
   return (
-    <div className="bg-white/5 border border-white/8 rounded-2xl overflow-hidden group hover:border-white/15 transition-all duration-200">
+    <div className="bg-white/[0.03] border border-white/[0.06] rounded-2xl overflow-hidden group hover:border-white/10 transition-all duration-200">
       {/* Cover */}
-      <div className="relative h-32 bg-white/5 overflow-hidden">
+      <div className="relative h-36 bg-white/[0.03] overflow-hidden">
         {imageUrl ? (
-          <Image
-            src={imageUrl} alt={game.label} fill
+          <Image src={imageUrl} alt={game.label} fill
             className="object-cover transition-transform duration-500 group-hover:scale-105"
-            sizes="(max-width: 640px) 50vw, 33vw"
-          />
+            sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw" />
         ) : (
           <div className="flex items-center justify-center h-full text-4xl">🎮</div>
         )}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
 
         {/* Mode badge */}
-        <div className="absolute top-2 right-2">
-          <span className={`text-[10px] font-bold px-2 py-1 rounded-lg ${isLobby ? 'bg-blue-500/80 text-white' : 'bg-emerald-500/80 text-white'}`}>
+        <div className="absolute top-2.5 right-2.5">
+          <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-md ${isLobby ? 'bg-blue-500/80' : 'bg-emerald-500/80'} text-white`}>
             {isLobby ? 'LOBBY' : '1v1'}
           </span>
         </div>
 
-        {/* Live indicator */}
+        {/* Live count */}
         {queueCount !== undefined && queueCount > 0 && (
-          <div className="absolute top-2 left-2">
-            <span className="flex items-center gap-1 text-[10px] font-bold bg-black/60 backdrop-blur-sm text-emerald-400 px-2 py-1 rounded-lg">
+          <div className="absolute top-2.5 left-2.5">
+            <span className="flex items-center gap-1 text-[10px] font-medium bg-black/50 backdrop-blur-sm text-emerald-400 px-2 py-0.5 rounded-md">
               <span className="w-1 h-1 rounded-full bg-emerald-400 animate-pulse" />
-              {queueCount} live
+              {queueCount} in queue
             </span>
           </div>
         )}
 
         {/* Game name */}
-        <div className="absolute bottom-2 left-3 right-3">
-          <p className="text-white font-bold text-sm leading-tight drop-shadow-lg">{game.label}</p>
+        <div className="absolute bottom-2.5 left-3 right-3">
+          <p className="text-white font-semibold text-sm leading-tight drop-shadow">{game.label}</p>
           <div className="flex gap-1 mt-1">
             {game.platforms.map((p) => (
               <span key={p} title={PLATFORMS[p]?.label} className="text-xs">{PLATFORMS[p]?.icon}</span>
@@ -78,36 +76,35 @@ export function GameCard({
         {rating !== undefined && (
           <div className="grid grid-cols-4 gap-1 mb-3">
             <div className="text-center">
-              <div className="text-sm font-black text-white">{rating}</div>
-              <div className="text-[9px] text-white/30 uppercase tracking-wide">ELO</div>
+              <div className="text-sm font-bold text-white">{rating}</div>
+              <div className="text-[9px] text-white/20 uppercase">ELO</div>
             </div>
             <div className="text-center">
-              <div className="text-sm font-black text-emerald-400">{wins ?? 0}</div>
-              <div className="text-[9px] text-white/30 uppercase tracking-wide">W</div>
+              <div className="text-sm font-bold text-emerald-400">{wins ?? 0}</div>
+              <div className="text-[9px] text-white/20 uppercase">W</div>
             </div>
             <div className="text-center">
-              <div className="text-sm font-black text-red-400">{losses ?? 0}</div>
-              <div className="text-[9px] text-white/30 uppercase tracking-wide">L</div>
+              <div className="text-sm font-bold text-red-400">{losses ?? 0}</div>
+              <div className="text-[9px] text-white/20 uppercase">L</div>
             </div>
             <div className="text-center">
-              <div className="text-sm font-black text-blue-400">{winRate !== null ? `${winRate}%` : '-'}</div>
-              <div className="text-[9px] text-white/30 uppercase tracking-wide">WR</div>
+              <div className="text-sm font-bold text-blue-400">{winRate !== null ? `${winRate}%` : '-'}</div>
+              <div className="text-[9px] text-white/20 uppercase">WR</div>
             </div>
           </div>
         )}
 
         {/* Action */}
         {isLobby ? (
-          <button onClick={onViewLobby} disabled={isDisabled}
-            className="w-full btn-ghost text-xs py-2.5 min-h-[36px]">
+          <button onClick={onViewLobby} disabled={isDisabled} className="w-full btn-ghost text-xs py-2 min-h-[36px]">
             <Users size={13} /> View Lobbies
           </button>
         ) : (
           <button onClick={onJoinQueue} disabled={isDisabled || isQueuing}
-            className={`w-full text-xs py-2.5 min-h-[36px] rounded-xl font-bold transition-all flex items-center justify-center gap-1.5 ${
+            className={`w-full text-xs py-2 min-h-[36px] rounded-xl font-semibold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
               isQueuing
-                ? 'bg-white/5 text-white/40 cursor-not-allowed'
-                : 'bg-emerald-500 hover:bg-emerald-400 active:scale-95 text-white'
+                ? 'bg-white/[0.04] text-white/30 cursor-not-allowed'
+                : 'bg-emerald-500 hover:bg-emerald-400 active:scale-[0.98] text-white'
             }`}>
             {isQueuing ? <><Loader2 size={12} className="animate-spin" /> Searching...</> : <><Swords size={12} /> Find Match</>}
           </button>

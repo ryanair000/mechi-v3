@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/components/AuthProvider';
 import { Navbar } from '@/components/Navbar';
 import { BottomNav } from '@/components/BottomNav';
+import { Sidebar } from '@/components/Sidebar';
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
@@ -19,11 +20,11 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-950">
-        <div className="flex flex-col items-center gap-4">
-          <div className="w-12 h-12 rounded-2xl bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center font-black text-emerald-400 text-xl">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-emerald-500/15 flex items-center justify-center font-bold text-emerald-400 text-lg">
             M
           </div>
-          <p className="text-white/30 text-sm">Loading...</p>
+          <p className="text-white/20 text-sm">Loading...</p>
         </div>
       </div>
     );
@@ -33,8 +34,11 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="min-h-screen bg-gray-950">
+      <Sidebar />
       <Navbar />
-      <main className="pb-20">{children}</main>
+      <div className="lg:pl-60">
+        <main className="pb-20 lg:pb-8">{children}</main>
+      </div>
       <BottomNav />
     </div>
   );

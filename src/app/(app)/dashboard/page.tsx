@@ -65,15 +65,12 @@ export default function DashboardPage() {
       const res = await authFetch('/api/queue/join', { method: 'POST', body: JSON.stringify({ game }) });
       const data = await res.json();
       if (!res.ok) {
-        if (data.matchId) { router.push(`/match/${data.matchId}`); }
+        if (data.matchId) router.push(`/match/${data.matchId}`);
         else { toast.error(data.error ?? 'Failed to join queue'); setQueuingGame(null); }
         return;
       }
       router.push(`/queue?game=${game}`);
-    } catch {
-      toast.error('Network error');
-      setQueuingGame(null);
-    }
+    } catch { toast.error('Network error'); setQueuingGame(null); }
   };
 
   const userGames = profile?.selected_games ?? [];
@@ -81,7 +78,6 @@ export default function DashboardPage() {
     (g) => GAMES[g].mode === 'lobby' && GAMES[g].platforms.some((p) => profile?.platforms?.includes(p))
   );
 
-  // Best rating across selected games
   const bestRating = userGames.reduce((best, g) => {
     const r = (profile?.[`rating_${g}`] as number) ?? 1000;
     return r > best ? r : best;
@@ -90,62 +86,62 @@ export default function DashboardPage() {
 
   if (loading) {
     return (
-      <div className="page-container space-y-4">
-        {[1, 2, 3].map((i) => <div key={i} className="h-48 shimmer" />)}
+      <div className="page-container">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {[1, 2, 3].map((i) => <div key={i} className="h-48 shimmer" />)}
+        </div>
       </div>
     );
   }
 
   return (
     <div className="page-container">
-      {/* Hero header */}
-      <div className="mb-6 pt-2">
-        <div className="flex items-start justify-between">
-          <div>
-            <p className="text-white/40 text-xs font-semibold mb-1">
-              {new Date().toLocaleDateString('en-KE', { weekday: 'long', month: 'short', day: 'numeric' })}
-            </p>
-            <h1 className="text-2xl font-black text-white leading-tight">
-              Hey, {user?.username ?? 'Player'} 👋
-            </h1>
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8 pt-2">
+        <div>
+          <p className="text-white/25 text-xs font-medium mb-1">
+            {new Date().toLocaleDateString('en-KE', { weekday: 'long', month: 'long', day: 'numeric' })}
+          </p>
+          <h1 className="text-2xl font-bold text-white">
+            Welcome back, {user?.username ?? 'Player'}
+          </h1>
+        </div>
+        <div className="flex items-center gap-3">
+          <div className="px-3 py-1.5 rounded-lg text-xs font-semibold" style={{ background: tier.color + '15', color: tier.color }}>
+            {tier.name} · {bestRating} ELO
           </div>
-          <div className="flex flex-col items-end gap-1">
-            <div className={`px-3 py-1 rounded-full text-xs font-bold`} style={{ background: tier.color + '25', color: tier.color }}>
-              {tier.name}
-            </div>
-            <div className="flex gap-1">
-              {(profile?.platforms ?? []).slice(0, 3).map((p) => (
-                <span key={p} title={PLATFORMS[p]?.label} className="text-base">{PLATFORMS[p]?.icon}</span>
-              ))}
-            </div>
+          <div className="flex gap-1.5">
+            {(profile?.platforms ?? []).slice(0, 5).map((p) => (
+              <span key={p} title={PLATFORMS[p]?.label} className="text-base">{PLATFORMS[p]?.icon}</span>
+            ))}
           </div>
         </div>
       </div>
 
       {/* Active match banner */}
       {activeMatch && (
-        <Link href={`/match/${activeMatch.id}`} className="block mb-5">
-          <div className="bg-emerald-500/15 border border-emerald-500/30 rounded-2xl p-4 flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-emerald-500/20 flex items-center justify-center flex-shrink-0">
-              <Swords size={20} className="text-emerald-400" />
+        <Link href={`/match/${activeMatch.id}`} className="block mb-6">
+          <div className="bg-emerald-500/8 border border-emerald-500/15 rounded-2xl p-4 flex items-center gap-4 hover:bg-emerald-500/12 transition-colors">
+            <div className="w-10 h-10 rounded-xl bg-emerald-500/15 flex items-center justify-center flex-shrink-0">
+              <Swords size={18} className="text-emerald-400" />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="font-bold text-white text-sm">Active Match</p>
-              <p className="text-xs text-white/50 truncate">{GAMES[activeMatch.game]?.label} · Tap to view</p>
+              <p className="font-semibold text-white text-sm">Active Match</p>
+              <p className="text-xs text-white/40 truncate">{GAMES[activeMatch.game]?.label} · Click to view</p>
             </div>
-            <ChevronRight size={18} className="text-white/30 flex-shrink-0" />
+            <ChevronRight size={16} className="text-white/20 flex-shrink-0" />
           </div>
         </Link>
       )}
 
       {/* No games warning */}
       {userGames.length === 0 && (
-        <div className="mb-5 bg-yellow-500/8 border border-yellow-500/20 rounded-2xl p-4 flex items-start gap-3">
-          <AlertCircle size={18} className="text-yellow-400 flex-shrink-0 mt-0.5" />
+        <div className="mb-6 bg-yellow-500/6 border border-yellow-500/15 rounded-2xl p-4 flex items-start gap-3">
+          <AlertCircle size={16} className="text-yellow-400 flex-shrink-0 mt-0.5" />
           <div>
-            <p className="font-bold text-yellow-300 text-sm">No games selected</p>
-            <p className="text-xs text-white/40 mt-0.5">Head to your profile to choose up to 3 games.</p>
-            <Link href="/profile" className="text-xs font-bold text-yellow-400 mt-2 inline-block">
+            <p className="font-semibold text-yellow-300 text-sm">No games selected</p>
+            <p className="text-xs text-white/30 mt-0.5">Head to your profile to choose up to 3 games.</p>
+            <Link href="/profile" className="text-xs font-semibold text-yellow-400 mt-2 inline-block hover:text-yellow-300">
               Update Profile →
             </Link>
           </div>
@@ -154,24 +150,21 @@ export default function DashboardPage() {
 
       {/* 1v1 games */}
       {userGames.length > 0 && (
-        <section className="mb-6">
-          <div className="flex items-center justify-between mb-3">
+        <section className="mb-8">
+          <div className="flex items-center justify-between mb-4">
             <p className="section-title">Your Games</p>
-            <Link href="/leaderboard" className="text-xs text-emerald-400 font-semibold">View Ranks →</Link>
+            <Link href="/leaderboard" className="text-xs text-emerald-400 font-medium hover:text-emerald-300">View Ranks →</Link>
           </div>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
             {userGames.map((gameKey) => (
-              <GameCard
-                key={gameKey}
-                gameKey={gameKey}
+              <GameCard key={gameKey} gameKey={gameKey}
                 rating={(profile?.[`rating_${gameKey}`] as number) ?? 1000}
                 wins={(profile?.[`wins_${gameKey}`] as number) ?? 0}
                 losses={(profile?.[`losses_${gameKey}`] as number) ?? 0}
                 queueCount={queueCounts[gameKey]}
                 onJoinQueue={() => handleJoinQueue(gameKey)}
                 isQueuing={queuingGame === gameKey}
-                isDisabled={!!activeMatch || (queuingGame !== null && queuingGame !== gameKey)}
-              />
+                isDisabled={!!activeMatch || (queuingGame !== null && queuingGame !== gameKey)} />
             ))}
           </div>
         </section>
@@ -179,9 +172,9 @@ export default function DashboardPage() {
 
       {/* Lobby games */}
       {lobbyGames.length > 0 && (
-        <section className="mb-6">
-          <p className="section-title mb-3">Lobby Games</p>
-          <div className="grid grid-cols-2 gap-3">
+        <section className="mb-8">
+          <p className="section-title mb-4">Lobby Games</p>
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
             {lobbyGames.map((gameKey) => (
               <GameCard key={gameKey} gameKey={gameKey} onViewLobby={() => router.push(`/lobbies?game=${gameKey}`)} />
             ))}
@@ -192,17 +185,17 @@ export default function DashboardPage() {
       {/* Rating overview */}
       {userGames.length > 0 && (
         <section>
-          <p className="section-title mb-3">Your Ratings</p>
-          <div className="space-y-2">
+          <p className="section-title mb-4">Rating Overview</p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
             {userGames.map((gameKey) => {
               const rating = (profile?.[`rating_${gameKey}`] as number) ?? 1000;
               const wins = (profile?.[`wins_${gameKey}`] as number) ?? 0;
               const losses = (profile?.[`losses_${gameKey}`] as number) ?? 0;
               return (
-                <div key={gameKey} className="card px-4 py-3.5 flex items-center justify-between">
+                <div key={gameKey} className="card px-5 py-4 flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-bold text-white">{GAMES[gameKey].label}</p>
-                    <p className="text-xs text-white/30 mt-0.5">{wins}W · {losses}L</p>
+                    <p className="text-sm font-semibold text-white">{GAMES[gameKey].label}</p>
+                    <p className="text-xs text-white/25 mt-0.5">{wins}W · {losses}L</p>
                   </div>
                   <RatingBadge rating={rating} size="sm" />
                 </div>

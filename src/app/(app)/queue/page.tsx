@@ -148,7 +148,7 @@ function QueueContent() {
           </div>
         </div>
 
-        <h1 className="text-[2rem] font-black tracking-[-0.05em] text-[var(--text-primary)] sm:text-[2.15rem]">
+        <h1 className="text-[2rem] font-black tracking-normal text-[var(--text-primary)] sm:text-[2.15rem]">
           Your next run is loading.
         </h1>
         <p className="mt-2 text-[13px] text-[var(--text-secondary)]">{gameConfig.label}</p>

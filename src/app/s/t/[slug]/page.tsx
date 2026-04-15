@@ -79,7 +79,7 @@ export default async function PublicTournamentPage({ params }: Props) {
           <div className="mx-auto my-6 flex h-20 w-20 items-center justify-center rounded-3xl bg-[rgba(255,107,107,0.14)] text-3xl font-black text-[var(--brand-coral)]">
             T
           </div>
-          <h1 className="text-4xl font-black tracking-[-0.06em] text-[var(--text-primary)]">
+          <h1 className="text-4xl font-black tracking-normal text-[var(--text-primary)]">
             {tournament.title}
           </h1>
           <p className="mx-auto mt-4 max-w-md text-sm leading-6 text-[var(--text-secondary)]">

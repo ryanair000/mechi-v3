@@ -44,7 +44,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         <Sidebar />
         <Navbar />
         <div className="lg:pl-60">
-          <main className="pb-20 lg:pb-8">{children}</main>
+          <main className="pb-[calc(5rem+env(safe-area-inset-bottom))] lg:pb-8">{children}</main>
         </div>
         <BottomNav />
       </div>

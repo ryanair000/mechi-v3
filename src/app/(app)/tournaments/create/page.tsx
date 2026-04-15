@@ -65,7 +65,7 @@ export default function CreateTournamentPage() {
 
         <div className="card circuit-panel mb-5 p-6">
           <p className="brand-kicker">New Bracket</p>
-          <h1 className="mt-3 text-3xl font-black tracking-[-0.05em] text-[var(--text-primary)]">
+          <h1 className="mt-3 text-3xl font-black tracking-normal text-[var(--text-primary)]">
             Create a tournament
           </h1>
           <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">

@@ -63,7 +63,7 @@ export default function LoginPage() {
         'One profile for your whole grind',
       ]}
     >
-      <div className="card p-5 sm:p-6">
+      <div className="card p-4 sm:p-6">
         <form onSubmit={handleSubmit} action="/api/auth/login" method="post" className="space-y-4">
           <input type="hidden" name="redirect_to" value="/dashboard" />
           <div>
@@ -96,7 +96,8 @@ export default function LoginPage() {
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 text-[var(--text-soft)] hover:text-[var(--text-primary)]"
+                className="absolute right-1 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-lg text-[var(--text-soft)] hover:text-[var(--text-primary)]"
+                aria-label={showPassword ? 'Hide password' : 'Show password'}
               >
                 {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
               </button>
@@ -117,7 +118,7 @@ export default function LoginPage() {
 
         <p className="mt-6 text-center text-sm text-[var(--text-secondary)]">
           New to Mechi?{' '}
-          <Link href="/register" className="brand-link-coral font-semibold">
+          <Link href="/register" className="brand-link-coral inline-flex min-h-11 items-center font-semibold">
             Create your account
           </Link>
         </p>

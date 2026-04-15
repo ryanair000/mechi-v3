@@ -96,14 +96,14 @@ export default function LandingPage() {
       <HomeFloatingHeader />
 
       <section className="relative overflow-hidden">
-        <div className="pointer-events-none absolute left-[10%] top-10 h-56 w-56 rounded-full bg-[rgba(50,224,196,0.1)] blur-[110px]" />
-        <div className="pointer-events-none absolute right-[12%] top-14 h-52 w-52 rounded-full bg-[rgba(255,107,107,0.1)] blur-[96px]" />
+        <div className="pointer-events-none absolute left-[10%] top-10 hidden h-56 w-56 rounded-full bg-[rgba(50,224,196,0.1)] blur-[110px] sm:block" />
+        <div className="pointer-events-none absolute right-[12%] top-14 hidden h-52 w-52 rounded-full bg-[rgba(255,107,107,0.1)] blur-[96px] sm:block" />
 
-        <div className="landing-shell relative pb-12 pt-10 sm:pb-14 sm:pt-12 lg:pb-18 lg:pt-16">
+        <div className="landing-shell relative pb-10 pt-6 sm:pb-14 sm:pt-12 lg:pb-18 lg:pt-16">
           <div className="max-w-2xl lg:max-w-[52%]">
             <BrandLogo size="lg" showTagline />
 
-            <h1 className="mt-6 max-w-2xl text-[2.6rem] font-black leading-[0.96] tracking-[-0.05em] text-[var(--text-primary)] sm:text-[3.2rem] lg:text-[3.8rem]">
+            <h1 className="mt-6 max-w-2xl text-[2.05rem] font-black leading-[1.04] tracking-normal text-[var(--text-primary)] sm:text-[3.2rem] sm:leading-[1.02] lg:text-[3.8rem]">
               Organized 1v1s for players who want less noise and better competition.
             </h1>
 
@@ -473,7 +473,7 @@ export default function LandingPage() {
                 Start free
                 <ArrowRight size={16} />
               </Link>
-              <Link href="/login" className="brand-link text-sm font-semibold">
+              <Link href="/login" className="brand-link inline-flex min-h-11 items-center text-sm font-semibold">
                 Already on Mechi? Jump back in
               </Link>
             </div>
@@ -488,10 +488,10 @@ export default function LandingPage() {
             Copyright {new Date().getFullYear()} Mechi. Competitive gaming for players who want organized play.
           </p>
           <div className="flex gap-5">
-            <Link href="/login" className="brand-link text-xs font-semibold">
+            <Link href="/login" className="brand-link inline-flex min-h-11 min-w-11 items-center justify-center text-xs font-semibold">
               Sign in
             </Link>
-            <Link href="/register" className="brand-link text-xs font-semibold">
+            <Link href="/register" className="brand-link inline-flex min-h-11 min-w-11 items-center justify-center text-xs font-semibold">
               Sign up
             </Link>
           </div>

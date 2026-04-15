@@ -175,7 +175,7 @@ export default function TournamentDetailPage() {
           <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
             <div>
               <p className="brand-kicker">{game?.label ?? tournament.game}</p>
-              <h1 className="mt-3 max-w-3xl text-3xl font-black tracking-[-0.05em] text-[var(--text-primary)] sm:text-4xl">
+              <h1 className="mt-3 max-w-3xl text-3xl font-black tracking-normal text-[var(--text-primary)] sm:text-4xl">
                 {tournament.title}
               </h1>
               <div className="mt-4 flex flex-wrap gap-2 text-xs font-bold text-[var(--text-secondary)]">

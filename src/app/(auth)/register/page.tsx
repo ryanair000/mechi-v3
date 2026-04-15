@@ -212,15 +212,15 @@ export default function RegisterPage() {
         'Upgrade later to unlock up to 3 games',
       ]}
     >
-      <div className="card p-5 sm:p-6">
-            <div className="mb-6 grid grid-cols-4 gap-2">
+      <div className="card p-4 sm:p-6">
+            <div className="mb-5 grid grid-cols-4 gap-1.5 sm:mb-6 sm:gap-2">
               {([1, 2, 3, 4] as Step[]).map((currentStep) => (
                 <div
                   key={currentStep}
-                  className="rounded-xl border border-[var(--border-color)] bg-[var(--surface-soft)] px-3 py-2.5"
+                  className="rounded-lg border border-[var(--border-color)] bg-[var(--surface-soft)] px-2 py-2 sm:rounded-xl sm:px-3 sm:py-2.5"
                 >
                   <div
-                    className={`flex h-6 w-6 items-center justify-center rounded-full text-[11px] font-semibold transition-all ${
+                    className={`flex h-6 w-6 items-center justify-center rounded-full text-[11px] font-semibold transition-all sm:h-7 sm:w-7 ${
                       step >= currentStep
                         ? 'bg-[var(--brand-coral)] text-[var(--brand-night)]'
                         : 'bg-[rgba(95,109,130,0.12)] text-[var(--text-soft)]'
@@ -229,7 +229,7 @@ export default function RegisterPage() {
                     {step > currentStep ? <Check size={12} /> : currentStep}
                   </div>
                   <span
-                    className={`mt-2 block text-[11px] font-semibold uppercase tracking-[0.12em] transition-colors ${
+                    className={`mt-2 block text-[8.5px] font-semibold uppercase leading-tight tracking-[0.08em] transition-colors sm:text-[11px] sm:tracking-[0.12em] ${
                       step === currentStep
                         ? 'text-[var(--text-primary)]'
                         : 'text-[var(--text-soft)]'
@@ -333,7 +333,8 @@ export default function RegisterPage() {
                       <button
                         type="button"
                         onClick={() => setShowPassword(!showPassword)}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 text-[var(--text-soft)] transition-colors hover:text-[var(--text-primary)]"
+                        className="absolute right-1 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-lg text-[var(--text-soft)] transition-colors hover:text-[var(--text-primary)]"
+                        aria-label={showPassword ? 'Hide password' : 'Show password'}
                       >
                         {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                       </button>
@@ -357,7 +358,7 @@ export default function RegisterPage() {
                           className="sr-only"
                         />
                         <div
-                          className={`flex h-5 w-5 items-center justify-center rounded-md border-2 transition-colors ${
+                          className={`flex h-6 w-6 items-center justify-center rounded-md border-2 transition-colors ${
                             formData.whatsapp_notifications
                               ? 'border-[var(--brand-teal)] bg-[var(--brand-teal)]'
                               : 'border-[var(--border-strong)] bg-transparent'
@@ -391,7 +392,7 @@ export default function RegisterPage() {
                     )}
                   </div>
                 </div>
-                <div className="flex gap-3">
+                <div className="mt-5 flex gap-3">
                   <button type="button" onClick={() => setStep(1)} className="btn-ghost flex-1">
                     <ChevronLeft size={14} /> Back
                   </button>
@@ -416,7 +417,7 @@ export default function RegisterPage() {
                 <p className="mb-5 text-sm leading-6 text-[var(--text-secondary)]">
                   Pick the games you want Mechi to organize for you.
                 </p>
-                <div className="mb-5 grid max-h-72 grid-cols-1 gap-2 overflow-y-auto sm:grid-cols-2">
+                <div className="mb-5 grid max-h-none grid-cols-1 gap-2.5 sm:max-h-72 sm:grid-cols-2 sm:overflow-y-auto">
                   {selectableGames.map((gameKey) => {
                     const game = GAMES[gameKey];
                     const isSelected = formData.selected_games.includes(gameKey);
@@ -426,7 +427,7 @@ export default function RegisterPage() {
                         key={gameKey}
                         type="button"
                         onClick={() => toggleGame(gameKey)}
-                        className={`flex items-center gap-3 rounded-lg border p-2.5 text-left transition-all ${
+                        className={`flex min-h-16 items-center gap-3 rounded-lg border p-3 text-left transition-all ${
                           isSelected
                             ? 'surface-action'
                             : 'border-[var(--border-color)] bg-[var(--surface-strong)] hover:bg-[var(--surface)]'
@@ -444,7 +445,7 @@ export default function RegisterPage() {
                           </div>
                         </div>
                         <div
-                          className={`flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full border-2 transition-colors ${
+                          className={`flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full border-2 transition-colors ${
                             isSelected
                               ? 'border-[var(--brand-coral)] bg-[var(--brand-coral)]'
                               : 'border-[rgba(95,109,130,0.24)]'
@@ -514,7 +515,7 @@ export default function RegisterPage() {
                                   key={platform}
                                   type="button"
                                   onClick={() => selectPlatformForGame(gameKey, platform)}
-                                  className={`inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-xs font-semibold transition-all ${
+                                  className={`inline-flex min-h-11 items-center gap-2 rounded-lg border px-3 py-2 text-xs font-semibold transition-all ${
                                     isSelected
                                       ? 'border-[rgba(50,224,196,0.28)] bg-[rgba(50,224,196,0.14)] text-[var(--accent-secondary-text)]'
                                       : 'border-[var(--border-color)] bg-[var(--surface)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
@@ -527,7 +528,7 @@ export default function RegisterPage() {
                             })}
                           </div>
                         ) : (
-                          <div className="inline-flex items-center gap-2 rounded-lg border border-[var(--border-color)] bg-[var(--surface)] px-3 py-2 text-xs font-semibold text-[var(--text-secondary)]">
+                          <div className="inline-flex min-h-11 items-center gap-2 rounded-lg border border-[var(--border-color)] bg-[var(--surface)] px-3 py-2 text-xs font-semibold text-[var(--text-secondary)]">
                             <PlatformLogo platform={game.platforms[0]} size={16} />
                             {PLATFORMS[game.platforms[0]]?.label}
                           </div>
@@ -551,7 +552,7 @@ export default function RegisterPage() {
                               })
                             }
                             placeholder={getGameIdPlaceholder(field.game, field.platform)}
-                            className="input text-sm"
+                            className="input"
                           />
                         </div>
                       ))}
@@ -584,7 +585,7 @@ export default function RegisterPage() {
               Already have an account?{' '}
               <Link
                 href={user ? '/dashboard' : '/login'}
-                className="brand-link-coral font-semibold"
+                className="brand-link-coral inline-flex min-h-11 items-center font-semibold"
               >
                 Sign in
               </Link>

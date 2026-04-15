@@ -85,7 +85,7 @@ export default function LobbyDetailPage() {
             <div className="flex gap-1">{game?.platforms.map((p) => <span key={p}>{PLATFORMS[p]?.icon}</span>)}</div>
           </div>
           <button onClick={copyRoomCode}
-            className="mt-4 flex items-center gap-2 bg-white/[0.06] hover:bg-white/[0.1] border border-white/[0.08] rounded-xl px-4 py-2.5 text-sm font-mono font-medium text-white transition-all active:scale-[0.98] w-full sm:w-auto justify-center">
+            className="mt-4 flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-white/[0.08] bg-white/[0.06] px-4 py-2.5 text-sm font-mono font-medium text-white transition-all hover:bg-white/[0.1] sm:w-auto">
             Room Code: {lobby.room_code} <Copy size={12} className="text-white/30" />
           </button>
         </div>

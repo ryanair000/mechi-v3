@@ -108,8 +108,8 @@ function PricingPageContent() {
   };
 
   return (
-    <div className="page-base min-h-screen">
-      <header className="sticky top-4 z-50">
+    <div className="page-base">
+      <header className="sticky top-2 z-50 sm:top-4">
         <div className="landing-shell">
           <div className="nav-panel rounded-[1.2rem] border p-2">
             <div className="grid grid-cols-[auto_1fr_auto] items-center gap-3">
@@ -148,9 +148,9 @@ function PricingPageContent() {
         </div>
       </header>
 
-      <main className="landing-shell pb-16 pt-8 sm:pb-20 sm:pt-12">
-        <section className="relative overflow-hidden rounded-[1.8rem] border border-[var(--border-color)] bg-[var(--surface)] px-5 py-8 shadow-[var(--shadow-strong)] sm:px-8 sm:py-10">
-          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_16%_12%,rgba(50,224,196,0.12),transparent_30%),radial-gradient(circle_at_88%_24%,rgba(255,107,107,0.12),transparent_28%)]" />
+      <main className="landing-shell pb-16 pt-5 sm:pb-20 sm:pt-12">
+        <section className="relative overflow-hidden rounded-[1.25rem] border border-[var(--border-color)] bg-[var(--surface)] px-4 py-6 shadow-[var(--shadow-soft)] sm:rounded-[1.8rem] sm:px-8 sm:py-10 sm:shadow-[var(--shadow-strong)]">
+          <div className="pointer-events-none absolute inset-0 hidden bg-[radial-gradient(circle_at_16%_12%,rgba(50,224,196,0.12),transparent_30%),radial-gradient(circle_at_88%_24%,rgba(255,107,107,0.12),transparent_28%)] sm:block" />
           <div className="relative">
             <div className="brand-kicker">
               <Sparkles size={12} />
@@ -159,7 +159,7 @@ function PricingPageContent() {
 
             <div className="mt-5 grid gap-8 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
               <div>
-                <h1 className="max-w-3xl text-[2.3rem] font-black leading-[0.95] tracking-[-0.05em] text-[var(--text-primary)] sm:text-[3.3rem]">
+                <h1 className="max-w-3xl text-[2rem] font-black leading-[1.05] tracking-normal text-[var(--text-primary)] sm:text-[3.3rem] sm:leading-[1]">
                   Start free. Upgrade only when your Mechi climb needs more.
                 </h1>
                 <p className="mt-4 max-w-2xl text-sm leading-7 text-[var(--text-secondary)] sm:text-base">
@@ -174,7 +174,7 @@ function PricingPageContent() {
                       key={cycle}
                       type="button"
                       onClick={() => setBillingCycle(cycle)}
-                      className={`rounded-xl px-4 py-2 text-sm font-semibold transition-all ${
+                      className={`min-h-11 rounded-xl px-4 py-2 text-base font-semibold transition-all sm:text-sm ${
                         billingCycle === cycle
                           ? 'bg-[var(--brand-coral)] text-[var(--brand-night)]'
                           : 'text-[var(--text-secondary)]'
@@ -239,7 +239,7 @@ function PricingPageContent() {
                   </div>
 
                   <div className="mt-6">
-                    <p className="text-4xl font-black tracking-[-0.04em] text-[var(--text-primary)]">
+                    <p className="text-4xl font-black tracking-normal text-[var(--text-primary)]">
                       {planKey === 'free' ? 'Free' : `KSH ${price}`}
                     </p>
                     <p className="mt-2 text-sm text-[var(--text-soft)]">
@@ -295,7 +295,32 @@ function PricingPageContent() {
               <h2 className="text-xl font-black text-[var(--text-primary)]">Free vs Pro</h2>
             </div>
 
-            <div className="mt-5 overflow-x-auto">
+            <div className="mt-5 grid gap-3 sm:hidden">
+              {COMPARISON_ROWS.map((row) => (
+                <div
+                  key={row.label}
+                  className="rounded-xl border border-[var(--border-color)] bg-[var(--surface-elevated)] p-3"
+                >
+                  <p className="text-sm font-semibold text-[var(--text-primary)]">{row.label}</p>
+                  <div className="mt-3 grid grid-cols-2 gap-2 text-sm">
+                    <div className="rounded-lg bg-[var(--surface)] px-3 py-2">
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.1em] text-[var(--text-soft)]">
+                        Free
+                      </p>
+                      <p className="mt-1 font-semibold text-[var(--text-primary)]">{row.free}</p>
+                    </div>
+                    <div className="rounded-lg bg-[var(--accent-primary-soft)] px-3 py-2">
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.1em] text-[#ff8a8a]">
+                        Pro
+                      </p>
+                      <p className="mt-1 font-semibold text-[var(--text-primary)]">{row.pro}</p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="mt-5 hidden overflow-x-auto sm:block">
               <table className="w-full min-w-[30rem] text-left text-sm">
                 <thead>
                   <tr className="border-b border-[var(--border-color)] text-[var(--text-soft)]">

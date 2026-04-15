@@ -8,7 +8,6 @@ import { AlertCircle, ChevronRight, Radar, Swords } from 'lucide-react';
 import { useAuth, useAuthFetch } from '@/components/AuthProvider';
 import { GameCard } from '@/components/GameCard';
 import { PaywallModal } from '@/components/PaywallModal';
-import { PlanBadge } from '@/components/PlanBadge';
 import { RatingBadge } from '@/components/RatingBadge';
 import { TierMedal } from '@/components/TierMedal';
 import { GAMES, getConfiguredPlatformForGame } from '@/lib/config';
@@ -204,22 +203,18 @@ export default function DashboardPage() {
         <PaywallModal reason={paywallReason} onClose={() => setShowPaywall(false)} />
       ) : null}
 
-      <div className="card circuit-panel mb-6 p-4 sm:p-5">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+      <div className="card circuit-panel mb-5 p-3 sm:p-4">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <div className="max-w-xl">
-            <div className="mb-3 flex flex-wrap items-center gap-2">
-              <span className="brand-chip px-3 py-1">{currentPlan.name}</span>
-              <PlanBadge plan={currentPlan.id} size="md" />
-            </div>
-            <h1 className="text-[2rem] font-black tracking-[-0.05em] text-[var(--text-primary)] sm:text-[2.5rem]">
+            <h1 className="text-[1.55rem] font-black tracking-normal text-[var(--text-primary)] sm:text-[1.95rem]">
               Command your climb, {user?.username ?? 'Player'}.
             </h1>
-            <div className="mt-6 max-w-lg rounded-2xl border border-[var(--border-color)] bg-[var(--surface-elevated)] p-3">
-              <div className="flex items-center justify-between gap-3 text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--text-soft)]">
+            <div className="mt-4 max-w-md rounded-xl border border-[var(--border-color)] bg-[var(--surface-elevated)] p-2.5">
+              <div className="flex items-center justify-between gap-3 text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--text-soft)]">
                 <span>XP progress</span>
                 <span>{xpProgress.progressInLevel}/{xpProgress.progressNeeded}</span>
               </div>
-              <div className="mt-3 h-2 overflow-hidden rounded-full bg-[var(--surface-strong)]">
+              <div className="mt-2.5 h-1.5 overflow-hidden rounded-full bg-[var(--surface-strong)]">
                 <div
                   className="h-full rounded-full transition-all"
                   style={{
@@ -228,7 +223,7 @@ export default function DashboardPage() {
                   }}
                 />
               </div>
-              <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-[var(--text-secondary)]">
+              <div className="mt-2.5 flex flex-wrap items-center gap-2 text-xs text-[var(--text-secondary)]">
                 <span className="brand-chip px-2 py-0.5">Lv. {level}</span>
                 <span className="brand-chip-coral px-2 py-0.5">{mp} MP</span>
                 <span>{xpProgress.nextLevelXp - xp} XP until next level</span>
@@ -236,16 +231,16 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-2.5 sm:min-w-[20rem] lg:max-w-[22rem]">
-            <div className="card p-3.5">
+          <div className="grid grid-cols-2 gap-2 sm:min-w-[16rem] lg:max-w-[17rem]">
+            <div className="card p-2.5">
               <p className="stat-label">Queue Heat</p>
-              <p className="mt-2 text-[1.9rem] font-black text-[var(--brand-teal)]">{queueTotal}</p>
-              <p className="mt-1.5 text-[11px] leading-5 text-[var(--text-soft)]">Players visible in your queues</p>
+              <p className="mt-1.5 text-[1.45rem] font-black text-[var(--brand-teal)]">{queueTotal}</p>
+              <p className="mt-1 text-[10px] leading-4 text-[var(--text-soft)]">Players visible in your queues</p>
             </div>
-            <div className="card p-3.5">
+            <div className="card p-2.5">
               <p className="stat-label">Win Streak</p>
-              <p className="mt-2 text-[1.9rem] font-black text-[var(--brand-coral)]">{streak}</p>
-              <p className="mt-1.5 text-[11px] leading-5 text-[var(--text-soft)]">Matches in a row right now</p>
+              <p className="mt-1.5 text-[1.45rem] font-black text-[var(--brand-coral)]">{streak}</p>
+              <p className="mt-1 text-[10px] leading-4 text-[var(--text-soft)]">Matches in a row right now</p>
             </div>
           </div>
         </div>
@@ -297,7 +292,7 @@ export default function DashboardPage() {
               View leaderboard
             </Link>
           </div>
-          <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
             {rankedGames.map((game) => (
               <GameCard
                 key={game}
@@ -329,7 +324,7 @@ export default function DashboardPage() {
               <span>{lobbyGames.length} active lobby titles</span>
             </div>
           </div>
-          <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
             {lobbyGames.map((game) => (
               <GameCard
                 key={game}

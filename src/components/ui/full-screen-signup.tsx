@@ -24,20 +24,20 @@ export function FullScreenSignup({
   sidePoints = [],
 }: FullScreenSignupProps) {
   return (
-    <div className="page-base min-h-screen">
-      <nav className="landing-shell flex h-16 items-center justify-between">
-        <Link href="/" className="flex items-center">
+    <div className="page-base">
+      <nav className="landing-shell flex h-14 items-center justify-between sm:h-16">
+        <Link href="/" className="flex min-h-11 items-center">
           <BrandLogo size="sm" />
         </Link>
         <ThemeToggle />
       </nav>
 
-      <div className="landing-shell pb-8 pt-3 sm:pb-10">
-        <div className="relative overflow-hidden rounded-[1.6rem] border border-[var(--border-color)] bg-[var(--surface)] shadow-[var(--shadow-strong)] backdrop-blur-xl">
-          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_18%_0%,rgba(255,107,107,0.14),transparent_34%),radial-gradient(circle_at_90%_90%,rgba(50,224,196,0.14),transparent_36%)]" />
+      <div className="landing-shell pb-[calc(1rem+env(safe-area-inset-bottom))] pt-2 sm:pb-10 sm:pt-3">
+        <div className="relative overflow-hidden rounded-[1.1rem] border border-[var(--border-color)] bg-[var(--surface)] shadow-[var(--shadow-soft)] sm:rounded-[1.6rem] sm:shadow-[var(--shadow-strong)] sm:backdrop-blur-xl">
+          <div className="pointer-events-none absolute inset-0 hidden bg-[radial-gradient(circle_at_18%_0%,rgba(255,107,107,0.14),transparent_34%),radial-gradient(circle_at_90%_90%,rgba(50,224,196,0.14),transparent_36%)] sm:block" />
           <div className="pointer-events-none absolute inset-y-0 left-[48%] hidden w-px bg-[linear-gradient(to_bottom,transparent,rgba(255,255,255,0.18),transparent)] lg:block" />
 
-          <div className="relative grid min-h-[calc(100vh-9rem)] lg:grid-cols-[1fr_1.08fr]">
+          <div className="relative grid lg:min-h-[calc(100svh-9rem)] lg:grid-cols-[1fr_1.08fr]">
             <aside className="relative hidden overflow-hidden bg-[var(--brand-night)] p-8 text-white lg:flex lg:flex-col lg:justify-between">
               <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(160deg,rgba(255,255,255,0.04),transparent_42%)]" />
               <div className="pointer-events-none absolute -bottom-20 -left-8 h-56 w-56 rounded-full bg-[rgba(255,107,107,0.22)] blur-[56px]" />
@@ -45,7 +45,7 @@ export function FullScreenSignup({
 
               <div className="relative">
                 <BrandLogo size="md" variant="reversed" showTagline />
-                <h1 className="mt-8 max-w-md text-[2rem] font-black leading-tight tracking-[-0.02em]">
+                <h1 className="mt-8 max-w-md text-[2rem] font-black leading-tight tracking-normal">
                   {sideTitle}
                 </h1>
                 {sideDescription ? (
@@ -69,7 +69,7 @@ export function FullScreenSignup({
 
             <section
               className={cn(
-                'relative flex flex-col justify-center px-4 py-6 sm:px-8 sm:py-8',
+                'relative flex flex-col justify-start px-3 py-4 sm:px-8 sm:py-8 lg:justify-center',
                 'bg-[var(--surface-elevated)]'
               )}
             >
@@ -77,7 +77,7 @@ export function FullScreenSignup({
                 {title || subtitle ? (
                   <div className="mb-6">
                     {title ? (
-                      <h2 className="text-[2rem] font-black leading-tight tracking-[-0.02em] text-[var(--text-primary)]">
+                      <h2 className="text-[1.75rem] font-black leading-tight text-[var(--text-primary)] sm:text-[2rem]">
                         {title}
                       </h2>
                     ) : null}

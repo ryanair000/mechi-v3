@@ -119,7 +119,7 @@ export default async function ShareMatchPage({ params }: Props) {
           <div className="mx-auto mb-4 mt-5 flex h-20 w-20 items-center justify-center rounded-full bg-[rgba(255,107,107,0.14)] text-3xl font-black text-[var(--brand-coral)]">
             W
           </div>
-          <h1 className="mb-2 text-3xl font-black tracking-[-0.05em] text-[var(--text-primary)]">
+          <h1 className="mb-2 text-3xl font-black tracking-normal text-[var(--text-primary)]">
             {winner?.username ?? 'Player'} won!
           </h1>
           <p className="mb-3 text-sm text-[var(--text-secondary)]">

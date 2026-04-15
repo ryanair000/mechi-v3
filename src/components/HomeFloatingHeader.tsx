@@ -15,20 +15,20 @@ const NAV_ITEMS = [
 const HEADER_TEXT_CLASS =
   'rounded-lg px-3 py-2 text-sm font-semibold uppercase tracking-[0.14em] text-[var(--text-secondary)] transition-colors hover:bg-[var(--surface-elevated)] hover:text-[var(--text-primary)]';
 const SIGN_IN_BUTTON_CLASS =
-  'inline-flex items-center justify-center rounded-xl border border-[rgba(50,224,196,0.28)] bg-[var(--surface-elevated)] px-4 py-2 text-sm font-semibold uppercase tracking-[0.14em] text-[var(--accent-secondary-text)] shadow-[inset_0_1px_0_rgba(255,255,255,0.06),0_10px_24px_rgba(50,224,196,0.12)] transition-all hover:border-[rgba(50,224,196,0.42)] hover:bg-[rgba(50,224,196,0.12)] hover:text-[var(--text-primary)]';
+  'inline-flex min-h-11 items-center justify-center rounded-xl border border-[rgba(50,224,196,0.28)] bg-[var(--surface-elevated)] px-4 py-2 text-base font-semibold uppercase tracking-[0.14em] text-[var(--accent-secondary-text)] shadow-[inset_0_1px_0_rgba(255,255,255,0.06),0_10px_24px_rgba(50,224,196,0.12)] transition-all hover:border-[rgba(50,224,196,0.42)] hover:bg-[rgba(50,224,196,0.12)] hover:text-[var(--text-primary)] sm:text-sm';
 
 export function HomeFloatingHeader() {
   const [isOpen, setIsOpen] = useState(false);
   const { user } = useAuth();
 
   return (
-    <header className="sticky top-4 z-50">
+    <header className="sticky top-2 z-50 sm:top-4">
       <div className="landing-shell relative">
         <div
           aria-hidden="true"
           className="pointer-events-none absolute left-1/2 top-[calc(100%+0.35rem)] h-px w-screen -translate-x-1/2 bg-gradient-to-r from-transparent via-[rgba(50,224,196,0.3)] to-transparent"
         />
-        <div className="rounded-[1.2rem] border border-[var(--border-color)] bg-[var(--surface-soft)] p-2 shadow-[var(--shadow-soft)] backdrop-blur-xl">
+        <div className="rounded-[1.2rem] border border-[var(--border-color)] bg-[var(--surface-soft)] p-1.5 shadow-[var(--shadow-soft)] backdrop-blur-xl sm:p-2">
           <div className="grid grid-cols-[1fr_auto] items-center gap-3">
             <div className="hidden items-center justify-center gap-1 md:flex">
               {NAV_ITEMS.map((item) => (
@@ -78,7 +78,7 @@ export function HomeFloatingHeader() {
                   {item.label}
                 </Link>
               ))}
-              <div className="mt-1 flex items-center gap-2 px-1 pb-1 pt-2">
+              <div className="mt-1 grid gap-2 px-1 pb-1 pt-2 sm:flex sm:items-center">
                 <Link
                   href={user ? '/dashboard' : '/login'}
                   onClick={() => setIsOpen(false)}

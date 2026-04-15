@@ -104,7 +104,7 @@ function LobbiesContent() {
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <p className="brand-kicker">Community Rooms</p>
-            <h1 className="mt-3 text-3xl font-black tracking-[-0.05em] text-[var(--text-primary)]">
+            <h1 className="mt-3 text-3xl font-black tracking-normal text-[var(--text-primary)]">
               Lobbies
             </h1>
             <p className="mt-3 text-sm leading-7 text-[var(--text-secondary)]">

@@ -109,7 +109,7 @@ export default function LeaderboardPage() {
               <Trophy size={16} />
             </div>
             <div>
-              <h1 className="text-[2rem] font-black tracking-[-0.05em] text-[var(--text-primary)] sm:text-[2.3rem]">
+              <h1 className="text-[2rem] font-black tracking-normal text-[var(--text-primary)] sm:text-[2.3rem]">
                 Leaderboard
               </h1>
               <p className="mt-1.5 text-[13px] leading-6 text-[var(--text-secondary)] sm:text-sm">

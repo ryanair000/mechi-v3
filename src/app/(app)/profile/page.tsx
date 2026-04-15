@@ -483,7 +483,7 @@ export default function ProfilePage() {
             </div>
 
             {rankedUserGames.length > 0 && (
-              <div className="grid grid-cols-4 gap-2 border-t border-[var(--border-color)] pt-4">
+              <div className="grid grid-cols-2 gap-3 border-t border-[var(--border-color)] pt-4 sm:grid-cols-4">
                 {[
                   { value: totalWins, label: 'Wins', color: 'var(--brand-teal)' },
                   { value: totalLosses, label: 'Losses', color: 'var(--brand-coral)' },
@@ -626,7 +626,7 @@ export default function ProfilePage() {
                         </div>
                       </div>
 
-                      <div className="relative grid grid-cols-4 gap-3 text-center">
+                      <div className="relative grid grid-cols-2 gap-3 text-center sm:grid-cols-4">
                         <div>
                           <div className="text-sm font-black" style={{ color: division.color }}>
                             {division.label}
@@ -1038,13 +1038,15 @@ export default function ProfilePage() {
                         : current
                     )
                   }
-                  className={`relative h-6 w-11 flex-shrink-0 rounded-full transition-colors ${
+                  aria-pressed={whatsappNotifications}
+                  aria-label="Toggle WhatsApp match alerts"
+                  className={`relative h-11 w-16 flex-shrink-0 rounded-full transition-colors ${
                     whatsappNotifications ? 'bg-[var(--brand-teal)]' : 'bg-[var(--surface-strong)]'
                   }`}
                 >
                   <span
-                    className={`absolute top-1 h-4 w-4 rounded-full bg-white shadow transition-transform ${
-                      whatsappNotifications ? 'translate-x-6' : 'translate-x-1'
+                    className={`absolute top-2 h-7 w-7 rounded-full bg-white shadow transition-transform ${
+                      whatsappNotifications ? 'translate-x-7' : 'translate-x-2'
                     }`}
                   />
                 </button>
@@ -1110,7 +1112,7 @@ export default function ProfilePage() {
                         {GAMES[game].label}
                       </span>
                       <div
-                        className={`flex h-5 w-5 items-center justify-center rounded-full border-2 transition-colors ${
+                        className={`flex h-6 w-6 items-center justify-center rounded-full border-2 transition-colors ${
                           isSelected
                             ? 'border-[var(--brand-coral)] bg-[var(--brand-coral)]'
                             : 'border-[rgba(95,109,130,0.24)]'
@@ -1189,7 +1191,7 @@ export default function ProfilePage() {
                             onChange={(e) =>
                               setGameIds({ ...gameIds, [field.key]: e.target.value })
                             }
-                            className="input text-sm"
+                            className="input"
                           />
                         </div>
                       ))}

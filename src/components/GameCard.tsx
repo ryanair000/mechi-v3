@@ -104,17 +104,17 @@ export function GameCard({
         ) : null}
 
         {isLobby ? (
-          <button onClick={onViewLobby} disabled={isDisabled} className="btn-ghost w-full min-h-[36px] py-2 text-xs">
+          <button onClick={onViewLobby} disabled={isDisabled} className="btn-ghost min-h-11 w-full py-2 text-sm">
             <Users size={13} /> View Lobbies
           </button>
         ) : (
           <button
             onClick={onJoinQueue}
             disabled={isDisabled || isQueuing}
-            className={`flex min-h-[36px] w-full items-center justify-center gap-1.5 rounded-xl py-2 text-xs font-semibold transition-all ${
+            className={`flex min-h-11 w-full items-center justify-center gap-1.5 rounded-xl py-2 text-sm font-semibold transition-all ${
               isQueuing
                 ? 'cursor-not-allowed bg-white/[0.04] text-white/30'
-                : 'cursor-pointer bg-emerald-500 text-white hover:bg-emerald-400 active:scale-[0.98]'
+                : 'cursor-pointer bg-emerald-500 text-white hover:bg-emerald-400'
             }`}
           >
             {isQueuing ? (

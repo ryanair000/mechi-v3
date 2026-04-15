@@ -56,7 +56,7 @@ export default function TournamentsPage() {
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <p className="brand-kicker">Bracket Mode</p>
-            <h1 className="mt-3 text-3xl font-black tracking-[-0.05em] text-[var(--text-primary)]">
+            <h1 className="mt-3 text-3xl font-black tracking-normal text-[var(--text-primary)]">
               Tournaments
             </h1>
             <p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--text-secondary)]">
@@ -116,7 +116,7 @@ export default function TournamentsPage() {
                 <div className="mb-4 flex items-start justify-between gap-3">
                   <div className="min-w-0">
                     <p className="brand-kicker">{game?.label ?? tournament.game}</p>
-                    <h2 className="mt-3 truncate text-xl font-black tracking-[-0.04em] text-[var(--text-primary)]">
+                    <h2 className="mt-3 truncate text-xl font-black tracking-normal text-[var(--text-primary)]">
                       {tournament.title}
                     </h2>
                   </div>

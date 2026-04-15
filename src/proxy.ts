@@ -70,11 +70,24 @@ function verifyToken(token: string): JWTPayload | null {
 
 function getPayload(request: NextRequest) {
   const authHeader = request.headers.get('Authorization');
-  const token = authHeader?.startsWith('Bearer ')
+  const headerToken = authHeader?.startsWith('Bearer ')
     ? authHeader.slice(7)
-    : request.cookies.get('auth_token')?.value;
+    : null;
+  const cookieToken = request.cookies.get('auth_token')?.value;
+  const token = headerToken ?? cookieToken;
 
-  return token ? verifyToken(token) : null;
+  if (token) {
+    const payload = verifyToken(token);
+    if (payload) {
+      return payload;
+    }
+  }
+
+  if (headerToken && cookieToken) {
+    return verifyToken(cookieToken);
+  }
+
+  return null;
 }
 
 async function getCurrentAccess(payload: JWTPayload | null) {

@@ -52,17 +52,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     }
 
-    if (!storedToken) {
-      clearStoredAuth();
-      setUser(null);
-      setToken(null);
-      setLoading(false);
-      return;
-    }
-
     if (cachedUser) {
       setUser(cachedUser);
-      setToken(storedToken);
+      setToken(storedToken ?? null);
       setLoading(false);
     }
 
@@ -72,13 +64,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       const res = await fetch('/api/auth/me', {
         headers: storedToken ? { Authorization: `Bearer ${storedToken}` } : undefined,
+        credentials: 'include',
         signal: controller.signal,
       });
 
       if (res.ok) {
         const data = await res.json();
         setUser(data.user);
-        setToken(storedToken);
+        setToken(storedToken ?? null);
         localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(data.user));
       } else {
         clearStoredAuth();
@@ -133,6 +126,7 @@ export function useAuthFetch() {
     async (url: string, options: RequestInit = {}) => {
       return fetch(url, {
         ...options,
+        credentials: options.credentials ?? 'include',
         headers: {
           'Content-Type': 'application/json',
           ...(token ? { Authorization: `Bearer ${token}` } : {}),

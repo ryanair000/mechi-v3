@@ -37,7 +37,10 @@ export function getAuthUser(request: NextRequest): JWTPayload | null {
   const authHeader = request.headers.get('Authorization');
   if (authHeader?.startsWith('Bearer ')) {
     const token = authHeader.slice(7);
-    return verifyToken(token);
+    const headerUser = verifyToken(token);
+    if (headerUser) {
+      return headerUser;
+    }
   }
 
   // Fallback to cookie
@@ -52,9 +55,16 @@ export function getAuthUser(request: NextRequest): JWTPayload | null {
 export function getTokenFromRequest(request: NextRequest): string | null {
   const authHeader = request.headers.get('Authorization');
   if (authHeader?.startsWith('Bearer ')) {
-    return authHeader.slice(7);
+    const headerToken = authHeader.slice(7);
+    if (verifyToken(headerToken)) {
+      return headerToken;
+    }
   }
-  return request.cookies.get('auth_token')?.value ?? null;
+  const cookieToken = request.cookies.get('auth_token')?.value;
+  if (cookieToken && verifyToken(cookieToken)) {
+    return cookieToken;
+  }
+  return null;
 }
 
 export function profileToAuthUser(profile: Record<string, unknown>): AuthUser {

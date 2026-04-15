@@ -6,6 +6,7 @@ import toast from 'react-hot-toast';
 import { Users, X } from 'lucide-react';
 import { useAuth, useAuthFetch } from '@/components/AuthProvider';
 import { BrandLogo } from '@/components/BrandLogo';
+import { PlatformLogo } from '@/components/PlatformLogo';
 import { createClient } from '@/lib/supabase';
 import { GAMES, PLATFORMS } from '@/lib/config';
 import type { GameKey, PlatformKey } from '@/types';
@@ -165,8 +166,8 @@ function QueueContent() {
           </div>
           <div className="card flex flex-wrap items-center justify-center gap-2 px-3 py-2.5 text-center">
             {displayedPlatforms.map((platform) => (
-              <span key={platform} className="text-sm" aria-hidden="true">
-                {PLATFORMS[platform]?.icon}
+              <span key={platform} aria-hidden="true">
+                <PlatformLogo platform={platform} size={16} />
               </span>
             ))}
             <span className="text-[13px] font-semibold leading-5 text-[var(--text-primary)]">{platformLabel}</span>

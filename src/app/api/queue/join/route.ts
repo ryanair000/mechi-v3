@@ -78,13 +78,18 @@ export async function POST(request: NextRequest) {
     // Check if already in queue
     const { data: existingQueue } = await supabase
       .from('queue')
-      .select('id, status')
+      .select('id, game, platform, status')
       .eq('user_id', authUser.sub)
       .eq('status', 'waiting')
+      .order('joined_at', { ascending: false })
+      .limit(1)
       .maybeSingle();
 
     if (existingQueue) {
-      return NextResponse.json({ error: 'Already in queue' }, { status: 409 });
+      return NextResponse.json(
+        { error: 'Already in queue', queueEntry: existingQueue },
+        { status: 409 }
+      );
     }
 
     // Check for active match

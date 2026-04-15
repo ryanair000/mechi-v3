@@ -5,6 +5,7 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
 import { Globe, Lock, Plus, Users, X } from 'lucide-react';
 import { useAuth, useAuthFetch } from '@/components/AuthProvider';
+import { PlatformLogo } from '@/components/PlatformLogo';
 import { GAMES, PLATFORMS } from '@/lib/config';
 import type { GameKey, Lobby } from '@/types';
 
@@ -247,7 +248,9 @@ function LobbiesContent() {
                     <Users size={11} /> {memberCount}/{lobby.max_players}
                   </span>
                   {game?.platforms.map((platform) => (
-                    <span key={platform}>{PLATFORMS[platform]?.icon}</span>
+                    <span key={platform} title={PLATFORMS[platform]?.label}>
+                      <PlatformLogo platform={platform} size={14} />
+                    </span>
                   ))}
                 </div>
 

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
@@ -18,11 +18,27 @@ import type { GameKey, Match, PlatformKey } from '@/types';
 interface UserProfile {
   id: string;
   username: string;
+  whatsapp_number?: string | null;
+  whatsapp_notifications?: boolean;
   platforms: PlatformKey[];
   game_ids?: Record<string, string>;
   selected_games: GameKey[];
   region: string;
   [key: string]: unknown;
+}
+
+const WHATSAPP_JOIN_URL = process.env.NEXT_PUBLIC_WHATSAPP_JOIN_URL ?? '';
+const WHATSAPP_PROMPT_SESSION_KEY = 'mechi_whatsapp_join_prompt';
+
+interface QueueStatusResponse {
+  inQueue?: boolean;
+  queueEntry?: {
+    game?: GameKey | null;
+    platform?: PlatformKey | null;
+  } | null;
+  activeMatch?: {
+    id: string;
+  } | null;
 }
 
 export default function DashboardPage() {
@@ -37,31 +53,59 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [showPaywall, setShowPaywall] = useState(false);
   const [paywallReason, setPaywallReason] = useState<'match_limit' | 'game_limit' | 'feature'>('match_limit');
+  const [showWhatsAppPrompt, setShowWhatsAppPrompt] = useState(false);
+
+  const resumeQueue = useCallback((queueEntry: QueueStatusResponse['queueEntry']) => {
+    const queueGame = queueEntry?.game;
+    if (!queueGame || !GAMES[queueGame]) {
+      return false;
+    }
+
+    const params = new URLSearchParams({ game: queueGame });
+    if (queueEntry?.platform) {
+      params.set('platform', queueEntry.platform);
+    }
+
+    router.replace(`/queue?${params.toString()}`);
+    return true;
+  }, [router]);
 
   useEffect(() => {
     let cancelled = false;
 
     async function loadDashboard() {
       try {
-        const [profileRes, activeMatchRes] = await Promise.all([
+        const [profileRes, activeMatchRes, queueStatusRes] = await Promise.all([
           authFetch('/api/users/profile'),
           authFetch('/api/matches/current'),
+          authFetch('/api/queue/status'),
         ]);
 
         if (cancelled) return;
 
+        const [profileData, matchData, queueData] = await Promise.all([
+          profileRes.ok ? profileRes.json() : Promise.resolve(null),
+          activeMatchRes.ok ? activeMatchRes.json() : Promise.resolve(null),
+          queueStatusRes.ok ? queueStatusRes.json() as Promise<QueueStatusResponse> : Promise.resolve(null),
+        ]);
+
+        if (cancelled) return;
+
+        if (matchData?.match?.id) {
+          router.replace(`/match/${matchData.match.id}`);
+          return;
+        }
+
+        if (queueData?.inQueue && resumeQueue(queueData.queueEntry)) {
+          return;
+        }
+
         if (profileRes.ok) {
-          const profileData = await profileRes.json();
-          if (!cancelled) {
-            setProfile(profileData.profile);
-          }
+          setProfile(profileData.profile);
         }
 
         if (activeMatchRes.ok) {
-          const matchData = await activeMatchRes.json();
-          if (!cancelled) {
-            setActiveMatch(matchData.match);
-          }
+          setActiveMatch(matchData.match);
         }
       } finally {
         if (!cancelled) {
@@ -75,7 +119,7 @@ export default function DashboardPage() {
     return () => {
       cancelled = true;
     };
-  }, [authFetch]);
+  }, [authFetch, resumeQueue, router]);
 
   useEffect(() => {
     const selectedGames = (profile?.selected_games ?? []).filter(
@@ -124,6 +168,37 @@ export default function DashboardPage() {
     };
   }, [profile]);
 
+  useEffect(() => {
+    if (loading || !user) {
+      return;
+    }
+
+    const whatsappNotifications =
+      profile?.whatsapp_notifications ?? user.whatsapp_notifications ?? false;
+    const whatsappNumber = profile?.whatsapp_number ?? user.whatsapp_number ?? null;
+    const hasWhatsAppSetup = Boolean(whatsappNotifications && whatsappNumber);
+
+    if (hasWhatsAppSetup) {
+      setShowWhatsAppPrompt(false);
+      return;
+    }
+
+    const sessionKey = `${WHATSAPP_PROMPT_SESSION_KEY}:${user.id}`;
+    const alreadyShown = sessionStorage.getItem(sessionKey) === '1';
+
+    setShowWhatsAppPrompt(true);
+
+    if (!alreadyShown) {
+      toast('Want WhatsApp alerts? Text us "Join Mechi" on WhatsApp, then keep alerts on in your profile.');
+      sessionStorage.setItem(sessionKey, '1');
+    }
+  }, [
+    loading,
+    profile?.whatsapp_notifications,
+    profile?.whatsapp_number,
+    user,
+  ]);
+
   const handleJoinQueue = async (game: GameKey) => {
     if (activeMatch) {
       toast.error('You have an active match');
@@ -155,6 +230,11 @@ export default function DashboardPage() {
         }
         if (data.matchId) {
           router.push(`/match/${data.matchId}`);
+        } else if (data.queueEntry?.game) {
+          if (!resumeQueue(data.queueEntry)) {
+            toast.error('You already have a live queue session');
+            setQueuingGame(null);
+          }
         } else {
           toast.error(data.error ?? 'Failed to join queue');
           setQueuingGame(null);
@@ -201,6 +281,43 @@ export default function DashboardPage() {
     <div className="page-container">
       {showPaywall ? (
         <PaywallModal reason={paywallReason} onClose={() => setShowPaywall(false)} />
+      ) : null}
+
+      {showWhatsAppPrompt ? (
+        <div className="card surface-live mb-4 p-4">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+            <div>
+              <p className="text-sm font-semibold text-[var(--text-primary)]">
+                Turn on WhatsApp notifications
+              </p>
+              <p className="mt-1 text-xs leading-6 text-[var(--text-secondary)]">
+                Text us on WhatsApp with <span className="font-semibold text-[var(--text-primary)]">Join Mechi</span> to receive match notifications on your number.
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {WHATSAPP_JOIN_URL ? (
+                <a
+                  href={WHATSAPP_JOIN_URL}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="btn-ghost"
+                >
+                  Open WhatsApp
+                </a>
+              ) : null}
+              <Link href="/profile" className="btn-ghost">
+                Open profile
+              </Link>
+              <button
+                type="button"
+                onClick={() => setShowWhatsAppPrompt(false)}
+                className="btn-ghost"
+              >
+                Later
+              </button>
+            </div>
+          </div>
+        </div>
       ) : null}
 
       <div className="card circuit-panel mb-5 p-3 sm:p-4">

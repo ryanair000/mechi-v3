@@ -25,6 +25,7 @@ import {
   getPlatformAddUrl,
 } from '@/lib/config';
 import { PlatformBadge } from '@/components/PlatformBadge';
+import { PlatformLogo } from '@/components/PlatformLogo';
 import { RatingBadge } from '@/components/RatingBadge';
 import type { GameKey, GamificationResult, PlatformKey } from '@/types';
 
@@ -355,7 +356,9 @@ export default function MatchPage() {
           {displayPlatform ? (
             <>
               <div className="mb-3 flex items-start gap-3">
-                <span className="mt-0.5 text-2xl">{PLATFORMS[displayPlatform]?.icon}</span>
+                <span className="mt-0.5">
+                  <PlatformLogo platform={displayPlatform} size={22} />
+                </span>
                 <div className="flex-1">
                   <p className="text-xs text-[var(--text-secondary)]">
                     Playing {game?.label} on {PLATFORMS[displayPlatform]?.label}

@@ -5,31 +5,26 @@ export const PLATFORMS: Record<PlatformKey, Platform> = {
     label: 'PlayStation',
     idLabel: 'PSN ID',
     placeholder: 'YourPSN',
-    icon: '🎮',
   },
   xbox: {
     label: 'Xbox',
     idLabel: 'Xbox Gamertag',
     placeholder: 'YourGamertag',
-    icon: '🟢',
   },
   nintendo: {
     label: 'Nintendo',
     idLabel: 'Friend Code',
     placeholder: 'SW-XXXX-XXXX-XXXX',
-    icon: '🔴',
   },
   mobile: {
     label: 'Mobile',
     idLabel: 'In-Game ID',
     placeholder: 'Username#1234',
-    icon: '📱',
   },
   pc: {
     label: 'PC',
     idLabel: 'Steam/Epic ID',
     placeholder: 'YourUsername',
-    icon: '🖥️',
   },
 };
 

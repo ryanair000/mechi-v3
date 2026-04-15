@@ -30,7 +30,6 @@ export interface Platform {
   label: string;
   idLabel: string;
   placeholder: string;
-  icon: string;
 }
 
 export interface Game {

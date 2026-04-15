@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useAuth, useAuthFetch } from '@/components/AuthProvider';
+import { PlatformLogo } from '@/components/PlatformLogo';
 import { GAMES, PLATFORMS } from '@/lib/config';
 import type { GameKey, Lobby, LobbyMember } from '@/types';
 import toast from 'react-hot-toast';
@@ -82,7 +83,13 @@ export default function LobbyDetailPage() {
           </div>
           <div className="flex items-center gap-4 text-sm text-white/40">
             <div className="flex items-center gap-1.5"><Users size={13} /><span>{members.length}/{lobby.max_players}</span></div>
-            <div className="flex gap-1">{game?.platforms.map((p) => <span key={p}>{PLATFORMS[p]?.icon}</span>)}</div>
+            <div className="flex gap-1.5">
+              {game?.platforms.map((platform) => (
+                <span key={platform} title={PLATFORMS[platform]?.label}>
+                  <PlatformLogo platform={platform} size={14} />
+                </span>
+              ))}
+            </div>
           </div>
           <button onClick={copyRoomCode}
             className="mt-4 flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-white/[0.08] bg-white/[0.06] px-4 py-2.5 text-sm font-mono font-medium text-white transition-all hover:bg-white/[0.1] sm:w-auto">

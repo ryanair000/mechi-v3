@@ -185,7 +185,7 @@ export default function CreateTournamentPage() {
               <Trophy size={15} className="text-[var(--brand-coral)]" />
               Prize split
             </div>
-            Mechi keeps 10%. Winner gets the remaining pool when the final result is confirmed.
+            Mechi keeps 5%. Winner gets the remaining pool when the final result is confirmed.
           </div>
 
           <button onClick={handleCreate} disabled={creating} className="btn-primary w-full">

@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import Link from 'next/link';
 import Image from 'next/image';
@@ -242,7 +242,7 @@ export default function ProfilePage() {
   if (loading) {
     return (
       <div className="px-4 pb-16 pt-4 sm:px-6 lg:px-8 lg:pb-6">
-        <div className="mx-auto w-full max-w-2xl space-y-4">
+        <div className="mx-auto w-full max-w-[88rem] space-y-4">
           <div className="h-56 shimmer" />
           <div className="h-12 shimmer" />
           <div className="h-36 shimmer" />
@@ -304,16 +304,81 @@ export default function ProfilePage() {
     { label: 'Platforms linked', complete: connectedPlatforms.length > 0 },
   ];
   const completedChecklistCount = setupChecklist.filter((item) => item.complete).length;
+  const missingChecklistItems = setupChecklist.filter((item) => !item.complete);
+  const profileStats = [
+    {
+      label: 'Wins',
+      value: totalWins,
+      color: 'var(--brand-teal)',
+      hint: rankedUserGames.length > 0 ? 'Across ranked play' : 'No ranked games yet',
+    },
+    {
+      label: 'Losses',
+      value: totalLosses,
+      color: 'var(--brand-coral)',
+      hint: totalMatches > 0 ? `${totalMatches} total matches` : 'Nothing recorded yet',
+    },
+    {
+      label: 'Win rate',
+      value: totalMatches > 0 ? `${overallWinRate}%` : '--',
+      color: '#60A5FA',
+      hint: totalMatches > 0 ? 'Current conversion' : 'Play to unlock',
+    },
+    {
+      label: 'Level',
+      value: `Lv. ${level}`,
+      color: 'var(--text-primary)',
+      hint: `${xp} total XP`,
+    },
+    {
+      label: 'Mechi Points',
+      value: mp,
+      color: 'var(--brand-coral)',
+      hint: 'From wins and unlocks',
+    },
+    {
+      label: 'Streak',
+      value: winStreak,
+      color: 'var(--brand-teal)',
+      hint: `Best run ${maxWinStreak}`,
+    },
+  ];
+  const overviewSummary = [
+    {
+      label: 'Strongest rank',
+      value: bestDivision.label,
+      hint: `${bestRating} rating`,
+      color: bestDivision.color,
+    },
+    {
+      label: 'Region',
+      value: profile?.region ? (profile.region as string) : 'Add region',
+      hint: 'Used for local matchmaking',
+      color: 'var(--text-primary)',
+    },
+    {
+      label: 'Platforms',
+      value: platformCount === 0 ? 'Add platform' : `${platformCount} connected`,
+      hint: whatsappNotifications ? 'WhatsApp alerts on' : 'Alerts currently off',
+      color: 'var(--text-primary)',
+    },
+    {
+      label: 'Game focus',
+      value: rankedUserGames.length > 0 ? `${rankedUserGames.length} ranked titles` : gameCountLabel,
+      hint: `${currentPlan.name} plan`,
+      color: 'var(--text-primary)',
+    },
+  ];
 
   return (
     <div className="px-4 pb-16 pt-4 sm:px-6 lg:px-8 lg:pb-6">
       {showPaywall ? (
         <PaywallModal reason="game_limit" onClose={() => setShowPaywall(false)} />
       ) : null}
-      <div className="mx-auto w-full max-w-2xl">
-        <div className="card mb-6 overflow-hidden">
+      <div className="mx-auto w-full max-w-[88rem]">
+        <div className="card mb-5 overflow-hidden">
           <div
-            className="relative h-40 sm:h-52 2xl:h-60"
+            className="relative h-32 sm:h-40 xl:h-48"
             style={{
               background: `linear-gradient(135deg, ${withAlpha(bestDivision.color, '26')} 0%, ${withAlpha(bestDivision.color, '10')} 58%, transparent 100%)`,
             }}
@@ -359,10 +424,10 @@ export default function ProfilePage() {
             </div>
           </div>
 
-          <div className="px-5 pb-6 sm:px-6">
-            <div className="-mt-12 flex flex-col gap-5 2xl:flex-row 2xl:items-end 2xl:justify-between">
+          <div className="px-4 pb-5 sm:px-6">
+            <div className="-mt-10 flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
               <div className="flex flex-col gap-4 sm:flex-row sm:items-end">
-                <div className="relative h-24 w-24 shrink-0 sm:h-28 sm:w-28">
+                <div className="relative h-20 w-20 shrink-0 sm:h-24 sm:w-24">
                   <div
                     className="absolute -inset-[5px] rounded-[2rem] opacity-55 blur-[10px]"
                     style={{ background: bestDivision.color }}
@@ -409,11 +474,11 @@ export default function ProfilePage() {
                 </div>
 
                 <div className="pb-1">
-                  <h1 className="text-2xl font-black leading-tight text-[var(--text-primary)] sm:text-[2.4rem]">
+                  <h1 className="text-2xl font-black leading-tight text-[var(--text-primary)] sm:text-[2.2rem]">
                     {user?.username}
                   </h1>
-                  <p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--text-secondary)]">
-                    Make this space yours. Update your photos, lock in your games, and keep your progress easy to read.
+                  <p className="mt-1.5 max-w-2xl text-sm leading-6 text-[var(--text-secondary)]">
+                    Keep your setup clear, your games ready, and your progress easy to scan.
                   </p>
                   <div className="mt-3 flex flex-wrap items-center gap-2">
                     <span
@@ -441,7 +506,7 @@ export default function ProfilePage() {
                 </div>
               </div>
 
-              <div className="flex flex-wrap items-center gap-2.5 2xl:justify-end">
+              <div className="flex flex-wrap items-center gap-2 xl:justify-end">
                 <button type="button" onClick={() => setTab('settings')} className="btn-ghost">
                   <Settings size={14} />
                   Edit profile
@@ -459,7 +524,7 @@ export default function ProfilePage() {
               </div>
             </div>
 
-            <div className="mb-5 flex flex-wrap items-center gap-2">
+            <div className="mb-4 mt-4 flex flex-wrap items-center gap-2">
               {((profile?.platforms ?? []) as PlatformKey[]).length > 0 ? (
                 ((profile?.platforms ?? []) as PlatformKey[]).map((platform) => (
                   <div
@@ -482,45 +547,22 @@ export default function ProfilePage() {
               )}
             </div>
 
-            {rankedUserGames.length > 0 && (
-              <div className="grid grid-cols-2 gap-3 border-t border-[var(--border-color)] pt-4 sm:grid-cols-4">
-                {[
-                  { value: totalWins, label: 'Wins', color: 'var(--brand-teal)' },
-                  { value: totalLosses, label: 'Losses', color: 'var(--brand-coral)' },
-                  { value: totalMatches > 0 ? `${overallWinRate}%` : '—', label: 'Win Rate', color: '#60A5FA' },
-                  { value: userGames.length, label: 'Games', color: 'var(--text-primary)' },
-                ].map((stat) => (
-                  <div key={stat.label} className="text-center">
-                    <div className="text-xl font-black" style={{ color: stat.color }}>
-                      {stat.value}
-                    </div>
-                    <div className="mt-0.5 text-[10px] uppercase tracking-wide text-[var(--text-soft)]">
-                      {stat.label}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            <div className="mt-5 grid gap-3 sm:grid-cols-3">
-              <div className="rounded-2xl border border-[var(--border-color)] bg-[var(--surface-elevated)] p-4">
-                <p className="stat-label">Level</p>
-                <p className="mt-2 text-lg font-black text-[var(--text-primary)]">Lv. {level}</p>
-                <p className="mt-1 text-xs text-[var(--text-soft)]">{xp} total XP earned</p>
-              </div>
-              <div className="rounded-2xl border border-[var(--border-color)] bg-[var(--surface-elevated)] p-4">
-                <p className="stat-label">Mechi Points</p>
-                <p className="mt-2 text-lg font-black text-[var(--brand-coral)]">{mp}</p>
-                <p className="mt-1 text-xs text-[var(--text-soft)]">From wins and unlocks</p>
-              </div>
-              <div className="rounded-2xl border border-[var(--border-color)] bg-[var(--surface-elevated)] p-4">
-                <p className="stat-label">Streak</p>
-                <p className="mt-2 text-lg font-black text-[var(--brand-teal)]">{winStreak}</p>
-                <p className="mt-1 text-xs text-[var(--text-soft)]">Best run: {maxWinStreak}</p>
-              </div>
+            <div className="grid gap-3 border-t border-[var(--border-color)] pt-4 sm:grid-cols-2 xl:grid-cols-6">
+              {profileStats.map((stat) => (
+                <div
+                  key={stat.label}
+                  className="rounded-2xl border border-[var(--border-color)] bg-[var(--surface-elevated)] p-4"
+                >
+                  <p className="stat-label">{stat.label}</p>
+                  <p className="mt-2 text-lg font-black" style={{ color: stat.color }}>
+                    {stat.value}
+                  </p>
+                  <p className="mt-1 text-xs text-[var(--text-soft)]">{stat.hint}</p>
+                </div>
+              ))}
             </div>
 
-            <div className="mt-4 rounded-2xl border border-[var(--border-color)] bg-[var(--surface-elevated)] p-4">
+            <div className="mt-3 rounded-2xl border border-[var(--border-color)] bg-[var(--surface-elevated)] p-4">
               <div className="flex items-center justify-between gap-3 text-[11px] font-semibold uppercase tracking-[0.15em] text-[var(--text-soft)]">
                 <span>XP Progress</span>
                 <span>{xpProgress.progressInLevel}/{xpProgress.progressNeeded}</span>
@@ -563,11 +605,11 @@ export default function ProfilePage() {
         </div>
 
         {tab === 'stats' && (
-          <div className="grid gap-4 2xl:grid-cols-[minmax(0,1.45fr)_minmax(320px,0.95fr)] 2xl:items-start">
+          <div className="grid gap-4 xl:grid-cols-[minmax(0,1.55fr)_minmax(280px,0.85fr)] xl:items-start">
             <div className="space-y-4">
             {userGames.length === 0 ? (
               <div className="card p-10 text-center">
-                <div className="mb-4 text-5xl">🎮</div>
+                <div className="mb-4 text-5xl">Ã°Å¸Å½Â®</div>
                 <p className="mb-1 font-semibold text-[var(--text-primary)]">No games set up yet</p>
                 <p className="mx-auto mb-5 max-w-xs text-sm text-[var(--text-soft)]">
                   Add your platforms and choose your focus games to start climbing the ranks.
@@ -578,7 +620,7 @@ export default function ProfilePage() {
               </div>
             ) : rankedUserGames.length === 0 ? (
               <div className="card p-10 text-center">
-                <div className="mb-4 text-5xl">🎮</div>
+                <div className="mb-4 text-5xl">Ã°Å¸Å½Â®</div>
                 <p className="mb-1 font-semibold text-[var(--text-primary)]">No ranked games selected</p>
                 <p className="mx-auto mb-5 max-w-xs text-sm text-[var(--text-soft)]">
                   Your mobile lobby games are saved. Add a 1v1 title when you want a tracked ladder.
@@ -588,7 +630,7 @@ export default function ProfilePage() {
                 </button>
               </div>
             ) : (
-              <div className="space-y-4">
+              <div className="grid gap-3 lg:grid-cols-2">
                 {rankedUserGames.map((game) => {
                   const rating = (profile?.[`rating_${game}`] as number) ?? 1000;
                   const wins = (profile?.[`wins_${game}`] as number) ?? 0;
@@ -597,10 +639,10 @@ export default function ProfilePage() {
                   const division = getRankDivision(rating);
 
                   return (
-                    <div key={game} className="card relative overflow-hidden p-5">
+                    <div key={game} className="card relative overflow-hidden p-4">
                       
 
-                      <div className="relative mb-4 flex items-center justify-between gap-3">
+                      <div className="relative mb-3 flex items-center justify-between gap-3">
                         <div className="flex items-center gap-2.5">
                           <div className="h-10 w-10 overflow-hidden rounded-lg border border-[var(--border-color)] bg-[var(--surface)]">
                           <GameCover gameKey={game} variant="header" className="h-full w-full" />
@@ -722,13 +764,13 @@ export default function ProfilePage() {
 
             </div>
 
-            <div className="space-y-4 2xl:sticky 2xl:top-4">
+            <div className="space-y-4 xl:sticky xl:top-4">
               <div className="card p-5">
                 <div className="flex items-start justify-between gap-3">
                   <div>
-                    <p className="section-title">Profile at a glance</p>
+                    <p className="section-title">Quick summary</p>
                     <p className="mt-2 text-sm text-[var(--text-secondary)]">
-                      A cleaner summary of how your account looks to other players.
+                      Keep the essentials close and leave the editing work for the next tab.
                     </p>
                   </div>
                   <span className="brand-chip px-2 py-1">
@@ -736,89 +778,59 @@ export default function ProfilePage() {
                   </span>
                 </div>
 
-                <div className="mt-4 grid gap-3 sm:grid-cols-2 2xl:grid-cols-1">
-                  <div className="rounded-2xl border border-[var(--border-color)] bg-[var(--surface-elevated)] p-4">
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--text-soft)]">
-                      Strongest rank
-                    </p>
-                    <p className="mt-2 text-lg font-black" style={{ color: bestDivision.color }}>
-                      {bestDivision.label}
-                    </p>
-                    <p className="mt-1 text-sm text-[var(--text-secondary)]">{bestRating} rating</p>
-                  </div>
-
-                  <div className="rounded-2xl border border-[var(--border-color)] bg-[var(--surface-elevated)] p-4">
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--text-soft)]">
-                      Region
-                    </p>
-                    <p className="mt-2 text-lg font-black text-[var(--text-primary)]">
-                      {profile?.region ? (profile.region as string) : 'Add your region'}
-                    </p>
-                    <p className="mt-1 text-sm text-[var(--text-secondary)]">
-                      Helps players understand where you queue from.
-                    </p>
-                  </div>
-
-                  <div className="rounded-2xl border border-[var(--border-color)] bg-[var(--surface-elevated)] p-4">
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--text-soft)]">
-                      Games tracked
-                    </p>
-                    <p className="mt-2 text-lg font-black text-[var(--text-primary)]">{userGames.length}</p>
-                    <p className="mt-1 text-sm text-[var(--text-secondary)]">
-                      {rankedUserGames.length} ranked title{rankedUserGames.length === 1 ? '' : 's'} active
-                    </p>
-                  </div>
-
-                  <div className="rounded-2xl border border-[var(--border-color)] bg-[var(--surface-elevated)] p-4">
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--text-soft)]">
-                      Platforms
-                    </p>
-                    <p className="mt-2 text-lg font-black text-[var(--text-primary)]">{platformCount}</p>
-                    <p className="mt-1 text-sm text-[var(--text-secondary)]">
-                      {whatsappNotifications ? 'WhatsApp alerts turned on' : 'Alerts currently off'}
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="card p-5">
-                <p className="section-title">Profile checklist</p>
-                <p className="mt-2 text-sm text-[var(--text-secondary)]">
-                  Small details that make your page easier to trust, share, and queue from.
-                </p>
-
-                <div className="mt-4 space-y-2.5">
-                  {setupChecklist.map((item) => (
+                <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
+                  {overviewSummary.map((item) => (
                     <div
                       key={item.label}
-                      className="flex items-center justify-between rounded-xl border border-[var(--border-color)] bg-[var(--surface-elevated)] px-3 py-3"
+                      className="rounded-2xl border border-[var(--border-color)] bg-[var(--surface-elevated)] p-4"
                     >
-                      <span className="text-sm font-medium text-[var(--text-primary)]">{item.label}</span>
-                      <span
-                        className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold ${
-                          item.complete
-                            ? 'bg-[rgba(50,224,196,0.14)] text-[var(--accent-secondary-text)]'
-                            : 'bg-[rgba(255,107,107,0.14)] text-[var(--brand-coral)]'
-                        }`}
-                      >
-                        {item.complete ? <Check size={12} /> : null}
-                        {item.complete ? 'Done' : 'Add now'}
-                      </span>
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--text-soft)]">
+                        {item.label}
+                      </p>
+                      <p className="mt-2 text-lg font-black" style={{ color: item.color }}>
+                        {item.value}
+                      </p>
+                      <p className="mt-1 text-sm text-[var(--text-secondary)]">{item.hint}</p>
                     </div>
                   ))}
                 </div>
 
-                <button type="button" onClick={() => setTab('settings')} className="btn-ghost mt-4 w-full">
-                  <Settings size={14} />
-                  Finish profile
-                </button>
+                <div className="mt-5 border-t border-[var(--border-color)] pt-4">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--text-soft)]">
+                    Next to clean up
+                  </p>
+                  <div className="mt-3 space-y-2">
+                    {missingChecklistItems.length > 0 ? (
+                      missingChecklistItems.slice(0, 3).map((item) => (
+                        <div
+                          key={item.label}
+                          className="flex items-center justify-between rounded-xl border border-[var(--border-color)] bg-[var(--surface-elevated)] px-3 py-2.5"
+                        >
+                          <span className="text-sm font-medium text-[var(--text-primary)]">{item.label}</span>
+                          <span className="rounded-full bg-[rgba(255,107,107,0.14)] px-2.5 py-1 text-[11px] font-semibold text-[var(--brand-coral)]">
+                            Add now
+                          </span>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="rounded-xl border border-[rgba(50,224,196,0.22)] bg-[rgba(50,224,196,0.08)] px-3 py-3 text-sm text-[var(--accent-secondary-text)]">
+                        Profile looks solid. Use edit mode when you want to refresh the visuals or change your games.
+                      </div>
+                    )}
+                  </div>
+
+                  <button type="button" onClick={() => setTab('settings')} className="btn-ghost mt-4 w-full">
+                    <Settings size={14} />
+                    Edit profile
+                  </button>
+                </div>
               </div>
             </div>
           </div>
         )}
 
         {tab === 'settings' && (
-          <div className="grid gap-4 2xl:grid-cols-[minmax(0,1.15fr)_minmax(320px,0.85fr)] 2xl:items-start">
+          <div className="grid gap-4 xl:grid-cols-[minmax(0,1.15fr)_minmax(320px,0.85fr)] xl:items-start">
             <div className="space-y-4">
               <div className="card p-5">
                 <div className="flex flex-wrap items-center justify-between gap-3">
@@ -990,85 +1002,87 @@ export default function ProfilePage() {
               </div>
             </div>
 
-            <div className="card p-5">
-              <label className="label">Region</label>
-              <p className="mb-3 mt-2 text-sm text-[var(--text-secondary)]">
-                Set the place you mostly queue from so nearby players can read you quickly.
-              </p>
-              <input
-                type="text"
-                list="profile-region-options"
-                value={region}
-                onChange={(e) => setRegion(e.target.value)}
-                className="input w-full sm:max-w-sm"
-                placeholder="Type your region"
-              />
-              <datalist id="profile-region-options">
-                {REGIONS.map((item) => (
-                  <option key={item} value={item}>
-                    {item}
-                  </option>
-                ))}
-              </datalist>
-            </div>
+            <div className="grid gap-4 xl:grid-cols-2">
+              <div className="card p-5">
+                <label className="label">Region</label>
+                <p className="mb-3 mt-2 text-sm text-[var(--text-secondary)]">
+                  Set the place you mostly queue from so nearby players can read you quickly.
+                </p>
+                <input
+                  type="text"
+                  list="profile-region-options"
+                  value={region}
+                  onChange={(e) => setRegion(e.target.value)}
+                  className="input w-full"
+                  placeholder="Type your region"
+                />
+                <datalist id="profile-region-options">
+                  {REGIONS.map((item) => (
+                    <option key={item} value={item}>
+                      {item}
+                    </option>
+                  ))}
+                </datalist>
+              </div>
 
-            <div className="card p-5">
-              <label className="label mb-3">Notifications</label>
-              <label className="flex cursor-pointer items-center justify-between gap-4">
-                <div>
-                  <p className="text-sm font-medium text-[var(--text-primary)]">WhatsApp match alerts</p>
-                  <p className="mt-0.5 text-xs text-[var(--text-soft)]">
-                    Get notified when matches are found or results are confirmed.
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() =>
-                    setProfile((current) =>
-                      current
-                        ? {
-                            ...current,
-                            whatsapp_notifications: !Boolean(current.whatsapp_notifications),
-                            whatsapp_number: !Boolean(current.whatsapp_notifications)
-                              ? (typeof current.whatsapp_number === 'string' && current.whatsapp_number.length > 0
-                                  ? current.whatsapp_number
-                                  : user?.phone ?? '')
-                              : current.whatsapp_number ?? null,
-                          }
-                        : current
-                    )
-                  }
-                  aria-pressed={whatsappNotifications}
-                  aria-label="Toggle WhatsApp match alerts"
-                  className={`relative h-11 w-16 flex-shrink-0 rounded-full transition-colors ${
-                    whatsappNotifications ? 'bg-[var(--brand-teal)]' : 'bg-[var(--surface-strong)]'
-                  }`}
-                >
-                  <span
-                    className={`absolute top-2 h-7 w-7 rounded-full bg-white shadow transition-transform ${
-                      whatsappNotifications ? 'translate-x-7' : 'translate-x-2'
-                    }`}
-                  />
-                </button>
-              </label>
-
-              {whatsappNotifications && (
-                <div className="mt-4 border-t border-[var(--border-color)] pt-4">
-                  <label className="label">WhatsApp Number</label>
-                  <input
-                    type="tel"
-                    value={whatsappNumber}
-                    onChange={(e) =>
+              <div className="card p-5">
+                <label className="label mb-3">Notifications</label>
+                <label className="flex cursor-pointer items-center justify-between gap-4">
+                  <div>
+                    <p className="text-sm font-medium text-[var(--text-primary)]">WhatsApp match alerts</p>
+                    <p className="mt-0.5 text-xs text-[var(--text-soft)]">
+                      Get notified when matches are found or results are confirmed.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() =>
                       setProfile((current) =>
-                        current ? { ...current, whatsapp_number: e.target.value } : current
+                        current
+                          ? {
+                              ...current,
+                              whatsapp_notifications: !Boolean(current.whatsapp_notifications),
+                              whatsapp_number: !Boolean(current.whatsapp_notifications)
+                                ? (typeof current.whatsapp_number === 'string' && current.whatsapp_number.length > 0
+                                    ? current.whatsapp_number
+                                    : user?.phone ?? '')
+                                : current.whatsapp_number ?? null,
+                            }
+                          : current
                       )
                     }
-                    placeholder="0712 345 678"
-                    className="input"
-                    inputMode="tel"
-                  />
-                </div>
-              )}
+                    aria-pressed={whatsappNotifications}
+                    aria-label="Toggle WhatsApp match alerts"
+                    className={`relative h-11 w-16 flex-shrink-0 rounded-full transition-colors ${
+                      whatsappNotifications ? 'bg-[var(--brand-teal)]' : 'bg-[var(--surface-strong)]'
+                    }`}
+                  >
+                    <span
+                      className={`absolute top-2 h-7 w-7 rounded-full bg-white shadow transition-transform ${
+                        whatsappNotifications ? 'translate-x-7' : 'translate-x-2'
+                      }`}
+                    />
+                  </button>
+                </label>
+
+                {whatsappNotifications && (
+                  <div className="mt-4 border-t border-[var(--border-color)] pt-4">
+                    <label className="label">WhatsApp Number</label>
+                    <input
+                      type="tel"
+                      value={whatsappNumber}
+                      onChange={(e) =>
+                        setProfile((current) =>
+                          current ? { ...current, whatsapp_number: e.target.value } : current
+                        )
+                      }
+                      placeholder="0712 345 678"
+                      className="input"
+                      inputMode="tel"
+                    />
+                  </div>
+                )}
+              </div>
             </div>
 
             <div className="card p-5">
@@ -1090,7 +1104,7 @@ export default function ProfilePage() {
                   ? 'Free plan saves 1 title. Upgrade to unlock up to 3.'
                   : `Pick up to ${currentPlan.maxGames} titles you actively play so your profile stays relevant.`}
               </p>
-              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+              <div className="grid grid-cols-1 gap-2 md:grid-cols-2 xl:grid-cols-3">
                 {selectableGames.map((game) => {
                   const isSelected = selectedGames.includes(game);
 
@@ -1203,7 +1217,7 @@ export default function ProfilePage() {
 
             </div>
 
-            <div className="space-y-4 2xl:sticky 2xl:top-4">
+            <div className="space-y-4 xl:sticky xl:top-4">
               <div className="card p-5">
                 <p className="section-title">Save and review</p>
                 <p className="mt-2 text-sm text-[var(--text-secondary)]">

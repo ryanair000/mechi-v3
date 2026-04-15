@@ -91,6 +91,7 @@ export async function POST(request: NextRequest) {
         region,
         size,
         entry_fee: entryFee,
+        platform_fee_rate: 5,
         rules: rules || null,
         organizer_id: authUser.sub,
       })

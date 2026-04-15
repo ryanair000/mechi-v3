@@ -9,7 +9,7 @@ CREATE TABLE IF NOT EXISTS tournaments (
   entry_fee integer NOT NULL DEFAULT 0 CHECK (entry_fee >= 0),
   prize_pool integer NOT NULL DEFAULT 0 CHECK (prize_pool >= 0),
   platform_fee integer NOT NULL DEFAULT 0 CHECK (platform_fee >= 0),
-  platform_fee_rate integer NOT NULL DEFAULT 10 CHECK (platform_fee_rate >= 0 AND platform_fee_rate <= 100),
+  platform_fee_rate integer NOT NULL DEFAULT 5 CHECK (platform_fee_rate >= 0 AND platform_fee_rate <= 100),
   status text NOT NULL DEFAULT 'open' CHECK (status IN ('open', 'full', 'active', 'completed', 'cancelled')),
   bracket jsonb,
   winner_id uuid REFERENCES profiles(id) ON DELETE SET NULL,

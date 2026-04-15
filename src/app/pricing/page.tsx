@@ -16,7 +16,7 @@ const VISIBLE_PLAN_ORDER: Array<'free' | 'pro'> = ['free', 'pro'];
 const COMPARISON_ROWS = [
   { label: 'Matches per day', free: '5', pro: 'Unlimited' },
   { label: 'Games selectable', free: '1', pro: '3' },
-  { label: 'Tournament fee', free: '10%', pro: '8%' },
+  { label: 'Tournament fee', free: '5%', pro: '5%' },
   { label: 'Match history', free: '10', pro: '100' },
   { label: 'Priority matchmaking', free: 'No', pro: 'No' },
   { label: 'CSV export', free: 'No', pro: 'No' },

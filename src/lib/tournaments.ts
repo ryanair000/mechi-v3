@@ -50,7 +50,7 @@ export function getTournamentUrl(slug: string): string {
   return `${getAppUrl()}/t/${slug}`;
 }
 
-export function getTournamentPrize(entryFee: number, playerCount: number, feeRate = 10) {
+export function getTournamentPrize(entryFee: number, playerCount: number, feeRate = 5) {
   const gross = Math.max(0, entryFee) * Math.max(0, playerCount);
   const platformFee = Math.floor((gross * feeRate) / 100);
   return {

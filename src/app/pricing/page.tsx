@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { Suspense, useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import toast from 'react-hot-toast';
-import { ArrowRight, Check, Crown, Sparkles, Zap } from 'lucide-react';
+import { ArrowRight, Check, Crown, Sparkles } from 'lucide-react';
 import { BrandLogo } from '@/components/BrandLogo';
 import { PlanBadge } from '@/components/PlanBadge';
 import { ThemeToggle } from '@/components/ThemeToggle';

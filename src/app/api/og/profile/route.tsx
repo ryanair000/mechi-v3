@@ -1,7 +1,9 @@
 import { ImageResponse } from 'next/og';
 import { NextRequest } from 'next/server';
+import { getGameImage } from '@/lib/config';
 import { createServiceClient } from '@/lib/supabase';
 import { ACHIEVEMENTS, getLevelFromXp, getRankDivision } from '@/lib/gamification';
+import type { GameKey } from '@/types';
 
 export const runtime = 'edge';
 
@@ -50,6 +52,7 @@ export async function GET(request: NextRequest) {
 
   const games = (profile.selected_games as string[]) ?? [];
   let bestRating = 1000;
+  let topGame: string | null = null;
   let totalWins = 0;
   let totalLosses = 0;
 
@@ -57,7 +60,10 @@ export async function GET(request: NextRequest) {
     const rating = ((profile as Record<string, unknown>)[`rating_${game}`] as number) ?? 1000;
     const wins = ((profile as Record<string, unknown>)[`wins_${game}`] as number) ?? 0;
     const losses = ((profile as Record<string, unknown>)[`losses_${game}`] as number) ?? 0;
-    if (rating > bestRating) bestRating = rating;
+    if (topGame === null || rating > bestRating) {
+      bestRating = rating;
+      topGame = game;
+    }
     totalWins += wins;
     totalLosses += losses;
   }
@@ -87,6 +93,7 @@ export async function GET(request: NextRequest) {
   const totalMatches = totalWins + totalLosses;
   const winRate = totalMatches > 0 ? Math.round((totalWins / totalMatches) * 100) : 0;
   const platforms = (profile.platforms as string[]) ?? [];
+  const gameImageUrl = topGame ? getGameImage(topGame as GameKey) : null;
 
   return new ImageResponse(
     (
@@ -96,12 +103,29 @@ export async function GET(request: NextRequest) {
           flexDirection: 'column',
           width: '100%',
           height: '100%',
+          position: 'relative',
+          overflow: 'hidden',
           background: 'linear-gradient(135deg, #0B1121 0%, #152033 55%, #08101C 100%)',
           padding: '52px',
           color: 'white',
           fontFamily: 'sans-serif',
         }}
       >
+        {gameImageUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={gameImageUrl}
+            alt=""
+            style={{
+              position: 'absolute',
+              inset: 0,
+              width: '100%',
+              height: '100%',
+              objectFit: 'cover',
+              opacity: 0.08,
+            }}
+          />
+        ) : null}
         <div
           style={{
             display: 'flex',

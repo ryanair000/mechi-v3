@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import Image from 'next/image';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
+import { getRankDivision } from '@/lib/gamification';
 import { createServiceClient } from '@/lib/supabase';
 
 interface Props {
@@ -9,12 +10,7 @@ interface Props {
 }
 
 function getTierName(rating: number): string {
-  if (rating >= 1700) return 'Legend';
-  if (rating >= 1500) return 'Diamond';
-  if (rating >= 1300) return 'Platinum';
-  if (rating >= 1100) return 'Gold';
-  if (rating >= 900) return 'Silver';
-  return 'Bronze';
+  return getRankDivision(rating).label;
 }
 
 function getTierColor(tier: string): string {
@@ -31,7 +27,7 @@ async function getProfileData(username: string) {
   const { data: profile } = await supabase
     .from('profiles')
     .select(
-      'username, region, avatar_url, cover_url, platforms, selected_games, rating_efootball, rating_fc26, rating_mk11, rating_nba2k26, rating_tekken8, rating_sf6, wins_efootball, wins_fc26, wins_mk11, wins_nba2k26, wins_tekken8, wins_sf6, losses_efootball, losses_fc26, losses_mk11, losses_nba2k26, losses_tekken8, losses_sf6'
+      'username, region, level, avatar_url, cover_url, platforms, selected_games, rating_efootball, rating_fc26, rating_mk11, rating_nba2k26, rating_tekken8, rating_sf6, wins_efootball, wins_fc26, wins_mk11, wins_nba2k26, wins_tekken8, wins_sf6, losses_efootball, losses_fc26, losses_mk11, losses_nba2k26, losses_tekken8, losses_sf6'
     )
     .ilike('username', username)
     .single();
@@ -63,8 +59,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   if (!profile) return { title: 'Player Not Found | Mechi' };
 
   const tier = getTierName(profile.bestRating);
-  const title = `${profile.username} - ${tier} (${profile.bestRating} ELO) | Mechi`;
-  const description = `${profile.username} is ranked ${tier} with ${profile.bestRating} ELO on Mechi. ${profile.totalWins} wins, ${profile.totalLosses} losses. Think you can beat them?`;
+  const level = typeof profile.level === 'number' ? profile.level : 1;
+  const title = `${profile.username} - ${tier} / Lv. ${level} | Mechi`;
+  const description = `${profile.username} is ranked ${tier} at level ${level} on Mechi. ${profile.totalWins} wins, ${profile.totalLosses} losses. Think you can beat them?`;
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://mechi-v3.vercel.app';
 
   return {
@@ -102,6 +99,7 @@ export default async function ShareProfilePage({ params }: Props) {
 
   const tier = getTierName(profile.bestRating);
   const tierColor = getTierColor(tier);
+  const level = typeof profile.level === 'number' ? profile.level : 1;
   const totalMatches = profile.totalWins + profile.totalLosses;
   const winRate = totalMatches > 0 ? Math.round((profile.totalWins / totalMatches) * 100) : 0;
   const selectedGames = (profile.selected_games as string[]) ?? [];
@@ -187,7 +185,7 @@ export default async function ShareProfilePage({ params }: Props) {
                       className="rounded-full px-3 py-1 text-xs font-bold"
                       style={{ background: `${tierColor}24`, color: tierColor }}
                     >
-                      {tier} / {profile.bestRating} ELO
+                      {tier} / Lv. {level}
                     </span>
                     <span className="rounded-full border border-white/[0.08] bg-white/[0.04] px-3 py-1 text-xs font-medium text-white/72">
                       {platformCount} platform{platformCount === 1 ? '' : 's'} linked

@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import Image from 'next/image';
 import { useEffect, useState, useCallback } from 'react';
 import toast from 'react-hot-toast';
@@ -15,7 +16,12 @@ import {
   Swords,
 } from 'lucide-react';
 import { useAuth, useAuthFetch } from '@/components/AuthProvider';
+import { GameCover } from '@/components/GameCover';
+import { PaywallModal } from '@/components/PaywallModal';
+import { PlanBadge } from '@/components/PlanBadge';
+import { PlatformLogo } from '@/components/PlatformLogo';
 import { ShareMenu } from '@/components/ShareMenu';
+import { TierMedal } from '@/components/TierMedal';
 import {
   GAMES,
   PLATFORMS,
@@ -35,30 +41,13 @@ import {
   getXpProgress,
   withAlpha,
 } from '@/lib/gamification';
+import { canSelectGames, getPlan } from '@/lib/plans';
 import {
   getProfileOgImageUrl,
   getProfileShareUrl,
   profileShareText,
 } from '@/lib/share';
-import type { GameKey, PlatformKey } from '@/types';
-
-const GAME_EMOJIS: Record<string, string> = {
-  efootball: '⚽',
-  efootball_mobile: '⚽',
-  fc26: '🏆',
-  mk11: '🥊',
-  nba2k26: '🏀',
-  tekken8: '👊',
-  sf6: '🥋',
-  cs2: '🎯',
-  valorant: '⚡',
-  mariokart: '🏎️',
-  smashbros: '💥',
-  codm: '🎯',
-  pubgm: '📱',
-  freefire: '🔥',
-  rocketleague: '🚀',
-};
+import type { GameKey, Plan, PlatformKey } from '@/types';
 
 interface Profile {
   [key: string]: unknown;
@@ -84,8 +73,10 @@ export default function ProfilePage() {
   const [achievementKeys, setAchievementKeys] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [subscriptionLoading, setSubscriptionLoading] = useState(false);
   const [uploadingMedia, setUploadingMedia] = useState<'avatar' | 'cover' | null>(null);
   const [tab, setTab] = useState<'stats' | 'settings'>('stats');
+  const [showPaywall, setShowPaywall] = useState(false);
 
   const [region, setRegion] = useState('Nairobi');
   const [platforms, setPlatforms] = useState<PlatformKey[]>([]);
@@ -138,8 +129,13 @@ export default function ProfilePage() {
         });
         return prev.filter((item) => item !== game);
       }
-      if (prev.length >= 3) {
-        toast.error('Max 3 games');
+      if (!canSelectGames(currentPlan.id, prev.length + 1)) {
+        toast.error(
+          currentPlan.id === 'free'
+            ? 'Free plan saves 1 game. Upgrade to unlock 3.'
+            : `Max ${currentPlan.maxGames} games on this plan`
+        );
+        setShowPaywall(true);
         return prev;
       }
       const defaultPlatform = GAMES[game]?.platforms.length === 1 ? GAMES[game].platforms[0] : null;
@@ -231,6 +227,9 @@ export default function ProfilePage() {
         await Promise.all([fetchProfile(), refresh()]);
       } else {
         const data = await res.json();
+        if (data.limit_reached) {
+          setShowPaywall(true);
+        }
         toast.error(data.error ?? 'Failed to save');
       }
     } catch {
@@ -243,7 +242,7 @@ export default function ProfilePage() {
   if (loading) {
     return (
       <div className="px-4 pb-16 pt-4 sm:px-6 lg:px-8 lg:pb-6">
-        <div className="mx-auto w-full max-w-[88rem] space-y-4">
+        <div className="mx-auto w-full max-w-2xl space-y-4">
           <div className="h-56 shimmer" />
           <div className="h-12 shimmer" />
           <div className="h-36 shimmer" />
@@ -295,6 +294,7 @@ export default function ProfilePage() {
   const coverUrl = (profile?.cover_url as string | null | undefined) ?? user?.cover_url ?? null;
   const usernameInitial = user?.username?.[0]?.toUpperCase() ?? '?';
   const platformCount = connectedPlatforms.length;
+  const currentPlan = getPlan(((profile?.plan as Plan | undefined) ?? user?.plan ?? 'free'));
   const gameCountLabel = userGames.length === 1 ? '1 game selected' : `${userGames.length} games selected`;
   const setupChecklist = [
     { label: 'Display photo', complete: Boolean(avatarUrl) },
@@ -307,10 +307,13 @@ export default function ProfilePage() {
 
   return (
     <div className="px-4 pb-16 pt-4 sm:px-6 lg:px-8 lg:pb-6">
-      <div className="mx-auto w-full max-w-[88rem]">
+      {showPaywall ? (
+        <PaywallModal reason="game_limit" onClose={() => setShowPaywall(false)} />
+      ) : null}
+      <div className="mx-auto w-full max-w-2xl">
         <div className="card mb-6 overflow-hidden">
           <div
-            className="relative h-40 sm:h-52 xl:h-60"
+            className="relative h-40 sm:h-52 2xl:h-60"
             style={{
               background: `linear-gradient(135deg, ${withAlpha(bestDivision.color, '26')} 0%, ${withAlpha(bestDivision.color, '10')} 58%, transparent 100%)`,
             }}
@@ -357,7 +360,7 @@ export default function ProfilePage() {
           </div>
 
           <div className="px-5 pb-6 sm:px-6">
-            <div className="-mt-12 flex flex-col gap-5 xl:flex-row xl:items-end xl:justify-between">
+            <div className="-mt-12 flex flex-col gap-5 2xl:flex-row 2xl:items-end 2xl:justify-between">
               <div className="flex flex-col gap-4 sm:flex-row sm:items-end">
                 <div className="relative h-24 w-24 shrink-0 sm:h-28 sm:w-28">
                   <div
@@ -414,14 +417,16 @@ export default function ProfilePage() {
                   </p>
                   <div className="mt-3 flex flex-wrap items-center gap-2">
                     <span
-                      className="rounded-full px-3 py-1 text-xs font-bold"
+                      className="inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-bold"
                       style={{
                         background: withAlpha(bestDivision.color, '18'),
                         color: bestDivision.color,
                       }}
                     >
+                      <TierMedal rating={bestRating} size="sm" />
                       {bestDivision.label} / Lv. {level}
                     </span>
+                    <PlanBadge plan={currentPlan.id} size="md" />
                     {profile?.region ? (
                       <span className="inline-flex items-center gap-1.5 rounded-full border border-[var(--border-color)] bg-[var(--surface-elevated)] px-3 py-1 text-xs font-medium text-[var(--text-secondary)]">
                         <MapPin size={12} />
@@ -436,7 +441,7 @@ export default function ProfilePage() {
                 </div>
               </div>
 
-              <div className="flex flex-wrap items-center gap-2.5 xl:justify-end">
+              <div className="flex flex-wrap items-center gap-2.5 2xl:justify-end">
                 <button type="button" onClick={() => setTab('settings')} className="btn-ghost">
                   <Settings size={14} />
                   Edit profile
@@ -461,7 +466,7 @@ export default function ProfilePage() {
                     key={platform}
                     className="flex items-center gap-1.5 rounded-lg border border-[var(--border-color)] bg-[var(--surface-elevated)] px-2.5 py-1"
                   >
-                    <span className="text-sm">{PLATFORMS[platform]?.icon}</span>
+                    <PlatformLogo platform={platform} size={14} />
                     <span className="text-[11px] font-medium text-[var(--text-secondary)]">
                       {PLATFORMS[platform]?.label}
                     </span>
@@ -558,14 +563,14 @@ export default function ProfilePage() {
         </div>
 
         {tab === 'stats' && (
-          <div className="grid gap-4 xl:grid-cols-[minmax(0,1.45fr)_minmax(320px,0.95fr)] xl:items-start">
+          <div className="grid gap-4 2xl:grid-cols-[minmax(0,1.45fr)_minmax(320px,0.95fr)] 2xl:items-start">
             <div className="space-y-4">
             {userGames.length === 0 ? (
               <div className="card p-10 text-center">
                 <div className="mb-4 text-5xl">🎮</div>
                 <p className="mb-1 font-semibold text-[var(--text-primary)]">No games set up yet</p>
                 <p className="mx-auto mb-5 max-w-xs text-sm text-[var(--text-soft)]">
-                  Add your platforms and pick up to 3 games to start climbing the ranks.
+                  Add your platforms and choose your focus games to start climbing the ranks.
                 </p>
                 <button onClick={() => setTab('settings')} className="btn-primary">
                   <Settings size={14} /> Set Up Profile
@@ -593,16 +598,13 @@ export default function ProfilePage() {
 
                   return (
                     <div key={game} className="card relative overflow-hidden p-5">
-                      <div
-                        className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 select-none text-8xl leading-none opacity-[0.06]"
-                        aria-hidden="true"
-                      >
-                        {GAME_EMOJIS[game] ?? '🎮'}
-                      </div>
+                      
 
                       <div className="relative mb-4 flex items-center justify-between gap-3">
                         <div className="flex items-center gap-2.5">
-                          <span className="text-xl">{GAME_EMOJIS[game] ?? '🎮'}</span>
+                          <div className="h-10 w-10 overflow-hidden rounded-lg border border-[var(--border-color)] bg-[var(--surface)]">
+                          <GameCover gameKey={game} variant="header" className="h-full w-full" />
+                        </div>
                           <div>
                             <p className="text-sm font-semibold text-[var(--text-primary)]">{GAMES[game].label}</p>
                             <p className="mt-0.5 text-[11px] text-[var(--text-soft)]">
@@ -610,14 +612,17 @@ export default function ProfilePage() {
                             </p>
                           </div>
                         </div>
-                        <div
-                          className="rounded-lg px-2.5 py-1 text-xs font-semibold"
-                          style={{
-                            background: withAlpha(division.color, '15'),
-                            color: division.color,
-                          }}
-                        >
-                          {division.label}
+                        <div className="flex items-center gap-2">
+                          <TierMedal rating={rating} size="sm" />
+                          <div
+                            className="rounded-lg px-2.5 py-1 text-xs font-semibold"
+                            style={{
+                              background: withAlpha(division.color, '15'),
+                              color: division.color,
+                            }}
+                          >
+                            {division.label}
+                          </div>
                         </div>
                       </div>
 
@@ -717,7 +722,7 @@ export default function ProfilePage() {
 
             </div>
 
-            <div className="space-y-4 xl:sticky xl:top-4">
+            <div className="space-y-4 2xl:sticky 2xl:top-4">
               <div className="card p-5">
                 <div className="flex items-start justify-between gap-3">
                   <div>
@@ -731,7 +736,7 @@ export default function ProfilePage() {
                   </span>
                 </div>
 
-                <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
+                <div className="mt-4 grid gap-3 sm:grid-cols-2 2xl:grid-cols-1">
                   <div className="rounded-2xl border border-[var(--border-color)] bg-[var(--surface-elevated)] p-4">
                     <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--text-soft)]">
                       Strongest rank
@@ -813,17 +818,77 @@ export default function ProfilePage() {
         )}
 
         {tab === 'settings' && (
-          <div className="grid gap-4 xl:grid-cols-[minmax(0,1.15fr)_minmax(320px,0.85fr)] xl:items-start">
+          <div className="grid gap-4 2xl:grid-cols-[minmax(0,1.15fr)_minmax(320px,0.85fr)] 2xl:items-start">
             <div className="space-y-4">
-            <div className="card p-5">
-              <div className="mb-4">
-                <p className="section-title">Profile look</p>
-                <p className="mt-2 text-sm text-[var(--text-secondary)]">
-                  Swap your display photo and cover any time to make the page feel more like yours.
-                </p>
+              <div className="card p-5">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <p className="section-title">Subscription</p>
+                    <div className="mt-2 flex items-center gap-2">
+                      <span className="text-sm font-semibold text-[var(--text-primary)]">{currentPlan.name}</span>
+                      <PlanBadge plan={currentPlan.id} size="md" />
+                    </div>
+                    <p className="mt-2 text-sm text-[var(--text-secondary)]">
+                      {currentPlan.id === 'free'
+                        ? 'Free plan gives you 5 ranked matches/day and 1 selected game.'
+                        : currentPlan.id === 'pro'
+                          ? 'Pro unlocks unlimited ranked matches and up to 3 selected games.'
+                          : 'Elite unlocks full history, priority perks, and premium access.'}
+                    </p>
+                    {typeof profile?.plan_expires_at === 'string' && currentPlan.id !== 'free' ? (
+                      <p className="mt-2 text-xs text-[var(--text-soft)]">
+                        Active until{' '}
+                        {new Date(profile.plan_expires_at).toLocaleDateString('en-KE', {
+                          day: 'numeric',
+                          month: 'short',
+                          year: 'numeric',
+                        })}
+                      </p>
+                    ) : null}
+                  </div>
+
+                  {currentPlan.id === 'free' ? (
+                    <Link href="/pricing" className="btn-primary">
+                      Upgrade
+                    </Link>
+                  ) : (
+                    <button
+                      type="button"
+                      disabled={subscriptionLoading}
+                      className="btn-outline"
+                      onClick={async () => {
+                        setSubscriptionLoading(true);
+                        try {
+                          const res = await authFetch('/api/subscriptions/cancel', { method: 'POST' });
+                          const data = await res.json();
+                          if (!res.ok) {
+                            toast.error(data.error ?? 'Could not cancel subscription');
+                            return;
+                          }
+                          toast.success('Subscription cancelled. Access stays active until expiry.');
+                          await Promise.all([fetchProfile(), refresh()]);
+                        } catch {
+                          toast.error('Network error');
+                        } finally {
+                          setSubscriptionLoading(false);
+                        }
+                      }}
+                    >
+                      {subscriptionLoading ? 'Cancelling...' : 'Cancel renewal'}
+                    </button>
+                  )}
+                </div>
               </div>
 
-              <div className="grid gap-4 lg:grid-cols-[minmax(220px,0.7fr)_minmax(0,1.3fr)]">
+              <div className="card p-5">
+                <div className="mb-4">
+                  <p className="section-title">Profile look</p>
+                  <p className="mt-2 text-sm text-[var(--text-secondary)]">
+                    Swap your display photo and cover any time to make the page feel more like yours.
+                  </p>
+                </div>
+
+                <div className="grid gap-4 lg:grid-cols-[minmax(220px,0.7fr)_minmax(0,1.3fr)]">
                 <div className="rounded-2xl border border-[var(--border-color)] bg-[var(--surface-elevated)] p-4">
                   <p className="label mb-3">Display photo</p>
                   <div className="flex items-center gap-4">
@@ -930,13 +995,21 @@ export default function ProfilePage() {
               <p className="mb-3 mt-2 text-sm text-[var(--text-secondary)]">
                 Set the place you mostly queue from so nearby players can read you quickly.
               </p>
-              <select value={region} onChange={(e) => setRegion(e.target.value)} className="input w-full sm:max-w-sm">
+              <input
+                type="text"
+                list="profile-region-options"
+                value={region}
+                onChange={(e) => setRegion(e.target.value)}
+                className="input w-full sm:max-w-sm"
+                placeholder="Type your region"
+              />
+              <datalist id="profile-region-options">
                 {REGIONS.map((item) => (
                   <option key={item} value={item}>
                     {item}
                   </option>
                 ))}
-              </select>
+              </datalist>
             </div>
 
             <div className="card p-5">
@@ -1011,7 +1084,9 @@ export default function ProfilePage() {
                 </div>
               </div>
               <p className="mb-3 text-xs text-[var(--text-soft)]">
-                Pick up to 3 titles you actively play so your profile and leaderboard view stay relevant.
+                {currentPlan.id === 'free'
+                  ? 'Free plan saves 1 title. Upgrade to unlock up to 3.'
+                  : `Pick up to ${currentPlan.maxGames} titles you actively play so your profile stays relevant.`}
               </p>
               <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                 {selectableGames.map((game) => {
@@ -1028,7 +1103,9 @@ export default function ProfilePage() {
                           : 'border-[var(--border-color)] bg-[var(--surface-elevated)] hover:bg-[var(--surface)]'
                       }`}
                     >
-                      <span className="text-xl">{GAME_EMOJIS[game] ?? '🎮'}</span>
+                      <div className="h-10 w-10 overflow-hidden rounded-lg border border-[var(--border-color)] bg-[var(--surface)]">
+                          <GameCover gameKey={game} variant="header" className="h-full w-full" />
+                        </div>
                       <span className="flex-1 text-sm font-medium text-[var(--text-primary)]">
                         {GAMES[game].label}
                       </span>
@@ -1061,7 +1138,9 @@ export default function ProfilePage() {
                         className="rounded-xl border border-[var(--border-color)] bg-[var(--surface-elevated)] p-3"
                       >
                         <div className="mb-3 flex items-center gap-2">
-                          <span className="text-xl">{GAME_EMOJIS[game] ?? '🎮'}</span>
+                          <div className="h-10 w-10 overflow-hidden rounded-lg border border-[var(--border-color)] bg-[var(--surface)]">
+                          <GameCover gameKey={game} variant="header" className="h-full w-full" />
+                        </div>
                           <p className="text-sm font-semibold text-[var(--text-primary)]">
                             {gameConfig.label}
                           </p>
@@ -1082,7 +1161,7 @@ export default function ProfilePage() {
                                       : 'border-[var(--border-color)] bg-[var(--surface)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
                                   }`}
                                 >
-                                  <span>{PLATFORMS[platform]?.icon}</span>
+                                  <PlatformLogo platform={platform} size={16} />
                                   {PLATFORMS[platform]?.label}
                                 </button>
                               );
@@ -1090,7 +1169,7 @@ export default function ProfilePage() {
                           </div>
                         ) : (
                           <div className="inline-flex items-center gap-2 rounded-lg border border-[var(--border-color)] bg-[var(--surface)] px-3 py-2 text-xs font-semibold text-[var(--text-secondary)]">
-                            <span>{PLATFORMS[gameConfig.platforms[0]]?.icon}</span>
+                            <PlatformLogo platform={gameConfig.platforms[0]} size={16} />
                             {PLATFORMS[gameConfig.platforms[0]]?.label}
                           </div>
                         )}
@@ -1122,7 +1201,7 @@ export default function ProfilePage() {
 
             </div>
 
-            <div className="space-y-4 xl:sticky xl:top-4">
+            <div className="space-y-4 2xl:sticky 2xl:top-4">
               <div className="card p-5">
                 <p className="section-title">Save and review</p>
                 <p className="mt-2 text-sm text-[var(--text-secondary)]">
@@ -1169,3 +1248,6 @@ export default function ProfilePage() {
     </div>
   );
 }
+
+
+

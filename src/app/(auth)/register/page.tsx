@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
 import Link from 'next/link';
+import { useState } from 'react';
 import toast from 'react-hot-toast';
 import {
   Check,
@@ -12,6 +12,8 @@ import {
   Loader2,
 } from 'lucide-react';
 import { useAuth } from '@/components/AuthProvider';
+import { GameCover } from '@/components/GameCover';
+import { PlatformLogo } from '@/components/PlatformLogo';
 import { FullScreenSignup } from '@/components/ui/full-screen-signup';
 import {
   GAMES,
@@ -29,6 +31,7 @@ import { normalizePhoneNumber } from '@/lib/phone';
 import type { GameKey, PlatformKey } from '@/types';
 
 type Step = 1 | 2 | 3;
+const FREE_GAME_LIMIT = 1;
 
 interface FormData {
   username: string;
@@ -97,8 +100,8 @@ export default function RegisterPage() {
   const toggleGame = (game: GameKey) => {
     setFormData((prev) => {
       const hasGame = prev.selected_games.includes(game);
-      if (!hasGame && prev.selected_games.length >= 3) {
-        toast.error('Maximum 3 games');
+      if (!hasGame && prev.selected_games.length >= FREE_GAME_LIMIT) {
+        toast.error('Free plan starts with 1 game. Upgrade later for 3.');
         return prev;
       }
 
@@ -200,12 +203,12 @@ export default function RegisterPage() {
     <FullScreenSignup
       title=""
       subtitle=""
-      sideTitle="Create your account"
+      sideTitle="Join Mechi"
       sideDescription=""
       sidePoints={[
-        'Lock in up to three main games',
+        'Start with 1 main game on Free',
         'Add only the IDs those games need',
-        'Keep your whole grind in one profile',
+        'Upgrade later to unlock up to 3 games',
       ]}
     >
       <div className="card p-5 sm:p-6">
@@ -410,12 +413,17 @@ export default function RegisterPage() {
                             : 'border-[var(--border-color)] bg-[var(--surface-strong)] hover:bg-[var(--surface)]'
                         }`}
                       >
-                        <div className="flex gap-1">
-                          {game.platforms.map((platform) => (
-                            <span key={platform} className="text-sm">{PLATFORMS[platform]?.icon}</span>
-                          ))}
+                        <div className="h-10 w-10 flex-shrink-0 overflow-hidden rounded-lg border border-[var(--border-color)] bg-[var(--surface)]">
+                          <GameCover gameKey={gameKey} variant="header" className="h-full w-full" />
                         </div>
-                        <span className="flex-1 text-sm font-medium text-[var(--text-primary)]">{game.label}</span>
+                        <div className="min-w-0 flex-1">
+                          <span className="block truncate text-sm font-medium text-[var(--text-primary)]">{game.label}</span>
+                          <div className="mt-1 flex gap-1">
+                            {game.platforms.map((platform) => (
+                              <PlatformLogo key={platform} platform={platform} size={12} />
+                            ))}
+                          </div>
+                        </div>
                         <div
                           className={`flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full border-2 transition-colors ${
                             isSelected
@@ -430,7 +438,7 @@ export default function RegisterPage() {
                   })}
                 </div>
                 <p className="mb-4 text-center text-xs text-[var(--text-soft)]">
-                  {formData.selected_games.length}/3 selected
+                  {formData.selected_games.length}/{FREE_GAME_LIMIT} selected on Free
                 </p>
                 <div className="flex gap-3">
                   <button type="button" onClick={() => setStep(1)} className="btn-ghost flex-1">
@@ -472,10 +480,8 @@ export default function RegisterPage() {
                         className="rounded-xl border border-[var(--border-color)] bg-[var(--surface-strong)] p-3"
                       >
                         <div className="mb-3 flex items-center gap-2">
-                          <div className="flex gap-1">
-                            {game.platforms.map((platform) => (
-                              <span key={platform} className="text-sm">{PLATFORMS[platform]?.icon}</span>
-                            ))}
+                          <div className="h-10 w-10 overflow-hidden rounded-lg border border-[var(--border-color)] bg-[var(--surface)]">
+                            <GameCover gameKey={gameKey} variant="header" className="h-full w-full" />
                           </div>
                           <p className="text-sm font-semibold text-[var(--text-primary)]">{game.label}</p>
                         </div>
@@ -495,7 +501,7 @@ export default function RegisterPage() {
                                       : 'border-[var(--border-color)] bg-[var(--surface)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
                                   }`}
                                 >
-                                  <span>{PLATFORMS[platform]?.icon}</span>
+                                  <PlatformLogo platform={platform} size={16} />
                                   {PLATFORMS[platform]?.label}
                                 </button>
                               );
@@ -503,7 +509,7 @@ export default function RegisterPage() {
                           </div>
                         ) : (
                           <div className="inline-flex items-center gap-2 rounded-lg border border-[var(--border-color)] bg-[var(--surface)] px-3 py-2 text-xs font-semibold text-[var(--text-secondary)]">
-                            <span>{PLATFORMS[game.platforms[0]]?.icon}</span>
+                            <PlatformLogo platform={game.platforms[0]} size={16} />
                             {PLATFORMS[game.platforms[0]]?.label}
                           </div>
                         )}

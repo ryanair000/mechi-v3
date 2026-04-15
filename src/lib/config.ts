@@ -149,6 +149,12 @@ export function getGameImage(gameKey: GameKey): string | null {
   return null;
 }
 
+export function getGameCapsuleImage(gameKey: GameKey): string | null {
+  const game = GAMES[gameKey];
+  if (!game?.steamAppId) return null;
+  return `https://cdn.cloudflare.steamstatic.com/steam/apps/${game.steamAppId}/library_600x900.jpg`;
+}
+
 export function getGameRatingKey(game: GameKey): string {
   return `rating_${game}`;
 }

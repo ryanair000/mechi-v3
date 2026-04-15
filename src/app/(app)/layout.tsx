@@ -33,13 +33,21 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   if (!user) return null;
 
   return (
-    <div className="min-h-screen bg-gray-950">
-      <Sidebar />
-      <Navbar />
-      <div className="lg:pl-60">
-        <main className="pb-20 lg:pb-8">{children}</main>
+    <div className="relative min-h-screen bg-gray-950">
+      <div
+        className="pointer-events-none fixed left-0 right-0 top-0 z-0 h-[500px]"
+        style={{
+          background: 'radial-gradient(ellipse 80% 40% at 50% -10%, rgba(16,185,129,0.05) 0%, transparent 70%)',
+        }}
+      />
+      <div className="relative z-10">
+        <Sidebar />
+        <Navbar />
+        <div className="lg:pl-60">
+          <main className="pb-20 lg:pb-8">{children}</main>
+        </div>
+        <BottomNav />
       </div>
-      <BottomNav />
     </div>
   );
 }

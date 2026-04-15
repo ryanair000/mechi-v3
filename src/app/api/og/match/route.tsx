@@ -1,7 +1,9 @@
 import { ImageResponse } from 'next/og';
 import { NextRequest } from 'next/server';
+import { getGameImage } from '@/lib/config';
 import { createServiceClient } from '@/lib/supabase';
 import { getLevelFromXp, getRankDivision } from '@/lib/gamification';
+import type { GameKey } from '@/types';
 
 export const runtime = 'edge';
 
@@ -77,6 +79,7 @@ export async function GET(request: NextRequest) {
   const winnerXp = (winner?.xp as number | null) ?? 0;
   const winnerLevel = winnerSummary?.newLevel ?? ((winner?.level as number | null) ?? getLevelFromXp(winnerXp));
   const gameLabel = GAME_LABELS[match.game] ?? match.game;
+  const gameImageUrl = getGameImage(match.game as GameKey);
 
   return new ImageResponse(
     (
@@ -86,12 +89,29 @@ export async function GET(request: NextRequest) {
           flexDirection: 'column',
           width: '100%',
           height: '100%',
+          position: 'relative',
+          overflow: 'hidden',
           background: 'linear-gradient(135deg, #0B1121 0%, #152033 55%, #08101C 100%)',
           padding: '52px',
           color: 'white',
           fontFamily: 'sans-serif',
         }}
       >
+        {gameImageUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={gameImageUrl}
+            alt=""
+            style={{
+              position: 'absolute',
+              inset: 0,
+              width: '100%',
+              height: '100%',
+              objectFit: 'cover',
+              opacity: 0.08,
+            }}
+          />
+        ) : null}
         <div
           style={{
             display: 'flex',

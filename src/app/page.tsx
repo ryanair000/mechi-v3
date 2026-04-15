@@ -1,17 +1,13 @@
 import Link from 'next/link';
-import {
-  ArrowRight,
-  Gamepad2,
-  Monitor,
-  Shield,
-  Smartphone,
-  Swords,
-  Trophy,
-  Users,
-} from 'lucide-react';
+import { ArrowRight, Shield, Swords, Users } from 'lucide-react';
 import { BrandLogo } from '@/components/BrandLogo';
+import { GameCarousel } from '@/components/GameCarousel';
+import { GameCover } from '@/components/GameCover';
 import { HomeFloatingHeader } from '@/components/HomeFloatingHeader';
+import { PlatformLogo } from '@/components/PlatformLogo';
+import { TierMedal } from '@/components/TierMedal';
 import { PLANS } from '@/lib/plans';
+import type { GameKey, PlatformKey } from '@/types';
 
 const HERO_STATS = [
   { value: '14+', label: 'Supported titles' },
@@ -21,12 +17,12 @@ const HERO_STATS = [
 ];
 
 const TIERS = [
-  { name: 'Bronze', range: 'III -> I', color: '#CD7F32' },
-  { name: 'Silver', range: 'III -> I', color: '#94A3B8' },
-  { name: 'Gold', range: 'III -> I', color: '#FFD700' },
-  { name: 'Platinum', range: 'III -> I', color: '#32E0C4' },
-  { name: 'Diamond', range: 'III -> I', color: '#60A5FA' },
-  { name: 'Legend', range: 'Final tier', color: '#FF6B6B' },
+  { name: 'Bronze', range: 'III -> I', rating: 800 },
+  { name: 'Silver', range: 'III -> I', rating: 980 },
+  { name: 'Gold', range: 'III -> I', rating: 1200 },
+  { name: 'Platinum', range: 'III -> I', rating: 1400 },
+  { name: 'Diamond', range: 'III -> I', rating: 1580 },
+  { name: 'Legend', range: 'Final tier', rating: 1800 },
 ];
 
 const STEPS = [
@@ -65,24 +61,11 @@ const TRUST_PILLARS = [
   },
 ];
 
-const PLATFORM_CHIPS = [
-  { icon: Gamepad2, label: 'PlayStation' },
-  { icon: Gamepad2, label: 'Xbox' },
-  { icon: Monitor, label: 'PC' },
-  { icon: Smartphone, label: 'Mobile' },
-];
-
-const SUPPORTED_GAMES = [
-  'eFootball 2026',
-  'eFootball Mobile',
-  'EA FC 26',
-  'COD Mobile',
-  'PUBG Mobile',
-  'Free Fire',
-  'Tekken 8',
-  'Street Fighter 6',
-  'Mortal Kombat 11',
-  'NBA 2K26',
+const PLATFORM_CHIPS: Array<{ platform: PlatformKey; label: string }> = [
+  { platform: 'ps', label: 'PlayStation' },
+  { platform: 'xbox', label: 'Xbox' },
+  { platform: 'pc', label: 'PC' },
+  { platform: 'mobile', label: 'Mobile' },
 ];
 
 const PRICING_PLANS = [
@@ -112,6 +95,9 @@ const PRICING_PLANS = [
   },
 ] as const;
 
+const HERO_LEFT_STACK: readonly GameKey[] = ['efootball', 'tekken8', 'nba2k26'];
+const HERO_RIGHT_STACK: readonly GameKey[] = ['fc26', 'sf6', 'valorant'];
+
 export default function LandingPage() {
   return (
     <div className="page-base">
@@ -121,8 +107,8 @@ export default function LandingPage() {
         <div className="pointer-events-none absolute left-[10%] top-10 h-56 w-56 rounded-full bg-[rgba(50,224,196,0.1)] blur-[110px]" />
         <div className="pointer-events-none absolute right-[12%] top-14 h-52 w-52 rounded-full bg-[rgba(255,107,107,0.1)] blur-[96px]" />
 
-        <div className="landing-shell pb-12 pt-10 sm:pb-14 sm:pt-12 lg:pb-18 lg:pt-16">
-          <div className="max-w-2xl">
+        <div className="landing-shell relative pb-12 pt-10 sm:pb-14 sm:pt-12 lg:pb-18 lg:pt-16">
+          <div className="max-w-2xl lg:max-w-[52%]">
             <BrandLogo size="lg" showTagline />
 
             <h1 className="mt-6 max-w-2xl text-[2.6rem] font-black leading-[0.96] tracking-[-0.05em] text-[var(--text-primary)] sm:text-[3.2rem] lg:text-[3.8rem]">
@@ -164,10 +150,40 @@ export default function LandingPage() {
                   key={platform.label}
                   className="inline-flex items-center gap-2 rounded-full border border-[var(--border-color)] bg-[var(--surface-strong)] px-3 py-1.5 text-[11px] font-semibold text-[var(--text-secondary)]"
                 >
-                  <platform.icon size={13} />
+                  <PlatformLogo platform={platform.platform} size={13} />
                   {platform.label}
                 </div>
               ))}
+            </div>
+          </div>
+
+          <div className="pointer-events-none absolute bottom-0 right-8 top-16 hidden w-[380px] overflow-hidden lg:block xl:right-16">
+            <div className="relative h-full">
+              <div className="absolute left-0 top-8 flex w-[180px] flex-col gap-3">
+                {HERO_LEFT_STACK.map((game, index) => (
+                  <div
+                    key={game}
+                    className="overflow-hidden rounded-xl border border-white/[0.08] shadow-2xl"
+                    style={{ opacity: 1 - index * 0.15, transform: `translateY(${index * 4}px)` }}
+                  >
+                    <GameCover gameKey={game} variant="header" className="w-full" />
+                  </div>
+                ))}
+              </div>
+
+              <div className="absolute right-0 top-20 flex w-[180px] flex-col gap-3">
+                {HERO_RIGHT_STACK.map((game, index) => (
+                  <div
+                    key={game}
+                    className="overflow-hidden rounded-xl border border-white/[0.08] shadow-2xl"
+                    style={{ opacity: 0.9 - index * 0.15, transform: `translateY(${index * 4}px)` }}
+                  >
+                    <GameCover gameKey={game} variant="header" className="w-full" />
+                  </div>
+                ))}
+              </div>
+
+              <div className="absolute bottom-0 left-0 right-0 h-40 bg-gradient-to-t from-gray-950 to-transparent" />
             </div>
           </div>
         </div>
@@ -268,15 +284,11 @@ export default function LandingPage() {
                   without turning your profile into a cluttered wall of disconnected records.
                 </p>
 
-                <div className="mt-5 flex flex-wrap gap-2.5">
-                  {SUPPORTED_GAMES.map((game) => (
-                    <span
-                      key={game}
-                      className="inline-flex rounded-full border border-[var(--border-color)] bg-[var(--surface-strong)] px-3 py-1.5 text-xs font-semibold text-[var(--text-secondary)]"
-                    >
-                      {game}
-                    </span>
-                  ))}
+                <div className="mt-5">
+                  <GameCarousel />
+                  <p className="mt-3 text-xs text-[var(--text-soft)]">
+                    Plus Mario Kart, Smash Bros, Free Fire, PUBG Mobile and more.
+                  </p>
                 </div>
               </div>
 
@@ -330,65 +342,62 @@ export default function LandingPage() {
           </div>
 
           <div className="mt-7 grid gap-3 lg:grid-cols-3">
-            {PRICING_PLANS.map((plan) => (
-              (() => {
-                const config = PLANS[plan.key];
-                return (
-              <div
-                key={plan.key}
-                className={`card flex h-full flex-col p-5 sm:p-6 ${
-                  plan.featured ? 'circuit-panel border-[rgba(50,224,196,0.26)]' : ''
-                }`}
-              >
-                <span
-                  className={`inline-flex w-fit rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] ${
-                    plan.featured
-                      ? 'bg-[rgba(50,224,196,0.14)] text-[var(--accent-secondary-text)]'
-                      : 'bg-[var(--surface-strong)] text-[var(--text-soft)]'
+            {PRICING_PLANS.map((plan) => {
+              const config = PLANS[plan.key];
+
+              return (
+                <div
+                  key={plan.key}
+                  className={`card flex h-full flex-col p-5 sm:p-6 ${
+                    plan.featured ? 'circuit-panel border-[rgba(50,224,196,0.26)]' : ''
                   }`}
                 >
-                  {plan.kicker}
-                </span>
+                  <span
+                    className={`inline-flex w-fit rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] ${
+                      plan.featured
+                        ? 'bg-[rgba(50,224,196,0.14)] text-[var(--accent-secondary-text)]'
+                        : 'bg-[var(--surface-strong)] text-[var(--text-soft)]'
+                    }`}
+                  >
+                    {plan.kicker}
+                  </span>
 
-                <div className="mt-5 flex items-end justify-between gap-4">
-                  <div>
-                    <h3 className="text-lg font-black text-[var(--text-primary)]">{config.name}</h3>
-                    <p className="mt-1 text-3xl font-black text-[var(--text-primary)]">
-                      {config.monthlyKes === 0 ? 'FREE' : `KSH ${config.monthlyKes}`}
-                    </p>
-                    <p className="mt-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--text-soft)]">
-                      {config.monthlyKes === 0 ? 'No payment needed' : 'per month'}
-                    </p>
+                  <div className="mt-5 flex items-end justify-between gap-4">
+                    <div>
+                      <h3 className="text-lg font-black text-[var(--text-primary)]">{config.name}</h3>
+                      <p className="mt-1 text-3xl font-black text-[var(--text-primary)]">
+                        {config.monthlyKes === 0 ? 'FREE' : `KSH ${config.monthlyKes}`}
+                      </p>
+                      <p className="mt-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--text-soft)]">
+                        {config.monthlyKes === 0 ? 'No payment needed' : 'per month'}
+                      </p>
+                    </div>
+                  </div>
+
+                  <p className="mt-4 text-sm leading-6 text-[var(--text-secondary)]">{plan.description}</p>
+
+                  <div className="mt-5 grid gap-2.5">
+                    {config.features.slice(0, 3).map((feature) => (
+                      <div
+                        key={feature}
+                        className="rounded-xl border border-[var(--border-color)] bg-[var(--surface)] px-3 py-2 text-sm font-medium text-[var(--text-secondary)]"
+                      >
+                        {feature}
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="mt-6">
+                    <Link
+                      href={plan.href}
+                      className={plan.featured ? 'btn-primary w-full justify-center' : 'btn-outline w-full justify-center'}
+                    >
+                      {plan.cta}
+                    </Link>
                   </div>
                 </div>
-
-                <p className="mt-4 text-sm leading-6 text-[var(--text-secondary)]">
-                  {plan.description}
-                </p>
-
-                <div className="mt-5 grid gap-2.5">
-                  {config.features.slice(0, 3).map((feature) => (
-                    <div
-                      key={feature}
-                      className="rounded-xl border border-[var(--border-color)] bg-[var(--surface)] px-3 py-2 text-sm font-medium text-[var(--text-secondary)]"
-                    >
-                      {feature}
-                    </div>
-                  ))}
-                </div>
-
-                <div className="mt-6">
-                  <Link
-                    href={plan.href}
-                    className={plan.featured ? 'btn-primary w-full justify-center' : 'btn-outline w-full justify-center'}
-                  >
-                    {plan.cta}
-                  </Link>
-                </div>
-              </div>
-                );
-              })()
-            ))}
+              );
+            })}
           </div>
         </div>
       </section>
@@ -431,7 +440,7 @@ export default function LandingPage() {
                   <p className="section-title">Rank clarity</p>
                   <h3 className="mt-2 text-lg font-black text-[var(--text-primary)]">Rank ladder</h3>
                 </div>
-                <Trophy size={18} className="text-[var(--brand-coral)]" />
+                <TierMedal rating={1800} size="sm" />
               </div>
 
               <div className="mt-5 grid gap-2.5">
@@ -441,10 +450,7 @@ export default function LandingPage() {
                     className="flex items-center justify-between rounded-xl border border-[var(--border-color)] bg-[var(--surface)] px-3 py-2.5"
                   >
                     <div className="flex items-center gap-2.5">
-                      <span
-                        className="h-2.5 w-2.5 rounded-full"
-                        style={{ backgroundColor: tier.color }}
-                      />
+                      <TierMedal rating={tier.rating} size="sm" />
                       <span className="text-sm font-semibold text-[var(--text-primary)]">{tier.name}</span>
                     </div>
                     <span className="text-xs font-medium text-[var(--text-soft)]">{tier.range}</span>

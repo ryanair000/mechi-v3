@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useEffect, useState, useCallback } from 'react';
 import { Crown, Trophy } from 'lucide-react';
 import { useAuth, useAuthFetch } from '@/components/AuthProvider';
+import { TierMedal } from '@/components/TierMedal';
 import { GAMES } from '@/lib/config';
 import { getRankDivision, withAlpha } from '@/lib/gamification';
 import type { GameKey } from '@/types';
@@ -265,13 +266,16 @@ export default function LeaderboardPage() {
                   </p>
                 </div>
 
-                <div className="hidden w-28 text-right sm:block">
-                  <span
-                    className="text-[13px] font-bold sm:text-sm"
-                    style={{ color: division.color }}
-                  >
-                    {entry.division}
-                  </span>
+                <div className="hidden w-28 sm:block">
+                  <div className="flex items-center justify-end gap-2">
+                    <TierMedal rating={entry.rating} size="sm" />
+                    <span
+                      className="text-[13px] font-bold sm:text-sm"
+                      style={{ color: division.color }}
+                    >
+                      {entry.division}
+                    </span>
+                  </div>
                 </div>
                 <div className="hidden w-16 text-right text-[13px] text-[var(--text-secondary)] sm:block">{entry.level}</div>
                 <div className="hidden w-20 text-right text-[13px] text-[var(--text-secondary)] sm:block">{entry.wins}</div>
@@ -279,8 +283,11 @@ export default function LeaderboardPage() {
                 <div className="hidden w-[4.5rem] text-right text-[13px] text-[var(--text-secondary)] sm:block">{winRate}%</div>
 
                 <div className="text-right sm:hidden">
-                  <div className="text-[13px] font-bold" style={{ color: division.color }}>
-                    {entry.division}
+                  <div className="inline-flex items-center justify-end gap-1.5">
+                    <TierMedal rating={entry.rating} size="sm" />
+                    <div className="text-[13px] font-bold" style={{ color: division.color }}>
+                      {entry.division}
+                    </div>
                   </div>
                   <div className="text-[9px] text-[var(--text-soft)]">Lv. {entry.level}</div>
                 </div>

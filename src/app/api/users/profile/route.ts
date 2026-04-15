@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuthUser } from '@/lib/auth';
+import { GAMES, PLATFORMS } from '@/lib/config';
 import { createServiceClient } from '@/lib/supabase';
 import { canUseSelectedGames, maybeExpireProfilePlan, resolvePlan } from '@/lib/subscription';
+
+const PLATFORM_KEYS = new Set(Object.keys(PLATFORMS));
+const GAME_KEYS = new Set(Object.keys(GAMES));
 
 export async function GET(request: NextRequest) {
   const authUser = getAuthUser(request);
@@ -65,6 +69,8 @@ export async function PATCH(request: NextRequest) {
       region,
       avatar_url,
       cover_url,
+      whatsapp_number,
+      whatsapp_notifications,
     } = body;
 
     const updateData: Record<string, unknown> = {};
@@ -92,17 +98,35 @@ export async function PATCH(request: NextRequest) {
       if (!Array.isArray(platforms)) {
         return NextResponse.json({ error: 'Platforms must be an array' }, { status: 400 });
       }
+      if (!platforms.every((platform) => typeof platform === 'string' && PLATFORM_KEYS.has(platform))) {
+        return NextResponse.json({ error: 'Platforms list contains invalid values' }, { status: 400 });
+      }
       updateData.platforms = platforms;
     }
     if (game_ids !== undefined) {
       if (typeof game_ids !== 'object' || game_ids === null || Array.isArray(game_ids)) {
         return NextResponse.json({ error: 'Game IDs must be an object' }, { status: 400 });
       }
+      const gameIdEntries = Object.entries(game_ids as Record<string, unknown>);
+      for (const [key, value] of gameIdEntries) {
+        if (typeof key !== 'string' || key.length === 0 || key.length > 120) {
+          return NextResponse.json({ error: 'Game IDs contain an invalid key' }, { status: 400 });
+        }
+        if (typeof value !== 'string' || value.trim().length === 0 || value.length > 120) {
+          return NextResponse.json({ error: 'Game IDs contain an invalid value' }, { status: 400 });
+        }
+      }
       updateData.game_ids = game_ids;
     }
     if (selected_games !== undefined) {
       if (!Array.isArray(selected_games)) {
         return NextResponse.json({ error: 'Selected games must be an array' }, { status: 400 });
+      }
+      if (!selected_games.every((game) => typeof game === 'string' && GAME_KEYS.has(game))) {
+        return NextResponse.json({ error: 'Selected games contain invalid values' }, { status: 400 });
+      }
+      if (new Set(selected_games).size !== selected_games.length) {
+        return NextResponse.json({ error: 'Selected games cannot contain duplicates' }, { status: 400 });
       }
       if (!canUseSelectedGames(resolvedPlan, selected_games.length)) {
         return NextResponse.json(
@@ -128,6 +152,24 @@ export async function PATCH(request: NextRequest) {
     }
     if (avatar_url !== undefined) updateData.avatar_url = avatar_url;
     if (cover_url !== undefined) updateData.cover_url = cover_url;
+    if (whatsapp_notifications !== undefined) {
+      if (typeof whatsapp_notifications !== 'boolean') {
+        return NextResponse.json(
+          { error: 'WhatsApp notifications must be true or false' },
+          { status: 400 }
+        );
+      }
+      updateData.whatsapp_notifications = whatsapp_notifications;
+    }
+    if (whatsapp_number !== undefined) {
+      if (
+        whatsapp_number !== null &&
+        (typeof whatsapp_number !== 'string' || whatsapp_number.trim().length === 0)
+      ) {
+        return NextResponse.json({ error: 'WhatsApp number must be a string or null' }, { status: 400 });
+      }
+      updateData.whatsapp_number = typeof whatsapp_number === 'string' ? whatsapp_number.trim() : null;
+    }
 
     if (Object.keys(updateData).length === 0) {
       return NextResponse.json({ error: 'Nothing to update' }, { status: 400 });

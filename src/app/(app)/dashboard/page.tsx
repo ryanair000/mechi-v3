@@ -4,12 +4,13 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
-import { AlertCircle, ChevronRight, Radar, Swords, Trophy } from 'lucide-react';
+import { AlertCircle, ChevronRight, Radar, Swords } from 'lucide-react';
 import { useAuth, useAuthFetch } from '@/components/AuthProvider';
 import { GameCard } from '@/components/GameCard';
 import { PaywallModal } from '@/components/PaywallModal';
 import { PlanBadge } from '@/components/PlanBadge';
 import { RatingBadge } from '@/components/RatingBadge';
+import { TierMedal } from '@/components/TierMedal';
 import { GAMES, getConfiguredPlatformForGame } from '@/lib/config';
 import { getLevelFromXp, getRankDivision, getXpProgress } from '@/lib/gamification';
 import { getPlan } from '@/lib/plans';
@@ -273,7 +274,7 @@ export default function DashboardPage() {
           <div>
             <p className="text-sm font-semibold text-[var(--text-primary)]">No games selected yet</p>
             <p className="mt-0.5 text-xs text-[var(--text-secondary)]">
-              Head to your profile, lock in up to three focus titles, and Mechi will
+              Head to your profile, lock in your focus title{currentPlan.maxGames > 1 ? 's' : ''}, and Mechi will
               tailor your ladder from there.
             </p>
             <Link href="/profile" className="brand-link-coral mt-2 inline-block text-xs font-semibold">
@@ -349,8 +350,8 @@ export default function DashboardPage() {
                 Quick read on how each title is moving.
               </p>
             </div>
-            <div className="brand-chip-coral">
-              <Trophy size={12} />
+            <div className="brand-chip-coral gap-2">
+              <TierMedal rating={bestRating} size="sm" />
               <span>{bestDivision.label} profile</span>
             </div>
           </div>
@@ -370,7 +371,10 @@ export default function DashboardPage() {
                       {wins}W / {losses}L
                     </p>
                   </div>
-                  <RatingBadge rating={rating} size="sm" />
+                  <div className="flex items-center gap-2">
+                    <TierMedal rating={rating} size="sm" showName />
+                    <RatingBadge rating={rating} size="sm" />
+                  </div>
                 </div>
               );
             })}

@@ -182,10 +182,6 @@ export default function LandingPage() {
                 Set up quick. Get matched. Start climbing.
               </h2>
             </div>
-            <p className="max-w-xl text-sm leading-6 text-[var(--text-secondary)]">
-              The landing experience now focuses on one promise: help players understand
-              the path quickly and get them into action without a wall of oversized content.
-            </p>
           </div>
 
           <div className="mt-7 grid gap-3 md:grid-cols-3">

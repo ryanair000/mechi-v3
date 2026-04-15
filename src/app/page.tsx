@@ -85,14 +85,6 @@ const PRICING_PLANS = [
     cta: 'SEE PRO',
     featured: true,
   },
-  {
-    key: 'elite',
-    kicker: 'FULL ACCESS',
-    description: 'Priority perks, full history access, and the sharpest Mechi experience for serious grinders.',
-    href: '/pricing',
-    cta: 'SEE ELITE',
-    featured: false,
-  },
 ] as const;
 
 const HERO_LEFT_STACK: readonly GameKey[] = ['efootball', 'tekken8', 'nba2k26'];
@@ -341,7 +333,7 @@ export default function LandingPage() {
             </p>
           </div>
 
-          <div className="mt-7 grid gap-3 lg:grid-cols-3">
+          <div className="mt-7 grid gap-3 lg:grid-cols-2">
             {PRICING_PLANS.map((plan) => {
               const config = PLANS[plan.key];
 

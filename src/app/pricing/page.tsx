@@ -11,16 +11,16 @@ import { ThemeToggle } from '@/components/ThemeToggle';
 import { useAuth, useAuthFetch } from '@/components/AuthProvider';
 import { type BillingCycle, type Plan, PLANS } from '@/lib/plans';
 
-const PLAN_ORDER: Plan[] = ['free', 'pro', 'elite'];
+const VISIBLE_PLAN_ORDER: Array<'free' | 'pro'> = ['free', 'pro'];
 
 const COMPARISON_ROWS = [
-  { label: 'Matches per day', free: '5', pro: 'Unlimited', elite: 'Unlimited' },
-  { label: 'Games selectable', free: '1', pro: '3', elite: '3' },
-  { label: 'Tournament fee', free: '10%', pro: '8%', elite: '7%' },
-  { label: 'Match history', free: '10', pro: '100', elite: 'Unlimited' },
-  { label: 'Priority matchmaking', free: 'No', pro: 'No', elite: 'Yes' },
-  { label: 'CSV export', free: 'No', pro: 'No', elite: 'Yes' },
-  { label: 'Early access', free: 'No', pro: 'No', elite: 'Yes' },
+  { label: 'Matches per day', free: '5', pro: 'Unlimited' },
+  { label: 'Games selectable', free: '1', pro: '3' },
+  { label: 'Tournament fee', free: '10%', pro: '8%' },
+  { label: 'Match history', free: '10', pro: '100' },
+  { label: 'Priority matchmaking', free: 'No', pro: 'No' },
+  { label: 'CSV export', free: 'No', pro: 'No' },
+  { label: 'Early access', free: 'No', pro: 'No' },
 ];
 
 function getPlanActionLabel(currentPlan: Plan, targetPlan: Plan) {
@@ -36,7 +36,7 @@ function getPlanActionLabel(currentPlan: Plan, targetPlan: Plan) {
     return 'Already on Elite';
   }
 
-  return targetPlan === 'elite' ? 'Go Elite' : 'Go Pro';
+  return 'Go Pro';
 }
 
 function PricingPageContent() {
@@ -63,12 +63,7 @@ function PricingPageContent() {
     }
   }, [refresh, searchParams]);
 
-  const annualSavings = useMemo(() => {
-    return {
-      pro: PLANS.pro.monthlyKes * 12 - PLANS.pro.annualKes,
-      elite: PLANS.elite.monthlyKes * 12 - PLANS.elite.annualKes,
-    };
-  }, []);
+  const annualSavings = useMemo(() => PLANS.pro.monthlyKes * 12 - PLANS.pro.annualKes, []);
 
   const handleUpgrade = async (plan: Exclude<Plan, 'free'>) => {
     if (!user) {
@@ -168,8 +163,7 @@ function PricingPageContent() {
                   Start free. Upgrade only when your Mechi climb needs more.
                 </h1>
                 <p className="mt-4 max-w-2xl text-sm leading-7 text-[var(--text-secondary)] sm:text-base">
-                  Free keeps the core open. Pro unlocks more volume. Elite adds the premium layer for players
-                  who want priority, full history, and the sharpest version of the platform.
+                  Free keeps the core open. Pro unlocks more volume for regular players who want unlimited ranked runs.
                 </p>
               </div>
 
@@ -209,8 +203,8 @@ function PricingPageContent() {
         </section>
 
         <section className="landing-section border-none px-0 pb-0 pt-8 sm:pt-10">
-          <div className="grid gap-4 lg:grid-cols-3">
-            {PLAN_ORDER.map((planKey) => {
+          <div className="grid gap-4 lg:grid-cols-2">
+            {VISIBLE_PLAN_ORDER.map((planKey) => {
               const plan = PLANS[planKey];
               const isCurrent = currentPlan === planKey;
               const isDowngradeFromElite = currentPlan === 'elite' && planKey === 'pro';
@@ -224,9 +218,7 @@ function PricingPageContent() {
                   className={`card flex h-full flex-col p-5 sm:p-6 ${
                     planKey === 'pro'
                       ? 'circuit-panel border-[rgba(255,107,107,0.24)]'
-                      : planKey === 'elite'
-                        ? 'border-[rgba(50,224,196,0.24)]'
-                        : ''
+                      : ''
                   }`}
                 >
                   <div className="flex items-start justify-between gap-3">
@@ -236,9 +228,6 @@ function PricingPageContent() {
                         <PlanBadge plan={planKey} size="md" />
                         {planKey === 'pro' ? (
                           <span className="brand-chip-coral px-2.5 py-1">Most popular</span>
-                        ) : null}
-                        {planKey === 'elite' ? (
-                          <span className="brand-chip px-2.5 py-1">Top tier</span>
                         ) : null}
                       </div>
                     </div>
@@ -257,7 +246,7 @@ function PricingPageContent() {
                       {planKey === 'free'
                         ? 'No payment needed'
                         : billingCycle === 'annual'
-                          ? `Billed yearly, save KSH ${annualSavings[planKey]}`
+                          ? `Billed yearly, save KSH ${annualSavings}`
                           : 'Billed monthly via Paystack'}
                     </p>
                   </div>
@@ -281,13 +270,13 @@ function PricingPageContent() {
                         type="button"
                         onClick={() => void handleUpgrade(planKey)}
                         disabled={actionDisabled}
-                        className={`${planKey === 'elite' ? 'btn-ghost' : 'btn-primary'} w-full justify-center disabled:opacity-45`}
+                        className="btn-primary w-full justify-center disabled:opacity-45"
                       >
                         {loadingPlan === planKey ? 'Starting checkout...' : getPlanActionLabel(currentPlan, planKey)}
                         {loadingPlan !== planKey ? <ArrowRight size={14} /> : null}
                       </button>
                     ) : (
-                      <Link href="/register" className={`${planKey === 'elite' ? 'btn-ghost' : 'btn-primary'} w-full justify-center`}>
+                      <Link href="/register" className="btn-primary w-full justify-center">
                         {getPlanActionLabel(currentPlan, planKey)}
                         <ArrowRight size={14} />
                       </Link>
@@ -303,17 +292,16 @@ function PricingPageContent() {
           <div className="card overflow-hidden p-5 sm:p-6">
             <div className="flex items-center gap-2">
               <Crown size={16} className="text-[var(--brand-coral)]" />
-              <h2 className="text-xl font-black text-[var(--text-primary)]">Full comparison</h2>
+              <h2 className="text-xl font-black text-[var(--text-primary)]">Free vs Pro</h2>
             </div>
 
             <div className="mt-5 overflow-x-auto">
-              <table className="w-full min-w-[42rem] text-left text-sm">
+              <table className="w-full min-w-[30rem] text-left text-sm">
                 <thead>
                   <tr className="border-b border-[var(--border-color)] text-[var(--text-soft)]">
                     <th className="pb-3 pr-4 font-semibold">Feature</th>
                     <th className="pb-3 px-4 font-semibold">Free</th>
                     <th className="pb-3 px-4 font-semibold text-[var(--brand-coral)]">Pro</th>
-                    <th className="pb-3 pl-4 font-semibold text-[var(--brand-teal)]">Elite</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -322,7 +310,6 @@ function PricingPageContent() {
                       <td className="py-3 pr-4 text-[var(--text-secondary)]">{row.label}</td>
                       <td className="py-3 px-4 text-[var(--text-primary)]">{row.free}</td>
                       <td className="py-3 px-4 text-[var(--text-primary)]">{row.pro}</td>
-                      <td className="py-3 pl-4 text-[var(--text-primary)]">{row.elite}</td>
                     </tr>
                   ))}
                 </tbody>

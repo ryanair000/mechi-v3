@@ -62,6 +62,18 @@ export function getProfileOgImageUrl(username: string) {
   return `${BASE_URL}/api/og/profile?username=${username}`;
 }
 
+export function getTournamentShareUrl(slug: string) {
+  return `${BASE_URL}/s/t/${slug}`;
+}
+
+export function getTournamentAppUrl(slug: string) {
+  return `${BASE_URL}/t/${slug}`;
+}
+
+export function getTournamentOgImageUrl(slug: string) {
+  return `${BASE_URL}/api/og/tournament?slug=${encodeURIComponent(slug)}`;
+}
+
 export function matchResultShareText(
   winner: string,
   loser: string,
@@ -83,4 +95,15 @@ export function profileShareText(username: string, rankLabel: string, level: num
 
 export function inviteShareText(username: string) {
   return `${username} invited you to Mechi. Join free, compete fairly, and rise through the ladder.`;
+}
+
+export function tournamentShareText(
+  title: string,
+  game: string,
+  entryFee: number,
+  slotsLeft: number
+) {
+  const price = entryFee > 0 ? `KES ${entryFee.toLocaleString()} entry` : 'free entry';
+  const slotCopy = slotsLeft === 1 ? '1 slot left' : `${slotsLeft} slots left`;
+  return `${title} is live on Mechi. ${game}. ${price}. ${slotCopy}. Pull up and prove it.`;
 }

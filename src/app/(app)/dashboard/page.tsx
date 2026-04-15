@@ -8,14 +8,15 @@ import { AlertCircle, ChevronRight, Radar, Swords, Trophy } from 'lucide-react';
 import { useAuth, useAuthFetch } from '@/components/AuthProvider';
 import { GameCard } from '@/components/GameCard';
 import { RatingBadge } from '@/components/RatingBadge';
-import { GAMES, PLATFORMS } from '@/lib/config';
-import { getLevelFromXp, getRankDivision, getXpProgress, withAlpha } from '@/lib/gamification';
+import { GAMES, getConfiguredPlatformForGame } from '@/lib/config';
+import { getLevelFromXp, getRankDivision, getXpProgress } from '@/lib/gamification';
 import type { GameKey, Match, PlatformKey } from '@/types';
 
 interface UserProfile {
   id: string;
   username: string;
   platforms: PlatformKey[];
+  game_ids?: Record<string, string>;
   selected_games: GameKey[];
   region: string;
   [key: string]: unknown;
@@ -72,7 +73,11 @@ export default function DashboardPage() {
   }, [authFetch]);
 
   useEffect(() => {
-    const selectedGames = profile?.selected_games ?? [];
+    const selectedGames = (profile?.selected_games ?? []).filter(
+      (game) => GAMES[game]?.mode === '1v1'
+    );
+    const profileGameIds = (profile?.game_ids as Record<string, string>) ?? {};
+    const profilePlatforms = profile?.platforms ?? [];
 
     if (!selectedGames.length) {
       setQueueCounts({});
@@ -84,7 +89,9 @@ export default function DashboardPage() {
     async function loadQueueCounts() {
       const results = await Promise.allSettled(
         selectedGames.map(async (game) => {
-          const res = await fetch(`/api/queue/count/${game}`);
+          const platform = getConfiguredPlatformForGame(game, profileGameIds, profilePlatforms);
+          const platformQuery = platform ? `?platform=${encodeURIComponent(platform)}` : '';
+          const res = await fetch(`/api/queue/count/${game}${platformQuery}`);
           if (res.ok) {
             const data = await res.json();
             return { game, count: data.count as number };
@@ -110,7 +117,7 @@ export default function DashboardPage() {
     return () => {
       cancelled = true;
     };
-  }, [profile?.selected_games]);
+  }, [profile]);
 
   const handleJoinQueue = async (game: GameKey) => {
     if (activeMatch) {
@@ -119,11 +126,19 @@ export default function DashboardPage() {
       return;
     }
 
+    const profileGameIds = (profile?.game_ids as Record<string, string>) ?? {};
+    const platform = getConfiguredPlatformForGame(game, profileGameIds, profile?.platforms ?? []);
+    if (!platform) {
+      toast.error('Choose a platform for this game in your profile');
+      router.push('/profile');
+      return;
+    }
+
     setQueuingGame(game);
     try {
       const res = await authFetch('/api/queue/join', {
         method: 'POST',
-        body: JSON.stringify({ game }),
+        body: JSON.stringify({ game, platform }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -135,7 +150,7 @@ export default function DashboardPage() {
         }
         return;
       }
-      router.push(`/queue?game=${game}`);
+      router.push(`/queue?game=${game}&platform=${platform}`);
     } catch {
       toast.error('Network error');
       setQueuingGame(null);
@@ -143,17 +158,14 @@ export default function DashboardPage() {
   };
 
   const userGames = profile?.selected_games ?? [];
-  const lobbyGames = (Object.keys(GAMES) as GameKey[]).filter(
-    (game) =>
-      GAMES[game].mode === 'lobby' &&
-      GAMES[game].platforms.some((platform) => profile?.platforms?.includes(platform))
-  );
+  const rankedGames = userGames.filter((game) => GAMES[game]?.mode === '1v1');
+  const lobbyGames = userGames.filter((game) => GAMES[game]?.mode === 'lobby');
 
-  const bestRating = userGames.reduce((best, game) => {
+  const bestRating = rankedGames.reduce((best, game) => {
     const rating = (profile?.[`rating_${game}`] as number) ?? 1000;
     return rating > best ? rating : best;
   }, 1000);
-  const queueTotal = userGames.reduce((total, game) => total + (queueCounts[game] ?? 0), 0);
+  const queueTotal = rankedGames.reduce((total, game) => total + (queueCounts[game] ?? 0), 0);
   const bestDivision = getRankDivision(bestRating);
   const xp = (profile?.xp as number) ?? 0;
   const level = (profile?.level as number) ?? getLevelFromXp(xp);
@@ -178,41 +190,10 @@ export default function DashboardPage() {
       <div className="card circuit-panel mb-6 p-4 sm:p-5">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div className="max-w-xl">
-            <p className="brand-kicker px-2.5 py-0.5 text-[10px]">
-              {new Date().toLocaleDateString('en-KE', {
-                weekday: 'long',
-                month: 'long',
-                day: 'numeric',
-              })}
-            </p>
-            <h1 className="mt-3 text-[2rem] font-black tracking-[-0.05em] text-[var(--text-primary)] sm:text-[2.5rem]">
+            <h1 className="text-[2rem] font-black tracking-[-0.05em] text-[var(--text-primary)] sm:text-[2.5rem]">
               Command your climb, {user?.username ?? 'Player'}.
             </h1>
-            <p className="mt-2 max-w-lg text-[13px] leading-6 text-[var(--text-secondary)] sm:text-sm">
-              Queue faster, watch your rank move, and keep your competitive setup
-              organized across every game you play on Mechi.
-            </p>
-            <div className="mt-4 flex flex-wrap items-center gap-2.5">
-              <div
-                className="rounded-full border px-2.5 py-1 text-[11px] font-semibold"
-                style={{
-                  color: bestDivision.color,
-                  backgroundColor: withAlpha(bestDivision.color, '14'),
-                  borderColor: withAlpha(bestDivision.color, '2f'),
-                }}
-              >
-                {bestDivision.label} / Lv. {level}
-              </div>
-              <div className="flex items-center gap-1.5 rounded-full border border-[var(--border-color)] bg-[var(--surface-elevated)] px-2.5 py-1 text-[11px] font-semibold text-[var(--text-secondary)]">
-                {(profile?.platforms ?? []).slice(0, 5).map((platform) => (
-                  <span key={platform} title={PLATFORMS[platform]?.label} className="text-sm">
-                    {PLATFORMS[platform]?.icon}
-                  </span>
-                ))}
-                <span>Connected platforms</span>
-              </div>
-            </div>
-            <div className="mt-4 max-w-lg rounded-2xl border border-[var(--border-color)] bg-[var(--surface-elevated)] p-3">
+            <div className="mt-6 max-w-lg rounded-2xl border border-[var(--border-color)] bg-[var(--surface-elevated)] p-3">
               <div className="flex items-center justify-between gap-3 text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--text-soft)]">
                 <span>XP progress</span>
                 <span>{xpProgress.progressInLevel}/{xpProgress.progressNeeded}</span>
@@ -236,11 +217,6 @@ export default function DashboardPage() {
 
           <div className="grid grid-cols-2 gap-2.5 sm:min-w-[20rem] lg:max-w-[22rem]">
             <div className="card p-3.5">
-              <p className="stat-label">Focus Games</p>
-              <p className="mt-2 text-[1.9rem] font-black text-[var(--text-primary)]">{userGames.length}</p>
-              <p className="mt-1.5 text-[11px] leading-5 text-[var(--text-soft)]">Competitive titles selected</p>
-            </div>
-            <div className="card p-3.5">
               <p className="stat-label">Queue Heat</p>
               <p className="mt-2 text-[1.9rem] font-black text-[var(--brand-teal)]">{queueTotal}</p>
               <p className="mt-1.5 text-[11px] leading-5 text-[var(--text-soft)]">Players visible in your queues</p>
@@ -249,15 +225,6 @@ export default function DashboardPage() {
               <p className="stat-label">Win Streak</p>
               <p className="mt-2 text-[1.9rem] font-black text-[var(--brand-coral)]">{streak}</p>
               <p className="mt-1.5 text-[11px] leading-5 text-[var(--text-soft)]">Matches in a row right now</p>
-            </div>
-            <div className="card p-3.5">
-              <p className="stat-label">Live Status</p>
-              <p className="mt-2 text-[1.9rem] font-black text-[var(--brand-coral)]">
-                {activeMatch ? 'Match On' : 'Ready'}
-              </p>
-              <p className="mt-1.5 text-[11px] leading-5 text-[var(--text-soft)]">
-                {activeMatch ? 'Finish your match to queue again' : 'You can jump into ranked now'}
-              </p>
             </div>
           </div>
         </div>
@@ -296,11 +263,11 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {userGames.length > 0 && (
+      {rankedGames.length > 0 && (
         <section className="mb-8">
           <div className="mb-4 flex items-center justify-between gap-3">
             <div>
-              <p className="section-title">Your Games</p>
+              <p className="section-title">Ranked Games</p>
               <p className="mt-2 text-sm text-[var(--text-secondary)]">
                 Queue ranked play, track your record, and keep moving upward.
               </p>
@@ -310,7 +277,7 @@ export default function DashboardPage() {
             </Link>
           </div>
           <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
-            {userGames.map((game) => (
+            {rankedGames.map((game) => (
               <GameCard
                 key={game}
                 gameKey={game}
@@ -353,7 +320,7 @@ export default function DashboardPage() {
         </section>
       )}
 
-      {userGames.length > 0 && (
+      {rankedGames.length > 0 && (
         <section>
           <div className="mb-4 flex items-center justify-between gap-3">
             <div>
@@ -368,7 +335,7 @@ export default function DashboardPage() {
             </div>
           </div>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {userGames.map((game) => {
+            {rankedGames.map((game) => {
               const rating = (profile?.[`rating_${game}`] as number) ?? 1000;
               const wins = (profile?.[`wins_${game}`] as number) ?? 0;
               const losses = (profile?.[`losses_${game}`] as number) ?? 0;

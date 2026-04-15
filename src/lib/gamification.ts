@@ -2,6 +2,7 @@ import type { GameKey, GamificationAchievement } from '@/types';
 
 export const TRACKED_RANKED_GAMES: GameKey[] = [
   'efootball',
+  'efootball_mobile',
   'fc26',
   'mk11',
   'nba2k26',
@@ -172,6 +173,15 @@ export const ACHIEVEMENTS: AchievementDef[] = [
     300,
     200,
     (stats) => (stats.gameWins.efootball ?? 0) >= 50
+  ),
+  achievementReward(
+    'efootball_mobile_god',
+    'eFootball Mobile God',
+    'Win 50 eFootball Mobile matches',
+    '\u{26BD}',
+    300,
+    200,
+    (stats) => (stats.gameWins.efootball_mobile ?? 0) >= 50
   ),
   achievementReward(
     'tekken_master',

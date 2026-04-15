@@ -4,13 +4,16 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { Menu, X } from 'lucide-react';
 import { BrandLogo } from '@/components/BrandLogo';
-import { ThemeToggle } from '@/components/ThemeToggle';
 
 const NAV_ITEMS = [
-  { href: '#how-it-works', label: 'How it works' },
-  { href: '#trust', label: 'Why Mechi' },
-  { href: '#supported', label: 'Games' },
+  { href: '#how-it-works', label: 'HOW IT WORKS' },
+  { href: '#supported', label: 'GAMES' },
+  { href: '#pricing', label: 'PRICING' },
+  { href: '#ranks', label: 'RANKS' },
 ];
+
+const HEADER_TEXT_CLASS =
+  'rounded-lg px-3 py-2 text-sm font-semibold uppercase tracking-[0.14em] text-[var(--text-secondary)] transition-colors hover:bg-[var(--surface-elevated)] hover:text-[var(--text-primary)]';
 
 export function HomeFloatingHeader() {
   const [isOpen, setIsOpen] = useState(false);
@@ -19,17 +22,22 @@ export function HomeFloatingHeader() {
     <header className="sticky top-4 z-50">
       <div className="landing-shell">
         <div className="rounded-[1.2rem] border border-[var(--border-color)] bg-[var(--surface-soft)] p-2 shadow-[var(--shadow-soft)] backdrop-blur-xl">
-          <div className="flex items-center justify-between gap-3">
-            <Link href="/" className="rounded-lg px-1 py-1" onClick={() => setIsOpen(false)}>
-              <BrandLogo size="sm" />
+          <div className="grid grid-cols-[auto_1fr_auto] items-center gap-3">
+            <Link
+              href="/"
+              aria-label="Home"
+              className="rounded-lg px-1 py-1"
+              onClick={() => setIsOpen(false)}
+            >
+              <BrandLogo size="sm" variant="symbol" />
             </Link>
 
-            <div className="hidden items-center gap-1 md:flex">
+            <div className="hidden items-center justify-center gap-1 md:flex">
               {NAV_ITEMS.map((item) => (
                 <Link
                   key={item.href}
                   href={item.href}
-                  className="rounded-lg px-3 py-2 text-sm font-semibold text-[var(--text-secondary)] transition-colors hover:bg-[var(--surface-elevated)] hover:text-[var(--text-primary)]"
+                  className={HEADER_TEXT_CLASS}
                 >
                   {item.label}
                 </Link>
@@ -37,13 +45,15 @@ export function HomeFloatingHeader() {
             </div>
 
             <div className="flex items-center gap-2">
-              <ThemeToggle />
               <div className="hidden items-center gap-2 sm:flex">
-                <Link href="/login" className="brand-link text-sm font-semibold">
-                  Sign in
+                <Link
+                  href="/login"
+                  className="brand-link text-sm font-semibold uppercase tracking-[0.14em]"
+                >
+                  SIGN IN
                 </Link>
-                <Link href="/register" className="btn-primary text-sm">
-                  Join free
+                <Link href="/register" className="btn-primary text-sm uppercase tracking-[0.14em]">
+                  JOIN FREE
                 </Link>
               </div>
               <button
@@ -66,17 +76,25 @@ export function HomeFloatingHeader() {
                   key={item.href}
                   href={item.href}
                   onClick={() => setIsOpen(false)}
-                  className="rounded-lg px-3 py-2 text-sm font-semibold text-[var(--text-secondary)] transition-colors hover:bg-[var(--surface-elevated)] hover:text-[var(--text-primary)]"
+                  className={HEADER_TEXT_CLASS}
                 >
                   {item.label}
                 </Link>
               ))}
               <div className="mt-1 flex items-center gap-2 px-1 pb-1 pt-2">
-                <Link href="/login" onClick={() => setIsOpen(false)} className="btn-outline text-sm">
-                  Sign in
+                <Link
+                  href="/login"
+                  onClick={() => setIsOpen(false)}
+                  className="btn-outline text-sm uppercase tracking-[0.14em]"
+                >
+                  SIGN IN
                 </Link>
-                <Link href="/register" onClick={() => setIsOpen(false)} className="btn-primary text-sm">
-                  Join free
+                <Link
+                  href="/register"
+                  onClick={() => setIsOpen(false)}
+                  className="btn-primary text-sm uppercase tracking-[0.14em]"
+                >
+                  JOIN FREE
                 </Link>
               </div>
             </div>

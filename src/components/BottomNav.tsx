@@ -2,18 +2,20 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, Lightbulb, Trophy, User, Users } from 'lucide-react';
+import { Home, Shield, Swords, Trophy, User, Users } from 'lucide-react';
+import { useAuth } from '@/components/AuthProvider';
 
 const NAV_ITEMS = [
   { href: '/dashboard', label: 'Home', icon: Home },
   { href: '/leaderboard', label: 'Ranks', icon: Trophy },
+  { href: '/tournaments', label: 'Brackets', icon: Swords },
   { href: '/lobbies', label: 'Lobbies', icon: Users },
-  { href: '/suggest', label: 'Suggest', icon: Lightbulb },
   { href: '/profile', label: 'Profile', icon: User },
 ];
 
 export function BottomNav() {
   const pathname = usePathname();
+  const { user } = useAuth();
 
   return (
     <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-[var(--border-color)] bg-[var(--surface-soft)] backdrop-blur-xl lg:hidden">
@@ -35,6 +37,21 @@ export function BottomNav() {
             </Link>
           );
         })}
+        {user?.role === 'admin' || user?.role === 'moderator' ? (
+          <Link
+            href="/admin"
+            className={`flex flex-1 flex-col items-center justify-center gap-0.5 py-1.5 transition-colors ${
+              pathname.startsWith('/admin')
+                ? 'text-[var(--brand-coral)]'
+                : 'text-[var(--text-soft)] hover:text-[var(--text-primary)]'
+            }`}
+          >
+            <Shield size={18} strokeWidth={pathname.startsWith('/admin') ? 2.5 : 1.5} />
+            <span className={`text-[10px] ${pathname.startsWith('/admin') ? 'font-semibold' : 'font-normal'}`}>
+              Admin
+            </span>
+          </Link>
+        ) : null}
       </div>
     </nav>
   );

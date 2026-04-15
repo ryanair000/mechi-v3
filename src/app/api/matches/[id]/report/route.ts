@@ -15,6 +15,7 @@ import { createServiceClient } from '@/lib/supabase';
 import { sendMatchDisputeEmail, sendResultConfirmedEmail } from '@/lib/email';
 import { notifyResultConfirmed } from '@/lib/whatsapp';
 import { GAMES, getGameLossesKey, getGameRatingKey, getGameWinsKey } from '@/lib/config';
+import { advanceTournamentAfterMatch } from '@/lib/tournaments';
 import type { GameKey, GamificationResult, Match } from '@/types';
 
 type ProfileRow = Record<string, unknown> & {
@@ -566,6 +567,14 @@ export async function POST(
         winnerLevel: winnerNewLevel,
         loserLevel: loserNewLevel,
       });
+
+      if (match.tournament_id) {
+        await advanceTournamentAfterMatch({
+          supabase,
+          matchId: id,
+          winnerId,
+        });
+      }
 
       return NextResponse.json({
         status: 'completed',

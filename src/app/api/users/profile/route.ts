@@ -40,7 +40,16 @@ export async function PATCH(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const { platforms, game_ids, selected_games, region, whatsapp_number, whatsapp_notifications } = body;
+    const {
+      platforms,
+      game_ids,
+      selected_games,
+      region,
+      whatsapp_number,
+      whatsapp_notifications,
+      avatar_url,
+      cover_url,
+    } = body;
 
     const updateData: Record<string, unknown> = {};
     if (platforms !== undefined) updateData.platforms = platforms;
@@ -51,6 +60,8 @@ export async function PATCH(request: NextRequest) {
     if (whatsapp_notifications !== undefined) {
       updateData.whatsapp_notifications = whatsapp_notifications;
     }
+    if (avatar_url !== undefined) updateData.avatar_url = avatar_url;
+    if (cover_url !== undefined) updateData.cover_url = cover_url;
 
     if (Object.keys(updateData).length === 0) {
       return NextResponse.json({ error: 'Nothing to update' }, { status: 400 });

@@ -15,8 +15,11 @@ export function createClient() {
 }
 
 export function createServiceClient() {
-  const key = supabaseServiceKey || supabaseAnonKey;
-  return createSupabaseClient(supabaseUrl, key, {
+  if (!supabaseServiceKey) {
+    throw new Error('SUPABASE_SERVICE_ROLE_KEY is required for server-side data access');
+  }
+
+  return createSupabaseClient(supabaseUrl, supabaseServiceKey, {
     auth: {
       persistSession: false,
       autoRefreshToken: false,

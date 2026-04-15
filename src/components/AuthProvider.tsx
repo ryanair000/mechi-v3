@@ -3,6 +3,10 @@
 import { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import type { AuthUser } from '@/types';
 
+const TOKEN_STORAGE_KEY = 'mechi_token';
+const USER_STORAGE_KEY = 'mechi_user';
+const AUTH_REFRESH_TIMEOUT_MS = 8000;
+
 interface AuthContextValue {
   user: AuthUser | null;
   token: string | null;
@@ -31,26 +35,64 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   const refresh = useCallback(async () => {
-    const storedToken = localStorage.getItem('mechi_token');
+    const clearStoredAuth = () => {
+      localStorage.removeItem(TOKEN_STORAGE_KEY);
+      localStorage.removeItem(USER_STORAGE_KEY);
+    };
+
+    const storedToken = localStorage.getItem(TOKEN_STORAGE_KEY);
+    const storedUser = localStorage.getItem(USER_STORAGE_KEY);
+    let cachedUser: AuthUser | null = null;
+
+    if (storedUser) {
+      try {
+        cachedUser = JSON.parse(storedUser) as AuthUser;
+      } catch {
+        localStorage.removeItem(USER_STORAGE_KEY);
+      }
+    }
+
+    if (!storedToken) {
+      clearStoredAuth();
+      setUser(null);
+      setToken(null);
+      setLoading(false);
+      return;
+    }
+
+    if (cachedUser) {
+      setUser(cachedUser);
+      setToken(storedToken);
+      setLoading(false);
+    }
+
+    const controller = new AbortController();
+    const timeoutId = window.setTimeout(() => controller.abort(), AUTH_REFRESH_TIMEOUT_MS);
 
     try {
       const res = await fetch('/api/auth/me', {
         headers: storedToken ? { Authorization: `Bearer ${storedToken}` } : undefined,
+        signal: controller.signal,
       });
 
       if (res.ok) {
         const data = await res.json();
         setUser(data.user);
         setToken(storedToken);
+        localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(data.user));
       } else {
-        localStorage.removeItem('mechi_token');
+        clearStoredAuth();
         setUser(null);
         setToken(null);
       }
     } catch {
-      setUser(null);
-      setToken(null);
+      if (!cachedUser) {
+        clearStoredAuth();
+        setUser(null);
+        setToken(null);
+      }
     } finally {
+      window.clearTimeout(timeoutId);
       setLoading(false);
     }
   }, []);
@@ -60,13 +102,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [refresh]);
 
   const login = useCallback((newToken: string, newUser: AuthUser) => {
-    localStorage.setItem('mechi_token', newToken);
+    localStorage.setItem(TOKEN_STORAGE_KEY, newToken);
+    localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(newUser));
     setToken(newToken);
     setUser(newUser);
   }, []);
 
   const logout = useCallback(() => {
-    localStorage.removeItem('mechi_token');
+    localStorage.removeItem(TOKEN_STORAGE_KEY);
+    localStorage.removeItem(USER_STORAGE_KEY);
     setToken(null);
     setUser(null);
     // Clear cookie via fetch (best-effort)

@@ -28,14 +28,31 @@ function LobbiesContent() {
 
   const fetchLobbies = useCallback(async () => {
     setLoading(true);
-    const url = gameFilter ? `/api/lobbies?game=${gameFilter}` : '/api/lobbies';
-    const res = await authFetch(url);
-    if (res.ok) {
-      const data = await res.json();
-      setLobbies(data.lobbies);
+    try {
+      const url = gameFilter ? `/api/lobbies?game=${gameFilter}` : '/api/lobbies';
+      const res = await authFetch(url);
+
+      if (res.ok) {
+        const data = await res.json();
+        setLobbies(data.lobbies);
+        return;
+      }
+
+      if (res.status === 401) {
+        router.push('/login');
+        return;
+      }
+
+      const data = await res.json().catch(() => ({ error: 'Could not load lobbies' }));
+      toast.error(data.error ?? 'Could not load lobbies');
+      setLobbies([]);
+    } catch {
+      toast.error('Could not load lobbies');
+      setLobbies([]);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
-  }, [authFetch, gameFilter]);
+  }, [authFetch, gameFilter, router]);
 
   useEffect(() => {
     void fetchLobbies();

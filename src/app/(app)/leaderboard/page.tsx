@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useEffect, useState, useCallback } from 'react';
 import { Crown, Trophy } from 'lucide-react';
 import { useAuth, useAuthFetch } from '@/components/AuthProvider';
@@ -17,16 +18,22 @@ interface LeaderboardEntry {
   losses: number;
 }
 
-const ONE_V_ONE_GAMES = (Object.keys(GAMES) as GameKey[]).filter(
-  (game) => GAMES[game].mode === '1v1'
-);
+function filterRankedGames(games: readonly string[] = []): GameKey[] {
+  return games.filter(
+    (game): game is GameKey => Boolean(GAMES[game as GameKey]) && GAMES[game as GameKey].mode === '1v1'
+  );
+}
 
 export default function LeaderboardPage() {
   const { user } = useAuth();
   const authFetch = useAuthFetch();
-  const [selectedGame, setSelectedGame] = useState<GameKey>(ONE_V_ONE_GAMES[0]);
+  const fallbackGames = filterRankedGames(user?.selected_games ?? []);
+  const [profileGames, setProfileGames] = useState<GameKey[] | null>(null);
+  const [selectedGame, setSelectedGame] = useState<GameKey | null>(fallbackGames[0] ?? null);
   const [entries, setEntries] = useState<LeaderboardEntry[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const [profileLoading, setProfileLoading] = useState(true);
+  const availableGames = profileGames ?? fallbackGames;
 
   const fetchLeaderboard = useCallback(async (game: GameKey) => {
     setLoading(true);
@@ -42,6 +49,51 @@ export default function LeaderboardPage() {
   }, [authFetch]);
 
   useEffect(() => {
+    let cancelled = false;
+
+    async function loadProfileGames() {
+      try {
+        const res = await authFetch('/api/users/profile');
+        if (!res.ok || cancelled) return;
+
+        const data = await res.json();
+        const nextGames = filterRankedGames((data.profile?.selected_games as string[]) ?? []);
+
+        if (!cancelled) {
+          setProfileGames(nextGames);
+        }
+      } finally {
+        if (!cancelled) {
+          setProfileLoading(false);
+        }
+      }
+    }
+
+    void loadProfileGames();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [authFetch]);
+
+  useEffect(() => {
+    if (!availableGames.length) {
+      setSelectedGame(null);
+      return;
+    }
+
+    if (!selectedGame || !availableGames.includes(selectedGame)) {
+      setSelectedGame(availableGames[0]);
+    }
+  }, [availableGames, selectedGame]);
+
+  useEffect(() => {
+    if (!selectedGame) {
+      setEntries([]);
+      setLoading(false);
+      return;
+    }
+
     void fetchLeaderboard(selectedGame);
   }, [selectedGame, fetchLeaderboard]);
 
@@ -56,8 +108,7 @@ export default function LeaderboardPage() {
               <Trophy size={16} />
             </div>
             <div>
-              <p className="brand-kicker px-2.5 py-0.5 text-[10px]">Competitive Ladder</p>
-              <h1 className="mt-2 text-[2rem] font-black tracking-[-0.05em] text-[var(--text-primary)] sm:text-[2.3rem]">
+              <h1 className="text-[2rem] font-black tracking-[-0.05em] text-[var(--text-primary)] sm:text-[2.3rem]">
                 Leaderboard
               </h1>
               <p className="mt-1.5 text-[13px] leading-6 text-[var(--text-secondary)] sm:text-sm">
@@ -65,10 +116,12 @@ export default function LeaderboardPage() {
               </p>
             </div>
           </div>
-          <div className="brand-chip-coral px-2.5 py-1 text-[11px]">
-            <Trophy size={11} />
-            <span>{GAMES[selectedGame].label}</span>
-          </div>
+          {selectedGame ? (
+            <div className="brand-chip-coral px-2.5 py-1 text-[11px]">
+              <Trophy size={11} />
+              <span>{GAMES[selectedGame].label}</span>
+            </div>
+          ) : null}
         </div>
       </div>
 
@@ -77,7 +130,7 @@ export default function LeaderboardPage() {
           <div>
             <p className="section-title">Pick a game</p>
             <p className="mt-1 text-[13px] text-[var(--text-secondary)] sm:text-sm">
-              Switch titles to see who is up, who is climbing, and where you stand.
+              Only the ranked games on your profile show up here.
             </p>
           </div>
           <div className="brand-chip-coral self-start px-2.5 py-1 text-[11px] sm:self-auto">
@@ -86,26 +139,40 @@ export default function LeaderboardPage() {
           </div>
         </div>
 
-        <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar sm:flex-wrap sm:overflow-visible">
-          {ONE_V_ONE_GAMES.map((game) => {
-            const isSelected = selectedGame === game;
+        {availableGames.length ? (
+          <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar sm:flex-wrap sm:overflow-visible">
+            {availableGames.map((game) => {
+              const isSelected = selectedGame === game;
 
-            return (
-              <button
-                key={game}
-                onClick={() => setSelectedGame(game)}
-                className={`flex-shrink-0 whitespace-nowrap rounded-xl border px-3 py-2 text-[13px] font-semibold transition-all ${
-                  isSelected
-                    ? 'border-[rgba(255,107,107,0.28)] bg-[var(--brand-coral)] text-[var(--brand-night)] shadow-[0_10px_24px_rgba(255,107,107,0.2)]'
-                    : 'border-[var(--border-color)] bg-[var(--surface-elevated)] text-[var(--text-secondary)] hover:border-[rgba(50,224,196,0.22)] hover:bg-[var(--surface)] hover:text-[var(--text-primary)]'
-                }`}
-                aria-pressed={isSelected}
-              >
-                {GAMES[game].label}
-              </button>
-            );
-          })}
-        </div>
+              return (
+                <button
+                  key={game}
+                  onClick={() => setSelectedGame(game)}
+                  className={`flex-shrink-0 whitespace-nowrap rounded-xl border px-3 py-2 text-[13px] font-semibold transition-all ${
+                    isSelected
+                      ? 'border-[rgba(255,107,107,0.28)] bg-[var(--brand-coral)] text-[var(--brand-night)] shadow-[0_10px_24px_rgba(255,107,107,0.2)]'
+                      : 'border-[var(--border-color)] bg-[var(--surface-elevated)] text-[var(--text-secondary)] hover:border-[rgba(50,224,196,0.22)] hover:bg-[var(--surface)] hover:text-[var(--text-primary)]'
+                  }`}
+                  aria-pressed={isSelected}
+                >
+                  {GAMES[game].label}
+                </button>
+              );
+            })}
+          </div>
+        ) : profileLoading ? (
+          <div className="h-12 shimmer" />
+        ) : (
+          <div className="rounded-xl border border-[var(--border-color)] bg-[var(--surface-elevated)] p-4">
+            <p className="text-sm font-semibold text-[var(--text-primary)]">No ranked games on your profile yet</p>
+            <p className="mt-1 text-xs leading-5 text-[var(--text-secondary)]">
+              Add a competitive title to your profile first, then its leaderboard will show up here.
+            </p>
+            <Link href="/profile" className="brand-link-coral mt-3 inline-block text-xs font-semibold">
+              Update profile
+            </Link>
+          </div>
+        )}
       </div>
 
       <div className="mb-2 hidden gap-3 px-3 py-1.5 text-[10px] font-semibold text-[var(--text-soft)] sm:grid sm:grid-cols-[2.5rem_1fr_6.5rem_4rem_5rem_5rem_4.5rem]">
@@ -118,11 +185,17 @@ export default function LeaderboardPage() {
         <div className="text-right">Win rate</div>
       </div>
 
-      {loading ? (
+      {loading || (profileLoading && !selectedGame) ? (
         <div className="space-y-2">
           {[1, 2, 3, 4, 5].map((item) => (
             <div key={item} className="h-14 shimmer" />
           ))}
+        </div>
+      ) : !selectedGame ? (
+        <div className="card py-20 text-center text-[var(--text-soft)]">
+          <Trophy size={36} className="mx-auto mb-3 opacity-30" />
+          <p className="font-medium text-[var(--text-primary)]">No leaderboard available yet</p>
+          <p className="mt-1 text-xs">Choose a ranked game in your profile to unlock this page.</p>
         </div>
       ) : entries.length === 0 ? (
         <div className="card py-20 text-center text-[var(--text-soft)]">

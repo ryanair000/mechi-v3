@@ -49,18 +49,17 @@ const imageSizes: Record<BrandLogoSize, string> = {
 };
 
 const tileToneClasses: Record<BrandLogoVariant, string> = {
-  full: 'border-[var(--border-color)] bg-white/95 shadow-[0_12px_30px_rgba(11,17,33,0.08)]',
-  reversed:
-    'border-white/10 bg-[rgba(11,17,33,0.9)] shadow-[0_18px_40px_rgba(0,0,0,0.22)]',
-  mono: 'border-[var(--border-color)] bg-[var(--surface-elevated)]',
-  symbol: 'border-[var(--border-color)] bg-white/95 shadow-[0_10px_24px_rgba(11,17,33,0.08)]',
+  full: 'border-transparent bg-transparent shadow-none',
+  reversed: 'border-transparent bg-transparent shadow-none',
+  mono: 'border-transparent bg-transparent shadow-none',
+  symbol: 'border-transparent bg-transparent shadow-none',
 };
 
 const imageToneClasses: Record<BrandLogoVariant, string> = {
-  full: 'object-cover',
-  reversed: 'object-cover',
-  mono: 'object-cover grayscale contrast-125 brightness-90',
-  symbol: 'object-cover',
+  full: 'object-contain',
+  reversed: 'object-contain',
+  mono: 'object-contain grayscale contrast-125 brightness-90',
+  symbol: 'object-contain',
 };
 
 const labelToneClasses: Record<BrandLogoVariant, string> = {
@@ -88,6 +87,11 @@ export function BrandLogo({
   return (
     <span className={cn('inline-flex items-center', gapClasses[size], className)}>
       <span
+        style={{
+          position: 'relative',
+          width: imageSizes[size],
+          height: imageSizes[size],
+        }}
         className={cn(
           'relative block shrink-0 overflow-hidden border',
           iconSizeClasses[size],

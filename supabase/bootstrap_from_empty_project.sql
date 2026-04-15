@@ -8,24 +8,29 @@ CREATE TABLE IF NOT EXISTS profiles (
   username text NOT NULL UNIQUE,
   phone text NOT NULL UNIQUE,
   email text,
+  avatar_url text,
+  cover_url text,
   password_hash text NOT NULL,
   region text NOT NULL DEFAULT 'Nairobi',
   platforms text[] NOT NULL DEFAULT '{}',
   game_ids jsonb NOT NULL DEFAULT '{}'::jsonb,
   selected_games text[] NOT NULL DEFAULT '{}',
   rating_efootball integer NOT NULL DEFAULT 1000,
+  rating_efootball_mobile integer NOT NULL DEFAULT 1000,
   rating_fc26 integer NOT NULL DEFAULT 1000,
   rating_mk11 integer NOT NULL DEFAULT 1000,
   rating_nba2k26 integer NOT NULL DEFAULT 1000,
   rating_tekken8 integer NOT NULL DEFAULT 1000,
   rating_sf6 integer NOT NULL DEFAULT 1000,
   wins_efootball integer NOT NULL DEFAULT 0,
+  wins_efootball_mobile integer NOT NULL DEFAULT 0,
   wins_fc26 integer NOT NULL DEFAULT 0,
   wins_mk11 integer NOT NULL DEFAULT 0,
   wins_nba2k26 integer NOT NULL DEFAULT 0,
   wins_tekken8 integer NOT NULL DEFAULT 0,
   wins_sf6 integer NOT NULL DEFAULT 0,
   losses_efootball integer NOT NULL DEFAULT 0,
+  losses_efootball_mobile integer NOT NULL DEFAULT 0,
   losses_fc26 integer NOT NULL DEFAULT 0,
   losses_mk11 integer NOT NULL DEFAULT 0,
   losses_nba2k26 integer NOT NULL DEFAULT 0,
@@ -38,6 +43,7 @@ CREATE TABLE IF NOT EXISTS queue (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id uuid NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
   game text NOT NULL,
+  platform text,
   region text NOT NULL DEFAULT 'kenya',
   rating integer NOT NULL DEFAULT 1000,
   status text NOT NULL DEFAULT 'waiting' CHECK (status IN ('waiting', 'matched', 'cancelled')),
@@ -49,6 +55,7 @@ CREATE TABLE IF NOT EXISTS matches (
   player1_id uuid NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
   player2_id uuid NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
   game text NOT NULL,
+  platform text,
   region text NOT NULL DEFAULT 'kenya',
   status text NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'completed', 'disputed', 'cancelled')),
   winner_id uuid REFERENCES profiles(id) ON DELETE SET NULL,
@@ -103,6 +110,7 @@ CREATE TABLE IF NOT EXISTS suggestion_votes (
 CREATE INDEX IF NOT EXISTS idx_profiles_username ON profiles(username);
 CREATE INDEX IF NOT EXISTS idx_profiles_phone ON profiles(phone);
 CREATE INDEX IF NOT EXISTS idx_queue_status_joined_at ON queue(status, joined_at);
+CREATE INDEX IF NOT EXISTS idx_queue_game_platform_status ON queue(game, platform, status);
 CREATE INDEX IF NOT EXISTS idx_queue_user_status ON queue(user_id, status);
 CREATE INDEX IF NOT EXISTS idx_matches_status_created_at ON matches(status, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_matches_player1_status ON matches(player1_id, status);
@@ -117,6 +125,74 @@ GRANT SELECT ON ALL TABLES IN SCHEMA public TO anon, authenticated;
 GRANT ALL ON ALL TABLES IN SCHEMA public TO service_role;
 GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO service_role;
 GRANT ALL ON ALL ROUTINES IN SCHEMA public TO service_role;
+
+-- Tournaments + Paystack-backed entry payments.
+CREATE TABLE IF NOT EXISTS tournaments (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  slug text UNIQUE NOT NULL,
+  title text NOT NULL,
+  game text NOT NULL,
+  platform text,
+  region text NOT NULL DEFAULT 'Nairobi',
+  size integer NOT NULL CHECK (size IN (4, 8, 16)),
+  entry_fee integer NOT NULL DEFAULT 0 CHECK (entry_fee >= 0),
+  prize_pool integer NOT NULL DEFAULT 0 CHECK (prize_pool >= 0),
+  platform_fee integer NOT NULL DEFAULT 0 CHECK (platform_fee >= 0),
+  platform_fee_rate integer NOT NULL DEFAULT 10 CHECK (platform_fee_rate >= 0 AND platform_fee_rate <= 100),
+  status text NOT NULL DEFAULT 'open' CHECK (status IN ('open', 'full', 'active', 'completed', 'cancelled')),
+  bracket jsonb,
+  winner_id uuid REFERENCES profiles(id) ON DELETE SET NULL,
+  organizer_id uuid NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+  rules text,
+  payout_status text NOT NULL DEFAULT 'none' CHECK (payout_status IN ('none', 'pending', 'paid', 'failed')),
+  payout_ref text,
+  payout_error text,
+  created_at timestamptz NOT NULL DEFAULT timezone('utc', now()),
+  started_at timestamptz,
+  ended_at timestamptz
+);
+
+CREATE TABLE IF NOT EXISTS tournament_players (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  tournament_id uuid NOT NULL REFERENCES tournaments(id) ON DELETE CASCADE,
+  user_id uuid NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+  seed integer,
+  payment_status text NOT NULL DEFAULT 'pending' CHECK (payment_status IN ('pending', 'paid', 'free', 'failed', 'refunded')),
+  payment_ref text,
+  payment_access_code text,
+  joined_at timestamptz NOT NULL DEFAULT timezone('utc', now()),
+  UNIQUE (tournament_id, user_id)
+);
+
+CREATE TABLE IF NOT EXISTS tournament_matches (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  tournament_id uuid NOT NULL REFERENCES tournaments(id) ON DELETE CASCADE,
+  match_id uuid REFERENCES matches(id) ON DELETE SET NULL,
+  round integer NOT NULL,
+  slot integer NOT NULL,
+  player1_id uuid REFERENCES profiles(id) ON DELETE SET NULL,
+  player2_id uuid REFERENCES profiles(id) ON DELETE SET NULL,
+  winner_id uuid REFERENCES profiles(id) ON DELETE SET NULL,
+  status text NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'ready', 'active', 'completed', 'bye')),
+  created_at timestamptz NOT NULL DEFAULT timezone('utc', now()),
+  UNIQUE (tournament_id, round, slot)
+);
+
+ALTER TABLE matches
+  ADD COLUMN IF NOT EXISTS tournament_id uuid REFERENCES tournaments(id) ON DELETE SET NULL;
+
+CREATE INDEX IF NOT EXISTS idx_tournaments_status_created_at ON tournaments(status, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_tournaments_game_status ON tournaments(game, status);
+CREATE INDEX IF NOT EXISTS idx_tournaments_organizer_id ON tournaments(organizer_id);
+CREATE INDEX IF NOT EXISTS idx_tournament_players_tournament_id ON tournament_players(tournament_id);
+CREATE INDEX IF NOT EXISTS idx_tournament_players_user_id ON tournament_players(user_id);
+CREATE INDEX IF NOT EXISTS idx_tournament_players_payment_status ON tournament_players(payment_status);
+CREATE INDEX IF NOT EXISTS idx_tournament_matches_tournament_round_slot ON tournament_matches(tournament_id, round, slot);
+CREATE INDEX IF NOT EXISTS idx_tournament_matches_match_id ON tournament_matches(match_id);
+CREATE INDEX IF NOT EXISTS idx_matches_tournament_id ON matches(tournament_id);
+
+GRANT SELECT ON tournaments, tournament_players, tournament_matches TO anon, authenticated;
+GRANT ALL ON tournaments, tournament_players, tournament_matches TO service_role;
 
 ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public
   GRANT SELECT ON TABLES TO anon, authenticated;
@@ -334,3 +410,40 @@ GRANT EXECUTE ON FUNCTION finalize_match_with_gamification(
   jsonb,
   jsonb
 ) TO anon, authenticated, service_role;
+
+ALTER TABLE profiles
+  ADD COLUMN IF NOT EXISTS role text NOT NULL DEFAULT 'user'
+    CHECK (role IN ('user', 'moderator', 'admin')),
+  ADD COLUMN IF NOT EXISTS is_banned boolean NOT NULL DEFAULT false,
+  ADD COLUMN IF NOT EXISTS ban_reason text,
+  ADD COLUMN IF NOT EXISTS banned_at timestamptz,
+  ADD COLUMN IF NOT EXISTS banned_by uuid REFERENCES profiles(id) ON DELETE SET NULL;
+
+CREATE TABLE IF NOT EXISTS admin_audit_logs (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  admin_id uuid NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+  action text NOT NULL,
+  target_type text NOT NULL CHECK (target_type IN ('user', 'match', 'tournament', 'system')),
+  target_id text,
+  details jsonb,
+  ip_address text,
+  created_at timestamptz NOT NULL DEFAULT timezone('utc', now())
+);
+
+CREATE TABLE IF NOT EXISTS rate_limit_attempts (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  key text NOT NULL UNIQUE,
+  attempts integer NOT NULL DEFAULT 1,
+  window_start timestamptz NOT NULL DEFAULT timezone('utc', now()),
+  last_attempt timestamptz NOT NULL DEFAULT timezone('utc', now())
+);
+
+CREATE INDEX IF NOT EXISTS idx_profiles_role ON profiles(role);
+CREATE INDEX IF NOT EXISTS idx_profiles_banned ON profiles(is_banned);
+CREATE INDEX IF NOT EXISTS idx_admin_audit_logs_admin_id ON admin_audit_logs(admin_id);
+CREATE INDEX IF NOT EXISTS idx_admin_audit_logs_created_at ON admin_audit_logs(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_admin_audit_logs_action ON admin_audit_logs(action);
+CREATE INDEX IF NOT EXISTS idx_rate_limit_attempts_key ON rate_limit_attempts(key);
+
+GRANT SELECT ON admin_audit_logs TO authenticated;
+GRANT ALL ON admin_audit_logs, rate_limit_attempts TO service_role;

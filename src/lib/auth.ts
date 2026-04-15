@@ -1,7 +1,7 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { NextRequest } from 'next/server';
-import type { JWTPayload, AuthUser } from '@/types';
+import type { JWTPayload, AuthUser, UserRole } from '@/types';
 
 const JWT_SECRET = process.env.JWT_SECRET!;
 const SALT_ROUNDS = 12;
@@ -15,7 +15,12 @@ export async function verifyPassword(password: string, hash: string): Promise<bo
   return bcrypt.compare(password, hash);
 }
 
-export function signToken(payload: { sub: string; username: string }): string {
+export function signToken(payload: {
+  sub: string;
+  username: string;
+  role?: UserRole;
+  is_banned?: boolean;
+}): string {
   return jwt.sign(payload, JWT_SECRET, { expiresIn: TOKEN_EXPIRY });
 }
 
@@ -58,9 +63,28 @@ export function profileToAuthUser(profile: Record<string, unknown>): AuthUser {
     username: profile.username as string,
     phone: profile.phone as string,
     email: profile.email as string | undefined,
+    avatar_url: (profile.avatar_url as string | null | undefined) ?? null,
+    cover_url: (profile.cover_url as string | null | undefined) ?? null,
     region: profile.region as string,
     platforms: ((profile.platforms as string[]) ?? []) as import('@/types').PlatformKey[],
     game_ids: (profile.game_ids as Record<string, string>) ?? {},
     selected_games: ((profile.selected_games as string[]) ?? []) as import('@/types').GameKey[],
+    role: (profile.role as UserRole | undefined) ?? 'user',
+    is_banned: (profile.is_banned as boolean | undefined) ?? false,
+    whatsapp_number: (profile.whatsapp_number as string | null | undefined) ?? null,
+    whatsapp_notifications: (profile.whatsapp_notifications as boolean | undefined) ?? false,
+    xp: (profile.xp as number | undefined) ?? 0,
+    level: (profile.level as number | undefined) ?? 1,
+    mp: (profile.mp as number | undefined) ?? 0,
+    win_streak: (profile.win_streak as number | undefined) ?? 0,
+    max_win_streak: (profile.max_win_streak as number | undefined) ?? 0,
   };
+}
+
+export function isModerator(user: JWTPayload | null): boolean {
+  return user?.role === 'moderator' || user?.role === 'admin';
+}
+
+export function isAdmin(user: JWTPayload | null): boolean {
+  return user?.role === 'admin';
 }

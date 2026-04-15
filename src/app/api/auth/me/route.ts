@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getAuthUser } from '@/lib/auth';
+import { getAuthUser, profileToAuthUser } from '@/lib/auth';
 import { createServiceClient } from '@/lib/supabase';
 
 export async function GET(request: NextRequest) {
@@ -19,8 +19,12 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'User not found' }, { status: 404 });
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const { password_hash: _hash, ...safeProfile } = profile;
+  if (profile.is_banned) {
+    return NextResponse.json(
+      { error: `Account suspended: ${profile.ban_reason ?? 'Contact support.'}` },
+      { status: 403 }
+    );
+  }
 
-  return NextResponse.json({ user: safeProfile });
+  return NextResponse.json({ user: profileToAuthUser(profile) });
 }

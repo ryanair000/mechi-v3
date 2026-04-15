@@ -119,13 +119,13 @@ export async function GET(request: NextRequest) {
                 alignItems: 'center',
                 justifyContent: 'center',
                 borderRadius: '18px',
-                background: 'rgba(255,255,255,0.96)',
-                border: '1px solid rgba(255,255,255,0.12)',
+                background: 'transparent',
+                border: '1px solid transparent',
                 overflow: 'hidden',
               }}
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={logoSrc} alt="Mechi logo" style={{ width: '100%', height: '100%' }} />
+              <img src={logoSrc} alt="Mechi logo" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
             </div>
             <div style={{ display: 'flex', flexDirection: 'column' }}>
               <span style={{ fontSize: '28px', fontWeight: 800 }}>MECHI</span>

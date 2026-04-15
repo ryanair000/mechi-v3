@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuthUser } from '@/lib/auth';
 import { createServiceClient } from '@/lib/supabase';
-import { GAMES } from '@/lib/config';
+import { GAMES, getConfiguredPlatformForGame, isValidGamePlatform } from '@/lib/config';
 import { runMatchmaking } from '@/lib/matchmaking';
-import type { GameKey } from '@/types';
+import type { GameKey, PlatformKey } from '@/types';
 
 export async function POST(request: NextRequest) {
   const authUser = getAuthUser(request);
@@ -13,7 +13,7 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const { game } = body;
+    const { game, platform } = body;
 
     if (!game || !GAMES[game as GameKey]) {
       return NextResponse.json({ error: 'Invalid game' }, { status: 400 });
@@ -24,7 +24,7 @@ export async function POST(request: NextRequest) {
     // Get user profile for region and rating
     const { data: profileRaw, error: profileError } = await supabase
       .from('profiles')
-      .select('id, region, rating_efootball, rating_fc26, rating_mk11, rating_nba2k26, rating_tekken8, rating_sf6')
+      .select('id, region, platforms, game_ids, rating_efootball, rating_efootball_mobile, rating_fc26, rating_mk11, rating_nba2k26, rating_tekken8, rating_sf6')
       .eq('id', authUser.sub)
       .single();
 
@@ -35,6 +35,20 @@ export async function POST(request: NextRequest) {
     const profile = profileRaw as Record<string, unknown>;
     const ratingKey = `rating_${game}`;
     const rating = (profile[ratingKey] as number) ?? 1000;
+    const profilePlatforms = ((profile.platforms as PlatformKey[]) ?? []);
+    const profileGameIds = ((profile.game_ids as Record<string, string>) ?? {});
+    const requestedPlatform = platform as PlatformKey | undefined;
+    const queuePlatform =
+      requestedPlatform && isValidGamePlatform(game as GameKey, requestedPlatform)
+        ? requestedPlatform
+        : getConfiguredPlatformForGame(game as GameKey, profileGameIds, profilePlatforms);
+
+    if (!queuePlatform || !profilePlatforms.includes(queuePlatform)) {
+      return NextResponse.json(
+        { error: 'Set a platform for this game before joining queue' },
+        { status: 400 }
+      );
+    }
 
     // Check if already in queue
     const { data: existingQueue } = await supabase
@@ -68,6 +82,7 @@ export async function POST(request: NextRequest) {
       .insert({
         user_id: authUser.sub,
         game,
+        platform: queuePlatform,
         region: (profile.region as string) ?? 'kenya',
         rating,
         status: 'waiting',

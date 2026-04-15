@@ -72,12 +72,49 @@ const PLATFORM_CHIPS = [
 ];
 
 const SUPPORTED_GAMES = [
-  'eFootball 2025',
+  'eFootball 2026',
+  'eFootball Mobile',
   'EA FC 26',
+  'COD Mobile',
+  'PUBG Mobile',
+  'Free Fire',
   'Tekken 8',
   'Street Fighter 6',
   'Mortal Kombat 11',
   'NBA 2K26',
+];
+
+const PRICING_PLANS = [
+  {
+    name: 'PLAYER',
+    price: 'FREE',
+    kicker: 'START HERE',
+    description: 'Build your profile, queue your mains, and keep your climb moving without paying to get in.',
+    features: ['1 player profile', 'Ranked queue access', 'Match history and share links'],
+    href: '/register',
+    cta: 'START FREE',
+    featured: false,
+  },
+  {
+    name: 'COMMUNITY',
+    price: 'CUSTOM',
+    kicker: 'FOR GROUPS',
+    description: 'Set up your scene with support for communities that want cleaner recurring play on Mechi.',
+    features: ['Community rollout support', 'Private lobby coordination', 'Shared setup for organizers'],
+    href: '/register',
+    cta: 'SET UP YOUR SCENE',
+    featured: true,
+  },
+  {
+    name: 'BOOST',
+    price: 'SOON',
+    kicker: 'ON DECK',
+    description: 'Extra player perks are in the works for grinders who want more polish, flex, and deeper stats.',
+    features: ['Expanded profile flair', 'Sharper performance insights', 'Priority access to new drops'],
+    href: '/register',
+    cta: 'GET EARLY ACCESS',
+    featured: false,
+  },
 ];
 
 export default function LandingPage() {
@@ -230,15 +267,15 @@ export default function LandingPage() {
       <section id="supported" className="landing-section">
         <div className="landing-shell">
           <div className="card circuit-panel p-6 sm:p-7">
-            <div className="grid gap-8 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
+            <div className="grid gap-8 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)]">
               <div>
-                <p className="section-title">Games and progression</p>
+                <p className="section-title">Games only</p>
                 <h2 className="mt-3 max-w-lg text-3xl font-black text-[var(--text-primary)] sm:text-[2.2rem]">
-                  One profile across the titles you actually grind.
+                  Keep the spotlight on the titles you actually play.
                 </h2>
                 <p className="mt-3 max-w-xl text-sm leading-6 text-[var(--text-secondary)]">
                   Football, fighters, sports, and mobile play can live under one cleaner identity
-                  instead of scattered profiles and disconnected records.
+                  without turning your profile into a cluttered wall of disconnected records.
                 </p>
 
                 <div className="mt-5 flex flex-wrap gap-2.5">
@@ -253,32 +290,166 @@ export default function LandingPage() {
                 </div>
               </div>
 
-              <div className="rounded-[1.05rem] border border-[var(--border-color)] bg-[var(--surface-strong)] p-4 sm:p-5">
-                <div className="flex items-center justify-between gap-3">
-                  <div>
-                    <p className="section-title">Rank clarity</p>
-                    <h3 className="mt-2 text-lg font-black text-[var(--text-primary)]">Rank ladder</h3>
+              <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-1">
+                {[
+                  {
+                    label: 'Focused setup',
+                    value: 'Up to 3 mains',
+                    tone: 'bg-[rgba(50,224,196,0.14)] text-[var(--accent-secondary-text)]',
+                  },
+                  {
+                    label: 'Cross-title identity',
+                    value: '1 clean profile',
+                    tone: 'bg-[rgba(96,165,250,0.14)] text-[#60a5fa]',
+                  },
+                  {
+                    label: 'Queue ready',
+                    value: 'Console, PC, mobile',
+                    tone: 'bg-[rgba(255,107,107,0.14)] text-[#ff8a8a]',
+                  },
+                ].map((item) => (
+                  <div
+                    key={item.label}
+                    className="rounded-[1.05rem] border border-[var(--border-color)] bg-[var(--surface-strong)] p-4 sm:p-5"
+                  >
+                    <span className={`inline-flex rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] ${item.tone}`}>
+                      {item.label}
+                    </span>
+                    <p className="mt-4 text-lg font-black text-[var(--text-primary)]">{item.value}</p>
                   </div>
-                  <Trophy size={18} className="text-[var(--brand-coral)]" />
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="pricing" className="landing-section">
+        <div className="landing-shell">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+            <div>
+              <p className="section-title">Pricing</p>
+              <h2 className="mt-3 max-w-2xl text-3xl font-black text-[var(--text-primary)] sm:text-[2.2rem]">
+                Start free now. Grow into more when your scene needs it.
+              </h2>
+            </div>
+            <p className="max-w-xl text-sm leading-6 text-[var(--text-secondary)]">
+              The core Mechi experience stays open for players. Bigger community setups and extra
+              polish can layer on top without slowing down the main grind.
+            </p>
+          </div>
+
+          <div className="mt-7 grid gap-3 lg:grid-cols-3">
+            {PRICING_PLANS.map((plan) => (
+              <div
+                key={plan.name}
+                className={`card flex h-full flex-col p-5 sm:p-6 ${
+                  plan.featured ? 'circuit-panel border-[rgba(50,224,196,0.26)]' : ''
+                }`}
+              >
+                <span
+                  className={`inline-flex w-fit rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] ${
+                    plan.featured
+                      ? 'bg-[rgba(50,224,196,0.14)] text-[var(--accent-secondary-text)]'
+                      : 'bg-[var(--surface-strong)] text-[var(--text-soft)]'
+                  }`}
+                >
+                  {plan.kicker}
+                </span>
+
+                <div className="mt-5 flex items-end justify-between gap-4">
+                  <div>
+                    <h3 className="text-lg font-black text-[var(--text-primary)]">{plan.name}</h3>
+                    <p className="mt-1 text-3xl font-black text-[var(--text-primary)]">{plan.price}</p>
+                  </div>
                 </div>
 
-                <div className="mt-4 grid gap-2.5">
-                  {TIERS.map((tier) => (
+                <p className="mt-4 text-sm leading-6 text-[var(--text-secondary)]">
+                  {plan.description}
+                </p>
+
+                <div className="mt-5 grid gap-2.5">
+                  {plan.features.map((feature) => (
                     <div
-                      key={tier.name}
-                      className="flex items-center justify-between rounded-xl border border-[var(--border-color)] bg-[var(--surface)] px-3 py-2.5"
+                      key={feature}
+                      className="rounded-xl border border-[var(--border-color)] bg-[var(--surface)] px-3 py-2 text-sm font-medium text-[var(--text-secondary)]"
                     >
-                      <div className="flex items-center gap-2.5">
-                        <span
-                          className="h-2.5 w-2.5 rounded-full"
-                          style={{ backgroundColor: tier.color }}
-                        />
-                        <span className="text-sm font-semibold text-[var(--text-primary)]">{tier.name}</span>
-                      </div>
-                      <span className="text-xs font-medium text-[var(--text-soft)]">{tier.range}</span>
+                      {feature}
                     </div>
                   ))}
                 </div>
+
+                <div className="mt-6">
+                  <Link
+                    href={plan.href}
+                    className={plan.featured ? 'btn-primary w-full justify-center' : 'btn-outline w-full justify-center'}
+                  >
+                    {plan.cta}
+                  </Link>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section id="ranks" className="landing-section">
+        <div className="landing-shell">
+          <div className="grid gap-6 lg:grid-cols-[minmax(0,0.82fr)_minmax(0,1.18fr)] lg:items-start">
+            <div>
+              <p className="section-title">Ranks</p>
+              <h2 className="mt-3 max-w-lg text-3xl font-black text-[var(--text-primary)] sm:text-[2.2rem]">
+                A ladder players can read in one quick look.
+              </h2>
+              <p className="mt-3 max-w-xl text-sm leading-6 text-[var(--text-secondary)]">
+                Rank should feel obvious, not mysterious. Bronze through Legend stays clean,
+                readable, and easy to understand before you even queue.
+              </p>
+
+              <div className="mt-5 grid grid-cols-3 gap-3">
+                {[
+                  { value: '6', label: 'Tiers' },
+                  { value: 'III -> I', label: 'Core climb' },
+                  { value: 'Legend', label: 'Final stop' },
+                ].map((item) => (
+                  <div
+                    key={item.label}
+                    className="rounded-2xl border border-[var(--border-color)] bg-[var(--surface-soft)] px-3 py-3"
+                  >
+                    <div className="text-sm font-black text-[var(--text-primary)]">{item.value}</div>
+                    <div className="mt-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--text-soft)]">
+                      {item.label}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="card overflow-hidden p-5 sm:p-6">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <p className="section-title">Rank clarity</p>
+                  <h3 className="mt-2 text-lg font-black text-[var(--text-primary)]">Rank ladder</h3>
+                </div>
+                <Trophy size={18} className="text-[var(--brand-coral)]" />
+              </div>
+
+              <div className="mt-5 grid gap-2.5">
+                {TIERS.map((tier) => (
+                  <div
+                    key={tier.name}
+                    className="flex items-center justify-between rounded-xl border border-[var(--border-color)] bg-[var(--surface)] px-3 py-2.5"
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <span
+                        className="h-2.5 w-2.5 rounded-full"
+                        style={{ backgroundColor: tier.color }}
+                      />
+                      <span className="text-sm font-semibold text-[var(--text-primary)]">{tier.name}</span>
+                    </div>
+                    <span className="text-xs font-medium text-[var(--text-soft)]">{tier.range}</span>
+                  </div>
+                ))}
               </div>
             </div>
           </div>

@@ -3,12 +3,12 @@
 import { Suspense, useEffect, useState, useRef, useCallback } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import toast from 'react-hot-toast';
-import { Radar, Users, Wifi, X } from 'lucide-react';
+import { Users, X } from 'lucide-react';
 import { useAuth, useAuthFetch } from '@/components/AuthProvider';
 import { BrandLogo } from '@/components/BrandLogo';
 import { createClient } from '@/lib/supabase';
-import { GAMES } from '@/lib/config';
-import type { GameKey } from '@/types';
+import { GAMES, PLATFORMS } from '@/lib/config';
+import type { GameKey, PlatformKey } from '@/types';
 
 function QueueContent() {
   const router = useRouter();
@@ -17,6 +17,7 @@ function QueueContent() {
   const authFetch = useAuthFetch();
 
   const game = searchParams.get('game') as GameKey | null;
+  const platform = searchParams.get('platform') as PlatformKey | null;
   const [elapsed, setElapsed] = useState(0);
   const [queueCount, setQueueCount] = useState(0);
   const [leaving, setLeaving] = useState(false);
@@ -52,7 +53,8 @@ function QueueContent() {
 
     const fetchCount = async () => {
       try {
-        const res = await fetch(`/api/queue/count/${game}`);
+        const platformQuery = platform ? `?platform=${encodeURIComponent(platform)}` : '';
+        const res = await fetch(`/api/queue/count/${game}${platformQuery}`);
         if (res.ok) {
           const data = await res.json();
           setQueueCount(data.count);
@@ -97,7 +99,7 @@ function QueueContent() {
       clearInterval(statusPoll);
       if (channelRef.current) channelRef.current.unsubscribe();
     };
-  }, [game, user, router, checkStatus]);
+  }, [game, platform, user, router, checkStatus]);
 
   const handleLeave = async () => {
     setLeaving(true);
@@ -116,14 +118,20 @@ function QueueContent() {
 
   if (!game) return null;
   const gameConfig = GAMES[game];
+  const queuePlatforms = platform
+    ? gameConfig.platforms.filter((item) => item === platform)
+    : gameConfig.platforms.filter((item) => (user?.platforms ?? []).includes(item));
+  const displayedPlatforms = queuePlatforms.length > 0 ? queuePlatforms : gameConfig.platforms;
+  const platformLabel = displayedPlatforms
+    .map((platform) => PLATFORMS[platform]?.label ?? platform)
+    .join(' / ');
 
   return (
     <div className="page-container flex min-h-[80vh] items-center justify-center">
       <div className="card circuit-panel relative w-full max-w-lg overflow-hidden p-6 text-center sm:p-7">
         <div className="pointer-events-none absolute inset-x-0 top-0 h-24 bg-[radial-gradient(circle_at_top,rgba(50,224,196,0.18),transparent_65%)]" />
-        <BrandLogo variant="symbol" size="sm" className="mx-auto" />
 
-        <div className="relative mb-7 mt-5 inline-flex">
+        <div className="relative mb-7 inline-flex">
           <div className="absolute inset-0 scale-150 animate-ping rounded-full border border-[rgba(50,224,196,0.16)]" />
           <div
             className="absolute inset-0 scale-125 animate-ping rounded-full border border-[rgba(255,107,107,0.18)]"
@@ -131,40 +139,43 @@ function QueueContent() {
           />
           <div className="flex h-[4.5rem] w-[4.5rem] items-center justify-center rounded-full border border-[rgba(50,224,196,0.2)] bg-[rgba(50,224,196,0.1)]">
             <div className="flex h-12 w-12 items-center justify-center rounded-full border border-[rgba(255,107,107,0.24)] bg-[rgba(255,107,107,0.12)]">
-              <Radar size={22} className="text-[var(--brand-coral)]" />
+              <BrandLogo
+                variant="symbol"
+                size="lg"
+                iconClassName="h-12 w-12 rounded-full border-0 bg-transparent shadow-none"
+              />
             </div>
           </div>
         </div>
 
-        <p className="brand-kicker justify-center px-2.5 py-0.5 text-[10px]">Live Matchmaking</p>
-        <h1 className="mt-3 text-[2rem] font-black tracking-[-0.05em] text-[var(--text-primary)] sm:text-[2.15rem]">
-          Searching for your next match
+        <h1 className="text-[2rem] font-black tracking-[-0.05em] text-[var(--text-primary)] sm:text-[2.15rem]">
+          Your next run is loading.
         </h1>
         <p className="mt-2 text-[13px] text-[var(--text-secondary)]">{gameConfig.label}</p>
         <p className="mt-3 text-[2rem] font-black tabular-nums text-[var(--brand-coral)] sm:text-[2.25rem]">
           {formatTime(elapsed)}
         </p>
 
-        <div className="mt-5 grid gap-2.5 sm:grid-cols-3">
+        <div className="mt-5 grid gap-2.5 sm:grid-cols-2">
           <div className="card flex items-center justify-center gap-2 px-3 py-2.5">
             <Users size={13} className="text-[var(--text-soft)]" />
             <span className="text-[13px] text-[var(--text-secondary)]">
               <span className="font-semibold text-[var(--text-primary)]">{queueCount}</span> in queue
             </span>
           </div>
-          <div className="surface-live flex items-center justify-center gap-2 rounded-2xl px-3 py-2.5">
-            <Wifi size={13} className="text-[var(--brand-teal)]" />
-            <span className="text-[13px] font-semibold text-[var(--accent-secondary-text)]">Live pulse</span>
-          </div>
-          <div className="surface-action flex items-center justify-center gap-2 rounded-2xl px-3 py-2.5">
-            <Radar size={13} className="text-[var(--brand-coral)]" />
-            <span className="text-[13px] font-semibold text-[var(--accent-primary-text)]">Skill-matched</span>
+          <div className="card flex flex-wrap items-center justify-center gap-2 px-3 py-2.5 text-center">
+            {displayedPlatforms.map((platform) => (
+              <span key={platform} className="text-sm" aria-hidden="true">
+                {PLATFORMS[platform]?.icon}
+              </span>
+            ))}
+            <span className="text-[13px] font-semibold leading-5 text-[var(--text-primary)]">{platformLabel}</span>
           </div>
         </div>
 
-        <p className="mx-auto mb-6 mt-5 max-w-xs text-center text-[13px] leading-6 text-[var(--text-secondary)]">
-          We&apos;re looking for an opponent near your skill band. Stay on this page and
-          Mechi will move you into the match room the moment a fair pairing is ready.
+        <p className="mx-auto mb-6 mt-5 max-w-sm text-center text-[13px] leading-6 text-[var(--text-secondary)]">
+          We&apos;re teeing up a proper {gameConfig.label} showdown. Stay locked and Mechi
+          will drop you straight into the room the second it&apos;s go time.
         </p>
 
         <button onClick={handleLeave} disabled={leaving} className="btn-danger mx-auto px-4 py-2 text-sm">

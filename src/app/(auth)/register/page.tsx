@@ -12,10 +12,20 @@ import {
   EyeOff,
   Loader2,
 } from 'lucide-react';
-import { BrandLogo } from '@/components/BrandLogo';
-import { ThemeToggle } from '@/components/ThemeToggle';
 import { useAuth } from '@/components/AuthProvider';
-import { GAMES, PLATFORMS, REGIONS, getGamesForPlatforms } from '@/lib/config';
+import { FullScreenSignup } from '@/components/ui/full-screen-signup';
+import {
+  GAMES,
+  PLATFORMS,
+  REGIONS,
+  getConfiguredPlatformForGame,
+  getGameIdKey,
+  getGameIdLabel,
+  getGameIdPlaceholder,
+  getGameIdValue,
+  getGamePlatformKey,
+  getPlatformsForGameSetup,
+} from '@/lib/config';
 import { normalizePhoneNumber } from '@/lib/phone';
 import type { GameKey, PlatformKey } from '@/types';
 
@@ -58,35 +68,30 @@ export default function RegisterPage() {
     formData.username.trim().length >= 3 &&
     formData.phone.trim().length >= 9 &&
     formData.password.length >= 6;
-  const step2Valid = formData.platforms.length > 0;
-  const availableGames = getGamesForPlatforms(formData.platforms).filter(
-    (game) => GAMES[game].mode === '1v1'
+  const setupPlatforms = getPlatformsForGameSetup(
+    formData.selected_games,
+    formData.game_ids,
+    formData.platforms
   );
+  const selectableGames = Object.keys(GAMES) as GameKey[];
+  const requiredIdFields = formData.selected_games.reduce<
+    Array<{ key: string; game: GameKey; platform: PlatformKey }>
+  >((fields, game) => {
+    const platform = getConfiguredPlatformForGame(game, formData.game_ids, setupPlatforms);
+    if (!platform) return fields;
 
-  const togglePlatform = (platform: PlatformKey) => {
-    setFormData((prev) => {
-      const hasPlatform = prev.platforms.includes(platform);
-      const nextPlatforms = hasPlatform
-        ? prev.platforms.filter((item) => item !== platform)
-        : [...prev.platforms, platform];
-      const nextGameIds = { ...prev.game_ids };
+    const key = getGameIdKey(game, platform);
+    if (!fields.some((field) => field.key === key)) {
+      fields.push({ key, game, platform });
+    }
 
-      if (hasPlatform) {
-        delete nextGameIds[platform];
-      }
-
-      const nextGames = prev.selected_games.filter((game) =>
-        GAMES[game]?.platforms.some((item) => nextPlatforms.includes(item))
-      );
-
-      return {
-        ...prev,
-        platforms: nextPlatforms,
-        game_ids: nextGameIds,
-        selected_games: nextGames,
-      };
-    });
-  };
+    return fields;
+  }, []);
+  const hasMissingGamePlatform = formData.selected_games.some(
+    (game) => !getConfiguredPlatformForGame(game, formData.game_ids, setupPlatforms)
+  );
+  const step2Valid = formData.selected_games.length > 0;
+  const step3Valid = step2Valid && !hasMissingGamePlatform;
 
   const toggleGame = (game: GameKey) => {
     setFormData((prev) => {
@@ -96,11 +101,44 @@ export default function RegisterPage() {
         return prev;
       }
 
+      const nextGameIds = { ...prev.game_ids };
+      if (hasGame) {
+        delete nextGameIds[getGamePlatformKey(game)];
+        for (const platform of GAMES[game]?.platforms ?? []) {
+          if (platform === 'mobile') {
+            delete nextGameIds[getGameIdKey(game, platform)];
+          }
+        }
+      } else if (GAMES[game]?.platforms.length === 1) {
+        nextGameIds[getGamePlatformKey(game)] =
+          nextGameIds[getGamePlatformKey(game)] ?? GAMES[game].platforms[0];
+      }
+
+      const nextSelectedGames = hasGame
+        ? prev.selected_games.filter((item) => item !== game)
+        : [...prev.selected_games, game];
+      const nextPlatforms = getPlatformsForGameSetup(nextSelectedGames, nextGameIds, prev.platforms);
+
       return {
         ...prev,
-        selected_games: hasGame
-          ? prev.selected_games.filter((item) => item !== game)
-          : [...prev.selected_games, game],
+        platforms: nextPlatforms,
+        game_ids: nextGameIds,
+        selected_games: nextSelectedGames,
+      };
+    });
+  };
+
+  const selectPlatformForGame = (game: GameKey, platform: PlatformKey) => {
+    setFormData((prev) => {
+      const nextGameIds = {
+        ...prev.game_ids,
+        [getGamePlatformKey(game)]: platform,
+      };
+
+      return {
+        ...prev,
+        game_ids: nextGameIds,
+        platforms: getPlatformsForGameSetup(prev.selected_games, nextGameIds, prev.platforms),
       };
     });
   };
@@ -111,6 +149,20 @@ export default function RegisterPage() {
       return;
     }
 
+    const finalPlatforms = getPlatformsForGameSetup(
+      formData.selected_games,
+      formData.game_ids,
+      formData.platforms
+    );
+    if (
+      formData.selected_games.some(
+        (game) => !getConfiguredPlatformForGame(game, formData.game_ids, finalPlatforms)
+      )
+    ) {
+      toast.error('Choose a platform for each game');
+      return;
+    }
+
     setLoading(true);
     try {
       const res = await fetch('/api/auth/register', {
@@ -118,6 +170,7 @@ export default function RegisterPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           ...formData,
+          platforms: finalPlatforms,
           phone: normalizePhoneNumber(formData.phone),
           whatsapp_number: formData.whatsapp_number
             ? normalizePhoneNumber(formData.whatsapp_number)
@@ -139,55 +192,27 @@ export default function RegisterPage() {
     }
   };
 
-  const STEP_LABELS = ['Account', 'Platforms', 'Games'];
+  const STEP_LABELS = ['Account', 'Games', 'Platforms'];
 
   return (
-    <div className="page-base flex min-h-screen flex-col">
-      <nav className="landing-shell flex h-16 items-center justify-between">
-        <Link href="/" className="flex items-center">
-          <BrandLogo size="sm" />
-        </Link>
-        <ThemeToggle />
-      </nav>
-
-      <div className="flex flex-1 items-start px-4 pb-10 pt-4 sm:px-6 lg:items-center">
-        <div className="mx-auto grid w-full max-w-5xl gap-6 xl:grid-cols-[minmax(0,0.92fr)_30rem]">
-          <div className="hidden xl:block">
-            <div className="card circuit-panel p-8">
-              <BrandLogo size="md" showTagline />
-              <h1 className="mt-6 max-w-md text-[2rem] font-black leading-tight text-[var(--text-primary)]">
-                Set up once. Lock in fast.
-              </h1>
-              <p className="mt-3 max-w-md text-sm leading-6 text-[var(--text-secondary)]">
-                Pick your setup, choose your games, and get a profile that keeps up with your grind.
-              </p>
-
-              <div className="mt-6 grid gap-2.5">
-                {[
-                  'Add the platforms you actually touch',
-                  'Lock in up to three main games',
-                  'Keep your whole grind in one profile',
-                ].map((item, index) => (
-                  <div
-                    key={item}
-                    className={`flex items-center gap-3 rounded-xl border px-3.5 py-3 ${
-                      index === 1 ? 'surface-action' : 'surface-live'
-                    }`}
-                  >
-                    <div className="flex h-7 w-7 items-center justify-center rounded-full bg-[var(--surface-strong)]">
-                      <Check
-                        size={13}
-                        className={index === 1 ? 'text-[var(--brand-coral)]' : 'text-[var(--brand-teal)]'}
-                      />
-                    </div>
-                    <span className="text-sm font-semibold text-[var(--text-primary)]">{item}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          <div className="card p-5 sm:p-6">
+    <FullScreenSignup
+      title={step === 1 ? 'Create your account' : step === 2 ? 'Select your games' : 'Set platform IDs'}
+      subtitle={
+        step === 1
+          ? 'Start with the essentials and we will build the rest with you.'
+          : step === 2
+            ? 'Choose up to three competitive titles for your profile.'
+            : 'Pick where each game runs and add the IDs players need.'
+      }
+      sideTitle="Set up once. Lock in fast."
+      sideDescription="Pick your setup, choose your games, and get a profile that keeps up with your grind."
+      sidePoints={[
+        'Lock in up to three main games',
+        'Add only the IDs those games need',
+        'Keep your whole grind in one profile',
+      ]}
+    >
+      <div className="card p-5 sm:p-6">
             <div className="mb-6 grid grid-cols-3 gap-2">
               {([1, 2, 3] as Step[]).map((currentStep) => (
                 <div
@@ -372,105 +397,16 @@ export default function RegisterPage() {
               <div>
                 <p className="section-title">Step 2</p>
                 <h1 className="mb-1 mt-3 text-[1.9rem] font-black text-[var(--text-primary)]">
-                  Choose your platforms
-                </h1>
-                <p className="mb-5 text-sm leading-6 text-[var(--text-secondary)]">
-                  Tell Mechi where you actually play so your profile stays organized.
-                </p>
-                <div className="mb-5 grid grid-cols-1 gap-2 sm:grid-cols-2">
-                {(Object.keys(PLATFORMS) as PlatformKey[]).map((key) => {
-                  const platform = PLATFORMS[key];
-                  const isSelected = formData.platforms.includes(key);
-                  return (
-                    <div
-                      key={key}
-                      className={`overflow-hidden rounded-lg border transition-colors ${
-                        isSelected
-                          ? 'surface-live'
-                          : 'border-[var(--border-color)] bg-[var(--surface-strong)]'
-                      }`}
-                    >
-                      <button
-                        type="button"
-                        onClick={() => togglePlatform(key)}
-                        className="flex w-full items-center gap-3 p-2.5 text-left"
-                      >
-                        <span className="text-lg">{platform.icon}</span>
-                        <span className="flex-1 text-sm font-medium text-[var(--text-primary)]">
-                          {platform.label}
-                        </span>
-                        <div
-                          className={`flex h-5 w-5 items-center justify-center rounded-full border-2 transition-colors ${
-                            isSelected
-                              ? 'border-[var(--brand-teal)] bg-[var(--brand-teal)]'
-                              : 'border-[rgba(95,109,130,0.24)]'
-                          }`}
-                        >
-                          {isSelected && <Check size={11} className="text-white" />}
-                        </div>
-                      </button>
-                      {isSelected && (
-                        <div className="px-2.5 pb-2.5">
-                          <input
-                            type="text"
-                            value={formData.game_ids[key] ?? ''}
-                            onChange={(e) =>
-                              setFormData({
-                                ...formData,
-                                game_ids: { ...formData.game_ids, [key]: e.target.value },
-                              })
-                            }
-                            placeholder={platform.placeholder}
-                            className="input text-sm"
-                          />
-                          <p className="mt-1 text-xs text-[var(--text-soft)]">{platform.idLabel}</p>
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-                </div>
-                <div className="flex gap-3">
-                  <button type="button" onClick={() => setStep(1)} className="btn-ghost flex-1">
-                    <ChevronLeft size={14} /> Back
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => step2Valid && setStep(3)}
-                    disabled={!step2Valid}
-                    className="btn-primary flex-1"
-                  >
-                    Next <ChevronRight size={14} />
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {step === 3 && (
-              <div>
-                <p className="section-title">Step 3</p>
-                <h1 className="mb-1 mt-3 text-[1.9rem] font-black text-[var(--text-primary)]">
                   Select your games
                 </h1>
                 <p className="mb-5 text-sm leading-6 text-[var(--text-secondary)]">
-                  Choose up to three competitive titles so your ladder stays focused.
+                  Pick the games you want Mechi to organize for you.
                 </p>
-              {availableGames.length === 0 ? (
-                <div className="py-8 text-center text-[var(--text-soft)]">
-                  <p className="text-sm">No 1v1 games for your platforms.</p>
-                  <button
-                    type="button"
-                    onClick={() => setStep(2)}
-                    className="brand-link mt-2 text-sm font-semibold"
-                  >
-                    Add more platforms
-                  </button>
-                </div>
-              ) : (
-                <div className="mb-5 grid max-h-72 grid-cols-1 gap-2 overflow-y-auto sm:grid-cols-2">
-                  {availableGames.map((gameKey) => {
+                <div className="mb-5 grid max-h-80 grid-cols-1 gap-2 overflow-y-auto sm:grid-cols-2">
+                  {selectableGames.map((gameKey) => {
                     const game = GAMES[gameKey];
                     const isSelected = formData.selected_games.includes(gameKey);
+
                     return (
                       <button
                         key={gameKey}
@@ -501,17 +437,117 @@ export default function RegisterPage() {
                     );
                   })}
                 </div>
-              )}
                 <p className="mb-4 text-center text-xs text-[var(--text-soft)]">
                   {formData.selected_games.length}/3 selected
                 </p>
+                <div className="flex gap-3">
+                  <button type="button" onClick={() => setStep(1)} className="btn-ghost flex-1">
+                    <ChevronLeft size={14} /> Back
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => step2Valid && setStep(3)}
+                    disabled={!step2Valid}
+                    className="btn-primary flex-1"
+                  >
+                    Next <ChevronRight size={14} />
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {step === 3 && (
+              <div>
+                <p className="section-title">Step 3</p>
+                <h1 className="mb-1 mt-3 text-[1.9rem] font-black text-[var(--text-primary)]">
+                  Set platform IDs
+                </h1>
+                <p className="mb-5 text-sm leading-6 text-[var(--text-secondary)]">
+                  Choose a platform for each game, then add the IDs opponents will need.
+                </p>
+                <div className="mb-5 space-y-3">
+                  {formData.selected_games.map((gameKey) => {
+                    const game = GAMES[gameKey];
+                    const selectedPlatform = getConfiguredPlatformForGame(
+                      gameKey,
+                      formData.game_ids,
+                      formData.platforms
+                    );
+
+                    return (
+                      <div
+                        key={gameKey}
+                        className="rounded-xl border border-[var(--border-color)] bg-[var(--surface-strong)] p-3"
+                      >
+                        <div className="mb-3 flex items-center gap-2">
+                          <div className="flex gap-1">
+                            {game.platforms.map((platform) => (
+                              <span key={platform} className="text-sm">{PLATFORMS[platform]?.icon}</span>
+                            ))}
+                          </div>
+                          <p className="text-sm font-semibold text-[var(--text-primary)]">{game.label}</p>
+                        </div>
+                        {game.platforms.length > 1 ? (
+                          <div className="flex flex-wrap gap-2">
+                            {game.platforms.map((platform) => {
+                              const isSelected = selectedPlatform === platform;
+
+                              return (
+                                <button
+                                  key={platform}
+                                  type="button"
+                                  onClick={() => selectPlatformForGame(gameKey, platform)}
+                                  className={`inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-xs font-semibold transition-all ${
+                                    isSelected
+                                      ? 'border-[rgba(50,224,196,0.28)] bg-[rgba(50,224,196,0.14)] text-[var(--accent-secondary-text)]'
+                                      : 'border-[var(--border-color)] bg-[var(--surface)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
+                                  }`}
+                                >
+                                  <span>{PLATFORMS[platform]?.icon}</span>
+                                  {PLATFORMS[platform]?.label}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        ) : (
+                          <div className="inline-flex items-center gap-2 rounded-lg border border-[var(--border-color)] bg-[var(--surface)] px-3 py-2 text-xs font-semibold text-[var(--text-secondary)]">
+                            <span>{PLATFORMS[game.platforms[0]]?.icon}</span>
+                            {PLATFORMS[game.platforms[0]]?.label}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+
+                  {requiredIdFields.length > 0 && (
+                    <div className="grid grid-cols-1 gap-3 border-t border-[var(--border-color)] pt-3 sm:grid-cols-2">
+                      {requiredIdFields.map((field) => (
+                        <div key={field.key}>
+                          <label className="label">{getGameIdLabel(field.game, field.platform)}</label>
+                          <input
+                            type="text"
+                            value={getGameIdValue(formData.game_ids, field.game, field.platform)}
+                            onChange={(e) =>
+                              setFormData({
+                                ...formData,
+                                game_ids: { ...formData.game_ids, [field.key]: e.target.value },
+                              })
+                            }
+                            placeholder={getGameIdPlaceholder(field.game, field.platform)}
+                            className="input text-sm"
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
                 <div className="flex gap-3">
                   <button type="button" onClick={() => setStep(2)} className="btn-ghost flex-1">
                     <ChevronLeft size={14} /> Back
                   </button>
                   <button
                     onClick={handleSubmit}
-                    disabled={loading || formData.selected_games.length === 0}
+                    disabled={loading || !step3Valid}
                     className="btn-primary flex-1"
                   >
                     {loading ? (
@@ -536,9 +572,7 @@ export default function RegisterPage() {
                 Sign in
               </Link>
             </p>
-          </div>
-        </div>
       </div>
-    </div>
+    </FullScreenSignup>
   );
 }

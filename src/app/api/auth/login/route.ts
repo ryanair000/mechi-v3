@@ -1,13 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServiceClient } from '@/lib/supabase';
-import { verifyPassword, signToken } from '@/lib/auth';
+import { verifyPassword, signToken, profileToAuthUser } from '@/lib/auth';
 import { getPhoneLookupVariants, normalizePhoneNumber } from '@/lib/phone';
+import { checkRateLimit, getClientIp, rateLimitResponse } from '@/lib/rateLimit';
+import type { UserRole } from '@/types';
 
 interface AuthenticatedProfile {
   id: string;
   username: string;
   phone: string;
   email: string | null;
+  avatar_url?: string | null;
+  cover_url?: string | null;
   whatsapp_number?: string | null;
   whatsapp_notifications?: boolean | null;
   region: string;
@@ -15,6 +19,9 @@ interface AuthenticatedProfile {
   game_ids: Record<string, string> | null;
   selected_games: string[] | null;
   password_hash: string;
+  role?: UserRole | null;
+  is_banned?: boolean | null;
+  ban_reason?: string | null;
   xp?: number | null;
   level?: number | null;
   mp?: number | null;
@@ -24,7 +31,7 @@ interface AuthenticatedProfile {
 
 type AuthFailure = {
   error: string;
-  status: 400 | 401;
+  status: 400 | 401 | 403;
 };
 
 type AuthSuccess = {
@@ -110,6 +117,13 @@ async function authenticateUser(identifier: string, password: string): Promise<A
     return { error: 'Account not found. Check your details.', status: 401 as const };
   }
 
+  if (profile.is_banned) {
+    return {
+      error: `Account suspended: ${profile.ban_reason ?? 'Contact support.'}`,
+      status: 403 as const,
+    };
+  }
+
   const isValid = await verifyPassword(password, profile.password_hash);
   if (!isValid) {
     return { error: 'Incorrect password', status: 401 as const };
@@ -120,6 +134,11 @@ async function authenticateUser(identifier: string, password: string): Promise<A
 
 export async function POST(request: NextRequest) {
   try {
+    const rateLimit = checkRateLimit(`login:${getClientIp(request)}`, 10, 15 * 60 * 1000);
+    if (!rateLimit.allowed) {
+      return rateLimitResponse(rateLimit.retryAfterSeconds);
+    }
+
     const contentType = request.headers.get('content-type') ?? '';
     const isJsonRequest = contentType.includes('application/json');
 
@@ -147,28 +166,17 @@ export async function POST(request: NextRequest) {
 
     const { profile } = result;
 
-    const token = signToken({ sub: profile.id, username: profile.username });
+    const token = signToken({
+      sub: profile.id,
+      username: profile.username,
+      role: profile.role ?? 'user',
+      is_banned: Boolean(profile.is_banned),
+    });
 
     const response = isJsonRequest
       ? NextResponse.json({
           token,
-          user: {
-            id: profile.id,
-            username: profile.username,
-            phone: profile.phone,
-            email: profile.email,
-            whatsapp_number: profile.whatsapp_number ?? null,
-            whatsapp_notifications: profile.whatsapp_notifications ?? false,
-            region: profile.region,
-            platforms: profile.platforms ?? [],
-            game_ids: profile.game_ids ?? {},
-            selected_games: profile.selected_games ?? [],
-            xp: profile.xp ?? 0,
-            level: profile.level ?? 1,
-            mp: profile.mp ?? 0,
-            win_streak: profile.win_streak ?? 0,
-            max_win_streak: profile.max_win_streak ?? 0,
-          },
+          user: profileToAuthUser(profile as unknown as Record<string, unknown>),
         })
       : NextResponse.redirect(new URL(redirectTo, requestOrigin), { status: 303 });
 

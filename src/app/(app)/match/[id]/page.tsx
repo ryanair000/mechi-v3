@@ -20,6 +20,7 @@ import { createClient } from '@/lib/supabase';
 import {
   GAMES,
   PLATFORMS,
+  getGameIdValue,
   getMatchingPlatform,
   getPlatformAddUrl,
 } from '@/lib/config';
@@ -39,6 +40,7 @@ interface MatchData {
   player1_id: string;
   player2_id: string;
   game: GameKey;
+  platform?: PlatformKey | null;
   region: string;
   status: 'pending' | 'completed' | 'disputed' | 'cancelled';
   winner_id: string | null;
@@ -292,9 +294,9 @@ export default function MatchPage() {
   const gamePlatforms = game?.platforms ?? [];
   const myPlatform = getMatchingPlatform(me.platforms, gamePlatforms);
   const opponentPlatform = getMatchingPlatform(opponent.platforms, gamePlatforms);
-  const displayPlatform = opponentPlatform ?? myPlatform;
+  const displayPlatform = match.platform ?? opponentPlatform ?? myPlatform;
   const opponentPlatformId = displayPlatform
-    ? opponent.game_ids?.[displayPlatform] || 'Not set'
+    ? getGameIdValue(opponent.game_ids ?? {}, match.game, displayPlatform) || 'Not set'
     : 'Not set';
   const gamificationResult = isPlayer1
     ? match.gamification_summary_p1 ?? null
@@ -387,7 +389,7 @@ export default function MatchPage() {
                 <PlatformBadge
                   key={platform}
                   platform={platform}
-                  platformId={opponent.game_ids?.[platform]}
+                  platformId={platform === displayPlatform ? opponentPlatformId : opponent.game_ids?.[platform]}
                   size="sm"
                 />
               ))}

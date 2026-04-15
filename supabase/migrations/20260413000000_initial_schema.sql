@@ -11,18 +11,21 @@ CREATE TABLE IF NOT EXISTS profiles (
   game_ids jsonb NOT NULL DEFAULT '{}'::jsonb,
   selected_games text[] NOT NULL DEFAULT '{}',
   rating_efootball integer NOT NULL DEFAULT 1000,
+  rating_efootball_mobile integer NOT NULL DEFAULT 1000,
   rating_fc26 integer NOT NULL DEFAULT 1000,
   rating_mk11 integer NOT NULL DEFAULT 1000,
   rating_nba2k26 integer NOT NULL DEFAULT 1000,
   rating_tekken8 integer NOT NULL DEFAULT 1000,
   rating_sf6 integer NOT NULL DEFAULT 1000,
   wins_efootball integer NOT NULL DEFAULT 0,
+  wins_efootball_mobile integer NOT NULL DEFAULT 0,
   wins_fc26 integer NOT NULL DEFAULT 0,
   wins_mk11 integer NOT NULL DEFAULT 0,
   wins_nba2k26 integer NOT NULL DEFAULT 0,
   wins_tekken8 integer NOT NULL DEFAULT 0,
   wins_sf6 integer NOT NULL DEFAULT 0,
   losses_efootball integer NOT NULL DEFAULT 0,
+  losses_efootball_mobile integer NOT NULL DEFAULT 0,
   losses_fc26 integer NOT NULL DEFAULT 0,
   losses_mk11 integer NOT NULL DEFAULT 0,
   losses_nba2k26 integer NOT NULL DEFAULT 0,
@@ -35,6 +38,7 @@ CREATE TABLE IF NOT EXISTS queue (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id uuid NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
   game text NOT NULL,
+  platform text,
   region text NOT NULL DEFAULT 'kenya',
   rating integer NOT NULL DEFAULT 1000,
   status text NOT NULL DEFAULT 'waiting' CHECK (status IN ('waiting', 'matched', 'cancelled')),
@@ -46,6 +50,7 @@ CREATE TABLE IF NOT EXISTS matches (
   player1_id uuid NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
   player2_id uuid NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
   game text NOT NULL,
+  platform text,
   region text NOT NULL DEFAULT 'kenya',
   status text NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'completed', 'disputed', 'cancelled')),
   winner_id uuid REFERENCES profiles(id) ON DELETE SET NULL,
@@ -100,6 +105,7 @@ CREATE TABLE IF NOT EXISTS suggestion_votes (
 CREATE INDEX IF NOT EXISTS idx_profiles_username ON profiles(username);
 CREATE INDEX IF NOT EXISTS idx_profiles_phone ON profiles(phone);
 CREATE INDEX IF NOT EXISTS idx_queue_status_joined_at ON queue(status, joined_at);
+CREATE INDEX IF NOT EXISTS idx_queue_game_platform_status ON queue(game, platform, status);
 CREATE INDEX IF NOT EXISTS idx_queue_user_status ON queue(user_id, status);
 CREATE INDEX IF NOT EXISTS idx_matches_status_created_at ON matches(status, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_matches_player1_status ON matches(player1_id, status);

@@ -6,7 +6,8 @@ import { createServiceClient } from '@/lib/supabase';
 import { getLevelFromXp, getRankDivision, withAlpha } from '@/lib/gamification';
 
 const GAME_LABELS: Record<string, string> = {
-  efootball: 'eFootball 2025',
+  efootball: 'eFootball 2026',
+  efootball_mobile: 'eFootball 2026 Mobile',
   fc26: 'EA FC 26',
   mk11: 'Mortal Kombat 11',
   nba2k26: 'NBA 2K26',

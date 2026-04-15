@@ -4,9 +4,15 @@ import { hashPassword, signToken } from '@/lib/auth';
 import { sendWelcomeEmail } from '@/lib/email';
 import { DEFAULT_RATING } from '@/lib/config';
 import { getPhoneLookupVariants, isValidPhoneNumber, normalizePhoneNumber } from '@/lib/phone';
+import { checkRateLimit, getClientIp, rateLimitResponse } from '@/lib/rateLimit';
 
 export async function POST(request: NextRequest) {
   try {
+    const rateLimit = checkRateLimit(`register:${getClientIp(request)}`, 5, 60 * 60 * 1000);
+    if (!rateLimit.allowed) {
+      return rateLimitResponse(rateLimit.retryAfterSeconds);
+    }
+
     const body = await request.json();
     const {
       username,
@@ -86,18 +92,21 @@ export async function POST(request: NextRequest) {
         game_ids: game_ids ?? {},
         selected_games: selected_games ?? [],
         rating_efootball: DEFAULT_RATING,
+        rating_efootball_mobile: DEFAULT_RATING,
         rating_fc26: DEFAULT_RATING,
         rating_mk11: DEFAULT_RATING,
         rating_nba2k26: DEFAULT_RATING,
         rating_tekken8: DEFAULT_RATING,
         rating_sf6: DEFAULT_RATING,
         wins_efootball: 0,
+        wins_efootball_mobile: 0,
         wins_fc26: 0,
         wins_mk11: 0,
         wins_nba2k26: 0,
         wins_tekken8: 0,
         wins_sf6: 0,
         losses_efootball: 0,
+        losses_efootball_mobile: 0,
         losses_fc26: 0,
         losses_mk11: 0,
         losses_nba2k26: 0,
@@ -112,7 +121,12 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to create account' }, { status: 500 });
     }
 
-    const token = signToken({ sub: profile.id, username: profile.username });
+    const token = signToken({
+      sub: profile.id,
+      username: profile.username,
+      role: 'user',
+      is_banned: false,
+    });
 
     // Send welcome email async
     if (email) {
@@ -126,8 +140,12 @@ export async function POST(request: NextRequest) {
         username: profile.username,
         phone: profile.phone,
         email: profile.email,
+        avatar_url: profile.avatar_url ?? null,
+        cover_url: profile.cover_url ?? null,
         whatsapp_number: profile.whatsapp_number ?? null,
         whatsapp_notifications: profile.whatsapp_notifications ?? false,
+        role: profile.role ?? 'user',
+        is_banned: profile.is_banned ?? false,
         region: profile.region,
         platforms: profile.platforms,
         game_ids: profile.game_ids,

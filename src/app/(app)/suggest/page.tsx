@@ -81,8 +81,7 @@ export default function SuggestPage() {
       <div className="card circuit-panel mb-5 p-6">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <p className="brand-kicker">Community Input</p>
-            <h1 className="mt-3 text-3xl font-black tracking-[-0.05em] text-[var(--text-primary)]">
+            <h1 className="text-3xl font-black tracking-[-0.05em] text-[var(--text-primary)]">
               Suggestions
             </h1>
             <p className="mt-3 text-sm leading-7 text-[var(--text-secondary)]">

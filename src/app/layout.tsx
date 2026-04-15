@@ -4,16 +4,25 @@ import { AuthProvider } from '@/components/AuthProvider';
 import { Toaster } from 'react-hot-toast';
 
 export const metadata: Metadata = {
-  title: 'Mechi — Kenya Gaming Matchmaking',
-  description: 'Find your opponent. Prove you\'re the best. 1v1 matchmaking for Kenyan gamers across PlayStation, Xbox, PC, Mobile & Nintendo.',
+  metadataBase: new URL('https://mechi.club'),
+  title: 'Mechi - Kenya Gaming Matchmaking',
+  description:
+    'Organized 1v1 matchmaking for Kenyan gamers who want cleaner queues, fair results, and a real climb.',
   keywords: ['gaming', 'matchmaking', 'kenya', 'esports', 'efootball', 'ea fc', 'tekken', '1v1'],
   openGraph: {
-    title: 'Mechi — Kenya Gaming Matchmaking',
-    description: '1v1 matchmaking for Kenyan gamers. Climb the ELO ladder.',
-    url: 'https://mechi-v3.vercel.app',
+    title: 'Mechi - Kenya Gaming Matchmaking',
+    description:
+      'Organized 1v1 matchmaking for Kenyan gamers. Queue up, lock results, and keep climbing.',
+    url: 'https://mechi.club',
     siteName: 'Mechi',
     locale: 'en_KE',
     type: 'website',
+  },
+  twitter: {
+    card: 'summary',
+    title: 'Mechi - Kenya Gaming Matchmaking',
+    description:
+      'Organized 1v1 matchmaking for Kenyan gamers. Queue up, lock results, and keep climbing.',
   },
 };
 

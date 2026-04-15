@@ -1,7 +1,8 @@
 'use client';
 
 import Link from 'next/link';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import toast from 'react-hot-toast';
 import {
   Check,
@@ -27,6 +28,9 @@ import {
   getGamePlatformKey,
   getPlatformsForGameSetup,
 } from '@/lib/config';
+import type { InvitePreview } from '@/lib/invite';
+import { normalizeInviteCode } from '@/lib/invite';
+import { getLoginPath, getSafeNextPath } from '@/lib/navigation';
 import { normalizePhoneNumber } from '@/lib/phone';
 import type { GameKey, PlatformKey } from '@/types';
 
@@ -48,9 +52,11 @@ interface FormData {
 
 export default function RegisterPage() {
   const { user, login } = useAuth();
+  const searchParams = useSearchParams();
   const [step, setStep] = useState<Step>(1);
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [invitePreview, setInvitePreview] = useState<InvitePreview | null>(null);
 
   const [formData, setFormData] = useState<FormData>({
     username: '',
@@ -65,6 +71,47 @@ export default function RegisterPage() {
     selected_games: [],
   });
   const emailIsValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email.trim());
+  const normalizedInviteCode = normalizeInviteCode(searchParams.get('invite'));
+  const rawNext = searchParams.get('next');
+  const nextPath = getSafeNextPath(rawNext);
+  const loginHref = getLoginPath(rawNext ? nextPath : null);
+
+  useEffect(() => {
+    if (!normalizedInviteCode) {
+      setInvitePreview(null);
+      return;
+    }
+
+    const inviteCode = normalizedInviteCode;
+    let cancelled = false;
+
+    async function loadInvite() {
+      try {
+        const res = await fetch(`/api/invite/${encodeURIComponent(inviteCode)}`);
+        if (!res.ok) {
+          if (!cancelled) {
+            setInvitePreview(null);
+          }
+          return;
+        }
+
+        const data = await res.json();
+        if (!cancelled) {
+          setInvitePreview((data.inviter as InvitePreview | undefined) ?? null);
+        }
+      } catch {
+        if (!cancelled) {
+          setInvitePreview(null);
+        }
+      }
+    }
+
+    void loadInvite();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [normalizedInviteCode]);
 
   const step1Valid =
     formData.username.trim().length >= 3 &&
@@ -175,6 +222,7 @@ export default function RegisterPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           ...formData,
+          invite_code: invitePreview?.invite_code ?? null,
           platforms: finalPlatforms,
           phone: normalizePhoneNumber(formData.phone),
           whatsapp_number: formData.whatsapp_number
@@ -190,7 +238,7 @@ export default function RegisterPage() {
       login(data.token, data.user);
       toast.success(`Welcome to Mechi, ${data.user.username}!`);
       // Use a hard navigation so auth cookie guards see the latest cookie immediately.
-      window.location.assign('/dashboard');
+      window.location.assign(nextPath);
     } catch {
       toast.error('Network error.');
     } finally {
@@ -240,6 +288,17 @@ export default function RegisterPage() {
                 </div>
               ))}
             </div>
+
+            {invitePreview ? (
+              <div className="mb-5 rounded-xl border border-[rgba(50,224,196,0.2)] bg-[rgba(50,224,196,0.08)] px-4 py-3">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--accent-secondary-text)]">
+                  Invite Active
+                </p>
+                <p className="mt-1 text-sm text-[var(--text-primary)]">
+                  Invited by <span className="font-semibold">{invitePreview.username}</span>
+                </p>
+              </div>
+            ) : null}
 
             {step === 1 && (
               <div>
@@ -584,7 +643,7 @@ export default function RegisterPage() {
             <p className="mt-6 text-center text-sm text-[var(--text-soft)]">
               Already have an account?{' '}
               <Link
-                href={user ? '/dashboard' : '/login'}
+                href={user ? nextPath : loginHref}
                 className="brand-link-coral inline-flex min-h-11 items-center font-semibold"
               >
                 Sign in

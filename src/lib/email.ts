@@ -1,8 +1,13 @@
 import { Resend } from 'resend';
+import { DEFAULT_RATING } from '@/lib/config';
+import { getRankDivision } from '@/lib/gamification';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 const FROM = 'Mechi <noreply@mechi.club>';
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'https://mechi.club';
+const APP_URL =
+  process.env.NEXT_PUBLIC_APP_URL ??
+  process.env.NEXT_PUBLIC_BASE_URL ??
+  'https://mechi.club';
 
 function baseLayout(title: string, content: string): string {
   return `<!DOCTYPE html>
@@ -12,40 +17,42 @@ function baseLayout(title: string, content: string): string {
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>${title}</title>
   <style>
-    body { margin: 0; padding: 0; background: #0f172a; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
-    .wrapper { max-width: 560px; margin: 0 auto; padding: 32px 16px; }
-    .card { background: #1e293b; border: 1px solid #334155; border-radius: 16px; overflow: hidden; }
-    .header { background: linear-gradient(135deg, #059669, #0d9488); padding: 32px; text-align: center; }
-    .header h1 { color: white; margin: 0; font-size: 28px; font-weight: 800; letter-spacing: -0.5px; }
-    .header p { color: rgba(255,255,255,0.8); margin: 8px 0 0; font-size: 14px; }
+    body { margin: 0; padding: 0; background: #eef3f7; font-family: 'Segoe UI', Arial, sans-serif; color: #0B1121; }
+    .wrapper { max-width: 620px; margin: 0 auto; padding: 32px 16px; }
+    .card { background: #ffffff; border: 1px solid #d7e1ea; border-radius: 24px; overflow: hidden; box-shadow: 0 24px 60px rgba(11, 17, 33, 0.08); }
+    .header { background: linear-gradient(135deg, #0B1121 0%, #152033 58%, #FF6B6B 100%); padding: 36px 32px; }
+    .brand { color: #ffffff; font-size: 28px; font-weight: 800; letter-spacing: -0.04em; margin: 0; }
+    .tagline { color: rgba(255,255,255,0.7); margin: 10px 0 0; font-size: 13px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; }
     .body { padding: 32px; }
-    .body h2 { color: #f1f5f9; margin: 0 0 8px; font-size: 20px; font-weight: 700; }
-    .body p { color: #94a3b8; line-height: 1.6; margin: 0 0 16px; }
-    .info-box { background: #0f172a; border: 1px solid #334155; border-radius: 12px; padding: 20px; margin: 20px 0; }
-    .info-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #1e293b; }
+    .body h2 { color: #0B1121; margin: 0 0 10px; font-size: 24px; font-weight: 800; letter-spacing: -0.03em; }
+    .body p { color: #435066; line-height: 1.7; margin: 0 0 16px; font-size: 14px; }
+    .info-box { background: #f8fbfd; border: 1px solid #d7e1ea; border-radius: 18px; padding: 20px; margin: 22px 0; }
+    .info-row { display: flex; justify-content: space-between; gap: 16px; padding: 10px 0; border-bottom: 1px solid #e3ebf2; }
     .info-row:last-child { border-bottom: none; }
-    .info-label { color: #64748b; font-size: 13px; }
-    .info-value { color: #f1f5f9; font-size: 13px; font-weight: 600; }
-    .btn { display: inline-block; background: #059669; color: white !important; text-decoration: none; padding: 14px 28px; border-radius: 12px; font-weight: 700; font-size: 15px; margin: 8px 0; }
-    .footer { padding: 24px 32px; border-top: 1px solid #334155; text-align: center; }
-    .footer p { color: #475569; font-size: 12px; margin: 0; }
-    .badge { display: inline-block; padding: 4px 12px; border-radius: 99px; font-size: 12px; font-weight: 700; }
-    .badge-green { background: #065f46; color: #34d399; }
-    .badge-red { background: #7f1d1d; color: #f87171; }
+    .info-label { color: #5f6d82; font-size: 13px; }
+    .info-value { color: #0B1121; font-size: 13px; font-weight: 700; text-align: right; }
+    .btn { display: inline-block; background: #FF6B6B; color: #0B1121 !important; text-decoration: none; padding: 14px 28px; border-radius: 14px; font-weight: 800; font-size: 14px; margin-top: 8px; }
+    .footer { padding: 22px 32px 28px; border-top: 1px solid #e3ebf2; text-align: center; }
+    .footer p { color: #5f6d82; font-size: 12px; margin: 0; line-height: 1.6; }
+    .badge { display: inline-block; padding: 5px 12px; border-radius: 999px; font-size: 11px; font-weight: 800; letter-spacing: 0.04em; text-transform: uppercase; }
+    .badge-win { background: rgba(50,224,196,0.16); color: #148a77; }
+    .badge-loss { background: rgba(255,107,107,0.12); color: #c94a4a; }
+    .badge-red { background: rgba(255,107,107,0.12); color: #c94a4a; }
   </style>
 </head>
 <body>
   <div class="wrapper">
     <div class="card">
       <div class="header">
-        <h1>🎮 Mechi</h1>
-        <p>Kenya's Premier Gaming Matchmaking Platform</p>
+        <p class="brand">MECHI</p>
+        <p class="tagline">Compete. Connect. Rise.</p>
       </div>
       <div class="body">
         ${content}
       </div>
       <div class="footer">
-        <p>© ${new Date().getFullYear()} Mechi · mechi.club · You are receiving this because you registered on Mechi.</p>
+        <p>mechi.club</p>
+        <p>You are receiving this email because you have an account on Mechi.</p>
       </div>
     </div>
   </div>
@@ -57,21 +64,26 @@ export async function sendWelcomeEmail(params: {
   to: string;
   username: string;
 }): Promise<void> {
+  const starterRank = getRankDivision(DEFAULT_RATING);
   const content = `
-    <h2>Welcome, ${params.username}! 🎉</h2>
-    <p>You've joined Kenya's #1 gaming matchmaking platform. Find opponents, track your rating, and prove you're the best.</p>
+    <h2>Welcome, ${params.username}</h2>
+    <p>Your Mechi profile is live. Pick your focus games, lock in your setup, and start climbing through clean competitive matches.</p>
     <div class="info-box">
       <div class="info-row">
-        <span class="info-label">Starting Rating</span>
-        <span class="info-value">1000 (Silver)</span>
+        <span class="info-label">Starting Rank</span>
+        <span class="info-value">${starterRank.label}</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">Level</span>
+        <span class="info-value">Lv. 1</span>
       </div>
       <div class="info-row">
         <span class="info-label">Platform</span>
         <span class="info-value">mechi.club</span>
       </div>
     </div>
-    <p>Head to your dashboard to start matching:</p>
-    <a href="${APP_URL}/dashboard" class="btn">Go to Dashboard →</a>
+    <p>Head to your dashboard, finish setup, and get into your first queue.</p>
+    <a href="${APP_URL}/dashboard" class="btn">Open Dashboard</a>
   `;
 
   try {
@@ -96,8 +108,8 @@ export async function sendMatchFoundEmail(params: {
   matchId: string;
 }): Promise<void> {
   const content = `
-    <h2>Match Found! ⚔️</h2>
-    <p>A worthy opponent has been found. Head to the match page to see details and connect with your opponent.</p>
+    <h2>Match found</h2>
+    <p>Your next Mechi match is ready. Open the match room, connect with your opponent, and finish cleanly so both profiles stay accurate.</p>
     <div class="info-box">
       <div class="info-row">
         <span class="info-label">Game</span>
@@ -112,12 +124,12 @@ export async function sendMatchFoundEmail(params: {
         <span class="info-value">${params.platform}</span>
       </div>
       <div class="info-row">
-        <span class="info-label">Opponent's ID</span>
+        <span class="info-label">Opponent ID</span>
         <span class="info-value">${params.opponentPlatformId}</span>
       </div>
     </div>
-    <p>Connect with your opponent and play the match, then report the result.</p>
-    <a href="${APP_URL}/match/${params.matchId}" class="btn">View Match →</a>
+    <p>Use the match page to coordinate, report the result, and keep the ladder moving.</p>
+    <a href="${APP_URL}/match/${params.matchId}" class="btn">View Match</a>
   `;
 
   try {
@@ -125,7 +137,7 @@ export async function sendMatchFoundEmail(params: {
       from: FROM,
       to: params.to,
       subject: `Match found! You vs ${params.opponentUsername}`,
-      html: baseLayout('Match Found!', content),
+      html: baseLayout('Match Found', content),
     });
   } catch (err) {
     console.error('[Email] Match found send error:', err);
@@ -138,13 +150,12 @@ export async function sendResultConfirmedEmail(params: {
   opponentUsername: string;
   game: string;
   won: boolean;
-  ratingChange: number;
-  newRating: number;
+  rankLabel: string;
+  level: number;
 }): Promise<void> {
-  const sign = params.ratingChange >= 0 ? '+' : '';
   const content = `
-    <h2>${params.won ? 'Victory! 🏆' : 'Match Complete 🎮'}</h2>
-    <p>Your match against <strong>${params.opponentUsername}</strong> has been confirmed.</p>
+    <h2>${params.won ? 'Victory confirmed' : 'Match complete'}</h2>
+    <p>Your match against <strong>${params.opponentUsername}</strong> is locked in. Your Mechi climb has been updated.</p>
     <div class="info-box">
       <div class="info-row">
         <span class="info-label">Game</span>
@@ -153,26 +164,26 @@ export async function sendResultConfirmedEmail(params: {
       <div class="info-row">
         <span class="info-label">Result</span>
         <span class="info-value">
-          <span class="badge ${params.won ? 'badge-green' : 'badge-red'}">${params.won ? 'WIN' : 'LOSS'}</span>
+          <span class="badge ${params.won ? 'badge-win' : 'badge-loss'}">${params.won ? 'Win' : 'Loss'}</span>
         </span>
       </div>
       <div class="info-row">
-        <span class="info-label">Rating Change</span>
-        <span class="info-value" style="color: ${params.ratingChange >= 0 ? '#34d399' : '#f87171'}">${sign}${params.ratingChange}</span>
+        <span class="info-label">Current Rank</span>
+        <span class="info-value">${params.rankLabel}</span>
       </div>
       <div class="info-row">
-        <span class="info-label">New Rating</span>
-        <span class="info-value">${params.newRating}</span>
+        <span class="info-label">Level</span>
+        <span class="info-value">Lv. ${params.level}</span>
       </div>
     </div>
-    <a href="${APP_URL}/dashboard" class="btn">Play Again →</a>
+    <a href="${APP_URL}/dashboard" class="btn">Play Again</a>
   `;
 
   try {
     await resend.emails.send({
       from: FROM,
       to: params.to,
-      subject: `Match result: ${params.won ? 'You won!' : 'Match complete'} ${sign}${params.ratingChange} rating`,
+      subject: `Match result: ${params.won ? 'You won!' : 'Match complete'} / ${params.rankLabel}`,
       html: baseLayout('Match Result', content),
     });
   } catch (err) {
@@ -190,7 +201,7 @@ export async function sendMatchDisputeEmail(params: {
   const content = `
     <h2>Match Disputed ⚠️</h2>
     <p>Your match against <strong>${params.opponentUsername}</strong> in <strong>${params.game}</strong> has been disputed.</p>
-    <p>Upload a screenshot of the result so our team can resolve it within 24 hours.</p>
+    <p>Upload a screenshot of the result on the match page so the result can be resolved cleanly.</p>
     <div class="info-box">
       <div class="info-row">
         <span class="info-label">Game</span>
@@ -202,16 +213,17 @@ export async function sendMatchDisputeEmail(params: {
       </div>
       <div class="info-row">
         <span class="info-label">Status</span>
-        <span class="info-value"><span class="badge badge-red">DISPUTED</span></span>
+        <span class="info-value"><span class="badge badge-red">Disputed</span></span>
       </div>
     </div>
-    <a href="${APP_URL}/match/${params.matchId}" class="btn">Upload Screenshot →</a>
+    <a href="${APP_URL}/match/${params.matchId}" class="btn">Upload Screenshot</a>
   `;
+
   try {
     await resend.emails.send({
       from: FROM,
       to: params.to,
-      subject: `Match disputed — upload a screenshot to resolve`,
+      subject: 'Match disputed - upload screenshot to resolve',
       html: baseLayout('Match Disputed', content),
     });
   } catch (err) {

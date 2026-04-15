@@ -1,18 +1,39 @@
 const WHATSAPP_TOKEN = process.env.WHATSAPP_TOKEN;
 const PHONE_NUMBER_ID = process.env.WHATSAPP_PHONE_NUMBER_ID;
 const API_VERSION = 'v25.0';
-const WHATSAPP_ENABLED = !!(WHATSAPP_TOKEN && PHONE_NUMBER_ID);
+const APP_URL =
+  process.env.NEXT_PUBLIC_APP_URL ??
+  process.env.NEXT_PUBLIC_BASE_URL ??
+  'https://mechi.club';
+const WHATSAPP_ENABLED = Boolean(WHATSAPP_TOKEN && PHONE_NUMBER_ID);
 
-async function sendWhatsApp(to: string, message: string): Promise<boolean> {
+async function safeNotify(label: string, fn: () => Promise<void>): Promise<void> {
   if (!WHATSAPP_ENABLED) {
-    console.log('[WhatsApp] Skipped — WHATSAPP_TOKEN or WHATSAPP_PHONE_NUMBER_ID not set');
-    return false;
+    console.log(`[WhatsApp] ${label} skipped - credentials not configured`);
+    return;
   }
 
-  // Normalize: ensure country code 254 (Kenya)
+  try {
+    await fn();
+  } catch (err) {
+    console.error(`[WhatsApp] ${label} error:`, err);
+  }
+}
+
+async function sendWhatsApp(to: string, message: string): Promise<void> {
+  if (!WHATSAPP_ENABLED || !WHATSAPP_TOKEN || !PHONE_NUMBER_ID) {
+    console.log('[WhatsApp] send skipped - credentials not configured');
+    return;
+  }
+
+  // Normalize phone number and ensure it includes Kenya's country code.
   let phone = to.replace(/\D/g, '');
-  if (phone.startsWith('0')) phone = '254' + phone.slice(1);
-  if (!phone.startsWith('254')) phone = '254' + phone;
+  if (phone.startsWith('0')) {
+    phone = '254' + phone.slice(1);
+  }
+  if (!phone.startsWith('254')) {
+    phone = '254' + phone;
+  }
 
   try {
     const response = await fetch(
@@ -33,63 +54,58 @@ async function sendWhatsApp(to: string, message: string): Promise<boolean> {
     );
 
     if (!response.ok) {
-      console.error('[WhatsApp] Send error:', await response.text());
-      return false;
+      const err = await response.text();
+      console.error('[WhatsApp] Send error:', err);
+      return;
     }
-    return true;
   } catch (err) {
     console.error('[WhatsApp] Network error:', err);
-    return false;
   }
 }
 
 export async function notifyMatchFound(params: {
-  phone: string;
+  whatsappNumber: string;
+  username: string;
   game: string;
   opponentUsername: string;
-  opponentPlatformId: string;
   matchId: string;
-}): Promise<boolean> {
-  if (!WHATSAPP_ENABLED) return false;
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://mechi.club';
-  const message =
-    `🎮 Mechi Inaanza!\n` +
-    `Game: ${params.game}\n` +
-    `Opponent: ${params.opponentUsername}\n` +
-    `Add them: ${params.opponentPlatformId}\n` +
-    `${appUrl}/match/${params.matchId}`;
-  return sendWhatsApp(params.phone, message);
+  appUrl?: string;
+}): Promise<void> {
+  await safeNotify('match_found', async () => {
+    const matchUrl = `${params.appUrl ?? APP_URL}/match/${params.matchId}`;
+    const message =
+      `Yo ${params.username}, your Mechi match is ready.\n` +
+      `Game: ${params.game}\n` +
+      `Opponent: ${params.opponentUsername}\n` +
+      `Open match: ${matchUrl}`;
+
+    await sendWhatsApp(params.whatsappNumber, message);
+  });
 }
 
 export async function notifyResultConfirmed(params: {
-  phone: string;
-  ratingChange: number;
-  won: boolean;
-}): Promise<boolean> {
-  if (!WHATSAPP_ENABLED) return false;
-  const sign = params.ratingChange >= 0 ? '+' : '';
-  const message =
-    `✅ Match confirmed.\n` +
-    `Result: ${params.won ? 'Victory! 🏆' : 'Defeat 😔'}\n` +
-    `Rating: ${sign}${params.ratingChange}`;
-  return sendWhatsApp(params.phone, message);
-}
-
-export async function notifyMatchDisputed(params: {
-  phone: string;
-  game: string;
+  whatsappNumber: string;
+  username: string;
   opponentUsername: string;
-  matchId: string;
-}): Promise<boolean> {
-  if (!WHATSAPP_ENABLED) return false;
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://mechi.club';
-  const message =
-    `⚠️ Match Disputed\n` +
-    `Game: ${params.game}\n` +
-    `vs ${params.opponentUsername}\n` +
-    `Upload screenshot to resolve:\n` +
-    `${appUrl}/match/${params.matchId}`;
-  return sendWhatsApp(params.phone, message);
+  game: string;
+  won: boolean;
+  rankLabel: string;
+  level: number;
+  appUrl?: string;
+}): Promise<void> {
+  await safeNotify('result_confirmed', async () => {
+    const dashboardUrl = `${params.appUrl ?? APP_URL}/dashboard`;
+    const message =
+      `${params.username}, your result is locked in.\n` +
+      `Game: ${params.game}\n` +
+      `Opponent: ${params.opponentUsername}\n` +
+      `Result: ${params.won ? 'Win confirmed' : 'Match closed'}\n` +
+      `Rank: ${params.rankLabel}\n` +
+      `Level: ${params.level}\n` +
+      `${dashboardUrl}`;
+
+    await sendWhatsApp(params.whatsappNumber, message);
+  });
 }
 
 export { sendWhatsApp };

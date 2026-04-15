@@ -14,13 +14,19 @@ const NAV_ITEMS = [
 
 const HEADER_TEXT_CLASS =
   'rounded-lg px-3 py-2 text-sm font-semibold uppercase tracking-[0.14em] text-[var(--text-secondary)] transition-colors hover:bg-[var(--surface-elevated)] hover:text-[var(--text-primary)]';
+const SIGN_IN_BUTTON_CLASS =
+  'inline-flex items-center justify-center rounded-xl border border-[rgba(50,224,196,0.28)] bg-[var(--surface-elevated)] px-4 py-2 text-sm font-semibold uppercase tracking-[0.14em] text-[var(--accent-secondary-text)] shadow-[inset_0_1px_0_rgba(255,255,255,0.06),0_10px_24px_rgba(50,224,196,0.12)] transition-all hover:border-[rgba(50,224,196,0.42)] hover:bg-[rgba(50,224,196,0.12)] hover:text-[var(--text-primary)]';
 
 export function HomeFloatingHeader() {
   const [isOpen, setIsOpen] = useState(false);
 
   return (
     <header className="sticky top-4 z-50">
-      <div className="landing-shell">
+      <div className="landing-shell relative">
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute left-1/2 top-[calc(100%+0.35rem)] h-px w-screen -translate-x-1/2 bg-gradient-to-r from-transparent via-[rgba(50,224,196,0.3)] to-transparent"
+        />
         <div className="rounded-[1.2rem] border border-[var(--border-color)] bg-[var(--surface-soft)] p-2 shadow-[var(--shadow-soft)] backdrop-blur-xl">
           <div className="grid grid-cols-[auto_1fr_auto] items-center gap-3">
             <Link
@@ -48,7 +54,7 @@ export function HomeFloatingHeader() {
               <div className="hidden items-center gap-2 sm:flex">
                 <Link
                   href="/login"
-                  className="brand-link text-sm font-semibold uppercase tracking-[0.14em]"
+                  className={SIGN_IN_BUTTON_CLASS}
                 >
                   SIGN IN
                 </Link>
@@ -85,7 +91,7 @@ export function HomeFloatingHeader() {
                 <Link
                   href="/login"
                   onClick={() => setIsOpen(false)}
-                  className="btn-outline text-sm uppercase tracking-[0.14em]"
+                  className={SIGN_IN_BUTTON_CLASS}
                 >
                   SIGN IN
                 </Link>

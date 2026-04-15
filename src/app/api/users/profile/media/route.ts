@@ -81,7 +81,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to save profile image' }, { status: 500 });
     }
 
-    const { password_hash: _hash, ...safeProfile } = profile;
+    const { password_hash, ...safeProfile } = profile;
+    void password_hash;
     return NextResponse.json({ profile: safeProfile, kind: kindValue });
   } catch (err) {
     console.error('[Profile Media Upload] Error:', err);

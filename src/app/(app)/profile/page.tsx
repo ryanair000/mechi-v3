@@ -242,8 +242,8 @@ export default function ProfilePage() {
 
   if (loading) {
     return (
-      <div className="page-container">
-        <div className="w-full space-y-4">
+      <div className="px-4 pb-16 pt-4 sm:px-6 lg:px-8 lg:pb-6">
+        <div className="mx-auto w-full max-w-[88rem] space-y-4">
           <div className="h-56 shimmer" />
           <div className="h-12 shimmer" />
           <div className="h-36 shimmer" />
@@ -269,6 +269,7 @@ export default function ProfilePage() {
     return fields;
   }, []);
   const userGames = (profile?.selected_games as GameKey[]) ?? [];
+  const connectedPlatforms = ((profile?.platforms ?? []) as PlatformKey[]);
   const rankedUserGames = userGames.filter((game) => GAMES[game]?.mode === '1v1');
   const bestRating = rankedUserGames.reduce((best, game) => {
     const rating = (profile?.[`rating_${game}`] as number) ?? 1000;
@@ -293,12 +294,20 @@ export default function ProfilePage() {
   const avatarUrl = (profile?.avatar_url as string | null | undefined) ?? user?.avatar_url ?? null;
   const coverUrl = (profile?.cover_url as string | null | undefined) ?? user?.cover_url ?? null;
   const usernameInitial = user?.username?.[0]?.toUpperCase() ?? '?';
-  const platformCount = ((profile?.platforms ?? []) as PlatformKey[]).length;
+  const platformCount = connectedPlatforms.length;
   const gameCountLabel = userGames.length === 1 ? '1 game selected' : `${userGames.length} games selected`;
+  const setupChecklist = [
+    { label: 'Display photo', complete: Boolean(avatarUrl) },
+    { label: 'Cover image', complete: Boolean(coverUrl) },
+    { label: 'Region chosen', complete: Boolean(profile?.region) },
+    { label: 'Games selected', complete: userGames.length > 0 },
+    { label: 'Platforms linked', complete: connectedPlatforms.length > 0 },
+  ];
+  const completedChecklistCount = setupChecklist.filter((item) => item.complete).length;
 
   return (
-    <div className="page-container">
-      <div className="w-full">
+    <div className="px-4 pb-16 pt-4 sm:px-6 lg:px-8 lg:pb-6">
+      <div className="mx-auto w-full max-w-[88rem]">
         <div className="card mb-6 overflow-hidden">
           <div
             className="relative h-40 sm:h-52 xl:h-60"
@@ -411,7 +420,7 @@ export default function ProfilePage() {
                         color: bestDivision.color,
                       }}
                     >
-                      {bestDivision.label} · Lv. {level}
+                      {bestDivision.label} / Lv. {level}
                     </span>
                     {profile?.region ? (
                       <span className="inline-flex items-center gap-1.5 rounded-full border border-[var(--border-color)] bg-[var(--surface-elevated)] px-3 py-1 text-xs font-medium text-[var(--text-secondary)]">
@@ -463,7 +472,7 @@ export default function ProfilePage() {
                   onClick={() => setTab('settings')}
                   className="brand-link text-xs font-semibold"
                 >
-                  + Add platforms →
+                  + Add platforms
                 </button>
               )}
             </div>
@@ -549,7 +558,8 @@ export default function ProfilePage() {
         </div>
 
         {tab === 'stats' && (
-          <div className="space-y-4">
+          <div className="grid gap-4 xl:grid-cols-[minmax(0,1.45fr)_minmax(320px,0.95fr)] xl:items-start">
+            <div className="space-y-4">
             {userGames.length === 0 ? (
               <div className="card p-10 text-center">
                 <div className="mb-4 text-5xl">🎮</div>
@@ -704,11 +714,107 @@ export default function ProfilePage() {
                 </div>
               )}
             </div>
+
+            </div>
+
+            <div className="space-y-4 xl:sticky xl:top-4">
+              <div className="card p-5">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="section-title">Profile at a glance</p>
+                    <p className="mt-2 text-sm text-[var(--text-secondary)]">
+                      A cleaner summary of how your account looks to other players.
+                    </p>
+                  </div>
+                  <span className="brand-chip px-2 py-1">
+                    {completedChecklistCount}/{setupChecklist.length} ready
+                  </span>
+                </div>
+
+                <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
+                  <div className="rounded-2xl border border-[var(--border-color)] bg-[var(--surface-elevated)] p-4">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--text-soft)]">
+                      Strongest rank
+                    </p>
+                    <p className="mt-2 text-lg font-black" style={{ color: bestDivision.color }}>
+                      {bestDivision.label}
+                    </p>
+                    <p className="mt-1 text-sm text-[var(--text-secondary)]">{bestRating} rating</p>
+                  </div>
+
+                  <div className="rounded-2xl border border-[var(--border-color)] bg-[var(--surface-elevated)] p-4">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--text-soft)]">
+                      Region
+                    </p>
+                    <p className="mt-2 text-lg font-black text-[var(--text-primary)]">
+                      {profile?.region ? (profile.region as string) : 'Add your region'}
+                    </p>
+                    <p className="mt-1 text-sm text-[var(--text-secondary)]">
+                      Helps players understand where you queue from.
+                    </p>
+                  </div>
+
+                  <div className="rounded-2xl border border-[var(--border-color)] bg-[var(--surface-elevated)] p-4">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--text-soft)]">
+                      Games tracked
+                    </p>
+                    <p className="mt-2 text-lg font-black text-[var(--text-primary)]">{userGames.length}</p>
+                    <p className="mt-1 text-sm text-[var(--text-secondary)]">
+                      {rankedUserGames.length} ranked title{rankedUserGames.length === 1 ? '' : 's'} active
+                    </p>
+                  </div>
+
+                  <div className="rounded-2xl border border-[var(--border-color)] bg-[var(--surface-elevated)] p-4">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--text-soft)]">
+                      Platforms
+                    </p>
+                    <p className="mt-2 text-lg font-black text-[var(--text-primary)]">{platformCount}</p>
+                    <p className="mt-1 text-sm text-[var(--text-secondary)]">
+                      {whatsappNotifications ? 'WhatsApp alerts turned on' : 'Alerts currently off'}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="card p-5">
+                <p className="section-title">Profile checklist</p>
+                <p className="mt-2 text-sm text-[var(--text-secondary)]">
+                  Small details that make your page easier to trust, share, and queue from.
+                </p>
+
+                <div className="mt-4 space-y-2.5">
+                  {setupChecklist.map((item) => (
+                    <div
+                      key={item.label}
+                      className="flex items-center justify-between rounded-xl border border-[var(--border-color)] bg-[var(--surface-elevated)] px-3 py-3"
+                    >
+                      <span className="text-sm font-medium text-[var(--text-primary)]">{item.label}</span>
+                      <span
+                        className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold ${
+                          item.complete
+                            ? 'bg-[rgba(50,224,196,0.14)] text-[var(--accent-secondary-text)]'
+                            : 'bg-[rgba(255,107,107,0.14)] text-[var(--brand-coral)]'
+                        }`}
+                      >
+                        {item.complete ? <Check size={12} /> : null}
+                        {item.complete ? 'Done' : 'Add now'}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+
+                <button type="button" onClick={() => setTab('settings')} className="btn-ghost mt-4 w-full">
+                  <Settings size={14} />
+                  Finish profile
+                </button>
+              </div>
+            </div>
           </div>
         )}
 
         {tab === 'settings' && (
-          <div className="space-y-4">
+          <div className="grid gap-4 xl:grid-cols-[minmax(0,1.15fr)_minmax(320px,0.85fr)] xl:items-start">
+            <div className="space-y-4">
             <div className="card p-5">
               <div className="mb-4">
                 <p className="section-title">Profile look</p>
@@ -821,7 +927,10 @@ export default function ProfilePage() {
 
             <div className="card p-5">
               <label className="label">Region</label>
-              <select value={region} onChange={(e) => setRegion(e.target.value)} className="input max-w-xs">
+              <p className="mb-3 mt-2 text-sm text-[var(--text-secondary)]">
+                Set the place you mostly queue from so nearby players can read you quickly.
+              </p>
+              <select value={region} onChange={(e) => setRegion(e.target.value)} className="input w-full sm:max-w-sm">
                 {REGIONS.map((item) => (
                   <option key={item} value={item}>
                     {item}
@@ -889,7 +998,7 @@ export default function ProfilePage() {
 
             <div className="card p-5">
               <div className="mb-3 flex items-center justify-between">
-                <label className="label mb-0">Games to Play</label>
+                <label className="label mb-0">Your games</label>
                 <div className="flex gap-1.5">
                   {[0, 1, 2].map((index) => (
                     <div
@@ -901,7 +1010,9 @@ export default function ProfilePage() {
                   ))}
                 </div>
               </div>
-              <p className="mb-3 text-xs text-[var(--text-soft)]">Pick up to 3 games to compete in</p>
+              <p className="mb-3 text-xs text-[var(--text-soft)]">
+                Pick up to 3 titles you actively play so your profile and leaderboard view stay relevant.
+              </p>
               <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                 {selectableGames.map((game) => {
                   const isSelected = selectedGames.includes(game);
@@ -938,7 +1049,7 @@ export default function ProfilePage() {
 
             {selectedGames.length > 0 && (
               <div className="card p-5">
-                <label className="label mb-3">Platforms and IDs</label>
+                <label className="label mb-3">Platforms and player IDs</label>
                 <div className="space-y-3">
                   {selectedGames.map((game) => {
                     const gameConfig = GAMES[game];
@@ -1009,25 +1120,48 @@ export default function ProfilePage() {
               </div>
             )}
 
-            <button onClick={handleSave} disabled={saving} className="btn-primary w-full">
-              {saving ? (
-                <>
-                  <Loader2 size={14} className="animate-spin" /> Saving...
-                </>
-              ) : (
-                <>
-                  <Check size={14} /> Save Changes
-                </>
-              )}
-            </button>
+            </div>
 
-            <div>
-              <p className="mb-3 px-1 text-[10px] font-semibold uppercase tracking-[0.22em] text-[var(--text-soft)]">
-                Account
-              </p>
-              <button onClick={logout} className="btn-danger w-full">
-                <LogOut size={14} /> Sign Out
-              </button>
+            <div className="space-y-4 xl:sticky xl:top-4">
+              <div className="card p-5">
+                <p className="section-title">Save and review</p>
+                <p className="mt-2 text-sm text-[var(--text-secondary)]">
+                  Once you save, your updated photo, cover, games, and alerts go live across your account.
+                </p>
+
+                <div className="mt-4 rounded-2xl border border-[var(--border-color)] bg-[var(--surface-elevated)] p-4">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--text-soft)]">
+                    Profile completion
+                  </p>
+                  <p className="mt-2 text-2xl font-black text-[var(--text-primary)]">
+                    {completedChecklistCount}/{setupChecklist.length}
+                  </p>
+                  <p className="mt-1 text-sm text-[var(--text-secondary)]">
+                    The more complete this is, the easier it is for players to trust your setup.
+                  </p>
+                </div>
+
+                <button onClick={handleSave} disabled={saving} className="btn-primary mt-4 w-full">
+                  {saving ? (
+                    <>
+                      <Loader2 size={14} className="animate-spin" /> Saving...
+                    </>
+                  ) : (
+                    <>
+                      <Check size={14} /> Save Changes
+                    </>
+                  )}
+                </button>
+              </div>
+
+              <div className="card p-5">
+                <p className="mb-3 text-[10px] font-semibold uppercase tracking-[0.22em] text-[var(--text-soft)]">
+                  Account
+                </p>
+                <button onClick={logout} className="btn-danger w-full">
+                  <LogOut size={14} /> Sign Out
+                </button>
+              </div>
             </div>
           </div>
         )}

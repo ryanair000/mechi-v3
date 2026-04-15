@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { BrandLogo } from '@/components/BrandLogo';
 import { HomeFloatingHeader } from '@/components/HomeFloatingHeader';
+import { PLANS } from '@/lib/plans';
 
 const HERO_STATS = [
   { value: '14+', label: 'Supported titles' },
@@ -86,36 +87,30 @@ const SUPPORTED_GAMES = [
 
 const PRICING_PLANS = [
   {
-    name: 'PLAYER',
-    price: 'FREE',
+    key: 'free',
     kicker: 'START HERE',
-    description: 'Build your profile, queue your mains, and keep your climb moving without paying to get in.',
-    features: ['1 player profile', 'Ranked queue access', 'Match history and share links'],
+    description: 'Build your profile, queue your main game, and get into ranked play without paying to enter.',
     href: '/register',
     cta: 'START FREE',
     featured: false,
   },
   {
-    name: 'COMMUNITY',
-    price: 'CUSTOM',
-    kicker: 'FOR GROUPS',
-    description: 'Set up your scene with support for communities that want cleaner recurring play on Mechi.',
-    features: ['Community rollout support', 'Private lobby coordination', 'Shared setup for organizers'],
-    href: '/register',
-    cta: 'SET UP YOUR SCENE',
+    key: 'pro',
+    kicker: 'MOST POPULAR',
+    description: 'Unlimited ranked play, more game slots, and a cleaner competitive grind for regular players.',
+    href: '/pricing',
+    cta: 'SEE PRO',
     featured: true,
   },
   {
-    name: 'BOOST',
-    price: 'SOON',
-    kicker: 'ON DECK',
-    description: 'Extra player perks are in the works for grinders who want more polish, flex, and deeper stats.',
-    features: ['Expanded profile flair', 'Sharper performance insights', 'Priority access to new drops'],
-    href: '/register',
-    cta: 'GET EARLY ACCESS',
+    key: 'elite',
+    kicker: 'FULL ACCESS',
+    description: 'Priority perks, full history access, and the sharpest Mechi experience for serious grinders.',
+    href: '/pricing',
+    cta: 'SEE ELITE',
     featured: false,
   },
-];
+] as const;
 
 export default function LandingPage() {
   return (
@@ -123,7 +118,6 @@ export default function LandingPage() {
       <HomeFloatingHeader />
 
       <section className="relative overflow-hidden">
-        <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[rgba(50,224,196,0.3)] to-transparent" />
         <div className="pointer-events-none absolute left-[10%] top-10 h-56 w-56 rounded-full bg-[rgba(50,224,196,0.1)] blur-[110px]" />
         <div className="pointer-events-none absolute right-[12%] top-14 h-52 w-52 rounded-full bg-[rgba(255,107,107,0.1)] blur-[96px]" />
 
@@ -341,8 +335,11 @@ export default function LandingPage() {
 
           <div className="mt-7 grid gap-3 lg:grid-cols-3">
             {PRICING_PLANS.map((plan) => (
+              (() => {
+                const config = PLANS[plan.key];
+                return (
               <div
-                key={plan.name}
+                key={plan.key}
                 className={`card flex h-full flex-col p-5 sm:p-6 ${
                   plan.featured ? 'circuit-panel border-[rgba(50,224,196,0.26)]' : ''
                 }`}
@@ -359,8 +356,13 @@ export default function LandingPage() {
 
                 <div className="mt-5 flex items-end justify-between gap-4">
                   <div>
-                    <h3 className="text-lg font-black text-[var(--text-primary)]">{plan.name}</h3>
-                    <p className="mt-1 text-3xl font-black text-[var(--text-primary)]">{plan.price}</p>
+                    <h3 className="text-lg font-black text-[var(--text-primary)]">{config.name}</h3>
+                    <p className="mt-1 text-3xl font-black text-[var(--text-primary)]">
+                      {config.monthlyKes === 0 ? 'FREE' : `KSH ${config.monthlyKes}`}
+                    </p>
+                    <p className="mt-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--text-soft)]">
+                      {config.monthlyKes === 0 ? 'No payment needed' : 'per month'}
+                    </p>
                   </div>
                 </div>
 
@@ -369,7 +371,7 @@ export default function LandingPage() {
                 </p>
 
                 <div className="mt-5 grid gap-2.5">
-                  {plan.features.map((feature) => (
+                  {config.features.slice(0, 3).map((feature) => (
                     <div
                       key={feature}
                       className="rounded-xl border border-[var(--border-color)] bg-[var(--surface)] px-3 py-2 text-sm font-medium text-[var(--text-secondary)]"
@@ -388,6 +390,8 @@ export default function LandingPage() {
                   </Link>
                 </div>
               </div>
+                );
+              })()
             ))}
           </div>
         </div>

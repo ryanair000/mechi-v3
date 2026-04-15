@@ -1,7 +1,8 @@
-import { Metadata } from 'next';
-import { createServiceClient } from '@/lib/supabase';
-import { redirect } from 'next/navigation';
+import type { Metadata } from 'next';
+import Image from 'next/image';
 import Link from 'next/link';
+import { redirect } from 'next/navigation';
+import { createServiceClient } from '@/lib/supabase';
 
 interface Props {
   params: Promise<{ username: string }>;
@@ -16,11 +17,22 @@ function getTierName(rating: number): string {
   return 'Bronze';
 }
 
+function getTierColor(tier: string): string {
+  if (tier === 'Legend') return '#A855F7';
+  if (tier === 'Diamond') return '#60A5FA';
+  if (tier === 'Platinum') return '#00CED1';
+  if (tier === 'Gold') return '#FFD700';
+  if (tier === 'Silver') return '#C0C0C0';
+  return '#CD7F32';
+}
+
 async function getProfileData(username: string) {
   const supabase = createServiceClient();
   const { data: profile } = await supabase
     .from('profiles')
-    .select('username, region, platforms, selected_games, rating_efootball, rating_fc26, rating_mk11, rating_nba2k26, rating_tekken8, rating_sf6, wins_efootball, wins_fc26, wins_mk11, wins_nba2k26, wins_tekken8, wins_sf6, losses_efootball, losses_fc26, losses_mk11, losses_nba2k26, losses_tekken8, losses_sf6')
+    .select(
+      'username, region, avatar_url, cover_url, platforms, selected_games, rating_efootball, rating_fc26, rating_mk11, rating_nba2k26, rating_tekken8, rating_sf6, wins_efootball, wins_fc26, wins_mk11, wins_nba2k26, wins_tekken8, wins_sf6, losses_efootball, losses_fc26, losses_mk11, losses_nba2k26, losses_tekken8, losses_sf6'
+    )
     .ilike('username', username)
     .single();
 
@@ -30,13 +42,15 @@ async function getProfileData(username: string) {
   let bestRating = 1000;
   let totalWins = 0;
   let totalLosses = 0;
-  for (const g of games) {
-    const r = (profile as Record<string, unknown>)[`rating_${g}`] as number ?? 1000;
-    const w = (profile as Record<string, unknown>)[`wins_${g}`] as number ?? 0;
-    const l = (profile as Record<string, unknown>)[`losses_${g}`] as number ?? 0;
-    if (r > bestRating) bestRating = r;
-    totalWins += w;
-    totalLosses += l;
+
+  for (const game of games) {
+    const rating = ((profile as Record<string, unknown>)[`rating_${game}`] as number) ?? 1000;
+    const wins = ((profile as Record<string, unknown>)[`wins_${game}`] as number) ?? 0;
+    const losses = ((profile as Record<string, unknown>)[`losses_${game}`] as number) ?? 0;
+
+    if (rating > bestRating) bestRating = rating;
+    totalWins += wins;
+    totalLosses += losses;
   }
 
   return { ...profile, bestRating, totalWins, totalLosses };
@@ -49,7 +63,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   if (!profile) return { title: 'Player Not Found | Mechi' };
 
   const tier = getTierName(profile.bestRating);
-  const title = `${profile.username} — ${tier} (${profile.bestRating} ELO) | Mechi`;
+  const title = `${profile.username} - ${tier} (${profile.bestRating} ELO) | Mechi`;
   const description = `${profile.username} is ranked ${tier} with ${profile.bestRating} ELO on Mechi. ${profile.totalWins} wins, ${profile.totalLosses} losses. Think you can beat them?`;
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://mechi-v3.vercel.app';
 
@@ -62,7 +76,14 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       type: 'profile',
       url: `${baseUrl}/s/${username}`,
       siteName: 'Mechi',
-      images: [{ url: `${baseUrl}/api/og/profile?username=${encodeURIComponent(username)}`, width: 1200, height: 630, alt: title }],
+      images: [
+        {
+          url: `${baseUrl}/api/og/profile?username=${encodeURIComponent(username)}`,
+          width: 1200,
+          height: 630,
+          alt: title,
+        },
+      ],
     },
     twitter: {
       card: 'summary_large_image',
@@ -80,61 +101,130 @@ export default async function ShareProfilePage({ params }: Props) {
   if (!profile) redirect('/');
 
   const tier = getTierName(profile.bestRating);
+  const tierColor = getTierColor(tier);
   const totalMatches = profile.totalWins + profile.totalLosses;
   const winRate = totalMatches > 0 ? Math.round((profile.totalWins / totalMatches) * 100) : 0;
+  const selectedGames = (profile.selected_games as string[]) ?? [];
+  const platformCount = ((profile.platforms as string[] | null | undefined) ?? []).length;
+  const avatarUrl = typeof profile.avatar_url === 'string' ? profile.avatar_url : null;
+  const coverUrl = typeof profile.cover_url === 'string' ? profile.cover_url : null;
+  const usernameInitial = profile.username[0]?.toUpperCase() ?? '?';
 
   return (
-    <div className="min-h-screen bg-gray-950 text-white flex flex-col">
-      <nav className="px-5 sm:px-8 h-16 flex items-center border-b border-white/[0.04]">
-        <Link href="/" className="flex items-center gap-2">
-          <div className="w-7 h-7 rounded-lg bg-emerald-500 flex items-center justify-center font-bold text-white text-xs">M</div>
-          <span className="font-bold text-sm">Mechi</span>
-        </Link>
+    <div className="min-h-screen bg-[linear-gradient(180deg,#070b14,#0b1121_45%,#11182a)] text-white">
+      <nav className="border-b border-white/[0.05] px-5 sm:px-8">
+        <div className="mx-auto flex h-16 w-full max-w-6xl items-center justify-between">
+          <Link href="/" className="flex items-center gap-2">
+            <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-emerald-500/18 font-black text-emerald-300">
+              M
+            </div>
+            <span className="text-sm font-bold tracking-[0.22em] text-white/92">MECHI</span>
+          </Link>
+          <Link href="/register" className="text-sm font-semibold text-emerald-300 hover:text-emerald-200">
+            Join free
+          </Link>
+        </div>
       </nav>
 
-      <div className="flex-1 flex items-center justify-center px-5 py-16">
-        <div className="text-center max-w-md">
-          <div className="w-20 h-20 rounded-2xl bg-emerald-500/15 flex items-center justify-center text-3xl font-bold text-emerald-400 mx-auto mb-4">
-            {profile.username[0].toUpperCase()}
+      <div className="mx-auto flex min-h-[calc(100vh-4rem)] w-full max-w-6xl items-center px-5 py-10 sm:px-8 sm:py-14">
+        <div className="w-full overflow-hidden rounded-[2rem] border border-white/[0.08] bg-[#101728]/92 shadow-[0_40px_120px_rgba(0,0,0,0.45)] backdrop-blur">
+          <div className="relative h-56 sm:h-72">
+            {coverUrl ? (
+              <Image
+                src={coverUrl}
+                alt={`${profile.username} cover image`}
+                fill
+                sizes="(min-width: 1280px) 1200px, 100vw"
+                className="object-cover"
+                priority
+              />
+            ) : null}
+            <div className="absolute inset-0 bg-[linear-gradient(135deg,rgba(17,24,39,0.38),rgba(7,11,20,0.16)_45%,rgba(7,11,20,0.72))]" />
+            <div
+              className="absolute inset-0 opacity-[0.12]"
+              style={{
+                backgroundImage: 'radial-gradient(circle, rgba(255,255,255,0.6) 1px, transparent 1px)',
+                backgroundSize: '28px 28px',
+              }}
+            />
           </div>
-          <h1 className="text-2xl font-bold mb-1">{profile.username}</h1>
-          <p className="text-white/40 text-sm mb-4">{profile.region}</p>
 
-          <div className="inline-flex items-center gap-2 bg-white/[0.04] rounded-xl px-5 py-3 mb-6">
-            <span className="text-lg font-bold" style={{ color: tier === 'Legend' ? '#A855F7' : tier === 'Diamond' ? '#60A5FA' : tier === 'Platinum' ? '#00CED1' : tier === 'Gold' ? '#FFD700' : tier === 'Silver' ? '#C0C0C0' : '#CD7F32' }}>
-              {tier}
-            </span>
-            <span className="text-white/30">·</span>
-            <span className="text-white font-bold">{profile.bestRating} ELO</span>
-          </div>
+          <div className="px-5 pb-8 sm:px-8 sm:pb-10">
+            <div className="-mt-14 flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-end">
+                <div className="relative h-24 w-24 overflow-hidden rounded-[1.8rem] border-4 border-[#101728] bg-white/6 shadow-[0_24px_48px_rgba(0,0,0,0.35)] sm:h-28 sm:w-28">
+                  {avatarUrl ? (
+                    <Image
+                      src={avatarUrl}
+                      alt={`${profile.username} avatar`}
+                      fill
+                      sizes="112px"
+                      className="object-cover"
+                    />
+                  ) : (
+                    <div
+                      className="flex h-full w-full items-center justify-center text-3xl font-black"
+                      style={{ background: `${tierColor}24`, color: tierColor }}
+                    >
+                      {usernameInitial}
+                    </div>
+                  )}
+                </div>
 
-          <div className="flex justify-center gap-8 mb-8">
-            <div className="text-center">
-              <div className="text-xl font-bold text-emerald-400">{profile.totalWins}</div>
-              <div className="text-[11px] text-white/20 uppercase">Wins</div>
+                <div className="pb-1">
+                  <p className="text-xs font-semibold uppercase tracking-[0.28em] text-emerald-300/90">
+                    Mechi profile
+                  </p>
+                  <h1 className="mt-2 text-3xl font-black leading-none text-white sm:text-[3.25rem]">
+                    {profile.username}
+                  </h1>
+                  <p className="mt-3 text-sm leading-6 text-white/66">
+                    {profile.region || 'Region not set'} and ready to compete across {selectedGames.length}{' '}
+                    {selectedGames.length === 1 ? 'game' : 'games'} on Mechi.
+                  </p>
+                  <div className="mt-4 flex flex-wrap items-center gap-2">
+                    <span
+                      className="rounded-full px-3 py-1 text-xs font-bold"
+                      style={{ background: `${tierColor}24`, color: tierColor }}
+                    >
+                      {tier} / {profile.bestRating} ELO
+                    </span>
+                    <span className="rounded-full border border-white/[0.08] bg-white/[0.04] px-3 py-1 text-xs font-medium text-white/72">
+                      {platformCount} platform{platformCount === 1 ? '' : 's'} linked
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-3 gap-3 sm:min-w-[22rem]">
+                <div className="rounded-2xl border border-white/[0.07] bg-white/[0.04] px-4 py-4 text-center">
+                  <div className="text-2xl font-black text-emerald-300">{profile.totalWins}</div>
+                  <div className="mt-1 text-[11px] uppercase tracking-[0.2em] text-white/34">Wins</div>
+                </div>
+                <div className="rounded-2xl border border-white/[0.07] bg-white/[0.04] px-4 py-4 text-center">
+                  <div className="text-2xl font-black text-rose-300">{profile.totalLosses}</div>
+                  <div className="mt-1 text-[11px] uppercase tracking-[0.2em] text-white/34">Losses</div>
+                </div>
+                <div className="rounded-2xl border border-white/[0.07] bg-white/[0.04] px-4 py-4 text-center">
+                  <div className="text-2xl font-black text-sky-300">{winRate}%</div>
+                  <div className="mt-1 text-[11px] uppercase tracking-[0.2em] text-white/34">Win rate</div>
+                </div>
+              </div>
             </div>
-            <div className="text-center">
-              <div className="text-xl font-bold text-red-400">{profile.totalLosses}</div>
-              <div className="text-[11px] text-white/20 uppercase">Losses</div>
-            </div>
-            <div className="text-center">
-              <div className="text-xl font-bold text-blue-400">{winRate}%</div>
-              <div className="text-[11px] text-white/20 uppercase">Win Rate</div>
-            </div>
-          </div>
 
-          <div className="flex flex-col sm:flex-row gap-3 justify-center">
-            <Link href="/register" className="btn-primary">
-              Challenge Them — Join Free
-            </Link>
-            <Link href="/login" className="btn-ghost">
-              Sign In
-            </Link>
-          </div>
+            <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+              <Link href="/register" className="btn-primary">
+                Challenge Them - Join Free
+              </Link>
+              <Link href="/login" className="btn-ghost">
+                Sign In
+              </Link>
+            </div>
 
-          <p className="text-white/15 text-xs mt-8">
-            Kenya&apos;s gaming matchmaking platform
-          </p>
+            <p className="mt-5 text-sm text-white/45">
+              See their competitive setup, then join Mechi and run it back.
+            </p>
+          </div>
         </div>
       </div>
     </div>

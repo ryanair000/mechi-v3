@@ -1,6 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { calculateElo } from './elo';
 import { GAMES, getConfiguredPlatformForGame, getGameIdValue } from './config';
+import { incrementMatchUsage } from './subscription';
 import type { GameKey, PlatformKey } from '@/types';
 import { notifyMatchFound } from './whatsapp';
 import { sendMatchFoundEmail } from './email';
@@ -84,6 +85,11 @@ export async function runMatchmaking(supabase: SupabaseClient): Promise<number> 
         .from('queue')
         .update({ status: 'matched' })
         .in('id', [entry.id, opponent.id]);
+
+      await Promise.allSettled([
+        incrementMatchUsage(entry.user_id as string, supabase),
+        incrementMatchUsage(opponent.user_id as string, supabase),
+      ]);
 
       matched.add(entry.id);
       matched.add(opponent.id);

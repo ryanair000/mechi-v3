@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServiceClient } from '@/lib/supabase';
-import { hashPassword, signToken } from '@/lib/auth';
+import { hashPassword, profileToAuthUser, signToken } from '@/lib/auth';
 import { sendWelcomeEmail } from '@/lib/email';
 import { DEFAULT_RATING } from '@/lib/config';
 import { getPhoneLookupVariants, isValidPhoneNumber, normalizePhoneNumber } from '@/lib/phone';
+import { canSelectGames } from '@/lib/plans';
 import { checkRateLimit, getClientIp, rateLimitResponse } from '@/lib/rateLimit';
 
 export async function POST(request: NextRequest) {
@@ -26,14 +27,19 @@ export async function POST(request: NextRequest) {
       whatsapp_number,
       whatsapp_notifications,
     } = body;
+    const trimmedEmail = String(email ?? '').trim();
+    const trimmedRegion = String(region ?? '').trim();
     const normalizedPhone = normalizePhoneNumber(phone ?? '');
     const normalizedWhatsappNumber = normalizePhoneNumber(
       whatsapp_number || normalizedPhone
     );
 
     // Validation
-    if (!username || !phone || !password || !region) {
+    if (!username || !phone || !password || !trimmedEmail || !trimmedRegion) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail)) {
+      return NextResponse.json({ error: 'Enter a valid email address' }, { status: 400 });
     }
     if (password.length < 6) {
       return NextResponse.json({ error: 'Password must be at least 6 characters' }, { status: 400 });
@@ -43,6 +49,12 @@ export async function POST(request: NextRequest) {
     }
     if (!selected_games || selected_games.length === 0) {
       return NextResponse.json({ error: 'Select at least one game' }, { status: 400 });
+    }
+    if (!canSelectGames('free', selected_games.length)) {
+      return NextResponse.json(
+        { error: 'Free accounts start with 1 selected game. Upgrade later to unlock 3.' },
+        { status: 400 }
+      );
     }
     if (!isValidPhoneNumber(phone)) {
       return NextResponse.json({ error: 'Enter a valid phone number' }, { status: 400 });
@@ -83,9 +95,9 @@ export async function POST(request: NextRequest) {
       .insert({
         username,
         phone: normalizedPhone,
-        email: email || null,
+        email: trimmedEmail,
         password_hash,
-        region,
+        region: trimmedRegion,
         platforms,
         game_ids: game_ids ?? {},
         selected_games: selected_games ?? [],
@@ -124,33 +136,11 @@ export async function POST(request: NextRequest) {
     });
 
     // Send welcome email async
-    if (email) {
-      sendWelcomeEmail({ to: email, username }).catch(console.error);
-    }
+    sendWelcomeEmail({ to: trimmedEmail, username }).catch(console.error);
 
     const response = NextResponse.json({
       token,
-      user: {
-        id: profile.id,
-        username: profile.username,
-        phone: profile.phone,
-        email: profile.email,
-        avatar_url: profile.avatar_url ?? null,
-        cover_url: profile.cover_url ?? null,
-        whatsapp_number: profile.whatsapp_number ?? null,
-        whatsapp_notifications: profile.whatsapp_notifications ?? false,
-        role: profile.role ?? 'user',
-        is_banned: profile.is_banned ?? false,
-        region: profile.region,
-        platforms: profile.platforms,
-        game_ids: profile.game_ids,
-        selected_games: profile.selected_games,
-        xp: profile.xp ?? 0,
-        level: profile.level ?? 1,
-        mp: profile.mp ?? 0,
-        win_streak: profile.win_streak ?? 0,
-        max_win_streak: profile.max_win_streak ?? 0,
-      },
+      user: profileToAuthUser(profile as unknown as Record<string, unknown>),
     });
 
     response.cookies.set('auth_token', token, {

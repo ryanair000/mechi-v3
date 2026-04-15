@@ -19,9 +19,12 @@ export type GameKey =
 
 export type GameMode = '1v1' | 'lobby';
 export type UserRole = 'user' | 'moderator' | 'admin';
+export type Plan = 'free' | 'pro' | 'elite';
+export type BillingCycle = 'monthly' | 'annual';
 export type TournamentStatus = 'open' | 'full' | 'active' | 'completed' | 'cancelled';
 export type TournamentPaymentStatus = 'pending' | 'paid' | 'free' | 'failed' | 'refunded';
 export type TournamentMatchStatus = 'pending' | 'ready' | 'active' | 'completed' | 'bye';
+export type SubscriptionStatus = 'pending' | 'active' | 'cancelled' | 'expired' | 'failed';
 
 export interface Platform {
   label: string;
@@ -110,6 +113,31 @@ export interface Profile {
   win_streak?: number;
   max_win_streak?: number;
   last_match_date?: string | null;
+  plan?: Plan;
+  plan_since?: string | null;
+  plan_expires_at?: string | null;
+  created_at: string;
+}
+
+export interface Subscription {
+  id: string;
+  user_id: string;
+  plan: Exclude<Plan, 'free'>;
+  billing_cycle: BillingCycle;
+  amount_kes: number;
+  status: SubscriptionStatus;
+  paystack_ref?: string | null;
+  started_at?: string | null;
+  expires_at?: string | null;
+  cancelled_at?: string | null;
+  created_at: string;
+}
+
+export interface MatchUsage {
+  id: string;
+  user_id: string;
+  date: string;
+  match_count: number;
   created_at: string;
 }
 
@@ -262,6 +290,9 @@ export interface AuthUser {
   mp?: number;
   win_streak?: number;
   max_win_streak?: number;
+  plan?: Plan;
+  plan_since?: string | null;
+  plan_expires_at?: string | null;
 }
 
 export interface JWTPayload {

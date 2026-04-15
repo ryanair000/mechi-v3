@@ -7,9 +7,12 @@ import toast from 'react-hot-toast';
 import { AlertCircle, ChevronRight, Radar, Swords, Trophy } from 'lucide-react';
 import { useAuth, useAuthFetch } from '@/components/AuthProvider';
 import { GameCard } from '@/components/GameCard';
+import { PaywallModal } from '@/components/PaywallModal';
+import { PlanBadge } from '@/components/PlanBadge';
 import { RatingBadge } from '@/components/RatingBadge';
 import { GAMES, getConfiguredPlatformForGame } from '@/lib/config';
 import { getLevelFromXp, getRankDivision, getXpProgress } from '@/lib/gamification';
+import { getPlan } from '@/lib/plans';
 import type { GameKey, Match, PlatformKey } from '@/types';
 
 interface UserProfile {
@@ -32,6 +35,8 @@ export default function DashboardPage() {
   const [queueCounts, setQueueCounts] = useState<Record<string, number>>({});
   const [queuingGame, setQueuingGame] = useState<GameKey | null>(null);
   const [loading, setLoading] = useState(true);
+  const [showPaywall, setShowPaywall] = useState(false);
+  const [paywallReason, setPaywallReason] = useState<'match_limit' | 'game_limit' | 'feature'>('match_limit');
 
   useEffect(() => {
     let cancelled = false;
@@ -142,6 +147,12 @@ export default function DashboardPage() {
       });
       const data = await res.json();
       if (!res.ok) {
+        if (data.limit_reached) {
+          setPaywallReason('match_limit');
+          setShowPaywall(true);
+          setQueuingGame(null);
+          return;
+        }
         if (data.matchId) {
           router.push(`/match/${data.matchId}`);
         } else {
@@ -172,6 +183,7 @@ export default function DashboardPage() {
   const mp = (profile?.mp as number) ?? 0;
   const streak = (profile?.win_streak as number) ?? 0;
   const xpProgress = getXpProgress(xp, level);
+  const currentPlan = getPlan((profile?.plan as string | undefined) ?? user?.plan ?? 'free');
 
   if (loading) {
     return (
@@ -187,9 +199,17 @@ export default function DashboardPage() {
 
   return (
     <div className="page-container">
+      {showPaywall ? (
+        <PaywallModal reason={paywallReason} onClose={() => setShowPaywall(false)} />
+      ) : null}
+
       <div className="card circuit-panel mb-6 p-4 sm:p-5">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div className="max-w-xl">
+            <div className="mb-3 flex flex-wrap items-center gap-2">
+              <span className="brand-chip px-3 py-1">{currentPlan.name}</span>
+              <PlanBadge plan={currentPlan.id} size="md" />
+            </div>
             <h1 className="text-[2rem] font-black tracking-[-0.05em] text-[var(--text-primary)] sm:text-[2.5rem]">
               Command your climb, {user?.username ?? 'Player'}.
             </h1>

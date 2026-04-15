@@ -2,14 +2,12 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
 import { Eye, EyeOff, Loader2 } from 'lucide-react';
 import { useAuth } from '@/components/AuthProvider';
 import { FullScreenSignup } from '@/components/ui/full-screen-signup';
 
 export default function LoginPage() {
-  const router = useRouter();
   const { login } = useAuth();
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
@@ -37,7 +35,8 @@ export default function LoginPage() {
       }
       login(data.token, data.user);
       toast.success(`Welcome back, ${data.user.username}!`);
-      router.push('/dashboard');
+      // Use a hard navigation so auth cookie guards see the latest cookie immediately.
+      window.location.assign('/dashboard');
     } catch {
       toast.error('Network error.');
     } finally {

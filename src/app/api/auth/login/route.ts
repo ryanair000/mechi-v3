@@ -3,7 +3,7 @@ import { createServiceClient } from '@/lib/supabase';
 import { verifyPassword, signToken, profileToAuthUser } from '@/lib/auth';
 import { getPhoneLookupVariants, normalizePhoneNumber } from '@/lib/phone';
 import { checkRateLimit, getClientIp, rateLimitResponse } from '@/lib/rateLimit';
-import type { UserRole } from '@/types';
+import type { Plan, UserRole } from '@/types';
 
 interface AuthenticatedProfile {
   id: string;
@@ -27,6 +27,9 @@ interface AuthenticatedProfile {
   mp?: number | null;
   win_streak?: number | null;
   max_win_streak?: number | null;
+  plan?: Plan | null;
+  plan_since?: string | null;
+  plan_expires_at?: string | null;
 }
 
 type AuthFailure = {

@@ -322,3 +322,45 @@ export async function sendTournamentWinnerEmail(params: {
     console.error('[Email] Tournament winner send error:', err);
   }
 }
+
+export async function sendSubscriptionConfirmEmail(params: {
+  to: string;
+  username: string;
+  plan: 'pro' | 'elite';
+  expiresAt: string;
+}): Promise<void> {
+  const planName = params.plan === 'elite' ? 'Elite' : 'Pro';
+  const expiry = new Date(params.expiresAt).toLocaleDateString('en-KE', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  });
+
+  const content = `
+    <h2>${planName} activated</h2>
+    <p>Hey ${params.username}, your ${planName} plan is live on Mechi.</p>
+    <div class="info-box">
+      <div class="info-row">
+        <span class="info-label">Plan</span>
+        <span class="info-value">${planName}</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">Renews</span>
+        <span class="info-value">${expiry}</span>
+      </div>
+    </div>
+    <p>Your upgraded perks are ready now. Jump back in and keep climbing.</p>
+    <a href="${APP_URL}/dashboard" class="btn">Open Dashboard</a>
+  `;
+
+  try {
+    await resend.emails.send({
+      from: FROM,
+      to: params.to,
+      subject: `${planName} activated on Mechi`,
+      html: baseLayout(`${planName} activated on Mechi`, content),
+    });
+  } catch (err) {
+    console.error('[Email] Subscription confirm send error:', err);
+  }
+}

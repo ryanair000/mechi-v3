@@ -2,7 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getAuthUser } from '@/lib/auth';
 import { createServiceClient } from '@/lib/supabase';
 import { GAMES, getConfiguredPlatformForGame, isValidGamePlatform } from '@/lib/config';
+import { canStartMatch } from '@/lib/plans';
 import { runMatchmaking } from '@/lib/matchmaking';
+import { getTodayMatchCount, maybeExpireProfilePlan } from '@/lib/subscription';
 import type { GameKey, PlatformKey } from '@/types';
 
 export async function POST(request: NextRequest) {
@@ -24,7 +26,7 @@ export async function POST(request: NextRequest) {
     // Get user profile for region and rating
     const { data: profileRaw, error: profileError } = await supabase
       .from('profiles')
-      .select('id, region, platforms, game_ids, rating_efootball, rating_fc26, rating_mk11, rating_nba2k26, rating_tekken8, rating_sf6')
+      .select('*')
       .eq('id', authUser.sub)
       .single();
 
@@ -33,6 +35,29 @@ export async function POST(request: NextRequest) {
     }
 
     const profile = profileRaw as Record<string, unknown>;
+    const plan = await maybeExpireProfilePlan(
+      {
+        id: profile.id as string,
+        plan: profile.plan as string | null | undefined,
+        plan_expires_at: profile.plan_expires_at as string | null | undefined,
+      },
+      supabase
+    );
+    const usedToday = await getTodayMatchCount(authUser.sub, supabase);
+
+    if (!canStartMatch(plan, usedToday)) {
+      return NextResponse.json(
+        {
+          error: 'Daily match limit reached',
+          limit_reached: true,
+          plan,
+          used: usedToday,
+          upgrade_url: '/pricing',
+        },
+        { status: 429 }
+      );
+    }
+
     const ratingKey = `rating_${game}`;
     const rating = (profile[ratingKey] as number) ?? 1000;
     const profilePlatforms = ((profile.platforms as PlatformKey[]) ?? []);

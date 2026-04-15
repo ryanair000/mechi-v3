@@ -48,7 +48,9 @@ export function FullScreenSignup({
                 <h1 className="mt-8 max-w-md text-[2rem] font-black leading-tight tracking-[-0.02em]">
                   {sideTitle}
                 </h1>
-                <p className="mt-3 max-w-md text-sm leading-6 text-white/72">{sideDescription}</p>
+                {sideDescription ? (
+                  <p className="mt-3 max-w-md text-sm leading-6 text-white/72">{sideDescription}</p>
+                ) : null}
               </div>
 
               {sidePoints.length ? (
@@ -72,12 +74,25 @@ export function FullScreenSignup({
               )}
             >
               <div className="mx-auto w-full max-w-xl">
-                <div className="mb-6">
-                  <h2 className="text-[2rem] font-black leading-tight tracking-[-0.02em] text-[var(--text-primary)]">
-                    {title}
-                  </h2>
-                  <p className="mt-1 text-sm text-[var(--text-secondary)]">{subtitle}</p>
-                </div>
+                {title || subtitle ? (
+                  <div className="mb-6">
+                    {title ? (
+                      <h2 className="text-[2rem] font-black leading-tight tracking-[-0.02em] text-[var(--text-primary)]">
+                        {title}
+                      </h2>
+                    ) : null}
+                    {subtitle ? (
+                      <p
+                        className={cn(
+                          'text-sm text-[var(--text-secondary)]',
+                          title ? 'mt-1' : ''
+                        )}
+                      >
+                        {subtitle}
+                      </p>
+                    ) : null}
+                  </div>
+                ) : null}
                 {children}
               </div>
             </section>

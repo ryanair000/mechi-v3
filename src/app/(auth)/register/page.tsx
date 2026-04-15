@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
 import {
   Check,
@@ -45,7 +44,6 @@ interface FormData {
 }
 
 export default function RegisterPage() {
-  const router = useRouter();
   const { login } = useAuth();
   const [step, setStep] = useState<Step>(1);
   const [loading, setLoading] = useState(false);
@@ -63,10 +61,13 @@ export default function RegisterPage() {
     game_ids: {},
     selected_games: [],
   });
+  const emailIsValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email.trim());
 
   const step1Valid =
     formData.username.trim().length >= 3 &&
     formData.phone.trim().length >= 9 &&
+    emailIsValid &&
+    formData.region.trim().length > 0 &&
     formData.password.length >= 6;
   const setupPlatforms = getPlatformsForGameSetup(
     formData.selected_games,
@@ -184,7 +185,8 @@ export default function RegisterPage() {
       }
       login(data.token, data.user);
       toast.success(`Welcome to Mechi, ${data.user.username}!`);
-      router.push('/dashboard');
+      // Use a hard navigation so auth cookie guards see the latest cookie immediately.
+      window.location.assign('/dashboard');
     } catch {
       toast.error('Network error.');
     } finally {
@@ -196,16 +198,10 @@ export default function RegisterPage() {
 
   return (
     <FullScreenSignup
-      title={step === 1 ? 'Create your account' : step === 2 ? 'Select your games' : 'Set platform IDs'}
-      subtitle={
-        step === 1
-          ? 'Start with the essentials and we will build the rest with you.'
-          : step === 2
-            ? 'Choose up to three competitive titles for your profile.'
-            : 'Pick where each game runs and add the IDs players need.'
-      }
-      sideTitle="Set up once. Lock in fast."
-      sideDescription="Pick your setup, choose your games, and get a profile that keeps up with your grind."
+      title=""
+      subtitle=""
+      sideTitle="Create your account"
+      sideDescription=""
       sidePoints={[
         'Lock in up to three main games',
         'Add only the IDs those games need',
@@ -244,14 +240,7 @@ export default function RegisterPage() {
             {step === 1 && (
               <div>
                 <p className="section-title">Step 1</p>
-                <h1 className="mb-1 mt-3 text-[1.9rem] font-black text-[var(--text-primary)]">
-                  Create your account
-                </h1>
-                <p className="mb-5 text-sm leading-6 text-[var(--text-secondary)]">
-                  Start with the essentials and we will build the rest with you.
-                </p>
-
-                <div className="space-y-4">
+                <div className="mt-4 space-y-4">
                   <div>
                     <label className="label">Username</label>
                     <input
@@ -336,30 +325,33 @@ export default function RegisterPage() {
                     )}
                   </div>
                   <div>
-                    <label className="label">
-                      Email <span className="font-normal text-[var(--text-soft)]">(optional)</span>
-                    </label>
+                    <label className="label">Email</label>
                     <input
                       type="email"
                       value={formData.email}
                       onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                       placeholder="you@example.com"
                       className="input"
+                      required
                     />
                   </div>
                   <div>
                     <label className="label">Region</label>
-                    <select
+                    <input
+                      type="text"
+                      list="register-region-options"
                       value={formData.region}
                       onChange={(e) => setFormData({ ...formData, region: e.target.value })}
                       className="input"
-                    >
+                      placeholder="Type your region"
+                    />
+                    <datalist id="register-region-options">
                       {REGIONS.map((region) => (
                         <option key={region} value={region}>
                           {region}
                         </option>
                       ))}
-                    </select>
+                    </datalist>
                   </div>
                   <div>
                     <label className="label">Password</label>

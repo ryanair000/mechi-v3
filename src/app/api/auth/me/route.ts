@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuthUser, profileToAuthUser } from '@/lib/auth';
 import { createServiceClient } from '@/lib/supabase';
+import { maybeExpireProfilePlan } from '@/lib/subscription';
 
 export async function GET(request: NextRequest) {
   const authUser = getAuthUser(request);
@@ -26,5 +27,24 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  return NextResponse.json({ user: profileToAuthUser(profile) });
+  const resolvedPlan = await maybeExpireProfilePlan(
+    {
+      id: profile.id as string,
+      plan: profile.plan as string | null | undefined,
+      plan_expires_at: profile.plan_expires_at as string | null | undefined,
+    },
+    supabase
+  );
+
+  const safeProfile =
+    resolvedPlan === profile.plan
+      ? profile
+      : {
+          ...profile,
+          plan: resolvedPlan,
+          plan_since: null,
+          plan_expires_at: null,
+        };
+
+  return NextResponse.json({ user: profileToAuthUser(safeProfile) });
 }

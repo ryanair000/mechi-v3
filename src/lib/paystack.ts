@@ -19,6 +19,10 @@ type VerifyData = {
   reference: string;
   amount: number;
   currency: string;
+  customer: {
+    email: string;
+  };
+  metadata?: Record<string, unknown>;
 };
 
 type RecipientData = {
@@ -46,12 +50,12 @@ export function toPaystackAmount(amountKes: number): number {
   return Math.max(0, Math.round(amountKes * 100));
 }
 
-export async function initializeTournamentPayment(params: {
+export async function initializePaystackTransaction(params: {
   amountKes: number;
   email: string;
   reference: string;
   callbackUrl: string;
-  metadata: Record<string, string | number | boolean | null>;
+  metadata?: Record<string, string | number | boolean | null>;
 }): Promise<{
   success: boolean;
   authorizationUrl?: string;
@@ -60,7 +64,12 @@ export async function initializeTournamentPayment(params: {
   error?: string;
 }> {
   if (!isPaystackConfigured()) {
-    return { success: true, reference: params.reference };
+    return {
+      success: true,
+      authorizationUrl: `${params.callbackUrl}?reference=${encodeURIComponent(params.reference)}`,
+      accessCode: 'dev',
+      reference: params.reference,
+    };
   }
 
   const response = await paystackRequest<InitializeData>('/transaction/initialize', {
@@ -71,7 +80,7 @@ export async function initializeTournamentPayment(params: {
       reference: params.reference,
       currency: DEFAULT_CURRENCY,
       callback_url: params.callbackUrl,
-      metadata: params.metadata,
+      metadata: params.metadata ?? {},
     }),
   });
 
@@ -91,12 +100,18 @@ export async function initializeTournamentPayment(params: {
   };
 }
 
-export async function verifyTournamentPayment(params: {
+export async function verifyPaystackTransaction(params: {
   reference: string;
-  expectedAmountKes: number;
-}): Promise<{ success: boolean; error?: string }> {
+  expectedAmountKes?: number;
+}): Promise<{
+  success: boolean;
+  amountKes?: number;
+  email?: string;
+  metadata?: Record<string, unknown>;
+  error?: string;
+}> {
   if (!isPaystackConfigured()) {
-    return { success: true };
+    return { success: true, amountKes: params.expectedAmountKes ?? 0, email: '', metadata: {} };
   }
 
   const response = await paystackRequest<VerifyData>(
@@ -108,12 +123,44 @@ export async function verifyTournamentPayment(params: {
     return { success: false, error: response.message || 'Payment could not be verified' };
   }
 
-  const paidEnough = response.data.amount >= toPaystackAmount(params.expectedAmountKes);
+  const paidEnough =
+    params.expectedAmountKes === undefined ||
+    response.data.amount >= toPaystackAmount(params.expectedAmountKes);
+
   if (response.data.status !== 'success' || !paidEnough) {
     return { success: false, error: 'Payment is not complete yet' };
   }
 
-  return { success: true };
+  return {
+    success: true,
+    amountKes: response.data.amount / 100,
+    email: response.data.customer.email,
+    metadata: response.data.metadata ?? {},
+  };
+}
+
+export async function initializeTournamentPayment(params: {
+  amountKes: number;
+  email: string;
+  reference: string;
+  callbackUrl: string;
+  metadata: Record<string, string | number | boolean | null>;
+}): Promise<{
+  success: boolean;
+  authorizationUrl?: string;
+  accessCode?: string;
+  reference: string;
+  error?: string;
+}> {
+  return initializePaystackTransaction(params);
+}
+
+export async function verifyTournamentPayment(params: {
+  reference: string;
+  expectedAmountKes: number;
+}): Promise<{ success: boolean; error?: string }> {
+  const verified = await verifyPaystackTransaction(params);
+  return verified.success ? { success: true } : { success: false, error: verified.error };
 }
 
 export async function createMobileMoneyRecipient(params: {

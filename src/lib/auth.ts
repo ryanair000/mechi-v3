@@ -78,6 +78,9 @@ export function profileToAuthUser(profile: Record<string, unknown>): AuthUser {
     mp: (profile.mp as number | undefined) ?? 0,
     win_streak: (profile.win_streak as number | undefined) ?? 0,
     max_win_streak: (profile.max_win_streak as number | undefined) ?? 0,
+    plan: (profile.plan as import('@/types').Plan | undefined) ?? 'free',
+    plan_since: (profile.plan_since as string | null | undefined) ?? null,
+    plan_expires_at: (profile.plan_expires_at as string | null | undefined) ?? null,
   };
 }
 

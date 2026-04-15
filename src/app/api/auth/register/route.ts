@@ -84,8 +84,6 @@ export async function POST(request: NextRequest) {
         username,
         phone: normalizedPhone,
         email: email || null,
-        whatsapp_number: normalizedWhatsappNumber || null,
-        whatsapp_notifications: whatsapp_notifications ?? false,
         password_hash,
         region,
         platforms,

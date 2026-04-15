@@ -18,7 +18,7 @@ export async function runMatchmaking(supabase: SupabaseClient): Promise<number> 
   // Get all waiting queue entries ordered by join time
   const { data: queueEntries, error } = await supabase
     .from('queue')
-    .select('*, profiles:user_id(id, username, phone, email, whatsapp_number, whatsapp_notifications, platforms, game_ids, selected_games)')
+    .select('*, profiles:user_id(id, username, phone, email, platforms, game_ids, selected_games)')
     .eq('status', 'waiting')
     .order('joined_at', { ascending: true });
 

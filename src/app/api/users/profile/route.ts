@@ -45,8 +45,6 @@ export async function PATCH(request: NextRequest) {
       game_ids,
       selected_games,
       region,
-      whatsapp_number,
-      whatsapp_notifications,
       avatar_url,
       cover_url,
     } = body;
@@ -56,10 +54,6 @@ export async function PATCH(request: NextRequest) {
     if (game_ids !== undefined) updateData.game_ids = game_ids;
     if (selected_games !== undefined) updateData.selected_games = selected_games;
     if (region !== undefined) updateData.region = region;
-    if (whatsapp_number !== undefined) updateData.whatsapp_number = whatsapp_number;
-    if (whatsapp_notifications !== undefined) {
-      updateData.whatsapp_notifications = whatsapp_notifications;
-    }
     if (avatar_url !== undefined) updateData.avatar_url = avatar_url;
     if (cover_url !== undefined) updateData.cover_url = cover_url;
 

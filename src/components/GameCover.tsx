@@ -13,11 +13,23 @@ interface GameCoverProps {
   priority?: boolean;
 }
 
-function getFallbackLabel(gameKey: GameKey) {
-  const words = GAMES[gameKey].label.split(' ');
-  if (words.length === 1) return words[0].slice(0, 3).toUpperCase();
-  return `${words[0][0] ?? ''}${words[1][0] ?? ''}`.toUpperCase();
-}
+const GAME_EMOJI: Record<GameKey, string> = {
+  efootball: '⚽',
+  efootball_mobile: '⚽',
+  fc26: '🏆',
+  mk11: '🥊',
+  nba2k26: '🏀',
+  tekken8: '👊',
+  sf6: '🥋',
+  codm: '🔫',
+  pubgm: '🎯',
+  cs2: '💥',
+  valorant: '🎯',
+  mariokart: '🏎️',
+  smashbros: '⚡',
+  freefire: '🔥',
+  rocketleague: '🚀',
+};
 
 export function GameCover({
   gameKey,
@@ -32,6 +44,7 @@ export function GameCover({
     !imgError
       ? (variant === 'capsule' ? getGameCapsuleImage(gameKey) : getGameImage(gameKey))
       : null;
+  const isRemoteImage = Boolean(imageUrl?.startsWith('http'));
 
   return (
     <div className={`relative overflow-hidden bg-[var(--surface-strong)] ${className}`}>
@@ -44,10 +57,17 @@ export function GameCover({
           className="h-full w-full object-cover"
           onError={() => setImgError(true)}
           priority={priority}
+          unoptimized={isRemoteImage}
         />
       ) : (
         <div className="absolute inset-0 flex items-center justify-center bg-[linear-gradient(140deg,rgba(50,224,196,0.2),rgba(255,107,107,0.14))]">
-          <span className="text-xl font-black tracking-[0.08em] text-white/80">{getFallbackLabel(gameKey)}</span>
+          <span
+            aria-hidden="true"
+            className={variant === 'capsule' ? 'text-5xl' : 'text-4xl'}
+          >
+            {GAME_EMOJI[gameKey]}
+          </span>
+          <span className="sr-only">{game.label}</span>
         </div>
       )}
 

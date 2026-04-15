@@ -130,12 +130,21 @@ function unauthorizedResponse(pathname: string, request: NextRequest) {
 
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
+  const payload = getPayload(request);
+
+  if ((pathname === '/login' || pathname === '/register') && payload) {
+    const access = await getCurrentAccess(payload);
+    if (access?.is_banned) {
+      return NextResponse.redirect(new URL('/banned', request.url));
+    }
+    if (access) {
+      return NextResponse.redirect(new URL('/dashboard', request.url));
+    }
+  }
 
   if (isPublic(pathname) && !isAdminRoute(pathname)) {
     return NextResponse.next();
   }
-
-  const payload = getPayload(request);
 
   if (isAdminRoute(pathname)) {
     if (!payload) return unauthorizedResponse(pathname, request);

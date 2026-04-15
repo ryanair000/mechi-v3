@@ -24,7 +24,7 @@ export async function POST(request: NextRequest) {
     // Get user profile for region and rating
     const { data: profileRaw, error: profileError } = await supabase
       .from('profiles')
-      .select('id, region, platforms, game_ids, rating_efootball, rating_efootball_mobile, rating_fc26, rating_mk11, rating_nba2k26, rating_tekken8, rating_sf6')
+      .select('id, region, platforms, game_ids, rating_efootball, rating_fc26, rating_mk11, rating_nba2k26, rating_tekken8, rating_sf6')
       .eq('id', authUser.sub)
       .single();
 

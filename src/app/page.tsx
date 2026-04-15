@@ -64,6 +64,7 @@ const TRUST_PILLARS = [
 const PLATFORM_CHIPS: Array<{ platform: PlatformKey; label: string }> = [
   { platform: 'ps', label: 'PlayStation' },
   { platform: 'xbox', label: 'Xbox' },
+  { platform: 'nintendo', label: 'Nintendo' },
   { platform: 'pc', label: 'PC' },
   { platform: 'mobile', label: 'Mobile' },
 ];
@@ -114,7 +115,7 @@ export default function LandingPage() {
             </p>
 
             <div className="mt-6 flex flex-col gap-3 sm:flex-row">
-              <Link href="/register" className="btn-primary">
+              <Link href="/register" className="btn-primary shadow-none">
                 Start competing
                 <ArrowRight size={16} />
               </Link>
@@ -470,7 +471,7 @@ export default function LandingPage() {
             </div>
 
             <div className="mt-5 flex flex-col gap-3 lg:mt-0 lg:items-end">
-              <Link href="/register" className="btn-primary">
+              <Link href="/register" className="btn-primary shadow-none">
                 Start free
                 <ArrowRight size={16} />
               </Link>

@@ -3,6 +3,7 @@ import { createServiceClient } from '@/lib/supabase';
 import { hashPassword, profileToAuthUser, signToken } from '@/lib/auth';
 import { sendWelcomeEmail } from '@/lib/email';
 import { DEFAULT_RATING } from '@/lib/config';
+import { findInviterByCode, generateUniqueInviteCode, normalizeInviteCode } from '@/lib/invite';
 import { getPhoneLookupVariants, isValidPhoneNumber, normalizePhoneNumber } from '@/lib/phone';
 import { canSelectGames } from '@/lib/plans';
 import { checkRateLimit, getClientIp, rateLimitResponse } from '@/lib/rateLimit';
@@ -26,13 +27,16 @@ export async function POST(request: NextRequest) {
       selected_games,
       whatsapp_number,
       whatsapp_notifications,
+      invite_code,
     } = body;
     const trimmedEmail = String(email ?? '').trim();
     const trimmedRegion = String(region ?? '').trim();
+    const normalizedInviteCode = normalizeInviteCode(invite_code);
     const normalizedPhone = normalizePhoneNumber(phone ?? '');
     const normalizedWhatsappNumber = normalizePhoneNumber(
       whatsapp_number || normalizedPhone
     );
+    const resolvedWhatsappNumber = whatsapp_notifications ? normalizedWhatsappNumber : null;
 
     // Validation
     if (!username || !phone || !password || !trimmedEmail || !trimmedRegion) {
@@ -64,7 +68,7 @@ export async function POST(request: NextRequest) {
     }
 
     const supabase = createServiceClient();
-    const phoneVariants = getPhoneLookupVariants(phone);
+    const phoneVariants = getPhoneLookupVariants(normalizedPhone);
 
     // Check username uniqueness
     const { data: existingUser } = await supabase
@@ -88,6 +92,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Phone number already registered' }, { status: 409 });
     }
 
+    const ownInviteCode = await generateUniqueInviteCode(supabase, username);
+    const inviter = normalizedInviteCode
+      ? await findInviterByCode(supabase, normalizedInviteCode)
+      : null;
+
     const password_hash = await hashPassword(password);
 
     const { data: profile, error: insertError } = await supabase
@@ -96,11 +105,15 @@ export async function POST(request: NextRequest) {
         username,
         phone: normalizedPhone,
         email: trimmedEmail,
+        invite_code: ownInviteCode,
+        invited_by: inviter?.id ?? null,
         password_hash,
         region: trimmedRegion,
         platforms,
         game_ids: game_ids ?? {},
         selected_games: selected_games ?? [],
+        whatsapp_number: resolvedWhatsappNumber,
+        whatsapp_notifications: Boolean(whatsapp_notifications),
         rating_efootball: DEFAULT_RATING,
         rating_fc26: DEFAULT_RATING,
         rating_mk11: DEFAULT_RATING,

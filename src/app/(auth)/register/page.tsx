@@ -30,7 +30,7 @@ import {
 import { normalizePhoneNumber } from '@/lib/phone';
 import type { GameKey, PlatformKey } from '@/types';
 
-type Step = 1 | 2 | 3;
+type Step = 1 | 2 | 3 | 4;
 const FREE_GAME_LIMIT = 1;
 
 interface FormData {
@@ -47,7 +47,7 @@ interface FormData {
 }
 
 export default function RegisterPage() {
-  const { login } = useAuth();
+  const { user, login } = useAuth();
   const [step, setStep] = useState<Step>(1);
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -68,7 +68,8 @@ export default function RegisterPage() {
 
   const step1Valid =
     formData.username.trim().length >= 3 &&
-    formData.phone.trim().length >= 9 &&
+    formData.phone.trim().length >= 9;
+  const step2Valid =
     emailIsValid &&
     formData.region.trim().length > 0 &&
     formData.password.length >= 6;
@@ -94,8 +95,8 @@ export default function RegisterPage() {
   const hasMissingGamePlatform = formData.selected_games.some(
     (game) => !getConfiguredPlatformForGame(game, formData.game_ids, setupPlatforms)
   );
-  const step2Valid = formData.selected_games.length > 0;
-  const step3Valid = step2Valid && !hasMissingGamePlatform;
+  const step3Valid = formData.selected_games.length > 0;
+  const step4Valid = step3Valid && !hasMissingGamePlatform;
 
   const toggleGame = (game: GameKey) => {
     setFormData((prev) => {
@@ -197,7 +198,7 @@ export default function RegisterPage() {
     }
   };
 
-  const STEP_LABELS = ['Account', 'Games', 'Platforms'];
+  const STEP_LABELS = ['Basics', 'Details', 'Games', 'Platforms'];
 
   return (
     <FullScreenSignup
@@ -212,8 +213,8 @@ export default function RegisterPage() {
       ]}
     >
       <div className="card p-5 sm:p-6">
-            <div className="mb-6 grid grid-cols-3 gap-2">
-              {([1, 2, 3] as Step[]).map((currentStep) => (
+            <div className="mb-6 grid grid-cols-4 gap-2">
+              {([1, 2, 3, 4] as Step[]).map((currentStep) => (
                 <div
                   key={currentStep}
                   className="rounded-xl border border-[var(--border-color)] bg-[var(--surface-soft)] px-3 py-2.5"
@@ -273,6 +274,71 @@ export default function RegisterPage() {
                       }
                     />
                   </div>
+                  <button
+                    type="button"
+                    onClick={() => step1Valid && setStep(2)}
+                    disabled={!step1Valid}
+                    className="btn-primary mt-2 w-full"
+                  >
+                    Next <ChevronRight size={14} />
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {step === 2 && (
+              <div>
+                <p className="section-title">Step 2</p>
+                <div className="mt-4 space-y-4">
+                  <div>
+                    <label className="label">Region</label>
+                    <input
+                      type="text"
+                      list="register-region-options"
+                      value={formData.region}
+                      onChange={(e) => setFormData({ ...formData, region: e.target.value })}
+                      className="input"
+                      placeholder="Type your region"
+                    />
+                    <datalist id="register-region-options">
+                      {REGIONS.map((region) => (
+                        <option key={region} value={region}>
+                          {region}
+                        </option>
+                      ))}
+                    </datalist>
+                  </div>
+                  <div>
+                    <label className="label">Email</label>
+                    <input
+                      type="email"
+                      value={formData.email}
+                      onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                      placeholder="you@example.com"
+                      className="input"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="label">Password</label>
+                    <div className="relative">
+                      <input
+                        type={showPassword ? 'text' : 'password'}
+                        value={formData.password}
+                        onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                        placeholder="Min 6 characters"
+                        className="input pr-12"
+                        minLength={6}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 text-[var(--text-soft)] transition-colors hover:text-[var(--text-primary)]"
+                      >
+                        {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                      </button>
+                    </div>
+                  </div>
                   <div className="rounded-xl border border-[var(--border-color)] bg-[var(--surface-elevated)] p-4">
                     <label className="flex cursor-pointer items-start gap-3">
                       <div className="relative mt-0.5 flex-shrink-0">
@@ -321,66 +387,19 @@ export default function RegisterPage() {
                           className="input"
                           inputMode="tel"
                         />
-                        <p className="mt-1.5 text-xs text-[var(--text-soft)]">
-                          Leave this as your main phone if you use the same number on WhatsApp.
-                        </p>
                       </div>
                     )}
                   </div>
-                  <div>
-                    <label className="label">Email</label>
-                    <input
-                      type="email"
-                      value={formData.email}
-                      onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                      placeholder="you@example.com"
-                      className="input"
-                      required
-                    />
-                  </div>
-                  <div>
-                    <label className="label">Region</label>
-                    <input
-                      type="text"
-                      list="register-region-options"
-                      value={formData.region}
-                      onChange={(e) => setFormData({ ...formData, region: e.target.value })}
-                      className="input"
-                      placeholder="Type your region"
-                    />
-                    <datalist id="register-region-options">
-                      {REGIONS.map((region) => (
-                        <option key={region} value={region}>
-                          {region}
-                        </option>
-                      ))}
-                    </datalist>
-                  </div>
-                  <div>
-                    <label className="label">Password</label>
-                    <div className="relative">
-                      <input
-                        type={showPassword ? 'text' : 'password'}
-                        value={formData.password}
-                        onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                        placeholder="Min 6 characters"
-                        className="input pr-12"
-                        minLength={6}
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowPassword(!showPassword)}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 text-[var(--text-soft)] transition-colors hover:text-[var(--text-primary)]"
-                      >
-                        {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-                      </button>
-                    </div>
-                  </div>
+                </div>
+                <div className="flex gap-3">
+                  <button type="button" onClick={() => setStep(1)} className="btn-ghost flex-1">
+                    <ChevronLeft size={14} /> Back
+                  </button>
                   <button
                     type="button"
-                    onClick={() => step1Valid && setStep(2)}
-                    disabled={!step1Valid}
-                    className="btn-primary mt-2 w-full"
+                    onClick={() => step2Valid && setStep(3)}
+                    disabled={!step2Valid}
+                    className="btn-primary flex-1"
                   >
                     Next <ChevronRight size={14} />
                   </button>
@@ -388,16 +407,16 @@ export default function RegisterPage() {
               </div>
             )}
 
-            {step === 2 && (
+            {step === 3 && (
               <div>
-                <p className="section-title">Step 2</p>
+                <p className="section-title">Step 3</p>
                 <h1 className="mb-1 mt-3 text-[1.9rem] font-black text-[var(--text-primary)]">
                   Select your games
                 </h1>
                 <p className="mb-5 text-sm leading-6 text-[var(--text-secondary)]">
                   Pick the games you want Mechi to organize for you.
                 </p>
-                <div className="mb-5 grid max-h-80 grid-cols-1 gap-2 overflow-y-auto sm:grid-cols-2">
+                <div className="mb-5 grid max-h-72 grid-cols-1 gap-2 overflow-y-auto sm:grid-cols-2">
                   {selectableGames.map((gameKey) => {
                     const game = GAMES[gameKey];
                     const isSelected = formData.selected_games.includes(gameKey);
@@ -441,13 +460,13 @@ export default function RegisterPage() {
                   {formData.selected_games.length}/{FREE_GAME_LIMIT} selected on Free
                 </p>
                 <div className="flex gap-3">
-                  <button type="button" onClick={() => setStep(1)} className="btn-ghost flex-1">
+                  <button type="button" onClick={() => setStep(2)} className="btn-ghost flex-1">
                     <ChevronLeft size={14} /> Back
                   </button>
                   <button
                     type="button"
-                    onClick={() => step2Valid && setStep(3)}
-                    disabled={!step2Valid}
+                    onClick={() => step3Valid && setStep(4)}
+                    disabled={!step3Valid}
                     className="btn-primary flex-1"
                   >
                     Next <ChevronRight size={14} />
@@ -456,9 +475,9 @@ export default function RegisterPage() {
               </div>
             )}
 
-            {step === 3 && (
+            {step === 4 && (
               <div>
-                <p className="section-title">Step 3</p>
+                <p className="section-title">Step 4</p>
                 <h1 className="mb-1 mt-3 text-[1.9rem] font-black text-[var(--text-primary)]">
                   Set platform IDs
                 </h1>
@@ -540,12 +559,12 @@ export default function RegisterPage() {
                   )}
                 </div>
                 <div className="flex gap-3">
-                  <button type="button" onClick={() => setStep(2)} className="btn-ghost flex-1">
+                  <button type="button" onClick={() => setStep(3)} className="btn-ghost flex-1">
                     <ChevronLeft size={14} /> Back
                   </button>
                   <button
                     onClick={handleSubmit}
-                    disabled={loading || !step3Valid}
+                    disabled={loading || !step4Valid}
                     className="btn-primary flex-1"
                   >
                     {loading ? (
@@ -564,7 +583,7 @@ export default function RegisterPage() {
             <p className="mt-6 text-center text-sm text-[var(--text-soft)]">
               Already have an account?{' '}
               <Link
-                href="/login"
+                href={user ? '/dashboard' : '/login'}
                 className="brand-link-coral font-semibold"
               >
                 Sign in

@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { Menu, X } from 'lucide-react';
+import { useAuth } from '@/components/AuthProvider';
 import { BrandLogo } from '@/components/BrandLogo';
 
 const NAV_ITEMS = [
@@ -19,6 +20,7 @@ const SIGN_IN_BUTTON_CLASS =
 
 export function HomeFloatingHeader() {
   const [isOpen, setIsOpen] = useState(false);
+  const { user } = useAuth();
 
   return (
     <header className="sticky top-4 z-50">
@@ -52,15 +54,14 @@ export function HomeFloatingHeader() {
 
             <div className="flex items-center gap-2">
               <div className="hidden items-center gap-2 sm:flex">
-                <Link
-                  href="/login"
-                  className={SIGN_IN_BUTTON_CLASS}
-                >
-                  SIGN IN
+                <Link href={user ? '/dashboard' : '/login'} className={SIGN_IN_BUTTON_CLASS}>
+                  {user ? 'DASHBOARD' : 'SIGN IN'}
                 </Link>
-                <Link href="/register" className="btn-primary text-sm uppercase tracking-[0.14em]">
-                  JOIN FREE
-                </Link>
+                {!user ? (
+                  <Link href="/register" className="btn-primary text-sm uppercase tracking-[0.14em]">
+                    JOIN FREE
+                  </Link>
+                ) : null}
               </div>
               <button
                 type="button"
@@ -89,19 +90,21 @@ export function HomeFloatingHeader() {
               ))}
               <div className="mt-1 flex items-center gap-2 px-1 pb-1 pt-2">
                 <Link
-                  href="/login"
+                  href={user ? '/dashboard' : '/login'}
                   onClick={() => setIsOpen(false)}
                   className={SIGN_IN_BUTTON_CLASS}
                 >
-                  SIGN IN
+                  {user ? 'DASHBOARD' : 'SIGN IN'}
                 </Link>
-                <Link
-                  href="/register"
-                  onClick={() => setIsOpen(false)}
-                  className="btn-primary text-sm uppercase tracking-[0.14em]"
-                >
-                  JOIN FREE
-                </Link>
+                {!user ? (
+                  <Link
+                    href="/register"
+                    onClick={() => setIsOpen(false)}
+                    className="btn-primary text-sm uppercase tracking-[0.14em]"
+                  >
+                    JOIN FREE
+                  </Link>
+                ) : null}
               </div>
             </div>
           ) : null}

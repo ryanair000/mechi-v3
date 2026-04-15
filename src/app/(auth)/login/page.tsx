@@ -1,18 +1,26 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
 import { Eye, EyeOff, Loader2 } from 'lucide-react';
 import { useAuth } from '@/components/AuthProvider';
 import { FullScreenSignup } from '@/components/ui/full-screen-signup';
 
 export default function LoginPage() {
-  const { login } = useAuth();
+  const { user, loading: authLoading, login } = useAuth();
+  const router = useRouter();
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (!authLoading && user) {
+      router.replace('/dashboard');
+    }
+  }, [authLoading, user, router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -35,7 +43,6 @@ export default function LoginPage() {
       }
       login(data.token, data.user);
       toast.success(`Welcome back, ${data.user.username}!`);
-      // Use a hard navigation so auth cookie guards see the latest cookie immediately.
       window.location.assign('/dashboard');
     } catch {
       toast.error('Network error.');
@@ -66,7 +73,7 @@ export default function LoginPage() {
               type="text"
               value={identifier}
               onChange={(e) => setIdentifier(e.target.value)}
-              placeholder="0712 345 678 · GameKing254 · you@mail.com"
+              placeholder="0712 345 678 | GameKing254 | you@mail.com"
               className="input"
               autoComplete="username"
               autoCapitalize="none"

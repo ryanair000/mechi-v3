@@ -6,6 +6,7 @@ import { useAuth } from '@/components/AuthProvider';
 import { Navbar } from '@/components/Navbar';
 import { BottomNav } from '@/components/BottomNav';
 import { Sidebar } from '@/components/Sidebar';
+import { BrandLogo } from '@/components/BrandLogo';
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
@@ -19,12 +20,10 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-950">
-        <div className="flex flex-col items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-emerald-500/15 flex items-center justify-center font-bold text-emerald-400 text-lg">
-            M
-          </div>
-          <p className="text-white/20 text-sm">Loading...</p>
+      <div className="page-base flex min-h-screen items-center justify-center px-4">
+        <div className="card flex min-w-[220px] flex-col items-center gap-3 px-6 py-6 text-center">
+          <BrandLogo size="md" />
+          <p className="text-sm font-medium text-[var(--text-secondary)]">Loading your arena...</p>
         </div>
       </div>
     );
@@ -33,11 +32,12 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   if (!user) return null;
 
   return (
-    <div className="relative min-h-screen bg-gray-950">
+    <div className="page-base relative min-h-screen">
       <div
         className="pointer-events-none fixed left-0 right-0 top-0 z-0 h-[500px]"
         style={{
-          background: 'radial-gradient(ellipse 80% 40% at 50% -10%, rgba(16,185,129,0.05) 0%, transparent 70%)',
+          background:
+            'radial-gradient(ellipse 78% 38% at 50% -6%, rgba(50,224,196,0.12) 0%, transparent 64%), radial-gradient(circle at 82% 12%, rgba(255,107,107,0.1) 0%, transparent 26%)',
         }}
       />
       <div className="relative z-10">

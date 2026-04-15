@@ -28,8 +28,15 @@ export async function GET(
       return NextResponse.json({ error: 'Failed to fetch leaderboard' }, { status: 500 });
     }
 
-    const players = playersRaw as Record<string, unknown>[] | null;
-    const sorted = (players ?? []).sort(
+    const players = ((playersRaw as Record<string, unknown>[] | null) ?? []).filter((player) => {
+      const selectedGames = Array.isArray(player.selected_games)
+        ? player.selected_games.filter((value): value is string => typeof value === 'string')
+        : [];
+
+      return selectedGames.includes(game);
+    });
+
+    const sorted = players.sort(
       (a, b) => ((b[ratingKey] as number) ?? 1000) - ((a[ratingKey] as number) ?? 1000)
     ).slice(0, 50);
 

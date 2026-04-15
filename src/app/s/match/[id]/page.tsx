@@ -1,13 +1,23 @@
-import { Metadata } from 'next';
-import { createServiceClient } from '@/lib/supabase';
-import { redirect } from 'next/navigation';
+import type { Metadata } from 'next';
 import Link from 'next/link';
+import { redirect } from 'next/navigation';
+import { BrandLogo } from '@/components/BrandLogo';
+import { createServiceClient } from '@/lib/supabase';
+import { getLevelFromXp, getRankDivision, withAlpha } from '@/lib/gamification';
 
 const GAME_LABELS: Record<string, string> = {
-  efootball: 'eFootball 2025', fc26: 'EA FC 26', mk11: 'Mortal Kombat 11',
-  nba2k26: 'NBA 2K26', tekken8: 'Tekken 8', sf6: 'Street Fighter 6',
-  cs2: 'CS2', valorant: 'Valorant', mariokart: 'Mario Kart 8',
-  smashbros: 'Super Smash Bros', rocketleague: 'Rocket League',
+  efootball: 'eFootball 2026',
+  efootball_mobile: 'eFootball 2026 Mobile',
+  fc26: 'EA FC 26',
+  mk11: 'Mortal Kombat 11',
+  nba2k26: 'NBA 2K26',
+  tekken8: 'Tekken 8',
+  sf6: 'Street Fighter 6',
+  cs2: 'CS2',
+  valorant: 'Valorant',
+  mariokart: 'Mario Kart 8',
+  smashbros: 'Super Smash Bros',
+  rocketleague: 'Rocket League',
 };
 
 interface Props {
@@ -20,13 +30,14 @@ async function getMatchData(id: string) {
   if (!match) return null;
 
   const { data: profiles } = await supabase
-    .from('profiles').select('id, username')
+    .from('profiles')
+    .select('*')
     .in('id', [match.player1_id, match.player2_id]);
 
-  const p1 = profiles?.find((p: { id: string }) => p.id === match.player1_id);
-  const p2 = profiles?.find((p: { id: string }) => p.id === match.player2_id);
+  const player1 = profiles?.find((profile: { id: string }) => profile.id === match.player1_id);
+  const player2 = profiles?.find((profile: { id: string }) => profile.id === match.player2_id);
 
-  return { match, p1, p2 };
+  return { match, player1, player2 };
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
@@ -37,16 +48,14 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     return { title: 'Match Not Found | Mechi' };
   }
 
-  const { match, p1, p2 } = data;
-  const winner = match.winner_id === match.player1_id ? p1 : p2;
-  const loser = match.winner_id === match.player1_id ? p2 : p1;
+  const { match, player1, player2 } = data;
+  const winner = match.winner_id === match.player1_id ? player1 : player2;
+  const loser = match.winner_id === match.player1_id ? player2 : player1;
   const game = GAME_LABELS[match.game] ?? match.game;
-  const ratingChange = match.winner_id === match.player1_id ? match.rating_change_p1 : match.rating_change_p2;
 
   const title = `${winner?.username ?? 'Player'} beat ${loser?.username ?? 'Player'} on ${game} | Mechi`;
-  const description = `${winner?.username} won against ${loser?.username} in ${game} (+${ratingChange ?? 0} ELO) on Mechi - Kenya's gaming matchmaking platform!`;
-
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://mechi-v3.vercel.app';
+  const description = `${winner?.username} beat ${loser?.username} in ${game} on Mechi. Result confirmed. Climb continues.`;
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://mechi.club';
 
   return {
     title,
@@ -57,12 +66,14 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       type: 'website',
       url: `${baseUrl}/s/match/${id}`,
       siteName: 'Mechi',
-      images: [{
-        url: `${baseUrl}/api/og/match?id=${id}`,
-        width: 1200,
-        height: 630,
-        alt: title,
-      }],
+      images: [
+        {
+          url: `${baseUrl}/api/og/match?id=${id}`,
+          width: 1200,
+          height: 630,
+          alt: title,
+        },
+      ],
     },
     twitter: {
       card: 'summary_large_image',
@@ -81,35 +92,60 @@ export default async function ShareMatchPage({ params }: Props) {
     redirect('/');
   }
 
-  const { match, p1, p2 } = data;
-  const winner = match.winner_id === match.player1_id ? p1 : p2;
-  const loser = match.winner_id === match.player1_id ? p2 : p1;
+  const { match, player1, player2 } = data;
+  const winner = match.winner_id === match.player1_id ? player1 : player2;
+  const loser = match.winner_id === match.player1_id ? player2 : player1;
+  const winnerSummary =
+    match.winner_id === match.player1_id
+      ? match.gamification_summary_p1 ?? null
+      : match.gamification_summary_p2 ?? null;
   const game = GAME_LABELS[match.game] ?? match.game;
-  const ratingChange = match.winner_id === match.player1_id ? match.rating_change_p1 : match.rating_change_p2;
+  const winnerRating = ((winner as Record<string, unknown> | undefined)?.[`rating_${match.game}`] as number) ?? 1000;
+  const winnerXp = (winner?.xp as number | null) ?? 0;
+  const winnerLevel = winnerSummary?.newLevel ?? ((winner?.level as number | null) ?? getLevelFromXp(winnerXp));
+  const division = getRankDivision(winnerRating);
 
   return (
-    <div className="min-h-screen bg-gray-950 text-white flex flex-col">
-      <nav className="px-5 sm:px-8 h-16 flex items-center border-b border-white/[0.04]">
-        <Link href="/" className="flex items-center gap-2">
-          <div className="w-7 h-7 rounded-lg bg-emerald-500 flex items-center justify-center font-bold text-white text-xs">M</div>
-          <span className="font-bold text-sm">Mechi</span>
+    <div className="page-base flex flex-col">
+      <nav className="landing-shell flex h-16 items-center border-b border-[var(--border-color)]">
+        <Link href="/" className="flex items-center">
+          <BrandLogo size="sm" />
         </Link>
       </nav>
 
-      <div className="flex-1 flex items-center justify-center px-5 py-16">
-        <div className="text-center max-w-md">
-          <div className="text-4xl mb-4">🏆</div>
-          <h1 className="text-2xl font-bold mb-2">
+      <div className="landing-shell flex flex-1 items-center justify-center py-16">
+        <div className="card circuit-panel w-full max-w-lg p-8 text-center sm:p-10">
+          <p className="brand-kicker justify-center">Match Result</p>
+          <div className="mx-auto mb-4 mt-5 flex h-20 w-20 items-center justify-center rounded-full bg-[rgba(255,107,107,0.14)] text-3xl font-black text-[var(--brand-coral)]">
+            W
+          </div>
+          <h1 className="mb-2 text-3xl font-black tracking-[-0.05em] text-[var(--text-primary)]">
             {winner?.username ?? 'Player'} won!
           </h1>
-          <p className="text-white/40 text-sm mb-2">
+          <p className="mb-3 text-sm text-[var(--text-secondary)]">
             {winner?.username} beat {loser?.username} in {game}
           </p>
-          <p className="text-emerald-400 font-bold text-lg mb-8">
-            +{ratingChange ?? 0} ELO
-          </p>
+          <div
+            className="mx-auto mb-8 inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-semibold"
+            style={{
+              color: division.color,
+              backgroundColor: withAlpha(division.color, '14'),
+              borderColor: withAlpha(division.color, '30'),
+            }}
+          >
+            <span>{division.label}</span>
+            <span className="text-[var(--text-soft)]">/</span>
+            <span>Lv. {winnerLevel}</span>
+          </div>
 
-          <div className="flex flex-col sm:flex-row gap-3 justify-center">
+          {winnerSummary && (
+            <div className="mb-8 flex flex-wrap items-center justify-center gap-2">
+              <span className="brand-chip px-2.5 py-1">+{winnerSummary.xpEarned} XP</span>
+              <span className="brand-chip-coral px-2.5 py-1">+{winnerSummary.mpEarned} MP</span>
+            </div>
+          )}
+
+          <div className="flex flex-col justify-center gap-3 sm:flex-row">
             <Link href="/register" className="btn-primary">
               Join Mechi Free
             </Link>
@@ -118,9 +154,7 @@ export default async function ShareMatchPage({ params }: Props) {
             </Link>
           </div>
 
-          <p className="text-white/15 text-xs mt-8">
-            Kenya&apos;s gaming matchmaking platform — compete in 1v1 ranked matches
-          </p>
+          <p className="mt-8 text-xs text-[var(--text-soft)]">Compete. Connect. Rise.</p>
         </div>
       </div>
     </div>

@@ -1,6 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { calculateElo } from './elo';
-import { GAMES } from './config';
+import { GAMES, getConfiguredPlatformForGame, getGameIdValue } from './config';
 import type { GameKey, PlatformKey } from '@/types';
 import { notifyMatchFound } from './whatsapp';
 import { sendMatchFoundEmail } from './email';
@@ -18,7 +18,7 @@ export async function runMatchmaking(supabase: SupabaseClient): Promise<number> 
   // Get all waiting queue entries ordered by join time
   const { data: queueEntries, error } = await supabase
     .from('queue')
-    .select('*, profiles:user_id(id, username, phone, email, platforms, game_ids, selected_games, whatsapp_number, whatsapp_notifications)')
+    .select('*, profiles:user_id(id, username, phone, email, whatsapp_number, whatsapp_notifications, platforms, game_ids, selected_games)')
     .eq('status', 'waiting')
     .order('joined_at', { ascending: true });
 
@@ -41,6 +41,22 @@ export async function runMatchmaking(supabase: SupabaseClient): Promise<number> 
       // Must be same game
       if (entry.game !== opponent.game) continue;
 
+      const game = GAMES[entry.game as GameKey];
+      const p1Profile = entry.profiles as Record<string, unknown> | null;
+      const p2Profile = opponent.profiles as Record<string, unknown> | null;
+      const p1Platforms = (p1Profile?.platforms as PlatformKey[]) ?? [];
+      const p2Platforms = (p2Profile?.platforms as PlatformKey[]) ?? [];
+      const p1GameIds = (p1Profile?.game_ids as Record<string, string>) ?? {};
+      const p2GameIds = (p2Profile?.game_ids as Record<string, string>) ?? {};
+      const p1Platform =
+        (entry.platform as PlatformKey | null) ??
+        getConfiguredPlatformForGame(entry.game as GameKey, p1GameIds, p1Platforms);
+      const p2Platform =
+        (opponent.platform as PlatformKey | null) ??
+        getConfiguredPlatformForGame(opponent.game as GameKey, p2GameIds, p2Platforms);
+
+      if (!p1Platform || !p2Platform || p1Platform !== p2Platform) continue;
+
       // Rating tolerance check (relaxed for small player base)
       if (Math.abs(entry.rating - opponent.rating) > RATING_TOLERANCE) continue;
 
@@ -51,6 +67,7 @@ export async function runMatchmaking(supabase: SupabaseClient): Promise<number> 
           player1_id: entry.user_id,
           player2_id: opponent.user_id,
           game: entry.game,
+          platform: p1Platform,
           region: entry.region ?? 'kenya',
           status: 'pending',
         })
@@ -73,33 +90,23 @@ export async function runMatchmaking(supabase: SupabaseClient): Promise<number> 
       matchesCreated++;
 
       // Send notifications async (don't block matchmaking)
-      const game = GAMES[entry.game as GameKey];
-      const gamePlatforms = game?.platforms ?? [];
-
-      const p1Profile = entry.profiles as Record<string, unknown> | null;
-      const p2Profile = opponent.profiles as Record<string, unknown> | null;
+      const gameLabel = game?.label ?? entry.game;
 
       if (p1Profile && p2Profile) {
-        const p1Platforms = (p1Profile.platforms as PlatformKey[]) ?? [];
-        const p2Platforms = (p2Profile.platforms as PlatformKey[]) ?? [];
-        const p1GameIds = (p1Profile.game_ids as Record<string, string>) ?? {};
-        const p2GameIds = (p2Profile.game_ids as Record<string, string>) ?? {};
-
-        const p1Platform = p1Platforms.find((p) => gamePlatforms.includes(p));
-        const p2Platform = p2Platforms.find((p) => gamePlatforms.includes(p));
-
-        const p1PlatformId = p1Platform ? (p1GameIds[p1Platform] ?? 'Not set') : 'Not set';
-        const p2PlatformId = p2Platform ? (p2GameIds[p2Platform] ?? 'Not set') : 'Not set';
-
-        const gameLabel = game?.label ?? entry.game;
+        const p1PlatformId = getGameIdValue(p1GameIds, entry.game as GameKey, p1Platform) || 'Not set';
+        const p2PlatformId = getGameIdValue(p2GameIds, entry.game as GameKey, p2Platform) || 'Not set';
+        const p1WhatsAppNumber = (p1Profile.whatsapp_number as string | undefined) ?? '';
+        const p2WhatsAppNumber = (p2Profile.whatsapp_number as string | undefined) ?? '';
+        const p1WhatsAppEnabled = Boolean(p1Profile.whatsapp_notifications) && Boolean(p1WhatsAppNumber);
+        const p2WhatsAppEnabled = Boolean(p2Profile.whatsapp_notifications) && Boolean(p2WhatsAppNumber);
 
         // Notify player 1
-        if (p1Profile.whatsapp_notifications && p1Profile.whatsapp_number) {
+        if (p1WhatsAppEnabled) {
           notifyMatchFound({
-            phone: p1Profile.whatsapp_number as string,
+            whatsappNumber: p1WhatsAppNumber,
+            username: p1Profile.username as string,
             game: gameLabel,
             opponentUsername: p2Profile.username as string,
-            opponentPlatformId: p2PlatformId,
             matchId: match.id,
           }).catch(console.error);
         }
@@ -116,12 +123,12 @@ export async function runMatchmaking(supabase: SupabaseClient): Promise<number> 
         }
 
         // Notify player 2
-        if (p2Profile.whatsapp_notifications && p2Profile.whatsapp_number) {
+        if (p2WhatsAppEnabled) {
           notifyMatchFound({
-            phone: p2Profile.whatsapp_number as string,
+            whatsappNumber: p2WhatsAppNumber,
+            username: p2Profile.username as string,
             game: gameLabel,
             opponentUsername: p1Profile.username as string,
-            opponentPlatformId: p1PlatformId,
             matchId: match.id,
           }).catch(console.error);
         }

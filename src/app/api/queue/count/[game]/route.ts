@@ -4,10 +4,12 @@ import { GAMES } from '@/lib/config';
 import type { GameKey } from '@/types';
 
 export async function GET(
-  _request: NextRequest,
+  request: NextRequest,
   { params }: { params: Promise<{ game: string }> }
 ) {
   const { game } = await params;
+  const { searchParams } = new URL(request.url);
+  const platform = searchParams.get('platform');
 
   if (!game || !GAMES[game as GameKey]) {
     return NextResponse.json({ error: 'Invalid game' }, { status: 400 });
@@ -16,11 +18,17 @@ export async function GET(
   try {
     const supabase = createServiceClient();
 
-    const { count, error } = await supabase
+    let query = supabase
       .from('queue')
       .select('*', { count: 'exact', head: true })
       .eq('game', game)
       .eq('status', 'waiting');
+
+    if (platform) {
+      query = query.eq('platform', platform);
+    }
+
+    const { count, error } = await query;
 
     if (error) {
       return NextResponse.json({ error: 'Failed to get count' }, { status: 500 });

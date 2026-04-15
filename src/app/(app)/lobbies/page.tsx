@@ -1,12 +1,12 @@
 'use client';
 
-import { useEffect, useState, useCallback, Suspense } from 'react';
+import { Suspense, useEffect, useState, useCallback } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
+import toast from 'react-hot-toast';
+import { Globe, Lock, Plus, Users, X } from 'lucide-react';
 import { useAuth, useAuthFetch } from '@/components/AuthProvider';
 import { GAMES, PLATFORMS } from '@/lib/config';
 import type { GameKey, Lobby } from '@/types';
-import toast from 'react-hot-toast';
-import { Plus, Users, Lock, Globe, X } from 'lucide-react';
 
 function LobbiesContent() {
   const { user } = useAuth();
@@ -20,32 +20,67 @@ function LobbiesContent() {
   const [showCreate, setShowCreate] = useState(false);
   const [creating, setCreating] = useState(false);
   const [joiningId, setJoiningId] = useState<string | null>(null);
-
   const [newLobby, setNewLobby] = useState({ game: gameFilter ?? 'codm', title: '' });
 
-  const LOBBY_GAMES = (Object.keys(GAMES) as GameKey[]).filter((g) => GAMES[g].mode === 'lobby');
+  const lobbyGames = (Object.keys(GAMES) as GameKey[]).filter(
+    (game) => GAMES[game].mode === 'lobby'
+  );
 
   const fetchLobbies = useCallback(async () => {
     setLoading(true);
-    const url = gameFilter ? `/api/lobbies?game=${gameFilter}` : '/api/lobbies';
-    const res = await authFetch(url);
-    if (res.ok) { const data = await res.json(); setLobbies(data.lobbies); }
-    setLoading(false);
-  }, [authFetch, gameFilter]);
+    try {
+      const url = gameFilter ? `/api/lobbies?game=${gameFilter}` : '/api/lobbies';
+      const res = await authFetch(url);
 
-  useEffect(() => { fetchLobbies(); }, [fetchLobbies]);
+      if (res.ok) {
+        const data = await res.json();
+        setLobbies(data.lobbies);
+        return;
+      }
+
+      if (res.status === 401) {
+        router.push('/login');
+        return;
+      }
+
+      const data = await res.json().catch(() => ({ error: 'Could not load lobbies' }));
+      toast.error(data.error ?? 'Could not load lobbies');
+      setLobbies([]);
+    } catch {
+      toast.error('Could not load lobbies');
+      setLobbies([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [authFetch, gameFilter, router]);
+
+  useEffect(() => {
+    void fetchLobbies();
+  }, [fetchLobbies]);
 
   const handleCreate = async () => {
-    if (!newLobby.title.trim()) { toast.error('Enter a lobby title'); return; }
+    if (!newLobby.title.trim()) {
+      toast.error('Enter a lobby title');
+      return;
+    }
+
     setCreating(true);
     try {
-      const res = await authFetch('/api/lobbies', { method: 'POST', body: JSON.stringify(newLobby) });
+      const res = await authFetch('/api/lobbies', {
+        method: 'POST',
+        body: JSON.stringify(newLobby),
+      });
       const data = await res.json();
-      if (!res.ok) { toast.error(data.error ?? 'Failed to create lobby'); return; }
+      if (!res.ok) {
+        toast.error(data.error ?? 'Failed to create lobby');
+        return;
+      }
       toast.success('Lobby created!');
       setShowCreate(false);
       router.push(`/lobbies/${data.lobby.id}`);
-    } finally { setCreating(false); }
+    } finally {
+      setCreating(false);
+    }
   };
 
   const handleJoin = async (lobbyId: string) => {
@@ -53,62 +88,98 @@ function LobbiesContent() {
     try {
       const res = await authFetch(`/api/lobbies/${lobbyId}/join`, { method: 'POST' });
       const data = await res.json();
-      if (!res.ok) { toast.error(data.error ?? 'Failed to join'); return; }
+      if (!res.ok) {
+        toast.error(data.error ?? 'Failed to join');
+        return;
+      }
       router.push(`/lobbies/${lobbyId}`);
-    } finally { setJoiningId(null); }
+    } finally {
+      setJoiningId(null);
+    }
   };
 
   return (
     <div className="page-container">
-      <div className="flex items-center justify-between mb-6 pt-2">
-        <div>
-          <h1 className="text-xl font-bold text-white">Lobbies</h1>
-          <p className="text-sm text-white/30 mt-0.5">Join or create game rooms</p>
+      <div className="card circuit-panel mb-6 p-6">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="brand-kicker">Community Rooms</p>
+            <h1 className="mt-3 text-3xl font-black tracking-[-0.05em] text-[var(--text-primary)]">
+              Lobbies
+            </h1>
+            <p className="mt-3 text-sm leading-7 text-[var(--text-secondary)]">
+              Create organized rooms for team titles, drop into open scrims, and keep your squad play moving.
+            </p>
+          </div>
+          <button onClick={() => setShowCreate(true)} className="btn-primary text-sm">
+            <Plus size={14} /> Create Lobby
+          </button>
         </div>
-        <button onClick={() => setShowCreate(true)} className="btn-primary text-sm">
-          <Plus size={14} /> Create
-        </button>
       </div>
 
-      {/* Game filter */}
-      <div className="flex gap-2 overflow-x-auto pb-2 mb-6 no-scrollbar">
-        <button onClick={() => router.push('/lobbies')}
-          className={`flex-shrink-0 text-xs font-medium px-3.5 py-2 rounded-lg transition-all ${
-            !gameFilter ? 'bg-emerald-500 text-white' : 'bg-white/[0.04] text-white/40 hover:bg-white/[0.08]'
-          }`}>
+      <div className="mb-6 flex gap-2 overflow-x-auto pb-2 no-scrollbar">
+        <button
+          onClick={() => router.push('/lobbies')}
+          className={`flex-shrink-0 rounded-lg px-3.5 py-2 text-xs font-medium transition-all ${
+            !gameFilter
+              ? 'bg-[var(--brand-coral)] text-[var(--brand-night)]'
+              : 'border border-[var(--border-color)] bg-[var(--surface-elevated)] text-[var(--text-soft)] hover:bg-[var(--surface)] hover:text-[var(--text-primary)]'
+          }`}
+        >
           All
         </button>
-        {LOBBY_GAMES.map((g) => (
-          <button key={g} onClick={() => router.push(`/lobbies?game=${g}`)}
-            className={`flex-shrink-0 text-xs font-medium px-3.5 py-2 rounded-lg transition-all ${
-              gameFilter === g ? 'bg-emerald-500 text-white' : 'bg-white/[0.04] text-white/40 hover:bg-white/[0.08]'
-            }`}>
-            {GAMES[g].label}
+        {lobbyGames.map((game) => (
+          <button
+            key={game}
+            onClick={() => router.push(`/lobbies?game=${game}`)}
+            className={`flex-shrink-0 rounded-lg px-3.5 py-2 text-xs font-medium transition-all ${
+              gameFilter === game
+                ? 'bg-[var(--brand-coral)] text-[var(--brand-night)]'
+                : 'border border-[var(--border-color)] bg-[var(--surface-elevated)] text-[var(--text-soft)] hover:bg-[var(--surface)] hover:text-[var(--text-primary)]'
+            }`}
+          >
+            {GAMES[game].label}
           </button>
         ))}
       </div>
 
-      {/* Create modal */}
       {showCreate && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4">
-          <div className="card w-full max-w-md p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="font-semibold text-white">Create Lobby</h2>
-              <button onClick={() => setShowCreate(false)} className="text-white/20 hover:text-white/40 p-1 transition-colors">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/55 px-4" onClick={() => setShowCreate(false)}>
+          <div className="card w-full max-w-md p-6" onClick={(event) => event.stopPropagation()}>
+            <div className="mb-4 flex items-center justify-between">
+              <div>
+                <p className="brand-kicker">New Room</p>
+                <h2 className="mt-2 font-semibold text-[var(--text-primary)]">Create Lobby</h2>
+              </div>
+              <button onClick={() => setShowCreate(false)} className="icon-button">
                 <X size={16} />
               </button>
             </div>
             <div className="space-y-3">
               <div>
                 <label className="label">Game</label>
-                <select value={newLobby.game} onChange={(e) => setNewLobby({ ...newLobby, game: e.target.value as GameKey })} className="input">
-                  {LOBBY_GAMES.map((g) => <option key={g} value={g}>{GAMES[g].label}</option>)}
+                <select
+                  value={newLobby.game}
+                  onChange={(e) => setNewLobby({ ...newLobby, game: e.target.value as GameKey })}
+                  className="input"
+                >
+                  {lobbyGames.map((game) => (
+                    <option key={game} value={game}>
+                      {GAMES[game].label}
+                    </option>
+                  ))}
                 </select>
               </div>
               <div>
                 <label className="label">Title</label>
-                <input type="text" value={newLobby.title} onChange={(e) => setNewLobby({ ...newLobby, title: e.target.value })}
-                  placeholder="e.g. Fun scrims - come join!" className="input" maxLength={60} />
+                <input
+                  type="text"
+                  value={newLobby.title}
+                  onChange={(e) => setNewLobby({ ...newLobby, title: e.target.value })}
+                  placeholder="e.g. Ranked warmup room"
+                  className="input"
+                  maxLength={60}
+                />
               </div>
               <div className="flex gap-3 pt-2">
                 <button onClick={() => setShowCreate(false)} className="btn-ghost flex-1">Cancel</button>
@@ -121,51 +192,81 @@ function LobbiesContent() {
         </div>
       )}
 
-      {/* Lobbies grid */}
       {loading ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {[1, 2, 3].map((i) => <div key={i} className="h-32 shimmer" />)}
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {[1, 2, 3].map((item) => (
+            <div key={item} className="h-32 shimmer" />
+          ))}
         </div>
       ) : lobbies.length === 0 ? (
-        <div className="text-center py-20 text-white/20">
+        <div className="card py-20 text-center text-[var(--text-soft)]">
           <Globe size={32} className="mx-auto mb-3 opacity-30" />
-          <p className="font-medium">No open lobbies</p>
-          <p className="text-xs mt-1 text-white/15">Be the first — create a lobby!</p>
+          <p className="font-medium text-[var(--text-primary)]">No open lobbies</p>
+          <p className="mt-1 text-xs">Be the first to open a room for your community.</p>
           <button onClick={() => setShowCreate(true)} className="btn-primary mt-4">
             <Plus size={14} /> Create Lobby
           </button>
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {lobbies.map((lobby) => {
             const game = GAMES[lobby.game];
             const isHost = lobby.host_id === user?.id;
             const memberCount = (lobby.member_count as unknown as number) ?? 0;
             const isFull = memberCount >= lobby.max_players;
+
             return (
               <div key={lobby.id} className="card p-4">
-                <div className="flex items-start justify-between gap-3 mb-3">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="text-sm font-semibold text-white truncate">{lobby.title}</span>
+                <div className="mb-3 flex items-start justify-between gap-3">
+                  <div className="min-w-0 flex-1">
+                    <div className="mb-1 flex items-center gap-2">
+                      <span className="truncate text-sm font-semibold text-[var(--text-primary)]">
+                        {lobby.title}
+                      </span>
                       {isHost && <span className="badge-emerald text-[10px]">Host</span>}
                     </div>
-                    <p className="text-xs text-white/30">{game?.label}</p>
+                    <p className="text-xs text-[var(--text-secondary)]">{game?.label}</p>
                   </div>
                   <span className="flex items-center gap-1 text-xs font-medium">
-                    {lobby.status === 'open' ? <><Globe size={11} className="text-emerald-400" /><span className="text-emerald-400">Open</span></>
-                    : <><Lock size={11} className="text-red-400" /><span className="text-red-400">Full</span></>}
+                    {lobby.status === 'open' ? (
+                      <>
+                        <Globe size={11} className="text-[var(--brand-teal)]" />
+                        <span className="text-[var(--brand-teal)]">Open</span>
+                      </>
+                    ) : (
+                      <>
+                        <Lock size={11} className="text-red-500" />
+                        <span className="text-red-500">Full</span>
+                      </>
+                    )}
                   </span>
                 </div>
-                <div className="flex items-center gap-3 text-xs text-white/20 mb-3">
-                  <span className="flex items-center gap-1"><Users size={11} /> {memberCount}/{lobby.max_players}</span>
-                  {game?.platforms.map((p) => <span key={p}>{PLATFORMS[p]?.icon}</span>)}
+
+                <div className="mb-3 flex items-center gap-3 text-xs text-[var(--text-soft)]">
+                  <span className="flex items-center gap-1">
+                    <Users size={11} /> {memberCount}/{lobby.max_players}
+                  </span>
+                  {game?.platforms.map((platform) => (
+                    <span key={platform}>{PLATFORMS[platform]?.icon}</span>
+                  ))}
                 </div>
-                {lobby.host && <p className="text-xs text-white/15 mb-3">Host: {(lobby.host as { username: string }).username}</p>}
+
+                {lobby.host && (
+                  <p className="mb-3 text-xs text-[var(--text-soft)]">
+                    Host: {(lobby.host as { username: string }).username}
+                  </p>
+                )}
+
                 <div className="flex gap-2">
-                  <button onClick={() => router.push(`/lobbies/${lobby.id}`)} className="btn-outline flex-1 text-xs py-2">View</button>
+                  <button onClick={() => router.push(`/lobbies/${lobby.id}`)} className="btn-outline flex-1 py-2 text-xs">
+                    View
+                  </button>
                   {!isHost && !isFull && (
-                    <button onClick={() => handleJoin(lobby.id)} disabled={joiningId === lobby.id} className="btn-primary flex-1 text-xs py-2">
+                    <button
+                      onClick={() => handleJoin(lobby.id)}
+                      disabled={joiningId === lobby.id}
+                      className="btn-primary flex-1 py-2 text-xs"
+                    >
                       {joiningId === lobby.id ? '...' : 'Join'}
                     </button>
                   )}
@@ -181,11 +282,17 @@ function LobbiesContent() {
 
 export default function LobbiesPage() {
   return (
-    <Suspense fallback={
-      <div className="page-container">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">{[1,2,3].map(i => <div key={i} className="h-32 shimmer" />)}</div>
-      </div>
-    }>
+    <Suspense
+      fallback={
+        <div className="page-container">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {[1, 2, 3].map((item) => (
+              <div key={item} className="h-32 shimmer" />
+            ))}
+          </div>
+        </div>
+      }
+    >
       <LobbiesContent />
     </Suspense>
   );

@@ -1,207 +1,177 @@
 import Link from 'next/link';
-import { Gamepad2, Trophy, Shield, Monitor, Smartphone, Zap, ArrowRight } from 'lucide-react';
+import {
+  ArrowRight,
+  Gamepad2,
+  Monitor,
+  Shield,
+  Smartphone,
+  Swords,
+  Trophy,
+  Users,
+} from 'lucide-react';
+import { BrandLogo } from '@/components/BrandLogo';
+import { HomeFloatingHeader } from '@/components/HomeFloatingHeader';
 
-const GAMES = [
-  { emoji: '⚽', name: 'eFootball', platforms: 'PS · Mobile · PC' },
-  { emoji: '🏆', name: 'EA FC 26', platforms: 'PS · Xbox · PC' },
-  { emoji: '🥊', name: 'Mortal Kombat 11', platforms: 'PS · Xbox · PC' },
-  { emoji: '🏀', name: 'NBA 2K26', platforms: 'PS · Xbox · PC' },
-  { emoji: '👊', name: 'Tekken 8', platforms: 'PS · Xbox · PC' },
-  { emoji: '🥋', name: 'Street Fighter 6', platforms: 'PS · Xbox · PC' },
-];
-
-const FEATURES = [
-  { icon: Zap, title: 'ELO Matchmaking', desc: 'Our skill-based algorithm pairs you with opponents at your level. No more mismatches.' },
-  { icon: Trophy, title: 'Ranked Leaderboards', desc: 'Six tiers from Bronze to Legend. Climb the ranks and prove your dominance.' },
-  { icon: Monitor, title: '5 Platforms', desc: 'PlayStation, Xbox, PC, Mobile, Nintendo — play on whatever you own.' },
-  { icon: Shield, title: 'Dispute Resolution', desc: 'Disagree on results? Upload a screenshot. Our team settles it fair.' },
+const HERO_STATS = [
+  { value: '14+', label: 'Supported titles' },
+  { value: '6', label: 'Rank tiers' },
+  { value: '24/7', label: 'Queue access' },
+  { value: '1', label: 'Clean profile across games' },
 ];
 
 const TIERS = [
-  { name: 'Bronze', range: '0-1099', color: '#CD7F32' },
-  { name: 'Silver', range: '1100-1299', color: '#C0C0C0' },
-  { name: 'Gold', range: '1300-1499', color: '#FFD700' },
-  { name: 'Platinum', range: '1500-1699', color: '#00CED1' },
-  { name: 'Diamond', range: '1700-1899', color: '#B9F2FF' },
-  { name: 'Legend', range: '1900+', color: '#FF6B6B' },
+  { name: 'Bronze', range: 'III -> I', color: '#CD7F32' },
+  { name: 'Silver', range: 'III -> I', color: '#94A3B8' },
+  { name: 'Gold', range: 'III -> I', color: '#FFD700' },
+  { name: 'Platinum', range: 'III -> I', color: '#32E0C4' },
+  { name: 'Diamond', range: 'III -> I', color: '#60A5FA' },
+  { name: 'Legend', range: 'Final tier', color: '#FF6B6B' },
+];
+
+const STEPS = [
+  {
+    step: '01',
+    title: 'Set your profile',
+    desc: 'Choose your region, platforms, and games once so every queue starts with the right context.',
+  },
+  {
+    step: '02',
+    title: 'Queue with intent',
+    desc: 'Join a 1v1 queue or open a lobby without chasing players across chats and side groups.',
+  },
+  {
+    step: '03',
+    title: 'Lock results and rise',
+    desc: 'Report the outcome, keep the match protected, and move forward with visible progression.',
+  },
+];
+
+const TRUST_PILLARS = [
+  {
+    icon: Swords,
+    title: 'Straight to the match',
+    desc: 'Less side noise, less back-and-forth, more time actually getting into the game.',
+  },
+  {
+    icon: Shield,
+    title: 'Wins that feel legit',
+    desc: 'Scores get confirmed, disputes can be handled, and your results do not feel random.',
+  },
+  {
+    icon: Users,
+    title: 'Your people in one place',
+    desc: 'Profiles, queues, and shares keep your scene connected without turning everything into a mess.',
+  },
+];
+
+const PLATFORM_CHIPS = [
+  { icon: Gamepad2, label: 'PlayStation' },
+  { icon: Gamepad2, label: 'Xbox' },
+  { icon: Monitor, label: 'PC' },
+  { icon: Smartphone, label: 'Mobile' },
+];
+
+const SUPPORTED_GAMES = [
+  'eFootball 2026',
+  'eFootball Mobile',
+  'EA FC 26',
+  'COD Mobile',
+  'PUBG Mobile',
+  'Free Fire',
+  'Tekken 8',
+  'Street Fighter 6',
+  'Mortal Kombat 11',
+  'NBA 2K26',
+];
+
+const PRICING_PLANS = [
+  {
+    name: 'PLAYER',
+    price: 'FREE',
+    kicker: 'START HERE',
+    description: 'Build your profile, queue your mains, and keep your climb moving without paying to get in.',
+    features: ['1 player profile', 'Ranked queue access', 'Match history and share links'],
+    href: '/register',
+    cta: 'START FREE',
+    featured: false,
+  },
+  {
+    name: 'COMMUNITY',
+    price: 'CUSTOM',
+    kicker: 'FOR GROUPS',
+    description: 'Set up your scene with support for communities that want cleaner recurring play on Mechi.',
+    features: ['Community rollout support', 'Private lobby coordination', 'Shared setup for organizers'],
+    href: '/register',
+    cta: 'SET UP YOUR SCENE',
+    featured: true,
+  },
+  {
+    name: 'BOOST',
+    price: 'SOON',
+    kicker: 'ON DECK',
+    description: 'Extra player perks are in the works for grinders who want more polish, flex, and deeper stats.',
+    features: ['Expanded profile flair', 'Sharper performance insights', 'Priority access to new drops'],
+    href: '/register',
+    cta: 'GET EARLY ACCESS',
+    featured: false,
+  },
 ];
 
 export default function LandingPage() {
   return (
-    <div className="min-h-screen bg-gray-950 text-white">
-      {/* ── Navbar ── */}
-      <nav className="sticky top-0 z-50 bg-gray-950/80 backdrop-blur-xl border-b border-white/[0.04]">
-        <div className="max-w-7xl mx-auto px-5 sm:px-8 h-16 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-emerald-500 flex items-center justify-center font-bold text-sm text-white">M</div>
-            <span className="font-bold text-base tracking-tight">Mechi</span>
-          </Link>
-          <div className="flex items-center gap-6">
-            <Link href="#features" className="hidden md:block text-sm text-white/40 hover:text-white transition-colors">Features</Link>
-            <Link href="#games" className="hidden md:block text-sm text-white/40 hover:text-white transition-colors">Games</Link>
-            <Link href="#ranks" className="hidden md:block text-sm text-white/40 hover:text-white transition-colors">Ranks</Link>
-            <div className="flex items-center gap-2">
-              <Link href="/login" className="text-sm font-medium text-white/50 hover:text-white px-3 py-2 transition-colors">
-                Sign In
-              </Link>
-              <Link href="/register" className="text-sm font-semibold bg-emerald-500 hover:bg-emerald-400 text-white px-4 py-2 rounded-lg transition-colors">
-                Get Started
-              </Link>
-            </div>
-          </div>
-        </div>
-      </nav>
+    <div className="page-base">
+      <HomeFloatingHeader />
 
-      {/* ── Hero ── */}
       <section className="relative overflow-hidden">
-        {/* Gradient orbs */}
-        <div className="absolute top-20 left-1/4 w-[600px] h-[600px] bg-emerald-500/[0.04] rounded-full blur-[120px] pointer-events-none" />
-        <div className="absolute bottom-0 right-1/4 w-[400px] h-[400px] bg-blue-500/[0.03] rounded-full blur-[100px] pointer-events-none" />
+        <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[rgba(50,224,196,0.3)] to-transparent" />
+        <div className="pointer-events-none absolute left-[10%] top-10 h-56 w-56 rounded-full bg-[rgba(50,224,196,0.1)] blur-[110px]" />
+        <div className="pointer-events-none absolute right-[12%] top-14 h-52 w-52 rounded-full bg-[rgba(255,107,107,0.1)] blur-[96px]" />
 
-        <div className="max-w-7xl mx-auto px-5 sm:px-8 pt-20 sm:pt-28 lg:pt-36 pb-20 lg:pb-32">
-          <div className="max-w-3xl">
-            <div className="inline-flex items-center gap-2 bg-emerald-500/8 border border-emerald-500/15 rounded-full px-4 py-1.5 text-emerald-400 text-xs font-medium mb-6">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-              Kenya&apos;s Gaming Matchmaking Platform
-            </div>
+        <div className="landing-shell pb-12 pt-10 sm:pb-14 sm:pt-12 lg:pb-18 lg:pt-16">
+          <div className="max-w-2xl">
+            <BrandLogo size="lg" showTagline />
 
-            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight leading-[1.1] mb-6">
-              Find your opponent.
-              <br />
-              <span className="text-emerald-400">Prove you&apos;re the best.</span>
+            <h1 className="mt-6 max-w-2xl text-[2.6rem] font-black leading-[0.96] tracking-[-0.05em] text-[var(--text-primary)] sm:text-[3.2rem] lg:text-[3.8rem]">
+              Organized 1v1s for players who want less noise and better competition.
             </h1>
 
-            <p className="text-lg sm:text-xl text-white/40 max-w-xl leading-relaxed mb-10">
-              Skill-based 1v1 matchmaking for Kenyan gamers. Play eFootball, EA FC, Tekken, Street Fighter and more — across PlayStation, Xbox, PC, Mobile and Nintendo.
+            <p className="mt-4 max-w-xl text-sm leading-7 text-[var(--text-secondary)] sm:text-base">
+              Mechi gives Kenyan players one cleaner place to queue, report, connect,
+              and keep rising across football, fighters, sports, and mobile titles.
             </p>
 
-            <div className="flex flex-col sm:flex-row gap-3">
-              <Link href="/register" className="inline-flex items-center justify-center gap-2 bg-emerald-500 hover:bg-emerald-400 text-white font-semibold px-6 py-3 rounded-xl text-sm transition-all active:scale-[0.98]">
-                Start Playing Free
+            <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+              <Link href="/register" className="btn-primary">
+                Start competing
                 <ArrowRight size={16} />
               </Link>
-              <Link href="/login" className="inline-flex items-center justify-center bg-white/6 hover:bg-white/10 text-white/60 hover:text-white font-medium px-6 py-3 rounded-xl text-sm transition-all">
-                Sign In
+              <Link href="#how-it-works" className="btn-ghost">
+                See how it works
               </Link>
             </div>
-          </div>
 
-          {/* Stats */}
-          <div className="mt-20 grid grid-cols-2 sm:grid-cols-4 gap-6 sm:gap-8 max-w-2xl">
-            {[
-              { value: '14+', label: 'Games Supported' },
-              { value: '5', label: 'Platforms' },
-              { value: '6', label: 'Rank Tiers' },
-              { value: '🇰🇪', label: 'Kenya First' },
-            ].map((s) => (
-              <div key={s.label}>
-                <div className="text-3xl font-bold text-white">{s.value}</div>
-                <div className="text-xs text-white/25 mt-1">{s.label}</div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ── How It Works ── */}
-      <section className="border-t border-white/[0.04] py-20 lg:py-28">
-        <div className="max-w-7xl mx-auto px-5 sm:px-8">
-          <p className="text-xs font-semibold text-white/20 uppercase tracking-widest mb-3">How It Works</p>
-          <h2 className="text-2xl sm:text-3xl font-bold mb-12 max-w-lg">Three steps to your next match.</h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {[
-              { step: '01', title: 'Create your profile', desc: 'Pick your platforms, add your gamer IDs, and choose up to 3 games.' },
-              { step: '02', title: 'Join the queue', desc: 'Hit "Find Match" — our ELO algorithm finds an opponent at your level.' },
-              { step: '03', title: 'Play & climb', desc: 'Report the result, gain rating points, and climb the ranked leaderboard.' },
-            ].map((item) => (
-              <div key={item.step} className="group">
-                <div className="text-sm font-mono text-emerald-500/60 mb-3">{item.step}</div>
-                <h3 className="text-base font-semibold text-white mb-2">{item.title}</h3>
-                <p className="text-sm text-white/30 leading-relaxed">{item.desc}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ── Features ── */}
-      <section id="features" className="border-t border-white/[0.04] py-20 lg:py-28">
-        <div className="max-w-7xl mx-auto px-5 sm:px-8">
-          <p className="text-xs font-semibold text-white/20 uppercase tracking-widest mb-3">Features</p>
-          <h2 className="text-2xl sm:text-3xl font-bold mb-12 max-w-lg">Built for competitive gamers.</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {FEATURES.map((f) => (
-              <div key={f.title} className="bg-white/[0.02] border border-white/[0.05] rounded-2xl p-6 hover:bg-white/[0.04] transition-colors">
-                <div className="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center mb-4">
-                  <f.icon size={18} className="text-emerald-400" />
+            <div className="mt-7 grid max-w-2xl grid-cols-2 gap-3 sm:grid-cols-4">
+              {HERO_STATS.map((item) => (
+                <div
+                  key={item.label}
+                  className="rounded-2xl border border-[var(--border-color)] bg-[var(--surface-soft)] px-3 py-3"
+                >
+                  <div className="text-lg font-black text-[var(--text-primary)]">{item.value}</div>
+                  <div className="mt-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--text-soft)]">
+                    {item.label}
+                  </div>
                 </div>
-                <h3 className="font-semibold text-white text-sm mb-2">{f.title}</h3>
-                <p className="text-xs text-white/30 leading-relaxed">{f.desc}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ── Games ── */}
-      <section id="games" className="border-t border-white/[0.04] py-20 lg:py-28">
-        <div className="max-w-7xl mx-auto px-5 sm:px-8">
-          <p className="text-xs font-semibold text-white/20 uppercase tracking-widest mb-3">Games</p>
-          <h2 className="text-2xl sm:text-3xl font-bold mb-12 max-w-lg">Play what you love.</h2>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-            {GAMES.map((g) => (
-              <div key={g.name} className="bg-white/[0.02] border border-white/[0.05] rounded-2xl p-5 text-center hover:bg-white/[0.04] transition-colors group">
-                <div className="text-3xl mb-3 group-hover:scale-110 transition-transform">{g.emoji}</div>
-                <div className="text-sm font-semibold text-white mb-1">{g.name}</div>
-                <div className="text-[11px] text-white/20">{g.platforms}</div>
-              </div>
-            ))}
-          </div>
-          <p className="text-sm text-white/20 mt-6">+ 8 more games including Call of Duty Mobile, Clash Royale, Chess, and more.</p>
-        </div>
-      </section>
-
-      {/* ── Rank Tiers ── */}
-      <section id="ranks" className="border-t border-white/[0.04] py-20 lg:py-28">
-        <div className="max-w-7xl mx-auto px-5 sm:px-8">
-          <p className="text-xs font-semibold text-white/20 uppercase tracking-widest mb-3">Rank System</p>
-          <h2 className="text-2xl sm:text-3xl font-bold mb-12 max-w-lg">Your skill, your rank.</h2>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-            {TIERS.map((t) => (
-              <div key={t.name} className="bg-white/[0.02] border border-white/[0.05] rounded-2xl p-5 text-center hover:bg-white/[0.04] transition-colors">
-                <div className="w-10 h-10 rounded-full mx-auto mb-3 flex items-center justify-center" style={{ background: t.color + '15' }}>
-                  <Trophy size={16} style={{ color: t.color }} />
-                </div>
-                <div className="text-sm font-semibold" style={{ color: t.color }}>{t.name}</div>
-                <div className="text-[11px] text-white/20 mt-0.5">{t.range} ELO</div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ── Platforms ── */}
-      <section className="border-t border-white/[0.04] py-20 lg:py-28">
-        <div className="max-w-7xl mx-auto px-5 sm:px-8">
-          <div className="flex flex-col lg:flex-row lg:items-center gap-10 lg:gap-20">
-            <div className="lg:max-w-md">
-              <p className="text-xs font-semibold text-white/20 uppercase tracking-widest mb-3">Cross-Platform</p>
-              <h2 className="text-2xl sm:text-3xl font-bold mb-4">Play on any device.</h2>
-              <p className="text-sm text-white/30 leading-relaxed">
-                Whether you game on a PS5, Xbox Series X, gaming PC, your phone, or a Nintendo Switch — Mechi supports all of them. Link your platform IDs and start matching.
-              </p>
+              ))}
             </div>
-            <div className="flex flex-wrap gap-4">
-              {[
-                { icon: Gamepad2, label: 'PlayStation', color: 'blue' },
-                { icon: Gamepad2, label: 'Xbox', color: 'green' },
-                { icon: Monitor, label: 'PC', color: 'purple' },
-                { icon: Smartphone, label: 'Mobile', color: 'orange' },
-                { icon: Gamepad2, label: 'Nintendo', color: 'red' },
-              ].map((p) => (
-                <div key={p.label} className="bg-white/[0.02] border border-white/[0.05] rounded-2xl px-6 py-4 flex items-center gap-3 hover:bg-white/[0.04] transition-colors">
-                  <p.icon size={18} className="text-white/30" />
-                  <span className="text-sm font-medium text-white/60">{p.label}</span>
+
+            <div className="mt-6 flex flex-wrap gap-2">
+              {PLATFORM_CHIPS.map((platform) => (
+                <div
+                  key={platform.label}
+                  className="inline-flex items-center gap-2 rounded-full border border-[var(--border-color)] bg-[var(--surface-strong)] px-3 py-1.5 text-[11px] font-semibold text-[var(--text-secondary)]"
+                >
+                  <platform.icon size={13} />
+                  {platform.label}
                 </div>
               ))}
             </div>
@@ -209,35 +179,323 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ── CTA ── */}
-      <section className="border-t border-white/[0.04] py-20 lg:py-28">
-        <div className="max-w-7xl mx-auto px-5 sm:px-8">
-          <div className="bg-emerald-500/[0.06] border border-emerald-500/10 rounded-3xl p-10 sm:p-16 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-8">
+      <section id="how-it-works" className="landing-section">
+        <div className="landing-shell">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
             <div>
-              <h2 className="text-2xl sm:text-3xl font-bold mb-2">Ready to compete?</h2>
-              <p className="text-white/30 text-sm max-w-md">Free to join. No subscriptions. No pay-to-win. Just pure skill-based competition for Kenyan gamers.</p>
+              <p className="section-title">How it works</p>
+              <h2 className="mt-3 max-w-xl text-3xl font-black text-[var(--text-primary)] sm:text-[2.2rem]">
+                Set up quick. Get matched. Start climbing.
+              </h2>
             </div>
-            <Link href="/register" className="inline-flex items-center justify-center gap-2 bg-emerald-500 hover:bg-emerald-400 text-white font-semibold px-6 py-3 rounded-xl text-sm transition-all active:scale-[0.98] flex-shrink-0">
-              Create Free Account
-              <ArrowRight size={16} />
-            </Link>
+            <p className="max-w-xl text-sm leading-6 text-[var(--text-secondary)]">
+              The landing experience now focuses on one promise: help players understand
+              the path quickly and get them into action without a wall of oversized content.
+            </p>
+          </div>
+
+          <div className="mt-7 grid gap-3 md:grid-cols-3">
+            {STEPS.map((item) => (
+              <div key={item.step} className="card p-5">
+                <div className="section-title">{item.step}</div>
+                <h3 className="mt-3 text-base font-black text-[var(--text-primary)]">{item.title}</h3>
+                <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">{item.desc}</p>
+              </div>
+            ))}
           </div>
         </div>
       </section>
 
-      {/* ── Footer ── */}
-      <footer className="border-t border-white/[0.04] py-8">
-        <div className="max-w-7xl mx-auto px-5 sm:px-8 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-2">
-            <div className="w-6 h-6 rounded-md bg-emerald-500 flex items-center justify-center font-bold text-[10px] text-white">M</div>
-            <span className="text-sm font-medium text-white/30">Mechi</span>
+      <section id="trust" className="landing-section">
+        <div className="landing-shell grid gap-6 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] lg:items-start">
+          <div>
+            <p className="section-title">Why it works</p>
+            <h2 className="mt-3 max-w-lg text-3xl font-black text-[var(--text-primary)] sm:text-[2.2rem]">
+              No chaos. Just good matches.
+            </h2>
+            <p className="mt-3 max-w-xl text-sm leading-6 text-[var(--text-secondary)]">
+              You should know where to tap, get into a match fast, and trust the result after.
+              That is the whole point.
+            </p>
+
+            <div className="mt-5 grid grid-cols-3 gap-3">
+              {[
+                { value: 'Clean', label: 'Match flow' },
+                { value: 'Quick', label: 'Queue up' },
+                { value: 'Real', label: 'Progress' },
+              ].map((item) => (
+                <div
+                  key={item.label}
+                  className="rounded-2xl border border-[var(--border-color)] bg-[var(--surface-soft)] px-3 py-3"
+                >
+                  <div className="text-sm font-black text-[var(--text-primary)]">{item.value}</div>
+                  <div className="mt-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--text-soft)]">
+                    {item.label}
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
-          <p className="text-xs text-white/15">
-            © {new Date().getFullYear()} Mechi · mechi.club · Built for Kenyan gamers 🇰🇪
+
+          <div className="card overflow-hidden">
+            {TRUST_PILLARS.map((item, index) => (
+              <div
+                key={item.title}
+                className={`flex gap-4 px-5 py-4 sm:px-6 ${
+                  index !== TRUST_PILLARS.length - 1 ? 'border-b border-[var(--border-color)]' : ''
+                }`}
+              >
+                <div
+                  className={`mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl ${
+                    index === 1
+                      ? 'bg-[rgba(255,107,107,0.14)] text-[#c95252]'
+                      : 'bg-[rgba(50,224,196,0.14)] text-[var(--accent-secondary-text)]'
+                  }`}
+                >
+                  <item.icon size={17} />
+                </div>
+                <div>
+                  <h3 className="text-base font-black text-[var(--text-primary)]">{item.title}</h3>
+                  <p className="mt-1 text-sm leading-6 text-[var(--text-secondary)]">{item.desc}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section id="supported" className="landing-section">
+        <div className="landing-shell">
+          <div className="card circuit-panel p-6 sm:p-7">
+            <div className="grid gap-8 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)]">
+              <div>
+                <p className="section-title">Games only</p>
+                <h2 className="mt-3 max-w-lg text-3xl font-black text-[var(--text-primary)] sm:text-[2.2rem]">
+                  Keep the spotlight on the titles you actually play.
+                </h2>
+                <p className="mt-3 max-w-xl text-sm leading-6 text-[var(--text-secondary)]">
+                  Football, fighters, sports, and mobile play can live under one cleaner identity
+                  without turning your profile into a cluttered wall of disconnected records.
+                </p>
+
+                <div className="mt-5 flex flex-wrap gap-2.5">
+                  {SUPPORTED_GAMES.map((game) => (
+                    <span
+                      key={game}
+                      className="inline-flex rounded-full border border-[var(--border-color)] bg-[var(--surface-strong)] px-3 py-1.5 text-xs font-semibold text-[var(--text-secondary)]"
+                    >
+                      {game}
+                    </span>
+                  ))}
+                </div>
+              </div>
+
+              <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-1">
+                {[
+                  {
+                    label: 'Focused setup',
+                    value: 'Up to 3 mains',
+                    tone: 'bg-[rgba(50,224,196,0.14)] text-[var(--accent-secondary-text)]',
+                  },
+                  {
+                    label: 'Cross-title identity',
+                    value: '1 clean profile',
+                    tone: 'bg-[rgba(96,165,250,0.14)] text-[#60a5fa]',
+                  },
+                  {
+                    label: 'Queue ready',
+                    value: 'Console, PC, mobile',
+                    tone: 'bg-[rgba(255,107,107,0.14)] text-[#ff8a8a]',
+                  },
+                ].map((item) => (
+                  <div
+                    key={item.label}
+                    className="rounded-[1.05rem] border border-[var(--border-color)] bg-[var(--surface-strong)] p-4 sm:p-5"
+                  >
+                    <span className={`inline-flex rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] ${item.tone}`}>
+                      {item.label}
+                    </span>
+                    <p className="mt-4 text-lg font-black text-[var(--text-primary)]">{item.value}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="pricing" className="landing-section">
+        <div className="landing-shell">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+            <div>
+              <p className="section-title">Pricing</p>
+              <h2 className="mt-3 max-w-2xl text-3xl font-black text-[var(--text-primary)] sm:text-[2.2rem]">
+                Start free now. Grow into more when your scene needs it.
+              </h2>
+            </div>
+            <p className="max-w-xl text-sm leading-6 text-[var(--text-secondary)]">
+              The core Mechi experience stays open for players. Bigger community setups and extra
+              polish can layer on top without slowing down the main grind.
+            </p>
+          </div>
+
+          <div className="mt-7 grid gap-3 lg:grid-cols-3">
+            {PRICING_PLANS.map((plan) => (
+              <div
+                key={plan.name}
+                className={`card flex h-full flex-col p-5 sm:p-6 ${
+                  plan.featured ? 'circuit-panel border-[rgba(50,224,196,0.26)]' : ''
+                }`}
+              >
+                <span
+                  className={`inline-flex w-fit rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] ${
+                    plan.featured
+                      ? 'bg-[rgba(50,224,196,0.14)] text-[var(--accent-secondary-text)]'
+                      : 'bg-[var(--surface-strong)] text-[var(--text-soft)]'
+                  }`}
+                >
+                  {plan.kicker}
+                </span>
+
+                <div className="mt-5 flex items-end justify-between gap-4">
+                  <div>
+                    <h3 className="text-lg font-black text-[var(--text-primary)]">{plan.name}</h3>
+                    <p className="mt-1 text-3xl font-black text-[var(--text-primary)]">{plan.price}</p>
+                  </div>
+                </div>
+
+                <p className="mt-4 text-sm leading-6 text-[var(--text-secondary)]">
+                  {plan.description}
+                </p>
+
+                <div className="mt-5 grid gap-2.5">
+                  {plan.features.map((feature) => (
+                    <div
+                      key={feature}
+                      className="rounded-xl border border-[var(--border-color)] bg-[var(--surface)] px-3 py-2 text-sm font-medium text-[var(--text-secondary)]"
+                    >
+                      {feature}
+                    </div>
+                  ))}
+                </div>
+
+                <div className="mt-6">
+                  <Link
+                    href={plan.href}
+                    className={plan.featured ? 'btn-primary w-full justify-center' : 'btn-outline w-full justify-center'}
+                  >
+                    {plan.cta}
+                  </Link>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section id="ranks" className="landing-section">
+        <div className="landing-shell">
+          <div className="grid gap-6 lg:grid-cols-[minmax(0,0.82fr)_minmax(0,1.18fr)] lg:items-start">
+            <div>
+              <p className="section-title">Ranks</p>
+              <h2 className="mt-3 max-w-lg text-3xl font-black text-[var(--text-primary)] sm:text-[2.2rem]">
+                A ladder players can read in one quick look.
+              </h2>
+              <p className="mt-3 max-w-xl text-sm leading-6 text-[var(--text-secondary)]">
+                Rank should feel obvious, not mysterious. Bronze through Legend stays clean,
+                readable, and easy to understand before you even queue.
+              </p>
+
+              <div className="mt-5 grid grid-cols-3 gap-3">
+                {[
+                  { value: '6', label: 'Tiers' },
+                  { value: 'III -> I', label: 'Core climb' },
+                  { value: 'Legend', label: 'Final stop' },
+                ].map((item) => (
+                  <div
+                    key={item.label}
+                    className="rounded-2xl border border-[var(--border-color)] bg-[var(--surface-soft)] px-3 py-3"
+                  >
+                    <div className="text-sm font-black text-[var(--text-primary)]">{item.value}</div>
+                    <div className="mt-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--text-soft)]">
+                      {item.label}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="card overflow-hidden p-5 sm:p-6">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <p className="section-title">Rank clarity</p>
+                  <h3 className="mt-2 text-lg font-black text-[var(--text-primary)]">Rank ladder</h3>
+                </div>
+                <Trophy size={18} className="text-[var(--brand-coral)]" />
+              </div>
+
+              <div className="mt-5 grid gap-2.5">
+                {TIERS.map((tier) => (
+                  <div
+                    key={tier.name}
+                    className="flex items-center justify-between rounded-xl border border-[var(--border-color)] bg-[var(--surface)] px-3 py-2.5"
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <span
+                        className="h-2.5 w-2.5 rounded-full"
+                        style={{ backgroundColor: tier.color }}
+                      />
+                      <span className="text-sm font-semibold text-[var(--text-primary)]">{tier.name}</span>
+                    </div>
+                    <span className="text-xs font-medium text-[var(--text-soft)]">{tier.range}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="landing-section">
+        <div className="landing-shell">
+          <div className="card circuit-panel p-6 sm:p-7 lg:flex lg:items-center lg:justify-between lg:gap-8">
+            <div className="max-w-2xl">
+              <p className="section-title">Ready to jump in</p>
+              <h2 className="mt-3 text-3xl font-black text-[var(--text-primary)] sm:text-[2.2rem]">
+                Pick your games. Queue up. Start climbing.
+              </h2>
+              <p className="mt-3 text-sm leading-6 text-[var(--text-secondary)]">
+                Set up your profile and get into matches that feel clean,
+                competitive, and easy to follow.
+              </p>
+            </div>
+
+            <div className="mt-5 flex flex-col gap-3 lg:mt-0 lg:items-end">
+              <Link href="/register" className="btn-primary">
+                Start free
+                <ArrowRight size={16} />
+              </Link>
+              <Link href="/login" className="brand-link text-sm font-semibold">
+                Already on Mechi? Jump back in
+              </Link>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <footer className="border-t border-[var(--border-color)] py-7">
+        <div className="landing-shell flex flex-col items-center justify-between gap-4 sm:flex-row">
+          <BrandLogo size="xs" />
+          <p className="text-center text-xs text-[var(--text-soft)]">
+            Copyright {new Date().getFullYear()} Mechi. Competitive gaming for players who want organized play.
           </p>
-          <div className="flex gap-6">
-            <Link href="/login" className="text-xs text-white/20 hover:text-white/40 transition-colors">Sign In</Link>
-            <Link href="/register" className="text-xs text-white/20 hover:text-white/40 transition-colors">Sign Up</Link>
+          <div className="flex gap-5">
+            <Link href="/login" className="brand-link text-xs font-semibold">
+              Sign in
+            </Link>
+            <Link href="/register" className="brand-link text-xs font-semibold">
+              Sign up
+            </Link>
           </div>
         </div>
       </footer>

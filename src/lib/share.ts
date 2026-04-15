@@ -1,4 +1,5 @@
-const BASE_URL = typeof window !== 'undefined' ? window.location.origin : 'https://mechi-v3.vercel.app';
+const BASE_URL =
+  typeof window !== 'undefined' ? window.location.origin : 'https://mechi.club';
 
 export interface ShareData {
   title: string;
@@ -6,13 +7,11 @@ export interface ShareData {
   url: string;
 }
 
-/** Share to WhatsApp with text + link */
 export function shareToWhatsApp(text: string, url: string) {
   const msg = `${text}\n\n${url}`;
   window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');
 }
 
-/** Copy link to clipboard */
 export async function copyLink(url: string): Promise<boolean> {
   try {
     await navigator.clipboard.writeText(url);
@@ -22,7 +21,6 @@ export async function copyLink(url: string): Promise<boolean> {
   }
 }
 
-/** Use native Web Share API (mobile) */
 export async function nativeShare(data: ShareData): Promise<boolean> {
   if (!navigator.share) return false;
   try {
@@ -33,20 +31,16 @@ export async function nativeShare(data: ShareData): Promise<boolean> {
   }
 }
 
-/** Check if Web Share API is available */
 export function canNativeShare(): boolean {
   return typeof navigator !== 'undefined' && !!navigator.share;
 }
 
-/** Download an image from a URL (for Instagram stories) */
 export function downloadImage(url: string, filename: string) {
   const a = document.createElement('a');
   a.href = url;
   a.download = filename;
   a.click();
 }
-
-// ── Share URL builders ──
 
 export function getMatchShareUrl(matchId: string) {
   return `${BASE_URL}/s/match/${matchId}`;
@@ -68,19 +62,48 @@ export function getProfileOgImageUrl(username: string) {
   return `${BASE_URL}/api/og/profile?username=${username}`;
 }
 
-// ── Pre-built share messages ──
-
-export function matchResultShareText(
-  winner: string, loser: string, game: string, ratingChange: number
-) {
-  const sign = ratingChange >= 0 ? '+' : '';
-  return `${winner} beat ${loser} on ${game} (${sign}${ratingChange} ELO) on Mechi - Kenya's gaming matchmaking platform!`;
+export function getTournamentShareUrl(slug: string) {
+  return `${BASE_URL}/s/t/${slug}`;
 }
 
-export function profileShareText(username: string, tier: string, bestRating: number) {
-  return `${username} is ranked ${tier} (${bestRating} ELO) on Mechi - Kenya's gaming matchmaking platform! Think you can beat them?`;
+export function getTournamentAppUrl(slug: string) {
+  return `${BASE_URL}/t/${slug}`;
+}
+
+export function getTournamentOgImageUrl(slug: string) {
+  return `${BASE_URL}/api/og/tournament?slug=${encodeURIComponent(slug)}`;
+}
+
+export function matchResultShareText(
+  winner: string,
+  loser: string,
+  game: string,
+  rankLabel?: string,
+  level?: number
+) {
+  const climbLine =
+    rankLabel && level
+      ? `${winner} is now ${rankLabel} / Lv. ${level}`
+      : `${winner} moved up the Mechi climb`;
+
+  return `${winner} beat ${loser} on ${game} on Mechi. ${climbLine}. Compete. Connect. Rise.`;
+}
+
+export function profileShareText(username: string, rankLabel: string, level: number) {
+  return `${username} is climbing as ${rankLabel} / Lv. ${level} on Mechi. Think you can beat them?`;
 }
 
 export function inviteShareText(username: string) {
-  return `${username} invited you to Mechi - Kenya's #1 gaming matchmaking platform. Join free and compete in 1v1 ranked matches!`;
+  return `${username} invited you to Mechi. Join free, compete fairly, and rise through the ladder.`;
+}
+
+export function tournamentShareText(
+  title: string,
+  game: string,
+  entryFee: number,
+  slotsLeft: number
+) {
+  const price = entryFee > 0 ? `KES ${entryFee.toLocaleString()} entry` : 'free entry';
+  const slotCopy = slotsLeft === 1 ? '1 slot left' : `${slotsLeft} slots left`;
+  return `${title} is live on Mechi. ${game}. ${price}. ${slotCopy}. Pull up and prove it.`;
 }

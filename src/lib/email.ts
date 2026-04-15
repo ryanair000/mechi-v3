@@ -218,3 +218,95 @@ export async function sendMatchDisputeEmail(params: {
     console.error('[Email] Dispute send error:', err);
   }
 }
+
+export async function sendTournamentFullEmail(params: {
+  to: string;
+  organizerName: string;
+  tournamentTitle: string;
+  tournamentUrl: string;
+}): Promise<void> {
+  const content = `
+    <h2>Your bracket is full</h2>
+    <p>Hey ${params.organizerName}, every slot in <strong>${params.tournamentTitle}</strong> is locked.</p>
+    <p>Start the tournament to create the first match rooms and get players moving.</p>
+    <a href="${params.tournamentUrl}" class="btn">Start Tournament</a>
+  `;
+
+  try {
+    await resend.emails.send({
+      from: FROM,
+      to: params.to,
+      subject: `${params.tournamentTitle} is full - start it now`,
+      html: baseLayout('Tournament Full', content),
+    });
+  } catch (err) {
+    console.error('[Email] Tournament full send error:', err);
+  }
+}
+
+export async function sendTournamentMatchReadyEmail(params: {
+  to: string;
+  playerName: string;
+  opponentName: string;
+  tournamentTitle: string;
+  game: string;
+  matchUrl: string;
+}): Promise<void> {
+  const content = `
+    <h2>Your bracket match is ready</h2>
+    <p>Hey ${params.playerName}, your match in <strong>${params.tournamentTitle}</strong> is live.</p>
+    <div class="info-box">
+      <div class="info-row">
+        <span class="info-label">Game</span>
+        <span class="info-value">${params.game}</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">Opponent</span>
+        <span class="info-value">${params.opponentName}</span>
+      </div>
+    </div>
+    <a href="${params.matchUrl}" class="btn">Open Match</a>
+  `;
+
+  try {
+    await resend.emails.send({
+      from: FROM,
+      to: params.to,
+      subject: `Your Mechi tournament match is ready`,
+      html: baseLayout('Tournament Match Ready', content),
+    });
+  } catch (err) {
+    console.error('[Email] Tournament match send error:', err);
+  }
+}
+
+export async function sendTournamentWinnerEmail(params: {
+  to: string;
+  winnerName: string;
+  tournamentTitle: string;
+  prizeAmount: number;
+  tournamentUrl: string;
+}): Promise<void> {
+  const prizeCopy =
+    params.prizeAmount > 0
+      ? `Your prize is KES ${params.prizeAmount.toLocaleString()}. If automatic payout needs review, Mechi will keep it marked on the tournament.`
+      : 'No cash prize on this one, but the win is yours.';
+
+  const content = `
+    <h2>Champion status locked</h2>
+    <p>GG ${params.winnerName}. You won <strong>${params.tournamentTitle}</strong>.</p>
+    <p>${prizeCopy}</p>
+    <a href="${params.tournamentUrl}" class="btn">View Bracket</a>
+  `;
+
+  try {
+    await resend.emails.send({
+      from: FROM,
+      to: params.to,
+      subject: `You won ${params.tournamentTitle}`,
+      html: baseLayout('Tournament Winner', content),
+    });
+  } catch (err) {
+    console.error('[Email] Tournament winner send error:', err);
+  }
+}

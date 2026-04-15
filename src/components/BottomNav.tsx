@@ -2,34 +2,56 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, Trophy, Users, Lightbulb, User } from 'lucide-react';
+import { Home, Shield, Swords, Trophy, User, Users } from 'lucide-react';
+import { useAuth } from '@/components/AuthProvider';
 
 const NAV_ITEMS = [
   { href: '/dashboard', label: 'Home', icon: Home },
   { href: '/leaderboard', label: 'Ranks', icon: Trophy },
+  { href: '/tournaments', label: 'Brackets', icon: Swords },
   { href: '/lobbies', label: 'Lobbies', icon: Users },
-  { href: '/suggest', label: 'Suggest', icon: Lightbulb },
   { href: '/profile', label: 'Profile', icon: User },
 ];
 
 export function BottomNav() {
   const pathname = usePathname();
+  const { user } = useAuth();
 
   return (
-    <nav className="fixed bottom-0 inset-x-0 z-40 bg-gray-950/90 backdrop-blur-xl border-t border-white/[0.04] lg:hidden">
-      <div className="max-w-7xl mx-auto px-2 flex items-center justify-around h-14">
+    <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-[var(--border-color)] bg-[var(--surface-soft)] backdrop-blur-xl lg:hidden">
+      <div className="mx-auto flex h-14 max-w-7xl items-center justify-around px-2">
         {NAV_ITEMS.map(({ href, label, icon: Icon }) => {
           const isActive = pathname === href || (href !== '/dashboard' && pathname.startsWith(href));
           return (
-            <Link key={href} href={href}
-              className={`flex flex-col items-center justify-center gap-0.5 flex-1 py-1.5 transition-colors ${
-                isActive ? 'text-emerald-400' : 'text-white/25 hover:text-white/50'
-              }`}>
+            <Link
+              key={href}
+              href={href}
+              className={`flex flex-1 flex-col items-center justify-center gap-0.5 py-1.5 transition-colors ${
+                isActive
+                  ? 'text-[var(--brand-coral)]'
+                  : 'text-[var(--text-soft)] hover:text-[var(--text-primary)]'
+              }`}
+            >
               <Icon size={18} strokeWidth={isActive ? 2.5 : 1.5} />
               <span className={`text-[10px] ${isActive ? 'font-semibold' : 'font-normal'}`}>{label}</span>
             </Link>
           );
         })}
+        {user?.role === 'admin' || user?.role === 'moderator' ? (
+          <Link
+            href="/admin"
+            className={`flex flex-1 flex-col items-center justify-center gap-0.5 py-1.5 transition-colors ${
+              pathname.startsWith('/admin')
+                ? 'text-[var(--brand-coral)]'
+                : 'text-[var(--text-soft)] hover:text-[var(--text-primary)]'
+            }`}
+          >
+            <Shield size={18} strokeWidth={pathname.startsWith('/admin') ? 2.5 : 1.5} />
+            <span className={`text-[10px] ${pathname.startsWith('/admin') ? 'font-semibold' : 'font-normal'}`}>
+              Admin
+            </span>
+          </Link>
+        ) : null}
       </div>
     </nav>
   );

@@ -14,11 +14,12 @@ export function createClient() {
   });
 }
 
-// Server-side Supabase client (uses service role key if available, falls back to anon key)
-// RLS is disabled on all tables so anon key has full access
 export function createServiceClient() {
-  const key = supabaseServiceKey?.startsWith('eyJ') ? supabaseServiceKey : supabaseAnonKey;
-  return createSupabaseClient(supabaseUrl, key, {
+  if (!supabaseServiceKey) {
+    throw new Error('SUPABASE_SERVICE_ROLE_KEY is required for server-side data access');
+  }
+
+  return createSupabaseClient(supabaseUrl, supabaseServiceKey, {
     auth: {
       persistSession: false,
       autoRefreshToken: false,

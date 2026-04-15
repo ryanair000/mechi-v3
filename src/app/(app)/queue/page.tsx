@@ -1,21 +1,23 @@
 'use client';
 
-import { useEffect, useState, useRef, useCallback, Suspense } from 'react';
+import { Suspense, useEffect, useState, useRef, useCallback } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useAuth, useAuthFetch } from '@/components/AuthProvider';
-import { createClient } from '@/lib/supabase';
-import { GAMES } from '@/lib/config';
-import type { GameKey } from '@/types';
 import toast from 'react-hot-toast';
-import { X, Users, Wifi } from 'lucide-react';
+import { Users, X } from 'lucide-react';
+import { useAuth, useAuthFetch } from '@/components/AuthProvider';
+import { BrandLogo } from '@/components/BrandLogo';
+import { createClient } from '@/lib/supabase';
+import { GAMES, PLATFORMS } from '@/lib/config';
+import type { GameKey, PlatformKey } from '@/types';
 
 function QueueContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { user, token } = useAuth();
+  const { user } = useAuth();
   const authFetch = useAuthFetch();
 
   const game = searchParams.get('game') as GameKey | null;
+  const platform = searchParams.get('platform') as PlatformKey | null;
   const [elapsed, setElapsed] = useState(0);
   const [queueCount, setQueueCount] = useState(0);
   const [leaving, setLeaving] = useState(false);
@@ -24,42 +26,72 @@ function QueueContent() {
   const channelRef = useRef<ReturnType<ReturnType<typeof createClient>['channel']> | null>(null);
 
   const checkStatus = useCallback(async () => {
-    if (!token) return;
+    if (!user) return;
+
     try {
       const res = await authFetch('/api/queue/status');
       if (!res.ok) return;
+
       const data = await res.json();
-      if (data.activeMatch) router.push(`/match/${data.activeMatch.id}`);
-      else if (!data.inQueue) router.push('/dashboard');
-    } catch { /* ignore */ }
-  }, [authFetch, token, router]);
+      if (data.activeMatch) {
+        router.push(`/match/${data.activeMatch.id}`);
+      } else if (!data.inQueue) {
+        router.push('/dashboard');
+      }
+    } catch {
+      // ignore
+    }
+  }, [authFetch, user, router]);
 
   useEffect(() => {
-    if (!game || !GAMES[game]) { router.push('/dashboard'); return; }
+    if (!game || !GAMES[game]) {
+      router.push('/dashboard');
+      return;
+    }
 
-    timerRef.current = setInterval(() => setElapsed((e) => e + 1), 1000);
+    timerRef.current = setInterval(() => setElapsed((value) => value + 1), 1000);
 
     const fetchCount = async () => {
-      try { const res = await fetch(`/api/queue/count/${game}`); if (res.ok) { const d = await res.json(); setQueueCount(d.count); } } catch {}
+      try {
+        const platformQuery = platform ? `?platform=${encodeURIComponent(platform)}` : '';
+        const res = await fetch(`/api/queue/count/${game}${platformQuery}`);
+        if (res.ok) {
+          const data = await res.json();
+          setQueueCount(data.count);
+        }
+      } catch {
+        // ignore
+      }
     };
-    fetchCount();
+
+    void fetchCount();
     pollRef.current = setInterval(fetchCount, 8000);
 
     const supabase = createClient();
     if (user?.id) {
-      const channel = supabase.channel(`queue_user_${user.id}`)
-        .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'queue' },
+      const channel = supabase
+        .channel(`queue_user_${user.id}`)
+        .on(
+          'postgres_changes',
+          { event: 'UPDATE', schema: 'public', table: 'queue' },
           (payload) => {
             const row = payload.new as { user_id: string; status: string };
             if (row.user_id !== user.id) return;
-            if (row.status === 'matched') checkStatus();
-            else if (row.status === 'cancelled') router.push('/dashboard');
+
+            if (row.status === 'matched') {
+              void checkStatus();
+            } else if (row.status === 'cancelled') {
+              router.push('/dashboard');
+            }
           }
-        ).subscribe();
+        )
+        .subscribe();
       channelRef.current = channel;
     }
 
-    const statusPoll = setInterval(checkStatus, 4000);
+    const statusPoll = setInterval(() => {
+      void checkStatus();
+    }, 4000);
 
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
@@ -67,71 +99,103 @@ function QueueContent() {
       clearInterval(statusPoll);
       if (channelRef.current) channelRef.current.unsubscribe();
     };
-  }, [game, user, router, checkStatus]);
+  }, [game, platform, user, router, checkStatus]);
 
   const handleLeave = async () => {
     setLeaving(true);
-    try { await authFetch('/api/queue/leave', { method: 'POST' }); toast.success('Left the queue'); router.push('/dashboard'); }
-    catch { toast.error('Failed to leave queue'); setLeaving(false); }
+    try {
+      await authFetch('/api/queue/leave', { method: 'POST' });
+      toast.success('Left the queue');
+      router.push('/dashboard');
+    } catch {
+      toast.error('Failed to leave queue');
+      setLeaving(false);
+    }
   };
 
-  const fmt = (s: number) => `${Math.floor(s / 60)}:${(s % 60).toString().padStart(2, '0')}`;
+  const formatTime = (seconds: number) =>
+    `${Math.floor(seconds / 60)}:${(seconds % 60).toString().padStart(2, '0')}`;
+
   if (!game) return null;
   const gameConfig = GAMES[game];
+  const queuePlatforms = platform
+    ? gameConfig.platforms.filter((item) => item === platform)
+    : gameConfig.platforms.filter((item) => (user?.platforms ?? []).includes(item));
+  const displayedPlatforms = queuePlatforms.length > 0 ? queuePlatforms : gameConfig.platforms;
+  const platformLabel = displayedPlatforms
+    .map((platform) => PLATFORMS[platform]?.label ?? platform)
+    .join(' / ');
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-[80vh] px-5 relative overflow-hidden">
-      {/* Background glow */}
-      <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-        <div className="w-[500px] h-[500px] rounded-full bg-emerald-500/[0.03] blur-[100px]" />
-      </div>
+    <div className="page-container flex min-h-[80vh] items-center justify-center">
+      <div className="card circuit-panel relative w-full max-w-lg overflow-hidden p-6 text-center sm:p-7">
+        <div className="pointer-events-none absolute inset-x-0 top-0 h-24 bg-[radial-gradient(circle_at_top,rgba(50,224,196,0.18),transparent_65%)]" />
 
-      {/* Pulse rings */}
-      <div className="relative mb-10">
-        <div className="absolute inset-0 rounded-full border border-emerald-500/8 animate-ping scale-150" />
-        <div className="absolute inset-0 rounded-full border border-emerald-500/5 animate-ping scale-125" style={{ animationDelay: '0.5s' }} />
-        <div className="w-24 h-24 rounded-full bg-emerald-500/8 border border-emerald-500/15 flex items-center justify-center">
-          <div className="w-16 h-16 rounded-full bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center">
-            <div className="text-2xl">🎮</div>
+        <div className="relative mb-7 inline-flex">
+          <div className="absolute inset-0 scale-150 animate-ping rounded-full border border-[rgba(50,224,196,0.16)]" />
+          <div
+            className="absolute inset-0 scale-125 animate-ping rounded-full border border-[rgba(255,107,107,0.18)]"
+            style={{ animationDelay: '0.5s' }}
+          />
+          <div className="flex h-[4.5rem] w-[4.5rem] items-center justify-center rounded-full border border-[rgba(50,224,196,0.2)] bg-[rgba(50,224,196,0.1)]">
+            <div className="flex h-12 w-12 items-center justify-center rounded-full border border-[rgba(255,107,107,0.24)] bg-[rgba(255,107,107,0.12)]">
+              <BrandLogo
+                variant="symbol"
+                size="lg"
+                iconClassName="h-12 w-12 rounded-full border-0 bg-transparent shadow-none"
+              />
+            </div>
           </div>
         </div>
-      </div>
 
-      <h1 className="text-xl font-bold text-white mb-1">Searching...</h1>
-      <p className="text-white/30 text-sm mb-2">{gameConfig.label}</p>
-      <p className="text-emerald-400 font-mono text-xl font-bold mb-6 tabular-nums">{fmt(elapsed)}</p>
+        <h1 className="text-[2rem] font-black tracking-[-0.05em] text-[var(--text-primary)] sm:text-[2.15rem]">
+          Your next run is loading.
+        </h1>
+        <p className="mt-2 text-[13px] text-[var(--text-secondary)]">{gameConfig.label}</p>
+        <p className="mt-3 text-[2rem] font-black tabular-nums text-[var(--brand-coral)] sm:text-[2.25rem]">
+          {formatTime(elapsed)}
+        </p>
 
-      <div className="flex items-center gap-3 mb-4">
-        <div className="flex items-center gap-2 bg-white/[0.04] border border-white/[0.06] rounded-lg px-3 py-2">
-          <Users size={13} className="text-white/30" />
-          <span className="text-sm text-white/50"><span className="text-white font-semibold">{queueCount}</span> in queue</span>
+        <div className="mt-5 grid gap-2.5 sm:grid-cols-2">
+          <div className="card flex items-center justify-center gap-2 px-3 py-2.5">
+            <Users size={13} className="text-[var(--text-soft)]" />
+            <span className="text-[13px] text-[var(--text-secondary)]">
+              <span className="font-semibold text-[var(--text-primary)]">{queueCount}</span> in queue
+            </span>
+          </div>
+          <div className="card flex flex-wrap items-center justify-center gap-2 px-3 py-2.5 text-center">
+            {displayedPlatforms.map((platform) => (
+              <span key={platform} className="text-sm" aria-hidden="true">
+                {PLATFORMS[platform]?.icon}
+              </span>
+            ))}
+            <span className="text-[13px] font-semibold leading-5 text-[var(--text-primary)]">{platformLabel}</span>
+          </div>
         </div>
-        <div className="flex items-center gap-2 bg-emerald-500/8 border border-emerald-500/15 rounded-lg px-3 py-2">
-          <Wifi size={13} className="text-emerald-400" />
-          <span className="text-xs text-emerald-400 font-medium">Live</span>
-        </div>
+
+        <p className="mx-auto mb-6 mt-5 max-w-sm text-center text-[13px] leading-6 text-[var(--text-secondary)]">
+          We&apos;re teeing up a proper {gameConfig.label} showdown. Stay locked and Mechi
+          will drop you straight into the room the second it&apos;s go time.
+        </p>
+
+        <button onClick={handleLeave} disabled={leaving} className="btn-danger mx-auto px-4 py-2 text-sm">
+          <X size={13} />
+          {leaving ? 'Leaving...' : 'Cancel Search'}
+        </button>
       </div>
-
-      <p className="text-white/15 text-xs text-center max-w-sm mb-8 leading-relaxed">
-        Looking for an opponent at your skill level. You&apos;ll be notified when a match is found.
-      </p>
-
-      <button onClick={handleLeave} disabled={leaving}
-        className="flex items-center gap-2 border border-red-500/20 text-red-400 hover:bg-red-500/8 px-5 py-2.5 rounded-xl font-medium text-sm transition-all active:scale-[0.98]">
-        <X size={14} />
-        {leaving ? 'Leaving...' : 'Cancel Search'}
-      </button>
     </div>
   );
 }
 
 export default function QueuePage() {
   return (
-    <Suspense fallback={
-      <div className="flex items-center justify-center min-h-[80vh]">
-        <div className="w-8 h-8 rounded-full border-2 border-emerald-500 border-t-transparent animate-spin" />
-      </div>
-    }>
+    <Suspense
+      fallback={
+        <div className="flex min-h-[80vh] items-center justify-center">
+          <div className="h-8 w-8 animate-spin rounded-full border-2 border-[var(--brand-teal)] border-t-transparent" />
+        </div>
+      }
+    >
       <QueueContent />
     </Suspense>
   );

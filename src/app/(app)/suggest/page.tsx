@@ -1,10 +1,10 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
+import toast from 'react-hot-toast';
+import { ChevronUp, Lightbulb, Loader2, Plus, X } from 'lucide-react';
 import { useAuthFetch } from '@/components/AuthProvider';
 import type { Suggestion } from '@/types';
-import toast from 'react-hot-toast';
-import { ChevronUp, Lightbulb, Plus, X, Loader2 } from 'lucide-react';
 
 export default function SuggestPage() {
   const authFetch = useAuthFetch();
@@ -25,7 +25,7 @@ export default function SuggestPage() {
   }, [authFetch]);
 
   useEffect(() => {
-    fetchSuggestions();
+    void fetchSuggestions();
   }, [fetchSuggestions]);
 
   const handleVote = async (id: string) => {
@@ -38,8 +38,10 @@ export default function SuggestPage() {
         return;
       }
       setSuggestions((prev) =>
-        prev.map((s) =>
-          s.id === id ? { ...s, votes: data.votes, user_voted: data.voted } : s
+        prev.map((suggestion) =>
+          suggestion.id === id
+            ? { ...suggestion, votes: data.votes, user_voted: data.voted }
+            : suggestion
         )
       );
     } finally {
@@ -47,8 +49,8 @@ export default function SuggestPage() {
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
     if (!form.game_name.trim() || !form.description.trim()) {
       toast.error('Fill in all fields');
       return;
@@ -65,7 +67,7 @@ export default function SuggestPage() {
         toast.error(data.error ?? 'Failed to submit');
         return;
       }
-      toast.success('Suggestion submitted! 🎮');
+      toast.success('Suggestion submitted!');
       setSuggestions((prev) => [{ ...data.suggestion, user_voted: false }, ...prev]);
       setForm({ game_name: '', description: '' });
       setShowForm(false);
@@ -76,22 +78,28 @@ export default function SuggestPage() {
 
   return (
     <div className="page-container">
-      <div className="flex items-center justify-between mb-4">
-        <div>
-          <h1 className="text-2xl font-black text-gray-900 dark:text-white">Suggestions</h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400">Vote for games to add</p>
+      <div className="card circuit-panel mb-5 p-6">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h1 className="text-3xl font-black tracking-[-0.05em] text-[var(--text-primary)]">
+              Suggestions
+            </h1>
+            <p className="mt-3 text-sm leading-7 text-[var(--text-secondary)]">
+              Tell us what should land on Mechi next, then vote the strongest ideas upward.
+            </p>
+          </div>
+          <button onClick={() => setShowForm(!showForm)} className="btn-primary text-sm">
+            {showForm ? <X size={16} /> : <Plus size={16} />}
+            {showForm ? 'Cancel' : 'Suggest'}
+          </button>
         </div>
-        <button onClick={() => setShowForm(!showForm)} className="btn-primary text-sm">
-          {showForm ? <X size={16} /> : <Plus size={16} />}
-          {showForm ? 'Cancel' : 'Suggest'}
-        </button>
       </div>
 
-      {/* Form */}
       {showForm && (
-        <form onSubmit={handleSubmit} className="card p-4 mb-5">
-          <h2 className="font-bold text-gray-900 dark:text-white mb-3 text-sm">Suggest a Game</h2>
-          <div className="space-y-3">
+        <form onSubmit={handleSubmit} className="card mb-5 p-5">
+          <p className="brand-kicker">New Suggestion</p>
+          <h2 className="mt-2 text-lg font-bold text-[var(--text-primary)]">Pitch a game for Mechi</h2>
+          <div className="mt-4 space-y-3">
             <div>
               <label className="label">Game Name</label>
               <input
@@ -108,12 +116,12 @@ export default function SuggestPage() {
               <textarea
                 value={form.description}
                 onChange={(e) => setForm({ ...form, description: e.target.value })}
-                placeholder="Tell us why this game would be great on Mechi..."
-                className="input min-h-[80px] resize-none"
+                placeholder="Tell us how this game fits the Mechi community..."
+                className="input min-h-[96px] resize-none"
                 maxLength={300}
               />
             </div>
-            <button type="submit" disabled={submitting} className="w-full btn-primary">
+            <button type="submit" disabled={submitting} className="btn-primary w-full">
               {submitting ? (
                 <>
                   <Loader2 size={16} className="animate-spin" /> Submitting...
@@ -126,30 +134,32 @@ export default function SuggestPage() {
         </form>
       )}
 
-      {/* List */}
       {loading ? (
         <div className="space-y-3">
-          {[1, 2, 3, 4].map((i) => <div key={i} className="h-20 shimmer rounded-2xl" />)}
+          {[1, 2, 3, 4].map((item) => (
+            <div key={item} className="h-20 shimmer rounded-2xl" />
+          ))}
         </div>
       ) : suggestions.length === 0 ? (
         <div className="card p-12 text-center">
-          <Lightbulb size={48} className="mx-auto mb-3 text-gray-300 dark:text-gray-600" />
-          <p className="font-semibold text-gray-600 dark:text-gray-400">No suggestions yet</p>
-          <p className="text-sm text-gray-400 mt-1">Be the first to suggest a game!</p>
+          <Lightbulb size={48} className="mx-auto mb-3 text-[var(--text-soft)]" />
+          <p className="font-semibold text-[var(--text-primary)]">No suggestions yet</p>
+          <p className="mt-1 text-sm text-[var(--text-secondary)]">
+            Be the first to suggest the next competitive title.
+          </p>
         </div>
       ) : (
         <div className="space-y-3">
           {suggestions.map((suggestion) => (
-            <div key={suggestion.id} className="card p-4 flex gap-3">
-              {/* Vote button */}
+            <div key={suggestion.id} className="card flex gap-3 p-4">
               <div className="flex flex-col items-center gap-1">
                 <button
                   onClick={() => handleVote(suggestion.id)}
                   disabled={votingId === suggestion.id}
-                  className={`w-10 h-10 rounded-xl flex flex-col items-center justify-center transition-colors ${
+                  className={`flex h-10 w-10 flex-col items-center justify-center rounded-xl transition-colors ${
                     suggestion.user_voted
-                      ? 'bg-emerald-600 text-white'
-                      : 'bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 hover:text-emerald-600'
+                      ? 'bg-[var(--brand-coral)] text-[var(--brand-night)]'
+                      : 'bg-[var(--surface-strong)] text-[var(--text-secondary)] hover:bg-[rgba(255,107,107,0.12)] hover:text-[var(--brand-coral)]'
                   }`}
                 >
                   {votingId === suggestion.id ? (
@@ -158,31 +168,30 @@ export default function SuggestPage() {
                     <ChevronUp size={16} />
                   )}
                 </button>
-                <span className="text-xs font-bold text-gray-600 dark:text-gray-400">
+                <span className="text-xs font-bold text-[var(--text-secondary)]">
                   {suggestion.votes}
                 </span>
               </div>
 
-              {/* Content */}
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 mb-1">
-                  <h3 className="font-bold text-gray-900 dark:text-white text-sm truncate">
+              <div className="min-w-0 flex-1">
+                <div className="mb-1 flex items-center gap-2">
+                  <h3 className="truncate text-sm font-bold text-[var(--text-primary)]">
                     {suggestion.game_name}
                   </h3>
-                  <span className={`text-xs px-2 py-0.5 rounded-full font-medium flex-shrink-0 ${
+                  <span className={`flex-shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${
                     suggestion.status === 'approved'
-                      ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400'
+                      ? 'bg-[rgba(50,224,196,0.16)] text-[var(--brand-teal)]'
                       : suggestion.status === 'rejected'
-                      ? 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400'
-                      : 'bg-gray-100 dark:bg-gray-800 text-gray-500'
+                        ? 'bg-red-500/10 text-red-500'
+                        : 'bg-[var(--surface-strong)] text-[var(--text-secondary)]'
                   }`}>
                     {suggestion.status}
                   </span>
                 </div>
-                <p className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed line-clamp-2">
+                <p className="line-clamp-2 text-xs leading-relaxed text-[var(--text-secondary)]">
                   {suggestion.description}
                 </p>
-                <p className="text-xs text-gray-400 mt-1">
+                <p className="mt-1 text-xs text-[var(--text-soft)]">
                   {new Date(suggestion.created_at).toLocaleDateString()}
                 </p>
               </div>

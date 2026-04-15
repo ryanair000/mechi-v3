@@ -35,8 +35,14 @@ export const PLATFORMS: Record<PlatformKey, Platform> = {
 
 export const GAMES: Record<GameKey, Game> = {
   efootball: {
-    label: 'eFootball 2025',
-    platforms: ['ps', 'xbox', 'pc', 'mobile'],
+    label: 'eFootball 2026',
+    platforms: ['ps', 'xbox', 'pc'],
+    mode: '1v1',
+    steamAppId: 1665460,
+  },
+  efootball_mobile: {
+    label: 'eFootball 2026 Mobile',
+    platforms: ['mobile'],
     mode: '1v1',
     steamAppId: 1665460,
   },
@@ -71,7 +77,7 @@ export const GAMES: Record<GameKey, Game> = {
     steamAppId: 1364780,
   },
   codm: {
-    label: 'COD Mobile',
+    label: 'Call of Duty: Mobile',
     platforms: ['mobile'],
     mode: 'lobby',
     maxPlayers: 5,
@@ -104,7 +110,7 @@ export const GAMES: Record<GameKey, Game> = {
     platforms: ['nintendo'],
     mode: '1v1',
   },
-  freefirm: {
+  freefire: {
     label: 'Free Fire',
     platforms: ['mobile'],
     mode: 'lobby',
@@ -160,6 +166,97 @@ export function getGamesForPlatforms(platforms: PlatformKey[]): GameKey[] {
     const game = GAMES[gameKey];
     return game.platforms.some((p) => platforms.includes(p));
   });
+}
+
+export function getGamePlatformKey(gameKey: GameKey): string {
+  return `platform:${gameKey}`;
+}
+
+export function getGameIdKey(gameKey: GameKey, platform: PlatformKey): string {
+  return platform === 'mobile' ? `${gameKey}:mobile` : platform;
+}
+
+export function getGameIdLabel(gameKey: GameKey, platform: PlatformKey): string {
+  if (platform === 'mobile') {
+    return `${GAMES[gameKey]?.label ?? 'Mobile game'} ID`;
+  }
+
+  return PLATFORMS[platform]?.idLabel ?? 'Platform ID';
+}
+
+export function getGameIdPlaceholder(gameKey: GameKey, platform: PlatformKey): string {
+  if (platform !== 'mobile') {
+    return PLATFORMS[platform]?.placeholder ?? 'Your ID';
+  }
+
+  switch (gameKey) {
+    case 'codm':
+      return 'CODM username or UID';
+    case 'efootball_mobile':
+      return 'eFootball user ID';
+    case 'pubgm':
+      return 'PUBG Mobile UID';
+    case 'freefire':
+      return 'Free Fire UID';
+    default:
+      return 'In-game ID';
+  }
+}
+
+export function isValidGamePlatform(gameKey: GameKey, platform: PlatformKey): boolean {
+  return GAMES[gameKey]?.platforms.includes(platform) ?? false;
+}
+
+export function getConfiguredPlatformForGame(
+  gameKey: GameKey,
+  gameIds: Record<string, string> = {},
+  platforms: PlatformKey[] = []
+): PlatformKey | null {
+  const game = GAMES[gameKey];
+  if (!game) return null;
+
+  const configuredPlatform = gameIds[getGamePlatformKey(gameKey)] as PlatformKey | undefined;
+  if (
+    configuredPlatform &&
+    game.platforms.includes(configuredPlatform) &&
+    (platforms.length === 0 || platforms.includes(configuredPlatform))
+  ) {
+    return configuredPlatform;
+  }
+
+  if (game.platforms.length === 1) {
+    const [onlyPlatform] = game.platforms;
+    if (platforms.length === 0 || platforms.includes(onlyPlatform)) {
+      return onlyPlatform;
+    }
+  }
+
+  return platforms.find((platform) => game.platforms.includes(platform)) ?? null;
+}
+
+export function getPlatformsForGameSetup(
+  selectedGames: GameKey[],
+  gameIds: Record<string, string> = {},
+  fallbackPlatforms: PlatformKey[] = []
+): PlatformKey[] {
+  const platforms = new Set<PlatformKey>();
+
+  selectedGames.forEach((gameKey) => {
+    const platform = getConfiguredPlatformForGame(gameKey, gameIds, fallbackPlatforms);
+    if (platform) {
+      platforms.add(platform);
+    }
+  });
+
+  return Array.from(platforms);
+}
+
+export function getGameIdValue(
+  gameIds: Record<string, string>,
+  gameKey: GameKey,
+  platform: PlatformKey
+): string {
+  return gameIds[getGameIdKey(gameKey, platform)] ?? gameIds[platform] ?? '';
 }
 
 export function getPlatformAddUrl(platform: PlatformKey, platformId: string): string | null {

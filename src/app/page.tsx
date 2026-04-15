@@ -104,12 +104,13 @@ export default function LandingPage() {
             <BrandLogo size="lg" showTagline />
 
             <h1 className="mt-6 max-w-2xl text-[2.05rem] font-black leading-[1.04] tracking-normal text-[var(--text-primary)] sm:text-[3.2rem] sm:leading-[1.02] lg:text-[3.8rem]">
-              Organized 1v1s for players who want less noise and better competition.
+              Less group-chat chaos. More proper 1v1s.
             </h1>
 
             <p className="mt-4 max-w-xl text-sm leading-7 text-[var(--text-secondary)] sm:text-base">
-              Mechi gives Kenyan players one cleaner place to queue, report, connect,
-              and keep rising across football, fighters, sports, and mobile titles.
+              Mechi is where Kenyan players set up a clean profile, jump into ranked
+              queues, report scores, track their climb, and stay tapped in with real
+              competition across football, fighters, sports, and mobile titles.
             </p>
 
             <div className="mt-6 flex flex-col gap-3 sm:flex-row">

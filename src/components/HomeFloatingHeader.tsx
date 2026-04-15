@@ -4,7 +4,6 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { Menu, X } from 'lucide-react';
 import { useAuth } from '@/components/AuthProvider';
-import { BrandLogo } from '@/components/BrandLogo';
 
 const NAV_ITEMS = [
   { href: '#how-it-works', label: 'HOW IT WORKS' },
@@ -30,16 +29,7 @@ export function HomeFloatingHeader() {
           className="pointer-events-none absolute left-1/2 top-[calc(100%+0.35rem)] h-px w-screen -translate-x-1/2 bg-gradient-to-r from-transparent via-[rgba(50,224,196,0.3)] to-transparent"
         />
         <div className="rounded-[1.2rem] border border-[var(--border-color)] bg-[var(--surface-soft)] p-2 shadow-[var(--shadow-soft)] backdrop-blur-xl">
-          <div className="grid grid-cols-[auto_1fr_auto] items-center gap-3">
-            <Link
-              href="/"
-              aria-label="Home"
-              className="rounded-lg px-1 py-1"
-              onClick={() => setIsOpen(false)}
-            >
-              <BrandLogo size="sm" variant="symbol" />
-            </Link>
-
+          <div className="grid grid-cols-[1fr_auto] items-center gap-3">
             <div className="hidden items-center justify-center gap-1 md:flex">
               {NAV_ITEMS.map((item) => (
                 <Link

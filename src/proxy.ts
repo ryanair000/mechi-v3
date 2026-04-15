@@ -69,25 +69,23 @@ function verifyToken(token: string): JWTPayload | null {
 }
 
 function getPayload(request: NextRequest) {
+  const token = getToken(request);
+
+  if (!token) {
+    return null;
+  }
+
+  return verifyToken(token);
+}
+
+function getToken(request: NextRequest) {
   const authHeader = request.headers.get('Authorization');
   const headerToken = authHeader?.startsWith('Bearer ')
     ? authHeader.slice(7)
     : null;
   const cookieToken = request.cookies.get('auth_token')?.value;
-  const token = headerToken ?? cookieToken;
 
-  if (token) {
-    const payload = verifyToken(token);
-    if (payload) {
-      return payload;
-    }
-  }
-
-  if (headerToken && cookieToken) {
-    return verifyToken(cookieToken);
-  }
-
-  return null;
+  return headerToken ?? cookieToken ?? null;
 }
 
 async function getCurrentAccess(payload: JWTPayload | null) {
@@ -130,16 +128,11 @@ function unauthorizedResponse(pathname: string, request: NextRequest) {
 
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
+  const token = getToken(request);
   const payload = getPayload(request);
 
   if ((pathname === '/login' || pathname === '/register') && payload) {
-    const access = await getCurrentAccess(payload);
-    if (access?.is_banned) {
-      return NextResponse.redirect(new URL('/banned', request.url));
-    }
-    if (access) {
-      return NextResponse.redirect(new URL('/dashboard', request.url));
-    }
+    return NextResponse.redirect(new URL('/dashboard', request.url));
   }
 
   if (isPublic(pathname) && !isAdminRoute(pathname)) {
@@ -160,15 +153,7 @@ export async function proxy(request: NextRequest) {
   }
 
   if (isProtectedRoute(pathname)) {
-    if (!payload) return unauthorizedResponse(pathname, request);
-    const access = await getCurrentAccess(payload);
-    if (!access) return unauthorizedResponse(pathname, request);
-    if (access.is_banned) {
-      if (pathname.startsWith('/api/')) {
-        return NextResponse.json({ error: 'Your account has been suspended.' }, { status: 403 });
-      }
-      return NextResponse.redirect(new URL('/banned', request.url));
-    }
+    if (!token) return unauthorizedResponse(pathname, request);
   }
 
   return NextResponse.next();

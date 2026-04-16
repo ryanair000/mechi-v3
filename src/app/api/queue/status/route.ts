@@ -62,8 +62,12 @@ export async function GET(request: NextRequest) {
       };
     }
 
+    if (normalizedQueueEntry?.status === 'matched' && !activeMatch) {
+      normalizedQueueEntry = null;
+    }
+
     return NextResponse.json({
-      inQueue: queueEntry?.status === 'waiting',
+      inQueue: normalizedQueueEntry?.status === 'waiting',
       queueEntry: normalizedQueueEntry ?? null,
       activeMatch: activeMatch ?? null,
     });

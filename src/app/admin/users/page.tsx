@@ -320,6 +320,28 @@ export default function AdminUsersPage() {
               .slice(0, 3)
               .map((game) => GAMES[game as GameKey]?.label ?? game);
             const isExpanded = detailUserId === member.id;
+            const recentLobbyActivity =
+              isExpanded && detail
+                ? [
+                    ...detail.hostedLobbies.map((lobby) => ({ type: 'hosted' as const, lobby })),
+                    ...detail.joinedLobbies.map((item) => ({ type: 'joined' as const, lobby: item.lobby })),
+                  ].slice(0, 6)
+                : [];
+            const recentTournamentActivity =
+              isExpanded && detail
+                ? [
+                    ...detail.organizedTournaments.map((tournament) => ({
+                      type: 'hosted' as const,
+                      tournament,
+                      paymentStatus: null as string | null,
+                    })),
+                    ...detail.joinedTournaments.map((item) => ({
+                      type: 'joined' as const,
+                      tournament: item.tournament,
+                      paymentStatus: item.payment_status,
+                    })),
+                  ].slice(0, 6)
+                : [];
 
             return (
               <div key={member.id} className="card p-5">
@@ -574,27 +596,25 @@ export default function AdminUsersPage() {
                           <div className="rounded-3xl border border-[var(--border-color)] bg-[var(--surface-elevated)] p-4">
                             <p className="text-sm font-semibold text-[var(--text-primary)]">Lobby activity</p>
                             <div className="mt-4 space-y-3">
-                              {[...detail.hostedLobbies.map((lobby) => ({ type: 'hosted', lobby })), ...detail.joinedLobbies.map((item) => ({ type: 'joined' as const, lobby: item.lobby }))].slice(0, 6).length === 0 ? (
+                              {recentLobbyActivity.length === 0 ? (
                                 <p className="text-sm text-[var(--text-secondary)]">No recent lobbies.</p>
                               ) : (
-                                [...detail.hostedLobbies.map((lobby) => ({ type: 'hosted', lobby })), ...detail.joinedLobbies.map((item) => ({ type: 'joined' as const, lobby: item.lobby }))]
-                                  .slice(0, 6)
-                                  .map((item) => (
-                                    <div key={`${item.type}-${item.lobby.id}`} className="rounded-2xl border border-[var(--border-color)] bg-[var(--surface)] px-3 py-3">
-                                      <div className="flex items-center justify-between gap-2">
-                                        <p className="text-sm font-black text-[var(--text-primary)]">{item.lobby.title}</p>
-                                        <span className="text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--text-soft)]">
-                                          {item.type}
-                                        </span>
-                                      </div>
-                                      <p className="mt-1 text-xs text-[var(--text-secondary)]">
-                                        {item.lobby.status} | Room {item.lobby.room_code}
-                                      </p>
-                                      <Link href={`/lobbies/${item.lobby.id}`} className="brand-link mt-2 inline-flex text-xs font-semibold">
-                                        Open room
-                                      </Link>
+                                recentLobbyActivity.map((item) => (
+                                  <div key={`${item.type}-${item.lobby.id}`} className="rounded-2xl border border-[var(--border-color)] bg-[var(--surface)] px-3 py-3">
+                                    <div className="flex items-center justify-between gap-2">
+                                      <p className="text-sm font-black text-[var(--text-primary)]">{item.lobby.title}</p>
+                                      <span className="text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--text-soft)]">
+                                        {item.type}
+                                      </span>
                                     </div>
-                                  ))
+                                    <p className="mt-1 text-xs text-[var(--text-secondary)]">
+                                      {item.lobby.status} | Room {item.lobby.room_code}
+                                    </p>
+                                    <Link href={`/lobbies/${item.lobby.id}`} className="brand-link mt-2 inline-flex text-xs font-semibold">
+                                      Open room
+                                    </Link>
+                                  </div>
+                                ))
                               )}
                             </div>
                           </div>
@@ -602,28 +622,26 @@ export default function AdminUsersPage() {
                           <div className="rounded-3xl border border-[var(--border-color)] bg-[var(--surface-elevated)] p-4">
                             <p className="text-sm font-semibold text-[var(--text-primary)]">Tournament activity</p>
                             <div className="mt-4 space-y-3">
-                              {[...detail.organizedTournaments.map((tournament) => ({ type: 'hosted', tournament })), ...detail.joinedTournaments.map((item) => ({ type: 'joined' as const, tournament: item.tournament, payment_status: item.payment_status }))].slice(0, 6).length === 0 ? (
+                              {recentTournamentActivity.length === 0 ? (
                                 <p className="text-sm text-[var(--text-secondary)]">No recent tournaments.</p>
                               ) : (
-                                [...detail.organizedTournaments.map((tournament) => ({ type: 'hosted', tournament })), ...detail.joinedTournaments.map((item) => ({ type: 'joined' as const, tournament: item.tournament, payment_status: item.payment_status }))]
-                                  .slice(0, 6)
-                                  .map((item) => (
-                                    <div key={`${item.type}-${item.tournament.id}`} className="rounded-2xl border border-[var(--border-color)] bg-[var(--surface)] px-3 py-3">
-                                      <div className="flex items-center justify-between gap-2">
-                                        <p className="text-sm font-black text-[var(--text-primary)]">{item.tournament.title}</p>
-                                        <span className="text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--text-soft)]">
-                                          {item.type}
-                                        </span>
-                                      </div>
-                                      <p className="mt-1 text-xs text-[var(--text-secondary)]">
-                                        {item.tournament.status}
-                                        {' payout_status' in item && item.payment_status ? ` | ${item.payment_status}` : ''}
-                                      </p>
-                                      <Link href={`/t/${item.tournament.slug}`} className="brand-link mt-2 inline-flex text-xs font-semibold">
-                                        Open bracket
-                                      </Link>
+                                recentTournamentActivity.map((item) => (
+                                  <div key={`${item.type}-${item.tournament.id}`} className="rounded-2xl border border-[var(--border-color)] bg-[var(--surface)] px-3 py-3">
+                                    <div className="flex items-center justify-between gap-2">
+                                      <p className="text-sm font-black text-[var(--text-primary)]">{item.tournament.title}</p>
+                                      <span className="text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--text-soft)]">
+                                        {item.type}
+                                      </span>
                                     </div>
-                                  ))
+                                    <p className="mt-1 text-xs text-[var(--text-secondary)]">
+                                      {item.tournament.status}
+                                      {item.paymentStatus ? ` | ${item.paymentStatus}` : ''}
+                                    </p>
+                                    <Link href={`/t/${item.tournament.slug}`} className="brand-link mt-2 inline-flex text-xs font-semibold">
+                                      Open bracket
+                                    </Link>
+                                  </div>
+                                ))
                               )}
                             </div>
                           </div>

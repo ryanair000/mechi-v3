@@ -19,14 +19,15 @@ export async function GET(
   try {
     const supabase = createServiceClient();
 
-    const buildCountQuery = () =>
+    const buildCountQuery = (includePlatformFilter: boolean) =>
       supabase
       .from('queue')
-      .select('id', { count: 'exact', head: true })
+      .select('id', { count: 'exact' })
       .eq('game', game)
-      .eq('status', 'waiting');
+      .eq('status', 'waiting')
+      .limit(1);
 
-    let query = buildCountQuery();
+    let query = buildCountQuery(Boolean(platform));
     if (platform) {
       query = query.eq('platform', platform);
     }
@@ -34,12 +35,12 @@ export async function GET(
     let { count, error } = await query;
 
     if (error && platform && isMissingColumnError(error, 'queue.platform')) {
-      ({ count, error } = await buildCountQuery());
+      ({ count, error } = await buildCountQuery(false));
     }
 
     if (error) {
       console.error('[Queue Count] Query error:', error);
-      return NextResponse.json({ error: 'Failed to get count' }, { status: 500 });
+      return NextResponse.json({ count: 0, game, degraded: true }, { status: 200 });
     }
 
     return NextResponse.json({ count: count ?? 0, game });

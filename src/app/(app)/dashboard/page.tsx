@@ -1,10 +1,11 @@
 'use client';
 
+import Image from 'next/image';
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
-import { AlertCircle, ChevronRight, Radar, Swords } from 'lucide-react';
+import { AlertCircle, ChevronRight, ExternalLink, Radar, Swords } from 'lucide-react';
 import { useAuth, useAuthFetch } from '@/components/AuthProvider';
 import { GameCard } from '@/components/GameCard';
 import { PaywallModal } from '@/components/PaywallModal';
@@ -29,6 +30,17 @@ interface UserProfile {
 
 const WHATSAPP_JOIN_URL = process.env.NEXT_PUBLIC_WHATSAPP_JOIN_URL ?? '';
 const WHATSAPP_PROMPT_SESSION_KEY = 'mechi_whatsapp_join_prompt';
+const LIVE_DEAL = {
+  title: 'God of War Digital Deluxe Edition',
+  platform: 'PlayStation Store',
+  edition: 'PS4 Digital Deluxe Edition',
+  currentPrice: '$14.99',
+  originalPrice: '$29.99',
+  discount: '50% off',
+  endsAt: 'April 23, 2026',
+  href: 'https://store.playstation.com/en-us/product/UP9000-CUSA07408_00-GODOFWARDDE00000',
+  imageSrc: '/deals/god-of-war-digital-deluxe.png',
+} as const;
 
 interface QueueStatusResponse {
   inQueue?: boolean;
@@ -379,6 +391,103 @@ export default function DashboardPage() {
           </div>
         </div>
       </div>
+
+      <section className="mb-8">
+        <div className="mb-4 flex items-center justify-between gap-3">
+          <div>
+            <p className="section-title">Live deal</p>
+            <p className="mt-2 text-sm text-[var(--text-secondary)]">
+              Fresh store drop pulled in for players right now.
+            </p>
+          </div>
+          <a
+            href={LIVE_DEAL.href}
+            target="_blank"
+            rel="noreferrer"
+            className="brand-link inline-flex items-center gap-1 text-xs font-semibold"
+          >
+            Open deal
+            <ExternalLink size={13} />
+          </a>
+        </div>
+
+        <div className="card overflow-hidden p-0">
+          <div className="grid lg:grid-cols-[minmax(0,0.88fr)_minmax(0,1.12fr)]">
+            <div className="relative min-h-[240px] bg-[var(--surface-strong)]">
+              <Image
+                src={LIVE_DEAL.imageSrc}
+                alt={LIVE_DEAL.title}
+                fill
+                sizes="(max-width: 1024px) 100vw, 38vw"
+                className="object-cover"
+                priority
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/76 via-black/18 to-transparent" />
+              <div className="absolute left-4 top-4 flex flex-wrap gap-2">
+                <span className="brand-chip px-3 py-1">Live deal</span>
+                <span className="rounded-full bg-white/14 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-white backdrop-blur-sm">
+                  {LIVE_DEAL.platform}
+                </span>
+              </div>
+              <div className="absolute bottom-4 left-4 right-4">
+                <p className="text-2xl font-black leading-tight text-white">
+                  {LIVE_DEAL.title}
+                </p>
+                <p className="mt-2 text-sm text-white/78">{LIVE_DEAL.edition}</p>
+              </div>
+            </div>
+
+            <div className="p-5 sm:p-6">
+              <div className="flex flex-wrap gap-2">
+                <span className="brand-chip-coral px-3 py-1">{LIVE_DEAL.discount}</span>
+                <span className="rounded-full border border-[var(--border-color)] bg-[var(--surface-strong)] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--text-secondary)]">
+                  Ends {LIVE_DEAL.endsAt}
+                </span>
+              </div>
+
+              <h2 className="mt-4 text-2xl font-black text-[var(--text-primary)] sm:text-[2rem]">
+                {LIVE_DEAL.currentPrice}
+              </h2>
+              <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">
+                Was <span className="line-through">{LIVE_DEAL.originalPrice}</span> on the PlayStation Store.
+              </p>
+
+              <div className="mt-5 grid gap-3 sm:grid-cols-3">
+                <div className="rounded-2xl border border-[var(--border-color)] bg-[var(--surface)] p-4">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--text-soft)]">
+                    Deal price
+                  </p>
+                  <p className="mt-2 text-xl font-black text-[var(--text-primary)]">{LIVE_DEAL.currentPrice}</p>
+                </div>
+                <div className="rounded-2xl border border-[var(--border-color)] bg-[var(--surface)] p-4">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--text-soft)]">
+                    Was
+                  </p>
+                  <p className="mt-2 text-xl font-black text-[var(--text-secondary)] line-through">{LIVE_DEAL.originalPrice}</p>
+                </div>
+                <div className="rounded-2xl border border-[var(--border-color)] bg-[var(--surface)] p-4">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--text-soft)]">
+                    Platform
+                  </p>
+                  <p className="mt-2 text-xl font-black text-[var(--text-primary)]">PlayStation</p>
+                </div>
+              </div>
+
+              <div className="mt-6">
+                <a
+                  href={LIVE_DEAL.href}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="btn-primary shadow-none"
+                >
+                  Grab the deal
+                  <ExternalLink size={15} />
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
 
       {activeMatch && (
         <Link href={`/match/${activeMatch.id}`} className="mb-6 block">

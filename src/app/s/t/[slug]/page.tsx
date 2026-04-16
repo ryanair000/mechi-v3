@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { BrandLogo } from '@/components/BrandLogo';
 import { GAMES, PLATFORMS } from '@/lib/config';
+import { getLoginPath, getRegisterPath } from '@/lib/navigation';
 import { createServiceClient } from '@/lib/supabase';
 import type { GameKey, PlatformKey } from '@/types';
 
@@ -14,11 +15,22 @@ async function getTournament(slug: string) {
   const supabase = createServiceClient();
   const { data: tournament } = await supabase
     .from('tournaments')
-    .select('*, organizer:organizer_id(id, username), winner:winner_id(id, username), player_count:tournament_players(count)')
+    .select('*, organizer:organizer_id(id, username), winner:winner_id(id, username)')
     .eq('slug', slug)
     .single();
 
-  return tournament;
+  if (!tournament) return null;
+
+  const { data: players } = await supabase
+    .from('tournament_players')
+    .select('tournament_id')
+    .eq('tournament_id', tournament.id)
+    .in('payment_status', ['paid', 'free']);
+
+  return {
+    ...tournament,
+    player_count: (players ?? []).length,
+  };
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
@@ -58,9 +70,8 @@ export default async function PublicTournamentPage({ params }: Props) {
 
   const game = GAMES[tournament.game as GameKey];
   const platform = tournament.platform as PlatformKey | null;
-  const playerCount = Array.isArray(tournament.player_count)
-    ? tournament.player_count[0]?.count ?? 0
-    : 0;
+  const playerCount = typeof tournament.player_count === 'number' ? tournament.player_count : 0;
+  const bracketPath = `/t/${tournament.slug}`;
 
   return (
     <div className="page-base flex min-h-screen flex-col">
@@ -68,7 +79,7 @@ export default async function PublicTournamentPage({ params }: Props) {
         <Link href="/" className="flex items-center">
           <BrandLogo size="sm" />
         </Link>
-        <Link href="/login" className="brand-link text-sm font-black">
+        <Link href={getLoginPath(bracketPath)} className="brand-link text-sm font-black">
           Sign in
         </Link>
       </nav>
@@ -93,10 +104,10 @@ export default async function PublicTournamentPage({ params }: Props) {
           </div>
 
           <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
-            <Link href={`/t/${tournament.slug}`} className="btn-primary">
+            <Link href={bracketPath} className="btn-primary">
               Join Bracket
             </Link>
-            <Link href="/register" className="btn-ghost">
+            <Link href={getRegisterPath({ next: bracketPath })} className="btn-ghost">
               Create Account
             </Link>
           </div>

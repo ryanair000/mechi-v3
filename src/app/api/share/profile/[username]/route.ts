@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { PUBLIC_PROFILE_SHARE_SELECT, getProfileShareStats } from '@/lib/share';
 import { createServiceClient } from '@/lib/supabase';
 
 /** Public endpoint — returns profile data for share pages and OG images (no auth) */
@@ -12,7 +13,7 @@ export async function GET(
 
     const { data: profile } = await supabase
       .from('profiles')
-      .select('id, username, region, platforms, selected_games, rating_efootball, rating_fc26, rating_mk11, rating_nba2k26, rating_tekken8, rating_sf6, wins_efootball, wins_fc26, wins_mk11, wins_nba2k26, wins_tekken8, wins_sf6, losses_efootball, losses_fc26, losses_mk11, losses_nba2k26, losses_tekken8, losses_sf6')
+      .select(PUBLIC_PROFILE_SHARE_SELECT)
       .ilike('username', username)
       .single();
 
@@ -20,20 +21,9 @@ export async function GET(
       return NextResponse.json({ error: 'Player not found' }, { status: 404 });
     }
 
-    // Calculate best rating and total stats
-    const games = (profile.selected_games as string[]) ?? [];
-    let bestRating = 1000;
-    let totalWins = 0;
-    let totalLosses = 0;
-
-    for (const g of games) {
-      const r = (profile as Record<string, unknown>)[`rating_${g}`] as number ?? 1000;
-      const w = (profile as Record<string, unknown>)[`wins_${g}`] as number ?? 0;
-      const l = (profile as Record<string, unknown>)[`losses_${g}`] as number ?? 0;
-      if (r > bestRating) bestRating = r;
-      totalWins += w;
-      totalLosses += l;
-    }
+    const { games, bestRating, totalWins, totalLosses } = getProfileShareStats(
+      profile as Record<string, unknown>
+    );
 
     return NextResponse.json({
       profile: {

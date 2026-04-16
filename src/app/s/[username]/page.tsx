@@ -3,6 +3,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { getRankDivision } from '@/lib/gamification';
+import { PUBLIC_PROFILE_SHARE_SELECT, getProfileShareStats } from '@/lib/share';
 import { createServiceClient } from '@/lib/supabase';
 
 interface Props {
@@ -26,28 +27,15 @@ async function getProfileData(username: string) {
   const supabase = createServiceClient();
   const { data: profile } = await supabase
     .from('profiles')
-    .select(
-      'username, region, level, avatar_url, cover_url, platforms, selected_games, rating_efootball, rating_fc26, rating_mk11, rating_nba2k26, rating_tekken8, rating_sf6, wins_efootball, wins_fc26, wins_mk11, wins_nba2k26, wins_tekken8, wins_sf6, losses_efootball, losses_fc26, losses_mk11, losses_nba2k26, losses_tekken8, losses_sf6'
-    )
+    .select(PUBLIC_PROFILE_SHARE_SELECT)
     .ilike('username', username)
     .single();
 
   if (!profile) return null;
 
-  const games = (profile.selected_games as string[]) ?? [];
-  let bestRating = 1000;
-  let totalWins = 0;
-  let totalLosses = 0;
-
-  for (const game of games) {
-    const rating = ((profile as Record<string, unknown>)[`rating_${game}`] as number) ?? 1000;
-    const wins = ((profile as Record<string, unknown>)[`wins_${game}`] as number) ?? 0;
-    const losses = ((profile as Record<string, unknown>)[`losses_${game}`] as number) ?? 0;
-
-    if (rating > bestRating) bestRating = rating;
-    totalWins += wins;
-    totalLosses += losses;
-  }
+  const { bestRating, totalWins, totalLosses } = getProfileShareStats(
+    profile as Record<string, unknown>
+  );
 
   return { ...profile, bestRating, totalWins, totalLosses };
 }

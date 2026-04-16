@@ -3,6 +3,7 @@ import { NextRequest } from 'next/server';
 import { getGameImage } from '@/lib/config';
 import { createServiceClient } from '@/lib/supabase';
 import { ACHIEVEMENTS, getLevelFromXp, getRankDivision } from '@/lib/gamification';
+import { getProfileShareStats } from '@/lib/share';
 import type { GameKey } from '@/types';
 
 export const runtime = 'edge';
@@ -50,22 +51,16 @@ export async function GET(request: NextRequest) {
     return notFoundCard('Mechi / Player not found');
   }
 
-  const games = (profile.selected_games as string[]) ?? [];
-  let bestRating = 1000;
+  const { games, bestRating, totalWins, totalLosses } = getProfileShareStats(
+    profile as Record<string, unknown>
+  );
   let topGame: string | null = null;
-  let totalWins = 0;
-  let totalLosses = 0;
 
   for (const game of games) {
     const rating = ((profile as Record<string, unknown>)[`rating_${game}`] as number) ?? 1000;
-    const wins = ((profile as Record<string, unknown>)[`wins_${game}`] as number) ?? 0;
-    const losses = ((profile as Record<string, unknown>)[`losses_${game}`] as number) ?? 0;
-    if (topGame === null || rating > bestRating) {
-      bestRating = rating;
+    if (topGame === null || rating > (((profile as Record<string, unknown>)[`rating_${topGame}`] as number) ?? 1000)) {
       topGame = game;
     }
-    totalWins += wins;
-    totalLosses += losses;
   }
 
   const { data: achievements, error: achievementsError } = await supabase

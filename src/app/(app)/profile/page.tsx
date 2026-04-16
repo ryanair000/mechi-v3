@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { useAuth, useAuthFetch } from '@/components/AuthProvider';
 import { GameCover } from '@/components/GameCover';
+import { InviteMenu } from '@/components/InviteMenu';
 import { PaywallModal } from '@/components/PaywallModal';
 import { PlanBadge } from '@/components/PlanBadge';
 import { PlatformLogo } from '@/components/PlatformLogo';
@@ -54,6 +55,7 @@ interface Profile {
   region?: string;
   avatar_url?: string | null;
   cover_url?: string | null;
+  invite_code?: string;
   platforms?: PlatformKey[];
   game_ids?: Record<string, string>;
   selected_games?: GameKey[];
@@ -292,6 +294,8 @@ export default function ProfilePage() {
   const whatsappNumber = typeof profile?.whatsapp_number === 'string' ? profile.whatsapp_number : '';
   const avatarUrl = (profile?.avatar_url as string | null | undefined) ?? user?.avatar_url ?? null;
   const coverUrl = (profile?.cover_url as string | null | undefined) ?? user?.cover_url ?? null;
+  const inviteCode =
+    (typeof profile?.invite_code === 'string' ? profile.invite_code : null) ?? user?.invite_code ?? null;
   const usernameInitial = user?.username?.[0]?.toUpperCase() ?? '?';
   const platformCount = connectedPlatforms.length;
   const currentPlan = getPlan(((profile?.plan as Plan | undefined) ?? user?.plan ?? 'free'));
@@ -511,6 +515,9 @@ export default function ProfilePage() {
                   <Settings size={14} />
                   Edit profile
                 </button>
+                {inviteCode && user?.username ? (
+                  <InviteMenu inviteCode={inviteCode} username={user.username} />
+                ) : null}
                 {user?.username ? (
                   <ShareMenu
                     text={profileShareText(user.username, bestDivision.label, level)}

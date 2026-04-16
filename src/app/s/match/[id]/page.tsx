@@ -26,7 +26,12 @@ interface Props {
 
 async function getMatchData(id: string) {
   const supabase = createServiceClient();
-  const { data: match } = await supabase.from('matches').select('*').eq('id', id).single();
+  const { data: match } = await supabase
+    .from('matches')
+    .select('*')
+    .eq('id', id)
+    .eq('status', 'completed')
+    .single();
   if (!match) return null;
 
   const { data: profiles } = await supabase

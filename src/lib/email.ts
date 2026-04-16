@@ -200,7 +200,7 @@ export async function sendMatchDisputeEmail(params: {
   matchId: string;
 }): Promise<void> {
   const content = `
-    <h2>Match Disputed ⚠️</h2>
+    <h2>Match disputed</h2>
     <p>Your match against <strong>${params.opponentUsername}</strong> in <strong>${params.game}</strong> has been disputed.</p>
     <p>Upload a screenshot of the result on the match page so the result can be resolved cleanly.</p>
     <div class="info-box">

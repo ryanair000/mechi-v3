@@ -108,4 +108,24 @@ export async function notifyResultConfirmed(params: {
   });
 }
 
+export async function notifyMatchDispute(params: {
+  whatsappNumber: string;
+  username: string;
+  opponentUsername: string;
+  game: string;
+  matchId: string;
+  appUrl?: string;
+}): Promise<void> {
+  await safeNotify('match_dispute', async () => {
+    const matchUrl = `${params.appUrl ?? APP_URL}/match/${params.matchId}`;
+    const message =
+      `${params.username}, your Mechi match has been disputed.\n` +
+      `Game: ${params.game}\n` +
+      `Opponent: ${params.opponentUsername}\n` +
+      `Upload a screenshot here: ${matchUrl}`;
+
+    await sendWhatsApp(params.whatsappNumber, message);
+  });
+}
+
 export { sendWhatsApp };

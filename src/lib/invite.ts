@@ -1,4 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { isMissingColumnError } from '@/lib/db-compat';
 
 export const INVITE_CODE_MAX_LENGTH = 24;
 
@@ -63,6 +64,10 @@ export async function generateUniqueInviteCode(
     const { data, error } = await query;
 
     if (error) {
+      if (isMissingColumnError(error, 'profiles.invite_code')) {
+        // Legacy production schema may not have invite codes - skip uniqueness enforcement.
+        return base;
+      }
       throw new Error(`Could not check invite code uniqueness: ${error.message}`);
     }
 
@@ -89,6 +94,10 @@ export async function findInviterByCode(
     .select('id, username, avatar_url, region, invite_code')
     .eq('invite_code', normalizedCode)
     .maybeSingle();
+
+  if (error && isMissingColumnError(error, 'profiles.invite_code')) {
+    return null;
+  }
 
   if (error || !data) {
     return null;

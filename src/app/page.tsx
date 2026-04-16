@@ -3,12 +3,11 @@ import Link from 'next/link';
 import { ArrowRight, Shield, Swords, Users } from 'lucide-react';
 import { BrandLogo } from '@/components/BrandLogo';
 import { GameCarousel } from '@/components/GameCarousel';
-import { GameCover } from '@/components/GameCover';
 import { HomeFloatingHeader } from '@/components/HomeFloatingHeader';
 import { PlatformLogo } from '@/components/PlatformLogo';
 import { TierMedal } from '@/components/TierMedal';
 import { PLANS } from '@/lib/plans';
-import type { GameKey, PlatformKey } from '@/types';
+import type { PlatformKey } from '@/types';
 
 const HERO_STATS = [
   { value: '14+', label: 'Supported titles' },
@@ -107,9 +106,6 @@ const PRICING_PLANS = [
   },
 ] as const;
 
-const HERO_LEFT_STACK: readonly GameKey[] = ['efootball', 'tekken8', 'nba2k26'];
-const HERO_RIGHT_STACK: readonly GameKey[] = ['fc26', 'sf6', 'valorant'];
-
 const LIVE_DEAL = {
   title: 'God of War Digital Deluxe Edition',
   platform: 'PlayStation Store',
@@ -132,83 +128,74 @@ export default function LandingPage() {
         <div className="pointer-events-none absolute right-[12%] top-14 hidden h-52 w-52 rounded-full bg-[rgba(255,107,107,0.1)] blur-[96px] sm:block" />
 
         <div className="landing-shell relative pb-10 pt-6 sm:pb-14 sm:pt-12 lg:pb-18 lg:pt-16">
-          <div className="max-w-2xl lg:max-w-[52%]">
-            <BrandLogo size="lg" showTagline />
+          <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(320px,0.72fr)] lg:items-start lg:gap-10">
+            <div className="max-w-2xl">
+              <BrandLogo size="lg" showTagline />
 
-            <h1 className="mt-6 max-w-2xl text-[2.05rem] font-black leading-[1.04] tracking-normal text-[var(--text-primary)] sm:text-[3.2rem] sm:leading-[1.02] lg:text-[3.8rem]">
-              Less group-chat chaos. More proper 1v1s.
-            </h1>
+              <h1 className="mt-6 max-w-2xl text-[2.05rem] font-black leading-[1.04] tracking-normal text-[var(--text-primary)] sm:text-[3.2rem] sm:leading-[1.02] lg:text-[3.8rem]">
+                Find the lobby. Lock the 1v1. Run the bracket.
+              </h1>
 
-            <p className="mt-4 max-w-xl text-sm leading-7 text-[var(--text-secondary)] sm:text-base">
-              Mechi is where Kenyan players set up a clean profile, jump into ranked
-              queues, report scores, track their climb, and stay tapped in with real
-              competition across football, fighters, sports, and mobile titles.
-            </p>
+              <p className="mt-4 max-w-xl text-sm leading-7 text-[var(--text-secondary)] sm:text-base">
+                Mechi cuts the WhatsApp chaos for Kenyan players. Build your profile,
+                queue clean 1v1s, spin up proper lobbies, host tournaments fast, and
+                let players grow the prize pool while Mechi handles results, rankings,
+                and automatic winner payouts.
+              </p>
 
-            <div className="mt-6 flex flex-col gap-3 sm:flex-row">
-              <Link href="/register" className="btn-primary shadow-none">
-                Start competing
-                <ArrowRight size={16} />
-              </Link>
-              <Link href="#how-it-works" className="btn-ghost">
-                See how it works
-              </Link>
+              <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+                <Link href="/register" className="btn-primary shadow-none">
+                  Start competing
+                  <ArrowRight size={16} />
+                </Link>
+                <Link href="#how-it-works" className="btn-ghost">
+                  See how it works
+                </Link>
+              </div>
             </div>
 
-            <div className="mt-7 grid max-w-2xl grid-cols-2 gap-3 sm:grid-cols-4">
-              {HERO_STATS.map((item) => (
-                <div
-                  key={item.label}
-                  className="rounded-2xl border border-[var(--border-color)] bg-[var(--surface-soft)] px-3 py-3"
-                >
-                  <div className="text-lg font-black text-[var(--text-primary)]">{item.value}</div>
-                  <div className="mt-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--text-soft)]">
-                    {item.label}
+            <div className="rounded-[1.75rem] border border-[var(--border-color)] bg-[rgba(10,18,31,0.22)] p-4 sm:p-5 lg:mt-3">
+              <div className="flex flex-col gap-4">
+                <div>
+                  <p className="section-title">Quick read</p>
+                  <p className="mt-2 max-w-sm text-sm leading-6 text-[var(--text-secondary)]">
+                    One side of the hero should tell the whole story fast: supported titles, ranked structure, always-on queueing, and where players can show up.
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  {HERO_STATS.map((item) => (
+                    <div
+                      key={item.label}
+                      className="rounded-2xl border border-[var(--border-color)] bg-[var(--surface-soft)] px-3 py-3 sm:px-4 sm:py-4"
+                    >
+                      <div className="text-lg font-black text-[var(--text-primary)] sm:text-[1.75rem]">
+                        {item.value}
+                      </div>
+                      <div className="mt-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--text-soft)] sm:text-[11px]">
+                        {item.label}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="rounded-2xl border border-[var(--border-color)] bg-[rgba(255,255,255,0.02)] p-4">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--accent-secondary-text)]">
+                    Platforms live
+                  </p>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {PLATFORM_CHIPS.map((platform) => (
+                      <div
+                        key={platform.label}
+                        className="inline-flex items-center gap-2 rounded-full border border-[var(--border-color)] bg-[var(--surface-strong)] px-3 py-1.5 text-[11px] font-semibold text-[var(--text-secondary)]"
+                      >
+                        <PlatformLogo platform={platform.platform} size={13} />
+                        {platform.label}
+                      </div>
+                    ))}
                   </div>
                 </div>
-              ))}
-            </div>
-
-            <div className="mt-6 flex flex-wrap gap-2">
-              {PLATFORM_CHIPS.map((platform) => (
-                <div
-                  key={platform.label}
-                  className="inline-flex items-center gap-2 rounded-full border border-[var(--border-color)] bg-[var(--surface-strong)] px-3 py-1.5 text-[11px] font-semibold text-[var(--text-secondary)]"
-                >
-                  <PlatformLogo platform={platform.platform} size={13} />
-                  {platform.label}
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div className="pointer-events-none absolute bottom-0 right-8 top-16 hidden w-[380px] overflow-hidden lg:block xl:right-16">
-            <div className="relative h-full">
-              <div className="absolute left-0 top-8 flex w-[180px] flex-col gap-3">
-                {HERO_LEFT_STACK.map((game, index) => (
-                  <div
-                    key={game}
-                    className="overflow-hidden rounded-xl border border-white/[0.08] shadow-2xl"
-                    style={{ opacity: 1 - index * 0.15, transform: `translateY(${index * 4}px)` }}
-                  >
-                    <GameCover gameKey={game} variant="header" className="w-full" />
-                  </div>
-                ))}
               </div>
-
-              <div className="absolute right-0 top-20 flex w-[180px] flex-col gap-3">
-                {HERO_RIGHT_STACK.map((game, index) => (
-                  <div
-                    key={game}
-                    className="overflow-hidden rounded-xl border border-white/[0.08] shadow-2xl"
-                    style={{ opacity: 0.9 - index * 0.15, transform: `translateY(${index * 4}px)` }}
-                  >
-                    <GameCover gameKey={game} variant="header" className="w-full" />
-                  </div>
-                ))}
-              </div>
-
-              <div className="absolute bottom-0 left-0 right-0 h-40 bg-gradient-to-t from-gray-950 to-transparent" />
             </div>
           </div>
         </div>

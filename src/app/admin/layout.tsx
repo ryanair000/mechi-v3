@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { cookies } from 'next/headers';
-import { BarChart2, ChevronRight, ScrollText, Shield, Swords, Trophy, Users } from 'lucide-react';
+import { BarChart2, ChevronRight, MessageCircle, ScrollText, Shield, Swords, Trophy, Users } from 'lucide-react';
 import { verifyToken } from '@/lib/auth';
 import { BrandLogo } from '@/components/BrandLogo';
 import { createServiceClient } from '@/lib/supabase';
@@ -11,6 +11,7 @@ const ADMIN_NAV = [
   { href: '/admin/users', label: 'Users', icon: Users },
   { href: '/admin/matches', label: 'Matches', icon: Swords },
   { href: '/admin/tournaments', label: 'Tournaments', icon: Trophy },
+  { href: '/admin/whatsapp', label: 'WhatsApp', icon: MessageCircle },
   { href: '/admin/logs', label: 'Audit Log', icon: ScrollText },
 ];
 

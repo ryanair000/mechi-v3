@@ -3,7 +3,7 @@
 import { Suspense, useEffect, useState, useCallback } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
-import { CalendarClock, Compass, Globe, Lock, Plus, Swords, Users, X } from 'lucide-react';
+import { CalendarClock, Compass, Globe, Lock, MessageCircle, Plus, Swords, Users, X } from 'lucide-react';
 import { useAuth, useAuthFetch } from '@/components/AuthProvider';
 import { PlatformLogo } from '@/components/PlatformLogo';
 import {
@@ -15,6 +15,10 @@ import {
   getLobbyPopularMaps,
 } from '@/lib/config';
 import type { GameKey, Lobby } from '@/types';
+
+const WHATSAPP_GROUP_URL =
+  process.env.NEXT_PUBLIC_WHATSAPP_GROUP_URL ??
+  'https://chat.whatsapp.com/GRquLpTxzQ35er85N33Ec7';
 
 function toDateTimeLocalValue(date: Date) {
   const timezoneOffsetMs = date.getTimezoneOffset() * 60_000;
@@ -257,6 +261,30 @@ function LobbiesContent() {
           </button>
         ))}
       </div>
+
+      {WHATSAPP_GROUP_URL ? (
+        <div className="card surface-live mb-6 p-4">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+            <div>
+              <p className="text-sm font-semibold text-[var(--text-primary)]">
+                Want faster lobby pings?
+              </p>
+              <p className="mt-1 text-xs leading-6 text-[var(--text-secondary)]">
+                Join the WhatsApp group for open-room drops, squad calls, and lobby updates outside the app.
+              </p>
+            </div>
+            <a
+              href={WHATSAPP_GROUP_URL}
+              target="_blank"
+              rel="noreferrer"
+              className="btn-ghost"
+            >
+              <MessageCircle size={14} />
+              Join WhatsApp group
+            </a>
+          </div>
+        </div>
+      ) : null}
 
       {showCreate && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/55 px-4" onClick={() => setShowCreate(false)}>

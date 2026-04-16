@@ -3,6 +3,7 @@ import { cookies } from 'next/headers';
 import {
   AlertTriangle,
   ArrowRight,
+  MessageCircle,
   Shield,
   Swords,
   Trophy,
@@ -237,6 +238,7 @@ export default async function AdminOverviewPage() {
               { href: '/admin/users', title: 'Review players', meta: 'Search, filter, ban, or update roles.' },
               { href: '/admin/matches', title: 'Resolve matches', meta: 'Handle disputes and overrides.' },
               { href: '/admin/tournaments', title: 'Check brackets', meta: 'Cancel broken events or inspect winners.' },
+              { href: '/admin/whatsapp', title: 'Test WhatsApp', meta: 'Send sandbox previews and inspect recipient wiring.' },
               {
                 href: overview.role === 'admin' ? '/admin/logs' : '/admin',
                 title: overview.role === 'admin' ? 'Audit trail' : 'Moderator lane',
@@ -314,6 +316,24 @@ export default async function AdminOverviewPage() {
               })}
             </div>
           )}
+        </div>
+      </section>
+
+      <section className="card p-5">
+        <div className="flex items-start gap-3">
+          <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[rgba(255,107,107,0.14)] text-[var(--brand-coral)]">
+            <MessageCircle size={18} />
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-black text-[var(--text-primary)]">WhatsApp control lane</p>
+            <p className="mt-1 text-sm leading-6 text-[var(--text-secondary)]">
+              Sandbox-test 1:1 alerts, inspect recipient errors, and keep the lobby-group setup in one place.
+            </p>
+            <Link href="/admin/whatsapp" className="brand-link-coral mt-3 inline-flex items-center gap-1 text-xs font-semibold">
+              Open WhatsApp tools
+              <ArrowRight size={12} />
+            </Link>
+          </div>
         </div>
       </section>
     </div>

@@ -1,3 +1,4 @@
+import Image from 'next/image';
 import Link from 'next/link';
 import { ArrowRight, Shield, Swords, Users } from 'lucide-react';
 import { BrandLogo } from '@/components/BrandLogo';
@@ -108,6 +109,18 @@ const PRICING_PLANS = [
 
 const HERO_LEFT_STACK: readonly GameKey[] = ['efootball', 'tekken8', 'nba2k26'];
 const HERO_RIGHT_STACK: readonly GameKey[] = ['fc26', 'sf6', 'valorant'];
+
+const LIVE_DEAL = {
+  title: 'God of War Digital Deluxe Edition',
+  platform: 'PlayStation Store',
+  edition: 'PS4 Digital Deluxe Edition',
+  currentPrice: '$14.99',
+  originalPrice: '$29.99',
+  discount: '50% off',
+  endsAt: 'April 23, 2026',
+  href: 'https://store.playstation.com/en-us/product/UP9000-CUSA07408_00-GODOFWARDDE00000',
+  imageSrc: '/deals/god-of-war-digital-deluxe.png',
+};
 
 export default function LandingPage() {
   return (
@@ -340,6 +353,94 @@ export default function LandingPage() {
 
       <section id="pricing" className="landing-section">
         <div className="landing-shell">
+          <div className="mb-8 card overflow-hidden p-0">
+            <div className="grid lg:grid-cols-[minmax(0,0.88fr)_minmax(0,1.12fr)]">
+              <div className="relative min-h-[260px] bg-[var(--surface-strong)]">
+                <Image
+                  src={LIVE_DEAL.imageSrc}
+                  alt={LIVE_DEAL.title}
+                  fill
+                  sizes="(max-width: 1024px) 100vw, 42vw"
+                  className="object-cover"
+                  priority
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/72 via-black/10 to-transparent" />
+                <div className="absolute left-5 top-5 flex flex-wrap gap-2">
+                  <span className="brand-chip px-3 py-1">Live deal</span>
+                  <span className="rounded-full bg-white/14 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-white backdrop-blur-sm">
+                    {LIVE_DEAL.platform}
+                  </span>
+                </div>
+                <div className="absolute bottom-5 left-5 right-5">
+                  <p className="text-2xl font-black leading-tight text-white sm:text-[2rem]">
+                    {LIVE_DEAL.title}
+                  </p>
+                  <p className="mt-2 text-sm text-white/76">{LIVE_DEAL.edition}</p>
+                </div>
+              </div>
+
+              <div className="p-6 sm:p-7">
+                <p className="section-title">Store drop</p>
+                <h2 className="mt-3 max-w-xl text-3xl font-black text-[var(--text-primary)] sm:text-[2.2rem]">
+                  Fresh PlayStation deal, live right now.
+                </h2>
+                <p className="mt-3 max-w-xl text-sm leading-6 text-[var(--text-secondary)]">
+                  We pulled this one in directly from the PlayStation Store so players can spot a
+                  good pickup fast without hunting around.
+                </p>
+
+                <div className="mt-5 flex flex-wrap gap-2">
+                  <span className="brand-chip-coral px-3 py-1">{LIVE_DEAL.discount}</span>
+                  <span className="rounded-full border border-[var(--border-color)] bg-[var(--surface-strong)] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--text-secondary)]">
+                    Ends {LIVE_DEAL.endsAt}
+                  </span>
+                </div>
+
+                <div className="mt-6 grid gap-3 sm:grid-cols-3">
+                  <div className="rounded-2xl border border-[var(--border-color)] bg-[var(--surface)] p-4">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--text-soft)]">
+                      Deal price
+                    </p>
+                    <p className="mt-2 text-3xl font-black text-[var(--text-primary)]">
+                      {LIVE_DEAL.currentPrice}
+                    </p>
+                  </div>
+                  <div className="rounded-2xl border border-[var(--border-color)] bg-[var(--surface)] p-4">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--text-soft)]">
+                      Was
+                    </p>
+                    <p className="mt-2 text-3xl font-black text-[var(--text-secondary)] line-through">
+                      {LIVE_DEAL.originalPrice}
+                    </p>
+                  </div>
+                  <div className="rounded-2xl border border-[var(--border-color)] bg-[var(--surface)] p-4">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--text-soft)]">
+                      Store
+                    </p>
+                    <p className="mt-2 text-lg font-black text-[var(--text-primary)]">
+                      PlayStation
+                    </p>
+                  </div>
+                </div>
+
+                <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+                  <a
+                    href={LIVE_DEAL.href}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="btn-primary shadow-none"
+                  >
+                    Grab the deal
+                    <ArrowRight size={16} />
+                  </a>
+                  <Link href="/register" className="btn-outline">
+                    Join Mechi
+                  </Link>
+                </div>
+              </div>
+            </div>
+          </div>
+
           <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
             <div>
               <p className="section-title">Pricing</p>

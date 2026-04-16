@@ -7,6 +7,7 @@ interface BrandLogoProps {
   className?: string;
   iconClassName?: string;
   labelClassName?: string;
+  showIcon?: boolean;
   showLabel?: boolean;
   showTagline?: boolean;
   size?: BrandLogoSize;
@@ -77,37 +78,47 @@ export function BrandLogo({
   className,
   iconClassName,
   labelClassName,
+  showIcon,
   showLabel,
   showTagline = false,
   size = 'sm',
   variant = 'full',
 }: BrandLogoProps) {
+  const shouldShowIcon = showIcon ?? true;
   const shouldShowLabel = showLabel ?? variant !== 'symbol';
 
   return (
-    <span className={cn('inline-flex items-center', gapClasses[size], className)}>
-      <span
-        style={{
-          position: 'relative',
-          width: imageSizes[size],
-          height: imageSizes[size],
-        }}
-        className={cn(
-          'relative block shrink-0 overflow-hidden border',
-          iconSizeClasses[size],
-          tileToneClasses[variant],
-          iconClassName
-        )}
-      >
-        <Image
-          src="/mechi-logo.png"
-          alt="Mechi logo"
-          fill
-          sizes={imageSizes[size]}
-          className={imageToneClasses[variant]}
-          priority={size === 'lg'}
-        />
-      </span>
+    <span
+      className={cn(
+        'inline-flex items-center',
+        shouldShowIcon && shouldShowLabel ? gapClasses[size] : undefined,
+        className
+      )}
+    >
+      {shouldShowIcon ? (
+        <span
+          style={{
+            position: 'relative',
+            width: imageSizes[size],
+            height: imageSizes[size],
+          }}
+          className={cn(
+            'relative block shrink-0 overflow-hidden border',
+            iconSizeClasses[size],
+            tileToneClasses[variant],
+            iconClassName
+          )}
+        >
+          <Image
+            src="/mechi-logo.png"
+            alt="Mechi logo"
+            fill
+            sizes={imageSizes[size]}
+            className={imageToneClasses[variant]}
+            priority={size === 'lg'}
+          />
+        </span>
+      ) : null}
 
       {shouldShowLabel ? (
         <span className="flex min-w-0 flex-col">

@@ -120,12 +120,12 @@ export const GAMES: Record<GameKey, Game> = {
 };
 
 export const TIERS: Tier[] = [
-  { name: 'Bronze', min: 0, max: 899, color: 'text-amber-700', bgColor: 'bg-amber-100 dark:bg-amber-900/30' },
-  { name: 'Silver', min: 900, max: 1099, color: 'text-gray-500', bgColor: 'bg-gray-100 dark:bg-gray-800' },
-  { name: 'Gold', min: 1100, max: 1299, color: 'text-yellow-500', bgColor: 'bg-yellow-50 dark:bg-yellow-900/30' },
-  { name: 'Platinum', min: 1300, max: 1499, color: 'text-cyan-500', bgColor: 'bg-cyan-50 dark:bg-cyan-900/30' },
-  { name: 'Diamond', min: 1500, max: 1699, color: 'text-blue-500', bgColor: 'bg-blue-50 dark:bg-blue-900/30' },
-  { name: 'Legend', min: 1700, max: Infinity, color: 'text-purple-500', bgColor: 'bg-purple-50 dark:bg-purple-900/30' },
+  { name: 'Bronze', min: 0, max: 1099, color: 'text-amber-700', bgColor: 'bg-amber-100 dark:bg-amber-900/30' },
+  { name: 'Silver', min: 1100, max: 1299, color: 'text-gray-500', bgColor: 'bg-gray-100 dark:bg-gray-800' },
+  { name: 'Gold', min: 1300, max: 1499, color: 'text-yellow-500', bgColor: 'bg-yellow-50 dark:bg-yellow-900/30' },
+  { name: 'Platinum', min: 1500, max: 1699, color: 'text-cyan-500', bgColor: 'bg-cyan-50 dark:bg-cyan-900/30' },
+  { name: 'Diamond', min: 1700, max: 1899, color: 'text-blue-500', bgColor: 'bg-blue-50 dark:bg-blue-900/30' },
+  { name: 'Legend', min: 1900, max: Infinity, color: 'text-purple-500', bgColor: 'bg-purple-50 dark:bg-purple-900/30' },
 ];
 
 export const REGIONS = ['Nairobi', 'Mombasa', 'Kisumu', 'Nakuru', 'Eldoret', 'Other'];

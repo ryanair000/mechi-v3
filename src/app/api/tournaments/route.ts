@@ -4,7 +4,7 @@ import { GAMES, isValidGamePlatform } from '@/lib/config';
 import { isTournamentSize } from '@/lib/bracket';
 import { makeSlug } from '@/lib/slug';
 import { createServiceClient } from '@/lib/supabase';
-import { getPlatformForTournament } from '@/lib/tournaments';
+import { CONFIRMED_PAYMENT_STATUSES, getPlatformForTournament } from '@/lib/tournaments';
 import type { GameKey, PlatformKey } from '@/types';
 
 export async function GET(request: NextRequest) {
@@ -18,9 +18,7 @@ export async function GET(request: NextRequest) {
 
     let query = supabase
       .from('tournaments')
-      .select(
-        '*, organizer:organizer_id(id, username), winner:winner_id(id, username), player_count:tournament_players(count)'
-      )
+      .select('*, organizer:organizer_id(id, username), winner:winner_id(id, username)')
       .order('created_at', { ascending: false })
       .range(offset, offset + limit - 1);
 
@@ -37,7 +35,35 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to fetch tournaments' }, { status: 500 });
     }
 
-    return NextResponse.json({ tournaments: data ?? [] });
+    const tournaments = (data ?? []) as Array<Record<string, unknown> & { id: string }>;
+    if (!tournaments.length) {
+      return NextResponse.json({ tournaments: [] });
+    }
+
+    const tournamentIds = tournaments.map((tournament) => tournament.id);
+    const { data: players, error: playersError } = await supabase
+      .from('tournament_players')
+      .select('tournament_id')
+      .in('tournament_id', tournamentIds)
+      .in('payment_status', [...CONFIRMED_PAYMENT_STATUSES]);
+
+    if (playersError) {
+      return NextResponse.json({ error: 'Failed to fetch tournaments' }, { status: 500 });
+    }
+
+    const playerCounts = (players ?? []).reduce<Record<string, number>>((counts, player) => {
+      const tournamentId = player.tournament_id as string | undefined;
+      if (!tournamentId) return counts;
+      counts[tournamentId] = (counts[tournamentId] ?? 0) + 1;
+      return counts;
+    }, {});
+
+    return NextResponse.json({
+      tournaments: tournaments.map((tournament) => ({
+        ...tournament,
+        player_count: playerCounts[tournament.id] ?? 0,
+      })),
+    });
   } catch (err) {
     console.error('[Tournaments GET] Error:', err);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });

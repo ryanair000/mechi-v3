@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuthUser } from '@/lib/auth';
 import { GAMES, PLATFORMS } from '@/lib/config';
+import { isValidPhoneNumber, normalizePhoneNumber } from '@/lib/phone';
 import { createServiceClient } from '@/lib/supabase';
 import { canUseSelectedGames, maybeExpireProfilePlan, resolvePlan } from '@/lib/subscription';
 
@@ -93,6 +94,12 @@ export async function PATCH(request: NextRequest) {
       },
       supabase
     );
+    let nextWhatsappNotifications = Boolean(currentProfile.whatsapp_notifications);
+    let nextWhatsappNumber =
+      typeof currentProfile.whatsapp_number === 'string' &&
+      currentProfile.whatsapp_number.trim().length > 0
+        ? normalizePhoneNumber(currentProfile.whatsapp_number)
+        : null;
 
     if (platforms !== undefined) {
       if (!Array.isArray(platforms)) {
@@ -159,6 +166,7 @@ export async function PATCH(request: NextRequest) {
           { status: 400 }
         );
       }
+      nextWhatsappNotifications = whatsapp_notifications;
       updateData.whatsapp_notifications = whatsapp_notifications;
     }
     if (whatsapp_number !== undefined) {
@@ -168,7 +176,32 @@ export async function PATCH(request: NextRequest) {
       ) {
         return NextResponse.json({ error: 'WhatsApp number must be a string or null' }, { status: 400 });
       }
-      updateData.whatsapp_number = typeof whatsapp_number === 'string' ? whatsapp_number.trim() : null;
+      nextWhatsappNumber =
+        typeof whatsapp_number === 'string' ? normalizePhoneNumber(whatsapp_number.trim()) : null;
+
+      if (nextWhatsappNumber && !isValidPhoneNumber(nextWhatsappNumber)) {
+        return NextResponse.json({ error: 'Enter a valid WhatsApp number' }, { status: 400 });
+      }
+
+      updateData.whatsapp_number = nextWhatsappNumber;
+    }
+
+    if (nextWhatsappNotifications) {
+      if (!nextWhatsappNumber) {
+        const fallbackPhone =
+          typeof currentProfile.phone === 'string' ? normalizePhoneNumber(currentProfile.phone) : '';
+        if (!isValidPhoneNumber(fallbackPhone)) {
+          return NextResponse.json(
+            { error: 'Add a valid WhatsApp number before turning alerts on' },
+            { status: 400 }
+          );
+        }
+
+        nextWhatsappNumber = fallbackPhone;
+        updateData.whatsapp_number = nextWhatsappNumber;
+      } else if (!isValidPhoneNumber(nextWhatsappNumber)) {
+        return NextResponse.json({ error: 'Enter a valid WhatsApp number' }, { status: 400 });
+      }
     }
 
     if (Object.keys(updateData).length === 0) {

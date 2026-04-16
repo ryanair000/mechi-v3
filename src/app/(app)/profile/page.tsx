@@ -1040,6 +1040,9 @@ export default function ProfilePage() {
                     <p className="mt-0.5 text-xs text-[var(--text-soft)]">
                       Get notified when matches are found or results are confirmed.
                     </p>
+                    <p className="mt-2 text-xs text-[var(--text-soft)]">
+                      Text <span className="font-semibold text-[var(--text-primary)]">Join Mechi</span> on WhatsApp first so Mechi can message you there.
+                    </p>
                   </div>
                   <button
                     type="button"

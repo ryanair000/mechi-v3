@@ -13,7 +13,7 @@ import {
 } from '@/lib/gamification';
 import { createServiceClient } from '@/lib/supabase';
 import { sendMatchDisputeEmail, sendResultConfirmedEmail } from '@/lib/email';
-import { notifyResultConfirmed } from '@/lib/whatsapp';
+import { notifyMatchDispute, notifyResultConfirmed } from '@/lib/whatsapp';
 import { GAMES, getGameLossesKey, getGameRatingKey, getGameWinsKey } from '@/lib/config';
 import { advanceTournamentAfterMatch } from '@/lib/tournaments';
 import type { GameKey, GamificationResult, Match } from '@/types';
@@ -319,10 +319,12 @@ export async function POST(
         const gameLabel = GAMES[updatedMatch.game as GameKey]?.label ?? updatedMatch.game;
         const { data: disputeProfilesRaw } = await supabase
           .from('profiles')
-          .select('id, username, email')
+          .select('id, username, email, whatsapp_number, whatsapp_notifications')
           .in('id', [match.player1_id, match.player2_id]);
 
-        const disputeProfiles = (disputeProfilesRaw ?? []) as Array<Pick<ProfileRow, 'id' | 'username' | 'email'>>;
+        const disputeProfiles = (disputeProfilesRaw ?? []) as Array<
+          Pick<ProfileRow, 'id' | 'username' | 'email' | 'whatsapp_number' | 'whatsapp_notifications'>
+        >;
         const player1 = disputeProfiles.find((profile) => profile.id === match.player1_id);
         const player2 = disputeProfiles.find((profile) => profile.id === match.player2_id);
 
@@ -336,9 +338,37 @@ export async function POST(
           }).catch(console.error);
         }
 
+        if (
+          player1?.whatsapp_notifications &&
+          player1.whatsapp_number &&
+          player2
+        ) {
+          notifyMatchDispute({
+            whatsappNumber: player1.whatsapp_number,
+            username: player1.username,
+            opponentUsername: player2.username,
+            game: gameLabel,
+            matchId: id,
+          }).catch(console.error);
+        }
+
         if (player2?.email && player1) {
           sendMatchDisputeEmail({
             to: player2.email,
+            username: player2.username,
+            opponentUsername: player1.username,
+            game: gameLabel,
+            matchId: id,
+          }).catch(console.error);
+        }
+
+        if (
+          player2?.whatsapp_notifications &&
+          player2.whatsapp_number &&
+          player1
+        ) {
+          notifyMatchDispute({
+            whatsappNumber: player2.whatsapp_number,
             username: player2.username,
             opponentUsername: player1.username,
             game: gameLabel,

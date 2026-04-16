@@ -17,12 +17,30 @@ const HERO_STATS = [
 ];
 
 const TIERS = [
-  { name: 'Bronze', range: 'III -> I', rating: 800 },
-  { name: 'Silver', range: 'III -> I', rating: 980 },
-  { name: 'Gold', range: 'III -> I', rating: 1200 },
-  { name: 'Platinum', range: 'III -> I', rating: 1400 },
-  { name: 'Diamond', range: 'III -> I', rating: 1580 },
-  { name: 'Legend', range: 'Final tier', rating: 1800 },
+  { name: 'Bronze', note: 'First tier', range: 'III / II / I', rating: 1000 },
+  { name: 'Silver', note: 'Next tier up', range: 'III / II / I', rating: 1120 },
+  { name: 'Gold', note: 'Mid climb', range: 'III / II / I', rating: 1320 },
+  { name: 'Platinum', note: 'Upper climb', range: 'III / II / I', rating: 1520 },
+  { name: 'Diamond', note: 'Near the top', range: 'III / II / I', rating: 1720 },
+  { name: 'Legend', note: 'Top rank', range: 'No divisions', rating: 1900 },
+];
+
+const RANK_STEPS = [
+  {
+    step: 'III',
+    title: 'Entry step',
+    desc: 'You just landed in that tier.',
+  },
+  {
+    step: 'II',
+    title: 'Middle step',
+    desc: 'You are moving through the tier.',
+  },
+  {
+    step: 'I',
+    title: 'Top step',
+    desc: 'You are closest to the next tier.',
+  },
 ];
 
 const STEPS = [
@@ -402,18 +420,18 @@ export default function LandingPage() {
             <div>
               <p className="section-title">Ranks</p>
               <h2 className="mt-3 max-w-lg text-3xl font-black text-[var(--text-primary)] sm:text-[2.2rem]">
-                A ladder players can read in one quick look.
+                A climb you can read instantly.
               </h2>
               <p className="mt-3 max-w-xl text-sm leading-6 text-[var(--text-secondary)]">
-                Rank should feel obvious, not mysterious. Bronze through Legend stays clean,
-                readable, and easy to understand before you even queue.
+                No hidden math on the surface. Every badge shows your tier plus your step inside
+                that tier. Bronze II means Bronze tier, middle step. Gold I means top step in Gold.
               </p>
 
               <div className="mt-5 grid grid-cols-3 gap-3">
                 {[
-                  { value: '6', label: 'Tiers' },
-                  { value: 'III -> I', label: 'Core climb' },
-                  { value: 'Legend', label: 'Final stop' },
+                  { value: '6', label: 'Main tiers' },
+                  { value: 'III / II / I', label: 'Steps per tier' },
+                  { value: 'Legend', label: 'Top rank' },
                 ].map((item) => (
                   <div
                     key={item.label}
@@ -429,23 +447,56 @@ export default function LandingPage() {
             </div>
 
             <div className="card overflow-hidden p-5 sm:p-6">
-              <div className="flex items-center justify-between gap-3">
-                <div>
-                  <p className="section-title">Rank clarity</p>
-                  <h3 className="mt-2 text-lg font-black text-[var(--text-primary)]">Rank ladder</h3>
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                <div className="max-w-md">
+                  <p className="section-title">How the climb works</p>
+                  <h3 className="mt-2 text-lg font-black text-[var(--text-primary)]">
+                    Tier + step = your rank
+                  </h3>
+                  <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">
+                    Learn the pattern once and every badge makes sense fast. The tier tells you the
+                    league you are in. The Roman numeral tells you how close you are to the next tier.
+                  </p>
                 </div>
-                <TierMedal rating={1800} size="sm" />
+                <div className="brand-chip-coral gap-2 self-start">
+                  <TierMedal rating={1900} size="sm" />
+                  <span>Legend is the top</span>
+                </div>
+              </div>
+
+              <div className="mt-5 grid gap-2.5 sm:grid-cols-3">
+                {RANK_STEPS.map((item) => (
+                  <div
+                    key={item.step}
+                    className="rounded-xl border border-[var(--border-color)] bg-[var(--surface)] p-3"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-2xl border border-[rgba(50,224,196,0.22)] bg-[rgba(50,224,196,0.12)] text-sm font-black text-[var(--accent-secondary-text)]">
+                        {item.step}
+                      </div>
+                      <div>
+                        <p className="text-sm font-black text-[var(--text-primary)]">{item.title}</p>
+                        <p className="mt-0.5 text-xs leading-5 text-[var(--text-secondary)]">
+                          {item.desc}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
               </div>
 
               <div className="mt-5 grid gap-2.5">
                 {TIERS.map((tier) => (
                   <div
                     key={tier.name}
-                    className="flex items-center justify-between rounded-xl border border-[var(--border-color)] bg-[var(--surface)] px-3 py-2.5"
+                    className="flex items-center justify-between rounded-xl border border-[var(--border-color)] bg-[var(--surface)] px-3 py-3"
                   >
                     <div className="flex items-center gap-2.5">
                       <TierMedal rating={tier.rating} size="sm" />
-                      <span className="text-sm font-semibold text-[var(--text-primary)]">{tier.name}</span>
+                      <div>
+                        <span className="text-sm font-semibold text-[var(--text-primary)]">{tier.name}</span>
+                        <p className="text-[11px] text-[var(--text-soft)]">{tier.note}</p>
+                      </div>
                     </div>
                     <span className="text-xs font-medium text-[var(--text-soft)]">{tier.range}</span>
                   </div>

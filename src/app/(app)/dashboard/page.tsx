@@ -355,6 +355,57 @@ export default function DashboardPage() {
               Check your live queue energy, level track, and next match from one cleaner home base.
             </p>
 
+            <div className="mt-5 overflow-hidden rounded-[1.35rem] border border-[rgba(50,224,196,0.2)] bg-[linear-gradient(135deg,rgba(50,224,196,0.12),rgba(255,106,106,0.08))] shadow-[var(--shadow-soft)]">
+              <div className="grid gap-4 p-4 sm:grid-cols-[108px_minmax(0,1fr)] sm:p-5">
+                <div className="relative h-28 overflow-hidden rounded-[1.05rem] bg-[var(--surface-strong)] sm:h-full sm:min-h-[108px]">
+                  <Image
+                    src={LIVE_DEAL.imageSrc}
+                    alt={LIVE_DEAL.title}
+                    fill
+                    sizes="108px"
+                    className="object-cover"
+                    priority
+                  />
+                </div>
+
+                <div className="min-w-0">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="brand-chip px-3 py-1">Live PS deal</span>
+                    <span className="brand-chip-coral px-3 py-1">{LIVE_DEAL.discount}</span>
+                    <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--text-soft)]">
+                      Ends {LIVE_DEAL.endsAt}
+                    </span>
+                  </div>
+
+                  <p className="mt-3 text-lg font-black leading-tight text-[var(--text-primary)] sm:text-[1.35rem]">
+                    {LIVE_DEAL.title}
+                  </p>
+                  <p className="mt-1 text-sm text-[var(--text-secondary)]">
+                    {LIVE_DEAL.platform} • {LIVE_DEAL.edition}
+                  </p>
+
+                  <div className="mt-3 flex flex-wrap items-end gap-x-3 gap-y-2">
+                    <p className="text-2xl font-black text-[var(--text-primary)]">{LIVE_DEAL.currentPrice}</p>
+                    <p className="text-sm text-[var(--text-secondary)]">
+                      Was <span className="line-through">{LIVE_DEAL.originalPrice}</span>
+                    </p>
+                  </div>
+
+                  <div className="mt-4 flex flex-wrap gap-3">
+                    <a
+                      href={LIVE_DEAL.href}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="btn-primary shadow-none"
+                    >
+                      Open PlayStation deal
+                      <ExternalLink size={15} />
+                    </a>
+                  </div>
+                </div>
+              </div>
+            </div>
+
             <div className="mt-5 max-w-2xl rounded-[1.25rem] border border-[var(--border-color)] bg-[var(--surface-strong)] p-4 shadow-[var(--shadow-soft)]">
               <div className="flex items-center justify-between gap-3 text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--text-soft)]">
                 <span>XP progress</span>
@@ -391,103 +442,6 @@ export default function DashboardPage() {
           </div>
         </div>
       </div>
-
-      <section className="mb-8">
-        <div className="mb-4 flex items-center justify-between gap-3">
-          <div>
-            <p className="section-title">Live deal</p>
-            <p className="mt-2 text-sm text-[var(--text-secondary)]">
-              Fresh store drop pulled in for players right now.
-            </p>
-          </div>
-          <a
-            href={LIVE_DEAL.href}
-            target="_blank"
-            rel="noreferrer"
-            className="brand-link inline-flex items-center gap-1 text-xs font-semibold"
-          >
-            Open deal
-            <ExternalLink size={13} />
-          </a>
-        </div>
-
-        <div className="card overflow-hidden p-0">
-          <div className="grid lg:grid-cols-[minmax(0,0.88fr)_minmax(0,1.12fr)]">
-            <div className="relative min-h-[240px] bg-[var(--surface-strong)]">
-              <Image
-                src={LIVE_DEAL.imageSrc}
-                alt={LIVE_DEAL.title}
-                fill
-                sizes="(max-width: 1024px) 100vw, 38vw"
-                className="object-cover"
-                priority
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/76 via-black/18 to-transparent" />
-              <div className="absolute left-4 top-4 flex flex-wrap gap-2">
-                <span className="brand-chip px-3 py-1">Live deal</span>
-                <span className="rounded-full bg-white/14 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-white backdrop-blur-sm">
-                  {LIVE_DEAL.platform}
-                </span>
-              </div>
-              <div className="absolute bottom-4 left-4 right-4">
-                <p className="text-2xl font-black leading-tight text-white">
-                  {LIVE_DEAL.title}
-                </p>
-                <p className="mt-2 text-sm text-white/78">{LIVE_DEAL.edition}</p>
-              </div>
-            </div>
-
-            <div className="p-5 sm:p-6">
-              <div className="flex flex-wrap gap-2">
-                <span className="brand-chip-coral px-3 py-1">{LIVE_DEAL.discount}</span>
-                <span className="rounded-full border border-[var(--border-color)] bg-[var(--surface-strong)] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--text-secondary)]">
-                  Ends {LIVE_DEAL.endsAt}
-                </span>
-              </div>
-
-              <h2 className="mt-4 text-2xl font-black text-[var(--text-primary)] sm:text-[2rem]">
-                {LIVE_DEAL.currentPrice}
-              </h2>
-              <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">
-                Was <span className="line-through">{LIVE_DEAL.originalPrice}</span> on the PlayStation Store.
-              </p>
-
-              <div className="mt-5 grid gap-3 sm:grid-cols-3">
-                <div className="rounded-2xl border border-[var(--border-color)] bg-[var(--surface)] p-4">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--text-soft)]">
-                    Deal price
-                  </p>
-                  <p className="mt-2 text-xl font-black text-[var(--text-primary)]">{LIVE_DEAL.currentPrice}</p>
-                </div>
-                <div className="rounded-2xl border border-[var(--border-color)] bg-[var(--surface)] p-4">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--text-soft)]">
-                    Was
-                  </p>
-                  <p className="mt-2 text-xl font-black text-[var(--text-secondary)] line-through">{LIVE_DEAL.originalPrice}</p>
-                </div>
-                <div className="rounded-2xl border border-[var(--border-color)] bg-[var(--surface)] p-4">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--text-soft)]">
-                    Platform
-                  </p>
-                  <p className="mt-2 text-xl font-black text-[var(--text-primary)]">PlayStation</p>
-                </div>
-              </div>
-
-              <div className="mt-6">
-                <a
-                  href={LIVE_DEAL.href}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="btn-primary shadow-none"
-                >
-                  Grab the deal
-                  <ExternalLink size={15} />
-                </a>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
 
       {activeMatch && (
         <Link href={`/match/${activeMatch.id}`} className="mb-6 block">

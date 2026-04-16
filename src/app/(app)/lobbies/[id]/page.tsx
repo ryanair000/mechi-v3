@@ -7,7 +7,7 @@ import { PlatformLogo } from '@/components/PlatformLogo';
 import { GAMES, PLATFORMS } from '@/lib/config';
 import type { GameKey, Lobby, LobbyMember } from '@/types';
 import toast from 'react-hot-toast';
-import { Users, Copy, ArrowLeft, LogOut, Crown, Trash2 } from 'lucide-react';
+import { Users, Copy, ArrowLeft, LogOut, Crown, Trash2, Compass, Swords } from 'lucide-react';
 
 interface LobbyDetail extends Lobby { host: { id: string; username: string }; }
 interface MemberWithUser extends LobbyMember { user: { id: string; username: string }; }
@@ -60,6 +60,8 @@ export default function LobbyDetailPage() {
   const game = GAMES[lobby.game as GameKey];
   const isHost = lobby.host_id === user?.id;
   const isMember = members.some((m) => m.user_id === user?.id);
+  const displayMode = lobby.mode && lobby.mode !== 'lobby' ? lobby.mode : null;
+  const displayMap = typeof lobby.map_name === 'string' && lobby.map_name.length > 0 ? lobby.map_name : null;
 
   return (
     <div className="page-container">
@@ -74,6 +76,22 @@ export default function LobbyDetailPage() {
             <div>
               <p className="text-blue-400 text-xs font-medium uppercase tracking-wide mb-1">{game?.label}</p>
               <h1 className="font-bold text-2xl text-white">{lobby.title}</h1>
+              {displayMode || displayMap ? (
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {displayMode ? (
+                    <span className="brand-chip gap-1 px-2.5 py-1">
+                      <Swords size={11} />
+                      {displayMode}
+                    </span>
+                  ) : null}
+                  {displayMap ? (
+                    <span className="brand-chip-coral gap-1 px-2.5 py-1">
+                      <Compass size={11} />
+                      {displayMap}
+                    </span>
+                  ) : null}
+                </div>
+              ) : null}
             </div>
             <span className={`text-xs font-medium px-3 py-1 rounded-lg ${
               lobby.status === 'open' ? 'bg-emerald-500/15 text-emerald-400' :

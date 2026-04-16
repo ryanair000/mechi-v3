@@ -3,11 +3,27 @@
 import { Suspense, useEffect, useState, useCallback } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
-import { Globe, Lock, Plus, Users, X } from 'lucide-react';
+import { Compass, Globe, Lock, Plus, Swords, Users, X } from 'lucide-react';
 import { useAuth, useAuthFetch } from '@/components/AuthProvider';
 import { PlatformLogo } from '@/components/PlatformLogo';
-import { GAMES, PLATFORMS } from '@/lib/config';
+import {
+  GAMES,
+  PLATFORMS,
+  getDefaultLobbyMap,
+  getDefaultLobbyMode,
+  getLobbyModeOptions,
+  getLobbyPopularMaps,
+} from '@/lib/config';
 import type { GameKey, Lobby } from '@/types';
+
+function createLobbyDraft(game: GameKey) {
+  return {
+    game,
+    title: '',
+    mode: getDefaultLobbyMode(game),
+    map_name: getDefaultLobbyMap(game),
+  };
+}
 
 function LobbiesContent() {
   const { user } = useAuth();
@@ -21,7 +37,7 @@ function LobbiesContent() {
   const [showCreate, setShowCreate] = useState(false);
   const [creating, setCreating] = useState(false);
   const [joiningId, setJoiningId] = useState<string | null>(null);
-  const [newLobby, setNewLobby] = useState({ game: gameFilter ?? 'codm', title: '' });
+  const [newLobby, setNewLobby] = useState(() => createLobbyDraft(gameFilter ?? 'codm'));
 
   const lobbyGames = (Object.keys(GAMES) as GameKey[]).filter(
     (game) => GAMES[game].mode === 'lobby'
@@ -59,9 +75,36 @@ function LobbiesContent() {
     void fetchLobbies();
   }, [fetchLobbies]);
 
+  useEffect(() => {
+    if (!gameFilter || GAMES[gameFilter]?.mode !== 'lobby') {
+      return;
+    }
+
+    setNewLobby((current) => {
+      if (current.game === gameFilter) {
+        return current;
+      }
+
+      return { ...createLobbyDraft(gameFilter), title: current.title };
+    });
+  }, [gameFilter]);
+
+  const modeOptions = getLobbyModeOptions(newLobby.game);
+  const mapOptions = getLobbyPopularMaps(newLobby.game);
+
   const handleCreate = async () => {
     if (!newLobby.title.trim()) {
       toast.error('Enter a lobby title');
+      return;
+    }
+
+    if (modeOptions.length > 0 && !newLobby.mode.trim()) {
+      toast.error('Select a game mode');
+      return;
+    }
+
+    if (mapOptions.length > 0 && !newLobby.map_name.trim()) {
+      toast.error('Pick a map or type your own');
       return;
     }
 
@@ -161,7 +204,13 @@ function LobbiesContent() {
                 <label className="label">Game</label>
                 <select
                   value={newLobby.game}
-                  onChange={(e) => setNewLobby({ ...newLobby, game: e.target.value as GameKey })}
+                  onChange={(e) => {
+                    const nextGame = e.target.value as GameKey;
+                    setNewLobby((current) => ({
+                      ...createLobbyDraft(nextGame),
+                      title: current.title,
+                    }));
+                  }}
                   className="input"
                 >
                   {lobbyGames.map((game) => (
@@ -182,6 +231,59 @@ function LobbiesContent() {
                   maxLength={60}
                 />
               </div>
+              {modeOptions.length > 0 ? (
+                <div>
+                  <label className="label">Game mode</label>
+                  <select
+                    value={newLobby.mode}
+                    onChange={(e) => setNewLobby({ ...newLobby, mode: e.target.value })}
+                    className="input"
+                  >
+                    {modeOptions.map((mode) => (
+                      <option key={mode} value={mode}>
+                        {mode}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              ) : null}
+              {mapOptions.length > 0 ? (
+                <div>
+                  <label className="label">Map</label>
+                  <input
+                    type="text"
+                    list={`lobby-map-options-${newLobby.game}`}
+                    value={newLobby.map_name}
+                    onChange={(e) => setNewLobby({ ...newLobby, map_name: e.target.value })}
+                    placeholder="Pick a popular map or type your own"
+                    className="input"
+                    maxLength={40}
+                  />
+                  <datalist id={`lobby-map-options-${newLobby.game}`}>
+                    {mapOptions.map((mapName) => (
+                      <option key={mapName} value={mapName}>
+                        {mapName}
+                      </option>
+                    ))}
+                  </datalist>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {mapOptions.map((mapName) => (
+                      <button
+                        key={mapName}
+                        type="button"
+                        onClick={() => setNewLobby({ ...newLobby, map_name: mapName })}
+                        className={`rounded-full border px-3 py-1.5 text-[11px] font-medium transition-all ${
+                          newLobby.map_name === mapName
+                            ? 'border-[rgba(50,224,196,0.32)] bg-[rgba(50,224,196,0.16)] text-[var(--text-primary)]'
+                            : 'border-[var(--border-color)] bg-[var(--surface-elevated)] text-[var(--text-soft)] hover:text-[var(--text-primary)]'
+                        }`}
+                      >
+                        {mapName}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
               <div className="flex gap-3 pt-2">
                 <button onClick={() => setShowCreate(false)} className="btn-ghost flex-1">Cancel</button>
                 <button onClick={handleCreate} disabled={creating} className="btn-primary flex-1">
@@ -215,6 +317,8 @@ function LobbiesContent() {
             const isHost = lobby.host_id === user?.id;
             const memberCount = (lobby.member_count as unknown as number) ?? 0;
             const isFull = memberCount >= lobby.max_players;
+            const displayMode = lobby.mode && lobby.mode !== 'lobby' ? lobby.mode : null;
+            const displayMap = typeof lobby.map_name === 'string' && lobby.map_name.length > 0 ? lobby.map_name : null;
 
             return (
               <div key={lobby.id} className="card p-4">
@@ -259,6 +363,23 @@ function LobbiesContent() {
                     Host: {(lobby.host as { username: string }).username}
                   </p>
                 )}
+
+                {displayMode || displayMap ? (
+                  <div className="mb-3 flex flex-wrap gap-2">
+                    {displayMode ? (
+                      <span className="brand-chip gap-1 px-2.5 py-1">
+                        <Swords size={11} />
+                        {displayMode}
+                      </span>
+                    ) : null}
+                    {displayMap ? (
+                      <span className="brand-chip-coral gap-1 px-2.5 py-1">
+                        <Compass size={11} />
+                        {displayMap}
+                      </span>
+                    ) : null}
+                  </div>
+                ) : null}
 
                 <div className="flex gap-2">
                   <button onClick={() => router.push(`/lobbies/${lobby.id}`)} className="btn-outline flex-1 py-2 text-xs">

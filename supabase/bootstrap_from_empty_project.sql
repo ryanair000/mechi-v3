@@ -74,6 +74,7 @@ CREATE TABLE IF NOT EXISTS lobbies (
   host_id uuid NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
   game text NOT NULL,
   mode text NOT NULL,
+  map_name text,
   title text NOT NULL,
   max_players integer NOT NULL DEFAULT 2,
   room_code text NOT NULL UNIQUE,

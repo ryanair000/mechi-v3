@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuthUser } from '@/lib/auth';
 import { createServiceClient } from '@/lib/supabase';
-import { GAMES } from '@/lib/config';
+import { GAMES, getDefaultLobbyMode, getLobbyModeOptions, getLobbyPopularMaps } from '@/lib/config';
 import type { GameKey } from '@/types';
 
 function generateRoomCode(): string {
@@ -52,15 +52,33 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const { game, title, mode } = body;
+    const { game, title, mode, map_name } = body;
+    const normalizedTitle = String(title ?? '').trim();
 
-    if (!game || !title) {
+    if (!game || !normalizedTitle) {
       return NextResponse.json({ error: 'Game and title are required' }, { status: 400 });
     }
 
     const gameConfig = GAMES[game as GameKey];
     if (!gameConfig) {
       return NextResponse.json({ error: 'Invalid game' }, { status: 400 });
+    }
+
+    const normalizedMode = String(mode ?? '').trim();
+    const normalizedMap = String(map_name ?? '').trim();
+    const modeOptions = getLobbyModeOptions(game as GameKey);
+    const mapOptions = getLobbyPopularMaps(game as GameKey);
+
+    if (modeOptions.length > 0 && !modeOptions.includes(normalizedMode)) {
+      return NextResponse.json({ error: 'Select a valid game mode' }, { status: 400 });
+    }
+
+    if (mapOptions.length > 0 && !normalizedMap) {
+      return NextResponse.json({ error: 'Select a map or type your own' }, { status: 400 });
+    }
+
+    if (normalizedMap.length > 40) {
+      return NextResponse.json({ error: 'Map name is too long' }, { status: 400 });
     }
 
     const supabase = createServiceClient();
@@ -70,8 +88,9 @@ export async function POST(request: NextRequest) {
       .insert({
         host_id: authUser.sub,
         game,
-        mode: mode ?? gameConfig.mode,
-        title: title.trim(),
+        mode: normalizedMode || getDefaultLobbyMode(game as GameKey),
+        map_name: normalizedMap || null,
+        title: normalizedTitle,
         max_players: gameConfig.maxPlayers ?? 2,
         room_code: generateRoomCode(),
         status: 'open',

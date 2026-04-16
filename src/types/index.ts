@@ -196,6 +196,7 @@ export interface Lobby {
   host_id: string;
   game: GameKey;
   mode: string;
+  map_name?: string | null;
   title: string;
   max_players: number;
   room_code: string;

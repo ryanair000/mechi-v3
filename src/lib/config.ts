@@ -119,6 +119,28 @@ export const GAMES: Record<GameKey, Game> = {
   },
 };
 
+export const LOBBY_MODE_OPTIONS: Partial<Record<GameKey, readonly string[]>> = {
+  codm: [
+    'Multiplayer Ranked',
+    'Search & Destroy',
+    'Hardpoint',
+    'Frontline',
+    'Battle Royale',
+  ],
+  pubgm: [
+    'Classic Squad',
+    'Classic Duo',
+    'Classic Solo',
+    'Team Deathmatch',
+    'Payload',
+  ],
+};
+
+export const LOBBY_POPULAR_MAPS: Partial<Record<GameKey, readonly string[]>> = {
+  codm: ['Nuketown', 'Raid', 'Firing Range', 'Shipment', 'Standoff'],
+  pubgm: ['Erangel', 'Livik', 'Miramar', 'Sanhok', 'Vikendi'],
+};
+
 export const TIERS: Tier[] = [
   { name: 'Bronze', min: 0, max: 899, color: 'text-amber-700', bgColor: 'bg-amber-100 dark:bg-amber-900/30' },
   { name: 'Silver', min: 900, max: 1099, color: 'text-gray-500', bgColor: 'bg-gray-100 dark:bg-gray-800' },
@@ -131,6 +153,22 @@ export const TIERS: Tier[] = [
 export const REGIONS = ['Nairobi', 'Mombasa', 'Kisumu', 'Nakuru', 'Eldoret', 'Other'];
 
 export const DEFAULT_RATING = 1000;
+
+export function getLobbyModeOptions(gameKey: GameKey): string[] {
+  return [...(LOBBY_MODE_OPTIONS[gameKey] ?? [])];
+}
+
+export function getLobbyPopularMaps(gameKey: GameKey): string[] {
+  return [...(LOBBY_POPULAR_MAPS[gameKey] ?? [])];
+}
+
+export function getDefaultLobbyMode(gameKey: GameKey): string {
+  return getLobbyModeOptions(gameKey)[0] ?? GAMES[gameKey]?.mode ?? 'lobby';
+}
+
+export function getDefaultLobbyMap(gameKey: GameKey): string {
+  return getLobbyPopularMaps(gameKey)[0] ?? '';
+}
 
 export function getTier(rating: number): Tier {
   return TIERS.find((t) => rating >= t.min && rating <= t.max) ?? TIERS[0];

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import type { JWTPayload } from '@/types';
+import { getLoginPath, getSafeNextPath } from '@/lib/navigation';
 import { createServiceClient } from '@/lib/supabase';
 
 const PROTECTED_PREFIXES = [
@@ -28,8 +29,10 @@ const PUBLIC_PREFIXES = [
   '/register',
   '/banned',
   '/api/auth',
+  '/api/invite',
   '/api/og',
   '/api/share',
+  '/join/',
   '/s/',
   '/_next',
   '/favicon',
@@ -123,7 +126,8 @@ function unauthorizedResponse(pathname: string, request: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  return NextResponse.redirect(new URL('/login', request.url));
+  const nextPath = `${pathname}${request.nextUrl.search}`;
+  return NextResponse.redirect(new URL(getLoginPath(nextPath), request.url));
 }
 
 export async function proxy(request: NextRequest) {
@@ -132,7 +136,8 @@ export async function proxy(request: NextRequest) {
   const payload = getPayload(request);
 
   if ((pathname === '/login' || pathname === '/register') && payload) {
-    return NextResponse.redirect(new URL('/dashboard', request.url));
+    const nextPath = getSafeNextPath(request.nextUrl.searchParams.get('next'));
+    return NextResponse.redirect(new URL(nextPath, request.url));
   }
 
   if (isPublic(pathname) && !isAdminRoute(pathname)) {

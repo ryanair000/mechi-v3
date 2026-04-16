@@ -39,16 +39,20 @@ export async function GET(request: NextRequest) {
   const supabase = createServiceClient();
   const { data: tournament } = await supabase
     .from('tournaments')
-    .select('*, player_count:tournament_players(count)')
+    .select('*')
     .eq('slug', slug)
     .single();
 
   if (!tournament) return notFoundCard('Mechi / Tournament not found');
 
+  const { data: players } = await supabase
+    .from('tournament_players')
+    .select('tournament_id')
+    .eq('tournament_id', tournament.id)
+    .in('payment_status', ['paid', 'free']);
+
   const game = GAMES[tournament.game as GameKey]?.label ?? tournament.game;
-  const playerCount = Array.isArray(tournament.player_count)
-    ? tournament.player_count[0]?.count ?? 0
-    : 0;
+  const playerCount = (players ?? []).length;
 
   return new ImageResponse(
     (

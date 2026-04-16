@@ -55,7 +55,12 @@ export async function GET(request: NextRequest) {
   }
 
   const supabase = createServiceClient();
-  const { data: match } = await supabase.from('matches').select('*').eq('id', matchId).single();
+  const { data: match } = await supabase
+    .from('matches')
+    .select('*')
+    .eq('id', matchId)
+    .eq('status', 'completed')
+    .single();
 
   if (!match) {
     return notFoundCard('Mechi / Match not found');

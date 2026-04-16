@@ -73,6 +73,8 @@ export function profileToAuthUser(profile: Record<string, unknown>): AuthUser {
     username: profile.username as string,
     phone: profile.phone as string,
     email: profile.email as string | undefined,
+    invite_code: (profile.invite_code as string | undefined) ?? undefined,
+    invited_by: (profile.invited_by as string | null | undefined) ?? null,
     avatar_url: (profile.avatar_url as string | null | undefined) ?? null,
     cover_url: (profile.cover_url as string | null | undefined) ?? null,
     region: profile.region as string,

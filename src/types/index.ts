@@ -71,6 +71,8 @@ export interface Profile {
   username: string;
   phone: string;
   email?: string;
+  invite_code?: string;
+  invited_by?: string | null;
   avatar_url?: string | null;
   cover_url?: string | null;
   whatsapp_number?: string | null;
@@ -274,6 +276,8 @@ export interface AuthUser {
   username: string;
   phone: string;
   email?: string;
+  invite_code?: string;
+  invited_by?: string | null;
   avatar_url?: string | null;
   cover_url?: string | null;
   whatsapp_number?: string | null;

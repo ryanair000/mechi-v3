@@ -1,8 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { use, useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
 import {
   Check,
@@ -36,6 +35,7 @@ import type { GameKey, PlatformKey } from '@/types';
 
 type Step = 1 | 2 | 3 | 4;
 const FREE_GAME_LIMIT = 1;
+type RegisterSearchParams = Promise<{ [key: string]: string | string[] | undefined }>;
 
 interface FormData {
   username: string;
@@ -50,9 +50,9 @@ interface FormData {
   selected_games: GameKey[];
 }
 
-export default function RegisterPage() {
+export default function RegisterPage({ searchParams }: { searchParams: RegisterSearchParams }) {
   const { user, login } = useAuth();
-  const searchParams = useSearchParams();
+  const resolvedSearchParams = use(searchParams);
   const [step, setStep] = useState<Step>(1);
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -71,8 +71,21 @@ export default function RegisterPage() {
     selected_games: [],
   });
   const emailIsValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email.trim());
-  const normalizedInviteCode = normalizeInviteCode(searchParams.get('invite'));
-  const rawNext = searchParams.get('next');
+  const rawInviteValue = resolvedSearchParams.invite;
+  const rawInviteCode =
+    typeof rawInviteValue === 'string'
+      ? rawInviteValue
+      : Array.isArray(rawInviteValue)
+        ? rawInviteValue[0] ?? null
+        : null;
+  const normalizedInviteCode = normalizeInviteCode(rawInviteCode);
+  const rawNextValue = resolvedSearchParams.next;
+  const rawNext =
+    typeof rawNextValue === 'string'
+      ? rawNextValue
+      : Array.isArray(rawNextValue)
+        ? rawNextValue[0] ?? null
+        : null;
   const nextPath = getSafeNextPath(rawNext);
   const loginHref = getLoginPath(rawNext ? nextPath : null);
 

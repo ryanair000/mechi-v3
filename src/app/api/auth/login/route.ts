@@ -10,6 +10,8 @@ interface AuthenticatedProfile {
   username: string;
   phone: string;
   email: string | null;
+  invite_code?: string | null;
+  invited_by?: string | null;
   avatar_url?: string | null;
   cover_url?: string | null;
   whatsapp_number?: string | null;
@@ -164,6 +166,9 @@ export async function POST(request: NextRequest) {
 
       const loginUrl = new URL('/login', requestOrigin);
       loginUrl.searchParams.set('error', errorMessage);
+      if (redirectTo !== '/dashboard') {
+        loginUrl.searchParams.set('next', redirectTo);
+      }
       return NextResponse.redirect(loginUrl, { status: 303 });
     }
 

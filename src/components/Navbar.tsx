@@ -12,7 +12,7 @@ export function Navbar() {
     <nav className="sticky top-0 z-40 border-b border-[var(--border-color)] bg-[var(--surface-soft)] pt-[env(safe-area-inset-top)] shadow-[var(--shadow-soft)] backdrop-blur-xl lg:hidden">
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4">
         <Link href="/dashboard" className="flex items-center rounded-xl px-1 py-1">
-          <BrandLogo size="sm" />
+          <BrandLogo size="md" showIcon={false} />
         </Link>
 
         <div className="flex items-center gap-2">

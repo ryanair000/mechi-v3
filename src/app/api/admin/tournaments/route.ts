@@ -18,7 +18,7 @@ export async function GET(request: NextRequest) {
     let query = supabase
       .from('tournaments')
       .select(
-        'id, slug, title, game, platform, region, size, entry_fee, prize_pool, platform_fee, status, created_at, started_at, ended_at, organizer:organizer_id(id, username), winner:winner_id(id, username), player_count:tournament_players(count)'
+        'id, slug, title, game, platform, region, size, entry_fee, prize_pool, platform_fee, status, created_at, started_at, ended_at, organizer:organizer_id(id, username), winner:winner_id(id, username)'
       )
       .order('created_at', { ascending: false })
       .range(offset, offset + limit - 1);
@@ -30,7 +30,35 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to fetch tournaments' }, { status: 500 });
     }
 
-    return NextResponse.json({ tournaments: data ?? [] });
+    const tournaments = (data ?? []) as Array<Record<string, unknown> & { id: string }>;
+    if (!tournaments.length) {
+      return NextResponse.json({ tournaments: [] });
+    }
+
+    const tournamentIds = tournaments.map((tournament) => tournament.id);
+    const { data: players, error: playersError } = await supabase
+      .from('tournament_players')
+      .select('tournament_id')
+      .in('tournament_id', tournamentIds)
+      .in('payment_status', ['paid', 'free']);
+
+    if (playersError) {
+      return NextResponse.json({ error: 'Failed to fetch tournaments' }, { status: 500 });
+    }
+
+    const playerCounts = (players ?? []).reduce<Record<string, number>>((counts, player) => {
+      const tournamentId = player.tournament_id as string | undefined;
+      if (!tournamentId) return counts;
+      counts[tournamentId] = (counts[tournamentId] ?? 0) + 1;
+      return counts;
+    }, {});
+
+    return NextResponse.json({
+      tournaments: tournaments.map((tournament) => ({
+        ...tournament,
+        player_count: playerCounts[tournament.id] ?? 0,
+      })),
+    });
   } catch (err) {
     console.error('[Admin Tournaments] Error:', err);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });

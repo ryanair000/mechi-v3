@@ -338,7 +338,11 @@ export async function POST(
           }).catch(console.error);
         }
 
-        if (player1?.whatsapp_notifications && player1.whatsapp_number && player2) {
+        if (
+          player1?.whatsapp_notifications &&
+          player1.whatsapp_number &&
+          player2
+        ) {
           notifyMatchDispute({
             whatsappNumber: player1.whatsapp_number,
             username: player1.username,
@@ -358,7 +362,11 @@ export async function POST(
           }).catch(console.error);
         }
 
-        if (player2?.whatsapp_notifications && player2.whatsapp_number && player1) {
+        if (
+          player2?.whatsapp_notifications &&
+          player2.whatsapp_number &&
+          player1
+        ) {
           notifyMatchDispute({
             whatsappNumber: player2.whatsapp_number,
             username: player2.username,

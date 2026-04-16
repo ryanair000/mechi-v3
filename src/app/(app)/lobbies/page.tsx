@@ -3,7 +3,7 @@
 import { Suspense, useEffect, useState, useCallback } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
-import { Compass, Globe, Lock, Plus, Swords, Users, X } from 'lucide-react';
+import { CalendarClock, Compass, Globe, Lock, Plus, Swords, Users, X } from 'lucide-react';
 import { useAuth, useAuthFetch } from '@/components/AuthProvider';
 import { PlatformLogo } from '@/components/PlatformLogo';
 import {
@@ -16,12 +16,41 @@ import {
 } from '@/lib/config';
 import type { GameKey, Lobby } from '@/types';
 
+function toDateTimeLocalValue(date: Date) {
+  const timezoneOffsetMs = date.getTimezoneOffset() * 60_000;
+  return new Date(date.getTime() - timezoneOffsetMs).toISOString().slice(0, 16);
+}
+
+function getDefaultLobbyScheduleValue() {
+  const date = new Date(Date.now() + 60 * 60 * 1000);
+  date.setMinutes(Math.ceil(date.getMinutes() / 15) * 15, 0, 0);
+  return toDateTimeLocalValue(date);
+}
+
+function formatLobbySchedule(value?: string | null) {
+  if (!value) {
+    return null;
+  }
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return null;
+  }
+
+  return new Intl.DateTimeFormat('en-KE', {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+  }).format(date);
+}
+
 function createLobbyDraft(game: GameKey) {
   return {
     game,
     title: '',
     mode: getDefaultLobbyMode(game),
     map_name: getDefaultLobbyMap(game),
+    scheduled_for: getDefaultLobbyScheduleValue(),
   };
 }
 
@@ -85,7 +114,11 @@ function LobbiesContent() {
         return current;
       }
 
-      return { ...createLobbyDraft(gameFilter), title: current.title };
+      return {
+        ...createLobbyDraft(gameFilter),
+        title: current.title,
+        scheduled_for: current.scheduled_for,
+      };
     });
   }, [gameFilter]);
 
@@ -108,11 +141,31 @@ function LobbiesContent() {
       return;
     }
 
+    if (!newLobby.scheduled_for.trim()) {
+      toast.error('Pick the expected date and time');
+      return;
+    }
+
+    const scheduledAt = new Date(newLobby.scheduled_for);
+
+    if (Number.isNaN(scheduledAt.getTime())) {
+      toast.error('Pick a valid date and time');
+      return;
+    }
+
+    if (scheduledAt.getTime() <= Date.now()) {
+      toast.error('Pick a future date and time');
+      return;
+    }
+
     setCreating(true);
     try {
       const res = await authFetch('/api/lobbies', {
         method: 'POST',
-        body: JSON.stringify(newLobby),
+        body: JSON.stringify({
+          ...newLobby,
+          scheduled_for: scheduledAt.toISOString(),
+        }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -209,6 +262,7 @@ function LobbiesContent() {
                     setNewLobby((current) => ({
                       ...createLobbyDraft(nextGame),
                       title: current.title,
+                      scheduled_for: current.scheduled_for,
                     }));
                   }}
                   className="input"
@@ -229,6 +283,16 @@ function LobbiesContent() {
                   placeholder="e.g. Ranked warmup room"
                   className="input"
                   maxLength={60}
+                />
+              </div>
+              <div>
+                <label className="label">Expected match date and time</label>
+                <input
+                  type="datetime-local"
+                  value={newLobby.scheduled_for}
+                  onChange={(e) => setNewLobby({ ...newLobby, scheduled_for: e.target.value })}
+                  className="input"
+                  min={toDateTimeLocalValue(new Date())}
                 />
               </div>
               {modeOptions.length > 0 ? (
@@ -319,6 +383,7 @@ function LobbiesContent() {
             const isFull = memberCount >= lobby.max_players;
             const displayMode = lobby.mode && lobby.mode !== 'lobby' ? lobby.mode : null;
             const displayMap = typeof lobby.map_name === 'string' && lobby.map_name.length > 0 ? lobby.map_name : null;
+            const displaySchedule = formatLobbySchedule(lobby.scheduled_for);
 
             return (
               <div key={lobby.id} className="card p-4">
@@ -364,7 +429,7 @@ function LobbiesContent() {
                   </p>
                 )}
 
-                {displayMode || displayMap ? (
+                {displayMode || displayMap || displaySchedule ? (
                   <div className="mb-3 flex flex-wrap gap-2">
                     {displayMode ? (
                       <span className="brand-chip gap-1 px-2.5 py-1">
@@ -376,6 +441,14 @@ function LobbiesContent() {
                       <span className="brand-chip-coral gap-1 px-2.5 py-1">
                         <Compass size={11} />
                         {displayMap}
+                      </span>
+                    ) : null}
+                    {displaySchedule ? (
+                      <span className="rounded-full border border-[var(--border-color)] bg-[var(--surface-elevated)] px-2.5 py-1 text-[11px] font-medium text-[var(--text-secondary)]">
+                        <span className="inline-flex items-center gap-1">
+                          <CalendarClock size={11} />
+                          {displaySchedule}
+                        </span>
                       </span>
                     ) : null}
                   </div>

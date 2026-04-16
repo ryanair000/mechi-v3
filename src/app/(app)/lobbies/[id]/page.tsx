@@ -7,10 +7,27 @@ import { PlatformLogo } from '@/components/PlatformLogo';
 import { GAMES, PLATFORMS } from '@/lib/config';
 import type { GameKey, Lobby, LobbyMember } from '@/types';
 import toast from 'react-hot-toast';
-import { Users, Copy, ArrowLeft, LogOut, Crown, Trash2, Compass, Swords } from 'lucide-react';
+import { Users, Copy, ArrowLeft, LogOut, Crown, Trash2, Compass, Swords, CalendarClock } from 'lucide-react';
 
 interface LobbyDetail extends Lobby { host: { id: string; username: string }; }
 interface MemberWithUser extends LobbyMember { user: { id: string; username: string }; }
+
+function formatLobbySchedule(value?: string | null) {
+  if (!value) {
+    return null;
+  }
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return null;
+  }
+
+  return new Intl.DateTimeFormat('en-KE', {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+  }).format(date);
+}
 
 export default function LobbyDetailPage() {
   const params = useParams();
@@ -62,6 +79,7 @@ export default function LobbyDetailPage() {
   const isMember = members.some((m) => m.user_id === user?.id);
   const displayMode = lobby.mode && lobby.mode !== 'lobby' ? lobby.mode : null;
   const displayMap = typeof lobby.map_name === 'string' && lobby.map_name.length > 0 ? lobby.map_name : null;
+  const displaySchedule = formatLobbySchedule(lobby.scheduled_for);
 
   return (
     <div className="page-container">
@@ -76,7 +94,7 @@ export default function LobbyDetailPage() {
             <div>
               <p className="text-blue-400 text-xs font-medium uppercase tracking-wide mb-1">{game?.label}</p>
               <h1 className="font-bold text-2xl text-white">{lobby.title}</h1>
-              {displayMode || displayMap ? (
+              {displayMode || displayMap || displaySchedule ? (
                 <div className="mt-3 flex flex-wrap gap-2">
                   {displayMode ? (
                     <span className="brand-chip gap-1 px-2.5 py-1">
@@ -88,6 +106,14 @@ export default function LobbyDetailPage() {
                     <span className="brand-chip-coral gap-1 px-2.5 py-1">
                       <Compass size={11} />
                       {displayMap}
+                    </span>
+                  ) : null}
+                  {displaySchedule ? (
+                    <span className="rounded-full border border-white/[0.08] bg-white/[0.04] px-2.5 py-1 text-[11px] font-medium text-white/70">
+                      <span className="inline-flex items-center gap-1">
+                        <CalendarClock size={11} />
+                        {displaySchedule}
+                      </span>
                     </span>
                   ) : null}
                 </div>

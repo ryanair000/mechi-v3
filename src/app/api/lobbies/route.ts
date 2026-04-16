@@ -52,8 +52,9 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const { game, title, mode, map_name } = body;
+    const { game, title, mode, map_name, scheduled_for } = body;
     const normalizedTitle = String(title ?? '').trim();
+    const normalizedSchedule = String(scheduled_for ?? '').trim();
 
     if (!game || !normalizedTitle) {
       return NextResponse.json({ error: 'Game and title are required' }, { status: 400 });
@@ -81,6 +82,20 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Map name is too long' }, { status: 400 });
     }
 
+    if (!normalizedSchedule) {
+      return NextResponse.json({ error: 'Expected match date and time are required' }, { status: 400 });
+    }
+
+    const scheduledAt = new Date(normalizedSchedule);
+
+    if (Number.isNaN(scheduledAt.getTime())) {
+      return NextResponse.json({ error: 'Pick a valid expected match date and time' }, { status: 400 });
+    }
+
+    if (scheduledAt.getTime() <= Date.now()) {
+      return NextResponse.json({ error: 'Expected match date and time must be in the future' }, { status: 400 });
+    }
+
     const supabase = createServiceClient();
 
     const { data: lobby, error } = await supabase
@@ -90,6 +105,7 @@ export async function POST(request: NextRequest) {
         game,
         mode: normalizedMode || getDefaultLobbyMode(game as GameKey),
         map_name: normalizedMap || null,
+        scheduled_for: scheduledAt.toISOString(),
         title: normalizedTitle,
         max_players: gameConfig.maxPlayers ?? 2,
         room_code: generateRoomCode(),

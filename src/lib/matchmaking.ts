@@ -1,12 +1,45 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { calculateElo } from './elo';
 import { GAMES, getConfiguredPlatformForGame, getGameIdValue } from './config';
+import { getPlan } from './plans';
 import { incrementMatchUsage } from './subscription';
+import { resolvePlan } from './subscription';
 import type { GameKey, PlatformKey } from '@/types';
 import { notifyMatchFound } from './whatsapp';
 import { sendMatchFoundEmail } from './email';
 
-const RATING_TOLERANCE = 300; // wider tolerance for small player base
+const BASE_RATING_TOLERANCE = 300;
+const RATING_TOLERANCE_STEP = 150;
+const RATING_TOLERANCE_STEP_MINUTES = 4;
+const MAX_RATING_TOLERANCE = 1200;
+const PRIORITY_WAIT_BONUS_MINUTES = 4;
+
+function getWaitMinutes(joinedAt: string | null | undefined): number {
+  if (!joinedAt) return 0;
+
+  const joinedAtMs = new Date(joinedAt).getTime();
+  if (Number.isNaN(joinedAtMs)) return 0;
+
+  return Math.max(0, Math.floor((Date.now() - joinedAtMs) / 60000));
+}
+
+function getRatingTolerance(
+  joinedAt: string | null | undefined,
+  profile: Record<string, unknown> | null
+): number {
+  const resolvedPlan = resolvePlan(
+    profile?.plan as string | null | undefined,
+    profile?.plan_expires_at as string | null | undefined
+  );
+  const priorityBonus = getPlan(resolvedPlan).priorityMatchmaking ? PRIORITY_WAIT_BONUS_MINUTES : 0;
+  const effectiveWaitMinutes = getWaitMinutes(joinedAt) + priorityBonus;
+  const expansionSteps = Math.floor(effectiveWaitMinutes / RATING_TOLERANCE_STEP_MINUTES);
+
+  return Math.min(
+    MAX_RATING_TOLERANCE,
+    BASE_RATING_TOLERANCE + expansionSteps * RATING_TOLERANCE_STEP
+  );
+}
 
 export async function runMatchmaking(supabase: SupabaseClient): Promise<number> {
   // First clean up stale entries older than 30 minutes
@@ -20,7 +53,7 @@ export async function runMatchmaking(supabase: SupabaseClient): Promise<number> 
   const { data: queueEntries, error } = await supabase
     .from('queue')
     .select(
-      '*, profiles:user_id(id, username, phone, email, whatsapp_number, whatsapp_notifications, platforms, game_ids, selected_games)'
+      '*, profiles:user_id(id, username, phone, email, whatsapp_number, whatsapp_notifications, platforms, game_ids, selected_games, plan, plan_expires_at)'
     )
     .eq('status', 'waiting')
     .order('joined_at', { ascending: true });
@@ -37,6 +70,24 @@ export async function runMatchmaking(supabase: SupabaseClient): Promise<number> 
     const entry = queueEntries[i];
     if (matched.has(entry.id)) continue;
 
+    const game = GAMES[entry.game as GameKey];
+    const p1Profile = entry.profiles as Record<string, unknown> | null;
+    const p1Platforms = (p1Profile?.platforms as PlatformKey[]) ?? [];
+    const p1GameIds = (p1Profile?.game_ids as Record<string, string>) ?? {};
+    const p1Platform =
+      (entry.platform as PlatformKey | null) ??
+      getConfiguredPlatformForGame(entry.game as GameKey, p1GameIds, p1Platforms);
+    const p1Tolerance = getRatingTolerance(entry.joined_at as string | undefined, p1Profile);
+    let bestCandidate:
+      | {
+          opponent: typeof queueEntries[number];
+          opponentProfile: Record<string, unknown> | null;
+          opponentGameIds: Record<string, string>;
+          opponentPlatform: PlatformKey;
+          ratingDifference: number;
+        }
+      | null = null;
+
     for (let j = i + 1; j < queueEntries.length; j++) {
       const opponent = queueEntries[j];
       if (matched.has(opponent.id)) continue;
@@ -44,117 +95,138 @@ export async function runMatchmaking(supabase: SupabaseClient): Promise<number> 
       // Must be same game
       if (entry.game !== opponent.game) continue;
 
-      const game = GAMES[entry.game as GameKey];
-      const p1Profile = entry.profiles as Record<string, unknown> | null;
       const p2Profile = opponent.profiles as Record<string, unknown> | null;
-      const p1Platforms = (p1Profile?.platforms as PlatformKey[]) ?? [];
       const p2Platforms = (p2Profile?.platforms as PlatformKey[]) ?? [];
-      const p1GameIds = (p1Profile?.game_ids as Record<string, string>) ?? {};
       const p2GameIds = (p2Profile?.game_ids as Record<string, string>) ?? {};
-      const p1Platform =
-        (entry.platform as PlatformKey | null) ??
-        getConfiguredPlatformForGame(entry.game as GameKey, p1GameIds, p1Platforms);
       const p2Platform =
         (opponent.platform as PlatformKey | null) ??
         getConfiguredPlatformForGame(opponent.game as GameKey, p2GameIds, p2Platforms);
 
       if (!p1Platform || !p2Platform || p1Platform !== p2Platform) continue;
 
-      // Rating tolerance check (relaxed for small player base)
-      if (Math.abs(entry.rating - opponent.rating) > RATING_TOLERANCE) continue;
+      const p2Tolerance = getRatingTolerance(opponent.joined_at as string | undefined, p2Profile);
+      const ratingDifference = Math.abs(entry.rating - opponent.rating);
+      const allowedTolerance = Math.max(p1Tolerance, p2Tolerance);
+      if (ratingDifference > allowedTolerance) continue;
 
-      // Create the match
-      const { data: match, error: matchError } = await supabase
-        .from('matches')
-        .insert({
-          player1_id: entry.user_id,
-          player2_id: opponent.user_id,
-          game: entry.game,
-          platform: p1Platform,
-          region: entry.region ?? 'kenya',
-          status: 'pending',
-        })
-        .select()
-        .single();
-
-      if (matchError || !match) {
-        console.error('[Matchmaking] Match create error:', matchError);
-        continue;
+      if (
+        !bestCandidate ||
+        ratingDifference < bestCandidate.ratingDifference ||
+        (ratingDifference === bestCandidate.ratingDifference &&
+          new Date(opponent.joined_at).getTime() < new Date(bestCandidate.opponent.joined_at).getTime())
+      ) {
+        bestCandidate = {
+          opponent,
+          opponentProfile: p2Profile,
+          opponentGameIds: p2GameIds,
+          opponentPlatform: p2Platform,
+          ratingDifference,
+        };
       }
-
-      // Update queue entries to matched
-      await supabase
-        .from('queue')
-        .update({ status: 'matched' })
-        .in('id', [entry.id, opponent.id]);
-
-      await Promise.allSettled([
-        incrementMatchUsage(entry.user_id as string, supabase),
-        incrementMatchUsage(opponent.user_id as string, supabase),
-      ]);
-
-      matched.add(entry.id);
-      matched.add(opponent.id);
-      matchesCreated++;
-
-      // Send notifications async (don't block matchmaking)
-      const gameLabel = game?.label ?? entry.game;
-
-      if (p1Profile && p2Profile) {
-        const p1PlatformId = getGameIdValue(p1GameIds, entry.game as GameKey, p1Platform) || 'Not set';
-        const p2PlatformId = getGameIdValue(p2GameIds, entry.game as GameKey, p2Platform) || 'Not set';
-        const p1WhatsAppNumber = (p1Profile.whatsapp_number as string | undefined) ?? '';
-        const p2WhatsAppNumber = (p2Profile.whatsapp_number as string | undefined) ?? '';
-        const p1WhatsAppEnabled = Boolean(p1Profile.whatsapp_notifications) && Boolean(p1WhatsAppNumber);
-        const p2WhatsAppEnabled = Boolean(p2Profile.whatsapp_notifications) && Boolean(p2WhatsAppNumber);
-
-        // Notify player 1
-        if (p1WhatsAppEnabled) {
-          notifyMatchFound({
-            whatsappNumber: p1WhatsAppNumber,
-            username: p1Profile.username as string,
-            game: gameLabel,
-            opponentUsername: p2Profile.username as string,
-            matchId: match.id,
-          }).catch(console.error);
-        }
-        if (p1Profile.email) {
-          sendMatchFoundEmail({
-            to: p1Profile.email as string,
-            username: p1Profile.username as string,
-            opponentUsername: p2Profile.username as string,
-            game: gameLabel,
-            platform: p2Platform ?? 'Unknown',
-            opponentPlatformId: p2PlatformId,
-            matchId: match.id,
-          }).catch(console.error);
-        }
-
-        // Notify player 2
-        if (p2WhatsAppEnabled) {
-          notifyMatchFound({
-            whatsappNumber: p2WhatsAppNumber,
-            username: p2Profile.username as string,
-            game: gameLabel,
-            opponentUsername: p1Profile.username as string,
-            matchId: match.id,
-          }).catch(console.error);
-        }
-        if (p2Profile.email) {
-          sendMatchFoundEmail({
-            to: p2Profile.email as string,
-            username: p2Profile.username as string,
-            opponentUsername: p1Profile.username as string,
-            game: gameLabel,
-            platform: p1Platform ?? 'Unknown',
-            opponentPlatformId: p1PlatformId,
-            matchId: match.id,
-          }).catch(console.error);
-        }
-      }
-
-      break; // Move to next unmatched entry
     }
+
+    if (!bestCandidate || !p1Platform) {
+      continue;
+    }
+
+    const {
+      opponent,
+      opponentProfile: p2Profile,
+      opponentGameIds: p2GameIds,
+      opponentPlatform: p2Platform,
+    } = bestCandidate;
+
+    // Create the match
+    const { data: match, error: matchError } = await supabase
+      .from('matches')
+      .insert({
+        player1_id: entry.user_id,
+        player2_id: opponent.user_id,
+        game: entry.game,
+        platform: p1Platform,
+        region: entry.region ?? 'kenya',
+        status: 'pending',
+      })
+      .select()
+      .single();
+
+    if (matchError || !match) {
+      console.error('[Matchmaking] Match create error:', matchError);
+      continue;
+    }
+
+    // Update queue entries to matched
+    await supabase
+      .from('queue')
+      .update({ status: 'matched' })
+      .in('id', [entry.id, opponent.id]);
+
+    await Promise.allSettled([
+      incrementMatchUsage(entry.user_id as string, supabase),
+      incrementMatchUsage(opponent.user_id as string, supabase),
+    ]);
+
+    matched.add(entry.id);
+    matched.add(opponent.id);
+    matchesCreated++;
+
+    // Send notifications async (don't block matchmaking)
+    const gameLabel = game?.label ?? entry.game;
+
+    if (p1Profile && p2Profile) {
+      const p1PlatformId = getGameIdValue(p1GameIds, entry.game as GameKey, p1Platform) || 'Not set';
+      const p2PlatformId = getGameIdValue(p2GameIds, entry.game as GameKey, p2Platform) || 'Not set';
+      const p1WhatsAppNumber = (p1Profile.whatsapp_number as string | undefined) ?? '';
+      const p2WhatsAppNumber = (p2Profile.whatsapp_number as string | undefined) ?? '';
+      const p1WhatsAppEnabled = Boolean(p1Profile.whatsapp_notifications) && Boolean(p1WhatsAppNumber);
+      const p2WhatsAppEnabled = Boolean(p2Profile.whatsapp_notifications) && Boolean(p2WhatsAppNumber);
+
+      // Notify player 1
+      if (p1WhatsAppEnabled) {
+        notifyMatchFound({
+          whatsappNumber: p1WhatsAppNumber,
+          username: p1Profile.username as string,
+          game: gameLabel,
+          opponentUsername: p2Profile.username as string,
+          matchId: match.id,
+        }).catch(console.error);
+      }
+      if (p1Profile.email) {
+        sendMatchFoundEmail({
+          to: p1Profile.email as string,
+          username: p1Profile.username as string,
+          opponentUsername: p2Profile.username as string,
+          game: gameLabel,
+          platform: p2Platform ?? 'Unknown',
+          opponentPlatformId: p2PlatformId,
+          matchId: match.id,
+        }).catch(console.error);
+      }
+
+      // Notify player 2
+      if (p2WhatsAppEnabled) {
+        notifyMatchFound({
+          whatsappNumber: p2WhatsAppNumber,
+          username: p2Profile.username as string,
+          game: gameLabel,
+          opponentUsername: p1Profile.username as string,
+          matchId: match.id,
+        }).catch(console.error);
+      }
+      if (p2Profile.email) {
+        sendMatchFoundEmail({
+          to: p2Profile.email as string,
+          username: p2Profile.username as string,
+          opponentUsername: p1Profile.username as string,
+          game: gameLabel,
+          platform: p1Platform ?? 'Unknown',
+          opponentPlatformId: p1PlatformId,
+          matchId: match.id,
+        }).catch(console.error);
+      }
+    }
+
+    // Move to next unmatched entry
   }
 
   return matchesCreated;

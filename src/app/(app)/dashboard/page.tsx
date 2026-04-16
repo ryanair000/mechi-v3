@@ -352,7 +352,7 @@ export default function DashboardPage() {
             <div className="card p-2.5">
               <p className="stat-label">Queue Heat</p>
               <p className="mt-1.5 text-[1.45rem] font-black text-[var(--brand-teal)]">{queueTotal}</p>
-              <p className="mt-1 text-[10px] leading-4 text-[var(--text-soft)]">Players visible in your queues</p>
+              <p className="mt-1 text-[10px] leading-4 text-[var(--text-soft)]">Players on your platform right now</p>
             </div>
             <div className="card p-2.5">
               <p className="stat-label">Win Streak</p>

@@ -175,8 +175,8 @@ function QueueContent() {
         </div>
 
         <p className="mx-auto mb-6 mt-5 max-w-sm text-center text-[13px] leading-6 text-[var(--text-secondary)]">
-          We&apos;re teeing up a proper {gameConfig.label} showdown. Stay locked and Mechi
-          will drop you straight into the room the second it&apos;s go time.
+          We&apos;re searching your {platformLabel} pool first, then widening the skill range if the queue stays
+          quiet so you can still get a proper {gameConfig.label} run.
         </p>
 
         <button onClick={handleLeave} disabled={leaving} className="btn-danger mx-auto px-4 py-2 text-sm">

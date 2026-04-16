@@ -55,7 +55,7 @@ export async function POST(request: NextRequest) {
     const plan = String(body.plan ?? '').trim() as Plan;
     const cycle = (String(body.cycle ?? 'monthly').trim() as BillingCycle) ?? 'monthly';
 
-    if (plan !== 'pro' && plan !== 'elite') {
+    if (plan !== 'pro') {
       return NextResponse.json({ error: 'Invalid plan' }, { status: 400 });
     }
 

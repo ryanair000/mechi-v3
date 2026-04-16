@@ -22,6 +22,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid game' }, { status: 400 });
     }
 
+    if (GAMES[game as GameKey].mode !== '1v1') {
+      return NextResponse.json({ error: 'Use lobbies for this game' }, { status: 400 });
+    }
+
     const supabase = createServiceClient();
 
     // Get user profile for region and rating
@@ -61,6 +65,15 @@ export async function POST(request: NextRequest) {
 
     const ratingKey = `rating_${game}`;
     const rating = (profile[ratingKey] as number) ?? 1000;
+    const selectedGames = ((profile.selected_games as string[]) ?? []);
+    if (!selectedGames.includes(game)) {
+      const gameLabel = GAMES[game as GameKey]?.label ?? game;
+      return NextResponse.json(
+        { error: `Add ${gameLabel} to your profile before joining queue` },
+        { status: 400 }
+      );
+    }
+
     const profilePlatforms = ((profile.platforms as PlatformKey[]) ?? []);
     const profileGameIds = ((profile.game_ids as Record<string, string>) ?? {});
     const requestedPlatform = platform as PlatformKey | undefined;

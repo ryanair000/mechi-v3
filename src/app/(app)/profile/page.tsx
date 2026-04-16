@@ -852,7 +852,7 @@ export default function ProfilePage() {
                         ? 'Free plan gives you 5 ranked matches/day and 1 selected game.'
                         : currentPlan.id === 'pro'
                           ? 'Pro unlocks unlimited ranked matches and up to 3 selected games.'
-                          : 'Elite unlocks full history, priority perks, and premium access.'}
+                          : 'Your premium access is active. New upgrades are Pro-only for now.'}
                     </p>
                     {typeof profile?.plan_expires_at === 'string' && currentPlan.id !== 'free' ? (
                       <p className="mt-2 text-xs text-[var(--text-soft)]">

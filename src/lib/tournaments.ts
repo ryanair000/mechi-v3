@@ -437,6 +437,10 @@ async function attemptPrizePayout(params: {
   title: string;
 }): Promise<{ status: 'pending' | 'paid' | 'failed'; reference?: string; error?: string }> {
   if (!isPaystackConfigured()) {
+    if (process.env.NODE_ENV === 'production') {
+      return { status: 'pending', error: 'Payment provider is not configured' };
+    }
+
     return { status: 'paid', reference: `dev_transfer_${Date.now()}` };
   }
 

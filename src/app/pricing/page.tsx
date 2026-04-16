@@ -33,7 +33,7 @@ function getPlanActionLabel(currentPlan: Plan, targetPlan: Plan) {
   }
 
   if (currentPlan === 'elite' && targetPlan === 'pro') {
-    return 'Already on Elite';
+    return 'Current plan';
   }
 
   return 'Go Pro';

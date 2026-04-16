@@ -122,7 +122,21 @@ export async function POST(
       );
     }
 
-    if (tournament.entry_fee <= 0 || !isPaystackConfigured()) {
+    if (
+      tournament.entry_fee > 0 &&
+      !isPaystackConfigured() &&
+      process.env.NODE_ENV === 'production'
+    ) {
+      return NextResponse.json(
+        { error: 'Payment provider is not configured' },
+        { status: 502 }
+      );
+    }
+
+    if (
+      tournament.entry_fee <= 0 ||
+      (!isPaystackConfigured() && process.env.NODE_ENV !== 'production')
+    ) {
       const playerOperation = canRetryExistingPlayer
         ? supabase
             .from('tournament_players')

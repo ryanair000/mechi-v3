@@ -20,7 +20,7 @@ export async function GET(
     const ratingKey = `rating_${game}`;
     const winsKey = `wins_${game}`;
     const lossesKey = `losses_${game}`;
-    const metricSelect = ['id', 'username', 'selected_games', ratingKey, winsKey, lossesKey].join(', ');
+    const metricSelect = ['id', 'username', 'selected_games', 'level', ratingKey, winsKey, lossesKey].join(', ');
 
     let fallbackToDefaults = false;
     let playersRaw: unknown = null;
@@ -75,7 +75,7 @@ export async function GET(
         username: p.username,
         rating,
         division: getRankDivision(rating).label,
-        level: 1,
+        level: (p.level as number | undefined) ?? 1,
         wins: fallbackToDefaults ? 0 : (p[winsKey] as number | undefined) ?? 0,
         losses: fallbackToDefaults ? 0 : (p[lossesKey] as number | undefined) ?? 0,
       };

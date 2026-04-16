@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServiceClient } from '@/lib/supabase';
 import { GAMES } from '@/lib/config';
+import { isMissingColumnError } from '@/lib/db-compat';
 import type { GameKey } from '@/types';
 
 export async function GET(
@@ -18,19 +19,26 @@ export async function GET(
   try {
     const supabase = createServiceClient();
 
-    let query = supabase
+    const buildCountQuery = () =>
+      supabase
       .from('queue')
-      .select('*', { count: 'exact', head: true })
+      .select('id', { count: 'exact', head: true })
       .eq('game', game)
       .eq('status', 'waiting');
 
+    let query = buildCountQuery();
     if (platform) {
       query = query.eq('platform', platform);
     }
 
-    const { count, error } = await query;
+    let { count, error } = await query;
+
+    if (error && platform && isMissingColumnError(error, 'queue.platform')) {
+      ({ count, error } = await buildCountQuery());
+    }
 
     if (error) {
+      console.error('[Queue Count] Query error:', error);
       return NextResponse.json({ error: 'Failed to get count' }, { status: 500 });
     }
 

@@ -53,6 +53,7 @@ export default function SidebarWithSubmenu() {
   );
   const [isCompeteOpen, setIsCompeteOpen] = useState(competeActive);
   const adminActive = isPathActive(pathname, '/admin');
+  const notificationsActive = isPathActive(pathname, '/notifications');
 
   return (
     <aside className="fixed bottom-0 left-0 top-0 z-40 hidden w-[17rem] flex-col border-r border-[var(--border-color)] bg-[linear-gradient(180deg,var(--surface-strong),var(--surface-soft))] px-3 py-3 shadow-[var(--shadow-soft)] backdrop-blur-xl lg:flex">
@@ -154,9 +155,14 @@ export default function SidebarWithSubmenu() {
 
       <div className="space-y-2 px-1 pb-1">
         <div className="flex items-center gap-2 rounded-2xl border border-[var(--border-color)] bg-[var(--surface)] px-3 py-2 shadow-[var(--shadow-soft)]">
-          <button type="button" className="icon-button h-10 w-10" aria-label="Notifications" title="Notifications">
+          <Link
+            href="/notifications"
+            className={`icon-button h-10 w-10 ${notificationsActive ? 'border-[rgba(50,224,196,0.24)] bg-[var(--surface-elevated)] text-[var(--accent-secondary-text)]' : ''}`}
+            aria-label="Notifications"
+            title="Notifications"
+          >
             <Bell size={16} />
-          </button>
+          </Link>
           <Link href="/profile" className="icon-button h-10 w-10" aria-label="Settings" title="Settings">
             <Settings size={16} />
           </Link>

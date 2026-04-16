@@ -37,6 +37,12 @@ dev-*.log
 start-*.log
 start-final*.log
 .playwright-cli/
+.codex-dev-*.log
+.codex-dev-*.err
+.codex-prod-*.log
+.codex-prod-*.err
+vercel-live-*.log
+supabase/.temp/
 
 # env files (can opt-in for committing if needed)
 .env*

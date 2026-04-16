@@ -84,7 +84,9 @@ export function profileToAuthUser(profile: Record<string, unknown>): AuthUser {
     role: (profile.role as UserRole | undefined) ?? 'user',
     is_banned: (profile.is_banned as boolean | undefined) ?? false,
     whatsapp_number: (profile.whatsapp_number as string | null | undefined) ?? null,
-    whatsapp_notifications: (profile.whatsapp_notifications as boolean | undefined) ?? false,
+    whatsapp_notifications:
+      (profile.whatsapp_notifications as boolean | undefined) ??
+      Boolean(profile.whatsapp_number as string | null | undefined),
     xp: (profile.xp as number | undefined) ?? 0,
     level: (profile.level as number | undefined) ?? 1,
     mp: (profile.mp as number | undefined) ?? 0,

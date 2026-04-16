@@ -45,7 +45,7 @@ export function GameCard({
 
   return (
     <div className="card group overflow-hidden p-0 transition-all duration-300 hover:-translate-y-1 hover:shadow-[var(--shadow-strong)]">
-      <div className="relative h-40 overflow-hidden border-b border-[var(--border-color)] bg-[var(--surface-strong)]">
+      <div className="relative h-44 overflow-hidden border-b border-[var(--border-color)] bg-[var(--surface-strong)]">
         <GameCover
           gameKey={gameKey}
           variant="header"
@@ -73,25 +73,26 @@ export function GameCard({
           </span>
         </div>
 
-        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/82 via-black/28 to-transparent px-4 pb-4 pt-8">
-          <p className="text-lg font-black leading-tight text-white [text-shadow:0_10px_28px_rgba(0,0,0,0.42)]">
+        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/84 via-black/32 to-transparent px-4 pb-4 pt-10">
+          <p className="max-w-[82%] text-[1.65rem] font-black leading-[1.02] text-white [text-shadow:0_10px_28px_rgba(0,0,0,0.42)]">
             {game.label}
           </p>
-          <div className="mt-2 flex flex-wrap gap-1.5">
-            {game.platforms.map((platform) => (
-              <span
-                key={platform}
-                title={PLATFORMS[platform]?.label}
-                className="inline-flex items-center rounded-full bg-white/14 px-1.5 py-1 backdrop-blur-sm"
-              >
-                <PlatformLogo platform={platform} size={12} />
-              </span>
-            ))}
-          </div>
         </div>
       </div>
 
-      <div className="space-y-4 p-4">
+      <div className="space-y-3.5 p-4">
+        <div className="flex flex-wrap items-center gap-1.5">
+          {game.platforms.map((platform) => (
+            <span
+              key={platform}
+              title={PLATFORMS[platform]?.label}
+              className="inline-flex items-center rounded-full border border-[var(--border-color)] bg-[var(--surface-strong)] px-2 py-1"
+            >
+              <PlatformLogo platform={platform} size={12} />
+            </span>
+          ))}
+        </div>
+
         {rating !== undefined ? (
           <div className="grid grid-cols-4 gap-2">
             <div
@@ -101,7 +102,7 @@ export function GameCard({
                 backgroundColor: division ? withAlpha(division.color, '12') : 'var(--surface-strong)',
               }}
             >
-              <div className="text-sm font-bold" style={{ color: division?.color ?? 'var(--text-primary)' }}>
+              <div className="text-[0.95rem] font-bold leading-tight" style={{ color: division?.color ?? 'var(--text-primary)' }}>
                 {division?.label ?? '-'}
               </div>
               <div className="mt-1 text-[9px] font-semibold uppercase tracking-[0.14em] text-[var(--text-soft)]">
@@ -131,7 +132,7 @@ export function GameCard({
           <button
             onClick={onJoinQueue}
             disabled={isDisabled || isQueuing}
-            className={`flex min-h-11 w-full items-center justify-center gap-1.5 rounded-[1rem] border py-3 text-sm font-semibold transition-all ${
+            className={`flex min-h-12 w-full items-center justify-center gap-1.5 rounded-[1rem] border py-3 text-base font-semibold transition-all ${
               isQueuing
                 ? 'cursor-not-allowed border-[var(--border-color)] bg-[var(--surface-strong)] text-[var(--text-soft)]'
                 : 'cursor-pointer border-[rgba(50,224,196,0.22)] bg-[var(--accent-secondary)] text-[var(--brand-night)] shadow-[0_16px_28px_rgba(50,224,196,0.22)] hover:-translate-y-0.5 hover:bg-[var(--accent-secondary-hover)]'

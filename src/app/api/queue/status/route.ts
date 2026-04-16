@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuthUser } from '@/lib/auth';
+import { getConfiguredPlatformForGame } from '@/lib/config';
 import { createServiceClient } from '@/lib/supabase';
 import { runMatchmaking } from '@/lib/matchmaking';
+import type { GameKey, PlatformKey } from '@/types';
 
 export async function GET(request: NextRequest) {
   const authUser = getAuthUser(request);
@@ -37,9 +39,32 @@ export async function GET(request: NextRequest) {
       runMatchmaking(supabase).catch(console.error);
     }
 
+    let normalizedQueueEntry = queueEntry;
+
+    if (queueEntry && !(queueEntry as Record<string, unknown>).platform) {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('platforms, game_ids')
+        .eq('id', authUser.sub)
+        .maybeSingle();
+
+      const derivedPlatform = profile
+        ? getConfiguredPlatformForGame(
+            queueEntry.game as GameKey,
+            (profile.game_ids as Record<string, string>) ?? {},
+            ((profile.platforms as string[]) ?? []) as PlatformKey[]
+          )
+        : null;
+
+      normalizedQueueEntry = {
+        ...queueEntry,
+        platform: derivedPlatform,
+      };
+    }
+
     return NextResponse.json({
       inQueue: queueEntry?.status === 'waiting',
-      queueEntry: queueEntry ?? null,
+      queueEntry: normalizedQueueEntry ?? null,
       activeMatch: activeMatch ?? null,
     });
   } catch (err) {

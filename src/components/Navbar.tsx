@@ -1,11 +1,13 @@
 'use client';
 
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { useAuth } from './AuthProvider';
 import { Bell, LogOut } from 'lucide-react';
 import { BrandLogo } from '@/components/BrandLogo';
 
 export function Navbar() {
+  const pathname = usePathname();
   const { user, logout } = useAuth();
 
   return (
@@ -16,9 +18,13 @@ export function Navbar() {
         </Link>
 
         <div className="flex items-center gap-2">
-          <button className="icon-button h-10 w-10" aria-label="Notifications">
+          <Link
+            href="/notifications"
+            className={`icon-button h-10 w-10 ${pathname.startsWith('/notifications') ? 'border-[rgba(50,224,196,0.24)] bg-[var(--surface-elevated)] text-[var(--accent-secondary-text)]' : ''}`}
+            aria-label="Notifications"
+          >
             <Bell size={14} />
-          </button>
+          </Link>
           {user && (
             <button
               onClick={logout}

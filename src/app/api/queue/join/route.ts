@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getAuthUser } from '@/lib/auth';
 import { createServiceClient } from '@/lib/supabase';
 import { GAMES, getConfiguredPlatformForGame, isValidGamePlatform } from '@/lib/config';
+import { isMissingColumnError } from '@/lib/db-compat';
 import { canStartMatch } from '@/lib/plans';
 import { runMatchmaking } from '@/lib/matchmaking';
 import { getTodayMatchCount, maybeExpireProfilePlan } from '@/lib/subscription';
@@ -76,7 +77,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if already in queue
-    const { data: existingQueue } = await supabase
+    let existingQueueResult = await supabase
       .from('queue')
       .select('id, game, platform, status')
       .eq('user_id', authUser.sub)
@@ -85,9 +86,29 @@ export async function POST(request: NextRequest) {
       .limit(1)
       .maybeSingle();
 
+    if (existingQueueResult.error && isMissingColumnError(existingQueueResult.error, 'queue.platform')) {
+      existingQueueResult = await supabase
+        .from('queue')
+        .select('id, game, status')
+        .eq('user_id', authUser.sub)
+        .eq('status', 'waiting')
+        .order('joined_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+    }
+
+    const existingQueue = existingQueueResult.data;
+
     if (existingQueue) {
       return NextResponse.json(
-        { error: 'Already in queue', queueEntry: existingQueue },
+        {
+          error: 'Already in queue',
+          queueEntry: {
+            ...existingQueue,
+            platform:
+              (existingQueue as Record<string, unknown>).platform ?? queuePlatform ?? null,
+          },
+        },
         { status: 409 }
       );
     }
@@ -107,32 +128,57 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { data: entry, error: insertError } = await supabase
+    const queuePayload = {
+      user_id: authUser.sub,
+      game,
+      platform: queuePlatform,
+      region: (profile.region as string) ?? 'kenya',
+      rating,
+      status: 'waiting',
+    };
+
+    let insertResult = await supabase
       .from('queue')
-      .insert({
-        user_id: authUser.sub,
-        game,
-        platform: queuePlatform,
-        region: (profile.region as string) ?? 'kenya',
-        rating,
-        status: 'waiting',
-      })
+      .insert(queuePayload)
       .select()
       .single();
+
+    if (insertResult.error && isMissingColumnError(insertResult.error, 'queue.platform')) {
+      const legacyQueuePayload = {
+        user_id: authUser.sub,
+        game,
+        region: (profile.region as string) ?? 'kenya',
+        rating,
+        status: 'waiting' as const,
+      };
+      insertResult = await supabase
+        .from('queue')
+        .insert(legacyQueuePayload)
+        .select()
+        .single();
+    }
+
+    const entry = insertResult.data;
+    const insertError = insertResult.error;
 
     if (insertError || !entry) {
       console.error('[Queue Join] Insert error:', insertError);
       return NextResponse.json({ error: 'Failed to join queue' }, { status: 500 });
     }
 
-    // AWAIT matchmaking — must complete before response on Vercel serverless
+    // AWAIT matchmaking - must complete before response on Vercel serverless
     try {
       await runMatchmaking(supabase);
     } catch (e) {
       console.error('[Queue Join] Matchmaking error:', e);
     }
 
-    return NextResponse.json({ entry });
+    return NextResponse.json({
+      entry: {
+        ...(entry as Record<string, unknown>),
+        platform: (entry as Record<string, unknown>).platform ?? queuePlatform ?? null,
+      },
+    });
   } catch (err) {
     console.error('[Queue Join] Error:', err);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });

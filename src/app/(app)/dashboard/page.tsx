@@ -27,9 +27,6 @@ interface UserProfile {
   [key: string]: unknown;
 }
 
-const WHATSAPP_JOIN_URL = process.env.NEXT_PUBLIC_WHATSAPP_JOIN_URL ?? '';
-const WHATSAPP_PROMPT_SESSION_KEY = 'mechi_whatsapp_join_prompt';
-
 interface QueueStatusResponse {
   inQueue?: boolean;
   queueEntry?: {
@@ -53,7 +50,6 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [showPaywall, setShowPaywall] = useState(false);
   const [paywallReason, setPaywallReason] = useState<'match_limit' | 'game_limit' | 'feature'>('match_limit');
-  const [showWhatsAppPrompt, setShowWhatsAppPrompt] = useState(false);
 
   const resumeQueue = useCallback((queueEntry: QueueStatusResponse['queueEntry']) => {
     const queueGame = queueEntry?.game;
@@ -168,37 +164,6 @@ export default function DashboardPage() {
     };
   }, [profile]);
 
-  useEffect(() => {
-    if (loading || !user) {
-      return;
-    }
-
-    const whatsappNotifications =
-      profile?.whatsapp_notifications ?? user.whatsapp_notifications ?? false;
-    const whatsappNumber = profile?.whatsapp_number ?? user.whatsapp_number ?? null;
-    const hasWhatsAppSetup = Boolean(whatsappNotifications && whatsappNumber);
-
-    if (hasWhatsAppSetup) {
-      setShowWhatsAppPrompt(false);
-      return;
-    }
-
-    const sessionKey = `${WHATSAPP_PROMPT_SESSION_KEY}:${user.id}`;
-    const alreadyShown = sessionStorage.getItem(sessionKey) === '1';
-
-    setShowWhatsAppPrompt(true);
-
-    if (!alreadyShown) {
-      toast('Want WhatsApp alerts? Text us "Join Mechi" on WhatsApp, then keep alerts on in your profile.');
-      sessionStorage.setItem(sessionKey, '1');
-    }
-  }, [
-    loading,
-    profile?.whatsapp_notifications,
-    profile?.whatsapp_number,
-    user,
-  ]);
-
   const handleJoinQueue = async (game: GameKey) => {
     if (activeMatch) {
       toast.error('You have an active match');
@@ -283,47 +248,10 @@ export default function DashboardPage() {
         <PaywallModal reason={paywallReason} onClose={() => setShowPaywall(false)} />
       ) : null}
 
-      {showWhatsAppPrompt ? (
-        <div className="card surface-live mb-4 p-4">
-          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-            <div>
-              <p className="text-sm font-semibold text-[var(--text-primary)]">
-                Turn on WhatsApp notifications
-              </p>
-              <p className="mt-1 text-xs leading-6 text-[var(--text-secondary)]">
-                Text us on WhatsApp with <span className="font-semibold text-[var(--text-primary)]">Join Mechi</span> to receive match notifications on your number.
-              </p>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              {WHATSAPP_JOIN_URL ? (
-                <a
-                  href={WHATSAPP_JOIN_URL}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="btn-ghost"
-                >
-                  Open WhatsApp
-                </a>
-              ) : null}
-              <Link href="/profile" className="btn-ghost">
-                Open profile
-              </Link>
-              <button
-                type="button"
-                onClick={() => setShowWhatsAppPrompt(false)}
-                className="btn-ghost"
-              >
-                Later
-              </button>
-            </div>
-          </div>
-        </div>
-      ) : null}
-
-      <div className="card circuit-panel mb-6 overflow-hidden p-4 sm:p-5">
-        <div className="grid gap-4 xl:grid-cols-[minmax(0,1.45fr)_minmax(16rem,0.65fr)]">
+      <div className="card circuit-panel mb-5 overflow-hidden p-4">
+        <div className="grid gap-4 xl:grid-cols-[minmax(0,1.2fr)_minmax(14.5rem,0.55fr)]">
           <div
-            className="rounded-[1.45rem] border border-[var(--border-color)] p-5 sm:p-6"
+            className="rounded-[1.35rem] border border-[var(--border-color)] p-4 sm:p-5"
             style={{
               background:
                 'linear-gradient(135deg, var(--surface-elevated) 0%, var(--surface) 100%)',
@@ -336,14 +264,14 @@ export default function DashboardPage() {
               ) : null}
             </div>
 
-            <h1 className="mt-4 text-[1.7rem] font-black tracking-normal text-[var(--text-primary)] sm:text-[2.1rem]">
+            <h1 className="mt-3 text-[1.45rem] font-black leading-[1.06] tracking-normal text-[var(--text-primary)] sm:text-[1.9rem]">
               Command your climb, {user?.username ?? 'Player'}.
             </h1>
-            <p className="mt-3 max-w-2xl text-sm leading-6 text-[var(--text-secondary)]">
+            <p className="mt-2 max-w-xl text-sm leading-6 text-[var(--text-secondary)]">
               Check your live queue energy, level track, and next match from one cleaner home base.
             </p>
 
-            <div className="mt-5 max-w-2xl rounded-[1.25rem] border border-[var(--border-color)] bg-[var(--surface-strong)] p-4 shadow-[var(--shadow-soft)]">
+            <div className="mt-4 max-w-xl rounded-[1.1rem] border border-[var(--border-color)] bg-[var(--surface-strong)] p-4 shadow-[var(--shadow-soft)]">
               <div className="flex items-center justify-between gap-3 text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--text-soft)]">
                 <span>XP progress</span>
                 <span>{xpProgress.progressInLevel}/{xpProgress.progressNeeded}</span>
@@ -426,7 +354,7 @@ export default function DashboardPage() {
               View leaderboard
             </Link>
           </div>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
             {rankedGames.map((game) => (
               <GameCard
                 key={game}
@@ -458,7 +386,7 @@ export default function DashboardPage() {
               <span>{lobbyGames.length} active lobby titles</span>
             </div>
           </div>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
             {lobbyGames.map((game) => (
               <GameCard
                 key={game}
@@ -473,14 +401,14 @@ export default function DashboardPage() {
 
       {rankedGames.length > 0 && (
         <section>
-          <div className="mb-4 flex items-center justify-between gap-3">
+          <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <p className="section-title">Rank Overview</p>
               <p className="mt-2 text-sm text-[var(--text-secondary)]">
                 Quick read on how each title is moving.
               </p>
             </div>
-            <div className="brand-chip-coral gap-2">
+            <div className="brand-chip-coral w-fit gap-2">
               <TierMedal rating={bestRating} size="sm" />
               <span>{bestDivision.label} profile</span>
             </div>

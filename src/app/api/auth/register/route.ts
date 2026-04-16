@@ -3,6 +3,7 @@ import { createServiceClient } from '@/lib/supabase';
 import { hashPassword, profileToAuthUser, signToken } from '@/lib/auth';
 import { sendWelcomeEmail } from '@/lib/email';
 import { DEFAULT_RATING } from '@/lib/config';
+import { isMissingColumnError, isMissingTableError } from '@/lib/db-compat';
 import { findInviterByCode, generateUniqueInviteCode, normalizeInviteCode } from '@/lib/invite';
 import { getPhoneLookupVariants, isValidPhoneNumber, normalizePhoneNumber } from '@/lib/phone';
 import { canSelectGames } from '@/lib/plans';
@@ -113,48 +114,70 @@ export async function POST(request: NextRequest) {
     const password_hash = await hashPassword(password);
     const trialWindow = getStarterTrialWindow();
 
-    const { data: profile, error: insertError } = await supabase
+    const fullProfileInsert = {
+      username,
+      phone: normalizedPhone,
+      email: trimmedEmail,
+      invite_code: ownInviteCode,
+      invited_by: inviter?.id ?? null,
+      password_hash,
+      region: trimmedRegion,
+      plan: STARTER_TRIAL_PLAN,
+      plan_since: trialWindow.startedAtIso,
+      plan_expires_at: trialWindow.expiresAtIso,
+      platforms,
+      game_ids: game_ids ?? {},
+      selected_games: selected_games ?? [],
+      whatsapp_number: resolvedWhatsappNumber,
+      whatsapp_notifications: Boolean(whatsapp_notifications),
+      rating_efootball: DEFAULT_RATING,
+      rating_fc26: DEFAULT_RATING,
+      rating_mk11: DEFAULT_RATING,
+      rating_nba2k26: DEFAULT_RATING,
+      rating_tekken8: DEFAULT_RATING,
+      rating_sf6: DEFAULT_RATING,
+      wins_efootball: 0,
+      wins_fc26: 0,
+      wins_mk11: 0,
+      wins_nba2k26: 0,
+      wins_tekken8: 0,
+      wins_sf6: 0,
+      losses_efootball: 0,
+      losses_fc26: 0,
+      losses_mk11: 0,
+      losses_nba2k26: 0,
+      losses_tekken8: 0,
+      losses_sf6: 0,
+    };
+
+    const legacyProfileInsert = {
+      username,
+      phone: normalizedPhone,
+      email: trimmedEmail,
+      password_hash,
+      region: trimmedRegion,
+      platforms,
+      game_ids: game_ids ?? {},
+      selected_games: selected_games ?? [],
+      whatsapp_number: resolvedWhatsappNumber,
+    };
+
+    let insertResult = await supabase
       .from('profiles')
-      .insert({
-        username,
-        phone: normalizedPhone,
-        email: trimmedEmail,
-        invite_code: ownInviteCode,
-        invited_by: inviter?.id ?? null,
-        password_hash,
-        region: trimmedRegion,
-        plan: STARTER_TRIAL_PLAN,
-        plan_since: trialWindow.startedAtIso,
-        plan_expires_at: trialWindow.expiresAtIso,
-        platforms,
-        game_ids: game_ids ?? {},
-        selected_games: selected_games ?? [],
-        whatsapp_number: resolvedWhatsappNumber,
-        whatsapp_notifications: Boolean(whatsapp_notifications),
-        rating_efootball: DEFAULT_RATING,
-        rating_fc26: DEFAULT_RATING,
-        rating_mk11: DEFAULT_RATING,
-        rating_nba2k26: DEFAULT_RATING,
-        rating_tekken8: DEFAULT_RATING,
-        rating_sf6: DEFAULT_RATING,
-        rating_ludo: DEFAULT_RATING,
-        wins_efootball: 0,
-        wins_fc26: 0,
-        wins_mk11: 0,
-        wins_nba2k26: 0,
-        wins_tekken8: 0,
-        wins_sf6: 0,
-        wins_ludo: 0,
-        losses_efootball: 0,
-        losses_fc26: 0,
-        losses_mk11: 0,
-        losses_nba2k26: 0,
-        losses_tekken8: 0,
-        losses_sf6: 0,
-        losses_ludo: 0,
-      })
+      .insert(fullProfileInsert)
       .select()
       .single();
+
+    if (insertResult.error && isMissingColumnError(insertResult.error)) {
+      insertResult = await supabase
+        .from('profiles')
+        .insert(legacyProfileInsert)
+        .select()
+        .single();
+    }
+
+    const profile = insertResult.data;
+    const insertError = insertResult.error;
 
     if (insertError || !profile) {
       console.error('[Register] Insert error:', insertError);
@@ -172,7 +195,9 @@ export async function POST(request: NextRequest) {
     });
 
     if (trialError) {
-      console.error('[Register] Trial subscription tracking error:', trialError);
+      if (!isMissingTableError(trialError, 'subscriptions')) {
+        console.error('[Register] Trial subscription tracking error:', trialError);
+      }
     }
 
     const token = signToken({

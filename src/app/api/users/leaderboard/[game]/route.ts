@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServiceClient } from '@/lib/supabase';
 import { GAMES } from '@/lib/config';
+import { isMissingColumnError } from '@/lib/db-compat';
 import { getRankDivision } from '@/lib/gamification';
 import type { GameKey } from '@/types';
 
@@ -19,56 +20,54 @@ export async function GET(
     const ratingKey = `rating_${game}`;
     const winsKey = `wins_${game}`;
     const lossesKey = `losses_${game}`;
+    const metricSelect = ['id', 'username', 'selected_games', ratingKey, winsKey, lossesKey].join(', ');
 
-    const { data: playersRaw, error } = await supabase
+    let fallbackToDefaults = false;
+    let playersRaw: unknown = null;
+    let error: unknown = null;
+
+    const initialResult = await supabase
       .from('profiles')
-      .select(
-        [
-          'id',
-          'username',
-          'selected_games',
-          'level',
-          'rating_efootball',
-          'rating_efootball_mobile',
-          'rating_fc26',
-          'rating_mk11',
-          'rating_nba2k26',
-          'rating_tekken8',
-          'rating_sf6',
-          'rating_ludo',
-          'wins_efootball',
-          'wins_efootball_mobile',
-          'wins_fc26',
-          'wins_mk11',
-          'wins_nba2k26',
-          'wins_tekken8',
-          'wins_sf6',
-          'wins_ludo',
-          'losses_efootball',
-          'losses_efootball_mobile',
-          'losses_fc26',
-          'losses_mk11',
-          'losses_nba2k26',
-          'losses_tekken8',
-          'losses_sf6',
-          'losses_ludo',
-        ].join(', ')
-      )
+      .select(metricSelect)
       .contains('selected_games', [game])
       .limit(100);
 
+    playersRaw = initialResult.data;
+    error = initialResult.error;
+
+    if (
+      error &&
+      (isMissingColumnError(error, `profiles.${ratingKey}`) ||
+        isMissingColumnError(error, `profiles.${winsKey}`) ||
+        isMissingColumnError(error, `profiles.${lossesKey}`))
+    ) {
+      fallbackToDefaults = true;
+      const fallbackResult = await supabase
+        .from('profiles')
+        .select('id, username, selected_games')
+        .contains('selected_games', [game])
+        .limit(100);
+
+      playersRaw = fallbackResult.data;
+      error = fallbackResult.error;
+    }
+
     if (error) {
+      console.error('[Leaderboard] Query error:', error);
       return NextResponse.json({ error: 'Failed to fetch leaderboard' }, { status: 500 });
     }
 
     const players = (playersRaw as unknown as Record<string, unknown>[] | null) ?? [];
 
     const sorted = players.sort(
-      (a, b) => ((b[ratingKey] as number) ?? 1000) - ((a[ratingKey] as number) ?? 1000)
+      (a, b) =>
+        fallbackToDefaults
+          ? String(a.username ?? '').localeCompare(String(b.username ?? ''))
+          : ((b[ratingKey] as number) ?? 1000) - ((a[ratingKey] as number) ?? 1000)
     ).slice(0, 50);
 
     const leaderboard = sorted.map((p, index) => {
-      const rating = (p[ratingKey] as number | undefined) ?? 1000;
+      const rating = fallbackToDefaults ? 1000 : (p[ratingKey] as number | undefined) ?? 1000;
 
       return {
         rank: index + 1,
@@ -76,9 +75,9 @@ export async function GET(
         username: p.username,
         rating,
         division: getRankDivision(rating).label,
-        level: p.level ?? 1,
-        wins: p[winsKey] ?? 0,
-        losses: p[lossesKey] ?? 0,
+        level: 1,
+        wins: fallbackToDefaults ? 0 : (p[winsKey] as number | undefined) ?? 0,
+        losses: fallbackToDefaults ? 0 : (p[lossesKey] as number | undefined) ?? 0,
       };
     });
 

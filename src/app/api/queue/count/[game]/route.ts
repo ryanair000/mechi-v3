@@ -19,7 +19,7 @@ export async function GET(
   try {
     const supabase = createServiceClient();
 
-    const buildCountQuery = (includePlatformFilter: boolean) =>
+    const buildCountQuery = () =>
       supabase
       .from('queue')
       .select('id', { count: 'exact' })
@@ -27,7 +27,7 @@ export async function GET(
       .eq('status', 'waiting')
       .limit(1);
 
-    let query = buildCountQuery(Boolean(platform));
+    let query = buildCountQuery();
     if (platform) {
       query = query.eq('platform', platform);
     }
@@ -35,7 +35,7 @@ export async function GET(
     let { count, error } = await query;
 
     if (error && platform && isMissingColumnError(error, 'queue.platform')) {
-      ({ count, error } = await buildCountQuery(false));
+      ({ count, error } = await buildCountQuery());
     }
 
     if (error) {

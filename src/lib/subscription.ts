@@ -192,6 +192,18 @@ export async function initiateSubscription(params: {
   }
 
   if (!isPaystackConfigured()) {
+    if (process.env.NODE_ENV === 'production') {
+      await supabase
+        .from('subscriptions')
+        .update({ status: 'failed' })
+        .eq('id', subscription.id);
+
+      return {
+        success: false,
+        error: 'Payment provider is not configured',
+      };
+    }
+
     await activateSubscription(subscription.id, supabase);
     return {
       success: true,

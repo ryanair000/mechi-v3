@@ -3,9 +3,11 @@ import { getAuthUser } from '@/lib/auth';
 import { GAMES } from '@/lib/config';
 import { createServiceClient } from '@/lib/supabase';
 import {
+  ACTIVE_TOURNAMENT_PLAYER_STATUSES,
   CONFIRMED_PAYMENT_STATUSES,
   getAppUrl,
   maybeMarkTournamentFull,
+  releaseExpiredTournamentReservations,
 } from '@/lib/tournaments';
 import {
   initializeTournamentPayment,
@@ -28,37 +30,66 @@ export async function POST(
 
   try {
     const supabase = createServiceClient();
-    const { data: tournamentRaw, error: tournamentError } = await supabase
+    const { data: tournamentBySlug, error: tournamentError } = await supabase
       .from('tournaments')
       .select('*')
       .eq('slug', slug)
       .single();
 
-    const tournament = tournamentRaw as Tournament | null;
+    let tournament = tournamentBySlug as Tournament | null;
     if (tournamentError || !tournament) {
       return NextResponse.json({ error: 'Tournament not found' }, { status: 404 });
     }
 
-    if (tournament.status !== 'open' && tournament.status !== 'full') {
+    await releaseExpiredTournamentReservations(supabase, tournament.id);
+
+    const { data: refreshedTournament } = await supabase
+      .from('tournaments')
+      .select('*')
+      .eq('id', tournament.id)
+      .single();
+
+    tournament = (refreshedTournament as Tournament | null) ?? tournament;
+
+    if (tournament.status !== 'open') {
       return NextResponse.json({ error: 'This tournament is not open' }, { status: 400 });
     }
 
     const { data: existing } = await supabase
       .from('tournament_players')
-      .select('*')
+      .select('id, payment_status')
       .eq('tournament_id', tournament.id)
       .eq('user_id', authUser.sub)
       .maybeSingle();
 
-    if (existing) {
+    const existingPlayer = existing as { id: string; payment_status: string } | null;
+    const canRetryExistingPlayer =
+      existingPlayer &&
+      !ACTIVE_TOURNAMENT_PLAYER_STATUSES.includes(
+        existingPlayer.payment_status as (typeof ACTIVE_TOURNAMENT_PLAYER_STATUSES)[number]
+      );
+
+    if (
+      existingPlayer &&
+      CONFIRMED_PAYMENT_STATUSES.includes(
+        existingPlayer.payment_status as (typeof CONFIRMED_PAYMENT_STATUSES)[number]
+      )
+    ) {
       return NextResponse.json({ error: 'You already joined this tournament' }, { status: 409 });
+    }
+
+    if (existingPlayer?.payment_status === 'pending') {
+      return NextResponse.json(
+        { error: 'Finish your current payment before trying again' },
+        { status: 409 }
+      );
     }
 
     const { count: reservedCount } = await supabase
       .from('tournament_players')
       .select('id', { count: 'exact', head: true })
       .eq('tournament_id', tournament.id)
-      .in('payment_status', ['pending', ...CONFIRMED_PAYMENT_STATUSES]);
+      .in('payment_status', [...ACTIVE_TOURNAMENT_PLAYER_STATUSES]);
 
     if ((reservedCount ?? 0) >= tournament.size) {
       await maybeMarkTournamentFull(supabase, tournament.id);
@@ -92,15 +123,25 @@ export async function POST(
     }
 
     if (tournament.entry_fee <= 0 || !isPaystackConfigured()) {
-      const { data: player, error } = await supabase
-        .from('tournament_players')
-        .insert({
-          tournament_id: tournament.id,
-          user_id: authUser.sub,
-          payment_status: 'free',
-        })
-        .select('*')
-        .single();
+      const playerOperation = canRetryExistingPlayer
+        ? supabase
+            .from('tournament_players')
+            .update({
+              payment_status: 'free',
+              payment_ref: null,
+              payment_access_code: null,
+              joined_at: new Date().toISOString(),
+            })
+            .eq('id', existingPlayer.id)
+        : supabase
+            .from('tournament_players')
+            .insert({
+              tournament_id: tournament.id,
+              user_id: authUser.sub,
+              payment_status: 'free',
+            });
+
+      const { data: player, error } = await playerOperation.select('*').single();
 
       if (error || !player) {
         return NextResponse.json({ error: 'Could not join tournament' }, { status: 500 });
@@ -114,14 +155,26 @@ export async function POST(
     const email = profile.email || `${profile.username}@mechi.club`;
     const callbackUrl = `${getAppUrl()}/t/${tournament.slug}?reference=${encodeURIComponent(reference)}`;
 
-    const { data: pendingPlayer, error: insertError } = await supabase
-      .from('tournament_players')
-      .insert({
-        tournament_id: tournament.id,
-        user_id: authUser.sub,
-        payment_status: 'pending',
-        payment_ref: reference,
-      })
+    const pendingOperation = canRetryExistingPlayer
+      ? supabase
+          .from('tournament_players')
+          .update({
+            payment_status: 'pending',
+            payment_ref: reference,
+            payment_access_code: null,
+            joined_at: new Date().toISOString(),
+          })
+          .eq('id', existingPlayer.id)
+      : supabase
+          .from('tournament_players')
+          .insert({
+            tournament_id: tournament.id,
+            user_id: authUser.sub,
+            payment_status: 'pending',
+            payment_ref: reference,
+          });
+
+    const { data: pendingPlayer, error: insertError } = await pendingOperation
       .select('*')
       .single();
 

@@ -27,6 +27,7 @@ CREATE TABLE IF NOT EXISTS profiles (
   rating_nba2k26 integer NOT NULL DEFAULT 1000,
   rating_tekken8 integer NOT NULL DEFAULT 1000,
   rating_sf6 integer NOT NULL DEFAULT 1000,
+  rating_ludo integer NOT NULL DEFAULT 1000,
   wins_efootball integer NOT NULL DEFAULT 0,
   wins_efootball_mobile integer NOT NULL DEFAULT 0,
   wins_fc26 integer NOT NULL DEFAULT 0,
@@ -34,6 +35,7 @@ CREATE TABLE IF NOT EXISTS profiles (
   wins_nba2k26 integer NOT NULL DEFAULT 0,
   wins_tekken8 integer NOT NULL DEFAULT 0,
   wins_sf6 integer NOT NULL DEFAULT 0,
+  wins_ludo integer NOT NULL DEFAULT 0,
   losses_efootball integer NOT NULL DEFAULT 0,
   losses_efootball_mobile integer NOT NULL DEFAULT 0,
   losses_fc26 integer NOT NULL DEFAULT 0,
@@ -41,6 +43,7 @@ CREATE TABLE IF NOT EXISTS profiles (
   losses_nba2k26 integer NOT NULL DEFAULT 0,
   losses_tekken8 integer NOT NULL DEFAULT 0,
   losses_sf6 integer NOT NULL DEFAULT 0,
+  losses_ludo integer NOT NULL DEFAULT 0,
   created_at timestamptz NOT NULL DEFAULT timezone('utc', now())
 );
 

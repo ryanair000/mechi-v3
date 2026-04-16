@@ -15,6 +15,7 @@ export type GameKey =
   | 'mariokart'
   | 'smashbros'
   | 'freefire'
+  | 'ludo'
   | 'rocketleague';
 
 export type GameMode = '1v1' | 'lobby';
@@ -36,6 +37,7 @@ export interface Game {
   label: string;
   platforms: PlatformKey[];
   mode: GameMode;
+  supportsLobby?: boolean;
   maxPlayers?: number;
   steamAppId?: number;
 }
@@ -94,6 +96,7 @@ export interface Profile {
   rating_nba2k26: number;
   rating_tekken8: number;
   rating_sf6: number;
+  rating_ludo: number;
   wins_efootball: number;
   wins_efootball_mobile: number;
   wins_fc26: number;
@@ -101,6 +104,7 @@ export interface Profile {
   wins_nba2k26: number;
   wins_tekken8: number;
   wins_sf6: number;
+  wins_ludo: number;
   losses_efootball: number;
   losses_efootball_mobile: number;
   losses_fc26: number;
@@ -108,6 +112,7 @@ export interface Profile {
   losses_nba2k26: number;
   losses_tekken8: number;
   losses_sf6: number;
+  losses_ludo: number;
   xp?: number;
   level?: number;
   mp?: number;
@@ -313,7 +318,7 @@ export interface AuditLog {
   id: string;
   admin_id: string;
   action: string;
-  target_type: 'user' | 'match' | 'tournament' | 'system';
+  target_type: 'user' | 'match' | 'tournament' | 'queue' | 'lobby' | 'system';
   target_id: string | null;
   details: Record<string, unknown> | null;
   ip_address: string | null;
@@ -333,6 +338,61 @@ export interface AdminUser {
   banned_at: string | null;
   selected_games: string[];
   created_at: string;
+}
+
+export interface AdminQueueEntry {
+  id: string;
+  user_id: string;
+  game: GameKey;
+  platform?: PlatformKey | null;
+  region: string;
+  rating: number;
+  status: 'waiting' | 'matched' | 'cancelled';
+  joined_at: string;
+  user?: {
+    id: string;
+    username: string;
+    phone: string | null;
+    email: string | null;
+    region: string;
+    role: UserRole;
+    is_banned: boolean;
+  } | null;
+  active_match?: {
+    id: string;
+    game: GameKey;
+    status: MatchStatus;
+    created_at: string;
+    opponent?: { id: string; username: string } | null;
+  } | null;
+}
+
+export interface AdminLobbySummary
+  extends Omit<Lobby, 'member_count' | 'host'> {
+  member_count: number;
+  host?: {
+    id: string;
+    username: string;
+    phone?: string | null;
+    email?: string | null;
+    role?: UserRole;
+    is_banned?: boolean;
+  } | null;
+}
+
+export interface AdminLobbyDetail extends AdminLobbySummary {
+  members: Array<
+    LobbyMember & {
+      user?: {
+        id: string;
+        username: string;
+        phone?: string | null;
+        email?: string | null;
+        role?: UserRole;
+        is_banned?: boolean;
+      } | null;
+    }
+  >;
 }
 
 export interface EloResult {

@@ -13,6 +13,7 @@ import {
   getDefaultLobbyMode,
   getLobbyModeOptions,
   getLobbyPopularMaps,
+  supportsLobbyMode,
 } from '@/lib/config';
 import type { GameKey, Lobby } from '@/types';
 
@@ -91,7 +92,7 @@ function LobbiesContent() {
   const [newLobby, setNewLobby] = useState(() => createLobbyDraft(gameFilter ?? 'codm'));
 
   const lobbyGames = (Object.keys(GAMES) as GameKey[]).filter(
-    (game) => GAMES[game].mode === 'lobby'
+    (game) => supportsLobbyMode(game)
   );
 
   const fetchLobbies = useCallback(async () => {
@@ -127,7 +128,7 @@ function LobbiesContent() {
   }, [fetchLobbies]);
 
   useEffect(() => {
-    if (!gameFilter || GAMES[gameFilter]?.mode !== 'lobby') {
+    if (!gameFilter || !supportsLobbyMode(gameFilter)) {
       return;
     }
 

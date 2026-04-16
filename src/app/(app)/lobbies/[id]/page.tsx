@@ -161,7 +161,7 @@ export default function LobbyDetailPage() {
                 </div>
               );
             })}
-            {Array.from({ length: lobby.max_players - members.length }).map((_, i) => (
+            {Array.from({ length: Math.max(0, lobby.max_players - members.length) }).map((_, i) => (
               <div key={`e-${i}`} className="flex items-center gap-3 p-2.5 rounded-xl border border-dashed border-white/[0.06]">
                 <div className="w-8 h-8 rounded-lg bg-white/[0.03]" />
                 <span className="text-sm text-white/15">Waiting for player...</span>

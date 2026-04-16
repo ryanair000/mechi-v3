@@ -5,7 +5,7 @@ import { GAMES, PLATFORMS } from '@/lib/config';
 import { getRankDivision, withAlpha } from '@/lib/gamification';
 import { GameCover } from '@/components/GameCover';
 import { PlatformLogo } from '@/components/PlatformLogo';
-import type { GameKey } from '@/types';
+import type { GameKey, GameMode } from '@/types';
 
 interface GameCardProps {
   gameKey: GameKey;
@@ -17,6 +17,7 @@ interface GameCardProps {
   onViewLobby?: () => void;
   isQueuing?: boolean;
   isDisabled?: boolean;
+  displayMode?: GameMode;
 }
 
 export function GameCard({
@@ -29,11 +30,13 @@ export function GameCard({
   onViewLobby,
   isQueuing = false,
   isDisabled = false,
+  displayMode,
 }: GameCardProps) {
   const game = GAMES[gameKey];
   if (!game) return null;
 
-  const isLobby = game.mode === 'lobby';
+  const mode = displayMode ?? game.mode;
+  const isLobby = mode === 'lobby';
   const winRate =
     wins !== undefined && losses !== undefined && wins + losses > 0
       ? Math.round((wins / (wins + losses)) * 100)
@@ -48,6 +51,7 @@ export function GameCard({
           variant="header"
           className="h-full w-full transition-transform duration-500 group-hover:scale-105"
           overlay
+          displayMode={mode}
         />
 
         <div className="absolute left-3 right-3 top-3 flex items-start justify-between gap-2">

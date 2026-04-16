@@ -13,6 +13,7 @@ const GAME_LABELS: Record<string, string> = {
   nba2k26: 'NBA 2K26',
   tekken8: 'Tekken 8',
   sf6: 'Street Fighter 6',
+  ludo: 'Ludo',
   cs2: 'CS2',
   valorant: 'Valorant',
   mariokart: 'Mario Kart 8',

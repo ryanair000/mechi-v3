@@ -34,17 +34,24 @@ async function getLogs(): Promise<AuditLog[]> {
   return (data ?? []) as AuditLog[];
 }
 
-const ACTION_STYLE: Record<string, string> = {
-  ban_user: 'text-red-400',
-  unban_user: 'text-[var(--brand-teal)]',
-  change_role: 'text-amber-400',
-  override_match: 'text-[#60A5FA]',
-  cancel_match: 'text-orange-400',
-  resolve_dispute: 'text-[var(--brand-teal)]',
-  cancel_tournament: 'text-red-400',
-  override_tournament_winner: 'text-[var(--brand-coral)]',
-  delete_suggestion: 'text-[var(--text-secondary)]',
-  system_note: 'text-[var(--text-soft)]',
+const ACTION_META: Record<string, { label: string; className: string }> = {
+  ban_user: { label: 'Ban user', className: 'text-red-400' },
+  unban_user: { label: 'Unban user', className: 'text-[var(--brand-teal)]' },
+  change_role: { label: 'Change role', className: 'text-amber-400' },
+  override_match: { label: 'Override match', className: 'text-[#60A5FA]' },
+  cancel_match: { label: 'Cancel match', className: 'text-orange-400' },
+  resolve_dispute: { label: 'Resolve dispute', className: 'text-[var(--brand-teal)]' },
+  cancel_tournament: { label: 'Cancel tournament', className: 'text-red-400' },
+  override_tournament_winner: {
+    label: 'Override tournament winner',
+    className: 'text-[var(--brand-coral)]',
+  },
+  cancel_queue_entry: { label: 'Cancel queue entry', className: 'text-[#60A5FA]' },
+  rerun_matchmaking: { label: 'Rerun matchmaking', className: 'text-[var(--brand-teal)]' },
+  close_lobby: { label: 'Close lobby', className: 'text-[var(--brand-coral)]' },
+  remove_lobby_member: { label: 'Remove lobby member', className: 'text-amber-400' },
+  delete_suggestion: { label: 'Delete suggestion', className: 'text-[var(--text-secondary)]' },
+  system_note: { label: 'System note', className: 'text-[var(--text-soft)]' },
 };
 
 export default async function AdminLogsPage() {
@@ -61,7 +68,8 @@ export default async function AdminLogsPage() {
           <div>
             <h1 className="text-3xl font-black tracking-tight text-[var(--text-primary)]">Audit log</h1>
             <p className="mt-2 max-w-2xl text-sm leading-7 text-[var(--text-secondary)]">
-              Every admin action lands here so you can trace bans, match overrides, and tournament interventions without guessing.
+              Every admin action lands here so you can trace bans, queue cleanup, lobby intervention,
+              and tournament decisions without guessing.
             </p>
           </div>
         </div>
@@ -84,7 +92,13 @@ export default async function AdminLogsPage() {
                 ? details.username
                 : typeof details.title === 'string'
                   ? details.title
-                  : null;
+                  : typeof details.roomCode === 'string'
+                    ? `room ${details.roomCode}`
+                    : null;
+            const actionMeta = ACTION_META[log.action] ?? {
+              label: log.action,
+              className: 'text-[var(--text-secondary)]',
+            };
 
             return (
               <div key={log.id} className="card px-4 py-3">
@@ -95,16 +109,16 @@ export default async function AdminLogsPage() {
                   <span className="w-full max-w-[10rem] shrink-0 text-[var(--text-secondary)]">
                     {log.admin?.username ?? 'Unknown'}
                   </span>
-                  <span className={`w-full max-w-[15rem] shrink-0 font-bold ${ACTION_STYLE[log.action] ?? 'text-[var(--text-secondary)]'}`}>
-                    {log.action}
+                  <span className={`w-full max-w-[15rem] shrink-0 font-bold ${actionMeta.className}`}>
+                    {actionMeta.label}
                   </span>
                   <div className="min-w-0 flex-1 text-[var(--text-secondary)]">
                     <span>
                       {log.target_type}
-                      {log.target_id ? `/${log.target_id.slice(0, 8)}…` : ''}
+                      {log.target_id ? `/${log.target_id.slice(0, 8)}...` : ''}
                     </span>
-                    {name ? <span>{` • ${name}`}</span> : null}
-                    {reason ? <span>{` • ${reason}`}</span> : null}
+                    {name ? <span>{` | ${name}`}</span> : null}
+                    {reason ? <span>{` | ${reason}`}</span> : null}
                   </div>
                 </div>
               </div>

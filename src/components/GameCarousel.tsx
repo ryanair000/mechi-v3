@@ -20,6 +20,7 @@ const FEATURED_GAMES: GameKey[] = [
   'codm',
   'pubgm',
   'freefire',
+  'ludo',
 ];
 
 export function GameCarousel() {

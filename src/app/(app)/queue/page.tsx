@@ -105,11 +105,15 @@ function QueueContent() {
   const handleLeave = async () => {
     setLeaving(true);
     try {
-      await authFetch('/api/queue/leave', { method: 'POST' });
+      const res = await authFetch('/api/queue/leave', { method: 'POST' });
+      if (!res.ok) {
+        const payload = await res.json().catch(() => null);
+        throw new Error(payload?.error ?? 'Failed to leave queue');
+      }
       toast.success('Left the queue');
       router.push('/dashboard');
-    } catch {
-      toast.error('Failed to leave queue');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to leave queue');
       setLeaving(false);
     }
   };

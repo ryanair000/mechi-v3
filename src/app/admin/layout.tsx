@@ -1,7 +1,18 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { cookies } from 'next/headers';
-import { BarChart2, ChevronRight, MessageCircle, ScrollText, Shield, Swords, Trophy, Users } from 'lucide-react';
+import {
+  BarChart2,
+  ChevronRight,
+  Clock3,
+  DoorOpen,
+  MessageCircle,
+  ScrollText,
+  Shield,
+  Swords,
+  Trophy,
+  Users,
+} from 'lucide-react';
 import { verifyToken } from '@/lib/auth';
 import { BrandLogo } from '@/components/BrandLogo';
 import { createServiceClient } from '@/lib/supabase';
@@ -9,10 +20,12 @@ import { createServiceClient } from '@/lib/supabase';
 const ADMIN_NAV = [
   { href: '/admin', label: 'Overview', icon: BarChart2 },
   { href: '/admin/users', label: 'Users', icon: Users },
+  { href: '/admin/queue', label: 'Queue', icon: Clock3 },
+  { href: '/admin/lobbies', label: 'Lobbies', icon: DoorOpen },
   { href: '/admin/matches', label: 'Matches', icon: Swords },
   { href: '/admin/tournaments', label: 'Tournaments', icon: Trophy },
-  { href: '/admin/whatsapp', label: 'WhatsApp', icon: MessageCircle },
-  { href: '/admin/logs', label: 'Audit Log', icon: ScrollText },
+  { href: '/admin/whatsapp', label: 'WhatsApp', icon: MessageCircle, adminOnly: true },
+  { href: '/admin/logs', label: 'Audit Log', icon: ScrollText, adminOnly: true },
 ];
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
@@ -35,6 +48,8 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     redirect('/dashboard');
   }
 
+  const visibleNav = ADMIN_NAV.filter((item) => !item.adminOnly || profile.role === 'admin');
+
   return (
     <div className="page-base min-h-screen lg:grid lg:grid-cols-[16rem_1fr]">
       <aside className="hidden border-r border-[var(--border-color)] bg-[var(--surface-soft)] p-4 lg:block">
@@ -48,10 +63,10 @@ export default async function AdminLayout({ children }: { children: React.ReactN
         </div>
 
         <div className="mb-3 flex items-center gap-2 px-3 text-xs font-black uppercase tracking-[0.16em] text-[var(--text-soft)]">
-          <Shield size={13} /> Admin
+          <Shield size={13} /> Control room
         </div>
         <nav className="space-y-1">
-          {ADMIN_NAV.map(({ href, label, icon: Icon }) => (
+          {visibleNav.map(({ href, label, icon: Icon }) => (
             <Link
               key={href}
               href={href}

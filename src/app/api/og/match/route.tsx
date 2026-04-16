@@ -1,9 +1,7 @@
 import { ImageResponse } from 'next/og';
 import { NextRequest } from 'next/server';
-import { getGameImage } from '@/lib/config';
 import { createServiceClient } from '@/lib/supabase';
 import { getLevelFromXp, getRankDivision } from '@/lib/gamification';
-import type { GameKey } from '@/types';
 
 export const runtime = 'edge';
 
@@ -15,6 +13,7 @@ const GAME_LABELS: Record<string, string> = {
   nba2k26: 'NBA 2K26',
   tekken8: 'Tekken 8',
   sf6: 'Street Fighter 6',
+  ludo: 'Ludo',
   cs2: 'CS2',
   valorant: 'Valorant',
   mariokart: 'Mario Kart 8',
@@ -46,9 +45,8 @@ function notFoundCard(message: string) {
 }
 
 export async function GET(request: NextRequest) {
-  const { origin, searchParams } = new URL(request.url);
+  const { searchParams } = new URL(request.url);
   const matchId = searchParams.get('id');
-  const logoSrc = `${origin}/mechi-logo.png`;
 
   if (!matchId) {
     return notFoundCard('Mechi / Match not found');
@@ -84,7 +82,6 @@ export async function GET(request: NextRequest) {
   const winnerXp = (winner?.xp as number | null) ?? 0;
   const winnerLevel = winnerSummary?.newLevel ?? ((winner?.level as number | null) ?? getLevelFromXp(winnerXp));
   const gameLabel = GAME_LABELS[match.game] ?? match.game;
-  const gameImageUrl = getGameImage(match.game as GameKey);
 
   return new ImageResponse(
     (
@@ -102,21 +99,30 @@ export async function GET(request: NextRequest) {
           fontFamily: 'sans-serif',
         }}
       >
-        {gameImageUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={gameImageUrl}
-            alt=""
-            style={{
-              position: 'absolute',
-              inset: 0,
-              width: '100%',
-              height: '100%',
-              objectFit: 'cover',
-              opacity: 0.08,
-            }}
-          />
-        ) : null}
+        <div
+          style={{
+            position: 'absolute',
+            top: '-12%',
+            right: '-8%',
+            width: '42%',
+            height: '82%',
+            borderRadius: '999px',
+            border: '1px solid rgba(255,255,255,0.08)',
+            background: 'radial-gradient(circle, rgba(255,107,107,0.14) 0%, rgba(255,107,107,0.03) 50%, transparent 72%)',
+          }}
+        />
+        <div
+          style={{
+            position: 'absolute',
+            bottom: '-18%',
+            left: '-10%',
+            width: '44%',
+            height: '78%',
+            borderRadius: '999px',
+            border: '1px solid rgba(255,255,255,0.08)',
+            background: 'radial-gradient(circle, rgba(50,224,196,0.16) 0%, rgba(50,224,196,0.04) 48%, transparent 70%)',
+          }}
+        />
         <div
           style={{
             display: 'flex',
@@ -125,25 +131,9 @@ export async function GET(request: NextRequest) {
             marginBottom: '38px',
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-            <div
-              style={{
-                width: '56px',
-                height: '56px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                borderRadius: '18px',
-                background: 'transparent',
-                border: '1px solid transparent',
-                overflow: 'hidden',
-              }}
-            >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={logoSrc} alt="Mechi logo" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
-            </div>
+          <div style={{ display: 'flex', flexDirection: 'column' }}>
+            <span style={{ fontSize: '28px', fontWeight: 800, letterSpacing: '0.12em' }}>MECHI</span>
             <div style={{ display: 'flex', flexDirection: 'column' }}>
-              <span style={{ fontSize: '28px', fontWeight: 800 }}>MECHI</span>
               <span style={{ fontSize: '14px', color: 'rgba(255,255,255,0.58)' }}>
                 Compete. Connect. Rise.
               </span>

@@ -1,11 +1,90 @@
 'use client';
 
+import Link from 'next/link';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import toast from 'react-hot-toast';
 import { Loader2, Search, Shield, ShieldOff, UserCog, Users } from 'lucide-react';
 import { useAuth, useAuthFetch } from '@/components/AuthProvider';
-import { GAMES } from '@/lib/config';
-import type { AdminUser, GameKey, UserRole } from '@/types';
+import { GAMES, PLATFORMS } from '@/lib/config';
+import type { AdminUser, GameKey, PlatformKey, UserRole } from '@/types';
+
+interface UserDetailMatch {
+  id: string;
+  game: GameKey;
+  platform: PlatformKey | null;
+  region: string;
+  status: string;
+  winner_id: string | null;
+  created_at: string;
+  completed_at: string | null;
+  tournament_id: string | null;
+  player1: { id: string; username: string } | null;
+  player2: { id: string; username: string } | null;
+}
+
+interface UserDetailLobby {
+  id: string;
+  game: GameKey;
+  title: string;
+  status: string;
+  room_code: string;
+  member_count?: number;
+  created_at: string;
+}
+
+interface UserDetailTournament {
+  id: string;
+  slug: string;
+  title: string;
+  game: GameKey;
+  status: string;
+  entry_fee: number;
+  prize_pool: number;
+  payout_status?: string | null;
+  created_at: string;
+}
+
+interface AdminUserDetail {
+  user: AdminUser & {
+    platforms: PlatformKey[];
+    xp?: number;
+    level?: number;
+    mp?: number;
+    win_streak?: number;
+    max_win_streak?: number;
+    plan?: string | null;
+    plan_since?: string | null;
+    plan_expires_at?: string | null;
+  };
+  currentQueueEntry: {
+    id: string;
+    game: GameKey;
+    platform: PlatformKey | null;
+    region: string;
+    rating: number;
+    status: string;
+    joined_at: string;
+  } | null;
+  recentMatches: UserDetailMatch[];
+  joinedLobbies: Array<{ joined_at: string; lobby: UserDetailLobby }>;
+  hostedLobbies: UserDetailLobby[];
+  joinedTournaments: Array<{
+    id: string;
+    payment_status: string;
+    joined_at: string;
+    tournament: UserDetailTournament;
+  }>;
+  organizedTournaments: UserDetailTournament[];
+  currentSubscription: {
+    id: string;
+    plan: string;
+    billing_cycle: string;
+    amount_kes: number;
+    status: string;
+    expires_at: string | null;
+    created_at: string;
+  } | null;
+}
 
 const ROLE_OPTIONS: Array<{ value: UserRole | 'all'; label: string }> = [
   { value: 'all', label: 'All roles' },
@@ -29,6 +108,9 @@ export default function AdminUsersPage() {
   const [bannedFilter, setBannedFilter] = useState('all');
   const [loading, setLoading] = useState(true);
   const [actingOn, setActingOn] = useState<string | null>(null);
+  const [detailUserId, setDetailUserId] = useState<string | null>(null);
+  const [detail, setDetail] = useState<AdminUserDetail | null>(null);
+  const [detailLoading, setDetailLoading] = useState(false);
 
   const fetchUsers = useCallback(async () => {
     setLoading(true);
@@ -38,7 +120,7 @@ export default function AdminUsersPage() {
       if (roleFilter !== 'all') params.set('role', roleFilter);
       if (bannedFilter !== 'all') params.set('banned', bannedFilter);
 
-      const res = await authFetch(`/api/admin/users?${params}`);
+      const res = await authFetch(`/api/admin/users?${params.toString()}`);
       const data = await res.json();
       if (!res.ok) {
         toast.error(data.error ?? 'Failed to load users');
@@ -53,6 +135,34 @@ export default function AdminUsersPage() {
       setLoading(false);
     }
   }, [authFetch, bannedFilter, query, roleFilter]);
+
+  const fetchUserDetail = useCallback(
+    async (targetId: string) => {
+      setDetailLoading(true);
+      try {
+        const res = await authFetch(`/api/admin/users/${targetId}`);
+        const data = await res.json();
+
+        if (!res.ok) {
+          toast.error(data.error ?? 'Failed to load user details');
+          setDetail(null);
+          return null;
+        }
+
+        const nextDetail = data as AdminUserDetail;
+        setDetail(nextDetail);
+        setDetailUserId(targetId);
+        return nextDetail;
+      } catch {
+        toast.error('Network error while loading user details');
+        setDetail(null);
+        return null;
+      } finally {
+        setDetailLoading(false);
+      }
+    },
+    [authFetch]
+  );
 
   useEffect(() => {
     void fetchUsers();
@@ -73,13 +183,29 @@ export default function AdminUsersPage() {
         }
         toast.success(successMessage);
         await fetchUsers();
+        if (detailUserId === targetId) {
+          await fetchUserDetail(targetId);
+        }
       } catch {
         toast.error('Network error');
       } finally {
         setActingOn(null);
       }
     },
-    [authFetch, fetchUsers]
+    [authFetch, detailUserId, fetchUserDetail, fetchUsers]
+  );
+
+  const handleToggleDetail = useCallback(
+    async (targetId: string) => {
+      if (detailUserId === targetId) {
+        setDetailUserId(null);
+        setDetail(null);
+        return;
+      }
+
+      await fetchUserDetail(targetId);
+    },
+    [detailUserId, fetchUserDetail]
   );
 
   const summary = useMemo(() => {
@@ -100,7 +226,8 @@ export default function AdminUsersPage() {
               User access and moderation
             </h1>
             <p className="mt-3 max-w-2xl text-sm leading-7 text-[var(--text-secondary)]">
-              Search accounts, suspend bad actors, and assign moderator coverage when the queue gets noisy.
+              Search accounts, suspend bad actors, and open player detail when you need their queue,
+              lobby, and tournament context in one place.
             </p>
           </div>
 
@@ -192,11 +319,12 @@ export default function AdminUsersPage() {
             const games = member.selected_games
               .slice(0, 3)
               .map((game) => GAMES[game as GameKey]?.label ?? game);
+            const isExpanded = detailUserId === member.id;
 
             return (
               <div key={member.id} className="card p-5">
                 <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
-                  <div className="min-w-0">
+                  <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
                       <p className="text-lg font-black text-[var(--text-primary)]">{member.username}</p>
                       <span
@@ -220,7 +348,7 @@ export default function AdminUsersPage() {
 
                     <p className="mt-1 text-sm text-[var(--text-secondary)]">
                       {member.phone}
-                      {member.email ? ` • ${member.email}` : ''} • {member.region}
+                      {member.email ? ` | ${member.email}` : ''} | {member.region}
                     </p>
                     <p className="mt-1 text-xs text-[var(--text-soft)]">
                       Joined {new Date(member.created_at).toLocaleDateString()}
@@ -246,6 +374,14 @@ export default function AdminUsersPage() {
                   </div>
 
                   <div className="flex flex-wrap items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => void handleToggleDetail(member.id)}
+                      className="btn-ghost"
+                    >
+                      {isExpanded ? 'Hide details' : 'View details'}
+                    </button>
+
                     {actingOn === member.id ? (
                       <div className="inline-flex items-center gap-2 rounded-full border border-[var(--border-color)] px-3 py-2 text-sm text-[var(--text-secondary)]">
                         <Loader2 size={14} className="animate-spin" />
@@ -273,9 +409,7 @@ export default function AdminUsersPage() {
                           <button
                             type="button"
                             disabled={isSelf}
-                            onClick={() =>
-                              void handleAction(member.id, { action: 'unban' }, 'User restored')
-                            }
+                            onClick={() => void handleAction(member.id, { action: 'unban' }, 'User restored')}
                             className="btn-ghost"
                           >
                             <ShieldOff size={14} />
@@ -324,6 +458,180 @@ export default function AdminUsersPage() {
                     )}
                   </div>
                 </div>
+
+                {isExpanded ? (
+                  <div className="mt-5 border-t border-[var(--border-color)] pt-5">
+                    {detailLoading || !detail ? (
+                      <div className="h-48 shimmer rounded-3xl" />
+                    ) : (
+                      <div className="space-y-4">
+                        <div className="grid gap-3 lg:grid-cols-[0.95fr_1.05fr]">
+                          <div className="rounded-3xl border border-[var(--border-color)] bg-[var(--surface-elevated)] p-4">
+                            <p className="text-sm font-semibold text-[var(--text-primary)]">Player snapshot</p>
+                            <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                              <div>
+                                <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[var(--text-soft)]">
+                                  Progress
+                                </p>
+                                <p className="mt-2 text-sm text-[var(--text-secondary)]">
+                                  Level {detail.user.level ?? 0} | XP {detail.user.xp ?? 0} | MP {detail.user.mp ?? 0}
+                                </p>
+                                <p className="mt-1 text-xs text-[var(--text-soft)]">
+                                  Streak {detail.user.win_streak ?? 0} | Best {detail.user.max_win_streak ?? 0}
+                                </p>
+                              </div>
+
+                              <div>
+                                <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[var(--text-soft)]">
+                                  Plan
+                                </p>
+                                <p className="mt-2 text-sm text-[var(--text-secondary)]">
+                                  {detail.user.plan ?? 'free'}
+                                </p>
+                                <p className="mt-1 text-xs text-[var(--text-soft)]">
+                                  {detail.user.plan_expires_at
+                                    ? `Expires ${new Date(detail.user.plan_expires_at).toLocaleString()}`
+                                    : 'No paid plan expiry'}
+                                </p>
+                              </div>
+
+                              <div>
+                                <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[var(--text-soft)]">
+                                  Platforms
+                                </p>
+                                <p className="mt-2 text-sm text-[var(--text-secondary)]">
+                                  {detail.user.platforms.length > 0
+                                    ? detail.user.platforms
+                                        .map((platform) => PLATFORMS[platform]?.label ?? platform)
+                                        .join(', ')
+                                    : 'No platforms set'}
+                                </p>
+                              </div>
+
+                              <div>
+                                <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[var(--text-soft)]">
+                                  Queue state
+                                </p>
+                                <p className="mt-2 text-sm text-[var(--text-secondary)]">
+                                  {detail.currentQueueEntry
+                                    ? `${GAMES[detail.currentQueueEntry.game]?.label ?? detail.currentQueueEntry.game} | ${detail.currentQueueEntry.status}`
+                                    : 'Not currently queued'}
+                                </p>
+                                <p className="mt-1 text-xs text-[var(--text-soft)]">
+                                  {detail.currentQueueEntry
+                                    ? `Joined ${new Date(detail.currentQueueEntry.joined_at).toLocaleString()}`
+                                    : 'No active queue entry'}
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="rounded-3xl border border-[var(--border-color)] bg-[var(--surface-elevated)] p-4">
+                            <p className="text-sm font-semibold text-[var(--text-primary)]">Current subscription</p>
+                            {!detail.currentSubscription ? (
+                              <p className="mt-4 text-sm text-[var(--text-secondary)]">No active subscription record.</p>
+                            ) : (
+                              <div className="mt-4 space-y-2 text-sm text-[var(--text-secondary)]">
+                                <p>Plan: {detail.currentSubscription.plan}</p>
+                                <p>Status: {detail.currentSubscription.status}</p>
+                                <p>Billing: {detail.currentSubscription.billing_cycle}</p>
+                                <p>Amount: KSh {detail.currentSubscription.amount_kes.toLocaleString()}</p>
+                                <p>
+                                  Expires:{' '}
+                                  {detail.currentSubscription.expires_at
+                                    ? new Date(detail.currentSubscription.expires_at).toLocaleString()
+                                    : 'n/a'}
+                                </p>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="grid gap-3 lg:grid-cols-3">
+                          <div className="rounded-3xl border border-[var(--border-color)] bg-[var(--surface-elevated)] p-4">
+                            <p className="text-sm font-semibold text-[var(--text-primary)]">Recent matches</p>
+                            <div className="mt-4 space-y-3">
+                              {detail.recentMatches.length === 0 ? (
+                                <p className="text-sm text-[var(--text-secondary)]">No recent matches.</p>
+                              ) : (
+                                detail.recentMatches.map((match) => (
+                                  <div key={match.id} className="rounded-2xl border border-[var(--border-color)] bg-[var(--surface)] px-3 py-3">
+                                    <p className="text-sm font-black text-[var(--text-primary)]">
+                                      {match.player1?.username ?? 'Unknown'} vs {match.player2?.username ?? 'Unknown'}
+                                    </p>
+                                    <p className="mt-1 text-xs text-[var(--text-secondary)]">
+                                      {GAMES[match.game]?.label ?? match.game} | {match.status}
+                                    </p>
+                                    <p className="mt-1 text-xs text-[var(--text-soft)]">
+                                      {new Date(match.created_at).toLocaleString()}
+                                    </p>
+                                  </div>
+                                ))
+                              )}
+                            </div>
+                          </div>
+
+                          <div className="rounded-3xl border border-[var(--border-color)] bg-[var(--surface-elevated)] p-4">
+                            <p className="text-sm font-semibold text-[var(--text-primary)]">Lobby activity</p>
+                            <div className="mt-4 space-y-3">
+                              {[...detail.hostedLobbies.map((lobby) => ({ type: 'hosted', lobby })), ...detail.joinedLobbies.map((item) => ({ type: 'joined' as const, lobby: item.lobby }))].slice(0, 6).length === 0 ? (
+                                <p className="text-sm text-[var(--text-secondary)]">No recent lobbies.</p>
+                              ) : (
+                                [...detail.hostedLobbies.map((lobby) => ({ type: 'hosted', lobby })), ...detail.joinedLobbies.map((item) => ({ type: 'joined' as const, lobby: item.lobby }))]
+                                  .slice(0, 6)
+                                  .map((item) => (
+                                    <div key={`${item.type}-${item.lobby.id}`} className="rounded-2xl border border-[var(--border-color)] bg-[var(--surface)] px-3 py-3">
+                                      <div className="flex items-center justify-between gap-2">
+                                        <p className="text-sm font-black text-[var(--text-primary)]">{item.lobby.title}</p>
+                                        <span className="text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--text-soft)]">
+                                          {item.type}
+                                        </span>
+                                      </div>
+                                      <p className="mt-1 text-xs text-[var(--text-secondary)]">
+                                        {item.lobby.status} | Room {item.lobby.room_code}
+                                      </p>
+                                      <Link href={`/lobbies/${item.lobby.id}`} className="brand-link mt-2 inline-flex text-xs font-semibold">
+                                        Open room
+                                      </Link>
+                                    </div>
+                                  ))
+                              )}
+                            </div>
+                          </div>
+
+                          <div className="rounded-3xl border border-[var(--border-color)] bg-[var(--surface-elevated)] p-4">
+                            <p className="text-sm font-semibold text-[var(--text-primary)]">Tournament activity</p>
+                            <div className="mt-4 space-y-3">
+                              {[...detail.organizedTournaments.map((tournament) => ({ type: 'hosted', tournament })), ...detail.joinedTournaments.map((item) => ({ type: 'joined' as const, tournament: item.tournament, payment_status: item.payment_status }))].slice(0, 6).length === 0 ? (
+                                <p className="text-sm text-[var(--text-secondary)]">No recent tournaments.</p>
+                              ) : (
+                                [...detail.organizedTournaments.map((tournament) => ({ type: 'hosted', tournament })), ...detail.joinedTournaments.map((item) => ({ type: 'joined' as const, tournament: item.tournament, payment_status: item.payment_status }))]
+                                  .slice(0, 6)
+                                  .map((item) => (
+                                    <div key={`${item.type}-${item.tournament.id}`} className="rounded-2xl border border-[var(--border-color)] bg-[var(--surface)] px-3 py-3">
+                                      <div className="flex items-center justify-between gap-2">
+                                        <p className="text-sm font-black text-[var(--text-primary)]">{item.tournament.title}</p>
+                                        <span className="text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--text-soft)]">
+                                          {item.type}
+                                        </span>
+                                      </div>
+                                      <p className="mt-1 text-xs text-[var(--text-secondary)]">
+                                        {item.tournament.status}
+                                        {' payout_status' in item && item.payment_status ? ` | ${item.payment_status}` : ''}
+                                      </p>
+                                      <Link href={`/t/${item.tournament.slug}`} className="brand-link mt-2 inline-flex text-xs font-semibold">
+                                        Open bracket
+                                      </Link>
+                                    </div>
+                                  ))
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ) : null}
               </div>
             );
           })}

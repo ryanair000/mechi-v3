@@ -5,6 +5,9 @@
 @custom-variant dark (&:where(.dark, .dark *, [data-theme=dark], [data-theme=dark] *));
 
 :root {
+  --font-sans: "Segoe UI Variable Display", "Aptos", "Segoe UI", sans-serif;
+  --font-display: "Aptos Display", "Segoe UI Semibold", "Trebuchet MS", sans-serif;
+  --font-body: "Aptos", "Segoe UI", "Verdana", sans-serif;
   --brand-teal: #32e0c4;
   --brand-coral: #ff6b6b;
   --brand-night: #0b1121;

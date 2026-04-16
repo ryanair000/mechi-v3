@@ -8,6 +8,7 @@ export const TRACKED_RANKED_GAMES: GameKey[] = [
   'nba2k26',
   'tekken8',
   'sf6',
+  'ludo',
 ];
 
 export const XP_RULES = {

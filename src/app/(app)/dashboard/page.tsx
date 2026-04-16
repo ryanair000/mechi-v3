@@ -1,17 +1,16 @@
 'use client';
 
-import Image from 'next/image';
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
-import { AlertCircle, ChevronRight, ExternalLink, Radar, Swords } from 'lucide-react';
+import { AlertCircle, ChevronRight, Radar, Swords } from 'lucide-react';
 import { useAuth, useAuthFetch } from '@/components/AuthProvider';
 import { GameCard } from '@/components/GameCard';
 import { PaywallModal } from '@/components/PaywallModal';
 import { RatingBadge } from '@/components/RatingBadge';
 import { TierMedal } from '@/components/TierMedal';
-import { GAMES, getConfiguredPlatformForGame } from '@/lib/config';
+import { GAMES, getConfiguredPlatformForGame, supportsLobbyMode } from '@/lib/config';
 import { getLevelFromXp, getRankDivision, getXpProgress } from '@/lib/gamification';
 import { getPlan } from '@/lib/plans';
 import type { GameKey, Match, PlatformKey } from '@/types';
@@ -30,17 +29,6 @@ interface UserProfile {
 
 const WHATSAPP_JOIN_URL = process.env.NEXT_PUBLIC_WHATSAPP_JOIN_URL ?? '';
 const WHATSAPP_PROMPT_SESSION_KEY = 'mechi_whatsapp_join_prompt';
-const LIVE_DEAL = {
-  title: 'God of War Digital Deluxe Edition',
-  platform: 'PlayStation Store',
-  edition: 'PS4 Digital Deluxe Edition',
-  currentPrice: '$14.99',
-  originalPrice: '$29.99',
-  discount: '50% off',
-  endsAt: 'April 23, 2026',
-  href: 'https://store.playstation.com/en-us/product/UP9000-CUSA07408_00-GODOFWARDDE00000',
-  imageSrc: '/deals/god-of-war-digital-deluxe.png',
-} as const;
 
 interface QueueStatusResponse {
   inQueue?: boolean;
@@ -262,7 +250,7 @@ export default function DashboardPage() {
 
   const userGames = profile?.selected_games ?? [];
   const rankedGames = userGames.filter((game) => GAMES[game]?.mode === '1v1');
-  const lobbyGames = userGames.filter((game) => GAMES[game]?.mode === 'lobby');
+  const lobbyGames = userGames.filter((game) => supportsLobbyMode(game));
 
   const bestRating = rankedGames.reduce((best, game) => {
     const rating = (profile?.[`rating_${game}`] as number) ?? 1000;
@@ -354,57 +342,6 @@ export default function DashboardPage() {
             <p className="mt-3 max-w-2xl text-sm leading-6 text-[var(--text-secondary)]">
               Check your live queue energy, level track, and next match from one cleaner home base.
             </p>
-
-            <div className="mt-5 overflow-hidden rounded-[1.35rem] border border-[rgba(50,224,196,0.2)] bg-[linear-gradient(135deg,rgba(50,224,196,0.12),rgba(255,106,106,0.08))] shadow-[var(--shadow-soft)]">
-              <div className="grid gap-4 p-4 sm:grid-cols-[108px_minmax(0,1fr)] sm:p-5">
-                <div className="relative h-28 overflow-hidden rounded-[1.05rem] bg-[var(--surface-strong)] sm:h-full sm:min-h-[108px]">
-                  <Image
-                    src={LIVE_DEAL.imageSrc}
-                    alt={LIVE_DEAL.title}
-                    fill
-                    sizes="108px"
-                    className="object-cover"
-                    priority
-                  />
-                </div>
-
-                <div className="min-w-0">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="brand-chip px-3 py-1">Live PS deal</span>
-                    <span className="brand-chip-coral px-3 py-1">{LIVE_DEAL.discount}</span>
-                    <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--text-soft)]">
-                      Ends {LIVE_DEAL.endsAt}
-                    </span>
-                  </div>
-
-                  <p className="mt-3 text-lg font-black leading-tight text-[var(--text-primary)] sm:text-[1.35rem]">
-                    {LIVE_DEAL.title}
-                  </p>
-                  <p className="mt-1 text-sm text-[var(--text-secondary)]">
-                    {LIVE_DEAL.platform} • {LIVE_DEAL.edition}
-                  </p>
-
-                  <div className="mt-3 flex flex-wrap items-end gap-x-3 gap-y-2">
-                    <p className="text-2xl font-black text-[var(--text-primary)]">{LIVE_DEAL.currentPrice}</p>
-                    <p className="text-sm text-[var(--text-secondary)]">
-                      Was <span className="line-through">{LIVE_DEAL.originalPrice}</span>
-                    </p>
-                  </div>
-
-                  <div className="mt-4 flex flex-wrap gap-3">
-                    <a
-                      href={LIVE_DEAL.href}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="btn-primary shadow-none"
-                    >
-                      Open PlayStation deal
-                      <ExternalLink size={15} />
-                    </a>
-                  </div>
-                </div>
-              </div>
-            </div>
 
             <div className="mt-5 max-w-2xl rounded-[1.25rem] border border-[var(--border-color)] bg-[var(--surface-strong)] p-4 shadow-[var(--shadow-soft)]">
               <div className="flex items-center justify-between gap-3 text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--text-soft)]">
@@ -527,6 +464,7 @@ export default function DashboardPage() {
                 key={game}
                 gameKey={game}
                 onViewLobby={() => router.push(`/lobbies?game=${game}`)}
+                displayMode="lobby"
               />
             ))}
           </div>

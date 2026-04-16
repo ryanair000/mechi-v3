@@ -137,18 +137,21 @@ export async function POST(request: NextRequest) {
         rating_nba2k26: DEFAULT_RATING,
         rating_tekken8: DEFAULT_RATING,
         rating_sf6: DEFAULT_RATING,
+        rating_ludo: DEFAULT_RATING,
         wins_efootball: 0,
         wins_fc26: 0,
         wins_mk11: 0,
         wins_nba2k26: 0,
         wins_tekken8: 0,
         wins_sf6: 0,
+        wins_ludo: 0,
         losses_efootball: 0,
         losses_fc26: 0,
         losses_mk11: 0,
         losses_nba2k26: 0,
         losses_tekken8: 0,
         losses_sf6: 0,
+        losses_ludo: 0,
       })
       .select()
       .single();

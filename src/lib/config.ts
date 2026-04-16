@@ -111,11 +111,85 @@ export const GAMES: Record<GameKey, Game> = {
     mode: 'lobby',
     maxPlayers: 4,
   },
+  ludo: {
+    label: 'Ludo',
+    platforms: ['mobile'],
+    mode: '1v1',
+    supportsLobby: true,
+    maxPlayers: 4,
+  },
   rocketleague: {
     label: 'Rocket League',
     platforms: ['ps', 'xbox', 'pc'],
     mode: '1v1',
     steamAppId: 252950,
+  },
+};
+
+const GAME_ARTWORK: Record<GameKey, { header: string; capsule: string }> = {
+  efootball: {
+    header: '/game-artwork/efootball-header.svg',
+    capsule: '/game-artwork/efootball-capsule.svg',
+  },
+  efootball_mobile: {
+    header: '/game-artwork/efootball_mobile-header.svg',
+    capsule: '/game-artwork/efootball_mobile-capsule.svg',
+  },
+  fc26: {
+    header: '/game-artwork/fc26-header.svg',
+    capsule: '/game-artwork/fc26-capsule.svg',
+  },
+  mk11: {
+    header: '/game-artwork/mk11-header.svg',
+    capsule: '/game-artwork/mk11-capsule.svg',
+  },
+  nba2k26: {
+    header: '/game-artwork/nba2k26-header.svg',
+    capsule: '/game-artwork/nba2k26-capsule.svg',
+  },
+  tekken8: {
+    header: '/game-artwork/tekken8-header.svg',
+    capsule: '/game-artwork/tekken8-capsule.svg',
+  },
+  sf6: {
+    header: '/game-artwork/sf6-header.svg',
+    capsule: '/game-artwork/sf6-capsule.svg',
+  },
+  codm: {
+    header: '/game-artwork/codm-header.svg',
+    capsule: '/game-artwork/codm-capsule.svg',
+  },
+  pubgm: {
+    header: '/game-artwork/pubgm-header.svg',
+    capsule: '/game-artwork/pubgm-capsule.svg',
+  },
+  cs2: {
+    header: '/game-artwork/cs2-header.svg',
+    capsule: '/game-artwork/cs2-capsule.svg',
+  },
+  valorant: {
+    header: '/game-artwork/valorant-header.svg',
+    capsule: '/game-artwork/valorant-capsule.svg',
+  },
+  mariokart: {
+    header: '/game-artwork/mariokart-header.svg',
+    capsule: '/game-artwork/mariokart-capsule.svg',
+  },
+  smashbros: {
+    header: '/game-artwork/smashbros-header.svg',
+    capsule: '/game-artwork/smashbros-capsule.svg',
+  },
+  freefire: {
+    header: '/game-artwork/freefire-header.svg',
+    capsule: '/game-artwork/freefire-capsule.svg',
+  },
+  ludo: {
+    header: '/game-artwork/ludo-header.svg',
+    capsule: '/game-artwork/ludo-capsule.svg',
+  },
+  rocketleague: {
+    header: '/game-artwork/rocketleague-header.svg',
+    capsule: '/game-artwork/rocketleague-capsule.svg',
   },
 };
 
@@ -133,6 +207,11 @@ export const LOBBY_MODE_OPTIONS: Partial<Record<GameKey, readonly string[]>> = {
     'Classic Solo',
     'Team Deathmatch',
     'Payload',
+  ],
+  ludo: [
+    'Classic 1v1',
+    'Classic 2v2',
+    'Quick Match',
   ],
 };
 
@@ -170,22 +249,21 @@ export function getDefaultLobbyMap(gameKey: GameKey): string {
   return getLobbyPopularMaps(gameKey)[0] ?? '';
 }
 
+export function supportsLobbyMode(gameKey: GameKey): boolean {
+  const game = GAMES[gameKey];
+  return Boolean(game && (game.mode === 'lobby' || game.supportsLobby));
+}
+
 export function getTier(rating: number): Tier {
   return TIERS.find((t) => rating >= t.min && rating <= t.max) ?? TIERS[0];
 }
 
 export function getGameImage(gameKey: GameKey): string | null {
-  const game = GAMES[gameKey];
-  if (game.steamAppId) {
-    return `https://cdn.cloudflare.steamstatic.com/steam/apps/${game.steamAppId}/header.jpg`;
-  }
-  return null;
+  return GAME_ARTWORK[gameKey]?.header ?? null;
 }
 
 export function getGameCapsuleImage(gameKey: GameKey): string | null {
-  const game = GAMES[gameKey];
-  if (!game?.steamAppId) return null;
-  return `https://cdn.cloudflare.steamstatic.com/steam/apps/${game.steamAppId}/library_600x900.jpg`;
+  return GAME_ARTWORK[gameKey]?.capsule ?? null;
 }
 
 export function getGameRatingKey(game: GameKey): string {
@@ -237,6 +315,8 @@ export function getGameIdPlaceholder(gameKey: GameKey, platform: PlatformKey): s
       return 'PUBG Mobile UID';
     case 'freefire':
       return 'Free Fire UID';
+    case 'ludo':
+      return 'Ludo player name or room ID';
     default:
       return 'In-game ID';
   }

@@ -35,6 +35,7 @@ export async function GET(
           'rating_nba2k26',
           'rating_tekken8',
           'rating_sf6',
+          'rating_ludo',
           'wins_efootball',
           'wins_efootball_mobile',
           'wins_fc26',
@@ -42,6 +43,7 @@ export async function GET(
           'wins_nba2k26',
           'wins_tekken8',
           'wins_sf6',
+          'wins_ludo',
           'losses_efootball',
           'losses_efootball_mobile',
           'losses_fc26',
@@ -49,6 +51,7 @@ export async function GET(
           'losses_nba2k26',
           'losses_tekken8',
           'losses_sf6',
+          'losses_ludo',
         ].join(', ')
       )
       .contains('selected_games', [game])

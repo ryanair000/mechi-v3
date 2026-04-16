@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuthUser } from '@/lib/auth';
 import { createServiceClient } from '@/lib/supabase';
-import { GAMES, getDefaultLobbyMode, getLobbyModeOptions, getLobbyPopularMaps } from '@/lib/config';
+import { GAMES, getDefaultLobbyMode, getLobbyModeOptions, getLobbyPopularMaps, supportsLobbyMode } from '@/lib/config';
 import type { GameKey } from '@/types';
 
 function generateRoomCode(): string {
@@ -86,6 +86,9 @@ export async function POST(request: NextRequest) {
     const gameConfig = GAMES[game as GameKey];
     if (!gameConfig) {
       return NextResponse.json({ error: 'Invalid game' }, { status: 400 });
+    }
+    if (!supportsLobbyMode(game as GameKey)) {
+      return NextResponse.json({ error: 'Pick a supported lobby game' }, { status: 400 });
     }
 
     const normalizedMode = String(mode ?? '').trim();

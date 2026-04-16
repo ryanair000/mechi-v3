@@ -9,13 +9,17 @@ export type AuditAction =
   | 'resolve_dispute'
   | 'cancel_tournament'
   | 'override_tournament_winner'
+  | 'cancel_queue_entry'
+  | 'rerun_matchmaking'
+  | 'close_lobby'
+  | 'remove_lobby_member'
   | 'delete_suggestion'
   | 'system_note';
 
 export interface AuditEntry {
   adminId: string;
   action: AuditAction;
-  targetType: 'user' | 'match' | 'tournament' | 'system';
+  targetType: 'user' | 'match' | 'tournament' | 'queue' | 'lobby' | 'system';
   targetId?: string;
   details?: Record<string, unknown>;
   ipAddress?: string | null;

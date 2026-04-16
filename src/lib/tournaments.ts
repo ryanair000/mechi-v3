@@ -21,6 +21,9 @@ import type {
 } from '@/types';
 
 export const CONFIRMED_PAYMENT_STATUSES = ['paid', 'free'] as const;
+export const ACTIVE_TOURNAMENT_PLAYER_STATUSES = ['pending', ...CONFIRMED_PAYMENT_STATUSES] as const;
+
+const TOURNAMENT_PAYMENT_HOLD_MINUTES = 15;
 
 type ProfileLite = {
   id: string;
@@ -58,6 +61,56 @@ export function getTournamentPrize(entryFee: number, playerCount: number, feeRat
     platformFee,
     prizePool: Math.max(0, gross - platformFee),
   };
+}
+
+export function isActiveTournamentPlayerStatus(status: string | null | undefined): boolean {
+  return Boolean(
+    status &&
+      ACTIVE_TOURNAMENT_PLAYER_STATUSES.includes(
+        status as (typeof ACTIVE_TOURNAMENT_PLAYER_STATUSES)[number]
+      )
+  );
+}
+
+export async function releaseExpiredTournamentReservations(
+  supabase: SupabaseClient,
+  tournamentId: string
+): Promise<void> {
+  const cutoff = new Date(
+    Date.now() - TOURNAMENT_PAYMENT_HOLD_MINUTES * 60 * 1000
+  ).toISOString();
+
+  await supabase
+    .from('tournament_players')
+    .update({ payment_status: 'failed' })
+    .eq('tournament_id', tournamentId)
+    .eq('payment_status', 'pending')
+    .lt('joined_at', cutoff);
+
+  const { data: tournamentRaw } = await supabase
+    .from('tournaments')
+    .select('id, size, status')
+    .eq('id', tournamentId)
+    .single();
+
+  const tournament = tournamentRaw as Pick<Tournament, 'id' | 'size' | 'status'> | null;
+  if (!tournament || tournament.status !== 'full') {
+    return;
+  }
+
+  const { count: confirmedCount } = await supabase
+    .from('tournament_players')
+    .select('id', { count: 'exact', head: true })
+    .eq('tournament_id', tournamentId)
+    .in('payment_status', [...CONFIRMED_PAYMENT_STATUSES]);
+
+  if ((confirmedCount ?? 0) < tournament.size) {
+    await supabase
+      .from('tournaments')
+      .update({ status: 'open' })
+      .eq('id', tournamentId)
+      .eq('status', 'full');
+  }
 }
 
 export async function maybeMarkTournamentFull(

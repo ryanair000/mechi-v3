@@ -8,6 +8,19 @@ import { getPhoneLookupVariants, isValidPhoneNumber, normalizePhoneNumber } from
 import { canSelectGames } from '@/lib/plans';
 import { checkRateLimit, getClientIp, rateLimitResponse } from '@/lib/rateLimit';
 
+const STARTER_TRIAL_PLAN = 'pro';
+
+function getStarterTrialWindow() {
+  const startedAt = new Date();
+  const expiresAt = new Date(startedAt);
+  expiresAt.setMonth(expiresAt.getMonth() + 1);
+
+  return {
+    startedAtIso: startedAt.toISOString(),
+    expiresAtIso: expiresAt.toISOString(),
+  };
+}
+
 export async function POST(request: NextRequest) {
   try {
     const rateLimit = checkRateLimit(`register:${getClientIp(request)}`, 5, 60 * 60 * 1000);
@@ -54,9 +67,9 @@ export async function POST(request: NextRequest) {
     if (!selected_games || selected_games.length === 0) {
       return NextResponse.json({ error: 'Select at least one game' }, { status: 400 });
     }
-    if (!canSelectGames('free', selected_games.length)) {
+    if (!canSelectGames(STARTER_TRIAL_PLAN, selected_games.length)) {
       return NextResponse.json(
-        { error: 'Free accounts start with 1 selected game. Upgrade later to unlock 3.' },
+        { error: 'New accounts start with a Pro trial and can save up to 3 games.' },
         { status: 400 }
       );
     }
@@ -98,6 +111,7 @@ export async function POST(request: NextRequest) {
       : null;
 
     const password_hash = await hashPassword(password);
+    const trialWindow = getStarterTrialWindow();
 
     const { data: profile, error: insertError } = await supabase
       .from('profiles')
@@ -109,6 +123,9 @@ export async function POST(request: NextRequest) {
         invited_by: inviter?.id ?? null,
         password_hash,
         region: trimmedRegion,
+        plan: STARTER_TRIAL_PLAN,
+        plan_since: trialWindow.startedAtIso,
+        plan_expires_at: trialWindow.expiresAtIso,
         platforms,
         game_ids: game_ids ?? {},
         selected_games: selected_games ?? [],
@@ -139,6 +156,20 @@ export async function POST(request: NextRequest) {
     if (insertError || !profile) {
       console.error('[Register] Insert error:', insertError);
       return NextResponse.json({ error: 'Failed to create account' }, { status: 500 });
+    }
+
+    const { error: trialError } = await supabase.from('subscriptions').insert({
+      user_id: profile.id,
+      plan: STARTER_TRIAL_PLAN,
+      billing_cycle: 'monthly',
+      amount_kes: 0,
+      status: 'active',
+      started_at: trialWindow.startedAtIso,
+      expires_at: trialWindow.expiresAtIso,
+    });
+
+    if (trialError) {
+      console.error('[Register] Trial subscription tracking error:', trialError);
     }
 
     const token = signToken({

@@ -31,10 +31,11 @@ import type { InvitePreview } from '@/lib/invite';
 import { normalizeInviteCode } from '@/lib/invite';
 import { getLoginPath, getSafeNextPath } from '@/lib/navigation';
 import { normalizePhoneNumber } from '@/lib/phone';
+import { PLANS } from '@/lib/plans';
 import type { GameKey, PlatformKey } from '@/types';
 
 type Step = 1 | 2 | 3 | 4;
-const FREE_GAME_LIMIT = 1;
+const STARTER_TRIAL_GAME_LIMIT = PLANS.pro.maxGames;
 type RegisterSearchParams = Promise<{ [key: string]: string | string[] | undefined }>;
 
 interface FormData {
@@ -161,8 +162,8 @@ export default function RegisterPage({ searchParams }: { searchParams: RegisterS
   const toggleGame = (game: GameKey) => {
     setFormData((prev) => {
       const hasGame = prev.selected_games.includes(game);
-      if (!hasGame && prev.selected_games.length >= FREE_GAME_LIMIT) {
-        toast.error('Free plan starts with 1 game. Upgrade later for 3.');
+      if (!hasGame && prev.selected_games.length >= STARTER_TRIAL_GAME_LIMIT) {
+        toast.error(`Your Pro trial starts with up to ${STARTER_TRIAL_GAME_LIMIT} games.`);
         return prev;
       }
 
@@ -249,7 +250,7 @@ export default function RegisterPage({ searchParams }: { searchParams: RegisterS
         return;
       }
       login(data.token, data.user);
-      toast.success(`Welcome to Mechi, ${data.user.username}!`);
+      toast.success(`Welcome to Mechi, ${data.user.username}! Your Pro trial is active.`);
       // Use a hard navigation so auth cookie guards see the latest cookie immediately.
       window.location.assign(nextPath);
     } catch {
@@ -268,9 +269,9 @@ export default function RegisterPage({ searchParams }: { searchParams: RegisterS
       sideTitle="Join Mechi"
       sideDescription=""
       sidePoints={[
-        'Start with 1 main game on Free',
+        'Start with a 1-month Pro trial',
+        `Save up to ${STARTER_TRIAL_GAME_LIMIT} main games`,
         'Add only the IDs those games need',
-        'Upgrade later to unlock up to 3 games',
       ]}
     >
       <div className="card p-4 sm:p-6">
@@ -487,7 +488,7 @@ export default function RegisterPage({ searchParams }: { searchParams: RegisterS
                   Select your games
                 </h1>
                 <p className="mb-5 text-sm leading-6 text-[var(--text-secondary)]">
-                  Pick the games you want Mechi to organize for you.
+                  Pick the games you want Mechi to organize for you during your Pro trial.
                 </p>
                 <div className="mb-5 grid max-h-none grid-cols-1 gap-2.5 sm:max-h-72 sm:grid-cols-2 sm:overflow-y-auto">
                   {selectableGames.map((gameKey) => {
@@ -530,7 +531,7 @@ export default function RegisterPage({ searchParams }: { searchParams: RegisterS
                   })}
                 </div>
                 <p className="mb-4 text-center text-xs text-[var(--text-soft)]">
-                  {formData.selected_games.length}/{FREE_GAME_LIMIT} selected on Free
+                  {formData.selected_games.length}/{STARTER_TRIAL_GAME_LIMIT} selected on Pro trial
                 </p>
                 <div className="flex gap-3">
                   <button type="button" onClick={() => setStep(2)} className="btn-ghost flex-1">

@@ -58,6 +58,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setLoading(false);
     }
 
+    if (!storedToken && !cachedUser) {
+      clearStoredAuth();
+      setUser(null);
+      setToken(null);
+      setLoading(false);
+      return;
+    }
+
     const controller = new AbortController();
     const timeoutId = window.setTimeout(() => controller.abort(), AUTH_REFRESH_TIMEOUT_MS);
 

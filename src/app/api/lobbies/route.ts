@@ -8,6 +8,24 @@ function generateRoomCode(): string {
   return Math.random().toString(36).substring(2, 8).toUpperCase();
 }
 
+function readRelationCount(value: unknown): number {
+  if (typeof value === 'number') {
+    return value;
+  }
+
+  if (Array.isArray(value)) {
+    const first = value[0] as { count?: unknown } | undefined;
+    return typeof first?.count === 'number' ? first.count : 0;
+  }
+
+  if (value && typeof value === 'object' && 'count' in value) {
+    const count = (value as { count?: unknown }).count;
+    return typeof count === 'number' ? count : 0;
+  }
+
+  return 0;
+}
+
 export async function GET(request: NextRequest) {
   const authUser = getAuthUser(request);
   if (!authUser) {
@@ -37,7 +55,12 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to fetch lobbies' }, { status: 500 });
     }
 
-    return NextResponse.json({ lobbies: lobbies ?? [] });
+    const normalizedLobbies = ((lobbies ?? []) as Array<Record<string, unknown>>).map((lobby) => ({
+      ...lobby,
+      member_count: readRelationCount(lobby.member_count),
+    }));
+
+    return NextResponse.json({ lobbies: normalizedLobbies });
   } catch (err) {
     console.error('[Lobbies GET] Error:', err);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });

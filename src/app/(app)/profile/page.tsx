@@ -351,7 +351,7 @@ export default function ProfilePage() {
     {
       label: 'Strongest rank',
       value: bestDivision.label,
-      hint: `${bestRating} rating`,
+      hint: `Lv. ${level} progression`,
       color: bestDivision.color,
     },
     {

@@ -44,6 +44,24 @@ function formatLobbySchedule(value?: string | null) {
   }).format(date);
 }
 
+function readLobbyMemberCount(value: unknown): number {
+  if (typeof value === 'number') {
+    return value;
+  }
+
+  if (Array.isArray(value)) {
+    const first = value[0] as { count?: unknown } | undefined;
+    return typeof first?.count === 'number' ? first.count : 0;
+  }
+
+  if (value && typeof value === 'object' && 'count' in value) {
+    const count = (value as { count?: unknown }).count;
+    return typeof count === 'number' ? count : 0;
+  }
+
+  return 0;
+}
+
 function createLobbyDraft(game: GameKey) {
   return {
     game,
@@ -379,7 +397,7 @@ function LobbiesContent() {
           {lobbies.map((lobby) => {
             const game = GAMES[lobby.game];
             const isHost = lobby.host_id === user?.id;
-            const memberCount = (lobby.member_count as unknown as number) ?? 0;
+            const memberCount = readLobbyMemberCount(lobby.member_count);
             const isFull = memberCount >= lobby.max_players;
             const displayMode = lobby.mode && lobby.mode !== 'lobby' ? lobby.mode : null;
             const displayMap = typeof lobby.map_name === 'string' && lobby.map_name.length > 0 ? lobby.map_name : null;

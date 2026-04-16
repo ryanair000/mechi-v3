@@ -37,13 +37,13 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         className="pointer-events-none fixed left-0 right-0 top-0 z-0 h-[500px]"
         style={{
           background:
-            'radial-gradient(ellipse 78% 38% at 50% -6%, rgba(50,224,196,0.12) 0%, transparent 64%), radial-gradient(circle at 82% 12%, rgba(255,107,107,0.1) 0%, transparent 26%)',
+            'radial-gradient(ellipse 68% 42% at 14% -8%, var(--page-glow-1) 0%, transparent 62%), radial-gradient(ellipse 54% 38% at 92% 0%, var(--page-glow-2) 0%, transparent 58%)',
         }}
       />
       <div className="relative z-10">
         <Sidebar />
         <Navbar />
-        <div className="lg:pl-60">
+        <div className="lg:pl-[17rem]">
           <main className="pb-[calc(5rem+env(safe-area-inset-bottom))] lg:pb-8">{children}</main>
         </div>
         <BottomNav />

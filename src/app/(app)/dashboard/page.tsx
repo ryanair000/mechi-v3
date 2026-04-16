@@ -320,18 +320,35 @@ export default function DashboardPage() {
         </div>
       ) : null}
 
-      <div className="card circuit-panel mb-5 p-3 sm:p-4">
-        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-          <div className="max-w-xl">
-            <h1 className="text-[1.55rem] font-black tracking-normal text-[var(--text-primary)] sm:text-[1.95rem]">
+      <div className="card circuit-panel mb-6 overflow-hidden p-4 sm:p-5">
+        <div className="grid gap-4 xl:grid-cols-[minmax(0,1.45fr)_minmax(16rem,0.65fr)]">
+          <div
+            className="rounded-[1.45rem] border border-[var(--border-color)] p-5 sm:p-6"
+            style={{
+              background:
+                'linear-gradient(135deg, var(--surface-elevated) 0%, var(--surface) 100%)',
+            }}
+          >
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="brand-chip px-3 py-1">Dashboard</span>
+              {rankedGames.length > 0 ? (
+                <span className="brand-chip-coral px-3 py-1">{bestDivision.label}</span>
+              ) : null}
+            </div>
+
+            <h1 className="mt-4 text-[1.7rem] font-black tracking-normal text-[var(--text-primary)] sm:text-[2.1rem]">
               Command your climb, {user?.username ?? 'Player'}.
             </h1>
-            <div className="mt-4 max-w-md rounded-xl border border-[var(--border-color)] bg-[var(--surface-elevated)] p-2.5">
+            <p className="mt-3 max-w-2xl text-sm leading-6 text-[var(--text-secondary)]">
+              Check your live queue energy, level track, and next match from one cleaner home base.
+            </p>
+
+            <div className="mt-5 max-w-2xl rounded-[1.25rem] border border-[var(--border-color)] bg-[var(--surface-strong)] p-4 shadow-[var(--shadow-soft)]">
               <div className="flex items-center justify-between gap-3 text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--text-soft)]">
                 <span>XP progress</span>
                 <span>{xpProgress.progressInLevel}/{xpProgress.progressNeeded}</span>
               </div>
-              <div className="mt-2.5 h-1.5 overflow-hidden rounded-full bg-[var(--surface-strong)]">
+              <div className="mt-3 h-2 overflow-hidden rounded-full bg-[var(--surface)]">
                 <div
                   className="h-full rounded-full transition-all"
                   style={{
@@ -340,7 +357,7 @@ export default function DashboardPage() {
                   }}
                 />
               </div>
-              <div className="mt-2.5 flex flex-wrap items-center gap-2 text-xs text-[var(--text-secondary)]">
+              <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-[var(--text-secondary)]">
                 <span className="brand-chip px-2 py-0.5">Lv. {level}</span>
                 <span className="brand-chip-coral px-2 py-0.5">{mp} MP</span>
                 <span>{xpProgress.nextLevelXp - xp} XP until next level</span>
@@ -348,16 +365,16 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-2 sm:min-w-[16rem] lg:max-w-[17rem]">
-            <div className="card p-2.5">
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
+            <div className="card p-4">
               <p className="stat-label">Queue Heat</p>
-              <p className="mt-1.5 text-[1.45rem] font-black text-[var(--brand-teal)]">{queueTotal}</p>
-              <p className="mt-1 text-[10px] leading-4 text-[var(--text-soft)]">Players on your platform right now</p>
+              <p className="mt-2 text-[1.7rem] font-black text-[var(--brand-teal)]">{queueTotal}</p>
+              <p className="mt-2 text-xs leading-5 text-[var(--text-soft)]">Players on your platform right now</p>
             </div>
-            <div className="card p-2.5">
+            <div className="card p-4">
               <p className="stat-label">Win Streak</p>
-              <p className="mt-1.5 text-[1.45rem] font-black text-[var(--brand-coral)]">{streak}</p>
-              <p className="mt-1 text-[10px] leading-4 text-[var(--text-soft)]">Matches in a row right now</p>
+              <p className="mt-2 text-[1.7rem] font-black text-[var(--brand-coral)]">{streak}</p>
+              <p className="mt-2 text-xs leading-5 text-[var(--text-soft)]">Matches in a row right now</p>
             </div>
           </div>
         </div>

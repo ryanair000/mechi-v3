@@ -9,6 +9,7 @@ import {
   ChevronDown,
   Home,
   Lightbulb,
+  type LucideIcon,
   LogOut,
   Settings,
   Shield,
@@ -23,7 +24,7 @@ import { ThemeToggle } from '@/components/ThemeToggle';
 
 type NavItem = {
   href: string;
-  icon: React.ComponentType<{ size?: number; strokeWidth?: number }>;
+  icon: LucideIcon;
   label: string;
 };
 
@@ -54,28 +55,32 @@ export default function SidebarWithSubmenu() {
   const adminActive = isPathActive(pathname, '/admin');
 
   return (
-    <aside className="fixed bottom-0 left-0 top-0 z-40 hidden w-64 flex-col border-r border-[var(--border-color)] bg-[var(--surface-soft)] shadow-[var(--shadow-soft)] backdrop-blur-xl lg:flex">
-      <div className="flex h-16 items-center justify-between border-b border-[var(--border-color)] px-5">
+    <aside className="fixed bottom-0 left-0 top-0 z-40 hidden w-[17rem] flex-col border-r border-[var(--border-color)] bg-[linear-gradient(180deg,var(--surface-strong),var(--surface-soft))] px-3 py-3 shadow-[var(--shadow-soft)] backdrop-blur-xl lg:flex">
+      <div className="flex items-center justify-between rounded-[1.35rem] border border-[var(--border-color)] bg-[var(--surface)] px-4 py-3 shadow-[var(--shadow-soft)]">
         <Link href="/dashboard" className="flex items-center">
-          <BrandLogo size="md" variant="reversed" />
+          <BrandLogo size="md" variant="full" />
         </Link>
         <ThemeToggle />
       </div>
 
-      <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-4">
+      <nav className="flex-1 space-y-1.5 overflow-y-auto px-1 py-4">
         {PRIMARY_ITEMS.map(({ href, label, icon: Icon }) => {
           const isActive = isPathActive(pathname, href);
           return (
             <Link
               key={href}
               href={href}
-              className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all ${
+              className={`flex items-center gap-3 rounded-2xl border px-3.5 py-3 text-sm font-semibold transition-all ${
                 isActive
-                  ? 'bg-[rgba(50,224,196,0.14)] text-[var(--accent-secondary-text)]'
-                  : 'text-[var(--text-secondary)] hover:bg-[var(--surface)] hover:text-[var(--text-primary)]'
+                  ? 'border-[rgba(50,224,196,0.22)] bg-[var(--surface-elevated)] text-[var(--text-primary)] shadow-[0_16px_28px_rgba(50,224,196,0.12)]'
+                  : 'border-transparent text-[var(--text-secondary)] hover:border-[var(--border-color)] hover:bg-[var(--surface-elevated)] hover:text-[var(--text-primary)]'
               }`}
             >
-              <Icon size={18} strokeWidth={isActive ? 2 : 1.5} />
+              <Icon
+                size={18}
+                strokeWidth={isActive ? 2 : 1.65}
+                className={isActive ? 'text-[var(--accent-secondary-text)]' : undefined}
+              />
               {label}
             </Link>
           );
@@ -84,10 +89,10 @@ export default function SidebarWithSubmenu() {
         {user?.role === 'admin' || user?.role === 'moderator' ? (
           <Link
             href="/admin"
-            className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all ${
+            className={`flex items-center gap-3 rounded-2xl border px-3.5 py-3 text-sm font-semibold transition-all ${
               adminActive
-                ? 'bg-[rgba(255,107,107,0.14)] text-[var(--brand-coral)]'
-                : 'text-[var(--text-secondary)] hover:bg-[var(--surface)] hover:text-[var(--text-primary)]'
+                ? 'border-[rgba(255,107,107,0.2)] bg-[var(--surface-elevated)] text-[var(--brand-coral)] shadow-[0_16px_28px_rgba(255,107,107,0.12)]'
+                : 'border-transparent text-[var(--text-secondary)] hover:border-[var(--border-color)] hover:bg-[var(--surface-elevated)] hover:text-[var(--text-primary)]'
             }`}
           >
             <Shield size={18} strokeWidth={adminActive ? 2 : 1.5} />
@@ -99,15 +104,19 @@ export default function SidebarWithSubmenu() {
           <button
             type="button"
             onClick={() => setIsCompeteOpen((open) => !open)}
-            className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-medium transition-all ${
+            className={`flex w-full items-center gap-3 rounded-2xl border px-3.5 py-3 text-left text-sm font-semibold transition-all ${
               competeActive
-                ? 'bg-[rgba(50,224,196,0.14)] text-[var(--accent-secondary-text)]'
-                : 'text-[var(--text-secondary)] hover:bg-[var(--surface)] hover:text-[var(--text-primary)]'
+                ? 'border-[rgba(50,224,196,0.22)] bg-[var(--surface-elevated)] text-[var(--text-primary)] shadow-[0_16px_28px_rgba(50,224,196,0.12)]'
+                : 'border-transparent text-[var(--text-secondary)] hover:border-[var(--border-color)] hover:bg-[var(--surface-elevated)] hover:text-[var(--text-primary)]'
             }`}
             aria-expanded={isCompeteOpen}
             aria-controls="app-compete-submenu"
           >
-            <Users size={18} strokeWidth={competeActive ? 2 : 1.5} />
+            <Users
+              size={18}
+              strokeWidth={competeActive ? 2 : 1.65}
+              className={competeActive ? 'text-[var(--accent-secondary-text)]' : undefined}
+            />
             <span className="flex-1">Compete</span>
             <ChevronDown
               size={15}
@@ -116,17 +125,20 @@ export default function SidebarWithSubmenu() {
           </button>
 
           {isCompeteOpen && (
-            <ul id="app-compete-submenu" className="ml-4 mt-1 space-y-1 border-l border-[var(--border-color)] pl-3">
+            <ul
+              id="app-compete-submenu"
+              className="ml-4 mt-2 space-y-1 rounded-2xl border border-[var(--border-color)] bg-[var(--surface)] p-2 shadow-[var(--shadow-soft)]"
+            >
               {COMPETE_ITEMS.map(({ href, label, icon: Icon }) => {
                 const isActive = isPathActive(pathname, href);
                 return (
                   <li key={href}>
                     <Link
                       href={href}
-                      className={`flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm font-medium transition-all ${
+                      className={`flex items-center gap-2.5 rounded-xl border px-3 py-2.5 text-sm font-medium transition-all ${
                         isActive
-                          ? 'bg-[rgba(50,224,196,0.12)] text-[var(--accent-secondary-text)]'
-                          : 'text-[var(--text-secondary)] hover:bg-[var(--surface)] hover:text-[var(--text-primary)]'
+                          ? 'border-[rgba(50,224,196,0.18)] bg-[var(--surface-elevated)] text-[var(--accent-secondary-text)]'
+                          : 'border-transparent text-[var(--text-secondary)] hover:border-[var(--border-color)] hover:bg-[var(--surface)] hover:text-[var(--text-primary)]'
                       }`}
                     >
                       <Icon size={16} strokeWidth={isActive ? 2 : 1.6} />
@@ -140,8 +152,8 @@ export default function SidebarWithSubmenu() {
         </div>
       </nav>
 
-      <div className="space-y-1 px-3 pb-4">
-        <div className="flex items-center gap-2 px-3 py-1">
+      <div className="space-y-2 px-1 pb-1">
+        <div className="flex items-center gap-2 rounded-2xl border border-[var(--border-color)] bg-[var(--surface)] px-3 py-2 shadow-[var(--shadow-soft)]">
           <button type="button" className="icon-button h-10 w-10" aria-label="Notifications" title="Notifications">
             <Bell size={16} />
           </button>
@@ -152,8 +164,7 @@ export default function SidebarWithSubmenu() {
 
         {user && (
           <>
-            <div className="mx-3 my-2 border-t border-[var(--border-color)]" />
-            <div className="flex items-center gap-3 px-3 py-2">
+            <div className="flex items-center gap-3 rounded-[1.25rem] border border-[var(--border-color)] bg-[var(--surface-elevated)] px-3 py-3 shadow-[var(--shadow-soft)]">
               <div className="avatar-shell relative h-8 w-8 overflow-hidden text-xs">
                 {user.avatar_url ? (
                   <Image
@@ -171,6 +182,7 @@ export default function SidebarWithSubmenu() {
                 <p className="truncate text-sm font-semibold text-[var(--text-primary)]">
                   {user.username}
                 </p>
+                <p className="truncate text-[11px] text-[var(--text-soft)]">Ready to compete</p>
               </div>
               <button
                 onClick={logout}

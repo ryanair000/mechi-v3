@@ -1,13 +1,10 @@
 import { GAMES } from '@/lib/config';
 import type { GameKey } from '@/types';
+import { ADMIN_URL, APP_URL } from '@/lib/urls';
 
 const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN?.trim();
 const TELEGRAM_CHAT_ID = process.env.TELEGRAM_CHAT_ID?.trim();
 const TELEGRAM_REGISTRATION_THREAD_ID = process.env.TELEGRAM_REGISTRATION_THREAD_ID?.trim();
-const APP_URL =
-  process.env.NEXT_PUBLIC_APP_URL ??
-  process.env.NEXT_PUBLIC_BASE_URL ??
-  'https://mechi.club';
 
 function escapeTelegramHtml(value: string): string {
   return value
@@ -73,7 +70,7 @@ export async function sendNewRegistrationTelegramNotification(params: {
 }): Promise<void> {
   const selectedGames = formatGameList(params.selectedGames);
   const profileUrl = `${APP_URL}/s/${encodeURIComponent(params.username)}`;
-  const adminUrl = `${APP_URL}/admin/users`;
+  const adminUrl = `${ADMIN_URL}/users`;
   const message = [
     '<b>New Mechi registration</b>',
     '',

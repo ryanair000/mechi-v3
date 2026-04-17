@@ -1,3 +1,5 @@
+import { APP_URL } from '@/lib/urls';
+
 const WHATSAPP_TOKEN = process.env.WHATSAPP_TOKEN;
 const PHONE_NUMBER_ID = process.env.WHATSAPP_PHONE_NUMBER_ID;
 const API_VERSION = 'v25.0';
@@ -6,10 +8,6 @@ const TEST_TEMPLATE_NAME = process.env.WHATSAPP_TEST_TEMPLATE_NAME ?? 'hello_wor
 const MATCH_FOUND_TEMPLATE = process.env.WHATSAPP_TEMPLATE_MATCH_FOUND;
 const RESULT_CONFIRMED_TEMPLATE = process.env.WHATSAPP_TEMPLATE_RESULT_CONFIRMED;
 const MATCH_DISPUTE_TEMPLATE = process.env.WHATSAPP_TEMPLATE_MATCH_DISPUTE;
-const APP_URL =
-  process.env.NEXT_PUBLIC_APP_URL ??
-  process.env.NEXT_PUBLIC_BASE_URL ??
-  'https://mechi.club';
 const WHATSAPP_ENABLED = Boolean(WHATSAPP_TOKEN && PHONE_NUMBER_ID);
 
 type WhatsAppTemplateParameter = {

@@ -1,14 +1,11 @@
 import { Resend } from 'resend';
 import { DEFAULT_RATING } from '@/lib/config';
 import { getRankDivision } from '@/lib/gamification';
+import { APP_URL } from '@/lib/urls';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 const FROM_ADDRESS = process.env.RESEND_FROM_EMAIL ?? 'noreply@mechi.club';
 const FROM = `Mechi <${FROM_ADDRESS}>`;
-const APP_URL =
-  process.env.NEXT_PUBLIC_APP_URL ??
-  process.env.NEXT_PUBLIC_BASE_URL ??
-  'https://mechi.club';
 
 function baseLayout(title: string, content: string): string {
   return `<!DOCTYPE html>

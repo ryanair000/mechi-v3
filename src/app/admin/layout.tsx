@@ -16,6 +16,7 @@ import {
 import { verifyToken } from '@/lib/auth';
 import { BrandLogo } from '@/components/BrandLogo';
 import { createServiceClient } from '@/lib/supabase';
+import { APP_URL } from '@/lib/urls';
 
 const ADMIN_NAV = [
   { href: '/admin', label: 'Overview', icon: BarChart2 },
@@ -29,13 +30,14 @@ const ADMIN_NAV = [
 ];
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
+  const appDashboardUrl = `${APP_URL}/dashboard`;
   const cookieStore = await cookies();
   const token = cookieStore.get('auth_token')?.value;
   const payload = token ? verifyToken(token) : null;
   const supabase = createServiceClient();
 
   if (!payload?.sub) {
-    redirect('/dashboard');
+    redirect(appDashboardUrl);
   }
 
   const { data: profile } = await supabase
@@ -45,7 +47,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     .single();
 
   if (!profile || profile.is_banned || (profile.role !== 'admin' && profile.role !== 'moderator')) {
-    redirect('/dashboard');
+    redirect(appDashboardUrl);
   }
 
   const visibleNav = ADMIN_NAV.filter((item) => !item.adminOnly || profile.role === 'admin');
@@ -54,9 +56,9 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     <div className="page-base min-h-screen lg:grid lg:grid-cols-[16rem_1fr]">
       <aside className="hidden border-r border-[var(--border-color)] bg-[var(--surface-soft)] p-4 lg:block">
         <div className="mb-8 flex items-center justify-between">
-          <Link href="/dashboard" className="flex items-center">
+          <a href={appDashboardUrl} className="flex items-center">
             <BrandLogo size="sm" variant="reversed" />
-          </Link>
+          </a>
           <span className="rounded-full bg-[var(--danger-soft)] px-2 py-1 text-[10px] font-black uppercase tracking-[0.14em] text-red-500">
             {profile.role}
           </span>
@@ -78,18 +80,18 @@ export default async function AdminLayout({ children }: { children: React.ReactN
             </Link>
           ))}
         </nav>
-        <Link href="/dashboard" className="brand-link mt-8 inline-flex px-3 text-sm font-semibold">
+        <a href={appDashboardUrl} className="brand-link mt-8 inline-flex px-3 text-sm font-semibold">
           Back to app
-        </Link>
+        </a>
       </aside>
 
       <main className="min-w-0">
         <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6 lg:py-8">
           <div className="mb-5 flex items-center justify-between lg:hidden">
             <BrandLogo size="sm" />
-            <Link href="/dashboard" className="brand-link text-sm font-black">
+            <a href={appDashboardUrl} className="brand-link text-sm font-black">
               App
-            </Link>
+            </a>
           </div>
           {children}
         </div>

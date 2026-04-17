@@ -21,6 +21,7 @@ import { BrandLogo } from '@/components/BrandLogo';
 import { NotificationNavButton } from '@/components/NotificationNavButton';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { getPlan } from '@/lib/plans';
+import { ADMIN_URL } from '@/lib/urls';
 
 type NavItem = {
   href: string;
@@ -106,8 +107,8 @@ export default function SidebarWithSubmenu() {
         })}
 
         {user?.role === 'admin' || user?.role === 'moderator' ? (
-          <Link
-            href="/admin"
+          <a
+            href={ADMIN_URL}
             className={`flex items-center gap-3 rounded-2xl border px-3.5 py-3 text-sm font-semibold transition-all ${
               adminActive
                 ? 'border-[rgba(255,107,107,0.2)] bg-[var(--surface-elevated)] text-[var(--brand-coral)] shadow-[0_16px_28px_rgba(255,107,107,0.12)]'
@@ -116,7 +117,7 @@ export default function SidebarWithSubmenu() {
           >
             <Shield size={18} strokeWidth={adminActive ? 2 : 1.5} />
             Admin
-          </Link>
+          </a>
         ) : null}
       </nav>
 

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import type { JWTPayload } from '@/types';
 import { getLoginPath, getSafeNextPath } from '@/lib/navigation';
 import { createServiceClient } from '@/lib/supabase';
+import { ADMIN_HOST, APP_URL } from '@/lib/urls';
 
 const PROTECTED_PREFIXES = [
   '/dashboard',
@@ -26,6 +27,17 @@ const PROTECTED_PREFIXES = [
 ];
 
 const ADMIN_PREFIXES = ['/admin', '/api/admin'];
+
+const ADMIN_HOST_PATH_ALIASES: Record<string, string> = {
+  '/': '/admin',
+  '/users': '/admin/users',
+  '/queue': '/admin/queue',
+  '/lobbies': '/admin/lobbies',
+  '/matches': '/admin/matches',
+  '/tournaments': '/admin/tournaments',
+  '/whatsapp': '/admin/whatsapp',
+  '/logs': '/admin/logs',
+};
 
 const PUBLIC_PREFIXES = [
   '/',
@@ -56,6 +68,24 @@ function isAdminRoute(pathname: string) {
 
 function isProtectedRoute(pathname: string) {
   return PROTECTED_PREFIXES.some((prefix) => pathname.startsWith(prefix));
+}
+
+function getRequestHost(request: NextRequest) {
+  return (
+    request.headers.get('x-forwarded-host') ??
+    request.headers.get('host') ??
+    request.nextUrl.host
+  )
+    .split(':')[0]
+    .toLowerCase();
+}
+
+function isAdminHost(request: NextRequest) {
+  return getRequestHost(request) === ADMIN_HOST;
+}
+
+function getAdminHostAlias(pathname: string) {
+  return ADMIN_HOST_PATH_ALIASES[pathname] ?? null;
 }
 
 function base64UrlDecode(value: string) {
@@ -122,6 +152,10 @@ function forbiddenResponse(pathname: string, request: NextRequest, message = 'Fo
     return NextResponse.json({ error: message }, { status: 403 });
   }
 
+  if (isAdminHost(request)) {
+    return NextResponse.redirect(new URL('/dashboard', APP_URL));
+  }
+
   return NextResponse.redirect(new URL('/dashboard', request.url));
 }
 
@@ -136,33 +170,52 @@ function unauthorizedResponse(pathname: string, request: NextRequest) {
 
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
+  const adminHost = isAdminHost(request);
+  const adminHostAlias = adminHost ? getAdminHostAlias(pathname) : null;
+  const effectivePathname = adminHostAlias ?? pathname;
   const token = getToken(request);
   const payload = getPayload(request);
 
-  if ((pathname === '/login' || pathname === '/register') && payload) {
-    const nextPath = getSafeNextPath(request.nextUrl.searchParams.get('next'));
+  if ((effectivePathname === '/login' || effectivePathname === '/register') && payload) {
+    const access = await getCurrentAccess(payload);
+    const fallbackPath =
+      adminHost && access && !access.is_banned && (access.role === 'admin' || access.role === 'moderator')
+        ? '/admin'
+        : '/dashboard';
+    const nextPath = getSafeNextPath(request.nextUrl.searchParams.get('next'), fallbackPath);
     return NextResponse.redirect(new URL(nextPath, request.url));
   }
 
-  if (isPublic(pathname) && !isAdminRoute(pathname)) {
+  if (isPublic(effectivePathname) && !isAdminRoute(effectivePathname)) {
     return NextResponse.next();
   }
 
-  if (isAdminRoute(pathname)) {
-    if (!payload) return unauthorizedResponse(pathname, request);
+  if (isAdminRoute(effectivePathname)) {
+    if (!payload) return unauthorizedResponse(effectivePathname, request);
     const access = await getCurrentAccess(payload);
-    if (!access) return unauthorizedResponse(pathname, request);
+    if (!access) return unauthorizedResponse(effectivePathname, request);
     if (access.role !== 'admin' && access.role !== 'moderator') {
-      return forbiddenResponse(pathname, request);
+      return forbiddenResponse(effectivePathname, request);
     }
     if (access.is_banned) {
-      return forbiddenResponse(pathname, request, 'Your account has been suspended.');
+      return forbiddenResponse(effectivePathname, request, 'Your account has been suspended.');
+    }
+    if (adminHostAlias) {
+      const rewriteUrl = request.nextUrl.clone();
+      rewriteUrl.pathname = adminHostAlias;
+      return NextResponse.rewrite(rewriteUrl);
     }
     return NextResponse.next();
   }
 
-  if (isProtectedRoute(pathname)) {
-    if (!token) return unauthorizedResponse(pathname, request);
+  if (isProtectedRoute(effectivePathname)) {
+    if (!token) return unauthorizedResponse(effectivePathname, request);
+  }
+
+  if (adminHostAlias) {
+    const rewriteUrl = request.nextUrl.clone();
+    rewriteUrl.pathname = adminHostAlias;
+    return NextResponse.rewrite(rewriteUrl);
   }
 
   return NextResponse.next();

@@ -156,8 +156,11 @@ export default function RegisterPage({ searchParams }: { searchParams: RegisterS
   const hasMissingGamePlatform = formData.selected_games.some(
     (game) => !getConfiguredPlatformForGame(game, formData.game_ids, setupPlatforms)
   );
+  const hasMissingRequiredIds = requiredIdFields.some(
+    (field) => !getGameIdValue(formData.game_ids, field.game, field.platform).trim()
+  );
   const step3Valid = formData.selected_games.length > 0;
-  const step4Valid = step3Valid && !hasMissingGamePlatform;
+  const step4Valid = step3Valid && !hasMissingGamePlatform && !hasMissingRequiredIds;
 
   const toggleGame = (game: GameKey) => {
     setFormData((prev) => {
@@ -175,9 +178,12 @@ export default function RegisterPage({ searchParams }: { searchParams: RegisterS
             delete nextGameIds[getGameIdKey(game, platform)];
           }
         }
-      } else if (GAMES[game]?.platforms.length === 1) {
-        nextGameIds[getGamePlatformKey(game)] =
-          nextGameIds[getGamePlatformKey(game)] ?? GAMES[game].platforms[0];
+      } else {
+        const [defaultPlatform] = GAMES[game]?.platforms ?? [];
+        if (defaultPlatform) {
+          nextGameIds[getGamePlatformKey(game)] =
+            nextGameIds[getGamePlatformKey(game)] ?? defaultPlatform;
+        }
       }
 
       const nextSelectedGames = hasGame
@@ -226,6 +232,15 @@ export default function RegisterPage({ searchParams }: { searchParams: RegisterS
       )
     ) {
       toast.error('Choose a platform for each game');
+      return;
+    }
+    if (
+      formData.selected_games.some((game) => {
+        const platform = getConfiguredPlatformForGame(game, formData.game_ids, finalPlatforms);
+        return !platform || !getGameIdValue(formData.game_ids, game, platform).trim();
+      })
+    ) {
+      toast.error('Add the game IDs opponents will need');
       return;
     }
 
@@ -632,6 +647,13 @@ export default function RegisterPage({ searchParams }: { searchParams: RegisterS
                     </div>
                   )}
                 </div>
+                {hasMissingGamePlatform || hasMissingRequiredIds ? (
+                  <p className="mb-4 text-center text-xs text-[var(--text-soft)]">
+                    {hasMissingGamePlatform
+                      ? 'Choose a platform for every selected game.'
+                      : 'Add each game ID to create your account.'}
+                  </p>
+                ) : null}
                 <div className="flex gap-3">
                   <button type="button" onClick={() => setStep(3)} className="btn-ghost flex-1">
                     <ChevronLeft size={14} /> Back

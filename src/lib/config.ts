@@ -340,19 +340,13 @@ export function getConfiguredPlatformForGame(
   if (!game) return null;
 
   const configuredPlatform = gameIds[getGamePlatformKey(gameKey)] as PlatformKey | undefined;
-  if (
-    configuredPlatform &&
-    game.platforms.includes(configuredPlatform) &&
-    (platforms.length === 0 || platforms.includes(configuredPlatform))
-  ) {
+  if (configuredPlatform && game.platforms.includes(configuredPlatform)) {
     return configuredPlatform;
   }
 
   if (game.platforms.length === 1) {
     const [onlyPlatform] = game.platforms;
-    if (platforms.length === 0 || platforms.includes(onlyPlatform)) {
-      return onlyPlatform;
-    }
+    return onlyPlatform;
   }
 
   return platforms.find((platform) => game.platforms.includes(platform)) ?? null;

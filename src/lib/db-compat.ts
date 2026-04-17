@@ -13,26 +13,35 @@ export function isMissingColumnError(error: unknown, column?: string): boolean {
   const code = dbError.code ?? '';
 
   const normalizedMessage = message.toLowerCase();
+  const normalizedCode = code.toUpperCase();
   const columnParts = column ? column.split('.') : [];
   const tableName = columnParts.length > 1 ? columnParts[0] : null;
   const columnName = columnParts.length > 1 ? columnParts[1] : columnParts[0] ?? null;
+  const normalizedColumn = column?.toLowerCase();
 
   const matchesColumnName = !columnName
     ? false
-    : message.includes(columnName) ||
-      message.includes(`'${columnName}'`) ||
-      normalizedMessage.includes(columnName.toLowerCase());
+    : normalizedMessage.includes(columnName.toLowerCase());
 
   const matchesTableName = !tableName
     ? true
-    : message.includes(tableName) ||
-      message.includes(`'${tableName}'`) ||
-      normalizedMessage.includes(tableName.toLowerCase());
+    : normalizedMessage.includes(tableName.toLowerCase());
+
+  const matchesRequestedColumn =
+    !normalizedColumn ||
+    normalizedMessage.includes(normalizedColumn) ||
+    (matchesColumnName && matchesTableName);
+
+  const isMissingColumnCode = normalizedCode === '42703' || normalizedCode === 'PGRST204';
+  const hasMissingColumnMessage =
+    normalizedMessage.includes('does not exist') ||
+    normalizedMessage.includes('could not find the') ||
+    normalizedMessage.includes('schema cache');
 
   return (
-    (code === '42703' || code === 'PGRST204') &&
+    (isMissingColumnCode || hasMissingColumnMessage) &&
     (column
-      ? message.includes(column) || (matchesColumnName && matchesTableName)
+      ? matchesRequestedColumn
       : normalizedMessage.includes('does not exist') ||
         normalizedMessage.includes('could not find the') ||
         normalizedMessage.includes('schema cache'))

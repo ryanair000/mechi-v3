@@ -2,13 +2,21 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createServiceClient } from '@/lib/supabase';
 import { hashPassword, profileToAuthUser, signToken } from '@/lib/auth';
 import { sendWelcomeEmail } from '@/lib/email';
-import { DEFAULT_RATING } from '@/lib/config';
+import {
+  DEFAULT_RATING,
+  GAMES,
+  PLATFORMS,
+  getConfiguredPlatformForGame,
+  getGameIdValue,
+  getPlatformsForGameSetup,
+} from '@/lib/config';
 import { isMissingColumnError, isMissingTableError } from '@/lib/db-compat';
 import { findInviterByCode, generateUniqueInviteCode, normalizeInviteCode } from '@/lib/invite';
 import { getPhoneLookupVariants, isValidPhoneNumber, normalizePhoneNumber } from '@/lib/phone';
 import { canSelectGames } from '@/lib/plans';
 import { checkRateLimit, getClientIp, rateLimitResponse } from '@/lib/rateLimit';
 import { sendNewRegistrationTelegramNotification } from '@/lib/telegram';
+import type { GameKey, PlatformKey } from '@/types';
 
 const STARTER_TRIAL_PLAN = 'pro';
 
@@ -21,6 +29,62 @@ function getStarterTrialWindow() {
     startedAtIso: startedAt.toISOString(),
     expiresAtIso: expiresAt.toISOString(),
   };
+}
+
+function normalizeSelectedGames(value: unknown): { games: GameKey[]; hasInvalid: boolean } {
+  if (!Array.isArray(value)) {
+    return { games: [], hasInvalid: Boolean(value) };
+  }
+
+  const games: GameKey[] = [];
+  let hasInvalid = false;
+
+  for (const item of value) {
+    if (typeof item === 'string' && item in GAMES) {
+      const game = item as GameKey;
+      if (!games.includes(game)) {
+        games.push(game);
+      }
+    } else {
+      hasInvalid = true;
+    }
+  }
+
+  return { games, hasInvalid };
+}
+
+function normalizePlatforms(value: unknown): { platforms: PlatformKey[]; hasInvalid: boolean } {
+  if (!Array.isArray(value)) {
+    return { platforms: [], hasInvalid: Boolean(value) };
+  }
+
+  const platforms: PlatformKey[] = [];
+  let hasInvalid = false;
+
+  for (const item of value) {
+    if (typeof item === 'string' && item in PLATFORMS) {
+      const platform = item as PlatformKey;
+      if (!platforms.includes(platform)) {
+        platforms.push(platform);
+      }
+    } else {
+      hasInvalid = true;
+    }
+  }
+
+  return { platforms, hasInvalid };
+}
+
+function normalizeGameIds(value: unknown): Record<string, string> {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    return {};
+  }
+
+  return Object.fromEntries(
+    Object.entries(value)
+      .filter((entry): entry is [string, string] => typeof entry[1] === 'string')
+      .map(([key, id]) => [key, id.trim()])
+  );
 }
 
 export async function POST(request: NextRequest) {
@@ -44,6 +108,16 @@ export async function POST(request: NextRequest) {
       whatsapp_notifications,
       invite_code,
     } = body;
+    const { games: selectedGames, hasInvalid: hasInvalidSelectedGame } =
+      normalizeSelectedGames(selected_games);
+    const { platforms: requestedPlatforms, hasInvalid: hasInvalidPlatform } =
+      normalizePlatforms(platforms);
+    const submittedGameIds = normalizeGameIds(game_ids);
+    const finalPlatforms = getPlatformsForGameSetup(
+      selectedGames,
+      submittedGameIds,
+      requestedPlatforms
+    );
     const trimmedEmail = String(email ?? '').trim();
     const trimmedRegion = String(region ?? '').trim();
     const normalizedInviteCode = normalizeInviteCode(invite_code);
@@ -63,15 +137,36 @@ export async function POST(request: NextRequest) {
     if (password.length < 6) {
       return NextResponse.json({ error: 'Password must be at least 6 characters' }, { status: 400 });
     }
-    if (!platforms || platforms.length === 0) {
-      return NextResponse.json({ error: 'Select at least one platform' }, { status: 400 });
+    if (hasInvalidPlatform) {
+      return NextResponse.json({ error: 'Choose valid platforms' }, { status: 400 });
     }
-    if (!selected_games || selected_games.length === 0) {
+    if (hasInvalidSelectedGame) {
+      return NextResponse.json({ error: 'Choose valid games' }, { status: 400 });
+    }
+    if (selectedGames.length === 0) {
       return NextResponse.json({ error: 'Select at least one game' }, { status: 400 });
     }
-    if (!canSelectGames(STARTER_TRIAL_PLAN, selected_games.length)) {
+    if (!canSelectGames(STARTER_TRIAL_PLAN, selectedGames.length)) {
       return NextResponse.json(
         { error: 'New accounts start with a Pro trial and can save up to 3 games.' },
+        { status: 400 }
+      );
+    }
+    if (
+      selectedGames.some(
+        (game) => !getConfiguredPlatformForGame(game, submittedGameIds, finalPlatforms)
+      )
+    ) {
+      return NextResponse.json({ error: 'Choose a platform for each game' }, { status: 400 });
+    }
+    if (
+      selectedGames.some((game) => {
+        const platform = getConfiguredPlatformForGame(game, submittedGameIds, finalPlatforms);
+        return !platform || !getGameIdValue(submittedGameIds, game, platform).trim();
+      })
+    ) {
+      return NextResponse.json(
+        { error: 'Add the game IDs opponents will need' },
         { status: 400 }
       );
     }
@@ -126,9 +221,9 @@ export async function POST(request: NextRequest) {
       plan: STARTER_TRIAL_PLAN,
       plan_since: trialWindow.startedAtIso,
       plan_expires_at: trialWindow.expiresAtIso,
-      platforms,
-      game_ids: game_ids ?? {},
-      selected_games: selected_games ?? [],
+      platforms: finalPlatforms,
+      game_ids: submittedGameIds,
+      selected_games: selectedGames,
       whatsapp_number: resolvedWhatsappNumber,
       whatsapp_notifications: Boolean(whatsapp_notifications),
       rating_efootball: DEFAULT_RATING,
@@ -157,9 +252,9 @@ export async function POST(request: NextRequest) {
       email: trimmedEmail,
       password_hash,
       region: trimmedRegion,
-      platforms,
-      game_ids: game_ids ?? {},
-      selected_games: selected_games ?? [],
+      platforms: finalPlatforms,
+      game_ids: submittedGameIds,
+      selected_games: selectedGames,
       whatsapp_number: resolvedWhatsappNumber,
     };
 
@@ -215,7 +310,7 @@ export async function POST(request: NextRequest) {
       email: trimmedEmail,
       phone: normalizedPhone,
       region: trimmedRegion,
-      selectedGames: selected_games ?? [],
+      selectedGames,
       plan: STARTER_TRIAL_PLAN,
       inviteCode: normalizedInviteCode,
     }).catch((error) => {

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { PRIMARY_ADMIN_PHONE, isPrimaryAdminPhone } from '@/lib/admin-access';
 import { getRequestAccessProfile, hasAdminAccess, hasModeratorAccess } from '@/lib/access';
 import { writeAuditLog, type AuditAction } from '@/lib/audit';
 import { getClientIp } from '@/lib/rateLimit';
@@ -190,7 +191,7 @@ export async function PATCH(
 
     const { data: target, error: targetError } = await supabase
       .from('profiles')
-      .select('id, username, role, is_banned')
+      .select('id, username, phone, role, is_banned')
       .eq('id', id)
       .single();
 
@@ -231,6 +232,20 @@ export async function PATCH(
 
       if (body.role === 'admin' && !hasAdminAccess(admin)) {
         return NextResponse.json({ error: 'Only admins can promote admins' }, { status: 403 });
+      }
+
+      if (body.role === 'admin' && !isPrimaryAdminPhone(target.phone)) {
+        return NextResponse.json(
+          { error: `Only ${PRIMARY_ADMIN_PHONE} can hold admin access` },
+          { status: 400 }
+        );
+      }
+
+      if (target.role === 'admin' && isPrimaryAdminPhone(target.phone) && body.role !== 'admin') {
+        return NextResponse.json(
+          { error: `Keep ${PRIMARY_ADMIN_PHONE} as the admin account` },
+          { status: 400 }
+        );
       }
 
       updateData = { role: body.role };

@@ -14,6 +14,7 @@ import {
   Trophy,
   Users,
 } from 'lucide-react';
+import { hasPrimaryAdminAccess } from '@/lib/admin-access';
 import { verifyToken } from '@/lib/auth';
 import { BrandLogo } from '@/components/BrandLogo';
 import { createServiceClient } from '@/lib/supabase';
@@ -44,15 +45,15 @@ export default async function AdminLayout({ children }: { children: React.ReactN
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('role, is_banned')
+    .select('phone, role, is_banned')
     .eq('id', payload.sub)
     .single();
 
-  if (!profile || profile.is_banned || (profile.role !== 'admin' && profile.role !== 'moderator')) {
+  if (!profile || profile.is_banned || !hasPrimaryAdminAccess(profile)) {
     redirect(appDashboardUrl);
   }
 
-  const visibleNav = ADMIN_NAV.filter((item) => !item.adminOnly || profile.role === 'admin');
+  const visibleNav = ADMIN_NAV;
 
   return (
     <div className="page-base min-h-screen lg:grid lg:grid-cols-[16rem_1fr]">

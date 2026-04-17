@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Home, Shield, Swords, Trophy, User, Users } from 'lucide-react';
+import { hasPrimaryAdminAccess } from '@/lib/admin-access';
 import { useAuth } from '@/components/AuthProvider';
 import { ADMIN_URL } from '@/lib/urls';
 
@@ -38,7 +39,7 @@ export function BottomNav() {
             </Link>
           );
         })}
-        {user?.role === 'admin' || user?.role === 'moderator' ? (
+        {hasPrimaryAdminAccess(user) ? (
           <a
             href={ADMIN_URL}
             className={`flex min-w-0 flex-1 flex-col items-center justify-center gap-1 self-stretch rounded-lg px-1 py-2 transition-colors ${

@@ -1,6 +1,7 @@
 'use client';
 
 import { createContext, useContext, useEffect, useState, useCallback } from 'react';
+import { hasPrimaryAdminAccess } from '@/lib/admin-access';
 import type { AuthUser } from '@/types';
 
 const TOKEN_STORAGE_KEY = 'mechi_token';
@@ -47,6 +48,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (storedUser) {
       try {
         cachedUser = JSON.parse(storedUser) as AuthUser;
+        if (cachedUser.role && !hasPrimaryAdminAccess(cachedUser)) {
+          cachedUser = {
+            ...cachedUser,
+            role: 'user',
+          };
+        }
       } catch {
         localStorage.removeItem(USER_STORAGE_KEY);
       }

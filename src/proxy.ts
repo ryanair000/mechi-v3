@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import type { JWTPayload } from '@/types';
+import { hasPrimaryAdminAccess } from '@/lib/admin-access';
 import { getLoginPath, getSafeNextPath } from '@/lib/navigation';
 import { createServiceClient } from '@/lib/supabase';
 import { ADMIN_HOST, APP_URL } from '@/lib/urls';
@@ -134,7 +135,7 @@ async function getCurrentAccess(payload: JWTPayload | null) {
   const supabase = createServiceClient();
   const { data, error } = await supabase
     .from('profiles')
-    .select('role, is_banned')
+    .select('phone, role, is_banned')
     .eq('id', payload.sub)
     .single();
 
@@ -143,6 +144,7 @@ async function getCurrentAccess(payload: JWTPayload | null) {
   }
 
   return {
+    phone: (data.phone as string | null | undefined) ?? '',
     role: (data.role as JWTPayload['role']) ?? 'user',
     is_banned: Boolean(data.is_banned),
   };
@@ -180,7 +182,7 @@ export async function proxy(request: NextRequest) {
   if ((effectivePathname === '/login' || effectivePathname === '/register') && payload) {
     const access = await getCurrentAccess(payload);
     const fallbackPath =
-      adminHost && access && !access.is_banned && (access.role === 'admin' || access.role === 'moderator')
+      adminHost && access && !access.is_banned && hasPrimaryAdminAccess(access)
         ? '/admin'
         : '/dashboard';
     const nextPath = getSafeNextPath(request.nextUrl.searchParams.get('next'), fallbackPath);
@@ -195,7 +197,7 @@ export async function proxy(request: NextRequest) {
     if (!payload) return unauthorizedResponse(effectivePathname, request);
     const access = await getCurrentAccess(payload);
     if (!access) return unauthorizedResponse(effectivePathname, request);
-    if (access.role !== 'admin' && access.role !== 'moderator') {
+    if (!hasPrimaryAdminAccess(access)) {
       return forbiddenResponse(effectivePathname, request);
     }
     if (access.is_banned) {

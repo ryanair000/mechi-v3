@@ -1,6 +1,7 @@
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { ScrollText } from 'lucide-react';
+import { hasPrimaryAdminAccess } from '@/lib/admin-access';
 import { verifyToken } from '@/lib/auth';
 import { createServiceClient } from '@/lib/supabase';
 import type { AuditLog } from '@/types';
@@ -17,11 +18,11 @@ async function getLogs(): Promise<AuditLog[]> {
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('role, is_banned')
+    .select('phone, role, is_banned')
     .eq('id', payload.sub)
     .single();
 
-  if (!profile || profile.is_banned || profile.role !== 'admin') {
+  if (!profile || profile.is_banned || !hasPrimaryAdminAccess(profile)) {
     redirect('/admin');
   }
 

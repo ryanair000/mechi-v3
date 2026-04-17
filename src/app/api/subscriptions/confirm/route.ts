@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getAuthUser, isAdmin } from '@/lib/auth';
+import { getRequestAccessProfile, hasAdminAccess } from '@/lib/access';
 import { activateSubscription } from '@/lib/subscription';
 
 export async function POST(request: NextRequest) {
-  const authUser = getAuthUser(request);
-  if (!authUser || !isAdmin(authUser)) {
+  const user = await getRequestAccessProfile(request);
+  if (!user || user.is_banned || !hasAdminAccess(user)) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 

@@ -11,7 +11,6 @@ import {
   type LucideIcon,
   LogOut,
   Settings,
-  Shield,
   Swords,
   Trophy,
   User,
@@ -22,7 +21,6 @@ import { BrandLogo } from '@/components/BrandLogo';
 import { NotificationNavButton } from '@/components/NotificationNavButton';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { getPlan } from '@/lib/plans';
-import { ADMIN_URL } from '@/lib/urls';
 
 type NavItem = {
   href: string;
@@ -49,7 +47,6 @@ function isPathActive(pathname: string, href: string) {
 export default function SidebarWithSubmenu() {
   const pathname = usePathname();
   const { user, logout } = useAuth();
-  const adminActive = isPathActive(pathname, '/admin');
   const currentPlan = getPlan(user?.plan ?? 'free');
   const profileHash = useSyncExternalStore(
     (onStoreChange) => {
@@ -126,19 +123,6 @@ export default function SidebarWithSubmenu() {
           );
         })}
 
-        {user?.role === 'admin' || user?.role === 'moderator' ? (
-          <a
-            href={ADMIN_URL}
-            className={`flex items-center gap-3 rounded-2xl border px-3.5 py-3 text-sm font-semibold transition-all ${
-              adminActive
-                ? 'border-[rgba(255,107,107,0.2)] bg-[var(--surface-elevated)] text-[var(--brand-coral)] shadow-[0_16px_28px_rgba(255,107,107,0.12)]'
-                : 'border-transparent text-[var(--text-secondary)] hover:border-[var(--border-color)] hover:bg-[var(--surface-elevated)] hover:text-[var(--text-primary)]'
-            }`}
-          >
-            <Shield size={18} strokeWidth={adminActive ? 2 : 1.5} />
-            Admin
-          </a>
-        ) : null}
       </nav>
 
       <div className="space-y-2 px-1 pb-1">

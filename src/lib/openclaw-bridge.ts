@@ -63,6 +63,7 @@ function normalizeDisposition(value: unknown, hasReplyText: boolean): SupportBri
     normalized === 'reply' ||
     normalized === 'answer' ||
     normalized === 'answered' ||
+    normalized === 'resolved' ||
     normalized === 'response' ||
     normalized === 'responded' ||
     normalized.includes('reply') ||

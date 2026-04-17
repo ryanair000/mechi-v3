@@ -42,7 +42,7 @@ type ProfileRow = Record<string, unknown> & {
 
 type RpcResult = {
   status: 'completed';
-  winner_id: string;
+  winner_id: string | null;
   gamification_summary_p1?: GamificationResult | null;
   gamification_summary_p2?: GamificationResult | null;
 };
@@ -335,7 +335,7 @@ export async function POST(
     const usesScoreReport = requiresMatchScoreReport(game);
     const rawPlayer1Score = parseReportedScore(body.player1_score);
     const rawPlayer2Score = parseReportedScore(body.player2_score);
-    let winnerId = String(body.winner_id ?? '').trim();
+    let winnerId: string | null = String(body.winner_id ?? '').trim() || null;
     let reportedPlayer1Score: number | null = null;
     let reportedPlayer2Score: number | null = null;
 
@@ -357,15 +357,12 @@ export async function POST(
       reportedPlayer1Score = rawPlayer1Score;
       reportedPlayer2Score = rawPlayer2Score;
 
-      if (reportedPlayer1Score === reportedPlayer2Score) {
-        return NextResponse.json(
-          { error: 'Draws are not supported for score reports yet' },
-          { status: 400 }
-        );
-      }
-
       winnerId =
-        reportedPlayer1Score > reportedPlayer2Score ? match.player1_id : match.player2_id;
+        reportedPlayer1Score > reportedPlayer2Score
+          ? match.player1_id
+          : reportedPlayer1Score < reportedPlayer2Score
+            ? match.player2_id
+            : null;
     } else {
       if (!winnerId) {
         return NextResponse.json({ error: 'winner_id is required' }, { status: 400 });
@@ -378,7 +375,7 @@ export async function POST(
 
     const isPlayer1 = authUser.sub === match.player1_id;
     const reportField = isPlayer1 ? 'player1_reported_winner' : 'player2_reported_winner';
-    const reportUpdate: Record<string, string | number> = { [reportField]: winnerId };
+    const reportUpdate: Record<string, string | number | null> = { [reportField]: winnerId };
 
     if (usesScoreReport && reportedPlayer1Score !== null && reportedPlayer2Score !== null) {
       if (isPlayer1) {
@@ -416,7 +413,10 @@ export async function POST(
       updatedMatch.player2_reported_player2_score !== null &&
       updatedMatch.player2_reported_player2_score !== undefined;
 
-    if (p1Reported && p2Reported) {
+    const scoreReportsReady = usesScoreReport && p1ScoreReady && p2ScoreReady;
+    const winnerReportsReady = !usesScoreReport && Boolean(p1Reported && p2Reported);
+
+    if (scoreReportsReady || winnerReportsReady) {
       const scoreMismatch =
         usesScoreReport &&
         (!p1ScoreReady ||
@@ -426,7 +426,7 @@ export async function POST(
           updatedMatch.player1_reported_player2_score !==
             updatedMatch.player2_reported_player2_score);
 
-      if (p1Reported !== p2Reported || scoreMismatch) {
+      if ((!usesScoreReport && p1Reported !== p2Reported) || scoreMismatch) {
         await supabase
           .from('matches')
           .update({
@@ -513,19 +513,87 @@ export async function POST(
         return NextResponse.json({ status: 'disputed' });
       }
 
-      const winnerId = p1Reported;
-      const loserId = winnerId === match.player1_id ? match.player2_id : match.player1_id;
-      const winnerIsPlayer1 = winnerId === match.player1_id;
       const gameLabel = GAMES[game]?.label ?? game;
-      const ratingKey = getGameRatingKey(game);
-      const winsKey = getGameWinsKey(game);
-      const lossesKey = getGameLossesKey(game);
       const finalPlayer1Score = usesScoreReport
         ? updatedMatch.player1_reported_player1_score ?? null
         : null;
       const finalPlayer2Score = usesScoreReport
         ? updatedMatch.player1_reported_player2_score ?? null
         : null;
+      const finalWinnerId =
+        usesScoreReport && finalPlayer1Score !== null && finalPlayer2Score !== null
+          ? finalPlayer1Score > finalPlayer2Score
+            ? match.player1_id
+            : finalPlayer1Score < finalPlayer2Score
+              ? match.player2_id
+              : null
+          : p1Reported;
+      const isDraw =
+        usesScoreReport &&
+        finalPlayer1Score !== null &&
+        finalPlayer2Score !== null &&
+        finalPlayer1Score === finalPlayer2Score;
+
+      if (isDraw) {
+        const { error: drawUpdateError } = await supabase
+          .from('matches')
+          .update({
+            status: 'completed',
+            winner_id: null,
+            rating_change_p1: 0,
+            rating_change_p2: 0,
+            player1_score: finalPlayer1Score,
+            player2_score: finalPlayer2Score,
+            completed_at: new Date().toISOString(),
+            gamification_summary_p1: null,
+            gamification_summary_p2: null,
+          })
+          .eq('id', id);
+
+        if (drawUpdateError) {
+          return NextResponse.json({ error: 'Failed to finalize draw' }, { status: 500 });
+        }
+
+        const scoreline = formatScoreline(finalPlayer1Score, finalPlayer2Score);
+        await createNotifications(
+          [match.player1_id, match.player2_id].map((userId) => ({
+            user_id: userId,
+            type: 'match_completed' as const,
+            title: 'Draw confirmed',
+            body: `${gameLabel} ended ${scoreline}. Both score reports matched.`,
+            href: `/match/${id}`,
+            metadata: {
+              match_id: id,
+              game,
+              winner_id: null,
+              result: 'draw',
+              player1_score: finalPlayer1Score,
+              player2_score: finalPlayer2Score,
+            },
+          })),
+          supabase
+        );
+
+        return NextResponse.json({
+          status: 'completed',
+          result: 'draw',
+          winner_id: null,
+          player1_score: finalPlayer1Score,
+          player2_score: finalPlayer2Score,
+          gamification: null,
+        });
+      }
+
+      if (!finalWinnerId) {
+        return NextResponse.json({ error: 'Could not determine match winner' }, { status: 400 });
+      }
+
+      const winnerId = finalWinnerId;
+      const loserId = winnerId === match.player1_id ? match.player2_id : match.player1_id;
+      const winnerIsPlayer1 = winnerId === match.player1_id;
+      const ratingKey = getGameRatingKey(game);
+      const winsKey = getGameWinsKey(game);
+      const lossesKey = getGameLossesKey(game);
 
       const { data: profilesRaw, error: profilesError } = await supabase
         .from('profiles')

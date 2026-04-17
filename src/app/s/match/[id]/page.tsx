@@ -55,12 +55,30 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   }
 
   const { match, player1, player2 } = data;
-  const winner = match.winner_id === match.player1_id ? player1 : player2;
-  const loser = match.winner_id === match.player1_id ? player2 : player1;
+  const scoreline =
+    match.player1_score !== null &&
+    match.player1_score !== undefined &&
+    match.player2_score !== null &&
+    match.player2_score !== undefined
+      ? `${match.player1_score}-${match.player2_score}`
+      : null;
+  const isDraw =
+    match.winner_id === null &&
+    match.player1_score !== null &&
+    match.player1_score !== undefined &&
+    match.player2_score !== null &&
+    match.player2_score !== undefined &&
+    match.player1_score === match.player2_score;
+  const winner = isDraw ? null : match.winner_id === match.player1_id ? player1 : player2;
+  const loser = isDraw ? null : match.winner_id === match.player1_id ? player2 : player1;
   const game = GAME_LABELS[match.game] ?? match.game;
 
-  const title = `${winner?.username ?? 'Player'} beat ${loser?.username ?? 'Player'} on ${game} | Mechi`;
-  const description = `${winner?.username} beat ${loser?.username} in ${game} on Mechi. Result confirmed. Climb continues.`;
+  const title = isDraw
+    ? `${player1?.username ?? 'Player'} drew ${player2?.username ?? 'Player'} on ${game} | Mechi`
+    : `${winner?.username ?? 'Player'} beat ${loser?.username ?? 'Player'} on ${game} | Mechi`;
+  const description = isDraw
+    ? `${player1?.username} and ${player2?.username} drew${scoreline ? ` ${scoreline}` : ''} in ${game} on Mechi. Result confirmed.`
+    : `${winner?.username} beat ${loser?.username} in ${game} on Mechi. Result confirmed. Climb continues.`;
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://mechi.club';
 
   return {
@@ -99,10 +117,26 @@ export default async function ShareMatchPage({ params }: Props) {
   }
 
   const { match, player1, player2 } = data;
-  const winner = match.winner_id === match.player1_id ? player1 : player2;
-  const loser = match.winner_id === match.player1_id ? player2 : player1;
+  const scoreline =
+    match.player1_score !== null &&
+    match.player1_score !== undefined &&
+    match.player2_score !== null &&
+    match.player2_score !== undefined
+      ? `${match.player1_score}-${match.player2_score}`
+      : null;
+  const isDraw =
+    match.winner_id === null &&
+    match.player1_score !== null &&
+    match.player1_score !== undefined &&
+    match.player2_score !== null &&
+    match.player2_score !== undefined &&
+    match.player1_score === match.player2_score;
+  const winner = isDraw ? null : match.winner_id === match.player1_id ? player1 : player2;
+  const loser = isDraw ? null : match.winner_id === match.player1_id ? player2 : player1;
   const winnerSummary =
-    match.winner_id === match.player1_id
+    isDraw
+      ? null
+      : match.winner_id === match.player1_id
       ? match.gamification_summary_p1 ?? null
       : match.gamification_summary_p2 ?? null;
   const game = GAME_LABELS[match.game] ?? match.game;
@@ -123,26 +157,36 @@ export default async function ShareMatchPage({ params }: Props) {
         <div className="card circuit-panel w-full max-w-lg p-8 text-center sm:p-10">
           <p className="brand-kicker justify-center">Match Result</p>
           <div className="mx-auto mb-4 mt-5 flex h-20 w-20 items-center justify-center rounded-full bg-[rgba(255,107,107,0.14)] text-3xl font-black text-[var(--brand-coral)]">
-            W
+            {isDraw ? 'D' : 'W'}
           </div>
           <h1 className="mb-2 text-3xl font-black tracking-normal text-[var(--text-primary)]">
-            {winner?.username ?? 'Player'} won!
+            {isDraw
+              ? `${player1?.username ?? 'Player'} drew ${player2?.username ?? 'Player'}`
+              : `${winner?.username ?? 'Player'} won!`}
           </h1>
           <p className="mb-3 text-sm text-[var(--text-secondary)]">
-            {winner?.username} beat {loser?.username} in {game}
+            {isDraw
+              ? `${scoreline ? `${scoreline} draw` : 'Draw'} in ${game}`
+              : `${winner?.username} beat ${loser?.username} in ${game}`}
           </p>
-          <div
-            className="mx-auto mb-8 inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-semibold"
-            style={{
-              color: division.color,
-              backgroundColor: withAlpha(division.color, '14'),
-              borderColor: withAlpha(division.color, '30'),
-            }}
-          >
-            <span>{division.label}</span>
-            <span className="text-[var(--text-soft)]">/</span>
-            <span>Lv. {winnerLevel}</span>
-          </div>
+          {isDraw ? (
+            <div className="mx-auto mb-8 inline-flex items-center gap-2 rounded-full border border-[var(--border-color)] bg-[var(--surface-elevated)] px-4 py-2 text-sm font-semibold text-[var(--text-primary)]">
+              Result confirmed
+            </div>
+          ) : (
+            <div
+              className="mx-auto mb-8 inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-semibold"
+              style={{
+                color: division.color,
+                backgroundColor: withAlpha(division.color, '14'),
+                borderColor: withAlpha(division.color, '30'),
+              }}
+            >
+              <span>{division.label}</span>
+              <span className="text-[var(--text-soft)]">/</span>
+              <span>Lv. {winnerLevel}</span>
+            </div>
+          )}
 
           {winnerSummary && (
             <div className="mb-8 flex flex-wrap items-center justify-center gap-2">

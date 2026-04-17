@@ -72,17 +72,6 @@ export async function GET(request: NextRequest) {
 
     const p1 = profiles?.find((profile: { id: string }) => profile.id === match.player1_id);
     const p2 = profiles?.find((profile: { id: string }) => profile.id === match.player2_id);
-    const winner = match.winner_id === match.player1_id ? p1 : p2;
-    const loser = match.winner_id === match.player1_id ? p2 : p1;
-    const winnerSummary =
-      match.winner_id === match.player1_id
-        ? match.gamification_summary_p1 ?? null
-        : match.gamification_summary_p2 ?? null;
-    const winnerRating = ((winner as Record<string, unknown> | undefined)?.[`rating_${match.game}`] as number) ?? 1000;
-    const division = getRankDivision(winnerRating);
-    const winnerXp = (winner?.xp as number | null) ?? 0;
-    const winnerLevel = winnerSummary?.newLevel ?? ((winner?.level as number | null) ?? getLevelFromXp(winnerXp));
-    const gameLabel = GAME_LABELS[match.game] ?? match.game;
     const scoreline =
       match.player1_score !== null &&
       match.player1_score !== undefined &&
@@ -90,7 +79,26 @@ export async function GET(request: NextRequest) {
       match.player2_score !== undefined
         ? `${match.player1_score}-${match.player2_score}`
         : null;
-
+    const isDraw =
+      match.winner_id === null &&
+      match.player1_score !== null &&
+      match.player1_score !== undefined &&
+      match.player2_score !== null &&
+      match.player2_score !== undefined &&
+      match.player1_score === match.player2_score;
+    const winner = isDraw ? null : match.winner_id === match.player1_id ? p1 : p2;
+    const loser = isDraw ? null : match.winner_id === match.player1_id ? p2 : p1;
+    const winnerSummary =
+      isDraw
+        ? null
+        : match.winner_id === match.player1_id
+        ? match.gamification_summary_p1 ?? null
+        : match.gamification_summary_p2 ?? null;
+    const winnerRating = ((winner as Record<string, unknown> | undefined)?.[`rating_${match.game}`] as number) ?? 1000;
+    const division = getRankDivision(winnerRating);
+    const winnerXp = (winner?.xp as number | null) ?? 0;
+    const winnerLevel = winnerSummary?.newLevel ?? ((winner?.level as number | null) ?? getLevelFromXp(winnerXp));
+    const gameLabel = GAME_LABELS[match.game] ?? match.game;
     return new ImageResponse(
       (
         <div
@@ -138,10 +146,14 @@ export async function GET(request: NextRequest) {
                 letterSpacing: '-0.06em',
               }}
             >
-              {winner?.username ?? 'Player'} beat {loser?.username ?? 'Player'}
+              {isDraw
+                ? `${p1?.username ?? 'Player'} drew ${p2?.username ?? 'Player'}`
+                : `${winner?.username ?? 'Player'} beat ${loser?.username ?? 'Player'}`}
             </span>
             <span style={{ marginTop: '20px', fontSize: '24px', color: 'rgba(255,255,255,0.68)' }}>
-              {scoreline
+              {isDraw && scoreline
+                ? `Score locked at ${scoreline}. Draw confirmed on Mechi.`
+                : scoreline
                 ? `Score locked at ${scoreline}. Progress updated on Mechi.`
                 : 'Clean result lock. Progress updated on Mechi.'}
             </span>
@@ -159,13 +171,17 @@ export async function GET(request: NextRequest) {
                 border: '1px solid rgba(50,224,196,0.18)',
               }}
             >
-              <span style={{ fontSize: '14px', color: 'rgba(255,255,255,0.58)' }}>Winner</span>
+              <span style={{ fontSize: '14px', color: 'rgba(255,255,255,0.58)' }}>
+                {isDraw ? 'Result' : 'Winner'}
+              </span>
               <span style={{ marginTop: '12px', fontSize: '34px', fontWeight: 900 }}>
-                {winner?.username ?? 'Player'}
+                {isDraw ? 'Draw confirmed' : winner?.username ?? 'Player'}
               </span>
-              <span style={{ marginTop: '12px', fontSize: '22px', fontWeight: 800, color: division.color }}>
-                {division.label} / Lv. {winnerLevel}
-              </span>
+              {!isDraw ? (
+                <span style={{ marginTop: '12px', fontSize: '22px', fontWeight: 800, color: division.color }}>
+                  {division.label} / Lv. {winnerLevel}
+                </span>
+              ) : null}
               {winnerSummary ? (
                 <span style={{ marginTop: '12px', fontSize: '18px', color: '#32E0C4' }}>
                   +{winnerSummary.xpEarned} XP / +{winnerSummary.mpEarned} MP

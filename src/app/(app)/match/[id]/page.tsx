@@ -237,15 +237,14 @@ export default function MatchPage() {
       const player1Score = Number(player1ScoreText);
       const player2Score = Number(player2ScoreText);
 
-      if (player1Score === player2Score) {
-        toast.error('Draws are not supported yet. Enter the final winner scoreline.');
-        return;
-      }
-
       payload.player1_score = player1Score;
       payload.player2_score = player2Score;
       payload.winner_id =
-        player1Score > player2Score ? match.player1_id : match.player2_id;
+        player1Score > player2Score
+          ? match.player1_id
+          : player1Score < player2Score
+            ? match.player2_id
+            : null;
     } else if (!winnerId) {
       toast.error('Pick a winner first');
       return;
@@ -280,7 +279,7 @@ export default function MatchPage() {
       }
 
       if (data.status === 'completed') {
-        toast.success('Match completed! Your climb is updated.');
+        toast.success(data.result === 'draw' ? 'Draw confirmed. Score locked.' : 'Match completed! Your climb is updated.');
       } else if (data.status === 'disputed') {
         toast.error('Result disputed! Upload a screenshot.');
       } else {
@@ -412,11 +411,37 @@ export default function MatchPage() {
     match.player2_score !== undefined
       ? `${match.player1_score}-${match.player2_score}`
       : null;
+  const hasMyReport = usesScoreReport ? Boolean(myReportedScoreline) : Boolean(myReport);
+  const hasOpponentReport = usesScoreReport
+    ? Boolean(opponentReportedScoreline)
+    : Boolean(opponentReport);
+  const myReportLabel =
+    usesScoreReport && myReportedScoreline
+      ? myReportedPlayer1Score === myReportedPlayer2Score
+        ? 'Draw reported'
+        : myReport === user.id
+          ? 'You won'
+          : `${opponent.username} won`
+      : myReport === user.id
+        ? 'You won'
+        : `${opponent.username} won`;
+  const isDrawResult =
+    match.status === 'completed' &&
+    match.winner_id === null &&
+    match.player1_score !== null &&
+    match.player1_score !== undefined &&
+    match.player2_score !== null &&
+    match.player2_score !== undefined &&
+    match.player1_score === match.player2_score;
   const platformAddUrl = displayPlatform
     ? getPlatformAddUrl(displayPlatform, opponentPlatformId)
     : null;
-  const resultHeading = iWon ? 'Victory locked in' : 'Tough one';
-  const resultCopy = iWon
+  const resultHeading = isDrawResult ? 'Draw locked in' : iWon ? 'Victory locked in' : 'Tough one';
+  const resultCopy = isDrawResult
+    ? confirmedScoreline
+      ? `Both players matched the ${confirmedScoreline} scoreline. The draw is now locked in.`
+      : 'Both players confirmed the draw. The match is closed.'
+    : iWon
     ? confirmedScoreline
       ? `Both players matched the scoreline. Your ${confirmedScoreline} win is now locked in.`
       : 'Both players confirmed it. Your win, streak, and climb progress are now locked in.'
@@ -517,7 +542,7 @@ export default function MatchPage() {
             <p className="mb-4 text-xs text-[var(--text-secondary)]">
               Both players must agree on the result.
             </p>
-            {!myReport && (
+            {!hasMyReport && (
               <div className="mb-4 rounded-2xl border border-[var(--border-color)] bg-[var(--surface-elevated)] p-3.5">
                 <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--text-soft)]">
                   Quick comment
@@ -551,11 +576,11 @@ export default function MatchPage() {
                 </p>
               </div>
             )}
-            {myReport ? (
+            {hasMyReport ? (
               <div className="surface-live mb-3 rounded-xl p-3">
                 <p className="text-sm font-medium text-[var(--accent-secondary-text)]">
                   You reported:{' '}
-                  <strong>{myReport === user.id ? 'You won' : `${opponent.username} won`}</strong>
+                  <strong>{myReportLabel}</strong>
                 </p>
                 {usesScoreReport && myReportedScoreline ? (
                   <p className="mt-1 text-xs text-[var(--text-secondary)]">
@@ -567,7 +592,7 @@ export default function MatchPage() {
                     Your note: <span className="font-semibold text-[var(--text-primary)]">{sentQuickComment}</span>
                   </p>
                 )}
-                {!opponentReport && (
+                {!hasOpponentReport && (
                   <p className="mt-1 text-xs text-[var(--text-secondary)]">
                     Waiting for opponent...
                   </p>
@@ -580,7 +605,7 @@ export default function MatchPage() {
                     Final score
                   </p>
                   <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">
-                    Enter the result in match order. No draws yet for FC26 or eFootball score reports.
+                    Enter the result in match order. Draws are allowed when both players submit the same scoreline.
                   </p>
 
                   <div className="mt-4 grid gap-3 sm:grid-cols-2">
@@ -661,7 +686,7 @@ export default function MatchPage() {
                 </p>
               </div>
             )}
-            {usesScoreReport && opponentReportedScoreline && !myReport ? (
+            {usesScoreReport && opponentReportedScoreline && !hasMyReport ? (
               <div className="mt-3 rounded-xl border border-[var(--border-color)] bg-[var(--surface-elevated)] px-3 py-2.5">
                 <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--text-soft)]">
                   Opponent score
@@ -736,13 +761,13 @@ export default function MatchPage() {
         {match.status === 'completed' && (
           <div
             className={`card result-panel mb-4 overflow-hidden p-6 text-center ${
-              iWon ? 'result-panel-win' : 'result-panel-loss'
+              isDrawResult ? '' : iWon ? 'result-panel-win' : 'result-panel-loss'
             }`}
           >
-            <div className={`result-burst ${iWon ? 'result-burst-win' : 'result-burst-loss'}`} />
+            <div className={`result-burst ${isDrawResult ? 'result-burst-win' : iWon ? 'result-burst-win' : 'result-burst-loss'}`} />
             <div className="relative">
-              <div className={`result-emblem ${iWon ? 'result-emblem-win' : 'result-emblem-loss'}`}>
-                {iWon ? <Trophy size={30} /> : <X size={30} />}
+              <div className={`result-emblem ${isDrawResult || iWon ? 'result-emblem-win' : 'result-emblem-loss'}`}>
+                {isDrawResult ? <Check size={30} /> : iWon ? <Trophy size={30} /> : <X size={30} />}
               </div>
               <h3 className="mb-1 text-2xl font-black text-[var(--text-primary)]">
                 {resultHeading}

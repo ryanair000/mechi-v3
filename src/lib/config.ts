@@ -45,7 +45,7 @@ export const GAMES: Record<GameKey, Game> = {
     label: 'EA FC 26',
     platforms: ['ps', 'xbox', 'pc'],
     mode: '1v1',
-    steamAppId: 2669320,
+    steamAppId: 3405690,
   },
   mk11: {
     label: 'Mortal Kombat 11',
@@ -57,7 +57,7 @@ export const GAMES: Record<GameKey, Game> = {
     label: 'NBA 2K26',
     platforms: ['ps', 'xbox', 'pc'],
     mode: '1v1',
-    steamAppId: 2338490,
+    steamAppId: 3472040,
   },
   tekken8: {
     label: 'Tekken 8',
@@ -93,7 +93,6 @@ export const GAMES: Record<GameKey, Game> = {
     label: 'Valorant',
     platforms: ['pc'],
     mode: '1v1',
-    steamAppId: 1343400,
   },
   mariokart: {
     label: 'Mario Kart 8',
@@ -130,68 +129,68 @@ const SCORE_REPORTED_GAMES = new Set<GameKey>(['fc26', 'efootball', 'efootball_m
 
 const GAME_ARTWORK: Record<GameKey, { header: string; capsule: string }> = {
   efootball: {
-    header: '/game-artwork/efootball-header.svg',
-    capsule: '/game-artwork/efootball-capsule.svg',
+    header: '/game-artwork/efootball-header.webp',
+    capsule: '/game-artwork/efootball-capsule.webp',
   },
   efootball_mobile: {
-    header: '/game-artwork/efootball_mobile-header.svg',
-    capsule: '/game-artwork/efootball_mobile-capsule.svg',
+    header: '/game-artwork/efootball_mobile-header.webp',
+    capsule: '/game-artwork/efootball_mobile-capsule.webp',
   },
   fc26: {
-    header: '/game-artwork/fc26-header.svg',
-    capsule: '/game-artwork/fc26-capsule.svg',
+    header: '/game-artwork/fc26-header.webp',
+    capsule: '/game-artwork/fc26-capsule.webp',
   },
   mk11: {
-    header: '/game-artwork/mk11-header.svg',
-    capsule: '/game-artwork/mk11-capsule.svg',
+    header: '/game-artwork/mk11-header.webp',
+    capsule: '/game-artwork/mk11-capsule.webp',
   },
   nba2k26: {
-    header: '/game-artwork/nba2k26-header.svg',
-    capsule: '/game-artwork/nba2k26-capsule.svg',
+    header: '/game-artwork/nba2k26-header.webp',
+    capsule: '/game-artwork/nba2k26-capsule.webp',
   },
   tekken8: {
-    header: '/game-artwork/tekken8-header.svg',
-    capsule: '/game-artwork/tekken8-capsule.svg',
+    header: '/game-artwork/tekken8-header.webp',
+    capsule: '/game-artwork/tekken8-capsule.webp',
   },
   sf6: {
-    header: '/game-artwork/sf6-header.svg',
-    capsule: '/game-artwork/sf6-capsule.svg',
+    header: '/game-artwork/sf6-header.webp',
+    capsule: '/game-artwork/sf6-capsule.webp',
   },
   codm: {
-    header: '/game-artwork/codm-header.svg',
-    capsule: '/game-artwork/codm-capsule.svg',
+    header: '/game-artwork/codm-header.webp',
+    capsule: '/game-artwork/codm-capsule.webp',
   },
   pubgm: {
-    header: '/game-artwork/pubgm-header.svg',
-    capsule: '/game-artwork/pubgm-capsule.svg',
+    header: '/game-artwork/pubgm-header.webp',
+    capsule: '/game-artwork/pubgm-capsule.webp',
   },
   cs2: {
-    header: '/game-artwork/cs2-header.svg',
-    capsule: '/game-artwork/cs2-capsule.svg',
+    header: '/game-artwork/cs2-header.webp',
+    capsule: '/game-artwork/cs2-capsule.webp',
   },
   valorant: {
-    header: '/game-artwork/valorant-header.svg',
-    capsule: '/game-artwork/valorant-capsule.svg',
+    header: '/game-artwork/valorant-header.webp',
+    capsule: '/game-artwork/valorant-capsule.webp',
   },
   mariokart: {
-    header: '/game-artwork/mariokart-header.svg',
-    capsule: '/game-artwork/mariokart-capsule.svg',
+    header: '/game-artwork/mariokart-header.webp',
+    capsule: '/game-artwork/mariokart-capsule.webp',
   },
   smashbros: {
-    header: '/game-artwork/smashbros-header.svg',
-    capsule: '/game-artwork/smashbros-capsule.svg',
+    header: '/game-artwork/smashbros-header.webp',
+    capsule: '/game-artwork/smashbros-capsule.webp',
   },
   freefire: {
-    header: '/game-artwork/freefire-header.svg',
-    capsule: '/game-artwork/freefire-capsule.svg',
+    header: '/game-artwork/freefire-header.webp',
+    capsule: '/game-artwork/freefire-capsule.webp',
   },
   ludo: {
-    header: '/game-artwork/ludo-header.svg',
-    capsule: '/game-artwork/ludo-capsule.svg',
+    header: '/game-artwork/ludo-header.webp',
+    capsule: '/game-artwork/ludo-capsule.webp',
   },
   rocketleague: {
-    header: '/game-artwork/rocketleague-header.svg',
-    capsule: '/game-artwork/rocketleague-capsule.svg',
+    header: '/game-artwork/rocketleague-header.webp',
+    capsule: '/game-artwork/rocketleague-capsule.webp',
   },
 };
 

@@ -9,6 +9,7 @@ import {
   MessageCircle,
   ScrollText,
   Shield,
+  Headset,
   Swords,
   Trophy,
   Users,
@@ -25,6 +26,7 @@ const ADMIN_NAV = [
   { href: '/admin/lobbies', label: 'Lobbies', icon: DoorOpen },
   { href: '/admin/matches', label: 'Matches', icon: Swords },
   { href: '/admin/tournaments', label: 'Tournaments', icon: Trophy },
+  { href: '/admin/support', label: 'Support', icon: Headset },
   { href: '/admin/whatsapp', label: 'WhatsApp', icon: MessageCircle, adminOnly: true },
   { href: '/admin/logs', label: 'Audit Log', icon: ScrollText, adminOnly: true },
 ];

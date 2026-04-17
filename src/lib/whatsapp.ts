@@ -69,7 +69,7 @@ function createBodyComponent(values: string[]): WhatsAppTemplateComponent[] {
   ];
 }
 
-function describeSendFailure(result: WhatsAppSendResult): string {
+export function formatWhatsAppDeliveryError(result: WhatsAppSendResult): string {
   if (result.details) {
     return result.details;
   }
@@ -298,7 +298,7 @@ export async function notifyMatchFound(params: {
       : await sendWhatsApp(params.whatsappNumber, buildMatchFoundMessage(params));
 
     if (!result.ok) {
-      throw new Error(describeSendFailure(result));
+      throw new Error(formatWhatsAppDeliveryError(result));
     }
   });
 }
@@ -331,7 +331,7 @@ export async function notifyResultConfirmed(params: {
       : await sendWhatsApp(params.whatsappNumber, buildResultConfirmedMessage(params));
 
     if (!result.ok) {
-      throw new Error(describeSendFailure(result));
+      throw new Error(formatWhatsAppDeliveryError(result));
     }
   });
 }
@@ -359,7 +359,14 @@ export async function notifyMatchDispute(params: {
       : await sendWhatsApp(params.whatsappNumber, buildMatchDisputeMessage(params));
 
     if (!result.ok) {
-      throw new Error(describeSendFailure(result));
+      throw new Error(formatWhatsAppDeliveryError(result));
     }
   });
+}
+
+export async function sendSupportWhatsAppMessage(params: {
+  whatsappNumber: string;
+  message: string;
+}): Promise<WhatsAppSendResult> {
+  return sendWhatsApp(params.whatsappNumber, params.message);
 }

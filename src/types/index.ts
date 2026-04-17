@@ -33,6 +33,16 @@ export type MatchChallengeStatus =
   | 'declined'
   | 'cancelled'
   | 'expired';
+export type SupportThreadChannel = 'whatsapp';
+export type SupportThreadStatus =
+  | 'open'
+  | 'waiting_on_ai'
+  | 'waiting_on_human'
+  | 'resolved'
+  | 'blocked';
+export type SupportThreadPriority = 'low' | 'normal' | 'high' | 'urgent';
+export type SupportMessageDirection = 'inbound' | 'outbound';
+export type SupportMessageSenderType = 'user' | 'ai' | 'admin' | 'system';
 export type NotificationType =
   | 'challenge_received'
   | 'challenge_sent'
@@ -243,6 +253,44 @@ export interface Notification {
   created_at: string;
 }
 
+export interface SupportMessage {
+  id: string;
+  thread_id: string;
+  direction: SupportMessageDirection;
+  sender_type: SupportMessageSenderType;
+  body?: string | null;
+  message_type: string;
+  provider_message_id?: string | null;
+  meta?: Record<string, unknown> | null;
+  ai_confidence?: number | null;
+  created_at: string;
+}
+
+export interface SupportThread {
+  id: string;
+  channel: SupportThreadChannel;
+  phone: string;
+  wa_id: string;
+  user_id?: string | null;
+  status: SupportThreadStatus;
+  priority: SupportThreadPriority;
+  assigned_to?: string | null;
+  escalation_reason?: string | null;
+  last_message_at: string;
+  last_ai_reply_at?: string | null;
+  created_at: string;
+  updated_at: string;
+  user?: Pick<
+    Profile,
+    'id' | 'username' | 'phone' | 'whatsapp_number' | 'plan' | 'region' | 'selected_games' | 'platforms'
+  > | null;
+  assignee?: Pick<Profile, 'id' | 'username' | 'role'> | null;
+  latest_message?: Pick<
+    SupportMessage,
+    'id' | 'body' | 'direction' | 'sender_type' | 'message_type' | 'ai_confidence' | 'created_at'
+  > | null;
+}
+
 export interface Suggestion {
   id: string;
   user_id: string;
@@ -375,7 +423,7 @@ export interface AuditLog {
   id: string;
   admin_id: string;
   action: string;
-  target_type: 'user' | 'match' | 'tournament' | 'queue' | 'lobby' | 'system';
+  target_type: 'user' | 'match' | 'tournament' | 'queue' | 'lobby' | 'support' | 'system';
   target_id: string | null;
   details: Record<string, unknown> | null;
   ip_address: string | null;

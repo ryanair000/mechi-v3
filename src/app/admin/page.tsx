@@ -5,6 +5,7 @@ import {
   ArrowRight,
   Clock3,
   DoorOpen,
+  Headset,
   MessageCircle,
   Shield,
   Swords,
@@ -261,6 +262,12 @@ export default async function AdminOverviewPage() {
       body: 'Clean up bad rooms, remove members, and keep team titles from drifting into chaos.',
       icon: DoorOpen,
     },
+    {
+      href: '/admin/support',
+      title: 'Support inbox',
+      body: 'Watch WhatsApp escalations, pick up human handoffs, and keep player conversations tracked.',
+      icon: Headset,
+    },
   ];
 
   const fastActions = [
@@ -269,6 +276,7 @@ export default async function AdminOverviewPage() {
     { href: '/admin/lobbies', title: 'Clean rooms', meta: 'Close stale lobbies or remove bad actors.' },
     { href: '/admin/matches', title: 'Resolve matches', meta: 'Handle disputes and stuck pending matches.' },
     { href: '/admin/tournaments', title: 'Watch brackets', meta: 'Inspect tournament health and payout state.' },
+    { href: '/admin/support', title: 'Support inbox', meta: 'Handle WhatsApp escalations and human replies.' },
     ...(overview.role === 'admin'
       ? [
           { href: '/admin/whatsapp', title: 'Test WhatsApp', meta: 'Preview sandbox alerts and delivery wiring.' },

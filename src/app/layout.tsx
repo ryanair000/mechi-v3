@@ -1,6 +1,11 @@
 import type { Metadata, Viewport } from 'next';
+import Script from 'next/script';
 import './globals.css';
 import { AppProviders } from '@/components/AppProviders';
+import {
+  GOOGLE_ANALYTICS_ID,
+  getGoogleAnalyticsConfigScript,
+} from '@/lib/analytics';
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://mechi.club'),
@@ -67,6 +72,13 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body>
         <AppProviders>{children}</AppProviders>
+        <Script
+          src={`https://www.googletagmanager.com/gtag/js?id=${GOOGLE_ANALYTICS_ID}`}
+          strategy="afterInteractive"
+        />
+        <Script id="google-analytics-config" strategy="afterInteractive">
+          {getGoogleAnalyticsConfigScript(GOOGLE_ANALYTICS_ID)}
+        </Script>
       </body>
     </html>
   );

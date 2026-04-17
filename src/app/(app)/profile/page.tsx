@@ -127,6 +127,19 @@ export default function ProfilePage() {
     void fetchProfile();
   }, [fetchProfile]);
 
+  useEffect(() => {
+    const syncTabFromHash = () => {
+      setTab(window.location.hash === '#settings' ? 'settings' : 'stats');
+    };
+
+    syncTabFromHash();
+    window.addEventListener('hashchange', syncTabFromHash);
+
+    return () => {
+      window.removeEventListener('hashchange', syncTabFromHash);
+    };
+  }, []);
+
   const toggleGame = (game: GameKey) => {
     setSelectedGames((prev) => {
       if (prev.includes(game)) {

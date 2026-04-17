@@ -1,5 +1,6 @@
 'use client';
 
+import { useSyncExternalStore } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -32,7 +33,6 @@ type NavItem = {
 const PRIMARY_ITEMS: NavItem[] = [
   { href: '/dashboard', label: 'Dashboard', icon: Home },
   { href: '/leaderboard', label: 'Leaderboard', icon: Trophy },
-  { href: '/profile', label: 'Profile', icon: User },
 ];
 
 const COMPETE_ITEMS: NavItem[] = [
@@ -51,6 +51,26 @@ export default function SidebarWithSubmenu() {
   const { user, logout } = useAuth();
   const adminActive = isPathActive(pathname, '/admin');
   const currentPlan = getPlan(user?.plan ?? 'free');
+  const profileHash = useSyncExternalStore(
+    (onStoreChange) => {
+      if (typeof window === 'undefined') {
+        return () => undefined;
+      }
+
+      window.addEventListener('hashchange', onStoreChange);
+      window.addEventListener('popstate', onStoreChange);
+
+      return () => {
+        window.removeEventListener('hashchange', onStoreChange);
+        window.removeEventListener('popstate', onStoreChange);
+      };
+    },
+    () => (typeof window === 'undefined' ? '' : window.location.hash),
+    () => ''
+  );
+
+  const profileActive = pathname === '/profile' && profileHash !== '#settings';
+  const settingsActive = pathname === '/profile' && profileHash === '#settings';
 
   return (
     <aside className="fixed bottom-0 left-0 top-0 z-40 hidden w-[17rem] flex-col border-r border-[var(--border-color)] bg-[linear-gradient(180deg,var(--surface-strong),var(--surface-soft))] px-3 py-3 shadow-[var(--shadow-soft)] backdrop-blur-xl lg:flex">
@@ -127,7 +147,19 @@ export default function SidebarWithSubmenu() {
           <Link
             href="/profile"
             className={`inline-flex h-10 w-10 items-center justify-center rounded-full text-[var(--text-secondary)] transition-colors hover:bg-[var(--surface-elevated)] hover:text-[var(--text-primary)] ${
-              isPathActive(pathname, '/profile')
+              profileActive
+                ? 'bg-[var(--surface-elevated)] text-[var(--accent-secondary-text)] shadow-[0_12px_24px_rgba(50,224,196,0.12)]'
+                : ''
+            }`}
+            aria-label="Profile"
+            title="Profile"
+          >
+            <User size={16} />
+          </Link>
+          <Link
+            href="/profile#settings"
+            className={`inline-flex h-10 w-10 items-center justify-center rounded-full text-[var(--text-secondary)] transition-colors hover:bg-[var(--surface-elevated)] hover:text-[var(--text-primary)] ${
+              settingsActive
                 ? 'bg-[var(--surface-elevated)] text-[var(--accent-secondary-text)] shadow-[0_12px_24px_rgba(50,224,196,0.12)]'
                 : ''
             }`}

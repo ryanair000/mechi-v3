@@ -2,6 +2,7 @@
 
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { AppOnboarding } from '@/components/AppOnboarding';
 import { useAuth } from '@/components/AuthProvider';
 import { Navbar } from '@/components/Navbar';
 import { BottomNav } from '@/components/BottomNav';
@@ -47,6 +48,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           <main className="pb-[calc(5rem+env(safe-area-inset-bottom))] lg:pb-8">{children}</main>
         </div>
         <BottomNav />
+        <AppOnboarding />
       </div>
     </div>
   );

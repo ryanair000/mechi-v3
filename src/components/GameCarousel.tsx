@@ -17,6 +17,7 @@ const FEATURED_GAMES: GameKey[] = [
   'cs2',
   'valorant',
   'rocketleague',
+  'fortnite',
   'codm',
   'pubgm',
   'freefire',

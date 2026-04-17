@@ -4,7 +4,8 @@ import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
-import { AlertCircle, ChevronRight, Radar, Swords } from 'lucide-react';
+import { AlertCircle, ChevronRight, CirclePlay, Radar, Swords } from 'lucide-react';
+import { openAppOnboarding } from '@/components/AppOnboarding';
 import { useAuth, useAuthFetch } from '@/components/AuthProvider';
 import { GameCard } from '@/components/GameCard';
 import { PaywallModal } from '@/components/PaywallModal';
@@ -278,6 +279,22 @@ export default function DashboardPage() {
             <p className="mt-2 max-w-xl text-sm leading-6 text-[var(--text-secondary)]">
               Check your live queue energy, level track, and next match from one cleaner home base.
             </p>
+
+            <div className="mt-4 flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onClick={openAppOnboarding}
+                className="btn-outline text-sm"
+              >
+                <CirclePlay size={14} />
+                How Mechi works
+              </button>
+              {userGames.length === 0 ? (
+                <Link href="/games" className="btn-primary text-sm">
+                  Finish Game Setup
+                </Link>
+              ) : null}
+            </div>
 
             <div className="mt-4 max-w-xl rounded-[1.1rem] border border-[var(--border-color)] bg-[var(--surface-strong)] p-4 shadow-[var(--shadow-soft)]">
               <div className="flex items-center justify-between gap-3 text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--text-soft)]">

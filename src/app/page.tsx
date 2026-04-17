@@ -249,7 +249,7 @@ export default function LandingPage() {
                 <div className="mt-5">
                   <GameCarousel />
                   <p className="mt-3 text-xs text-[var(--text-soft)]">
-                    Plus Mario Kart, Smash Bros, Free Fire, PUBG Mobile and more.
+                    Plus Fortnite, Mario Kart, Smash Bros, Free Fire, PUBG Mobile and more.
                   </p>
                 </div>
               </div>

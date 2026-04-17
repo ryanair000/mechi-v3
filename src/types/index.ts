@@ -16,7 +16,8 @@ export type GameKey =
   | 'smashbros'
   | 'freefire'
   | 'ludo'
-  | 'rocketleague';
+  | 'rocketleague'
+  | 'fortnite';
 
 export type GameMode = '1v1' | 'lobby';
 export type UserRole = 'user' | 'moderator' | 'admin';

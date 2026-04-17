@@ -119,6 +119,12 @@ export const GAMES: Record<GameKey, Game> = {
     supportsLobby: true,
     maxPlayers: 4,
   },
+  fortnite: {
+    label: 'Fortnite',
+    platforms: ['ps', 'xbox', 'pc', 'nintendo'],
+    mode: 'lobby',
+    maxPlayers: 4,
+  },
   rocketleague: {
     label: 'Rocket League',
     platforms: ['ps', 'xbox', 'pc'],
@@ -129,7 +135,7 @@ export const GAMES: Record<GameKey, Game> = {
 
 const SCORE_REPORTED_GAMES = new Set<GameKey>(['fc26', 'efootball']);
 
-const GAME_ARTWORK: Record<GameKey, { header: string; capsule: string }> = {
+const GAME_ARTWORK: Partial<Record<GameKey, { header: string; capsule: string }>> = {
   efootball: {
     header: '/game-artwork/efootball-header.webp',
     capsule: '/game-artwork/efootball-capsule.webp',
@@ -216,11 +222,19 @@ export const LOBBY_MODE_OPTIONS: Partial<Record<GameKey, readonly string[]>> = {
     'Classic 2v2',
     'Quick Match',
   ],
+  fortnite: [
+    'Battle Royale',
+    'Zero Build',
+    'Reload',
+    'Creative',
+    'Box Fights',
+  ],
 };
 
 export const LOBBY_POPULAR_MAPS: Partial<Record<GameKey, readonly string[]>> = {
   codm: ['Nuketown', 'Raid', 'Firing Range', 'Shipment', 'Standoff'],
   pubgm: ['Erangel', 'Livik', 'Miramar', 'Sanhok', 'Vikendi'],
+  fortnite: ['Battle Royale Island', 'Reload', 'The Pit', 'Zone Wars'],
 };
 
 export const TIERS: Tier[] = [

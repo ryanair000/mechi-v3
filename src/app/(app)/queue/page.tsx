@@ -180,8 +180,8 @@ function QueueContent() {
         </div>
 
         <p className="mx-auto mb-6 mt-5 max-w-sm text-center text-[13px] leading-6 text-[var(--text-secondary)]">
-          Mechi is checking your {platformLabel} pool first, then opening the net wider if things stay quiet so
-          you still land a fair {gameConfig.label} run instead of waiting in limbo.
+          Mechi is checking your {platformLabel} pool first, then opening the net wider if things stay quiet. You can
+          leave the app and keep your queue live. When a match lands, Mechi sends the update by email and WhatsApp.
         </p>
 
         <button onClick={handleLeave} disabled={leaving} className="btn-danger mx-auto px-4 py-2 text-sm">

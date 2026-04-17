@@ -6,7 +6,7 @@ import {
   MATCH_CHALLENGE_EXPIRY_HOURS,
   resolveChallengePlatform,
 } from '@/lib/challenges';
-import { GAMES } from '@/lib/config';
+import { GAMES, getCanonicalGameKey } from '@/lib/config';
 import { isMissingColumnError } from '@/lib/db-compat';
 import { createNotifications } from '@/lib/notifications';
 import { incrementMatchUsage } from '@/lib/subscription';
@@ -109,7 +109,7 @@ export async function POST(
       return NextResponse.json({ error: 'Could not load both player profiles' }, { status: 404 });
     }
 
-    const game = challenge.game as GameKey;
+    const game = getCanonicalGameKey(challenge.game as GameKey);
     const platform = challenge.platform as PlatformKey;
 
     if (!canUserChallengeGame(game, challenger) || !canUserChallengeGame(game, opponent)) {

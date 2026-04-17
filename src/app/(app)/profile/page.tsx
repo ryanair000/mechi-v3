@@ -33,8 +33,14 @@ import {
   getGameIdLabel,
   getGameIdPlaceholder,
   getGameIdValue,
+  getGameLossesKey,
   getGamePlatformKey,
+  getGameRatingKey,
+  getSelectableGameKeys,
+  getGameWinsKey,
   getPlatformsForGameSetup,
+  normalizeGameIdKeys,
+  normalizeSelectedGameKeys,
 } from '@/lib/config';
 import {
   ACHIEVEMENTS,
@@ -102,8 +108,8 @@ export default function ProfilePage() {
         setProfile(data.profile);
         setRegion((data.profile.region as string) ?? 'Nairobi');
         setPlatforms((data.profile.platforms as PlatformKey[]) ?? []);
-        setGameIds((data.profile.game_ids as Record<string, string>) ?? {});
-        setSelectedGames((data.profile.selected_games as GameKey[]) ?? []);
+        setGameIds(normalizeGameIdKeys((data.profile.game_ids as Record<string, string>) ?? {}));
+        setSelectedGames(normalizeSelectedGameKeys(data.profile.selected_games ?? []));
       }
 
       if (achievementsRes.ok) {
@@ -145,7 +151,7 @@ export default function ProfilePage() {
         setShowPaywall(true);
         return prev;
       }
-      const defaultPlatform = GAMES[game]?.platforms.length === 1 ? GAMES[game].platforms[0] : null;
+      const defaultPlatform = GAMES[game]?.platforms[0] ?? null;
       if (defaultPlatform) {
         setGameIds((ids) => ({
           ...ids,
@@ -237,8 +243,12 @@ export default function ProfilePage() {
 
     setSaving(true);
     try {
-      const currentSelectedGames = (profile.selected_games as GameKey[]) ?? [];
-      const currentGameIds = (profile.game_ids as Record<string, string>) ?? {};
+      const currentSelectedGames = normalizeSelectedGameKeys(
+        (profile.selected_games as GameKey[]) ?? []
+      );
+      const currentGameIds = normalizeGameIdKeys(
+        (profile.game_ids as Record<string, string>) ?? {}
+      );
       const currentPlatforms = (profile.platforms as PlatformKey[]) ?? [];
 
       const normalizeArray = (values: string[]) => [...values].sort();
@@ -304,7 +314,7 @@ export default function ProfilePage() {
     );
   }
 
-  const selectableGames = Object.keys(GAMES) as GameKey[];
+  const selectableGames = getSelectableGameKeys();
   const setupPlatforms = getPlatformsForGameSetup(selectedGames, gameIds, platforms);
   const requiredIdFields = selectedGames.reduce<
     Array<{ key: string; game: GameKey; platform: PlatformKey }>
@@ -319,16 +329,22 @@ export default function ProfilePage() {
 
     return fields;
   }, []);
-  const userGames = (profile?.selected_games as GameKey[]) ?? [];
+  const userGames = normalizeSelectedGameKeys((profile?.selected_games as GameKey[]) ?? []);
   const connectedPlatforms = ((profile?.platforms ?? []) as PlatformKey[]);
   const rankedUserGames = userGames.filter((game) => GAMES[game]?.mode === '1v1');
   const bestRating = rankedUserGames.reduce((best, game) => {
-    const rating = (profile?.[`rating_${game}`] as number) ?? 1000;
+    const rating = (profile?.[getGameRatingKey(game)] as number) ?? 1000;
     return rating > best ? rating : best;
   }, 1000);
   const bestDivision = getRankDivision(bestRating);
-  const totalWins = rankedUserGames.reduce((sum, game) => sum + (((profile?.[`wins_${game}`] as number) ?? 0)), 0);
-  const totalLosses = rankedUserGames.reduce((sum, game) => sum + (((profile?.[`losses_${game}`] as number) ?? 0)), 0);
+  const totalWins = rankedUserGames.reduce(
+    (sum, game) => sum + (((profile?.[getGameWinsKey(game)] as number) ?? 0)),
+    0
+  );
+  const totalLosses = rankedUserGames.reduce(
+    (sum, game) => sum + (((profile?.[getGameLossesKey(game)] as number) ?? 0)),
+    0
+  );
   const totalMatches = totalWins + totalLosses;
   const overallWinRate = totalMatches > 0 ? Math.round((totalWins / totalMatches) * 100) : 0;
   const xp = (profile?.xp as number) ?? 0;
@@ -707,9 +723,9 @@ export default function ProfilePage() {
             ) : (
               <div className="grid gap-3 lg:grid-cols-2">
                 {rankedUserGames.map((game) => {
-                  const rating = (profile?.[`rating_${game}`] as number) ?? 1000;
-                  const wins = (profile?.[`wins_${game}`] as number) ?? 0;
-                  const losses = (profile?.[`losses_${game}`] as number) ?? 0;
+                  const rating = (profile?.[getGameRatingKey(game)] as number) ?? 1000;
+                  const wins = (profile?.[getGameWinsKey(game)] as number) ?? 0;
+                  const losses = (profile?.[getGameLossesKey(game)] as number) ?? 0;
                   const winRate = wins + losses > 0 ? Math.round((wins / (wins + losses)) * 100) : 0;
                   const division = getRankDivision(rating);
 

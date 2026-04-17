@@ -3,7 +3,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { ChallengePlayerButton } from '@/components/ChallengePlayerButton';
-import { GAMES, getConfiguredPlatformForGame } from '@/lib/config';
+import { GAMES, getConfiguredPlatformForGame, normalizeSelectedGameKeys } from '@/lib/config';
 import { getRankDivision } from '@/lib/gamification';
 import { PUBLIC_PROFILE_SHARE_SELECT, getProfileShareStats } from '@/lib/share';
 import { createServiceClient } from '@/lib/supabase';
@@ -93,7 +93,7 @@ export default async function ShareProfilePage({ params }: Props) {
   const level = typeof profile.level === 'number' ? profile.level : 1;
   const totalMatches = profile.totalWins + profile.totalLosses;
   const winRate = totalMatches > 0 ? Math.round((profile.totalWins / totalMatches) * 100) : 0;
-  const selectedGames = (profile.selected_games as string[]) ?? [];
+  const selectedGames = normalizeSelectedGameKeys((profile.selected_games as string[]) ?? []);
   const profilePlatforms = ((profile.platforms as PlatformKey[] | null | undefined) ?? []);
   const platformCount = profilePlatforms.length;
   const primaryChallengeGame =

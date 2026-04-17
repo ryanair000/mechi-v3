@@ -10,7 +10,15 @@ import { GameCard } from '@/components/GameCard';
 import { PaywallModal } from '@/components/PaywallModal';
 import { RatingBadge } from '@/components/RatingBadge';
 import { TierMedal } from '@/components/TierMedal';
-import { GAMES, getConfiguredPlatformForGame, supportsLobbyMode } from '@/lib/config';
+import {
+  GAMES,
+  getConfiguredPlatformForGame,
+  getGameLossesKey,
+  getGameRatingKey,
+  getGameWinsKey,
+  normalizeSelectedGameKeys,
+  supportsLobbyMode,
+} from '@/lib/config';
 import { getLevelFromXp, getRankDivision, getXpProgress } from '@/lib/gamification';
 import { getPlan } from '@/lib/plans';
 import type { GameKey, Match, PlatformKey } from '@/types';
@@ -118,7 +126,7 @@ export default function DashboardPage() {
   }, [authFetch, resumeQueue, router]);
 
   useEffect(() => {
-    const selectedGames = (profile?.selected_games ?? []).filter(
+    const selectedGames = normalizeSelectedGameKeys(profile?.selected_games ?? []).filter(
       (game) => GAMES[game]?.mode === '1v1'
     );
     const profileGameIds = (profile?.game_ids as Record<string, string>) ?? {};
@@ -213,12 +221,12 @@ export default function DashboardPage() {
     }
   };
 
-  const userGames = profile?.selected_games ?? [];
+  const userGames = normalizeSelectedGameKeys(profile?.selected_games ?? []);
   const rankedGames = userGames.filter((game) => GAMES[game]?.mode === '1v1');
   const lobbyGames = userGames.filter((game) => supportsLobbyMode(game));
 
   const bestRating = rankedGames.reduce((best, game) => {
-    const rating = (profile?.[`rating_${game}`] as number) ?? 1000;
+    const rating = (profile?.[getGameRatingKey(game)] as number) ?? 1000;
     return rating > best ? rating : best;
   }, 1000);
   const queueTotal = rankedGames.reduce((total, game) => total + (queueCounts[game] ?? 0), 0);
@@ -359,9 +367,9 @@ export default function DashboardPage() {
               <GameCard
                 key={game}
                 gameKey={game}
-                rating={(profile?.[`rating_${game}`] as number) ?? 1000}
-                wins={(profile?.[`wins_${game}`] as number) ?? 0}
-                losses={(profile?.[`losses_${game}`] as number) ?? 0}
+                rating={(profile?.[getGameRatingKey(game)] as number) ?? 1000}
+                wins={(profile?.[getGameWinsKey(game)] as number) ?? 0}
+                losses={(profile?.[getGameLossesKey(game)] as number) ?? 0}
                 queueCount={queueCounts[game]}
                 onJoinQueue={() => handleJoinQueue(game)}
                 isQueuing={queuingGame === game}
@@ -415,9 +423,9 @@ export default function DashboardPage() {
           </div>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {rankedGames.map((game) => {
-              const rating = (profile?.[`rating_${game}`] as number) ?? 1000;
-              const wins = (profile?.[`wins_${game}`] as number) ?? 0;
-              const losses = (profile?.[`losses_${game}`] as number) ?? 0;
+              const rating = (profile?.[getGameRatingKey(game)] as number) ?? 1000;
+              const wins = (profile?.[getGameWinsKey(game)] as number) ?? 0;
+              const losses = (profile?.[getGameLossesKey(game)] as number) ?? 0;
 
               return (
                 <div key={game} className="card flex items-center justify-between px-5 py-4">

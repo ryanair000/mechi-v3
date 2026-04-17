@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import toast from 'react-hot-toast';
 import { Clock3, Loader2, RefreshCw, Search, Shield, Users, X } from 'lucide-react';
 import { useAuth, useAuthFetch } from '@/components/AuthProvider';
-import { GAMES, PLATFORMS, REGIONS } from '@/lib/config';
+import { GAMES, PLATFORMS, REGIONS, getSelectableGameKeys } from '@/lib/config';
 import type { AdminQueueEntry, GameKey, PlatformKey } from '@/types';
 
 const STATUS_OPTIONS = [
@@ -214,7 +214,7 @@ export default function AdminQueuePage() {
             className="input"
           >
             <option value="all">All games</option>
-            {(Object.keys(GAMES) as GameKey[]).map((gameKey) => (
+            {getSelectableGameKeys().map((gameKey) => (
               <option key={gameKey} value={gameKey}>
                 {GAMES[gameKey].label}
               </option>

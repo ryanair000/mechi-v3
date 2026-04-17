@@ -6,6 +6,7 @@ import { createServiceClient } from '@/lib/supabase';
 const PROTECTED_PREFIXES = [
   '/dashboard',
   '/profile',
+  '/games',
   '/match',
   '/queue',
   '/tournaments',

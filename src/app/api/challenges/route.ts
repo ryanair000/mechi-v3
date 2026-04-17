@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuthUser } from '@/lib/auth';
-import { GAMES } from '@/lib/config';
+import { GAMES, getCanonicalGameKey } from '@/lib/config';
 import {
   canUserChallengeGame,
   expirePendingChallenges,
@@ -99,7 +99,7 @@ export async function POST(request: NextRequest) {
   try {
     const body = (await request.json()) as Record<string, unknown>;
     const opponentId = String(body.opponent_id ?? '').trim();
-    const game = String(body.game ?? '').trim() as GameKey;
+    const requestedGame = String(body.game ?? '').trim() as GameKey;
     const platform = String(body.platform ?? '').trim() as PlatformKey;
     const message = String(body.message ?? '').trim();
 
@@ -107,9 +107,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Pick a valid opponent' }, { status: 400 });
     }
 
-    if (!GAMES[game] || GAMES[game].mode !== '1v1') {
+    if (!GAMES[requestedGame] || GAMES[requestedGame].mode !== '1v1') {
       return NextResponse.json({ error: 'Pick a supported 1-on-1 game' }, { status: 400 });
     }
+
+    const game = getCanonicalGameKey(requestedGame);
 
     const supabase = createServiceClient();
     await expirePendingChallenges(supabase);

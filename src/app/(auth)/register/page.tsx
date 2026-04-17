@@ -25,6 +25,7 @@ import {
   getGameIdPlaceholder,
   getGameIdValue,
   getGamePlatformKey,
+  getSelectableGameKeys,
   getPlatformsForGameSetup,
 } from '@/lib/config';
 import type { InvitePreview } from '@/lib/invite';
@@ -139,7 +140,7 @@ export default function RegisterPage({ searchParams }: { searchParams: RegisterS
     formData.game_ids,
     formData.platforms
   );
-  const selectableGames = Object.keys(GAMES) as GameKey[];
+  const selectableGames = getSelectableGameKeys();
   const requiredIdFields = formData.selected_games.reduce<
     Array<{ key: string; game: GameKey; platform: PlatformKey }>
   >((fields, game) => {

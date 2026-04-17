@@ -2,12 +2,13 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { BrandLogo } from '@/components/BrandLogo';
+import { getGameRatingKey } from '@/lib/config';
 import { createServiceClient } from '@/lib/supabase';
 import { getLevelFromXp, getRankDivision, withAlpha } from '@/lib/gamification';
 
 const GAME_LABELS: Record<string, string> = {
   efootball: 'eFootball 2026',
-  efootball_mobile: 'eFootball 2026 Mobile',
+  efootball_mobile: 'eFootball 2026',
   fc26: 'EA FC 26',
   mk11: 'Mortal Kombat 11',
   nba2k26: 'NBA 2K26',
@@ -140,7 +141,9 @@ export default async function ShareMatchPage({ params }: Props) {
       ? match.gamification_summary_p1 ?? null
       : match.gamification_summary_p2 ?? null;
   const game = GAME_LABELS[match.game] ?? match.game;
-  const winnerRating = ((winner as Record<string, unknown> | undefined)?.[`rating_${match.game}`] as number) ?? 1000;
+  const winnerRating =
+    ((winner as Record<string, unknown> | undefined)?.[getGameRatingKey(match.game)] as number) ??
+    1000;
   const winnerXp = (winner?.xp as number | null) ?? 0;
   const winnerLevel = winnerSummary?.newLevel ?? ((winner?.level as number | null) ?? getLevelFromXp(winnerXp));
   const division = getRankDivision(winnerRating);

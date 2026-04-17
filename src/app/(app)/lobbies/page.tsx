@@ -11,6 +11,7 @@ import {
   PLATFORMS,
   getDefaultLobbyMap,
   getDefaultLobbyMode,
+  getSelectableGameKeys,
   getLobbyModeOptions,
   getLobbyPopularMaps,
   supportsLobbyMode,
@@ -91,9 +92,7 @@ function LobbiesContent() {
   const [joiningId, setJoiningId] = useState<string | null>(null);
   const [newLobby, setNewLobby] = useState(() => createLobbyDraft(gameFilter ?? 'codm'));
 
-  const lobbyGames = (Object.keys(GAMES) as GameKey[]).filter(
-    (game) => supportsLobbyMode(game)
-  );
+  const lobbyGames = getSelectableGameKeys().filter((game) => supportsLobbyMode(game));
 
   const fetchLobbies = useCallback(async () => {
     setLoading(true);

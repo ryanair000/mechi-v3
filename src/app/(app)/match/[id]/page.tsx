@@ -20,7 +20,9 @@ import { createClient } from '@/lib/supabase';
 import {
   GAMES,
   PLATFORMS,
+  getCanonicalGameKey,
   getGameIdValue,
+  getGameRatingKey,
   getMatchingPlatform,
   getPlatformAddUrl,
   requiresMatchScoreReport,
@@ -440,18 +442,19 @@ export default function MatchPage() {
   const isPlayer1 = user.id === match.player1_id;
   const me = isPlayer1 ? match.player1 : match.player2;
   const opponent = isPlayer1 ? match.player2 : match.player1;
-  const game = GAMES[match.game];
+  const matchGame = getCanonicalGameKey(match.game);
+  const game = GAMES[matchGame];
   const gamePlatforms = game?.platforms ?? [];
   const myPlatform = getMatchingPlatform(me.platforms, gamePlatforms);
   const opponentPlatform = getMatchingPlatform(opponent.platforms, gamePlatforms);
   const displayPlatform = match.platform ?? opponentPlatform ?? myPlatform;
   const opponentPlatformId = displayPlatform
-    ? getGameIdValue(opponent.game_ids ?? {}, match.game, displayPlatform) || 'Not set'
+    ? getGameIdValue(opponent.game_ids ?? {}, matchGame, displayPlatform) || 'Not set'
     : 'Not set';
   const gamificationResult = isPlayer1
     ? match.gamification_summary_p1 ?? null
     : match.gamification_summary_p2 ?? null;
-  const usesScoreReport = requiresMatchScoreReport(match.game);
+  const usesScoreReport = requiresMatchScoreReport(matchGame);
   const iWon = match.winner_id === user.id;
   const myReport = isPlayer1 ? match.player1_reported_winner : match.player2_reported_winner;
   const opponentReport = isPlayer1 ? match.player2_reported_winner : match.player1_reported_winner;
@@ -940,7 +943,7 @@ export default function MatchPage() {
               <p className="mb-1 text-xs text-[var(--text-soft)]">Your Rank</p>
               <RatingBadge
                 rating={
-                  ((user as unknown as Record<string, unknown>)[`rating_${match.game}`] as number) ??
+                  ((user as unknown as Record<string, unknown>)[getGameRatingKey(matchGame)] as number) ??
                   1000
                 }
                 size="sm"

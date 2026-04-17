@@ -1,5 +1,10 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { getConfiguredPlatformForGame, isValidGamePlatform } from '@/lib/config';
+import {
+  getCanonicalGameKey,
+  getConfiguredPlatformForGame,
+  isValidGamePlatform,
+  normalizeSelectedGameKeys,
+} from '@/lib/config';
 import type { GameKey, MatchChallenge, PlatformKey } from '@/types';
 
 type ChallengeProfile = {
@@ -32,17 +37,19 @@ export function resolveChallengePlatform(
   challenger: ChallengeProfile,
   opponent: ChallengeProfile
 ): PlatformKey | null {
-  if (!isValidGamePlatform(game, requestedPlatform)) {
+  const canonicalGame = getCanonicalGameKey(game);
+
+  if (!isValidGamePlatform(canonicalGame, requestedPlatform)) {
     return null;
   }
 
   const challengerPlatform = getConfiguredPlatformForGame(
-    game,
+    canonicalGame,
     challenger.game_ids ?? {},
     challenger.platforms ?? []
   );
   const opponentPlatform = getConfiguredPlatformForGame(
-    game,
+    canonicalGame,
     opponent.game_ids ?? {},
     opponent.platforms ?? []
   );
@@ -55,7 +62,8 @@ export function resolveChallengePlatform(
 }
 
 export function canUserChallengeGame(game: GameKey, profile: ChallengeProfile): boolean {
-  return Boolean(profile.selected_games?.includes(game));
+  const selectedGames = normalizeSelectedGameKeys(profile.selected_games ?? []);
+  return selectedGames.includes(getCanonicalGameKey(game));
 }
 
 export function mapChallengeRelations(

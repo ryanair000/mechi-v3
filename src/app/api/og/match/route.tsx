@@ -1,13 +1,14 @@
 import { ImageResponse } from 'next/og';
 import { NextRequest } from 'next/server';
 import { createServiceClient } from '@/lib/supabase';
+import { getGameRatingKey } from '@/lib/config';
 import { getLevelFromXp, getRankDivision } from '@/lib/gamification';
 
 export const runtime = 'edge';
 
 const GAME_LABELS: Record<string, string> = {
   efootball: 'eFootball 2026',
-  efootball_mobile: 'eFootball 2026 Mobile',
+  efootball_mobile: 'eFootball 2026',
   fc26: 'EA FC 26',
   mk11: 'Mortal Kombat 11',
   nba2k26: 'NBA 2K26',
@@ -94,7 +95,9 @@ export async function GET(request: NextRequest) {
         : match.winner_id === match.player1_id
         ? match.gamification_summary_p1 ?? null
         : match.gamification_summary_p2 ?? null;
-    const winnerRating = ((winner as Record<string, unknown> | undefined)?.[`rating_${match.game}`] as number) ?? 1000;
+    const winnerRating =
+      ((winner as Record<string, unknown> | undefined)?.[getGameRatingKey(match.game)] as number) ??
+      1000;
     const division = getRankDivision(winnerRating);
     const winnerXp = (winner?.xp as number | null) ?? 0;
     const winnerLevel = winnerSummary?.newLevel ?? ((winner?.level as number | null) ?? getLevelFromXp(winnerXp));

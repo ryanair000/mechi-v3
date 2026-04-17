@@ -1,6 +1,14 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { calculateElo } from './elo';
-import { GAMES, getConfiguredPlatformForGame, getGameIdValue } from './config';
+import {
+  GAMES,
+  getCanonicalGameKey,
+  getConfiguredPlatformForGame,
+  getGameIdValue,
+  getGameLossesKey,
+  getGameRatingKey,
+  getGameWinsKey,
+} from './config';
 import { isMissingColumnError } from './db-compat';
 import { getPlan } from './plans';
 import { incrementMatchUsage } from './subscription';
@@ -114,13 +122,14 @@ export async function runMatchmaking(supabase: SupabaseClient): Promise<number> 
     const entry = queueEntries[i];
     if (matched.has(entry.id)) continue;
 
-    const game = GAMES[entry.game as GameKey];
+    const entryGame = getCanonicalGameKey(entry.game as GameKey);
+    const game = GAMES[entryGame];
     const p1Profile = entry.profiles as Record<string, unknown> | null;
     const p1Platforms = (p1Profile?.platforms as PlatformKey[]) ?? [];
     const p1GameIds = (p1Profile?.game_ids as Record<string, string>) ?? {};
     const p1Platform =
       (entry.platform as PlatformKey | null) ??
-      getConfiguredPlatformForGame(entry.game as GameKey, p1GameIds, p1Platforms);
+      getConfiguredPlatformForGame(entryGame, p1GameIds, p1Platforms);
     const p1Tolerance = getRatingTolerance(entry.joined_at as string | undefined, p1Profile);
     let bestCandidate:
       | {
@@ -137,14 +146,15 @@ export async function runMatchmaking(supabase: SupabaseClient): Promise<number> 
       if (matched.has(opponent.id)) continue;
 
       // Must be same game
-      if (entry.game !== opponent.game) continue;
+      const opponentGame = getCanonicalGameKey(opponent.game as GameKey);
+      if (entryGame !== opponentGame) continue;
 
       const p2Profile = opponent.profiles as Record<string, unknown> | null;
       const p2Platforms = (p2Profile?.platforms as PlatformKey[]) ?? [];
       const p2GameIds = (p2Profile?.game_ids as Record<string, string>) ?? {};
       const p2Platform =
         (opponent.platform as PlatformKey | null) ??
-        getConfiguredPlatformForGame(opponent.game as GameKey, p2GameIds, p2Platforms);
+        getConfiguredPlatformForGame(opponentGame, p2GameIds, p2Platforms);
 
       if (!p1Platform || !p2Platform || p1Platform !== p2Platform) continue;
 
@@ -184,7 +194,7 @@ export async function runMatchmaking(supabase: SupabaseClient): Promise<number> 
     const matchPayload = {
       player1_id: entry.user_id,
       player2_id: opponent.user_id,
-      game: entry.game,
+      game: entryGame,
       platform: p1Platform,
       region: entry.region ?? 'kenya',
       status: 'pending',
@@ -200,7 +210,7 @@ export async function runMatchmaking(supabase: SupabaseClient): Promise<number> 
       const legacyMatchPayload = {
         player1_id: entry.user_id,
         player2_id: opponent.user_id,
-        game: entry.game,
+        game: entryGame,
         region: entry.region ?? 'kenya',
         status: 'pending' as const,
       };
@@ -235,11 +245,11 @@ export async function runMatchmaking(supabase: SupabaseClient): Promise<number> 
     matchesCreated++;
 
     // Send notifications async (don't block matchmaking)
-    const gameLabel = game?.label ?? entry.game;
+    const gameLabel = game?.label ?? entryGame;
 
     if (p1Profile && p2Profile) {
-      const p1PlatformId = getGameIdValue(p1GameIds, entry.game as GameKey, p1Platform) || 'Not set';
-      const p2PlatformId = getGameIdValue(p2GameIds, entry.game as GameKey, p2Platform) || 'Not set';
+      const p1PlatformId = getGameIdValue(p1GameIds, entryGame, p1Platform) || 'Not set';
+      const p2PlatformId = getGameIdValue(p2GameIds, entryGame, p2Platform) || 'Not set';
       const p1WhatsAppNumber = (p1Profile.whatsapp_number as string | undefined) ?? '';
       const p2WhatsAppNumber = (p2Profile.whatsapp_number as string | undefined) ?? '';
       const p1WhatsAppEnabled =
@@ -306,7 +316,7 @@ export async function runMatchmaking(supabase: SupabaseClient): Promise<number> 
             metadata: {
               match_id: match.id,
               opponent_id: opponent.user_id,
-              game: entry.game,
+              game: entryGame,
               platform: p1Platform,
             },
           },
@@ -319,7 +329,7 @@ export async function runMatchmaking(supabase: SupabaseClient): Promise<number> 
             metadata: {
               match_id: match.id,
               opponent_id: entry.user_id,
-              game: entry.game,
+              game: entryGame,
               platform: p2Platform,
             },
           },
@@ -341,9 +351,10 @@ export async function finalizeMatch(
   loserId: string,
   game: GameKey
 ): Promise<void> {
-  const ratingKey = `rating_${game}`;
-  const winsKey = `wins_${game}`;
-  const lossesKey = `losses_${game}`;
+  const canonicalGame = getCanonicalGameKey(game);
+  const ratingKey = getGameRatingKey(canonicalGame);
+  const winsKey = getGameWinsKey(canonicalGame);
+  const lossesKey = getGameLossesKey(canonicalGame);
 
   const { data: profilesRaw } = await supabase
     .from('profiles')

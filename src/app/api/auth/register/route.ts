@@ -4,11 +4,12 @@ import { hashPassword, profileToAuthUser, signToken } from '@/lib/auth';
 import { sendWelcomeEmail } from '@/lib/email';
 import {
   DEFAULT_RATING,
-  GAMES,
   PLATFORMS,
   getConfiguredPlatformForGame,
   getGameIdValue,
+  getValidCanonicalGameKey,
   getPlatformsForGameSetup,
+  normalizeGameIdKeys,
 } from '@/lib/config';
 import { isMissingColumnError, isMissingTableError } from '@/lib/db-compat';
 import { findInviterByCode, generateUniqueInviteCode, normalizeInviteCode } from '@/lib/invite';
@@ -40,8 +41,13 @@ function normalizeSelectedGames(value: unknown): { games: GameKey[]; hasInvalid:
   let hasInvalid = false;
 
   for (const item of value) {
-    if (typeof item === 'string' && item in GAMES) {
-      const game = item as GameKey;
+    if (typeof item !== 'string') {
+      hasInvalid = true;
+      continue;
+    }
+
+    const game = getValidCanonicalGameKey(item);
+    if (game) {
       if (!games.includes(game)) {
         games.push(game);
       }
@@ -80,10 +86,12 @@ function normalizeGameIds(value: unknown): Record<string, string> {
     return {};
   }
 
-  return Object.fromEntries(
-    Object.entries(value)
-      .filter((entry): entry is [string, string] => typeof entry[1] === 'string')
-      .map(([key, id]) => [key, id.trim()])
+  return normalizeGameIdKeys(
+    Object.fromEntries(
+      Object.entries(value)
+        .filter((entry): entry is [string, string] => typeof entry[1] === 'string')
+        .map(([key, id]) => [key, id.trim()])
+    )
   );
 }
 

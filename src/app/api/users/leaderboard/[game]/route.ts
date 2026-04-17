@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServiceClient } from '@/lib/supabase';
-import { GAMES } from '@/lib/config';
+import { GAMES, getCanonicalGameKey, getGameLossesKey, getGameRatingKey, getGameWinsKey } from '@/lib/config';
 import { isMissingColumnError } from '@/lib/db-compat';
 import { getRankDivision } from '@/lib/gamification';
 import type { GameKey } from '@/types';
@@ -9,17 +9,19 @@ export async function GET(
   _request: NextRequest,
   { params }: { params: Promise<{ game: string }> }
 ) {
-  const { game } = await params;
+  const { game: requestedGame } = await params;
 
-  if (!game || !GAMES[game as GameKey]) {
+  if (!requestedGame || !GAMES[requestedGame as GameKey]) {
     return NextResponse.json({ error: 'Invalid game' }, { status: 400 });
   }
 
+  const game = getCanonicalGameKey(requestedGame as GameKey);
+
   try {
     const supabase = createServiceClient();
-    const ratingKey = `rating_${game}`;
-    const winsKey = `wins_${game}`;
-    const lossesKey = `losses_${game}`;
+    const ratingKey = getGameRatingKey(game);
+    const winsKey = getGameWinsKey(game);
+    const lossesKey = getGameLossesKey(game);
     const metricSelect = [
       'id',
       'username',

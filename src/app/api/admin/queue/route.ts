@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getRequestAccessProfile, hasModeratorAccess } from '@/lib/access';
 import { createServiceClient } from '@/lib/supabase';
-import { GAMES } from '@/lib/config';
+import { GAMES, getCanonicalGameKey } from '@/lib/config';
 import { firstRelation } from '@/lib/tournaments';
 import type { AdminQueueEntry, GameKey, MatchStatus, PlatformKey, UserRole } from '@/types';
 
@@ -109,7 +109,7 @@ export async function GET(request: NextRequest) {
     }
 
     if (game && GAMES[game as GameKey]) {
-      query = query.eq('game', game);
+      query = query.eq('game', getCanonicalGameKey(game as GameKey));
     }
 
     if (platform) {

@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
   Home,
+  Gamepad2,
   Lightbulb,
   type LucideIcon,
   LogOut,
@@ -37,6 +38,7 @@ const COMPETE_ITEMS: NavItem[] = [
   { href: '/tournaments', label: 'Tournaments', icon: Swords },
   { href: '/lobbies', label: 'Lobbies', icon: Users },
   { href: '/suggest', label: 'Suggest', icon: Lightbulb },
+  { href: '/games', label: 'Games', icon: Gamepad2 },
 ];
 
 function isPathActive(pathname: string, href: string) {

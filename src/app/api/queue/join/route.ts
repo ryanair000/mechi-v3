@@ -1,7 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuthUser } from '@/lib/auth';
 import { createServiceClient } from '@/lib/supabase';
-import { GAMES, getConfiguredPlatformForGame, isValidGamePlatform } from '@/lib/config';
+import {
+  GAMES,
+  getCanonicalGameKey,
+  getConfiguredPlatformForGame,
+  getGameRatingKey,
+  isValidGamePlatform,
+  normalizeSelectedGameKeys,
+} from '@/lib/config';
 import { isMissingColumnError } from '@/lib/db-compat';
 import { canStartMatch } from '@/lib/plans';
 import { runMatchmaking } from '@/lib/matchmaking';
@@ -16,13 +23,15 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const { game, platform } = body;
+    const { game: requestedGame, platform } = body;
 
-    if (!game || !GAMES[game as GameKey]) {
+    if (!requestedGame || !GAMES[requestedGame as GameKey]) {
       return NextResponse.json({ error: 'Invalid game' }, { status: 400 });
     }
 
-    if (GAMES[game as GameKey].mode !== '1v1') {
+    const game = getCanonicalGameKey(requestedGame as GameKey);
+
+    if (GAMES[game].mode !== '1v1') {
       return NextResponse.json({ error: 'Use lobbies for this game' }, { status: 400 });
     }
 
@@ -63,9 +72,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const ratingKey = `rating_${game}`;
+    const ratingKey = getGameRatingKey(game);
     const rating = (profile[ratingKey] as number) ?? 1000;
-    const selectedGames = ((profile.selected_games as string[]) ?? []);
+    const selectedGames = normalizeSelectedGameKeys((profile.selected_games as string[]) ?? []);
     if (!selectedGames.includes(game)) {
       const gameLabel = GAMES[game as GameKey]?.label ?? game;
       return NextResponse.json(

@@ -1,6 +1,7 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { NextRequest } from 'next/server';
+import { normalizeGameIdKeys, normalizeSelectedGameKeys } from '@/lib/config';
 import type { JWTPayload, AuthUser, UserRole } from '@/types';
 
 const JWT_SECRET = process.env.JWT_SECRET!;
@@ -79,8 +80,8 @@ export function profileToAuthUser(profile: Record<string, unknown>): AuthUser {
     cover_url: (profile.cover_url as string | null | undefined) ?? null,
     region: profile.region as string,
     platforms: ((profile.platforms as string[]) ?? []) as import('@/types').PlatformKey[],
-    game_ids: (profile.game_ids as Record<string, string>) ?? {},
-    selected_games: ((profile.selected_games as string[]) ?? []) as import('@/types').GameKey[],
+    game_ids: normalizeGameIdKeys((profile.game_ids as Record<string, string>) ?? {}),
+    selected_games: normalizeSelectedGameKeys((profile.selected_games as string[]) ?? []),
     role: (profile.role as UserRole | undefined) ?? 'user',
     is_banned: (profile.is_banned as boolean | undefined) ?? false,
     whatsapp_number: (profile.whatsapp_number as string | null | undefined) ?? null,

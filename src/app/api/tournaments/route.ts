@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuthUser } from '@/lib/auth';
-import { GAMES, isValidGamePlatform } from '@/lib/config';
+import { GAMES, getCanonicalGameKey, isValidGamePlatform } from '@/lib/config';
 import { isTournamentSize } from '@/lib/bracket';
 import { getPlan } from '@/lib/plans';
 import { makeSlug } from '@/lib/slug';
@@ -29,7 +29,7 @@ export async function GET(request: NextRequest) {
     }
 
     if (game && GAMES[game as GameKey]) {
-      query = query.eq('game', game);
+      query = query.eq('game', getCanonicalGameKey(game as GameKey));
     }
 
     const { data, error } = await query;
@@ -81,7 +81,7 @@ export async function POST(request: NextRequest) {
   try {
     const body = (await request.json()) as Record<string, unknown>;
     const title = String(body.title ?? '').trim();
-    const game = String(body.game ?? '') as GameKey;
+    const requestedGame = String(body.game ?? '') as GameKey;
     const requestedPlatform = (body.platform ? String(body.platform) : null) as PlatformKey | null;
     const size = Number(body.size);
     const entryFee = Math.max(0, Math.round(Number(body.entry_fee ?? 0)));
@@ -92,6 +92,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Tournament title is too short' }, { status: 400 });
     }
 
+    const game = GAMES[requestedGame] ? getCanonicalGameKey(requestedGame) : requestedGame;
     const gameConfig = GAMES[game];
     if (!gameConfig || gameConfig.mode !== '1v1') {
       return NextResponse.json({ error: 'Pick a supported 1v1 game' }, { status: 400 });

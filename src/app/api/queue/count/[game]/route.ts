@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServiceClient } from '@/lib/supabase';
-import { GAMES } from '@/lib/config';
+import { GAMES, getCanonicalGameKey } from '@/lib/config';
 import { isMissingColumnError } from '@/lib/db-compat';
 import type { GameKey } from '@/types';
 
@@ -8,13 +8,15 @@ export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ game: string }> }
 ) {
-  const { game } = await params;
+  const { game: requestedGame } = await params;
   const { searchParams } = new URL(request.url);
   const platform = searchParams.get('platform');
 
-  if (!game || !GAMES[game as GameKey]) {
+  if (!requestedGame || !GAMES[requestedGame as GameKey]) {
     return NextResponse.json({ error: 'Invalid game' }, { status: 400 });
   }
+
+  const game = getCanonicalGameKey(requestedGame as GameKey);
 
   try {
     const supabase = createServiceClient();

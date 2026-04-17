@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { ArrowLeft, Trophy } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useAuth, useAuthFetch } from '@/components/AuthProvider';
-import { GAMES, PLATFORMS, REGIONS } from '@/lib/config';
+import { GAMES, PLATFORMS, REGIONS, getSelectableGameKeys } from '@/lib/config';
 import { getPlan } from '@/lib/plans';
 import type { GameKey, PlatformKey } from '@/types';
 
@@ -16,7 +16,7 @@ export default function CreateTournamentPage() {
   const authFetch = useAuthFetch();
   const router = useRouter();
   const tournamentGames = useMemo(
-    () => (Object.keys(GAMES) as GameKey[]).filter((game) => GAMES[game].mode === '1v1'),
+    () => getSelectableGameKeys().filter((game) => GAMES[game].mode === '1v1'),
     []
   );
   const [form, setForm] = useState({

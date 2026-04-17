@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuthUser } from '@/lib/auth';
-import { GAMES } from '@/lib/config';
+import { GAMES, getCanonicalGameKey, normalizeSelectedGameKeys } from '@/lib/config';
 import { createNotifications } from '@/lib/notifications';
 import { createServiceClient } from '@/lib/supabase';
 import {
@@ -115,8 +115,11 @@ export async function POST(
       return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
     }
 
-    if (!profile.selected_games?.includes(tournament.game)) {
-      const gameLabel = GAMES[tournament.game]?.label ?? tournament.game;
+    const tournamentGame = getCanonicalGameKey(tournament.game);
+    const selectedGames = normalizeSelectedGameKeys(profile.selected_games ?? []);
+
+    if (!selectedGames.includes(tournamentGame)) {
+      const gameLabel = GAMES[tournamentGame]?.label ?? tournament.game;
       return NextResponse.json(
         { error: `Add ${gameLabel} to your profile before joining` },
         { status: 400 }

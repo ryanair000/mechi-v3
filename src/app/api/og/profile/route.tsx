@@ -1,6 +1,7 @@
 import { ImageResponse } from 'next/og';
 import { NextRequest } from 'next/server';
 import { createServiceClient } from '@/lib/supabase';
+import { getGameRatingKey } from '@/lib/config';
 import { ACHIEVEMENTS, getLevelFromXp, getRankDivision } from '@/lib/gamification';
 import { getProfileShareStats } from '@/lib/share';
 
@@ -51,11 +52,14 @@ export async function GET(request: NextRequest) {
   const { games, bestRating, totalWins, totalLosses } = getProfileShareStats(
     profile as Record<string, unknown>
   );
-  let topGame: string | null = null;
+  let topGame: (typeof games)[number] | null = null;
 
   for (const game of games) {
-    const rating = ((profile as Record<string, unknown>)[`rating_${game}`] as number) ?? 1000;
-    if (topGame === null || rating > (((profile as Record<string, unknown>)[`rating_${topGame}`] as number) ?? 1000)) {
+    const rating = ((profile as Record<string, unknown>)[getGameRatingKey(game)] as number) ?? 1000;
+    if (
+      topGame === null ||
+      rating > (((profile as Record<string, unknown>)[getGameRatingKey(topGame)] as number) ?? 1000)
+    ) {
       topGame = game;
     }
   }

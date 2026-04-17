@@ -59,6 +59,8 @@ export interface Game {
   supportsLobby?: boolean;
   maxPlayers?: number;
   steamAppId?: number;
+  hidden?: boolean;
+  canonicalGame?: GameKey;
 }
 
 export interface Tier {

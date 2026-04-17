@@ -1,3 +1,10 @@
+import {
+  getGameLossesKey,
+  getGameRatingKey,
+  getGameWinsKey,
+  normalizeSelectedGameKeys,
+} from '@/lib/config';
+
 const BASE_URL =
   typeof window !== 'undefined'
     ? window.location.origin
@@ -134,15 +141,15 @@ export function tournamentShareText(
 }
 
 export function getProfileShareStats(profile: Record<string, unknown>) {
-  const games = (profile.selected_games as string[]) ?? [];
+  const games = normalizeSelectedGameKeys((profile.selected_games as string[]) ?? []);
   let bestRating = 1000;
   let totalWins = 0;
   let totalLosses = 0;
 
   for (const game of games) {
-    const rating = ((profile as Record<string, unknown>)[`rating_${game}`] as number) ?? 1000;
-    const wins = ((profile as Record<string, unknown>)[`wins_${game}`] as number) ?? 0;
-    const losses = ((profile as Record<string, unknown>)[`losses_${game}`] as number) ?? 0;
+    const rating = (profile[getGameRatingKey(game)] as number) ?? 1000;
+    const wins = (profile[getGameWinsKey(game)] as number) ?? 0;
+    const losses = (profile[getGameLossesKey(game)] as number) ?? 0;
 
     if (rating > bestRating) {
       bestRating = rating;

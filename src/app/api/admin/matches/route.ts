@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getRequestAccessProfile, hasModeratorAccess } from '@/lib/access';
+import { GAMES, getCanonicalGameKey } from '@/lib/config';
 import { createServiceClient } from '@/lib/supabase';
+import type { GameKey } from '@/types';
 
 export async function GET(request: NextRequest) {
   const user = await getRequestAccessProfile(request);
@@ -25,7 +27,7 @@ export async function GET(request: NextRequest) {
       .range(offset, offset + limit - 1);
 
     if (status && status !== 'all') query = query.eq('status', status);
-    if (game) query = query.eq('game', game);
+    if (game && GAMES[game as GameKey]) query = query.eq('game', getCanonicalGameKey(game as GameKey));
 
     const { data, error } = await query;
     if (error) {

@@ -1,17 +1,35 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuthUser } from '@/lib/auth';
-import { GAMES, PLATFORMS } from '@/lib/config';
+import {
+  PLATFORMS,
+  getConfiguredPlatformForGame,
+  getGameIdValue,
+  getPlatformsForGameSetup,
+  getValidCanonicalGameKey,
+  normalizeGameIdKeys,
+  normalizeSelectedGameKeys,
+} from '@/lib/config';
 import { isMissingColumnError } from '@/lib/db-compat';
 import { isValidPhoneNumber, normalizePhoneNumber } from '@/lib/phone';
 import { createServiceClient } from '@/lib/supabase';
 import { canUseSelectedGames, maybeExpireProfilePlan, resolvePlan } from '@/lib/subscription';
+import type { GameKey, PlatformKey } from '@/types';
 
 const PLATFORM_KEYS = new Set(Object.keys(PLATFORMS));
-const GAME_KEYS = new Set(Object.keys(GAMES));
 
 function withProfileDefaults(profile: Record<string, unknown>) {
+  const gameIds =
+    profile.game_ids && typeof profile.game_ids === 'object' && !Array.isArray(profile.game_ids)
+      ? normalizeGameIdKeys(profile.game_ids as Record<string, string>)
+      : {};
+  const selectedGames = Array.isArray(profile.selected_games)
+    ? normalizeSelectedGameKeys(profile.selected_games)
+    : [];
+
   return {
     ...profile,
+    game_ids: gameIds,
+    selected_games: selectedGames,
     whatsapp_notifications:
       (profile.whatsapp_notifications as boolean | undefined) ??
       Boolean(profile.whatsapp_number as string | null | undefined),
@@ -24,6 +42,14 @@ function withProfileDefaults(profile: Record<string, unknown>) {
     plan_since: (profile.plan_since as string | null | undefined) ?? null,
     plan_expires_at: (profile.plan_expires_at as string | null | undefined) ?? null,
   };
+}
+
+function normalizeGameIds(value: Record<string, unknown>): Record<string, string> {
+  return normalizeGameIdKeys(
+    Object.fromEntries(
+      Object.entries(value).map(([key, id]) => [key, String(id).trim()])
+    )
+  );
 }
 
 export async function GET(request: NextRequest) {
@@ -128,6 +154,9 @@ export async function PATCH(request: NextRequest) {
       if (!platforms.every((platform) => typeof platform === 'string' && PLATFORM_KEYS.has(platform))) {
         return NextResponse.json({ error: 'Platforms list contains invalid values' }, { status: 400 });
       }
+      if (new Set(platforms).size !== platforms.length) {
+        return NextResponse.json({ error: 'Platforms cannot contain duplicates' }, { status: 400 });
+      }
       updateData.platforms = platforms;
     }
     if (game_ids !== undefined) {
@@ -143,19 +172,26 @@ export async function PATCH(request: NextRequest) {
           return NextResponse.json({ error: 'Game IDs contain an invalid value' }, { status: 400 });
         }
       }
-      updateData.game_ids = game_ids;
+      updateData.game_ids = normalizeGameIds(game_ids as Record<string, unknown>);
     }
     if (selected_games !== undefined) {
       if (!Array.isArray(selected_games)) {
         return NextResponse.json({ error: 'Selected games must be an array' }, { status: 400 });
       }
-      if (!selected_games.every((game) => typeof game === 'string' && GAME_KEYS.has(game))) {
-        return NextResponse.json({ error: 'Selected games contain invalid values' }, { status: 400 });
+      const normalizedSelectedGames: GameKey[] = [];
+      for (const game of selected_games) {
+        if (typeof game !== 'string') {
+          return NextResponse.json({ error: 'Selected games contain invalid values' }, { status: 400 });
+        }
+        const canonicalGame = getValidCanonicalGameKey(game);
+        if (!canonicalGame) {
+          return NextResponse.json({ error: 'Selected games contain invalid values' }, { status: 400 });
+        }
+        if (!normalizedSelectedGames.includes(canonicalGame)) {
+          normalizedSelectedGames.push(canonicalGame);
+        }
       }
-      if (new Set(selected_games).size !== selected_games.length) {
-        return NextResponse.json({ error: 'Selected games cannot contain duplicates' }, { status: 400 });
-      }
-      if (!canUseSelectedGames(resolvedPlan, selected_games.length)) {
+      if (!canUseSelectedGames(resolvedPlan, normalizedSelectedGames.length)) {
         return NextResponse.json(
           {
             error:
@@ -169,7 +205,42 @@ export async function PATCH(request: NextRequest) {
           { status: 400 }
         );
       }
-      updateData.selected_games = selected_games;
+      updateData.selected_games = normalizedSelectedGames;
+    }
+
+    if (platforms !== undefined || game_ids !== undefined || selected_games !== undefined) {
+      const nextSelectedGames = (
+        selected_games !== undefined
+          ? (updateData.selected_games as GameKey[])
+          : normalizeSelectedGameKeys((currentProfile.selected_games as string[] | null | undefined) ?? [])
+      ) as GameKey[];
+      const nextPlatforms = (
+        platforms !== undefined
+          ? platforms
+          : ((currentProfile.platforms as string[] | null | undefined) ?? [])
+      ) as PlatformKey[];
+      const nextGameIds =
+        (updateData.game_ids as Record<string, string> | undefined) ??
+        normalizeGameIdKeys((currentProfile.game_ids as Record<string, string> | null | undefined) ?? {});
+      const setupPlatforms = getPlatformsForGameSetup(nextSelectedGames, nextGameIds, nextPlatforms);
+
+      const hasMissingPlatform = nextSelectedGames.some(
+        (game) => !getConfiguredPlatformForGame(game, nextGameIds, setupPlatforms)
+      );
+      if (hasMissingPlatform) {
+        return NextResponse.json({ error: 'Choose a platform for each game' }, { status: 400 });
+      }
+
+      const hasMissingGameId = nextSelectedGames.some((game) => {
+        const platform = getConfiguredPlatformForGame(game, nextGameIds, setupPlatforms);
+        return !platform || !getGameIdValue(nextGameIds, game, platform).trim();
+      });
+      if (hasMissingGameId) {
+        return NextResponse.json(
+          { error: 'Add the game IDs opponents will need' },
+          { status: 400 }
+        );
+      }
     }
     if (region !== undefined) {
       if (typeof region !== 'string' || region.trim().length === 0) {

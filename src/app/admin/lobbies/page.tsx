@@ -15,7 +15,7 @@ import {
   X,
 } from 'lucide-react';
 import { useAuthFetch } from '@/components/AuthProvider';
-import { GAMES, supportsLobbyMode } from '@/lib/config';
+import { GAMES, getSelectableGameKeys, supportsLobbyMode } from '@/lib/config';
 import type { AdminLobbyDetail, AdminLobbySummary, GameKey } from '@/types';
 
 const STATUS_OPTIONS = [
@@ -221,7 +221,7 @@ export default function AdminLobbiesPage() {
   }, [lobbies]);
 
   const lobbyGames = useMemo(
-    () => (Object.keys(GAMES) as GameKey[]).filter((gameKey) => supportsLobbyMode(gameKey)),
+    () => getSelectableGameKeys().filter((gameKey) => supportsLobbyMode(gameKey)),
     []
   );
 

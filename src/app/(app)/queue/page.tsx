@@ -8,7 +8,7 @@ import { useAuth, useAuthFetch } from '@/components/AuthProvider';
 import { BrandLogo } from '@/components/BrandLogo';
 import { PlatformLogo } from '@/components/PlatformLogo';
 import { createClient } from '@/lib/supabase';
-import { GAMES, PLATFORMS } from '@/lib/config';
+import { GAMES, PLATFORMS, getCanonicalGameKey } from '@/lib/config';
 import type { GameKey, PlatformKey } from '@/types';
 
 function QueueContent() {
@@ -17,7 +17,8 @@ function QueueContent() {
   const { user } = useAuth();
   const authFetch = useAuthFetch();
 
-  const game = searchParams.get('game') as GameKey | null;
+  const rawGame = searchParams.get('game') as GameKey | null;
+  const game = rawGame && GAMES[rawGame] ? getCanonicalGameKey(rawGame) : null;
   const platform = searchParams.get('platform') as PlatformKey | null;
   const [elapsed, setElapsed] = useState(0);
   const [queueCount, setQueueCount] = useState(0);

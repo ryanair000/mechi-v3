@@ -31,15 +31,17 @@ export const PLATFORMS: Record<PlatformKey, Platform> = {
 export const GAMES: Record<GameKey, Game> = {
   efootball: {
     label: 'eFootball 2026',
-    platforms: ['ps', 'xbox', 'pc'],
+    platforms: ['ps', 'xbox', 'pc', 'mobile'],
     mode: '1v1',
     steamAppId: 1665460,
   },
   efootball_mobile: {
-    label: 'eFootball 2026 Mobile',
+    label: 'eFootball 2026',
     platforms: ['mobile'],
     mode: '1v1',
     steamAppId: 1665460,
+    hidden: true,
+    canonicalGame: 'efootball',
   },
   fc26: {
     label: 'EA FC 26',
@@ -125,7 +127,7 @@ export const GAMES: Record<GameKey, Game> = {
   },
 };
 
-const SCORE_REPORTED_GAMES = new Set<GameKey>(['fc26', 'efootball', 'efootball_mobile']);
+const SCORE_REPORTED_GAMES = new Set<GameKey>(['fc26', 'efootball']);
 
 const GAME_ARTWORK: Record<GameKey, { header: string; capsule: string }> = {
   efootball: {
@@ -133,8 +135,8 @@ const GAME_ARTWORK: Record<GameKey, { header: string; capsule: string }> = {
     capsule: '/game-artwork/efootball-capsule.webp',
   },
   efootball_mobile: {
-    header: '/game-artwork/efootball_mobile-header.webp',
-    capsule: '/game-artwork/efootball_mobile-capsule.webp',
+    header: '/game-artwork/efootball-header.webp',
+    capsule: '/game-artwork/efootball-capsule.webp',
   },
   fc26: {
     header: '/game-artwork/fc26-header.webp',
@@ -235,28 +237,31 @@ export const REGIONS = ['Nairobi', 'Mombasa', 'Kisumu', 'Nakuru', 'Eldoret', 'Ot
 export const DEFAULT_RATING = 1000;
 
 export function getLobbyModeOptions(gameKey: GameKey): string[] {
-  return [...(LOBBY_MODE_OPTIONS[gameKey] ?? [])];
+  const canonicalGameKey = getCanonicalGameKey(gameKey);
+  return [...(LOBBY_MODE_OPTIONS[canonicalGameKey] ?? [])];
 }
 
 export function getLobbyPopularMaps(gameKey: GameKey): string[] {
-  return [...(LOBBY_POPULAR_MAPS[gameKey] ?? [])];
+  const canonicalGameKey = getCanonicalGameKey(gameKey);
+  return [...(LOBBY_POPULAR_MAPS[canonicalGameKey] ?? [])];
 }
 
 export function getDefaultLobbyMode(gameKey: GameKey): string {
-  return getLobbyModeOptions(gameKey)[0] ?? GAMES[gameKey]?.mode ?? 'lobby';
+  const canonicalGameKey = getCanonicalGameKey(gameKey);
+  return getLobbyModeOptions(canonicalGameKey)[0] ?? GAMES[canonicalGameKey]?.mode ?? 'lobby';
 }
 
 export function getDefaultLobbyMap(gameKey: GameKey): string {
-  return getLobbyPopularMaps(gameKey)[0] ?? '';
+  return getLobbyPopularMaps(getCanonicalGameKey(gameKey))[0] ?? '';
 }
 
 export function supportsLobbyMode(gameKey: GameKey): boolean {
-  const game = GAMES[gameKey];
+  const game = GAMES[getCanonicalGameKey(gameKey)];
   return Boolean(game && (game.mode === 'lobby' || game.supportsLobby));
 }
 
 export function requiresMatchScoreReport(gameKey: GameKey): boolean {
-  return SCORE_REPORTED_GAMES.has(gameKey);
+  return SCORE_REPORTED_GAMES.has(getCanonicalGameKey(gameKey));
 }
 
 export function getTier(rating: number): Tier {
@@ -264,43 +269,78 @@ export function getTier(rating: number): Tier {
 }
 
 export function getGameImage(gameKey: GameKey): string | null {
-  return GAME_ARTWORK[gameKey]?.header ?? null;
+  return GAME_ARTWORK[getCanonicalGameKey(gameKey)]?.header ?? null;
 }
 
 export function getGameCapsuleImage(gameKey: GameKey): string | null {
-  return GAME_ARTWORK[gameKey]?.capsule ?? null;
+  return GAME_ARTWORK[getCanonicalGameKey(gameKey)]?.capsule ?? null;
 }
 
 export function getGameRatingKey(game: GameKey): string {
-  return `rating_${game}`;
+  return `rating_${getCanonicalGameKey(game)}`;
 }
 
 export function getGameWinsKey(game: GameKey): string {
-  return `wins_${game}`;
+  return `wins_${getCanonicalGameKey(game)}`;
 }
 
 export function getGameLossesKey(game: GameKey): string {
-  return `losses_${game}`;
+  return `losses_${getCanonicalGameKey(game)}`;
+}
+
+export function getCanonicalGameKey(gameKey: GameKey): GameKey {
+  return GAMES[gameKey]?.canonicalGame ?? gameKey;
+}
+
+export function getValidCanonicalGameKey(gameKey: string): GameKey | null {
+  if (!Object.prototype.hasOwnProperty.call(GAMES, gameKey)) {
+    return null;
+  }
+
+  return getCanonicalGameKey(gameKey as GameKey);
+}
+
+export function getSelectableGameKeys(): GameKey[] {
+  return (Object.keys(GAMES) as GameKey[]).filter(
+    (gameKey) => !GAMES[gameKey].hidden && getCanonicalGameKey(gameKey) === gameKey
+  );
+}
+
+export function normalizeSelectedGameKeys(values: readonly unknown[] = []): GameKey[] {
+  const games: GameKey[] = [];
+
+  for (const value of values) {
+    if (typeof value !== 'string') continue;
+
+    const game = getValidCanonicalGameKey(value);
+    if (game && !games.includes(game)) {
+      games.push(game);
+    }
+  }
+
+  return games;
 }
 
 export function getGamesForPlatforms(platforms: PlatformKey[]): GameKey[] {
-  return (Object.keys(GAMES) as GameKey[]).filter((gameKey) => {
+  return getSelectableGameKeys().filter((gameKey) => {
     const game = GAMES[gameKey];
     return game.platforms.some((p) => platforms.includes(p));
   });
 }
 
 export function getGamePlatformKey(gameKey: GameKey): string {
-  return `platform:${gameKey}`;
+  return `platform:${getCanonicalGameKey(gameKey)}`;
 }
 
 export function getGameIdKey(gameKey: GameKey, platform: PlatformKey): string {
-  return platform === 'mobile' ? `${gameKey}:mobile` : platform;
+  return platform === 'mobile' ? `${getCanonicalGameKey(gameKey)}:mobile` : platform;
 }
 
 export function getGameIdLabel(gameKey: GameKey, platform: PlatformKey): string {
   if (platform === 'mobile') {
-    return `${GAMES[gameKey]?.label ?? 'Mobile game'} ID`;
+    const canonicalGameKey = getCanonicalGameKey(gameKey);
+    const label = GAMES[canonicalGameKey]?.label ?? 'Mobile game';
+    return canonicalGameKey === 'efootball' ? `${label} Mobile ID` : `${label} ID`;
   }
 
   return PLATFORMS[platform]?.idLabel ?? 'Platform ID';
@@ -311,10 +351,10 @@ export function getGameIdPlaceholder(gameKey: GameKey, platform: PlatformKey): s
     return PLATFORMS[platform]?.placeholder ?? 'Your ID';
   }
 
-  switch (gameKey) {
+  switch (getCanonicalGameKey(gameKey)) {
     case 'codm':
       return 'CODM username or UID';
-    case 'efootball_mobile':
+    case 'efootball':
       return 'eFootball user ID';
     case 'pubgm':
       return 'PUBG Mobile UID';
@@ -328,7 +368,23 @@ export function getGameIdPlaceholder(gameKey: GameKey, platform: PlatformKey): s
 }
 
 export function isValidGamePlatform(gameKey: GameKey, platform: PlatformKey): boolean {
-  return GAMES[gameKey]?.platforms.includes(platform) ?? false;
+  return GAMES[getCanonicalGameKey(gameKey)]?.platforms.includes(platform) ?? false;
+}
+
+export function normalizeGameIdKeys(gameIds: Record<string, string> = {}): Record<string, string> {
+  const nextGameIds = { ...gameIds };
+
+  if (nextGameIds['efootball_mobile:mobile'] && !nextGameIds['efootball:mobile']) {
+    nextGameIds['efootball:mobile'] = nextGameIds['efootball_mobile:mobile'];
+  }
+  if (nextGameIds['platform:efootball_mobile'] && !nextGameIds['platform:efootball']) {
+    nextGameIds['platform:efootball'] = nextGameIds['platform:efootball_mobile'];
+  }
+
+  delete nextGameIds['efootball_mobile:mobile'];
+  delete nextGameIds['platform:efootball_mobile'];
+
+  return nextGameIds;
 }
 
 export function getConfiguredPlatformForGame(
@@ -336,12 +392,22 @@ export function getConfiguredPlatformForGame(
   gameIds: Record<string, string> = {},
   platforms: PlatformKey[] = []
 ): PlatformKey | null {
-  const game = GAMES[gameKey];
+  const canonicalGameKey = getCanonicalGameKey(gameKey);
+  const game = GAMES[canonicalGameKey];
   if (!game) return null;
 
-  const configuredPlatform = gameIds[getGamePlatformKey(gameKey)] as PlatformKey | undefined;
+  const canonicalGameIds = normalizeGameIdKeys(gameIds);
+  const configuredPlatform = canonicalGameIds[getGamePlatformKey(canonicalGameKey)] as
+    | PlatformKey
+    | undefined;
   if (configuredPlatform && game.platforms.includes(configuredPlatform)) {
     return configuredPlatform;
+  }
+
+  const legacyGame = GAMES[gameKey];
+  if (legacyGame?.canonicalGame && legacyGame.platforms.length === 1) {
+    const [onlyPlatform] = legacyGame.platforms;
+    return onlyPlatform;
   }
 
   if (game.platforms.length === 1) {
@@ -374,7 +440,15 @@ export function getGameIdValue(
   gameKey: GameKey,
   platform: PlatformKey
 ): string {
-  return gameIds[getGameIdKey(gameKey, platform)] ?? gameIds[platform] ?? '';
+  const canonicalGameKey = getCanonicalGameKey(gameKey);
+  const canonicalGameIds = normalizeGameIdKeys(gameIds);
+
+  return (
+    canonicalGameIds[getGameIdKey(canonicalGameKey, platform)] ??
+    gameIds[getGameIdKey(gameKey, platform)] ??
+    gameIds[platform] ??
+    ''
+  );
 }
 
 export function getPlatformAddUrl(platform: PlatformKey, platformId: string): string | null {

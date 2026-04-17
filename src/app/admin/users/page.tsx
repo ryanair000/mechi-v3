@@ -5,7 +5,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import toast from 'react-hot-toast';
 import { Loader2, Search, Shield, ShieldOff, UserCog, Users } from 'lucide-react';
 import { useAuth, useAuthFetch } from '@/components/AuthProvider';
-import { GAMES, PLATFORMS } from '@/lib/config';
+import { GAMES, PLATFORMS, normalizeSelectedGameKeys } from '@/lib/config';
 import type { AdminUser, GameKey, PlatformKey, UserRole } from '@/types';
 
 interface UserDetailMatch {
@@ -316,9 +316,9 @@ export default function AdminUsersPage() {
         <div className="space-y-3">
           {users.map((member) => {
             const isSelf = user?.id === member.id;
-            const games = member.selected_games
+            const games = normalizeSelectedGameKeys(member.selected_games)
               .slice(0, 3)
-              .map((game) => GAMES[game as GameKey]?.label ?? game);
+              .map((game) => GAMES[game]?.label ?? game);
             const isExpanded = detailUserId === member.id;
             const recentLobbyActivity =
               isExpanded && detail

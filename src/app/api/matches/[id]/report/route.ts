@@ -16,6 +16,7 @@ import { sendMatchDisputeEmail, sendResultConfirmedEmail } from '@/lib/email';
 import { notifyMatchDispute, notifyResultConfirmed } from '@/lib/whatsapp';
 import {
   GAMES,
+  getCanonicalGameKey,
   getGameLossesKey,
   getGameRatingKey,
   getGameWinsKey,
@@ -331,7 +332,7 @@ export async function POST(
       return NextResponse.json({ error: 'Match is not active' }, { status: 400 });
     }
 
-    const game = match.game as GameKey;
+    const game = getCanonicalGameKey(match.game as GameKey);
     const usesScoreReport = requiresMatchScoreReport(game);
     const rawPlayer1Score = parseReportedScore(body.player1_score);
     const rawPlayer2Score = parseReportedScore(body.player2_score);

@@ -6,7 +6,7 @@ import { Crown, Trophy } from 'lucide-react';
 import { useAuth, useAuthFetch } from '@/components/AuthProvider';
 import { ChallengePlayerButton } from '@/components/ChallengePlayerButton';
 import { TierMedal } from '@/components/TierMedal';
-import { GAMES, getConfiguredPlatformForGame } from '@/lib/config';
+import { GAMES, getConfiguredPlatformForGame, normalizeSelectedGameKeys } from '@/lib/config';
 import { getRankDivision, withAlpha } from '@/lib/gamification';
 import type { GameKey, PlatformKey } from '@/types';
 
@@ -23,8 +23,8 @@ interface LeaderboardEntry {
 }
 
 function filterRankedGames(games: readonly string[] = []): GameKey[] {
-  return games.filter(
-    (game): game is GameKey => Boolean(GAMES[game as GameKey]) && GAMES[game as GameKey].mode === '1v1'
+  return normalizeSelectedGameKeys(games).filter(
+    (game): game is GameKey => Boolean(GAMES[game]) && GAMES[game].mode === '1v1'
   );
 }
 

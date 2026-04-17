@@ -1,7 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuthUser } from '@/lib/auth';
 import { createServiceClient } from '@/lib/supabase';
-import { GAMES, getDefaultLobbyMode, getLobbyModeOptions, getLobbyPopularMaps, supportsLobbyMode } from '@/lib/config';
+import {
+  GAMES,
+  getCanonicalGameKey,
+  getDefaultLobbyMode,
+  getLobbyModeOptions,
+  getLobbyPopularMaps,
+  supportsLobbyMode,
+} from '@/lib/config';
 import type { GameKey } from '@/types';
 
 function generateRoomCode(): string {
@@ -46,7 +53,7 @@ export async function GET(request: NextRequest) {
       .limit(30);
 
     if (game && GAMES[game as GameKey]) {
-      query = query.eq('game', game);
+      query = query.eq('game', getCanonicalGameKey(game as GameKey));
     }
 
     const { data: lobbies, error } = await query;
@@ -75,7 +82,10 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const { game, title, mode, map_name, scheduled_for } = body;
+    const { game: requestedGame, title, mode, map_name, scheduled_for } = body;
+    const game = requestedGame && GAMES[requestedGame as GameKey]
+      ? getCanonicalGameKey(requestedGame as GameKey)
+      : requestedGame;
     const normalizedTitle = String(title ?? '').trim();
     const normalizedSchedule = String(scheduled_for ?? '').trim();
 

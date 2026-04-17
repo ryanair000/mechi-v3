@@ -1,7 +1,9 @@
 import type { Metadata, Viewport } from 'next';
 import Script from 'next/script';
+import { Suspense } from 'react';
 import './globals.css';
 import { AppProviders } from '@/components/AppProviders';
+import { GoogleAnalyticsPageView } from '@/components/GoogleAnalyticsPageView';
 import {
   GOOGLE_ANALYTICS_ID,
   getGoogleAnalyticsConfigScript,
@@ -72,6 +74,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body>
         <AppProviders>{children}</AppProviders>
+        <Suspense fallback={null}>
+          <GoogleAnalyticsPageView measurementId={GOOGLE_ANALYTICS_ID} />
+        </Suspense>
         <Script
           src={`https://www.googletagmanager.com/gtag/js?id=${GOOGLE_ANALYTICS_ID}`}
           strategy="afterInteractive"

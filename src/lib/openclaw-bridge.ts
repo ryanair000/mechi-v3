@@ -133,7 +133,7 @@ export async function requestSupportReply(
   }
 
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 25_000);
+  const timeout = setTimeout(() => controller.abort(), 45_000);
 
   try {
     const response = await fetch(bridgeUrl, {

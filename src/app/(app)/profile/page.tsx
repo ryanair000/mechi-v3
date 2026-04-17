@@ -21,6 +21,7 @@ import { InviteMenu } from '@/components/InviteMenu';
 import { PaywallModal } from '@/components/PaywallModal';
 import { PlanBadge } from '@/components/PlanBadge';
 import { PlatformLogo } from '@/components/PlatformLogo';
+import { ProfileImageCropper } from '@/components/ProfileImageCropper';
 import { ShareMenu } from '@/components/ShareMenu';
 import { TierMedal } from '@/components/TierMedal';
 import {
@@ -77,6 +78,10 @@ export default function ProfilePage() {
   const [saving, setSaving] = useState(false);
   const [subscriptionLoading, setSubscriptionLoading] = useState(false);
   const [uploadingMedia, setUploadingMedia] = useState<'avatar' | 'cover' | null>(null);
+  const [pendingMedia, setPendingMedia] = useState<{
+    kind: 'avatar' | 'cover';
+    file: File;
+  } | null>(null);
   const [tab, setTab] = useState<'stats' | 'settings'>('stats');
   const [showPaywall, setShowPaywall] = useState(false);
 
@@ -193,6 +198,19 @@ export default function ProfilePage() {
     } finally {
       setUploadingMedia(null);
     }
+  };
+
+  const openMediaEditor = (kind: 'avatar' | 'cover', file: File | null) => {
+    if (!file) {
+      return;
+    }
+
+    if (!file.type.startsWith('image/')) {
+      toast.error('Pick an image file');
+      return;
+    }
+
+    setPendingMedia({ kind, file });
   };
 
   const handleSave = async () => {
@@ -379,6 +397,20 @@ export default function ProfilePage() {
       {showPaywall ? (
         <PaywallModal reason="game_limit" onClose={() => setShowPaywall(false)} />
       ) : null}
+      {pendingMedia ? (
+        <ProfileImageCropper
+          kind={pendingMedia.kind}
+          file={pendingMedia.file}
+          onCancel={() => setPendingMedia(null)}
+          onConfirm={async (blob) => {
+            const nextFile = new File([blob], pendingMedia.file.name, {
+              type: blob.type || pendingMedia.file.type,
+            });
+            await handleMediaUpload(pendingMedia.kind, nextFile);
+            setPendingMedia(null);
+          }}
+        />
+      ) : null}
       <div className="mx-auto w-full max-w-[88rem]">
         <div className="card mb-5 overflow-hidden">
           <div
@@ -394,7 +426,7 @@ export default function ProfilePage() {
                 fill
                 sizes="(min-width: 1280px) 1200px, 100vw"
                 className="object-cover"
-                priority
+                preload
               />
             ) : null}
             <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(11,17,33,0.08),rgba(11,17,33,0.52))]" />
@@ -419,7 +451,7 @@ export default function ProfilePage() {
                   className="sr-only"
                   onChange={(event) => {
                     const file = event.target.files?.[0] ?? null;
-                    void handleMediaUpload('cover', file);
+                    openMediaEditor('cover', file);
                     event.target.value = '';
                   }}
                   disabled={uploadingMedia !== null}
@@ -469,7 +501,7 @@ export default function ProfilePage() {
                       className="sr-only"
                       onChange={(event) => {
                         const file = event.target.files?.[0] ?? null;
-                        void handleMediaUpload('avatar', file);
+                        openMediaEditor('avatar', file);
                         event.target.value = '';
                       }}
                       disabled={uploadingMedia !== null}
@@ -616,7 +648,9 @@ export default function ProfilePage() {
             <div className="space-y-4">
             {userGames.length === 0 ? (
               <div className="card p-10 text-center">
-                <div className="mb-4 text-5xl">Ã°Å¸Å½Â®</div>
+                <div className="mb-4 inline-flex h-16 w-16 items-center justify-center rounded-3xl bg-[rgba(50,224,196,0.14)] text-[var(--accent-secondary-text)]">
+                  <Swords size={28} />
+                </div>
                 <p className="mb-1 font-semibold text-[var(--text-primary)]">No games set up yet</p>
                 <p className="mx-auto mb-5 max-w-xs text-sm text-[var(--text-soft)]">
                   Add your platforms and choose your focus games to start climbing the ranks.
@@ -627,7 +661,9 @@ export default function ProfilePage() {
               </div>
             ) : rankedUserGames.length === 0 ? (
               <div className="card p-10 text-center">
-                <div className="mb-4 text-5xl">Ã°Å¸Å½Â®</div>
+                <div className="mb-4 inline-flex h-16 w-16 items-center justify-center rounded-3xl bg-[rgba(255,107,107,0.14)] text-[var(--brand-coral)]">
+                  <BarChart2 size={28} />
+                </div>
                 <p className="mb-1 font-semibold text-[var(--text-primary)]">No ranked games selected</p>
                 <p className="mx-auto mb-5 max-w-xs text-sm text-[var(--text-soft)]">
                   Your mobile lobby games are saved. Add a 1v1 title when you want a tracked ladder.
@@ -851,8 +887,8 @@ export default function ProfilePage() {
                       {currentPlan.id === 'free'
                         ? 'Free plan gives you 5 ranked matches/day and 1 selected game.'
                         : currentPlan.id === 'pro'
-                          ? 'Pro unlocks unlimited ranked matches and up to 3 selected games.'
-                          : 'Your premium access is active. New upgrades are Pro-only for now.'}
+                          ? 'Pro unlocks unlimited ranked matches, direct challenges, and up to 3 selected games.'
+                          : 'Elite keeps the full stack live with zero tournament fee, early access, and streaming perks.'}
                     </p>
                     {typeof profile?.plan_expires_at === 'string' && currentPlan.id !== 'free' ? (
                       <p className="mt-2 text-xs text-[var(--text-soft)]">
@@ -903,7 +939,7 @@ export default function ProfilePage() {
                 <div className="mb-4">
                   <p className="section-title">Profile look</p>
                   <p className="mt-2 text-sm text-[var(--text-secondary)]">
-                    Swap your display photo and cover any time to make the page feel more like yours.
+                    Crop and reposition your display photo or cover before upload so the page always frames them cleanly.
                   </p>
                 </div>
 
@@ -950,7 +986,7 @@ export default function ProfilePage() {
                         className="sr-only"
                         onChange={(event) => {
                           const file = event.target.files?.[0] ?? null;
-                          void handleMediaUpload('avatar', file);
+                          openMediaEditor('avatar', file);
                           event.target.value = '';
                         }}
                         disabled={uploadingMedia !== null}
@@ -998,7 +1034,7 @@ export default function ProfilePage() {
                         className="sr-only"
                         onChange={(event) => {
                           const file = event.target.files?.[0] ?? null;
-                          void handleMediaUpload('cover', file);
+                          openMediaEditor('cover', file);
                           event.target.value = '';
                         }}
                         disabled={uploadingMedia !== null}

@@ -21,7 +21,7 @@ export async function GET(
     const { data: matchRaw, error: matchError } = await supabase
       .from('matches')
       .select(
-        'id, player1_id, player2_id, game, platform, region, status, winner_id, player1_reported_winner, player2_reported_winner, rating_change_p1, rating_change_p2, dispute_screenshot_url, dispute_requested_by, gamification_summary_p1, gamification_summary_p2, tournament_id, created_at, completed_at, player1:player1_id(id, username, email, phone), player2:player2_id(id, username, email, phone)'
+        'id, player1_id, player2_id, game, platform, region, status, winner_id, player1_reported_winner, player2_reported_winner, player1_reported_player1_score, player1_reported_player2_score, player2_reported_player1_score, player2_reported_player2_score, player1_score, player2_score, rating_change_p1, rating_change_p2, dispute_screenshot_url, dispute_requested_by, gamification_summary_p1, gamification_summary_p2, tournament_id, created_at, completed_at, player1:player1_id(id, username, email, phone), player2:player2_id(id, username, email, phone)'
       )
       .eq('id', id)
       .single();

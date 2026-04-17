@@ -39,7 +39,7 @@ export function GameCover({
           sizes={variant === 'capsule' ? '(max-width: 768px) 45vw, 300px' : '(max-width: 768px) 92vw, 460px'}
           className="h-full w-full object-cover"
           onError={() => setFailedImageUrl(desiredImageUrl)}
-          priority={priority}
+          preload={priority}
           unoptimized={isUnoptimizedImage}
         />
       ) : (

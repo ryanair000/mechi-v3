@@ -4,13 +4,15 @@ import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, Trophy } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { useAuthFetch } from '@/components/AuthProvider';
+import { useAuth, useAuthFetch } from '@/components/AuthProvider';
 import { GAMES, PLATFORMS, REGIONS } from '@/lib/config';
+import { getPlan } from '@/lib/plans';
 import type { GameKey, PlatformKey } from '@/types';
 
 const TOURNAMENT_SIZES = [4, 8, 16] as const;
 
 export default function CreateTournamentPage() {
+  const { user } = useAuth();
   const authFetch = useAuthFetch();
   const router = useRouter();
   const tournamentGames = useMemo(
@@ -23,12 +25,14 @@ export default function CreateTournamentPage() {
     platform: GAMES[tournamentGames[0] ?? 'fc26']?.platforms[0] ?? 'ps',
     region: 'Nairobi',
     size: 4,
+    entry_type: 'paid' as 'paid' | 'free',
     entry_fee: 0,
     rules: '',
   });
   const [creating, setCreating] = useState(false);
 
   const platforms = GAMES[form.game]?.platforms ?? [];
+  const currentPlan = getPlan(user?.plan ?? 'free');
 
   const handleCreate = async () => {
     if (!form.title.trim()) {
@@ -40,7 +44,10 @@ export default function CreateTournamentPage() {
     try {
       const res = await authFetch('/api/tournaments', {
         method: 'POST',
-        body: JSON.stringify(form),
+        body: JSON.stringify({
+          ...form,
+          entry_fee: form.entry_type === 'free' ? 0 : form.entry_fee,
+        }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -69,7 +76,7 @@ export default function CreateTournamentPage() {
             Create a tournament
           </h1>
           <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">
-            Keep it simple: game, slots, rules, and entry fee. Mechi handles bracket flow after results.
+            Lock the game, pick whether entry is paid or free, and let Mechi handle the bracket once results start landing.
           </p>
         </div>
 
@@ -126,7 +133,7 @@ export default function CreateTournamentPage() {
             </div>
           </div>
 
-          <div className="grid gap-4 sm:grid-cols-3">
+          <div className="grid gap-4 sm:grid-cols-2">
             <div>
               <label className="label">Region</label>
               <select
@@ -155,17 +162,77 @@ export default function CreateTournamentPage() {
                 ))}
               </select>
             </div>
+          </div>
+
+          <div>
+            <label className="label">Entry type</label>
+            <div className="grid gap-3 sm:grid-cols-2">
+              {[
+                {
+                  key: 'paid' as const,
+                  title: 'Paid entry',
+                  copy: 'Players pay a KES fee to join and the winner gets the prize pool after platform fee.',
+                },
+                {
+                  key: 'free' as const,
+                  title: 'Free entry',
+                  copy:
+                    currentPlan.id === 'free'
+                      ? 'Pro or Elite only. Upgrade if you want to host a free bracket.'
+                      : 'Open the bracket without asking players to pay in.',
+                },
+              ].map((entryType) => {
+                const isSelected = form.entry_type === entryType.key;
+                return (
+                  <button
+                    key={entryType.key}
+                    type="button"
+                    onClick={() =>
+                      setForm((current) => ({
+                        ...current,
+                        entry_type: entryType.key,
+                        entry_fee: entryType.key === 'free' ? 0 : Math.max(0, current.entry_fee || 0),
+                      }))
+                    }
+                    className={`rounded-2xl border p-4 text-left transition-all ${
+                      isSelected
+                        ? 'border-[rgba(255,107,107,0.28)] bg-[var(--accent-primary-soft)]'
+                        : 'border-[var(--border-color)] bg-[var(--surface-elevated)] hover:border-[rgba(50,224,196,0.22)] hover:bg-[var(--surface)]'
+                    }`}
+                  >
+                    <p className="text-sm font-black text-[var(--text-primary)]">{entryType.title}</p>
+                    <p className="mt-2 text-xs leading-5 text-[var(--text-secondary)]">{entryType.copy}</p>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2">
             <div>
-              <label className="label">Entry fee (KES)</label>
-              <input
-                type="number"
-                min={0}
-                value={form.entry_fee}
-                onChange={(event) =>
-                  setForm((current) => ({ ...current, entry_fee: Number(event.target.value) }))
-                }
-                className="input"
-              />
+              <label className="label">Entry fee</label>
+              {form.entry_type === 'paid' ? (
+                <input
+                  type="number"
+                  min={0}
+                  value={form.entry_fee}
+                  onChange={(event) =>
+                    setForm((current) => ({ ...current, entry_fee: Number(event.target.value) }))
+                  }
+                  className="input"
+                  placeholder="Amount in KES"
+                />
+              ) : (
+                <div className="input flex items-center text-[var(--text-soft)]">Free entry</div>
+              )}
+            </div>
+            <div className="rounded-2xl border border-[var(--border-color)] bg-[var(--surface-elevated)] px-4 py-3">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--text-soft)]">
+                Platform fee
+              </p>
+              <p className="mt-1 text-sm font-black text-[var(--text-primary)]">
+                {currentPlan.tournamentFeePercent}% on this plan
+              </p>
             </div>
           </div>
 
@@ -185,7 +252,9 @@ export default function CreateTournamentPage() {
               <Trophy size={15} className="text-[var(--brand-coral)]" />
               Prize split
             </div>
-            Mechi keeps 5%. Winner gets the remaining pool when the final result is confirmed.
+            {form.entry_type === 'free'
+              ? 'Free-entry brackets stay open to join. Pro and Elite can host them, and Elite pays 0% platform fee.'
+              : `Mechi keeps ${currentPlan.tournamentFeePercent}%. The winner gets the remaining pool when the final result is confirmed.`}
           </div>
 
           <button onClick={handleCreate} disabled={creating} className="btn-primary w-full">

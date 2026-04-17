@@ -154,7 +154,7 @@ function QueueContent() {
         </div>
 
         <h1 className="text-[2rem] font-black tracking-normal text-[var(--text-primary)] sm:text-[2.15rem]">
-          Your next run is loading.
+          We&apos;re cooking up your next matchup.
         </h1>
         <p className="mt-2 text-[13px] text-[var(--text-secondary)]">{gameConfig.label}</p>
         <p className="mt-3 text-[2rem] font-black tabular-nums text-[var(--brand-coral)] sm:text-[2.25rem]">
@@ -179,8 +179,8 @@ function QueueContent() {
         </div>
 
         <p className="mx-auto mb-6 mt-5 max-w-sm text-center text-[13px] leading-6 text-[var(--text-secondary)]">
-          We&apos;re searching your {platformLabel} pool first, then widening the skill range if the queue stays
-          quiet so you can still get a proper {gameConfig.label} run.
+          Mechi is checking your {platformLabel} pool first, then opening the net wider if things stay quiet so
+          you still land a fair {gameConfig.label} run instead of waiting in limbo.
         </p>
 
         <button onClick={handleLeave} disabled={leaving} className="btn-danger mx-auto px-4 py-2 text-sm">

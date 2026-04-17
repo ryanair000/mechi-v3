@@ -14,7 +14,14 @@ import {
 import { createServiceClient } from '@/lib/supabase';
 import { sendMatchDisputeEmail, sendResultConfirmedEmail } from '@/lib/email';
 import { notifyMatchDispute, notifyResultConfirmed } from '@/lib/whatsapp';
-import { GAMES, getGameLossesKey, getGameRatingKey, getGameWinsKey } from '@/lib/config';
+import {
+  GAMES,
+  getGameLossesKey,
+  getGameRatingKey,
+  getGameWinsKey,
+  requiresMatchScoreReport,
+} from '@/lib/config';
+import { createNotifications } from '@/lib/notifications';
 import { advanceTournamentAfterMatch } from '@/lib/tournaments';
 import type { GameKey, GamificationResult, Match } from '@/types';
 
@@ -99,6 +106,26 @@ function shouldUseLegacyFallback(error: { message?: string; code?: string } | nu
   );
 }
 
+function parseReportedScore(value: unknown): number | null | undefined {
+  if (value === undefined || value === null || value === '') {
+    return undefined;
+  }
+
+  if (typeof value === 'number' && Number.isInteger(value) && value >= 0) {
+    return value;
+  }
+
+  if (typeof value === 'string' && /^\d+$/.test(value.trim())) {
+    return Number(value.trim());
+  }
+
+  return null;
+}
+
+function formatScoreline(player1Score: number, player2Score: number) {
+  return `${player1Score}-${player2Score}`;
+}
+
 async function finalizeLegacyMatch(params: {
   supabase: ReturnType<typeof createServiceClient>;
   matchId: string;
@@ -109,8 +136,22 @@ async function finalizeLegacyMatch(params: {
   newRatingLoser: number;
   ratingChangeP1: number;
   ratingChangeP2: number;
+  finalPlayer1Score?: number | null;
+  finalPlayer2Score?: number | null;
 }) {
-  const { supabase, matchId, winnerId, loserId, game, newRatingWinner, newRatingLoser, ratingChangeP1, ratingChangeP2 } = params;
+  const {
+    supabase,
+    matchId,
+    winnerId,
+    loserId,
+    game,
+    newRatingWinner,
+    newRatingLoser,
+    ratingChangeP1,
+    ratingChangeP2,
+    finalPlayer1Score,
+    finalPlayer2Score,
+  } = params;
   const ratingKey = getGameRatingKey(game);
   const winsKey = getGameWinsKey(game);
   const lossesKey = getGameLossesKey(game);
@@ -152,15 +193,25 @@ async function finalizeLegacyMatch(params: {
     return false;
   }
 
+  const matchUpdate: Record<string, string | number | null> = {
+    status: 'completed',
+    winner_id: winnerId,
+    rating_change_p1: ratingChangeP1,
+    rating_change_p2: ratingChangeP2,
+    completed_at: new Date().toISOString(),
+  };
+
+  if (finalPlayer1Score !== undefined) {
+    matchUpdate.player1_score = finalPlayer1Score;
+  }
+
+  if (finalPlayer2Score !== undefined) {
+    matchUpdate.player2_score = finalPlayer2Score;
+  }
+
   const { error: matchError } = await supabase
     .from('matches')
-    .update({
-      status: 'completed',
-      winner_id: winnerId,
-      rating_change_p1: ratingChangeP1,
-      rating_change_p2: ratingChangeP2,
-      completed_at: new Date().toISOString(),
-    })
+    .update(matchUpdate)
     .eq('id', matchId);
 
   return !matchError;
@@ -246,12 +297,7 @@ export async function POST(
   const { id } = await params;
 
   try {
-    const body = await request.json();
-    const { winner_id } = body;
-
-    if (!winner_id) {
-      return NextResponse.json({ error: 'winner_id is required' }, { status: 400 });
-    }
+    const body = (await request.json()) as Record<string, unknown>;
 
     const supabase = createServiceClient();
 
@@ -275,6 +321,8 @@ export async function POST(
       return NextResponse.json({
         status: 'completed',
         winner_id: match.winner_id,
+        player1_score: match.player1_score ?? null,
+        player2_score: match.player2_score ?? null,
         gamification: getGamificationSummaryForUser(match, authUser.sub),
       });
     }
@@ -283,16 +331,68 @@ export async function POST(
       return NextResponse.json({ error: 'Match is not active' }, { status: 400 });
     }
 
-    if (winner_id !== match.player1_id && winner_id !== match.player2_id) {
-      return NextResponse.json({ error: 'Invalid winner' }, { status: 400 });
+    const game = match.game as GameKey;
+    const usesScoreReport = requiresMatchScoreReport(game);
+    const rawPlayer1Score = parseReportedScore(body.player1_score);
+    const rawPlayer2Score = parseReportedScore(body.player2_score);
+    let winnerId = String(body.winner_id ?? '').trim();
+    let reportedPlayer1Score: number | null = null;
+    let reportedPlayer2Score: number | null = null;
+
+    if (usesScoreReport) {
+      if (rawPlayer1Score === undefined || rawPlayer2Score === undefined) {
+        return NextResponse.json(
+          { error: 'player1_score and player2_score are required for this match' },
+          { status: 400 }
+        );
+      }
+
+      if (rawPlayer1Score === null || rawPlayer2Score === null) {
+        return NextResponse.json(
+          { error: 'Scores must be whole numbers that are 0 or higher' },
+          { status: 400 }
+        );
+      }
+
+      reportedPlayer1Score = rawPlayer1Score;
+      reportedPlayer2Score = rawPlayer2Score;
+
+      if (reportedPlayer1Score === reportedPlayer2Score) {
+        return NextResponse.json(
+          { error: 'Draws are not supported for score reports yet' },
+          { status: 400 }
+        );
+      }
+
+      winnerId =
+        reportedPlayer1Score > reportedPlayer2Score ? match.player1_id : match.player2_id;
+    } else {
+      if (!winnerId) {
+        return NextResponse.json({ error: 'winner_id is required' }, { status: 400 });
+      }
+
+      if (winnerId !== match.player1_id && winnerId !== match.player2_id) {
+        return NextResponse.json({ error: 'Invalid winner' }, { status: 400 });
+      }
     }
 
     const isPlayer1 = authUser.sub === match.player1_id;
     const reportField = isPlayer1 ? 'player1_reported_winner' : 'player2_reported_winner';
+    const reportUpdate: Record<string, string | number> = { [reportField]: winnerId };
+
+    if (usesScoreReport && reportedPlayer1Score !== null && reportedPlayer2Score !== null) {
+      if (isPlayer1) {
+        reportUpdate.player1_reported_player1_score = reportedPlayer1Score;
+        reportUpdate.player1_reported_player2_score = reportedPlayer2Score;
+      } else {
+        reportUpdate.player2_reported_player1_score = reportedPlayer1Score;
+        reportUpdate.player2_reported_player2_score = reportedPlayer2Score;
+      }
+    }
 
     const { data: updatedMatchRaw, error: updateError } = await supabase
       .from('matches')
-      .update({ [reportField]: winner_id })
+      .update(reportUpdate)
       .eq('id', id)
       .select('*')
       .single();
@@ -305,9 +405,28 @@ export async function POST(
 
     const p1Reported = updatedMatch.player1_reported_winner;
     const p2Reported = updatedMatch.player2_reported_winner;
+    const p1ScoreReady =
+      updatedMatch.player1_reported_player1_score !== null &&
+      updatedMatch.player1_reported_player1_score !== undefined &&
+      updatedMatch.player1_reported_player2_score !== null &&
+      updatedMatch.player1_reported_player2_score !== undefined;
+    const p2ScoreReady =
+      updatedMatch.player2_reported_player1_score !== null &&
+      updatedMatch.player2_reported_player1_score !== undefined &&
+      updatedMatch.player2_reported_player2_score !== null &&
+      updatedMatch.player2_reported_player2_score !== undefined;
 
     if (p1Reported && p2Reported) {
-      if (p1Reported !== p2Reported) {
+      const scoreMismatch =
+        usesScoreReport &&
+        (!p1ScoreReady ||
+          !p2ScoreReady ||
+          updatedMatch.player1_reported_player1_score !==
+            updatedMatch.player2_reported_player1_score ||
+          updatedMatch.player1_reported_player2_score !==
+            updatedMatch.player2_reported_player2_score);
+
+      if (p1Reported !== p2Reported || scoreMismatch) {
         await supabase
           .from('matches')
           .update({
@@ -376,17 +495,37 @@ export async function POST(
           }).catch(console.error);
         }
 
+        await createNotifications(
+          [match.player1_id, match.player2_id].map((userId) => ({
+            user_id: userId,
+            type: 'match_disputed' as const,
+            title: 'Match sent to review',
+            body: 'Your reports did not match. Upload proof if needed and we will sort it out.',
+            href: `/match/${id}`,
+            metadata: {
+              match_id: id,
+              game: updatedMatch.game,
+            },
+          })),
+          supabase
+        );
+
         return NextResponse.json({ status: 'disputed' });
       }
 
       const winnerId = p1Reported;
       const loserId = winnerId === match.player1_id ? match.player2_id : match.player1_id;
       const winnerIsPlayer1 = winnerId === match.player1_id;
-      const game = match.game as GameKey;
       const gameLabel = GAMES[game]?.label ?? game;
       const ratingKey = getGameRatingKey(game);
       const winsKey = getGameWinsKey(game);
       const lossesKey = getGameLossesKey(game);
+      const finalPlayer1Score = usesScoreReport
+        ? updatedMatch.player1_reported_player1_score ?? null
+        : null;
+      const finalPlayer2Score = usesScoreReport
+        ? updatedMatch.player1_reported_player2_score ?? null
+        : null;
 
       const { data: profilesRaw, error: profilesError } = await supabase
         .from('profiles')
@@ -574,6 +713,8 @@ export async function POST(
           newRatingLoser,
           ratingChangeP1,
           ratingChangeP2,
+          finalPlayer1Score,
+          finalPlayer2Score,
         });
 
         if (!legacyCompleted) {
@@ -586,6 +727,16 @@ export async function POST(
         responseSummary = isPlayer1
           ? rpcResult.gamification_summary_p1 ?? responseSummary
           : rpcResult.gamification_summary_p2 ?? responseSummary;
+
+        if (usesScoreReport) {
+          await supabase
+            .from('matches')
+            .update({
+              player1_score: finalPlayer1Score,
+              player2_score: finalPlayer2Score,
+            })
+            .eq('id', id);
+        }
       }
 
       await sendCompletionNotifications({
@@ -606,12 +757,82 @@ export async function POST(
         });
       }
 
+      await createNotifications(
+        [
+          {
+            user_id: winnerId,
+            type: 'match_completed' as const,
+            title: 'Result confirmed',
+            body:
+              usesScoreReport && finalPlayer1Score !== null && finalPlayer2Score !== null
+                ? `You won ${gameLabel} ${formatScoreline(finalPlayer1Score, finalPlayer2Score)}.`
+                : `You won your ${gameLabel} match.`,
+            href: `/match/${id}`,
+            metadata: {
+              match_id: id,
+              game,
+              winner_id: winnerId,
+              player1_score: finalPlayer1Score,
+              player2_score: finalPlayer2Score,
+            },
+          },
+          {
+            user_id: loserId,
+            type: 'match_completed' as const,
+            title: 'Result confirmed',
+            body:
+              usesScoreReport && finalPlayer1Score !== null && finalPlayer2Score !== null
+                ? `${winnerProfile.username} won ${gameLabel} ${formatScoreline(finalPlayer1Score, finalPlayer2Score)}.`
+                : `${winnerProfile.username} won your ${gameLabel} match.`,
+            href: `/match/${id}`,
+            metadata: {
+              match_id: id,
+              game,
+              winner_id: winnerId,
+              player1_score: finalPlayer1Score,
+              player2_score: finalPlayer2Score,
+            },
+          },
+        ],
+        supabase
+      );
+
       return NextResponse.json({
         status: 'completed',
         winner_id: winnerId,
+        player1_score: finalPlayer1Score,
+        player2_score: finalPlayer2Score,
         gamification: responseSummary,
       });
     }
+
+    const opponentId = isPlayer1 ? match.player2_id : match.player1_id;
+    const pendingScoreline =
+      usesScoreReport && reportedPlayer1Score !== null && reportedPlayer2Score !== null
+        ? formatScoreline(reportedPlayer1Score, reportedPlayer2Score)
+        : null;
+
+    await createNotifications(
+      [
+        {
+          user_id: opponentId,
+          type: 'match_reported' as const,
+          title: 'Your opponent reported the result',
+          body: pendingScoreline
+            ? `${GAMES[game]?.label ?? game} score submitted: ${pendingScoreline}. Confirm to lock it in.`
+            : `Open the match and confirm the ${GAMES[game]?.label ?? game} result.`,
+          href: `/match/${id}`,
+          metadata: {
+            match_id: id,
+            game,
+            winner_id: winnerId,
+            player1_score: reportedPlayer1Score,
+            player2_score: reportedPlayer2Score,
+          },
+        },
+      ],
+      supabase
+    );
 
     return NextResponse.json({ status: 'waiting_for_opponent' });
   } catch (err) {

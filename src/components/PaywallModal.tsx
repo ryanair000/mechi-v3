@@ -13,7 +13,7 @@ interface PaywallModalProps {
 const COPY = {
   match_limit: {
     title: "You've hit today's match cap",
-    body: 'Free players get 5 ranked matches per day. Go Pro for unlimited runs.',
+    body: 'Free players get 5 ranked matches per day. Go Pro for unlimited runs and direct challenges.',
   },
   game_limit: {
     title: 'Unlock more focus games',
@@ -56,7 +56,7 @@ export function PaywallModal({ reason, featureName, onClose }: PaywallModalProps
         <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">{body}</p>
 
         <div className="mt-5 space-y-2.5">
-          {(['pro'] as const).map((planKey) => {
+          {(['pro', 'elite'] as const).map((planKey) => {
             const plan = PLANS[planKey];
             return (
               <div
@@ -67,7 +67,9 @@ export function PaywallModal({ reason, featureName, onClose }: PaywallModalProps
                   <div>
                     <p className="text-sm font-black text-[var(--text-primary)]">{plan.name}</p>
                     <p className="mt-1 text-xs text-[var(--text-soft)]">
-                      Unlimited matches / 3 games
+                      {planKey === 'elite'
+                        ? 'Unlimited matches / zero tournament fee / streaming access'
+                        : 'Unlimited matches / 3 games / direct challenges'}
                     </p>
                   </div>
                   <div className="text-right">

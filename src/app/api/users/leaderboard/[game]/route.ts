@@ -20,7 +20,17 @@ export async function GET(
     const ratingKey = `rating_${game}`;
     const winsKey = `wins_${game}`;
     const lossesKey = `losses_${game}`;
-    const metricSelect = ['id', 'username', 'selected_games', 'level', ratingKey, winsKey, lossesKey].join(', ');
+    const metricSelect = [
+      'id',
+      'username',
+      'selected_games',
+      'platforms',
+      'game_ids',
+      'level',
+      ratingKey,
+      winsKey,
+      lossesKey,
+    ].join(', ');
 
     let fallbackToDefaults = false;
     let playersRaw: unknown = null;
@@ -43,8 +53,8 @@ export async function GET(
     ) {
       fallbackToDefaults = true;
       const fallbackResult = await supabase
-        .from('profiles')
-        .select('id, username, selected_games')
+          .from('profiles')
+        .select('id, username, selected_games, platforms, game_ids')
         .contains('selected_games', [game])
         .limit(100);
 
@@ -73,6 +83,8 @@ export async function GET(
         rank: index + 1,
         id: p.id,
         username: p.username,
+        platforms: (p.platforms as unknown[] | undefined) ?? [],
+        game_ids: (p.game_ids as Record<string, string> | undefined) ?? {},
         rating,
         division: getRankDivision(rating).label,
         level: (p.level as number | undefined) ?? 1,

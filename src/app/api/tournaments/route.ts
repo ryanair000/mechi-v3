@@ -2,7 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getAuthUser } from '@/lib/auth';
 import { GAMES, isValidGamePlatform } from '@/lib/config';
 import { isTournamentSize } from '@/lib/bracket';
+import { getPlan } from '@/lib/plans';
 import { makeSlug } from '@/lib/slug';
+import { maybeExpireProfilePlan } from '@/lib/subscription';
 import { createServiceClient } from '@/lib/supabase';
 import { CONFIRMED_PAYMENT_STATUSES, getPlatformForTournament } from '@/lib/tournaments';
 import type { GameKey, PlatformKey } from '@/types';
@@ -106,6 +108,35 @@ export async function POST(request: NextRequest) {
 
     const supabase = createServiceClient();
     const slug = makeSlug(title);
+    const { data: organizerProfileRaw, error: organizerProfileError } = await supabase
+      .from('profiles')
+      .select('id, plan, plan_expires_at')
+      .eq('id', authUser.sub)
+      .single();
+
+    const organizerProfile = organizerProfileRaw as {
+      id: string;
+      plan?: string | null;
+      plan_expires_at?: string | null;
+    } | null;
+
+    if (organizerProfileError || !organizerProfile) {
+      return NextResponse.json({ error: 'Organizer profile not found' }, { status: 404 });
+    }
+
+    const organizerPlan = await maybeExpireProfilePlan(organizerProfile, supabase);
+    const organizerPlanConfig = getPlan(organizerPlan);
+
+    if (entryFee === 0 && organizerPlan === 'free') {
+      return NextResponse.json(
+        {
+          error: 'Free-entry tournaments are for Pro and Elite players.',
+          upgrade_url: '/pricing',
+          required_plan: 'pro',
+        },
+        { status: 403 }
+      );
+    }
 
     const { data: tournament, error } = await supabase
       .from('tournaments')
@@ -117,7 +148,7 @@ export async function POST(request: NextRequest) {
         region,
         size,
         entry_fee: entryFee,
-        platform_fee_rate: 5,
+        platform_fee_rate: organizerPlanConfig.tournamentFeePercent,
         rules: rules || null,
         organizer_id: authUser.sub,
       })

@@ -3,8 +3,9 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuth } from './AuthProvider';
-import { Bell, LogOut } from 'lucide-react';
+import { LogOut } from 'lucide-react';
 import { BrandLogo } from '@/components/BrandLogo';
+import { NotificationNavButton } from '@/components/NotificationNavButton';
 
 export function Navbar() {
   const pathname = usePathname();
@@ -18,17 +19,13 @@ export function Navbar() {
         </Link>
 
         <div className="flex items-center gap-2">
-          <Link
-            href="/notifications"
-            className={`icon-button h-10 w-10 ${pathname.startsWith('/notifications') ? 'border-[rgba(50,224,196,0.24)] bg-[var(--surface-elevated)] text-[var(--accent-secondary-text)]' : ''}`}
-            aria-label="Notifications"
-          >
-            <Bell size={14} />
-          </Link>
+          <NotificationNavButton className="h-10 w-10" />
           {user && (
             <button
               onClick={logout}
-              className="icon-button h-10 w-10 hover:border-red-500/20 hover:bg-red-500/10 hover:text-red-500"
+              className={`inline-flex h-10 w-10 items-center justify-center rounded-full text-[var(--text-secondary)] transition-colors hover:bg-red-500/10 hover:text-red-500 ${
+                pathname.startsWith('/profile') ? 'hover:bg-[var(--surface-elevated)]' : ''
+              }`}
               aria-label="Sign out"
             >
               <LogOut size={14} />

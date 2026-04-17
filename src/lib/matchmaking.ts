@@ -8,6 +8,7 @@ import { resolvePlan } from './subscription';
 import type { GameKey, PlatformKey } from '@/types';
 import { notifyMatchFound } from './whatsapp';
 import { sendMatchFoundEmail } from './email';
+import { createNotifications } from './notifications';
 
 const BASE_RATING_TOLERANCE = 300;
 const RATING_TOLERANCE_STEP = 150;
@@ -293,6 +294,38 @@ export async function runMatchmaking(supabase: SupabaseClient): Promise<number> 
           matchId: match.id,
         }).catch(console.error);
       }
+
+      createNotifications(
+        [
+          {
+            user_id: entry.user_id,
+            type: 'match_found',
+            title: 'Your next run is live',
+            body: `${p2Profile.username as string} is ready for ${gameLabel}. Open the room and lock the result.`,
+            href: `/match/${match.id}`,
+            metadata: {
+              match_id: match.id,
+              opponent_id: opponent.user_id,
+              game: entry.game,
+              platform: p1Platform,
+            },
+          },
+          {
+            user_id: opponent.user_id,
+            type: 'match_found',
+            title: 'A ranked match just landed',
+            body: `${p1Profile.username as string} is ready for ${gameLabel}. Open the room and lock the result.`,
+            href: `/match/${match.id}`,
+            metadata: {
+              match_id: match.id,
+              opponent_id: entry.user_id,
+              game: entry.game,
+              platform: p2Platform,
+            },
+          },
+        ],
+        supabase
+      ).catch(console.error);
     }
 
     // Move to next unmatched entry

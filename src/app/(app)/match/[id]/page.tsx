@@ -23,6 +23,7 @@ import {
   getGameIdValue,
   getMatchingPlatform,
   getPlatformAddUrl,
+  requiresMatchScoreReport,
 } from '@/lib/config';
 import { PlatformBadge } from '@/components/PlatformBadge';
 import { PlatformLogo } from '@/components/PlatformLogo';
@@ -47,6 +48,12 @@ interface MatchData {
   winner_id: string | null;
   player1_reported_winner: string | null;
   player2_reported_winner: string | null;
+  player1_reported_player1_score?: number | null;
+  player1_reported_player2_score?: number | null;
+  player2_reported_player1_score?: number | null;
+  player2_reported_player2_score?: number | null;
+  player1_score?: number | null;
+  player2_score?: number | null;
   rating_change_p1: number | null;
   rating_change_p2: number | null;
   gamification_summary_p1?: GamificationResult | null;
@@ -78,6 +85,7 @@ export default function MatchPage() {
     from: string;
     comment: string;
   } | null>(null);
+  const [reportScores, setReportScores] = useState({ player1: '', player2: '' });
   const [keepResultOpen, setKeepResultOpen] = useState(false);
   const [autoCloseCountdown, setAutoCloseCountdown] = useState<number | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -179,12 +187,77 @@ export default function MatchPage() {
     return () => window.clearTimeout(timer);
   }, [autoCloseCountdown, keepResultOpen, router]);
 
-  const handleReport = async (winnerId: string) => {
-    setReporting(winnerId);
+  useEffect(() => {
+    if (!match || !user) {
+      return;
+    }
+
+    const reporterIsPlayer1 = user.id === match.player1_id;
+    const reportedPlayer1Score = reporterIsPlayer1
+      ? match.player1_reported_player1_score
+      : match.player2_reported_player1_score;
+    const reportedPlayer2Score = reporterIsPlayer1
+      ? match.player1_reported_player2_score
+      : match.player2_reported_player2_score;
+
+    if (
+      reportedPlayer1Score === null ||
+      reportedPlayer1Score === undefined ||
+      reportedPlayer2Score === null ||
+      reportedPlayer2Score === undefined
+    ) {
+      setReportScores({ player1: '', player2: '' });
+      return;
+    }
+
+    setReportScores({
+      player1: String(reportedPlayer1Score),
+      player2: String(reportedPlayer2Score),
+    });
+  }, [match, user]);
+
+  const handleReport = async (winnerId?: string) => {
+    if (!match) {
+      return;
+    }
+
+    const scoreReportingEnabled = requiresMatchScoreReport(match.game);
+    const payload: Record<string, unknown> = {};
+    const nextReportingState = scoreReportingEnabled ? 'score' : (winnerId ?? 'report');
+
+    if (scoreReportingEnabled) {
+      const player1ScoreText = reportScores.player1.trim();
+      const player2ScoreText = reportScores.player2.trim();
+
+      if (!/^\d+$/.test(player1ScoreText) || !/^\d+$/.test(player2ScoreText)) {
+        toast.error('Enter both scorelines as whole numbers');
+        return;
+      }
+
+      const player1Score = Number(player1ScoreText);
+      const player2Score = Number(player2ScoreText);
+
+      if (player1Score === player2Score) {
+        toast.error('Draws are not supported yet. Enter the final winner scoreline.');
+        return;
+      }
+
+      payload.player1_score = player1Score;
+      payload.player2_score = player2Score;
+      payload.winner_id =
+        player1Score > player2Score ? match.player1_id : match.player2_id;
+    } else if (!winnerId) {
+      toast.error('Pick a winner first');
+      return;
+    } else {
+      payload.winner_id = winnerId;
+    }
+
+    setReporting(nextReportingState);
     try {
       const res = await authFetch(`/api/matches/${matchId}/report`, {
         method: 'POST',
-        body: JSON.stringify({ winner_id: winnerId }),
+        body: JSON.stringify(payload),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -302,16 +375,54 @@ export default function MatchPage() {
   const gamificationResult = isPlayer1
     ? match.gamification_summary_p1 ?? null
     : match.gamification_summary_p2 ?? null;
+  const usesScoreReport = requiresMatchScoreReport(match.game);
   const iWon = match.winner_id === user.id;
   const myReport = isPlayer1 ? match.player1_reported_winner : match.player2_reported_winner;
   const opponentReport = isPlayer1 ? match.player2_reported_winner : match.player1_reported_winner;
+  const myReportedPlayer1Score = isPlayer1
+    ? match.player1_reported_player1_score
+    : match.player2_reported_player1_score;
+  const myReportedPlayer2Score = isPlayer1
+    ? match.player1_reported_player2_score
+    : match.player2_reported_player2_score;
+  const opponentReportedPlayer1Score = isPlayer1
+    ? match.player2_reported_player1_score
+    : match.player1_reported_player1_score;
+  const opponentReportedPlayer2Score = isPlayer1
+    ? match.player2_reported_player2_score
+    : match.player1_reported_player2_score;
+  const myReportedScoreline =
+    myReportedPlayer1Score !== null &&
+    myReportedPlayer1Score !== undefined &&
+    myReportedPlayer2Score !== null &&
+    myReportedPlayer2Score !== undefined
+      ? `${myReportedPlayer1Score}-${myReportedPlayer2Score}`
+      : null;
+  const opponentReportedScoreline =
+    opponentReportedPlayer1Score !== null &&
+    opponentReportedPlayer1Score !== undefined &&
+    opponentReportedPlayer2Score !== null &&
+    opponentReportedPlayer2Score !== undefined
+      ? `${opponentReportedPlayer1Score}-${opponentReportedPlayer2Score}`
+      : null;
+  const confirmedScoreline =
+    match.player1_score !== null &&
+    match.player1_score !== undefined &&
+    match.player2_score !== null &&
+    match.player2_score !== undefined
+      ? `${match.player1_score}-${match.player2_score}`
+      : null;
   const platformAddUrl = displayPlatform
     ? getPlatformAddUrl(displayPlatform, opponentPlatformId)
     : null;
   const resultHeading = iWon ? 'Victory locked in' : 'Tough one';
   const resultCopy = iWon
-    ? 'Both players confirmed it. Your win, streak, and climb progress are now locked in.'
-    : 'Both players confirmed the result. The match is closed and your climb progress is updated.';
+    ? confirmedScoreline
+      ? `Both players matched the scoreline. Your ${confirmedScoreline} win is now locked in.`
+      : 'Both players confirmed it. Your win, streak, and climb progress are now locked in.'
+    : confirmedScoreline
+      ? `Both players matched the scoreline. The ${confirmedScoreline} result is now locked in.`
+      : 'Both players confirmed the result. The match is closed and your climb progress is updated.';
 
   const statusTone =
     match.status === 'completed'
@@ -446,6 +557,11 @@ export default function MatchPage() {
                   You reported:{' '}
                   <strong>{myReport === user.id ? 'You won' : `${opponent.username} won`}</strong>
                 </p>
+                {usesScoreReport && myReportedScoreline ? (
+                  <p className="mt-1 text-xs text-[var(--text-secondary)]">
+                    Submitted score: <span className="font-semibold text-[var(--text-primary)]">{myReportedScoreline}</span>
+                  </p>
+                ) : null}
                 {sentQuickComment && (
                   <p className="mt-1 text-xs text-[var(--text-secondary)]">
                     Your note: <span className="font-semibold text-[var(--text-primary)]">{sentQuickComment}</span>
@@ -456,6 +572,64 @@ export default function MatchPage() {
                     Waiting for opponent...
                   </p>
                 )}
+              </div>
+            ) : usesScoreReport ? (
+              <div className="space-y-4">
+                <div className="rounded-2xl border border-[var(--border-color)] bg-[var(--surface-elevated)] p-4">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--text-soft)]">
+                    Final score
+                  </p>
+                  <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">
+                    Enter the result in match order. No draws yet for FC26 or eFootball score reports.
+                  </p>
+
+                  <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                    <label className="block">
+                      <span className="mb-1.5 block text-xs font-semibold text-[var(--text-primary)]">
+                        {match.player1.username}
+                      </span>
+                      <input
+                        inputMode="numeric"
+                        value={reportScores.player1}
+                        onChange={(event) =>
+                          setReportScores((current) => ({
+                            ...current,
+                            player1: event.target.value.replace(/[^0-9]/g, ''),
+                          }))
+                        }
+                        className="input"
+                        placeholder="0"
+                      />
+                    </label>
+
+                    <label className="block">
+                      <span className="mb-1.5 block text-xs font-semibold text-[var(--text-primary)]">
+                        {match.player2.username}
+                      </span>
+                      <input
+                        inputMode="numeric"
+                        value={reportScores.player2}
+                        onChange={(event) =>
+                          setReportScores((current) => ({
+                            ...current,
+                            player2: event.target.value.replace(/[^0-9]/g, ''),
+                          }))
+                        }
+                        className="input"
+                        placeholder="0"
+                      />
+                    </label>
+                  </div>
+                </div>
+
+                <button
+                  onClick={() => void handleReport()}
+                  disabled={!!reporting}
+                  className="btn-primary w-full justify-center"
+                >
+                  <Check size={16} />
+                  {reporting ? 'Submitting score...' : 'Submit Score'}
+                </button>
               </div>
             ) : (
               <div className="grid grid-cols-2 gap-3">
@@ -487,6 +661,16 @@ export default function MatchPage() {
                 </p>
               </div>
             )}
+            {usesScoreReport && opponentReportedScoreline && !myReport ? (
+              <div className="mt-3 rounded-xl border border-[var(--border-color)] bg-[var(--surface-elevated)] px-3 py-2.5">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--text-soft)]">
+                  Opponent score
+                </p>
+                <p className="mt-1 text-sm font-semibold text-[var(--text-primary)]">
+                  {opponent.username} submitted {opponentReportedScoreline}
+                </p>
+              </div>
+            ) : null}
             <button onClick={handleCancel} disabled={cancelling} className="btn-danger mt-3 w-full text-sm">
               {cancelling ? 'Cancelling...' : 'Cancel Match'}
             </button>
@@ -592,6 +776,11 @@ export default function MatchPage() {
                 </strong>
               </p>
             )}
+            {confirmedScoreline ? (
+              <div className="mt-3 inline-flex rounded-full border border-[var(--border-color)] bg-[var(--surface-elevated)] px-4 py-2 text-sm font-black text-[var(--text-primary)]">
+                Final score: {confirmedScoreline}
+              </div>
+            ) : null}
             {gamificationResult?.newAchievements?.length ? (
               <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
                 {gamificationResult.newAchievements.map((achievement) => (
@@ -665,6 +854,11 @@ export default function MatchPage() {
               Match payout: {gamificationResult.xpEarned} XP / {gamificationResult.mpEarned} MP
             </p>
           )}
+          {confirmedScoreline ? (
+            <p className="mt-3 text-center text-xs text-[var(--text-secondary)]">
+              Confirmed score: {match.player1.username} {match.player1_score} - {match.player2_score} {match.player2.username}
+            </p>
+          ) : null}
           <p className="mt-3 text-center text-xs text-[var(--text-soft)]">
             Started {new Date(match.created_at).toLocaleString()}
           </p>

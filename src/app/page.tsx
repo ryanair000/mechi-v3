@@ -1,6 +1,7 @@
 import Link from 'next/link';
-import { ArrowRight, Shield, Swords, Users } from 'lucide-react';
+import { ArrowRight, Zap } from 'lucide-react';
 import { BrandLogo } from '@/components/BrandLogo';
+import FooterSection from '@/components/footer';
 import { GameCarousel } from '@/components/GameCarousel';
 import { HomeFloatingHeader } from '@/components/HomeFloatingHeader';
 import { PlatformLogo } from '@/components/PlatformLogo';
@@ -10,71 +11,37 @@ import type { PlatformKey } from '@/types';
 
 const HERO_STATS = [
   { value: '16+', label: 'Supported titles' },
-  { value: '6', label: 'Rank tiers' },
+  { value: '1v1', label: 'Ranked direct challenges' },
   { value: '24/7', label: 'Queue access' },
-  { value: '1', label: 'Clean profile across games' },
+  { value: 'KES 299', label: 'Pro monthly' },
 ];
 
-const TIERS = [
-  { name: 'Bronze', note: 'First tier', range: 'III / II / I', rating: 1000 },
-  { name: 'Silver', note: 'Next tier up', range: 'III / II / I', rating: 1120 },
-  { name: 'Gold', note: 'Mid climb', range: 'III / II / I', rating: 1320 },
-  { name: 'Platinum', note: 'Upper climb', range: 'III / II / I', rating: 1520 },
-  { name: 'Diamond', note: 'Near the top', range: 'III / II / I', rating: 1720 },
-  { name: 'Legend', note: 'Top rank', range: 'No divisions', rating: 1900 },
+const LAUNCH_CHIPS = [
+  'Open to first 100 players',
+  '50 more players to close registration',
+  'Registration closes in 20 days',
 ];
 
-const RANK_STEPS = [
-  {
-    step: 'III',
-    title: 'Entry step',
-    desc: 'You just landed in that tier.',
-  },
-  {
-    step: 'II',
-    title: 'Middle step',
-    desc: 'You are moving through the tier.',
-  },
-  {
-    step: 'I',
-    title: 'Top step',
-    desc: 'You are closest to the next tier.',
-  },
-];
-
-const STEPS = [
+const HOW_IT_WORKS = [
   {
     step: '01',
-    title: 'Set your profile',
-    desc: 'Choose your region, platforms, and games once so every queue starts with the right context.',
+    title: 'Build one clean setup',
+    desc: 'Pick your games, link your platform IDs, and let Mechi keep your profile ready for queues, direct challenges, and brackets.',
   },
   {
     step: '02',
-    title: 'Queue with intent',
-    desc: 'Join a 1v1 queue or open a lobby without chasing players across chats and side groups.',
+    title: 'Queue or call someone out',
+    desc: 'Run ranked matchmaking when you want a fast lobby, or challenge any player directly without waiting on random pairing.',
   },
   {
     step: '03',
-    title: 'Lock results and rise',
-    desc: 'Report the outcome, keep the match protected, and move forward with visible progression.',
-  },
-];
-
-const TRUST_PILLARS = [
-  {
-    icon: Swords,
-    title: 'Straight to the match',
-    desc: 'Less side noise, less back-and-forth, more time actually getting into the game.',
+    title: 'Create smarter tournaments',
+    desc: 'Host paid or free-entry brackets, keep players informed, and let the bracket update itself as results come in.',
   },
   {
-    icon: Shield,
-    title: 'Wins that feel legit',
-    desc: 'Scores get confirmed, disputes can be handled, and your results do not feel random.',
-  },
-  {
-    icon: Users,
-    title: 'Your people in one place',
-    desc: 'Profiles, queues, and shares keep your scene connected without turning everything into a mess.',
+    step: '04',
+    title: 'Lock scores and keep moving',
+    desc: 'Football titles use scorelines, disputes stay visible, and every completed match feeds the same climb and notification system.',
   },
 ];
 
@@ -90,20 +57,61 @@ const PRICING_PLANS = [
   {
     key: 'free',
     kicker: 'START HERE',
-    description: 'Build your profile, queue your main game, and get into ranked play without paying to enter.',
+    description:
+      'Keep the core open with ranked runs, tournament joins, and direct 1-on-1 challenges while you test the waters.',
     href: '/register',
-    cta: 'START FREE',
+    cta: 'JOIN FREE',
     featured: false,
   },
   {
     key: 'pro',
     kicker: 'MOST POPULAR',
-    description: 'Unlimited ranked play, more game slots, and a cleaner competitive grind for regular players.',
+    description:
+      'KES 299/month after the 1-month trial. Unlimited ranked play, 3 saved games, direct challenges, and free-entry tournament hosting.',
     href: '/pricing',
     cta: 'SEE PRO',
     featured: true,
   },
+  {
+    key: 'elite',
+    kicker: 'ALL ACCESS',
+    description:
+      'KES 999/month for players who want the full stack: zero tournament fee, a gold badge, early access, and streaming feature access.',
+    href: '/pricing',
+    cta: 'SEE ELITE',
+    featured: false,
+  },
 ] as const;
+
+const RANK_GUIDE = [
+  {
+    title: 'See your main tier first',
+    copy: 'Bronze, Silver, Gold, Platinum, Diamond, and Legend tell you where you sit at a glance.',
+  },
+  {
+    title: 'Use III / II / I as progress steps',
+    copy: 'III means you just landed there. I means you are one clean push away from the next tier.',
+  },
+  {
+    title: 'Legend stays the finish line',
+    copy: 'No extra step math there. If you hit Legend, everyone knows exactly what that means.',
+  },
+];
+
+const RANK_TIERS = [
+  { name: 'Bronze', note: 'Starting climb', rating: 1000 },
+  { name: 'Silver', note: 'Settling in', rating: 1120 },
+  { name: 'Gold', note: 'Momentum tier', rating: 1320 },
+  { name: 'Platinum', note: 'Sharp players', rating: 1520 },
+  { name: 'Diamond', note: 'Near the top', rating: 1720 },
+  { name: 'Legend', note: 'Top ladder', rating: 1900 },
+];
+
+const COUNTDOWN_BLOCKS = [
+  { value: '20', label: 'Days left' },
+  { value: '50', label: 'Spots left' },
+  { value: '100', label: 'Player cap' },
+];
 
 export default function LandingPage() {
   return (
@@ -119,15 +127,18 @@ export default function LandingPage() {
             <div className="max-w-2xl">
               <BrandLogo size="lg" showTagline />
 
+              <div className="mt-6 brand-kicker">
+                <Zap size={12} />
+                Beta V3
+              </div>
+
               <h1 className="mt-6 max-w-2xl text-[2.05rem] font-black leading-[1.04] tracking-normal text-[var(--text-primary)] sm:text-[3.2rem] sm:leading-[1.02] lg:text-[3.8rem]">
-                Find the lobby. Lock the 1v1. Run the bracket.
+                Find the lobby. Start competing. Lock the 1-on-1.
               </h1>
 
               <p className="mt-4 max-w-xl text-sm leading-7 text-[var(--text-secondary)] sm:text-base">
-                Mechi cuts the WhatsApp chaos for Kenyan players. Build your profile,
-                queue clean 1v1s, spin up proper lobbies, host tournaments fast, and
-                let players grow the prize pool while Mechi handles results, rankings,
-                and automatic winner payouts.
+                Mechi V3 cuts the WhatsApp chaos for players who want cleaner queues, direct challenges,
+                real tournament flow, confirmed scorelines, and updates that actually tell you what is going on.
               </p>
 
               <div className="mt-6 flex flex-col gap-3 sm:flex-row">
@@ -135,9 +146,17 @@ export default function LandingPage() {
                   Start competing
                   <ArrowRight size={16} />
                 </Link>
-                <Link href="#how-it-works" className="btn-ghost">
-                  See how it works
+                <Link href="/pricing" className="btn-ghost">
+                  See pricing
                 </Link>
+              </div>
+
+              <div className="mt-5 flex flex-wrap gap-2">
+                {LAUNCH_CHIPS.map((chip) => (
+                  <span key={chip} className="rounded-full border border-[var(--border-color)] bg-[var(--surface-strong)] px-3 py-1.5 text-xs font-semibold text-[var(--text-secondary)]">
+                    {chip}
+                  </span>
+                ))}
               </div>
             </div>
 
@@ -146,7 +165,7 @@ export default function LandingPage() {
                 <div>
                   <p className="section-title">Quick read</p>
                   <p className="mt-2 max-w-sm text-sm leading-6 text-[var(--text-secondary)]">
-                    One side of the hero should tell the whole story fast: supported titles, ranked structure, always-on queueing, and where players can show up.
+                    Beta V3 is built for players who want to queue, challenge, host, report, and keep moving without guessing what happens next.
                   </p>
                 </div>
 
@@ -193,76 +212,21 @@ export default function LandingPage() {
           <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
             <div>
               <p className="section-title">How it works</p>
-              <h2 className="mt-3 max-w-xl text-3xl font-black text-[var(--text-primary)] sm:text-[2.2rem]">
-                Set up quick. Get matched. Start climbing.
+              <h2 className="mt-3 max-w-2xl text-3xl font-black text-[var(--text-primary)] sm:text-[2.2rem]">
+                V3 keeps every competitive move in one cleaner loop.
               </h2>
             </div>
+            <p className="max-w-xl text-sm leading-6 text-[var(--text-secondary)]">
+              Set up once, play how you want, and stay informed at every step instead of chasing updates across chats.
+            </p>
           </div>
 
-          <div className="mt-7 grid gap-3 md:grid-cols-3">
-            {STEPS.map((item) => (
+          <div className="mt-7 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+            {HOW_IT_WORKS.map((item) => (
               <div key={item.step} className="card p-5">
                 <div className="section-title">{item.step}</div>
                 <h3 className="mt-3 text-base font-black text-[var(--text-primary)]">{item.title}</h3>
                 <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">{item.desc}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      <section id="trust" className="landing-section">
-        <div className="landing-shell grid gap-6 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] lg:items-start">
-          <div>
-            <p className="section-title">Why it works</p>
-            <h2 className="mt-3 max-w-lg text-3xl font-black text-[var(--text-primary)] sm:text-[2.2rem]">
-              No chaos. Just good matches.
-            </h2>
-            <p className="mt-3 max-w-xl text-sm leading-6 text-[var(--text-secondary)]">
-              You should know where to tap, get into a match fast, and trust the result after.
-              That is the whole point.
-            </p>
-
-            <div className="mt-5 grid grid-cols-3 gap-3">
-              {[
-                { value: 'Clean', label: 'Match flow' },
-                { value: 'Quick', label: 'Queue up' },
-                { value: 'Real', label: 'Progress' },
-              ].map((item) => (
-                <div
-                  key={item.label}
-                  className="rounded-2xl border border-[var(--border-color)] bg-[var(--surface-soft)] px-3 py-3"
-                >
-                  <div className="text-sm font-black text-[var(--text-primary)]">{item.value}</div>
-                  <div className="mt-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--text-soft)]">
-                    {item.label}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div className="card overflow-hidden">
-            {TRUST_PILLARS.map((item, index) => (
-              <div
-                key={item.title}
-                className={`flex gap-4 px-5 py-4 sm:px-6 ${
-                  index !== TRUST_PILLARS.length - 1 ? 'border-b border-[var(--border-color)]' : ''
-                }`}
-              >
-                <div
-                  className={`mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl ${
-                    index === 1
-                      ? 'bg-[rgba(255,107,107,0.14)] text-[#c95252]'
-                      : 'bg-[rgba(50,224,196,0.14)] text-[var(--accent-secondary-text)]'
-                  }`}
-                >
-                  <item.icon size={17} />
-                </div>
-                <div>
-                  <h3 className="text-base font-black text-[var(--text-primary)]">{item.title}</h3>
-                  <p className="mt-1 text-sm leading-6 text-[var(--text-secondary)]">{item.desc}</p>
-                </div>
               </div>
             ))}
           </div>
@@ -276,11 +240,10 @@ export default function LandingPage() {
               <div>
                 <p className="section-title">Games only</p>
                 <h2 className="mt-3 max-w-lg text-3xl font-black text-[var(--text-primary)] sm:text-[2.2rem]">
-                  Keep the spotlight on the titles you actually play.
+                  Keep the spotlight on the titles you actually grind.
                 </h2>
                 <p className="mt-3 max-w-xl text-sm leading-6 text-[var(--text-secondary)]">
-                  Football, fighters, sports, and mobile play can live under one cleaner identity
-                  without turning your profile into a cluttered wall of disconnected records.
+                  Football, fighters, sports, and mobile play can sit under one cleaner identity without turning your profile into a cluttered wall.
                 </p>
 
                 <div className="mt-5">
@@ -294,18 +257,18 @@ export default function LandingPage() {
               <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-1">
                 {[
                   {
-                    label: 'Focused setup',
-                    value: 'Up to 3 mains',
+                    label: 'Direct calls',
+                    value: 'Challenge any player',
                     tone: 'bg-[rgba(50,224,196,0.14)] text-[var(--accent-secondary-text)]',
                   },
                   {
-                    label: 'Cross-title identity',
-                    value: '1 clean profile',
+                    label: 'Tournament flow',
+                    value: 'Paid or free entry',
                     tone: 'bg-[rgba(96,165,250,0.14)] text-[#60a5fa]',
                   },
                   {
-                    label: 'Queue ready',
-                    value: 'Console, PC, mobile',
+                    label: 'Result lock',
+                    value: 'Scorelines + disputes',
                     tone: 'bg-[rgba(255,107,107,0.14)] text-[#ff8a8a]',
                   },
                 ].map((item) => (
@@ -331,16 +294,15 @@ export default function LandingPage() {
             <div>
               <p className="section-title">Pricing</p>
               <h2 className="mt-3 max-w-2xl text-3xl font-black text-[var(--text-primary)] sm:text-[2.2rem]">
-                Start free now. Grow into more when your scene needs it.
+                Start free now. Move into Pro or Elite when the grind gets serious.
               </h2>
             </div>
             <p className="max-w-xl text-sm leading-6 text-[var(--text-secondary)]">
-              The core Mechi experience stays open for players. Bigger community setups and extra
-              polish can layer on top without slowing down the main grind.
+              New signups begin with a 1-month Pro trial. After that, Pro keeps the regular climb moving at KES 299, and Elite opens the all-access lane at KES 999.
             </p>
           </div>
 
-          <div className="mt-7 grid gap-3 lg:grid-cols-2">
+          <div className="mt-7 grid gap-3 lg:grid-cols-3">
             {PRICING_PLANS.map((plan) => {
               const config = PLANS[plan.key];
 
@@ -348,14 +310,20 @@ export default function LandingPage() {
                 <div
                   key={plan.key}
                   className={`card flex h-full flex-col p-5 sm:p-6 ${
-                    plan.featured ? 'circuit-panel border-[rgba(50,224,196,0.26)]' : ''
+                    plan.featured
+                      ? 'circuit-panel border-[rgba(50,224,196,0.26)]'
+                      : plan.key === 'elite'
+                        ? 'border-[rgba(246,196,83,0.28)]'
+                        : ''
                   }`}
                 >
                   <span
                     className={`inline-flex w-fit rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] ${
                       plan.featured
                         ? 'bg-[rgba(50,224,196,0.14)] text-[var(--accent-secondary-text)]'
-                        : 'bg-[var(--surface-strong)] text-[var(--text-soft)]'
+                        : plan.key === 'elite'
+                          ? 'bg-[rgba(246,196,83,0.14)] text-[#b88919]'
+                          : 'bg-[var(--surface-strong)] text-[var(--text-soft)]'
                     }`}
                   >
                     {plan.kicker}
@@ -376,7 +344,7 @@ export default function LandingPage() {
                   <p className="mt-4 text-sm leading-6 text-[var(--text-secondary)]">{plan.description}</p>
 
                   <div className="mt-5 grid gap-2.5">
-                    {config.features.slice(0, 3).map((feature) => (
+                    {config.features.slice(0, 4).map((feature) => (
                       <div
                         key={feature}
                         className="rounded-xl border border-[var(--border-color)] bg-[var(--surface)] px-3 py-2 text-sm font-medium text-[var(--text-secondary)]"
@@ -389,7 +357,13 @@ export default function LandingPage() {
                   <div className="mt-6">
                     <Link
                       href={plan.href}
-                      className={plan.featured ? 'btn-primary w-full justify-center' : 'btn-outline w-full justify-center'}
+                      className={
+                        plan.featured
+                          ? 'btn-primary w-full justify-center'
+                          : plan.key === 'elite'
+                            ? 'btn-ghost w-full justify-center'
+                            : 'btn-outline w-full justify-center'
+                      }
                     >
                       {plan.cta}
                     </Link>
@@ -403,47 +377,33 @@ export default function LandingPage() {
 
       <section id="ranks" className="landing-section">
         <div className="landing-shell">
-          <div className="grid gap-6 lg:grid-cols-[minmax(0,0.82fr)_minmax(0,1.18fr)] lg:items-start">
+          <div className="grid gap-6 lg:grid-cols-[minmax(0,0.92fr)_minmax(0,1.08fr)] lg:items-start">
             <div>
               <p className="section-title">Ranks</p>
               <h2 className="mt-3 max-w-lg text-3xl font-black text-[var(--text-primary)] sm:text-[2.2rem]">
                 A climb you can read instantly.
               </h2>
               <p className="mt-3 max-w-xl text-sm leading-6 text-[var(--text-secondary)]">
-                No hidden math on the surface. Every badge shows your tier plus your step inside
-                that tier. Bronze II means Bronze tier, middle step. Gold I means top step in Gold.
+                No hidden math on the surface. The big tier tells you the league. The Roman numeral tells you how close you are to the next jump.
               </p>
 
-              <div className="mt-5 grid grid-cols-3 gap-3">
-                {[
-                  { value: '6', label: 'Main tiers' },
-                  { value: 'III / II / I', label: 'Steps per tier' },
-                  { value: 'Legend', label: 'Top rank' },
-                ].map((item) => (
-                  <div
-                    key={item.label}
-                    className="rounded-2xl border border-[var(--border-color)] bg-[var(--surface-soft)] px-3 py-3"
-                  >
-                    <div className="text-sm font-black text-[var(--text-primary)]">{item.value}</div>
-                    <div className="mt-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--text-soft)]">
-                      {item.label}
-                    </div>
+              <div className="mt-5 space-y-3">
+                {RANK_GUIDE.map((item) => (
+                  <div key={item.title} className="rounded-2xl border border-[var(--border-color)] bg-[var(--surface-soft)] p-4">
+                    <p className="text-sm font-black text-[var(--text-primary)]">{item.title}</p>
+                    <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">{item.copy}</p>
                   </div>
                 ))}
               </div>
             </div>
 
             <div className="card overflow-hidden p-5 sm:p-6">
-              <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-                <div className="max-w-md">
-                  <p className="section-title">How the climb works</p>
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <p className="section-title">Tier ladder</p>
                   <h3 className="mt-2 text-lg font-black text-[var(--text-primary)]">
-                    Tier + step = your rank
+                    Bronze to Legend
                   </h3>
-                  <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">
-                    Learn the pattern once and every badge makes sense fast. The tier tells you the
-                    league you are in. The Roman numeral tells you how close you are to the next tier.
-                  </p>
                 </div>
                 <div className="brand-chip-coral gap-2 self-start">
                   <TierMedal rating={1900} size="sm" />
@@ -451,29 +411,8 @@ export default function LandingPage() {
                 </div>
               </div>
 
-              <div className="mt-5 grid gap-2.5 sm:grid-cols-3">
-                {RANK_STEPS.map((item) => (
-                  <div
-                    key={item.step}
-                    className="rounded-xl border border-[var(--border-color)] bg-[var(--surface)] p-3"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="flex h-10 w-10 items-center justify-center rounded-2xl border border-[rgba(50,224,196,0.22)] bg-[rgba(50,224,196,0.12)] text-sm font-black text-[var(--accent-secondary-text)]">
-                        {item.step}
-                      </div>
-                      <div>
-                        <p className="text-sm font-black text-[var(--text-primary)]">{item.title}</p>
-                        <p className="mt-0.5 text-xs leading-5 text-[var(--text-secondary)]">
-                          {item.desc}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-
               <div className="mt-5 grid gap-2.5">
-                {TIERS.map((tier) => (
+                {RANK_TIERS.map((tier) => (
                   <div
                     key={tier.name}
                     className="flex items-center justify-between rounded-xl border border-[var(--border-color)] bg-[var(--surface)] px-3 py-3"
@@ -485,7 +424,9 @@ export default function LandingPage() {
                         <p className="text-[11px] text-[var(--text-soft)]">{tier.note}</p>
                       </div>
                     </div>
-                    <span className="text-xs font-medium text-[var(--text-soft)]">{tier.range}</span>
+                    <span className="text-xs font-medium text-[var(--text-soft)]">
+                      {tier.name === 'Legend' ? 'Top rank' : 'III / II / I'}
+                    </span>
                   </div>
                 ))}
               </div>
@@ -498,13 +439,39 @@ export default function LandingPage() {
         <div className="landing-shell">
           <div className="card circuit-panel p-6 sm:p-7 lg:flex lg:items-center lg:justify-between lg:gap-8">
             <div className="max-w-2xl">
+              <p className="section-title">Countdown</p>
+              <h2 className="mt-3 text-3xl font-black text-[var(--text-primary)] sm:text-[2.2rem]">
+                Beta V3 registration closes May 7, 2026.
+              </h2>
+              <p className="mt-3 text-sm leading-6 text-[var(--text-secondary)]">
+                Open to the first 100 players. Right now there are 50 spots left before the gate shuts on this beta run.
+              </p>
+            </div>
+
+            <div className="mt-5 grid flex-1 gap-3 sm:grid-cols-3 lg:mt-0 lg:max-w-xl">
+              {COUNTDOWN_BLOCKS.map((item) => (
+                <div key={item.label} className="rounded-2xl border border-[var(--border-color)] bg-[var(--surface-strong)] px-4 py-4 text-center">
+                  <p className="text-3xl font-black text-[var(--text-primary)]">{item.value}</p>
+                  <p className="mt-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--text-soft)]">
+                    {item.label}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="landing-section pt-0">
+        <div className="landing-shell">
+          <div className="card circuit-panel p-6 sm:p-7 lg:flex lg:items-center lg:justify-between lg:gap-8">
+            <div className="max-w-2xl">
               <p className="section-title">Ready to jump in</p>
               <h2 className="mt-3 text-3xl font-black text-[var(--text-primary)] sm:text-[2.2rem]">
                 Pick your games. Queue up. Start climbing.
               </h2>
               <p className="mt-3 text-sm leading-6 text-[var(--text-secondary)]">
-                Set up your profile and get into matches that feel clean,
-                competitive, and easy to follow.
+                Set up your profile, take the 1-month Pro trial, and see how clean V3 feels when the flow actually keeps you informed.
               </p>
             </div>
 
@@ -513,30 +480,15 @@ export default function LandingPage() {
                 Start free
                 <ArrowRight size={16} />
               </Link>
-              <Link href="/login" className="brand-link inline-flex min-h-11 items-center text-sm font-semibold">
-                Already on Mechi? Jump back in
+              <Link href="/pricing" className="brand-link inline-flex min-h-11 items-center text-sm font-semibold">
+                Compare Free, Pro, and Elite
               </Link>
             </div>
           </div>
         </div>
       </section>
 
-      <footer className="border-t border-[var(--border-color)] py-7">
-        <div className="landing-shell flex flex-col items-center justify-between gap-4 sm:flex-row">
-          <BrandLogo size="xs" />
-          <p className="text-center text-xs text-[var(--text-soft)]">
-            Copyright {new Date().getFullYear()} Mechi. Competitive gaming for players who want organized play.
-          </p>
-          <div className="flex gap-5">
-            <Link href="/login" className="brand-link inline-flex min-h-11 min-w-11 items-center justify-center text-xs font-semibold">
-              Sign in
-            </Link>
-            <Link href="/register" className="brand-link inline-flex min-h-11 min-w-11 items-center justify-center text-xs font-semibold">
-              Sign up
-            </Link>
-          </div>
-        </div>
-      </footer>
+      <FooterSection />
     </div>
   );
 }

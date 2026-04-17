@@ -4,14 +4,17 @@ import Link from 'next/link';
 import { useEffect, useState, useCallback } from 'react';
 import { Crown, Trophy } from 'lucide-react';
 import { useAuth, useAuthFetch } from '@/components/AuthProvider';
+import { ChallengePlayerButton } from '@/components/ChallengePlayerButton';
 import { TierMedal } from '@/components/TierMedal';
-import { GAMES } from '@/lib/config';
+import { GAMES, getConfiguredPlatformForGame } from '@/lib/config';
 import { getRankDivision, withAlpha } from '@/lib/gamification';
-import type { GameKey } from '@/types';
+import type { GameKey, PlatformKey } from '@/types';
 
 interface LeaderboardEntry {
   id: string;
   username: string;
+  platforms: PlatformKey[];
+  game_ids: Record<string, string>;
   rating: number;
   division: string;
   level: number;
@@ -176,7 +179,7 @@ export default function LeaderboardPage() {
         )}
       </div>
 
-      <div className="mb-2 hidden gap-3 px-3 py-1.5 text-[10px] font-semibold text-[var(--text-soft)] sm:grid sm:grid-cols-[2.5rem_1fr_6.5rem_4rem_5rem_5rem_4.5rem]">
+      <div className="mb-2 hidden gap-3 px-3 py-1.5 text-[10px] font-semibold text-[var(--text-soft)] sm:grid sm:grid-cols-[2.5rem_1fr_6.5rem_4rem_5rem_5rem_4.5rem_7.5rem]">
         <div>Rank</div>
         <div>Player</div>
         <div className="text-right">Rank</div>
@@ -184,6 +187,7 @@ export default function LeaderboardPage() {
         <div className="text-right">Wins</div>
         <div className="text-right">Losses</div>
         <div className="text-right">Win rate</div>
+        <div className="text-right">Action</div>
       </div>
 
       {loading || (profileLoading && !selectedGame) ? (
@@ -214,6 +218,10 @@ export default function LeaderboardPage() {
                 : 0;
             const isMe = entry.id === user?.id;
             const isTopThree = index < 3;
+            const challengePlatform =
+              selectedGame
+                ? getConfiguredPlatformForGame(selectedGame, entry.game_ids, entry.platforms)
+                : null;
 
             return (
               <div
@@ -281,6 +289,18 @@ export default function LeaderboardPage() {
                 <div className="hidden w-20 text-right text-[13px] text-[var(--text-secondary)] sm:block">{entry.wins}</div>
                 <div className="hidden w-20 text-right text-[13px] text-[var(--text-secondary)] sm:block">{entry.losses}</div>
                 <div className="hidden w-[4.5rem] text-right text-[13px] text-[var(--text-secondary)] sm:block">{winRate}%</div>
+                <div className="hidden w-[7.5rem] justify-end sm:flex">
+                  {!isMe && selectedGame && challengePlatform ? (
+                    <ChallengePlayerButton
+                      opponentId={entry.id}
+                      opponentUsername={entry.username}
+                      game={selectedGame}
+                      platform={challengePlatform}
+                      label="Challenge"
+                      className="btn-outline min-h-9 px-3 py-2 text-xs"
+                    />
+                  ) : null}
+                </div>
 
                 <div className="text-right sm:hidden">
                   <div className="inline-flex items-center justify-end gap-1.5">
@@ -290,6 +310,18 @@ export default function LeaderboardPage() {
                     </div>
                   </div>
                   <div className="text-[9px] text-[var(--text-soft)]">Lv. {entry.level}</div>
+                  {!isMe && selectedGame && challengePlatform ? (
+                    <div className="mt-2">
+                      <ChallengePlayerButton
+                        opponentId={entry.id}
+                        opponentUsername={entry.username}
+                        game={selectedGame}
+                        platform={challengePlatform}
+                        label="Challenge"
+                        className="btn-outline min-h-8 px-3 py-1.5 text-[11px]"
+                      />
+                    </div>
+                  ) : null}
                 </div>
               </div>
             );

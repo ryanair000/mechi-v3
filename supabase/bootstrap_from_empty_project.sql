@@ -69,12 +69,46 @@ CREATE TABLE IF NOT EXISTS matches (
   winner_id uuid REFERENCES profiles(id) ON DELETE SET NULL,
   player1_reported_winner uuid REFERENCES profiles(id) ON DELETE SET NULL,
   player2_reported_winner uuid REFERENCES profiles(id) ON DELETE SET NULL,
+  player1_reported_player1_score integer,
+  player1_reported_player2_score integer,
+  player2_reported_player1_score integer,
+  player2_reported_player2_score integer,
+  player1_score integer,
+  player2_score integer,
   rating_change_p1 integer,
   rating_change_p2 integer,
   dispute_screenshot_url text,
   dispute_requested_by uuid REFERENCES profiles(id) ON DELETE SET NULL,
   created_at timestamptz NOT NULL DEFAULT timezone('utc', now()),
   completed_at timestamptz
+);
+
+CREATE TABLE IF NOT EXISTS match_challenges (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  challenger_id uuid NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+  opponent_id uuid NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+  game text NOT NULL,
+  platform text NOT NULL,
+  status text NOT NULL DEFAULT 'pending' CHECK (
+    status IN ('pending', 'accepted', 'declined', 'cancelled', 'expired')
+  ),
+  message text,
+  match_id uuid REFERENCES matches(id) ON DELETE SET NULL,
+  expires_at timestamptz NOT NULL DEFAULT (timezone('utc', now()) + interval '24 hours'),
+  responded_at timestamptz,
+  created_at timestamptz NOT NULL DEFAULT timezone('utc', now())
+);
+
+CREATE TABLE IF NOT EXISTS notifications (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+  type text NOT NULL,
+  title text NOT NULL,
+  body text,
+  href text,
+  metadata jsonb NOT NULL DEFAULT '{}'::jsonb,
+  read_at timestamptz,
+  created_at timestamptz NOT NULL DEFAULT timezone('utc', now())
 );
 
 CREATE TABLE IF NOT EXISTS lobbies (
@@ -125,6 +159,18 @@ CREATE INDEX IF NOT EXISTS idx_queue_user_status ON queue(user_id, status);
 CREATE INDEX IF NOT EXISTS idx_matches_status_created_at ON matches(status, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_matches_player1_status ON matches(player1_id, status);
 CREATE INDEX IF NOT EXISTS idx_matches_player2_status ON matches(player2_id, status);
+CREATE INDEX IF NOT EXISTS idx_match_challenges_challenger_status
+  ON match_challenges(challenger_id, status, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_match_challenges_opponent_status
+  ON match_challenges(opponent_id, status, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_match_challenges_expires_at
+  ON match_challenges(expires_at);
+CREATE INDEX IF NOT EXISTS idx_match_challenges_match_id
+  ON match_challenges(match_id);
+CREATE INDEX IF NOT EXISTS idx_notifications_user_created_at
+  ON notifications(user_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_notifications_user_read_at
+  ON notifications(user_id, read_at, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_lobbies_status_created_at ON lobbies(status, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_lobby_members_lobby_id ON lobby_members(lobby_id);
 CREATE INDEX IF NOT EXISTS idx_suggestions_votes ON suggestions(votes DESC);
@@ -135,6 +181,31 @@ GRANT SELECT ON ALL TABLES IN SCHEMA public TO anon, authenticated;
 GRANT ALL ON ALL TABLES IN SCHEMA public TO service_role;
 GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO service_role;
 GRANT ALL ON ALL ROUTINES IN SCHEMA public TO service_role;
+
+ALTER TABLE notifications ENABLE ROW LEVEL SECURITY;
+ALTER TABLE match_challenges ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY notifications_select_own
+  ON notifications
+  FOR SELECT
+  TO authenticated
+  USING (auth.uid() = user_id);
+
+CREATE POLICY notifications_update_own
+  ON notifications
+  FOR UPDATE
+  TO authenticated
+  USING (auth.uid() = user_id)
+  WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY match_challenges_select_party
+  ON match_challenges
+  FOR SELECT
+  TO authenticated
+  USING (auth.uid() = challenger_id OR auth.uid() = opponent_id);
+
+REVOKE ALL ON TABLE notifications FROM anon, authenticated;
+REVOKE ALL ON TABLE match_challenges FROM anon, authenticated;
 
 -- Tournaments + Paystack-backed entry payments.
 CREATE TABLE IF NOT EXISTS tournaments (

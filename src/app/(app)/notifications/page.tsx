@@ -1,9 +1,23 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
-import { BellRing, ChevronRight, MessageCircle, Smartphone } from 'lucide-react';
+import { useCallback, useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import toast from 'react-hot-toast';
+import {
+  BellRing,
+  ChevronRight,
+  Clock3,
+  MessageCircle,
+  Smartphone,
+  Swords,
+  Trophy,
+  X,
+} from 'lucide-react';
 import { useAuth, useAuthFetch } from '@/components/AuthProvider';
+import { emitNotificationRefresh } from '@/components/NotificationNavButton';
+import { GAMES, PLATFORMS } from '@/lib/config';
+import type { MatchChallenge, Notification, PlatformKey } from '@/types';
 
 type NotificationProfile = {
   username?: string;
@@ -13,37 +27,119 @@ type NotificationProfile = {
 
 const WHATSAPP_JOIN_URL = process.env.NEXT_PUBLIC_WHATSAPP_JOIN_URL ?? '';
 
+function formatTimestamp(value: string) {
+  return new Date(value).toLocaleString('en-KE', {
+    day: 'numeric',
+    month: 'short',
+    hour: 'numeric',
+    minute: '2-digit',
+  });
+}
+
+function challengeLabel(challenge: MatchChallenge) {
+  const gameLabel = GAMES[challenge.game]?.label ?? challenge.game;
+  const platformLabel = PLATFORMS[challenge.platform as PlatformKey]?.label ?? challenge.platform;
+  return `${gameLabel} on ${platformLabel}`;
+}
+
 export default function NotificationsPage() {
+  const router = useRouter();
   const { user } = useAuth();
   const authFetch = useAuthFetch();
   const [profile, setProfile] = useState<NotificationProfile | null>(null);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [inboundChallenges, setInboundChallenges] = useState<MatchChallenge[]>([]);
+  const [outboundChallenges, setOutboundChallenges] = useState<MatchChallenge[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [actionId, setActionId] = useState<string | null>(null);
+
+  const loadInbox = useCallback(async () => {
+    setLoading(true);
+    try {
+      const [profileRes, notificationsRes, challengesRes] = await Promise.all([
+        authFetch('/api/users/profile'),
+        authFetch('/api/notifications'),
+        authFetch('/api/challenges'),
+      ]);
+
+      if (profileRes.ok) {
+        const profileData = await profileRes.json();
+        setProfile(profileData.profile as NotificationProfile);
+      }
+
+      if (notificationsRes.ok) {
+        const notificationsData = (await notificationsRes.json()) as {
+          notifications?: Notification[];
+          unreadCount?: number;
+        };
+        const nextNotifications = notificationsData.notifications ?? [];
+        setNotifications(nextNotifications);
+
+        if ((notificationsData.unreadCount ?? 0) > 0) {
+          void authFetch('/api/notifications', { method: 'PATCH' }).then(() => {
+            emitNotificationRefresh();
+          });
+        }
+      }
+
+      if (challengesRes.ok) {
+        const challengeData = (await challengesRes.json()) as {
+          inbound?: MatchChallenge[];
+          outbound?: MatchChallenge[];
+        };
+        setInboundChallenges(challengeData.inbound ?? []);
+        setOutboundChallenges(challengeData.outbound ?? []);
+      }
+    } finally {
+      setLoading(false);
+    }
+  }, [authFetch]);
 
   useEffect(() => {
-    let cancelled = false;
-
-    async function loadProfile() {
-      const res = await authFetch('/api/users/profile');
-      if (!res.ok || cancelled) {
-        return;
-      }
-
-      const data = await res.json();
-      if (!cancelled) {
-        setProfile(data.profile as NotificationProfile);
-      }
-    }
-
-    void loadProfile();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [authFetch]);
+    void loadInbox();
+  }, [loadInbox]);
 
   const whatsappNumber = profile?.whatsapp_number ?? user?.whatsapp_number ?? null;
   const whatsappEnabled = Boolean(
     profile?.whatsapp_notifications ?? user?.whatsapp_notifications ?? whatsappNumber
   );
+
+  const handleChallengeAction = async (
+    challengeId: string,
+    action: 'accept' | 'decline' | 'cancel'
+  ) => {
+    setActionId(`${challengeId}:${action}`);
+    try {
+      const res = await authFetch(`/api/challenges/${challengeId}/${action}`, {
+        method: 'POST',
+      });
+      const data = (await res.json()) as { error?: string; match_id?: string };
+
+      if (!res.ok) {
+        toast.error(data.error ?? 'Could not update challenge');
+        return;
+      }
+
+      emitNotificationRefresh();
+      await loadInbox();
+
+      if (action === 'accept' && data.match_id) {
+        toast.success('Challenge accepted. Match is live.');
+        router.push(`/match/${data.match_id}`);
+        return;
+      }
+
+      if (action === 'decline') {
+        toast.success('Challenge declined');
+      } else if (action === 'cancel') {
+        toast.success('Challenge cancelled');
+      }
+    } catch {
+      toast.error('Network error');
+    } finally {
+      setActionId(null);
+    }
+  };
 
   return (
     <div className="page-container">
@@ -52,32 +148,32 @@ export default function NotificationsPage() {
           <div className="max-w-2xl">
             <p className="section-title">Notifications</p>
             <h1 className="mt-3 text-[1.5rem] font-black leading-[1.05] text-[var(--text-primary)] sm:text-[2rem]">
-              Keep your alerts clean and easy to catch.
+              Your inbox for challenges, brackets, and match moments.
             </h1>
             <p className="mt-3 max-w-xl text-sm leading-6 text-[var(--text-secondary)]">
-              Queue moves, match rooms, and result reminders should land in one place without
-              cluttering your dashboard.
+              Nothing should happen off-screen. This is where Mechi keeps the receipts when someone challenges you,
+              your bracket moves, or a result needs your attention.
             </p>
           </div>
 
           <div className="inline-flex w-fit items-center gap-2 rounded-full border border-[rgba(50,224,196,0.2)] bg-[rgba(50,224,196,0.12)] px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--accent-secondary-text)]">
             <BellRing size={14} />
-            {whatsappEnabled ? 'Alerts on' : 'Alerts off'}
+            {whatsappEnabled ? 'Inbox + alerts on' : 'Inbox only'}
           </div>
         </div>
 
-        <div className="mt-6 grid gap-4 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)]">
+        <div className="mt-6 grid gap-4 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
           <div className="rounded-[1.2rem] border border-[var(--border-color)] bg-[var(--surface-strong)] p-5">
             <div className="flex items-start gap-3">
               <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[rgba(50,224,196,0.14)] text-[var(--accent-secondary-text)]">
                 <MessageCircle size={18} />
               </div>
               <div className="min-w-0">
-                <p className="text-base font-black text-[var(--text-primary)]">WhatsApp alerts</p>
+                <p className="text-base font-black text-[var(--text-primary)]">WhatsApp backup</p>
                 <p className="mt-1 text-sm leading-6 text-[var(--text-secondary)]">
                   {whatsappEnabled
-                    ? 'You are set to catch queue and match updates without checking the dashboard every minute.'
-                    : 'Turn this on if you want Mechi to ping you when your queue pops or a room is ready.'}
+                    ? 'You will still catch queue and match updates on WhatsApp when you are away from the app.'
+                    : 'Turn WhatsApp on in profile if you want match alerts to hit your phone too.'}
                 </p>
               </div>
             </div>
@@ -118,22 +214,31 @@ export default function NotificationsPage() {
           <div className="grid gap-3">
             {[
               {
-                title: 'Queue updates',
-                copy: 'Get a heads-up when your ranked search turns into a live room.',
+                icon: Swords,
+                title: `${inboundChallenges.length} pending challenges`,
+                copy: inboundChallenges.length
+                  ? 'Accept or decline direct 1-on-1 calls from here.'
+                  : 'No one is waiting on your reply right now.',
               },
               {
-                title: 'Result reminders',
-                copy: 'Stay on top of reports so matches close cleanly and your record stays sharp.',
+                icon: Trophy,
+                title: `${notifications.length} recent updates`,
+                copy: notifications.length
+                  ? 'Tournament joins, match locks, and disputes all stack here.'
+                  : 'Your activity feed will start filling up as you play.',
               },
               {
-                title: 'Account setup',
-                copy: 'Use your profile when you want to change the number tied to alerts.',
+                icon: Smartphone,
+                title: whatsappEnabled ? 'Alerts synced' : 'Phone alerts off',
+                copy: whatsappEnabled
+                  ? 'Your inbox stays backed up with WhatsApp reminders.'
+                  : 'App inbox is live. Add WhatsApp if you want backup pings too.',
               },
             ].map((item) => (
               <div key={item.title} className="rounded-[1.05rem] border border-[var(--border-color)] bg-[var(--surface-strong)] p-4">
                 <div className="flex items-start gap-3">
                   <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[rgba(255,107,107,0.14)] text-[var(--brand-coral)]">
-                    <Smartphone size={15} />
+                    <item.icon size={15} />
                   </div>
                   <div>
                     <p className="text-sm font-black text-[var(--text-primary)]">{item.title}</p>
@@ -142,6 +247,164 @@ export default function NotificationsPage() {
                 </div>
               </div>
             ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="mt-5 grid gap-5 xl:grid-cols-[minmax(0,0.98fr)_minmax(0,1.02fr)]">
+        <div className="space-y-5">
+          <div className="card p-5">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <p className="section-title">Direct Challenges</p>
+                <h2 className="mt-2 text-xl font-black text-[var(--text-primary)]">Pending replies</h2>
+              </div>
+              <span className="brand-chip px-3 py-1">{inboundChallenges.length + outboundChallenges.length} live</span>
+            </div>
+
+            <div className="mt-4 space-y-3">
+              {loading ? (
+                <>
+                  <div className="h-24 shimmer" />
+                  <div className="h-24 shimmer" />
+                </>
+              ) : inboundChallenges.length === 0 && outboundChallenges.length === 0 ? (
+                <div className="rounded-2xl border border-[var(--border-color)] bg-[var(--surface-elevated)] p-4 text-sm text-[var(--text-secondary)]">
+                  No pending direct challenges yet. Use the leaderboard or a public profile to call someone out.
+                </div>
+              ) : (
+                <>
+                  {inboundChallenges.map((challenge) => {
+                    const pendingAccept = actionId === `${challenge.id}:accept`;
+                    const pendingDecline = actionId === `${challenge.id}:decline`;
+                    return (
+                      <div key={challenge.id} className="rounded-2xl border border-[var(--border-color)] bg-[var(--surface-elevated)] p-4">
+                        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                          <div>
+                            <p className="text-sm font-black text-[var(--text-primary)]">
+                              {challenge.challenger?.username ?? 'A player'} challenged you
+                            </p>
+                            <p className="mt-1 text-sm text-[var(--text-secondary)]">{challengeLabel(challenge)}</p>
+                            <p className="mt-2 text-xs text-[var(--text-soft)]">
+                              Sent {formatTimestamp(challenge.created_at)}
+                            </p>
+                            {challenge.message ? (
+                              <p className="mt-3 rounded-xl border border-[var(--border-color)] bg-[var(--surface)] px-3 py-2 text-sm text-[var(--text-secondary)]">
+                                {challenge.message}
+                              </p>
+                            ) : null}
+                          </div>
+                          <div className="flex flex-wrap gap-2 sm:justify-end">
+                            <button
+                              type="button"
+                              onClick={() => void handleChallengeAction(challenge.id, 'accept')}
+                              disabled={pendingAccept || pendingDecline}
+                              className="btn-primary"
+                            >
+                              {pendingAccept ? 'Accepting...' : 'Accept'}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => void handleChallengeAction(challenge.id, 'decline')}
+                              disabled={pendingAccept || pendingDecline}
+                              className="btn-outline"
+                            >
+                              {pendingDecline ? 'Declining...' : 'Decline'}
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+
+                  {outboundChallenges.map((challenge) => {
+                    const pendingCancel = actionId === `${challenge.id}:cancel`;
+                    return (
+                      <div key={challenge.id} className="rounded-2xl border border-[var(--border-color)] bg-[var(--surface-elevated)] p-4">
+                        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                          <div>
+                            <p className="text-sm font-black text-[var(--text-primary)]">
+                              Waiting on {challenge.opponent?.username ?? 'your opponent'}
+                            </p>
+                            <p className="mt-1 text-sm text-[var(--text-secondary)]">{challengeLabel(challenge)}</p>
+                            <p className="mt-2 text-xs text-[var(--text-soft)]">
+                              Expires {formatTimestamp(challenge.expires_at)}
+                            </p>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => void handleChallengeAction(challenge.id, 'cancel')}
+                            disabled={pendingCancel}
+                            className="btn-outline"
+                          >
+                            <X size={14} />
+                            {pendingCancel ? 'Cancelling...' : 'Cancel'}
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+
+        <div className="card p-5">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <p className="section-title">Activity Feed</p>
+              <h2 className="mt-2 text-xl font-black text-[var(--text-primary)]">Recent updates</h2>
+            </div>
+            <span className="brand-chip-coral px-3 py-1">{notifications.length} items</span>
+          </div>
+
+          <div className="mt-4 space-y-3">
+            {loading ? (
+              <>
+                <div className="h-20 shimmer" />
+                <div className="h-20 shimmer" />
+                <div className="h-20 shimmer" />
+              </>
+            ) : notifications.length === 0 ? (
+              <div className="rounded-2xl border border-[var(--border-color)] bg-[var(--surface-elevated)] p-5 text-sm text-[var(--text-secondary)]">
+                No updates yet. Once matches, tournaments, and challenges start moving, this feed will stop being quiet.
+              </div>
+            ) : (
+              notifications.map((item) => (
+                <div key={item.id} className="rounded-2xl border border-[var(--border-color)] bg-[var(--surface-elevated)] p-4">
+                  <div className="flex items-start gap-3">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-[rgba(50,224,196,0.14)] text-[var(--accent-secondary-text)]">
+                      {item.type.includes('challenge') ? (
+                        <Swords size={16} />
+                      ) : item.type.includes('tournament') ? (
+                        <Trophy size={16} />
+                      ) : (
+                        <Clock3 size={16} />
+                      )}
+                    </div>
+
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between">
+                        <p className="text-sm font-black text-[var(--text-primary)]">{item.title}</p>
+                        <p className="text-xs text-[var(--text-soft)]">{formatTimestamp(item.created_at)}</p>
+                      </div>
+                      {item.body ? (
+                        <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">{item.body}</p>
+                      ) : null}
+                      {item.href ? (
+                        <div className="mt-3">
+                          <Link href={item.href} className="brand-link-coral inline-flex min-h-10 items-center text-xs font-semibold uppercase tracking-[0.14em]">
+                            Open
+                            <ChevronRight size={14} />
+                          </Link>
+                        </div>
+                      ) : null}
+                    </div>
+                  </div>
+                </div>
+              ))
+            )}
           </div>
         </div>
       </section>

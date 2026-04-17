@@ -126,6 +126,8 @@ export const GAMES: Record<GameKey, Game> = {
   },
 };
 
+const SCORE_REPORTED_GAMES = new Set<GameKey>(['fc26', 'efootball', 'efootball_mobile']);
+
 const GAME_ARTWORK: Record<GameKey, { header: string; capsule: string }> = {
   efootball: {
     header: '/game-artwork/efootball-header.svg',
@@ -252,6 +254,10 @@ export function getDefaultLobbyMap(gameKey: GameKey): string {
 export function supportsLobbyMode(gameKey: GameKey): boolean {
   const game = GAMES[gameKey];
   return Boolean(game && (game.mode === 'lobby' || game.supportsLobby));
+}
+
+export function requiresMatchScoreReport(gameKey: GameKey): boolean {
+  return SCORE_REPORTED_GAMES.has(gameKey);
 }
 
 export function getTier(rating: number): Tier {

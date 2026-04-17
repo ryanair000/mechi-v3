@@ -12,8 +12,10 @@ import {
   sendTournamentMatchReadyEmail,
   sendTournamentWinnerEmail,
 } from '@/lib/email';
+import { createNotifications } from '@/lib/notifications';
 import type {
   GameKey,
+  Match,
   PlatformKey,
   Tournament,
   TournamentMatch,
@@ -39,6 +41,10 @@ type TournamentPlayerRow = TournamentPlayer & {
 type TournamentMatchRow = TournamentMatch & {
   player1?: ProfileLite | ProfileLite[] | null;
   player2?: ProfileLite | ProfileLite[] | null;
+  match?:
+    | Pick<Match, 'id' | 'status' | 'player1_score' | 'player2_score'>
+    | Array<Pick<Match, 'id' | 'status' | 'player1_score' | 'player2_score'>>
+    | null;
 };
 
 export function getAppUrl(): string {
@@ -158,6 +164,78 @@ export async function maybeMarkTournamentFull(
   }
 }
 
+export async function markTournamentPaymentPaidByReference(
+  supabase: SupabaseClient,
+  reference: string
+): Promise<{ success: boolean; tournamentId?: string; error?: string }> {
+  const { data: playerRaw, error: playerError } = await supabase
+    .from('tournament_players')
+    .select('id, tournament_id, payment_status')
+    .eq('payment_ref', reference)
+    .maybeSingle();
+
+  const player = playerRaw as
+    | { id: string; tournament_id: string; payment_status: string }
+    | null;
+
+  if (playerError || !player) {
+    return { success: false, error: 'Tournament payment record not found' };
+  }
+
+  if (player.payment_status === 'paid' || player.payment_status === 'free') {
+    await maybeMarkTournamentFull(supabase, player.tournament_id);
+    return { success: true, tournamentId: player.tournament_id };
+  }
+
+  const { error: updateError } = await supabase
+    .from('tournament_players')
+    .update({ payment_status: 'paid' })
+    .eq('id', player.id)
+    .in('payment_status', ['pending', 'failed']);
+
+  if (updateError) {
+    return { success: false, error: 'Could not confirm tournament payment' };
+  }
+
+  await maybeMarkTournamentFull(supabase, player.tournament_id);
+  return { success: true, tournamentId: player.tournament_id };
+}
+
+export async function markTournamentPaymentFailedByReference(
+  supabase: SupabaseClient,
+  reference: string
+): Promise<{ success: boolean; tournamentId?: string; error?: string }> {
+  const { data: playerRaw, error: playerError } = await supabase
+    .from('tournament_players')
+    .select('id, tournament_id, payment_status')
+    .eq('payment_ref', reference)
+    .maybeSingle();
+
+  const player = playerRaw as
+    | { id: string; tournament_id: string; payment_status: string }
+    | null;
+
+  if (playerError || !player) {
+    return { success: false, error: 'Tournament payment record not found' };
+  }
+
+  if (player.payment_status === 'paid' || player.payment_status === 'free') {
+    return { success: true, tournamentId: player.tournament_id };
+  }
+
+  const { error: updateError } = await supabase
+    .from('tournament_players')
+    .update({ payment_status: 'failed' })
+    .eq('id', player.id)
+    .eq('payment_status', 'pending');
+
+  if (updateError) {
+    return { success: false, error: 'Could not mark tournament payment failed' };
+  }
+
+  return { success: true, tournamentId: player.tournament_id };
+}
+
 export async function startTournament(params: {
   supabase: SupabaseClient;
   tournamentId: string;
@@ -261,6 +339,22 @@ export async function startTournament(params: {
       if (!created.success) return created;
     }
   }
+
+  await createNotifications(
+    players.map((player) => ({
+      user_id: player.user_id,
+      type: 'tournament_started' as const,
+      title: `${tournament.title} is live`,
+      body: `Bracket locked. Your ${GAMES[tournament.game as GameKey]?.label ?? tournament.game} run has started.`,
+      href: `/t/${tournament.slug}`,
+      metadata: {
+        tournament_id: tournament.id,
+        slug: tournament.slug,
+        game: tournament.game,
+      },
+    })),
+    supabase
+  );
 
   return { success: true };
 }
@@ -510,6 +604,28 @@ async function notifyTournamentMatchReady(params: {
       matchUrl,
     }).catch(console.error);
   }
+
+  await createNotifications(
+    [player1, player2]
+      .filter((profile): profile is ProfileLite => Boolean(profile))
+      .map((profile) => {
+        const opponent = profile.id === player1Id ? player2 : player1;
+        return {
+          user_id: profile.id,
+          type: 'match_found' as const,
+          title: `${tournament.title}: match ready`,
+          body: `${opponent?.username ?? 'Your opponent'} is set for your ${gameLabel} bracket match.`,
+          href: `/match/${matchId}`,
+          metadata: {
+            tournament_id: tournament.id,
+            match_id: matchId,
+            game: tournament.game,
+            opponent_id: opponent?.id ?? null,
+          },
+        };
+      }),
+    supabase
+  );
 }
 
 export function firstRelation<T>(value: T | T[] | null | undefined): T | null {
@@ -522,6 +638,7 @@ export function mapTournamentMatchRelations(match: TournamentMatchRow): Tourname
     ...match,
     player1: firstRelation(match.player1),
     player2: firstRelation(match.player2),
+    match: firstRelation(match.match),
   };
 }
 

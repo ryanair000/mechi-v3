@@ -39,13 +39,13 @@ export async function GET(
         .order('joined_at', { ascending: true }),
       supabase
         .from('tournament_matches')
-        .select('*, player1:player1_id(id, username), player2:player2_id(id, username), winner:winner_id(id, username)')
+        .select('*, player1:player1_id(id, username), player2:player2_id(id, username), winner:winner_id(id, username), match:match_id(id, status, player1_score, player2_score)')
         .eq('tournament_id', id)
         .order('round', { ascending: true })
         .order('slot', { ascending: true }),
       supabase
         .from('matches')
-        .select('id, game, status, winner_id, created_at, completed_at, player1:player1_id(id, username), player2:player2_id(id, username)')
+        .select('id, game, status, winner_id, player1_score, player2_score, created_at, completed_at, player1:player1_id(id, username), player2:player2_id(id, username)')
         .eq('tournament_id', id)
         .order('created_at', { ascending: false }),
     ]);

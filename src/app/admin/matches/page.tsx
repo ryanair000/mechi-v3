@@ -15,6 +15,8 @@ interface MatchRow {
   region: string;
   status: string;
   winner_id: string | null;
+  player1_score?: number | null;
+  player2_score?: number | null;
   created_at: string;
   completed_at: string | null;
   dispute_screenshot_url: string | null;
@@ -29,6 +31,12 @@ interface MatchDetail {
     player2_id: string;
     player1_reported_winner: string | null;
     player2_reported_winner: string | null;
+    player1_reported_player1_score?: number | null;
+    player1_reported_player2_score?: number | null;
+    player2_reported_player1_score?: number | null;
+    player2_reported_player2_score?: number | null;
+    player1_score?: number | null;
+    player2_score?: number | null;
     rating_change_p1: number | null;
     rating_change_p2: number | null;
     dispute_requested_by: string | null;
@@ -209,6 +217,13 @@ export default function AdminMatchesPage() {
                 : match.winner_id === player2?.id
                   ? player2?.username
                   : null;
+            const confirmedScoreline =
+              match.player1_score !== null &&
+              match.player1_score !== undefined &&
+              match.player2_score !== null &&
+              match.player2_score !== undefined
+                ? `${match.player1_score}-${match.player2_score}`
+                : null;
             const isExpanded = detailMatchId === match.id;
 
             return (
@@ -244,6 +259,9 @@ export default function AdminMatchesPage() {
 
                     {winnerName ? (
                       <p className="mt-2 text-sm text-[var(--brand-teal)]">Winner set: {winnerName}</p>
+                    ) : null}
+                    {confirmedScoreline ? (
+                      <p className="mt-1 text-sm text-[var(--text-secondary)]">Final score: {confirmedScoreline}</p>
                     ) : null}
 
                     {match.dispute_screenshot_url ? (
@@ -363,6 +381,14 @@ export default function AdminMatchesPage() {
                             </p>
                             <p>Rating delta P1: {detail.match.rating_change_p1 ?? 0}</p>
                             <p>Rating delta P2: {detail.match.rating_change_p2 ?? 0}</p>
+                            {detail.match.player1_score !== null &&
+                            detail.match.player1_score !== undefined &&
+                            detail.match.player2_score !== null &&
+                            detail.match.player2_score !== undefined ? (
+                              <p>
+                                Final score: {detail.match.player1_score} - {detail.match.player2_score}
+                              </p>
+                            ) : null}
                             {detail.tournament ? (
                               <p>
                                 Tournament:{' '}
@@ -387,6 +413,14 @@ export default function AdminMatchesPage() {
                               <p className="mt-2 text-xs text-[var(--text-soft)]">
                                 Reported winner: {detail.reportState.player1ReportedWinner?.username ?? 'No report yet'}
                               </p>
+                              {detail.match.player1_reported_player1_score !== null &&
+                              detail.match.player1_reported_player1_score !== undefined &&
+                              detail.match.player1_reported_player2_score !== null &&
+                              detail.match.player1_reported_player2_score !== undefined ? (
+                                <p className="mt-1 text-xs text-[var(--text-soft)]">
+                                  Reported score: {detail.match.player1_reported_player1_score} - {detail.match.player1_reported_player2_score}
+                                </p>
+                              ) : null}
                             </div>
 
                             <div className="rounded-2xl border border-[var(--border-color)] bg-[var(--surface)] px-4 py-3">
@@ -399,6 +433,14 @@ export default function AdminMatchesPage() {
                               <p className="mt-2 text-xs text-[var(--text-soft)]">
                                 Reported winner: {detail.reportState.player2ReportedWinner?.username ?? 'No report yet'}
                               </p>
+                              {detail.match.player2_reported_player1_score !== null &&
+                              detail.match.player2_reported_player1_score !== undefined &&
+                              detail.match.player2_reported_player2_score !== null &&
+                              detail.match.player2_reported_player2_score !== undefined ? (
+                                <p className="mt-1 text-xs text-[var(--text-soft)]">
+                                  Reported score: {detail.match.player2_reported_player1_score} - {detail.match.player2_reported_player2_score}
+                                </p>
+                              ) : null}
                             </div>
 
                             <div className="rounded-2xl border border-[var(--border-color)] bg-[var(--surface)] px-4 py-3">

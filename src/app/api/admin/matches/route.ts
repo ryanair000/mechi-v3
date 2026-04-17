@@ -19,7 +19,7 @@ export async function GET(request: NextRequest) {
     let query = supabase
       .from('matches')
       .select(
-        'id, game, platform, region, status, winner_id, created_at, completed_at, dispute_screenshot_url, dispute_requested_by, tournament_id, player1:player1_id(id, username), player2:player2_id(id, username)'
+        'id, game, platform, region, status, winner_id, player1_score, player2_score, created_at, completed_at, dispute_screenshot_url, dispute_requested_by, tournament_id, player1:player1_id(id, username), player2:player2_id(id, username)'
       )
       .order('created_at', { ascending: false })
       .range(offset, offset + limit - 1);

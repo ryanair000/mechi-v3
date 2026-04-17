@@ -83,6 +83,13 @@ export async function GET(request: NextRequest) {
     const winnerXp = (winner?.xp as number | null) ?? 0;
     const winnerLevel = winnerSummary?.newLevel ?? ((winner?.level as number | null) ?? getLevelFromXp(winnerXp));
     const gameLabel = GAME_LABELS[match.game] ?? match.game;
+    const scoreline =
+      match.player1_score !== null &&
+      match.player1_score !== undefined &&
+      match.player2_score !== null &&
+      match.player2_score !== undefined
+        ? `${match.player1_score}-${match.player2_score}`
+        : null;
 
     return new ImageResponse(
       (
@@ -134,7 +141,9 @@ export async function GET(request: NextRequest) {
               {winner?.username ?? 'Player'} beat {loser?.username ?? 'Player'}
             </span>
             <span style={{ marginTop: '20px', fontSize: '24px', color: 'rgba(255,255,255,0.68)' }}>
-              Clean result lock. Progress updated on Mechi.
+              {scoreline
+                ? `Score locked at ${scoreline}. Progress updated on Mechi.`
+                : 'Clean result lock. Progress updated on Mechi.'}
             </span>
           </div>
 
@@ -160,6 +169,11 @@ export async function GET(request: NextRequest) {
               {winnerSummary ? (
                 <span style={{ marginTop: '12px', fontSize: '18px', color: '#32E0C4' }}>
                   +{winnerSummary.xpEarned} XP / +{winnerSummary.mpEarned} MP
+                </span>
+              ) : null}
+              {scoreline ? (
+                <span style={{ marginTop: '12px', fontSize: '18px', color: 'rgba(255,255,255,0.74)' }}>
+                  Final score {scoreline}
                 </span>
               ) : null}
             </div>

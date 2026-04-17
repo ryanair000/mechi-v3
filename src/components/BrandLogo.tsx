@@ -115,7 +115,7 @@ export function BrandLogo({
             fill
             sizes={imageSizes[size]}
             className={imageToneClasses[variant]}
-            priority={size === 'lg'}
+            preload={size === 'lg'}
           />
         </span>
       ) : null}

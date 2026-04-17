@@ -26,6 +26,25 @@ export type TournamentStatus = 'open' | 'full' | 'active' | 'completed' | 'cance
 export type TournamentPaymentStatus = 'pending' | 'paid' | 'free' | 'failed' | 'refunded';
 export type TournamentMatchStatus = 'pending' | 'ready' | 'active' | 'completed' | 'bye';
 export type SubscriptionStatus = 'pending' | 'active' | 'cancelled' | 'expired' | 'failed';
+export type MatchChallengeStatus =
+  | 'pending'
+  | 'accepted'
+  | 'declined'
+  | 'cancelled'
+  | 'expired';
+export type NotificationType =
+  | 'challenge_received'
+  | 'challenge_sent'
+  | 'challenge_accepted'
+  | 'challenge_declined'
+  | 'challenge_cancelled'
+  | 'tournament_joined'
+  | 'tournament_player_joined'
+  | 'tournament_started'
+  | 'match_found'
+  | 'match_reported'
+  | 'match_completed'
+  | 'match_disputed';
 
 export interface Platform {
   label: string;
@@ -172,6 +191,12 @@ export interface Match {
   winner_id: string | null;
   player1_reported_winner: string | null;
   player2_reported_winner: string | null;
+  player1_reported_player1_score?: number | null;
+  player1_reported_player2_score?: number | null;
+  player2_reported_player1_score?: number | null;
+  player2_reported_player2_score?: number | null;
+  player1_score?: number | null;
+  player2_score?: number | null;
   rating_change_p1: number | null;
   rating_change_p2: number | null;
   dispute_screenshot_url: string | null;
@@ -185,6 +210,34 @@ export interface Match {
 export interface MatchWithProfiles extends Match {
   player1: Pick<Profile, 'id' | 'username' | 'game_ids' | 'platforms'>;
   player2: Pick<Profile, 'id' | 'username' | 'game_ids' | 'platforms'>;
+}
+
+export interface MatchChallenge {
+  id: string;
+  challenger_id: string;
+  opponent_id: string;
+  game: GameKey;
+  platform: PlatformKey;
+  status: MatchChallengeStatus;
+  message?: string | null;
+  match_id?: string | null;
+  expires_at: string;
+  responded_at?: string | null;
+  created_at: string;
+  challenger?: Pick<Profile, 'id' | 'username' | 'avatar_url' | 'plan'> | null;
+  opponent?: Pick<Profile, 'id' | 'username' | 'avatar_url' | 'plan'> | null;
+}
+
+export interface Notification {
+  id: string;
+  user_id: string;
+  type: NotificationType;
+  title: string;
+  body?: string | null;
+  href?: string | null;
+  metadata?: Record<string, unknown> | null;
+  read_at?: string | null;
+  created_at: string;
 }
 
 export interface Suggestion {
@@ -276,6 +329,7 @@ export interface TournamentMatch {
   player1?: Pick<Profile, 'id' | 'username'> | null;
   player2?: Pick<Profile, 'id' | 'username'> | null;
   winner?: Pick<Profile, 'id' | 'username'> | null;
+  match?: Pick<Match, 'id' | 'status' | 'player1_score' | 'player2_score'> | null;
 }
 
 export interface AuthUser {

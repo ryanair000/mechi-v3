@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuthUser } from '@/lib/auth';
 import { GAMES } from '@/lib/config';
+import { createNotifications } from '@/lib/notifications';
 import { createServiceClient } from '@/lib/supabase';
 import {
   ACTIVE_TOURNAMENT_PLAYER_STATUSES,
@@ -15,7 +16,7 @@ import {
   normaliseKenyanPhone,
 } from '@/lib/paystack';
 import { makePaymentReference } from '@/lib/slug';
-import type { Tournament } from '@/types';
+import type { NotificationType, Tournament } from '@/types';
 
 export async function POST(
   request: NextRequest,
@@ -161,6 +162,45 @@ export async function POST(
         return NextResponse.json({ error: 'Could not join tournament' }, { status: 500 });
       }
 
+      const notifications: Array<{
+        user_id: string;
+        type: NotificationType;
+        title: string;
+        body: string;
+        href: string;
+        metadata: Record<string, unknown>;
+      }> = [
+        {
+          user_id: authUser.sub,
+          type: 'tournament_joined',
+          title: `You're in ${tournament.title}`,
+          body: `${GAMES[tournament.game]?.label ?? tournament.game} bracket joined successfully.`,
+          href: `/t/${tournament.slug}`,
+          metadata: {
+            tournament_id: tournament.id,
+            slug: tournament.slug,
+            game: tournament.game,
+          },
+        },
+      ];
+
+      if (tournament.organizer_id !== authUser.sub) {
+        notifications.push({
+          user_id: tournament.organizer_id,
+          type: 'tournament_player_joined',
+          title: `${profile.username} joined ${tournament.title}`,
+          body: `One more player locked their ${GAMES[tournament.game]?.label ?? tournament.game} slot.`,
+          href: `/t/${tournament.slug}`,
+          metadata: {
+            tournament_id: tournament.id,
+            slug: tournament.slug,
+            player_id: authUser.sub,
+            game: tournament.game,
+          },
+        });
+      }
+
+      await createNotifications(notifications, supabase);
       await maybeMarkTournamentFull(supabase, tournament.id);
       return NextResponse.json({ status: 'joined', player });
     }
@@ -202,6 +242,8 @@ export async function POST(
       reference,
       callbackUrl,
       metadata: {
+        app: 'mechi',
+        source: 'mechi',
         tournament_id: tournament.id,
         tournament_slug: tournament.slug,
         user_id: authUser.sub,

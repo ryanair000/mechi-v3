@@ -55,6 +55,12 @@ interface TournamentDetail {
     player1?: { id: string; username: string } | null;
     player2?: { id: string; username: string } | null;
     winner?: { id: string; username: string } | null;
+    match?: {
+      id: string;
+      status: string;
+      player1_score?: number | null;
+      player2_score?: number | null;
+    } | null;
   }>;
   liveMatches: Array<{
     id: string;
@@ -62,6 +68,8 @@ interface TournamentDetail {
     created_at: string;
     completed_at: string | null;
     winner_id: string | null;
+    player1_score?: number | null;
+    player2_score?: number | null;
     player1?: { id: string; username: string } | null;
     player2?: { id: string; username: string } | null;
   }>;
@@ -459,6 +467,14 @@ export default function AdminTournamentsPage() {
                                       <p className="mt-1 text-xs text-[var(--text-soft)]">
                                         {match.status}{match.winner ? ` | Winner ${match.winner.username}` : ''}
                                       </p>
+                                      {match.match?.player1_score !== null &&
+                                      match.match?.player1_score !== undefined &&
+                                      match.match?.player2_score !== null &&
+                                      match.match?.player2_score !== undefined ? (
+                                        <p className="mt-1 text-xs text-[var(--text-soft)]">
+                                          Score: {match.match.player1_score} - {match.match.player2_score}
+                                        </p>
+                                      ) : null}
                                     </div>
                                   ))
                                 )}
@@ -477,6 +493,14 @@ export default function AdminTournamentsPage() {
                                         {match.player1?.username ?? 'Unknown'} vs {match.player2?.username ?? 'Unknown'}
                                       </p>
                                       <p className="mt-1 text-xs text-[var(--text-secondary)]">{match.status}</p>
+                                      {match.player1_score !== null &&
+                                      match.player1_score !== undefined &&
+                                      match.player2_score !== null &&
+                                      match.player2_score !== undefined ? (
+                                        <p className="mt-1 text-xs text-[var(--text-soft)]">
+                                          Score: {match.player1_score} - {match.player2_score}
+                                        </p>
+                                      ) : null}
                                       <p className="mt-1 text-xs text-[var(--text-soft)]">
                                         {new Date(match.created_at).toLocaleString()}
                                       </p>

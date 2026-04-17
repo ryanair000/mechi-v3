@@ -254,6 +254,14 @@ export default function TournamentDetailPage() {
                       <PlayerLine name={match.player1?.username ?? 'TBD'} won={match.winner_id === match.player1_id} />
                       <div className="my-2 border-t border-[var(--border-color)]" />
                       <PlayerLine name={match.player2?.username ?? 'TBD'} won={match.winner_id === match.player2_id} />
+                      {match.match?.player1_score !== null &&
+                      match.match?.player1_score !== undefined &&
+                      match.match?.player2_score !== null &&
+                      match.match?.player2_score !== undefined ? (
+                        <div className="mt-3 rounded-xl border border-[var(--border-color)] bg-[var(--surface-elevated)] px-3 py-2 text-xs font-bold text-[var(--text-primary)]">
+                          Final score: {match.match.player1_score} - {match.match.player2_score}
+                        </div>
+                      ) : null}
                       <div className="mt-3 flex items-center justify-between gap-2">
                         <span className="text-xs font-bold uppercase tracking-[0.12em] text-[var(--text-soft)]">
                           {match.status}

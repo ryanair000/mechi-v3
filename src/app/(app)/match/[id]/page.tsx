@@ -66,6 +66,28 @@ interface MatchData {
 }
 
 const QUICK_RESULT_COMMENTS = ['GG', 'Close one', 'Lucky', 'Run it back'] as const;
+const MATCH_STATUS_POLL_INTERVAL_MS = 3000;
+
+function hasSubmittedScore(value: number | null | undefined) {
+  return value !== null && value !== undefined;
+}
+
+function hasUserSubmittedResultReport(match: MatchData, userId: string) {
+  const isPlayer1 = userId === match.player1_id;
+
+  if (requiresMatchScoreReport(match.game)) {
+    const reportedPlayer1Score = isPlayer1
+      ? match.player1_reported_player1_score
+      : match.player2_reported_player1_score;
+    const reportedPlayer2Score = isPlayer1
+      ? match.player1_reported_player2_score
+      : match.player2_reported_player2_score;
+
+    return hasSubmittedScore(reportedPlayer1Score) && hasSubmittedScore(reportedPlayer2Score);
+  }
+
+  return Boolean(isPlayer1 ? match.player1_reported_winner : match.player2_reported_winner);
+}
 
 export default function MatchPage() {
   const params = useParams();
@@ -92,10 +114,18 @@ export default function MatchPage() {
   const channelRef = useRef<{ send: (payload: unknown) => Promise<unknown> } | null>(null);
 
   const fetchMatch = useCallback(async () => {
-    const res = await authFetch(`/api/matches/${matchId}`);
+    const res = await authFetch(`/api/matches/${matchId}`, { cache: 'no-store' });
     if (res.ok) {
       const data = await res.json();
-      setMatch(data.match);
+      setMatch((current) => {
+        const nextMatch = data.match as MatchData;
+
+        if (current?.id === nextMatch.id && current.status !== 'pending' && nextMatch.status === 'pending') {
+          return current;
+        }
+
+        return nextMatch;
+      });
     } else {
       router.push('/dashboard');
     }
@@ -132,6 +162,19 @@ export default function MatchPage() {
           toast(`${note.from}: ${note.comment}`, {
             icon: '💬',
           });
+        }
+      )
+      .on(
+        'broadcast',
+        { event: 'match-updated' },
+        ({ payload }) => {
+          const nextPayload = payload as { matchId?: string } | undefined;
+
+          if (nextPayload?.matchId && nextPayload.matchId !== matchId) {
+            return;
+          }
+
+          void fetchMatch();
         }
       )
       .on(
@@ -216,6 +259,28 @@ export default function MatchPage() {
     });
   }, [match, user]);
 
+  useEffect(() => {
+    if (!match || !user || match.status !== 'pending') {
+      return;
+    }
+
+    if (!hasUserSubmittedResultReport(match, user.id)) {
+      return;
+    }
+
+    // Realtime can be missed in some Supabase configs, so keep this fallback
+    // narrow: only poll while this user is waiting for the opponent's report.
+    const pollTimer = window.setInterval(() => {
+      if (document.visibilityState === 'hidden') {
+        return;
+      }
+
+      void fetchMatch();
+    }, MATCH_STATUS_POLL_INTERVAL_MS);
+
+    return () => window.clearInterval(pollTimer);
+  }, [fetchMatch, match, user]);
+
   const handleReport = async (winnerId?: string) => {
     if (!match) {
       return;
@@ -276,6 +341,18 @@ export default function MatchPage() {
         });
         setSentQuickComment(selectedQuickComment);
         setSelectedQuickComment(null);
+      }
+
+      if (channelRef.current) {
+        void channelRef.current.send({
+          type: 'broadcast',
+          event: 'match-updated',
+          payload: {
+            matchId,
+            fromUserId: user?.id,
+            status: data.status,
+          },
+        });
       }
 
       if (data.status === 'completed') {

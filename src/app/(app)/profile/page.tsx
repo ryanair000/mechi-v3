@@ -151,6 +151,9 @@ export default function ProfilePage() {
           ...ids,
           [getGamePlatformKey(game)]: ids[getGamePlatformKey(game)] ?? defaultPlatform,
         }));
+        setPlatforms((prevPlatforms) =>
+          prevPlatforms.includes(defaultPlatform) ? prevPlatforms : [...prevPlatforms, defaultPlatform]
+        );
       }
       return [...prev, game];
     });
@@ -161,6 +164,9 @@ export default function ProfilePage() {
       ...ids,
       [getGamePlatformKey(game)]: platform,
     }));
+    setPlatforms((prevPlatforms) =>
+      prevPlatforms.includes(platform) ? prevPlatforms : [...prevPlatforms, platform]
+    );
   };
 
   const handleMediaUpload = async (kind: 'avatar' | 'cover', file: File | null) => {
@@ -214,33 +220,59 @@ export default function ProfilePage() {
   };
 
   const handleSave = async () => {
+    if (!profile) {
+      toast.error('Profile not loaded');
+      return;
+    }
+
     const setupPlatforms = getPlatformsForGameSetup(selectedGames, gameIds, platforms);
     const hasMissingPlatform = selectedGames.some(
       (game) => !getConfiguredPlatformForGame(game, gameIds, setupPlatforms)
     );
 
-    if (selectedGames.length === 0) {
-      toast.error('Pick at least 1 game');
-      return;
-    }
-
-    if (hasMissingPlatform) {
+    if (selectedGames.length > 0 && hasMissingPlatform) {
       toast.error('Choose a platform for each game');
       return;
     }
 
     setSaving(true);
     try {
+      const currentSelectedGames = (profile.selected_games as GameKey[]) ?? [];
+      const currentGameIds = (profile.game_ids as Record<string, string>) ?? {};
+      const currentPlatforms = (profile.platforms as PlatformKey[]) ?? [];
+
+      const normalizeArray = (values: string[]) => [...values].sort();
+      const stableStringify = (value: Record<string, string>) => {
+        const sortedEntries = Object.entries(value).sort(([a], [b]) => a.localeCompare(b));
+        return JSON.stringify(Object.fromEntries(sortedEntries));
+      };
+
+      const payload: Record<string, unknown> = {
+        region,
+        whatsapp_notifications: profile.whatsapp_notifications ?? false,
+        whatsapp_number: profile.whatsapp_number ?? null,
+      };
+
+      const nextSelectedGames = normalizeArray(selectedGames);
+      const prevSelectedGames = normalizeArray(currentSelectedGames);
+      const nextPlatforms = normalizeArray(setupPlatforms);
+      const prevPlatforms = normalizeArray(currentPlatforms);
+
+      if (JSON.stringify(nextSelectedGames) !== JSON.stringify(prevSelectedGames)) {
+        payload.selected_games = selectedGames;
+      }
+
+      if (stableStringify(gameIds) !== stableStringify(currentGameIds)) {
+        payload.game_ids = gameIds;
+      }
+
+      if (JSON.stringify(nextPlatforms) !== JSON.stringify(prevPlatforms)) {
+        payload.platforms = setupPlatforms;
+      }
+
       const res = await authFetch('/api/users/profile', {
         method: 'PATCH',
-        body: JSON.stringify({
-          region,
-          platforms: setupPlatforms,
-          game_ids: gameIds,
-          selected_games: selectedGames,
-          whatsapp_notifications: profile?.whatsapp_notifications ?? false,
-          whatsapp_number: profile?.whatsapp_number ?? null,
-        }),
+        body: JSON.stringify(payload),
       });
       if (res.ok) {
         toast.success('Profile updated!');

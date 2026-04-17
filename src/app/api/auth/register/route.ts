@@ -8,6 +8,7 @@ import { findInviterByCode, generateUniqueInviteCode, normalizeInviteCode } from
 import { getPhoneLookupVariants, isValidPhoneNumber, normalizePhoneNumber } from '@/lib/phone';
 import { canSelectGames } from '@/lib/plans';
 import { checkRateLimit, getClientIp, rateLimitResponse } from '@/lib/rateLimit';
+import { sendNewRegistrationTelegramNotification } from '@/lib/telegram';
 
 const STARTER_TRIAL_PLAN = 'pro';
 
@@ -209,6 +210,17 @@ export async function POST(request: NextRequest) {
 
     // Send welcome email async
     sendWelcomeEmail({ to: trimmedEmail, username }).catch(console.error);
+    sendNewRegistrationTelegramNotification({
+      username: profile.username as string,
+      email: trimmedEmail,
+      phone: normalizedPhone,
+      region: trimmedRegion,
+      selectedGames: selected_games ?? [],
+      plan: STARTER_TRIAL_PLAN,
+      inviteCode: normalizedInviteCode,
+    }).catch((error) => {
+      console.error('[Telegram] Registration notification error:', error);
+    });
 
     const response = NextResponse.json({
       token,

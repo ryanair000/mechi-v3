@@ -129,9 +129,9 @@ export default function RegisterPage({ searchParams }: { searchParams: RegisterS
 
   const step1Valid =
     formData.username.trim().length >= 3 &&
-    formData.phone.trim().length >= 9;
+    formData.phone.trim().length >= 9 &&
+    emailIsValid;
   const step2Valid =
-    emailIsValid &&
     formData.region.trim().length > 0 &&
     formData.password.length >= 6;
   const setupPlatforms = getPlatformsForGameSetup(
@@ -347,6 +347,17 @@ export default function RegisterPage({ searchParams }: { searchParams: RegisterS
                       }
                     />
                   </div>
+                  <div>
+                    <label className="label">Email</label>
+                    <input
+                      type="email"
+                      value={formData.email}
+                      onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                      placeholder="you@example.com"
+                      className="input"
+                      required
+                    />
+                  </div>
                   <button
                     type="button"
                     onClick={() => step1Valid && setStep(2)}
@@ -380,17 +391,6 @@ export default function RegisterPage({ searchParams }: { searchParams: RegisterS
                         </option>
                       ))}
                     </datalist>
-                  </div>
-                  <div>
-                    <label className="label">Email</label>
-                    <input
-                      type="email"
-                      value={formData.email}
-                      onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                      placeholder="you@example.com"
-                      className="input"
-                      required
-                    />
                   </div>
                   <div>
                     <label className="label">Password</label>

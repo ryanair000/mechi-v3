@@ -42,14 +42,16 @@ function chunkRecipients(values: string[]): string[][] {
   return chunks;
 }
 
-function claimBroadcastSlot(key: string, cooldownMs: number) {
-  const now = Date.now();
-
+function pruneLocalBroadcastCooldowns(now = Date.now()) {
   for (const [storedKey, timestamp] of broadcastCooldowns.entries()) {
     if (now - timestamp > BROADCAST_COOLDOWN_RETENTION_MS) {
       broadcastCooldowns.delete(storedKey);
     }
   }
+}
+
+function claimLocalBroadcastSlot(key: string, cooldownMs: number, now = Date.now()) {
+  pruneLocalBroadcastCooldowns(now);
 
   const previous = broadcastCooldowns.get(key);
   if (previous && now - previous < cooldownMs) {
@@ -57,6 +59,65 @@ function claimBroadcastSlot(key: string, cooldownMs: number) {
   }
 
   broadcastCooldowns.set(key, now);
+  return true;
+}
+
+function isDuplicateRateLimitKey(error: { code?: string } | null | undefined) {
+  return error?.code === '23505';
+}
+
+async function claimBroadcastSlot(params: {
+  supabase: SupabaseClient;
+  key: string;
+  cooldownMs: number;
+}) {
+  const { supabase, key, cooldownMs } = params;
+  const now = Date.now();
+
+  if (!claimLocalBroadcastSlot(key, cooldownMs, now)) {
+    return false;
+  }
+
+  const nowIso = new Date(now).toISOString();
+  const cooldownCutoffIso = new Date(now - cooldownMs).toISOString();
+
+  const { data: recycledEntry, error: recycleError } = await supabase
+    .from('rate_limit_attempts')
+    .update({
+      attempts: 1,
+      window_start: nowIso,
+      last_attempt: nowIso,
+    })
+    .eq('key', key)
+    .lte('last_attempt', cooldownCutoffIso)
+    .select('id')
+    .maybeSingle();
+
+  if (recycleError) {
+    console.error('[Game Audience] Failed to recycle broadcast cooldown:', recycleError);
+    return true;
+  }
+
+  if (recycledEntry) {
+    return true;
+  }
+
+  const { error: insertError } = await supabase.from('rate_limit_attempts').insert({
+    key,
+    attempts: 1,
+    window_start: nowIso,
+    last_attempt: nowIso,
+  });
+
+  if (!insertError) {
+    return true;
+  }
+
+  if (isDuplicateRateLimitKey(insertError)) {
+    return false;
+  }
+
+  console.error('[Game Audience] Failed to claim broadcast cooldown:', insertError);
   return true;
 }
 
@@ -85,11 +146,12 @@ export async function getGameAudienceMembers(params: {
         break;
       }
 
-      const rows = ((data ?? []) as Array<{
+      const pageRows = (data ?? []) as Array<{
         id: string;
         username?: string | null;
         email?: string | null;
-      }>).filter((row) => row.email && !blockedIds.has(row.id));
+      }>;
+      const rows = pageRows.filter((row) => row.email && !blockedIds.has(row.id));
 
       for (const row of rows) {
         if (!recipients.has(row.id)) {
@@ -101,7 +163,7 @@ export async function getGameAudienceMembers(params: {
         }
       }
 
-      if (rows.length < AUDIENCE_PAGE_SIZE) {
+      if (pageRows.length < AUDIENCE_PAGE_SIZE) {
         break;
       }
 
@@ -122,7 +184,13 @@ export async function notifyGameAudienceAboutQueue(params: {
 }): Promise<void> {
   const canonicalGame = getCanonicalGameKey(params.game);
   const broadcastKey = `queue:${params.actorUserId}:${canonicalGame}:${params.platform}`;
-  if (!claimBroadcastSlot(broadcastKey, QUEUE_BROADCAST_COOLDOWN_MS)) {
+  if (
+    !(await claimBroadcastSlot({
+      supabase: params.supabase,
+      key: broadcastKey,
+      cooldownMs: QUEUE_BROADCAST_COOLDOWN_MS,
+    }))
+  ) {
     return;
   }
 
@@ -160,7 +228,13 @@ export async function notifyGameAudienceAboutLobby(params: {
 }): Promise<void> {
   const canonicalGame = getCanonicalGameKey(params.game);
   const broadcastKey = `lobby:${params.actorUserId}:${canonicalGame}`;
-  if (!claimBroadcastSlot(broadcastKey, LOBBY_BROADCAST_COOLDOWN_MS)) {
+  if (
+    !(await claimBroadcastSlot({
+      supabase: params.supabase,
+      key: broadcastKey,
+      cooldownMs: LOBBY_BROADCAST_COOLDOWN_MS,
+    }))
+  ) {
     return;
   }
 
@@ -200,7 +274,13 @@ export async function notifyGameAudienceAboutTournament(params: {
 }): Promise<void> {
   const canonicalGame = getCanonicalGameKey(params.game);
   const broadcastKey = `tournament:${params.actorUserId}:${canonicalGame}`;
-  if (!claimBroadcastSlot(broadcastKey, TOURNAMENT_BROADCAST_COOLDOWN_MS)) {
+  if (
+    !(await claimBroadcastSlot({
+      supabase: params.supabase,
+      key: broadcastKey,
+      cooldownMs: TOURNAMENT_BROADCAST_COOLDOWN_MS,
+    }))
+  ) {
     return;
   }
 

@@ -1,19 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getAuthUser } from '@/lib/auth';
+import { requireActiveAccessProfile } from '@/lib/access';
 import { getNotificationsForUser, markAllNotificationsRead } from '@/lib/notifications';
 
 export async function GET(request: NextRequest) {
-  const authUser = getAuthUser(request);
-  if (!authUser) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const access = await requireActiveAccessProfile(request);
+  if (access.response) {
+    return access.response;
   }
+
+  const authUser = access.profile;
 
   try {
     const limit = Math.min(
       Math.max(Number(request.nextUrl.searchParams.get('limit') ?? '40'), 1),
       100
     );
-    const data = await getNotificationsForUser(authUser.sub, limit);
+    const data = await getNotificationsForUser(authUser.id, limit);
     return NextResponse.json(data);
   } catch (error) {
     console.error('[Notifications GET] Error:', error);
@@ -22,13 +24,15 @@ export async function GET(request: NextRequest) {
 }
 
 export async function PATCH(request: NextRequest) {
-  const authUser = getAuthUser(request);
-  if (!authUser) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const access = await requireActiveAccessProfile(request);
+  if (access.response) {
+    return access.response;
   }
 
+  const authUser = access.profile;
+
   try {
-    await markAllNotificationsRead(authUser.sub);
+    await markAllNotificationsRead(authUser.id);
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error('[Notifications PATCH] Error:', error);

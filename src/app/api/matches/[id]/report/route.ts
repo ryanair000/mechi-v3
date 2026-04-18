@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getAuthUser } from '@/lib/auth';
+import { requireActiveAccessProfile } from '@/lib/access';
 import { calculateElo } from '@/lib/elo';
 import {
   evaluateAchievements,
@@ -293,11 +293,12 @@ export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const authUser = getAuthUser(request);
-  if (!authUser) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const access = await requireActiveAccessProfile(request);
+  if (access.response) {
+    return access.response;
   }
 
+  const authUser = access.profile;
   const { id } = await params;
 
   try {
@@ -317,7 +318,7 @@ export async function POST(
       return NextResponse.json({ error: 'Match not found' }, { status: 404 });
     }
 
-    if (match.player1_id !== authUser.sub && match.player2_id !== authUser.sub) {
+    if (match.player1_id !== authUser.id && match.player2_id !== authUser.id) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
@@ -327,7 +328,7 @@ export async function POST(
         winner_id: match.winner_id,
         player1_score: match.player1_score ?? null,
         player2_score: match.player2_score ?? null,
-        gamification: getGamificationSummaryForUser(match, authUser.sub),
+        gamification: getGamificationSummaryForUser(match, authUser.id),
       });
     }
 
@@ -377,7 +378,7 @@ export async function POST(
       }
     }
 
-    const isPlayer1 = authUser.sub === match.player1_id;
+    const isPlayer1 = authUser.id === match.player1_id;
     const reportField = isPlayer1 ? 'player1_reported_winner' : 'player2_reported_winner';
     const reportUpdate: Record<string, string | number | null> = { [reportField]: winnerId };
 
@@ -435,7 +436,7 @@ export async function POST(
           .from('matches')
           .update({
             status: 'disputed',
-            dispute_requested_by: authUser.sub,
+            dispute_requested_by: authUser.id,
           })
           .eq('id', id);
 

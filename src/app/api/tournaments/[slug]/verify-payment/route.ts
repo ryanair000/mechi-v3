@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getAuthUser } from '@/lib/auth';
+import { requireActiveAccessProfile } from '@/lib/access';
 import { GAMES } from '@/lib/config';
 import { createNotifications } from '@/lib/notifications';
 import { createServiceClient } from '@/lib/supabase';
@@ -11,11 +11,12 @@ export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ slug: string }> }
 ) {
-  const authUser = getAuthUser(request);
-  if (!authUser) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const access = await requireActiveAccessProfile(request);
+  if (access.response) {
+    return access.response;
   }
 
+  const authUser = access.profile;
   const { slug } = await params;
 
   try {
@@ -41,7 +42,7 @@ export async function POST(
       .from('tournament_players')
       .select('*')
       .eq('tournament_id', tournament.id)
-      .eq('user_id', authUser.sub)
+      .eq('user_id', authUser.id)
       .eq('payment_ref', reference)
       .single();
 
@@ -83,7 +84,7 @@ export async function POST(
       metadata: Record<string, unknown>;
     }> = [
       {
-        user_id: authUser.sub,
+        user_id: authUser.id,
         type: 'tournament_joined',
         title: `Payment confirmed for ${tournament.title}`,
         body: `You're locked into the ${GAMES[tournament.game]?.label ?? tournament.game} bracket.`,
@@ -96,11 +97,11 @@ export async function POST(
       },
     ];
 
-    if (tournament.organizer_id !== authUser.sub) {
+    if (tournament.organizer_id !== authUser.id) {
       const { data: profileRaw } = await supabase
         .from('profiles')
         .select('username')
-        .eq('id', authUser.sub)
+        .eq('id', authUser.id)
         .maybeSingle();
 
       notifications.push({
@@ -112,7 +113,7 @@ export async function POST(
         metadata: {
           tournament_id: tournament.id,
           slug: tournament.slug,
-          player_id: authUser.sub,
+          player_id: authUser.id,
           game: tournament.game,
         },
       });

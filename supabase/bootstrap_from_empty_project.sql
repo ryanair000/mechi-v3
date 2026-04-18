@@ -387,7 +387,7 @@ BEGIN
 END;
 $$;
 
-GRANT SELECT ON subscriptions, match_usage TO authenticated;
+REVOKE ALL ON TABLE subscriptions, match_usage FROM anon, authenticated;
 GRANT ALL ON subscriptions, match_usage TO service_role;
 GRANT EXECUTE ON FUNCTION increment_match_usage(uuid, date) TO service_role;
 
@@ -631,6 +631,33 @@ BEGIN
 END;
 $$;
 
+REVOKE EXECUTE ON FUNCTION finalize_match_with_gamification(
+  uuid,
+  uuid,
+  integer,
+  integer,
+  integer,
+  integer,
+  text,
+  text,
+  text,
+  integer,
+  integer,
+  integer,
+  integer,
+  integer,
+  integer,
+  integer,
+  integer,
+  integer,
+  integer,
+  date,
+  text[],
+  text[],
+  jsonb,
+  jsonb
+) FROM anon, authenticated;
+
 GRANT EXECUTE ON FUNCTION finalize_match_with_gamification(
   uuid,
   uuid,
@@ -656,7 +683,7 @@ GRANT EXECUTE ON FUNCTION finalize_match_with_gamification(
   text[],
   jsonb,
   jsonb
-) TO anon, authenticated, service_role;
+) TO service_role;
 
 ALTER TABLE profiles
   ADD COLUMN IF NOT EXISTS role text NOT NULL DEFAULT 'user'
@@ -692,5 +719,5 @@ CREATE INDEX IF NOT EXISTS idx_admin_audit_logs_created_at ON admin_audit_logs(c
 CREATE INDEX IF NOT EXISTS idx_admin_audit_logs_action ON admin_audit_logs(action);
 CREATE INDEX IF NOT EXISTS idx_rate_limit_attempts_key ON rate_limit_attempts(key);
 
-GRANT SELECT ON admin_audit_logs TO authenticated;
+REVOKE ALL ON TABLE admin_audit_logs FROM anon, authenticated;
 GRANT ALL ON admin_audit_logs, rate_limit_attempts TO service_role;

@@ -180,7 +180,6 @@ export async function POST(request: NextRequest) {
         entry_fee: entryFee,
         platform_fee_rate: organizerPlanConfig.tournamentFeePercent,
         rules: rules || null,
-        organizer_id: authUser.sub,
         organizer_id: authUser.id,
       })
       .select('*')
@@ -197,10 +196,10 @@ export async function POST(request: NextRequest) {
     });
 
     try {
-        await notifyGameAudienceAboutTournament({
-          supabase,
-          actorUserId: authUser.id,
-          game,
+      await notifyGameAudienceAboutTournament({
+        supabase,
+        actorUserId: authUser.id,
+        game,
         organizerName: organizerProfile.username?.trim() || 'A player',
         slug,
         title,
@@ -208,8 +207,8 @@ export async function POST(request: NextRequest) {
         entryFee,
         size,
         region: location.label,
-          excludeUserIds: [authUser.id],
-        });
+        excludeUserIds: [authUser.id],
+      });
     } catch (broadcastError) {
       console.error('[Tournaments POST] Broadcast error:', broadcastError);
     }

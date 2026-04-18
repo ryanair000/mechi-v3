@@ -11,16 +11,17 @@ import { ThemeToggle } from '@/components/ThemeToggle';
 import { useAuth, useAuthFetch } from '@/components/AuthProvider';
 import { type BillingCycle, type Plan, PLANS } from '@/lib/plans';
 
-const VISIBLE_PLAN_ORDER: Array<'free' | 'pro'> = ['free', 'pro'];
+const VISIBLE_PLAN_ORDER: Array<'free' | 'pro' | 'elite'> = ['free', 'pro', 'elite'];
 
 const COMPARISON_ROWS = [
-  { label: 'Matches per day', free: '5', pro: 'Unlimited' },
-  { label: 'Games selectable', free: '1', pro: '3' },
-  { label: 'Tournament fee', free: '5%', pro: '5%' },
-  { label: 'Match history', free: '10', pro: '100' },
-  { label: 'Priority matchmaking', free: 'No', pro: 'No' },
-  { label: 'CSV export', free: 'No', pro: 'No' },
-  { label: 'Early access', free: 'No', pro: 'No' },
+  { label: 'Matches per day', free: '5', pro: 'Unlimited', elite: 'Unlimited' },
+  { label: 'Games selectable', free: '1', pro: '3', elite: '3' },
+  { label: 'Direct 1-on-1 challenges', free: 'Yes', pro: 'Yes', elite: 'Yes' },
+  { label: 'Free-entry tournament hosting', free: 'No', pro: 'Yes', elite: 'Yes' },
+  { label: 'Tournament platform fee', free: '5%', pro: '5%', elite: '0%' },
+  { label: 'Match history', free: '10', pro: '100', elite: 'Unlimited' },
+  { label: 'Early access', free: 'No', pro: 'No', elite: 'Yes' },
+  { label: 'Streaming features', free: 'No', pro: 'No', elite: 'Yes' },
 ];
 
 function getPlanActionLabel(currentPlan: Plan, targetPlan: Plan) {
@@ -33,10 +34,10 @@ function getPlanActionLabel(currentPlan: Plan, targetPlan: Plan) {
   }
 
   if (currentPlan === 'elite' && targetPlan === 'pro') {
-    return 'Already on Elite';
+    return 'Included in Elite';
   }
 
-  return 'Go Pro';
+  return targetPlan === 'elite' ? 'Go Elite' : 'Go Pro';
 }
 
 function PricingPageContent() {
@@ -63,7 +64,13 @@ function PricingPageContent() {
     }
   }, [refresh, searchParams]);
 
-  const annualSavings = useMemo(() => PLANS.pro.monthlyKes * 12 - PLANS.pro.annualKes, []);
+  const annualSavings = useMemo(
+    () => ({
+      pro: PLANS.pro.monthlyKes * 12 - PLANS.pro.annualKes,
+      elite: PLANS.elite.monthlyKes * 12 - PLANS.elite.annualKes,
+    }),
+    []
+  );
 
   const handleUpgrade = async (plan: Exclude<Plan, 'free'>) => {
     if (!user) {
@@ -163,7 +170,7 @@ function PricingPageContent() {
                   Start free. Upgrade only when your Mechi climb needs more.
                 </h1>
                 <p className="mt-4 max-w-2xl text-sm leading-7 text-[var(--text-secondary)] sm:text-base">
-                  Free keeps the core open. Pro unlocks more volume for regular players who want unlimited ranked runs.
+                  New players start with a 1-month Pro trial. After that, keep it free, move to Pro at KES 299 for unlimited ranked runs and direct challenges, or go Elite at KES 999 for zero tournament fees, early access, and streaming perks.
                 </p>
               </div>
 
@@ -203,7 +210,7 @@ function PricingPageContent() {
         </section>
 
         <section className="landing-section border-none px-0 pb-0 pt-8 sm:pt-10">
-          <div className="grid gap-4 lg:grid-cols-2">
+          <div className="grid gap-4 lg:grid-cols-3">
             {VISIBLE_PLAN_ORDER.map((planKey) => {
               const plan = PLANS[planKey];
               const isCurrent = currentPlan === planKey;
@@ -211,6 +218,8 @@ function PricingPageContent() {
               const actionDisabled =
                 planKey === 'free' || isCurrent || isDowngradeFromElite || loadingPlan !== null;
               const price = billingCycle === 'annual' ? plan.annualKes : plan.monthlyKes;
+              const savings =
+                planKey === 'pro' || planKey === 'elite' ? annualSavings[planKey] : 0;
 
               return (
                 <div
@@ -218,6 +227,8 @@ function PricingPageContent() {
                   className={`card flex h-full flex-col p-5 sm:p-6 ${
                     planKey === 'pro'
                       ? 'circuit-panel border-[rgba(255,107,107,0.24)]'
+                      : planKey === 'elite'
+                        ? 'circuit-panel border-[rgba(246,196,83,0.32)]'
                       : ''
                   }`}
                 >
@@ -228,6 +239,10 @@ function PricingPageContent() {
                         <PlanBadge plan={planKey} size="md" />
                         {planKey === 'pro' ? (
                           <span className="brand-chip-coral px-2.5 py-1">Most popular</span>
+                        ) : planKey === 'elite' ? (
+                          <span className="rounded-full border border-[rgba(246,196,83,0.32)] bg-[rgba(246,196,83,0.14)] px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-[#b88919]">
+                            All access
+                          </span>
                         ) : null}
                       </div>
                     </div>
@@ -246,9 +261,14 @@ function PricingPageContent() {
                       {planKey === 'free'
                         ? 'No payment needed'
                         : billingCycle === 'annual'
-                          ? `Billed yearly, save KSH ${annualSavings}`
+                          ? `Billed yearly, save KSH ${savings}`
                           : 'Billed monthly via Paystack'}
                     </p>
+                    {planKey === 'pro' ? (
+                      <p className="mt-2 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--brand-coral)]">
+                        1-month trial on new signups
+                      </p>
+                    ) : null}
                   </div>
 
                   <div className="mt-6 space-y-3">
@@ -292,7 +312,7 @@ function PricingPageContent() {
           <div className="card overflow-hidden p-5 sm:p-6">
             <div className="flex items-center gap-2">
               <Crown size={16} className="text-[var(--brand-coral)]" />
-              <h2 className="text-xl font-black text-[var(--text-primary)]">Free vs Pro</h2>
+              <h2 className="text-xl font-black text-[var(--text-primary)]">Plan breakdown</h2>
             </div>
 
             <div className="mt-5 grid gap-3 sm:hidden">
@@ -315,18 +335,25 @@ function PricingPageContent() {
                       </p>
                       <p className="mt-1 font-semibold text-[var(--text-primary)]">{row.pro}</p>
                     </div>
+                    <div className="rounded-lg border border-[rgba(246,196,83,0.2)] bg-[rgba(246,196,83,0.12)] px-3 py-2">
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.1em] text-[#b88919]">
+                        Elite
+                      </p>
+                      <p className="mt-1 font-semibold text-[var(--text-primary)]">{row.elite}</p>
+                    </div>
                   </div>
                 </div>
               ))}
             </div>
 
             <div className="mt-5 hidden overflow-x-auto sm:block">
-              <table className="w-full min-w-[30rem] text-left text-sm">
+              <table className="w-full min-w-[38rem] text-left text-sm">
                 <thead>
                   <tr className="border-b border-[var(--border-color)] text-[var(--text-soft)]">
                     <th className="pb-3 pr-4 font-semibold">Feature</th>
                     <th className="pb-3 px-4 font-semibold">Free</th>
                     <th className="pb-3 px-4 font-semibold text-[var(--brand-coral)]">Pro</th>
+                    <th className="pb-3 px-4 font-semibold text-[#b88919]">Elite</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -335,6 +362,7 @@ function PricingPageContent() {
                       <td className="py-3 pr-4 text-[var(--text-secondary)]">{row.label}</td>
                       <td className="py-3 px-4 text-[var(--text-primary)]">{row.free}</td>
                       <td className="py-3 px-4 text-[var(--text-primary)]">{row.pro}</td>
+                      <td className="py-3 px-4 text-[var(--text-primary)]">{row.elite}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -355,8 +383,8 @@ function PricingPageContent() {
                 a: 'Yes. Cancelling stops renewal, but your plan stays active until the current billing period ends.',
               },
               {
-                q: 'Does free ever expire?',
-                a: 'No. Free stays free forever. You only hit the daily match cap and single-game limit.',
+                q: 'What does Elite unlock?',
+                a: 'Elite keeps everything in Pro, then adds zero tournament fee, early access to updates, a gold badge, and streaming-feature access.',
               },
             ].map((item) => (
               <div key={item.q} className="card p-5">

@@ -1,12 +1,60 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuthUser } from '@/lib/auth';
-import { GAMES, PLATFORMS } from '@/lib/config';
+import {
+  PLATFORMS,
+  getConfiguredPlatformForGame,
+  getGameIdValue,
+  getPlatformsForGameSetup,
+  getValidCanonicalGameKey,
+  normalizeGameIdKeys,
+  normalizeSelectedGameKeys,
+} from '@/lib/config';
+import { isMissingColumnError } from '@/lib/db-compat';
+import { resolveProfileLocation, validateLocationSelection } from '@/lib/location';
 import { isValidPhoneNumber, normalizePhoneNumber } from '@/lib/phone';
 import { createServiceClient } from '@/lib/supabase';
 import { canUseSelectedGames, maybeExpireProfilePlan, resolvePlan } from '@/lib/subscription';
+import type { GameKey, PlatformKey } from '@/types';
 
 const PLATFORM_KEYS = new Set(Object.keys(PLATFORMS));
-const GAME_KEYS = new Set(Object.keys(GAMES));
+
+function withProfileDefaults(profile: Record<string, unknown>) {
+  const gameIds =
+    profile.game_ids && typeof profile.game_ids === 'object' && !Array.isArray(profile.game_ids)
+      ? normalizeGameIdKeys(profile.game_ids as Record<string, string>)
+      : {};
+  const selectedGames = Array.isArray(profile.selected_games)
+    ? normalizeSelectedGameKeys(profile.selected_games)
+    : [];
+  const location = resolveProfileLocation(profile);
+
+  return {
+    ...profile,
+    country: location.country,
+    region: location.region,
+    game_ids: gameIds,
+    selected_games: selectedGames,
+    whatsapp_notifications:
+      (profile.whatsapp_notifications as boolean | undefined) ??
+      Boolean(profile.whatsapp_number as string | null | undefined),
+    xp: (profile.xp as number | undefined) ?? 0,
+    level: (profile.level as number | undefined) ?? 1,
+    mp: (profile.mp as number | undefined) ?? 0,
+    win_streak: (profile.win_streak as number | undefined) ?? 0,
+    max_win_streak: (profile.max_win_streak as number | undefined) ?? 0,
+    plan: (profile.plan as string | undefined) ?? 'free',
+    plan_since: (profile.plan_since as string | null | undefined) ?? null,
+    plan_expires_at: (profile.plan_expires_at as string | null | undefined) ?? null,
+  };
+}
+
+function normalizeGameIds(value: Record<string, unknown>): Record<string, string> {
+  return normalizeGameIdKeys(
+    Object.fromEntries(
+      Object.entries(value).map(([key, id]) => [key, String(id).trim()])
+    )
+  );
+}
 
 export async function GET(request: NextRequest) {
   const authUser = getAuthUser(request);
@@ -48,7 +96,7 @@ export async function GET(request: NextRequest) {
             plan_expires_at: null,
           };
 
-    return NextResponse.json({ profile: safeProfile });
+    return NextResponse.json({ profile: withProfileDefaults(safeProfile as Record<string, unknown>) });
   } catch (err) {
     console.error('[Profile GET] Error:', err);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
@@ -67,6 +115,7 @@ export async function PATCH(request: NextRequest) {
       platforms,
       game_ids,
       selected_games,
+      country,
       region,
       avatar_url,
       cover_url,
@@ -94,11 +143,14 @@ export async function PATCH(request: NextRequest) {
       },
       supabase
     );
-    let nextWhatsappNotifications = Boolean(currentProfile.whatsapp_notifications);
+    let nextWhatsappNotifications =
+      (currentProfile.whatsapp_notifications as boolean | undefined) ??
+      Boolean(currentProfile.whatsapp_number);
+    let nextLocation = resolveProfileLocation(currentProfile as Record<string, unknown>);
     let nextWhatsappNumber =
       typeof currentProfile.whatsapp_number === 'string' &&
       currentProfile.whatsapp_number.trim().length > 0
-        ? normalizePhoneNumber(currentProfile.whatsapp_number)
+        ? normalizePhoneNumber(currentProfile.whatsapp_number, nextLocation.country)
         : null;
 
     if (platforms !== undefined) {
@@ -107,6 +159,9 @@ export async function PATCH(request: NextRequest) {
       }
       if (!platforms.every((platform) => typeof platform === 'string' && PLATFORM_KEYS.has(platform))) {
         return NextResponse.json({ error: 'Platforms list contains invalid values' }, { status: 400 });
+      }
+      if (new Set(platforms).size !== platforms.length) {
+        return NextResponse.json({ error: 'Platforms cannot contain duplicates' }, { status: 400 });
       }
       updateData.platforms = platforms;
     }
@@ -123,19 +178,26 @@ export async function PATCH(request: NextRequest) {
           return NextResponse.json({ error: 'Game IDs contain an invalid value' }, { status: 400 });
         }
       }
-      updateData.game_ids = game_ids;
+      updateData.game_ids = normalizeGameIds(game_ids as Record<string, unknown>);
     }
     if (selected_games !== undefined) {
       if (!Array.isArray(selected_games)) {
         return NextResponse.json({ error: 'Selected games must be an array' }, { status: 400 });
       }
-      if (!selected_games.every((game) => typeof game === 'string' && GAME_KEYS.has(game))) {
-        return NextResponse.json({ error: 'Selected games contain invalid values' }, { status: 400 });
+      const normalizedSelectedGames: GameKey[] = [];
+      for (const game of selected_games) {
+        if (typeof game !== 'string') {
+          return NextResponse.json({ error: 'Selected games contain invalid values' }, { status: 400 });
+        }
+        const canonicalGame = getValidCanonicalGameKey(game);
+        if (!canonicalGame) {
+          return NextResponse.json({ error: 'Selected games contain invalid values' }, { status: 400 });
+        }
+        if (!normalizedSelectedGames.includes(canonicalGame)) {
+          normalizedSelectedGames.push(canonicalGame);
+        }
       }
-      if (new Set(selected_games).size !== selected_games.length) {
-        return NextResponse.json({ error: 'Selected games cannot contain duplicates' }, { status: 400 });
-      }
-      if (!canUseSelectedGames(resolvedPlan, selected_games.length)) {
+      if (!canUseSelectedGames(resolvedPlan, normalizedSelectedGames.length)) {
         return NextResponse.json(
           {
             error:
@@ -149,13 +211,59 @@ export async function PATCH(request: NextRequest) {
           { status: 400 }
         );
       }
-      updateData.selected_games = selected_games;
+      updateData.selected_games = normalizedSelectedGames;
     }
-    if (region !== undefined) {
-      if (typeof region !== 'string' || region.trim().length === 0) {
-        return NextResponse.json({ error: 'Region is required' }, { status: 400 });
+
+    if (platforms !== undefined || game_ids !== undefined || selected_games !== undefined) {
+      const nextSelectedGames = (
+        selected_games !== undefined
+          ? (updateData.selected_games as GameKey[])
+          : normalizeSelectedGameKeys((currentProfile.selected_games as string[] | null | undefined) ?? [])
+      ) as GameKey[];
+      const nextPlatforms = (
+        platforms !== undefined
+          ? platforms
+          : ((currentProfile.platforms as string[] | null | undefined) ?? [])
+      ) as PlatformKey[];
+      const nextGameIds =
+        (updateData.game_ids as Record<string, string> | undefined) ??
+        normalizeGameIdKeys((currentProfile.game_ids as Record<string, string> | null | undefined) ?? {});
+      const setupPlatforms = getPlatformsForGameSetup(nextSelectedGames, nextGameIds, nextPlatforms);
+
+      const hasMissingPlatform = nextSelectedGames.some(
+        (game) => !getConfiguredPlatformForGame(game, nextGameIds, setupPlatforms)
+      );
+      if (hasMissingPlatform) {
+        return NextResponse.json({ error: 'Choose a platform for each game' }, { status: 400 });
       }
-      updateData.region = region.trim();
+
+      const hasMissingGameId = nextSelectedGames.some((game) => {
+        const platform = getConfiguredPlatformForGame(game, nextGameIds, setupPlatforms);
+        return !platform || !getGameIdValue(nextGameIds, game, platform).trim();
+      });
+      if (hasMissingGameId) {
+        return NextResponse.json(
+          { error: 'Add the game IDs opponents will need' },
+          { status: 400 }
+        );
+      }
+    }
+    if (country !== undefined || region !== undefined) {
+      const resolvedLocation = validateLocationSelection({
+        country: country !== undefined ? country : nextLocation.country,
+        region: region !== undefined ? region : nextLocation.region,
+      });
+
+      if (!resolvedLocation) {
+        return NextResponse.json(
+          { error: 'Choose a supported country and region' },
+          { status: 400 }
+        );
+      }
+
+      nextLocation = resolvedLocation;
+      updateData.country = resolvedLocation.country;
+      updateData.region = resolvedLocation.region;
     }
     if (avatar_url !== undefined) updateData.avatar_url = avatar_url;
     if (cover_url !== undefined) updateData.cover_url = cover_url;
@@ -177,9 +285,11 @@ export async function PATCH(request: NextRequest) {
         return NextResponse.json({ error: 'WhatsApp number must be a string or null' }, { status: 400 });
       }
       nextWhatsappNumber =
-        typeof whatsapp_number === 'string' ? normalizePhoneNumber(whatsapp_number.trim()) : null;
+        typeof whatsapp_number === 'string'
+          ? normalizePhoneNumber(whatsapp_number.trim(), nextLocation.country)
+          : null;
 
-      if (nextWhatsappNumber && !isValidPhoneNumber(nextWhatsappNumber)) {
+      if (nextWhatsappNumber && !isValidPhoneNumber(nextWhatsappNumber, nextLocation.country)) {
         return NextResponse.json({ error: 'Enter a valid WhatsApp number' }, { status: 400 });
       }
 
@@ -189,8 +299,10 @@ export async function PATCH(request: NextRequest) {
     if (nextWhatsappNotifications) {
       if (!nextWhatsappNumber) {
         const fallbackPhone =
-          typeof currentProfile.phone === 'string' ? normalizePhoneNumber(currentProfile.phone) : '';
-        if (!isValidPhoneNumber(fallbackPhone)) {
+          typeof currentProfile.phone === 'string'
+            ? normalizePhoneNumber(currentProfile.phone, nextLocation.country)
+            : '';
+        if (!isValidPhoneNumber(fallbackPhone, nextLocation.country)) {
           return NextResponse.json(
             { error: 'Add a valid WhatsApp number before turning alerts on' },
             { status: 400 }
@@ -199,7 +311,7 @@ export async function PATCH(request: NextRequest) {
 
         nextWhatsappNumber = fallbackPhone;
         updateData.whatsapp_number = nextWhatsappNumber;
-      } else if (!isValidPhoneNumber(nextWhatsappNumber)) {
+      } else if (!isValidPhoneNumber(nextWhatsappNumber, nextLocation.country)) {
         return NextResponse.json({ error: 'Enter a valid WhatsApp number' }, { status: 400 });
       }
     }
@@ -208,12 +320,48 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ error: 'Nothing to update' }, { status: 400 });
     }
 
-    const { data: profile, error } = await supabase
+    let finalUpdateData = { ...updateData };
+    let updateResult = await supabase
       .from('profiles')
-      .update(updateData)
+      .update(finalUpdateData)
       .eq('id', authUser.sub)
       .select()
       .single();
+
+    if (updateResult.error && isMissingColumnError(updateResult.error, 'profiles.country')) {
+      finalUpdateData = { ...finalUpdateData };
+      delete finalUpdateData.country;
+
+      if (country !== undefined || region !== undefined) {
+        finalUpdateData.region = nextLocation.label || nextLocation.region;
+      }
+
+      updateResult = await supabase
+        .from('profiles')
+        .update(finalUpdateData)
+        .eq('id', authUser.sub)
+        .select()
+        .single();
+    }
+
+    if (updateResult.error && isMissingColumnError(updateResult.error, 'profiles.whatsapp_notifications')) {
+      finalUpdateData = { ...finalUpdateData };
+      delete finalUpdateData.whatsapp_notifications;
+
+      if (whatsapp_notifications !== undefined) {
+        finalUpdateData.whatsapp_number = nextWhatsappNotifications ? nextWhatsappNumber : null;
+      }
+
+      updateResult = await supabase
+        .from('profiles')
+        .update(finalUpdateData)
+        .eq('id', authUser.sub)
+        .select()
+        .single();
+    }
+
+    const profile = updateResult.data;
+    const error = updateResult.error;
 
     if (error || !profile) {
       return NextResponse.json({ error: 'Failed to update profile' }, { status: 500 });
@@ -222,7 +370,7 @@ export async function PATCH(request: NextRequest) {
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { password_hash: _hash2, ...safeProfile2 } = profile;
 
-    return NextResponse.json({ profile: safeProfile2 });
+    return NextResponse.json({ profile: withProfileDefaults(safeProfile2 as Record<string, unknown>) });
   } catch (err) {
     console.error('[Profile PATCH] Error:', err);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });

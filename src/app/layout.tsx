@@ -1,37 +1,29 @@
 import type { Metadata, Viewport } from 'next';
-import { Geist, Montserrat, Open_Sans } from 'next/font/google';
+import Script from 'next/script';
+import { Suspense } from 'react';
 import './globals.css';
 import { AppProviders } from '@/components/AppProviders';
-import { cn } from '@/lib/utils';
-
-const geist = Geist({
-  subsets: ['latin'],
-  variable: '--font-sans',
-  display: 'swap',
-});
-
-const montserrat = Montserrat({
-  subsets: ['latin'],
-  variable: '--font-display',
-  display: 'swap',
-});
-
-const openSans = Open_Sans({
-  subsets: ['latin'],
-  variable: '--font-body',
-  display: 'swap',
-});
+import { GoogleAnalyticsPageView } from '@/components/GoogleAnalyticsPageView';
+import {
+  GOOGLE_ANALYTICS_ID,
+  getGoogleAnalyticsConfigScript,
+} from '@/lib/analytics';
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://mechi.club'),
   title: 'Mechi | Compete. Connect. Rise.',
   description:
-    'Mechi is the competitive gaming platform for Kenyan players who want organized 1v1s, clean matchmaking, and a better way to rise.',
+    'Mechi helps East African players find proper 1v1s, clean lobbies, and prize-backed tournaments without the WhatsApp chaos.',
   keywords: [
     'mechi',
     'gaming',
     'matchmaking',
+    'east africa',
     'kenya',
+    'tanzania',
+    'uganda',
+    'rwanda',
+    'ethiopia',
     'esports',
     '1v1',
     'competitive gaming',
@@ -42,17 +34,17 @@ export const metadata: Metadata = {
   openGraph: {
     title: 'Mechi | Compete. Connect. Rise.',
     description:
-      'Organized 1v1 matchmaking for Kenyan players across football, fighters, sports, and mobile competition.',
+      'Queue clean 1v1s, spin up proper lobbies, and run prize-backed tournaments for players across East Africa in one place.',
     url: 'https://mechi.club',
     siteName: 'Mechi',
-    locale: 'en_KE',
+    locale: 'en',
     type: 'website',
   },
   twitter: {
     card: 'summary_large_image',
     title: 'Mechi | Compete. Connect. Rise.',
     description:
-      'Organized 1v1 matchmaking for Kenyan players who want better competition and cleaner progression.',
+      'Players across Kenya, Tanzania, Uganda, Rwanda, and Ethiopia use Mechi for cleaner 1v1s, better lobbies, and smoother tournament runs.',
   },
 };
 
@@ -81,16 +73,22 @@ const themeScript = `
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html
-      lang="en"
-      className={cn(montserrat.variable, openSans.variable, geist.variable, 'font-sans')}
-      suppressHydrationWarning
-    >
+    <html lang="en" className="font-sans" suppressHydrationWarning>
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
       </head>
       <body>
         <AppProviders>{children}</AppProviders>
+        <Suspense fallback={null}>
+          <GoogleAnalyticsPageView measurementId={GOOGLE_ANALYTICS_ID} />
+        </Suspense>
+        <Script
+          src={`https://www.googletagmanager.com/gtag/js?id=${GOOGLE_ANALYTICS_ID}`}
+          strategy="afterInteractive"
+        />
+        <Script id="google-analytics-config" strategy="afterInteractive">
+          {getGoogleAnalyticsConfigScript(GOOGLE_ANALYTICS_ID)}
+        </Script>
       </body>
     </html>
   );

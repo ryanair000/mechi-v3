@@ -1,7 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuthUser } from '@/lib/auth';
 import { createServiceClient } from '@/lib/supabase';
-import { CONFIRMED_PAYMENT_STATUSES, mapTournamentMatchRelations } from '@/lib/tournaments';
+import {
+  CONFIRMED_PAYMENT_STATUSES,
+  isActiveTournamentPlayerStatus,
+  mapTournamentMatchRelations,
+  releaseExpiredTournamentReservations,
+} from '@/lib/tournaments';
 
 export async function GET(
   request: NextRequest,
@@ -12,15 +17,25 @@ export async function GET(
 
   try {
     const supabase = createServiceClient();
-    const { data: tournament, error } = await supabase
+    const { data: tournamentBySlug, error } = await supabase
       .from('tournaments')
       .select('*, organizer:organizer_id(id, username, email), winner:winner_id(id, username)')
       .eq('slug', slug)
       .single();
 
-    if (error || !tournament) {
+    if (error || !tournamentBySlug) {
       return NextResponse.json({ error: 'Tournament not found' }, { status: 404 });
     }
+
+    await releaseExpiredTournamentReservations(supabase, tournamentBySlug.id);
+
+    const { data: refreshedTournament } = await supabase
+      .from('tournaments')
+      .select('*, organizer:organizer_id(id, username, email), winner:winner_id(id, username)')
+      .eq('id', tournamentBySlug.id)
+      .single();
+
+    const tournament = (refreshedTournament ?? tournamentBySlug) as typeof tournamentBySlug;
 
     const { data: players } = await supabase
       .from('tournament_players')
@@ -30,12 +45,14 @@ export async function GET(
 
     const { data: matches } = await supabase
       .from('tournament_matches')
-      .select('*, player1:player1_id(id, username), player2:player2_id(id, username), winner:winner_id(id, username)')
+      .select('*, player1:player1_id(id, username), player2:player2_id(id, username), winner:winner_id(id, username), match:match_id(id, status, player1_score, player2_score)')
       .eq('tournament_id', tournament.id)
       .order('round', { ascending: true })
       .order('slot', { ascending: true });
 
-    const playerRows = players ?? [];
+    const playerRows = (players ?? []).filter((player) =>
+      isActiveTournamentPlayerStatus(player.payment_status as string | null | undefined)
+    );
     const confirmedCount = playerRows.filter((player) =>
       CONFIRMED_PAYMENT_STATUSES.includes(
         player.payment_status as (typeof CONFIRMED_PAYMENT_STATUSES)[number]

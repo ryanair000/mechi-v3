@@ -38,6 +38,10 @@ export function isPaystackConfigured(): boolean {
   return Boolean(process.env.PAYSTACK_SECRET_KEY);
 }
 
+function allowDevPaymentFallback(): boolean {
+  return !isPaystackConfigured() && process.env.NODE_ENV !== 'production';
+}
+
 export function normaliseKenyanPhone(phone: string): string {
   const digits = phone.replace(/\D/g, '');
   if (digits.startsWith('0') && digits.length === 10) return `254${digits.slice(1)}`;
@@ -63,12 +67,20 @@ export async function initializePaystackTransaction(params: {
   reference: string;
   error?: string;
 }> {
-  if (!isPaystackConfigured()) {
+  if (allowDevPaymentFallback()) {
     return {
       success: true,
       authorizationUrl: `${params.callbackUrl}?reference=${encodeURIComponent(params.reference)}`,
       accessCode: 'dev',
       reference: params.reference,
+    };
+  }
+
+  if (!isPaystackConfigured()) {
+    return {
+      success: false,
+      reference: params.reference,
+      error: 'Payment provider is not configured',
     };
   }
 
@@ -110,8 +122,12 @@ export async function verifyPaystackTransaction(params: {
   metadata?: Record<string, unknown>;
   error?: string;
 }> {
-  if (!isPaystackConfigured()) {
+  if (allowDevPaymentFallback()) {
     return { success: true, amountKes: params.expectedAmountKes ?? 0, email: '', metadata: {} };
+  }
+
+  if (!isPaystackConfigured()) {
+    return { success: false, error: 'Payment provider is not configured' };
   }
 
   const response = await paystackRequest<VerifyData>(
@@ -167,8 +183,12 @@ export async function createMobileMoneyRecipient(params: {
   name: string;
   phone: string;
 }): Promise<{ success: boolean; recipientCode?: string; error?: string }> {
-  if (!isPaystackConfigured()) {
+  if (allowDevPaymentFallback()) {
     return { success: true, recipientCode: `dev_recipient_${Date.now()}` };
+  }
+
+  if (!isPaystackConfigured()) {
+    return { success: false, error: 'Payment provider is not configured' };
   }
 
   const bankCode = process.env.PAYSTACK_MOBILE_MONEY_BANK_CODE;
@@ -199,8 +219,12 @@ export async function disbursePrize(params: {
   amountKes: number;
   reason: string;
 }): Promise<{ success: boolean; reference?: string; error?: string }> {
-  if (!isPaystackConfigured()) {
+  if (allowDevPaymentFallback()) {
     return { success: true, reference: `dev_transfer_${Date.now()}` };
+  }
+
+  if (!isPaystackConfigured()) {
+    return { success: false, error: 'Payment provider is not configured' };
   }
 
   const response = await paystackRequest<TransferData>('/transfer', {

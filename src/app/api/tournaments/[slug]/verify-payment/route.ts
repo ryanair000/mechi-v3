@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuthUser } from '@/lib/auth';
+import { GAMES } from '@/lib/config';
+import { createNotifications } from '@/lib/notifications';
 import { createServiceClient } from '@/lib/supabase';
-import { maybeMarkTournamentFull } from '@/lib/tournaments';
+import { markTournamentPaymentPaidByReference } from '@/lib/tournaments';
 import { verifyTournamentPayment } from '@/lib/paystack';
-import type { Tournament } from '@/types';
+import type { NotificationType, Tournament } from '@/types';
 
 export async function POST(
   request: NextRequest,
@@ -64,12 +66,59 @@ export async function POST(
       );
     }
 
-    await supabase
-      .from('tournament_players')
-      .update({ payment_status: 'paid' })
-      .eq('id', player.id);
+    const confirmed = await markTournamentPaymentPaidByReference(supabase, reference);
+    if (!confirmed.success) {
+      return NextResponse.json(
+        { error: confirmed.error ?? 'Could not confirm tournament payment' },
+        { status: 500 }
+      );
+    }
 
-    await maybeMarkTournamentFull(supabase, tournament.id);
+    const notifications: Array<{
+      user_id: string;
+      type: NotificationType;
+      title: string;
+      body: string;
+      href: string;
+      metadata: Record<string, unknown>;
+    }> = [
+      {
+        user_id: authUser.sub,
+        type: 'tournament_joined',
+        title: `Payment confirmed for ${tournament.title}`,
+        body: `You're locked into the ${GAMES[tournament.game]?.label ?? tournament.game} bracket.`,
+        href: `/t/${tournament.slug}`,
+        metadata: {
+          tournament_id: tournament.id,
+          slug: tournament.slug,
+          game: tournament.game,
+        },
+      },
+    ];
+
+    if (tournament.organizer_id !== authUser.sub) {
+      const { data: profileRaw } = await supabase
+        .from('profiles')
+        .select('username')
+        .eq('id', authUser.sub)
+        .maybeSingle();
+
+      notifications.push({
+        user_id: tournament.organizer_id,
+        type: 'tournament_player_joined',
+        title: `${String(profileRaw?.username ?? 'A player')} joined ${tournament.title}`,
+        body: `Their payment cleared and the ${GAMES[tournament.game]?.label ?? tournament.game} slot is locked.`,
+        href: `/t/${tournament.slug}`,
+        metadata: {
+          tournament_id: tournament.id,
+          slug: tournament.slug,
+          player_id: authUser.sub,
+          game: tournament.game,
+        },
+      });
+    }
+
+    await createNotifications(notifications, supabase);
 
     return NextResponse.json({ status: 'paid' });
   } catch (err) {

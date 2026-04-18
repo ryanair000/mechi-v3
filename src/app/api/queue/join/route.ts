@@ -1,9 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuthUser } from '@/lib/auth';
 import { createServiceClient } from '@/lib/supabase';
-import { GAMES, getConfiguredPlatformForGame, isValidGamePlatform } from '@/lib/config';
+import {
+  GAMES,
+  getCanonicalGameKey,
+  getConfiguredPlatformForGame,
+  getGameRatingKey,
+  isValidGamePlatform,
+  normalizeSelectedGameKeys,
+} from '@/lib/config';
+import { isMissingColumnError } from '@/lib/db-compat';
+import { notifyGameAudienceAboutQueue } from '@/lib/game-audience';
+import { resolveProfileLocation, UNSPECIFIED_LOCATION_LABEL } from '@/lib/location';
 import { canStartMatch } from '@/lib/plans';
 import { runMatchmaking } from '@/lib/matchmaking';
+import { expireWaitingQueueEntries } from '@/lib/queue';
 import { getTodayMatchCount, maybeExpireProfilePlan } from '@/lib/subscription';
 import type { GameKey, PlatformKey } from '@/types';
 
@@ -15,10 +26,16 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const { game, platform } = body;
+    const { game: requestedGame, platform } = body;
 
-    if (!game || !GAMES[game as GameKey]) {
+    if (!requestedGame || !GAMES[requestedGame as GameKey]) {
       return NextResponse.json({ error: 'Invalid game' }, { status: 400 });
+    }
+
+    const game = getCanonicalGameKey(requestedGame as GameKey);
+
+    if (GAMES[game].mode !== '1v1') {
+      return NextResponse.json({ error: 'Use lobbies for this game' }, { status: 400 });
     }
 
     const supabase = createServiceClient();
@@ -58,8 +75,17 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const ratingKey = `rating_${game}`;
+    const ratingKey = getGameRatingKey(game);
     const rating = (profile[ratingKey] as number) ?? 1000;
+    const selectedGames = normalizeSelectedGameKeys((profile.selected_games as string[]) ?? []);
+    if (!selectedGames.includes(game)) {
+      const gameLabel = GAMES[game as GameKey]?.label ?? game;
+      return NextResponse.json(
+        { error: `Add ${gameLabel} to your profile before joining queue` },
+        { status: 400 }
+      );
+    }
+
     const profilePlatforms = ((profile.platforms as PlatformKey[]) ?? []);
     const profileGameIds = ((profile.game_ids as Record<string, string>) ?? {});
     const requestedPlatform = platform as PlatformKey | undefined;
@@ -75,8 +101,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    await expireWaitingQueueEntries(supabase, authUser.sub);
+
     // Check if already in queue
-    const { data: existingQueue } = await supabase
+    let existingQueueResult = await supabase
       .from('queue')
       .select('id, game, platform, status')
       .eq('user_id', authUser.sub)
@@ -85,9 +113,29 @@ export async function POST(request: NextRequest) {
       .limit(1)
       .maybeSingle();
 
+    if (existingQueueResult.error && isMissingColumnError(existingQueueResult.error, 'queue.platform')) {
+      existingQueueResult = await supabase
+        .from('queue')
+        .select('id, game, status')
+        .eq('user_id', authUser.sub)
+        .eq('status', 'waiting')
+        .order('joined_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+    }
+
+    const existingQueue = existingQueueResult.data;
+
     if (existingQueue) {
       return NextResponse.json(
-        { error: 'Already in queue', queueEntry: existingQueue },
+        {
+          error: 'Already in queue',
+          queueEntry: {
+            ...existingQueue,
+            platform:
+              (existingQueue as Record<string, unknown>).platform ?? queuePlatform ?? null,
+          },
+        },
         { status: 409 }
       );
     }
@@ -107,32 +155,78 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { data: entry, error: insertError } = await supabase
+    const profileLocation = resolveProfileLocation(profile);
+    const queuePayload = {
+      user_id: authUser.sub,
+      game,
+      platform: queuePlatform,
+      region: profileLocation.label || UNSPECIFIED_LOCATION_LABEL,
+      rating,
+      status: 'waiting',
+    };
+
+    let insertResult = await supabase
       .from('queue')
-      .insert({
-        user_id: authUser.sub,
-        game,
-        platform: queuePlatform,
-        region: (profile.region as string) ?? 'kenya',
-        rating,
-        status: 'waiting',
-      })
+      .insert(queuePayload)
       .select()
       .single();
+
+    if (insertResult.error && isMissingColumnError(insertResult.error, 'queue.platform')) {
+      const legacyQueuePayload = {
+        user_id: authUser.sub,
+        game,
+        region: profileLocation.label || UNSPECIFIED_LOCATION_LABEL,
+        rating,
+        status: 'waiting' as const,
+      };
+      insertResult = await supabase
+        .from('queue')
+        .insert(legacyQueuePayload)
+        .select()
+        .single();
+    }
+
+    const entry = insertResult.data;
+    const insertError = insertResult.error;
 
     if (insertError || !entry) {
       console.error('[Queue Join] Insert error:', insertError);
       return NextResponse.json({ error: 'Failed to join queue' }, { status: 500 });
     }
 
-    // AWAIT matchmaking — must complete before response on Vercel serverless
+    // AWAIT matchmaking - must complete before response on Vercel serverless
     try {
       await runMatchmaking(supabase);
     } catch (e) {
       console.error('[Queue Join] Matchmaking error:', e);
     }
 
-    return NextResponse.json({ entry });
+    const { data: latestQueueEntry } = await supabase
+      .from('queue')
+      .select('status')
+      .eq('id', entry.id)
+      .maybeSingle();
+
+    if (latestQueueEntry?.status === 'waiting') {
+      try {
+        await notifyGameAudienceAboutQueue({
+          supabase,
+          game,
+          username: String(profile.username ?? 'A player'),
+          platform: queuePlatform,
+          excludeUserIds: [authUser.sub],
+        });
+      } catch (broadcastError) {
+        console.error('[Queue Join] Broadcast error:', broadcastError);
+      }
+    }
+
+    return NextResponse.json({
+      entry: {
+        ...(entry as Record<string, unknown>),
+        platform: (entry as Record<string, unknown>).platform ?? queuePlatform ?? null,
+      },
+    });
   } catch (err) {
     console.error('[Queue Join] Error:', err);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });

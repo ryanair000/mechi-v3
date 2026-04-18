@@ -3,17 +3,20 @@ import { createServiceClient } from '@/lib/supabase';
 import { verifyPassword, signToken, profileToAuthUser } from '@/lib/auth';
 import { getPhoneLookupVariants, normalizePhoneNumber } from '@/lib/phone';
 import { checkRateLimit, getClientIp, rateLimitResponse } from '@/lib/rateLimit';
-import type { Plan, UserRole } from '@/types';
+import type { CountryKey, Plan, UserRole } from '@/types';
 
 interface AuthenticatedProfile {
   id: string;
   username: string;
   phone: string;
   email: string | null;
+  invite_code?: string | null;
+  invited_by?: string | null;
   avatar_url?: string | null;
   cover_url?: string | null;
   whatsapp_number?: string | null;
   whatsapp_notifications?: boolean | null;
+  country?: CountryKey | null;
   region: string;
   platforms: string[] | null;
   game_ids: Record<string, string> | null;
@@ -99,7 +102,7 @@ async function authenticateUser(identifier: string, password: string): Promise<A
       .from('profiles')
       .select('*')
       .in('phone', phoneVariants)
-      .limit(1);
+      .limit(10);
 
     profiles = result.data as AuthenticatedProfile[] | null;
     error = result.error;
@@ -114,25 +117,32 @@ async function authenticateUser(identifier: string, password: string): Promise<A
     error = result.error;
   }
 
-  const profile = profiles?.[0] as AuthenticatedProfile | undefined;
-
-  if (error || !profile) {
+  const candidateProfiles = profiles ?? [];
+  if (error || candidateProfiles.length === 0) {
     return { error: 'Account not found. Check your details.', status: 401 as const };
   }
 
-  if (profile.is_banned) {
-    return {
-      error: `Account suspended: ${profile.ban_reason ?? 'Contact support.'}`,
-      status: 403 as const,
-    };
+  for (const profile of candidateProfiles) {
+    const isValid = await verifyPassword(password, profile.password_hash);
+    if (!isValid) {
+      continue;
+    }
+
+    if (profile.is_banned) {
+      return {
+        error: `Account suspended: ${profile.ban_reason ?? 'Contact support.'}`,
+        status: 403 as const,
+      };
+    }
+
+    return { profile };
   }
 
-  const isValid = await verifyPassword(password, profile.password_hash);
-  if (!isValid) {
+  if (candidateProfiles.length > 0) {
     return { error: 'Incorrect password', status: 401 as const };
   }
 
-  return { profile };
+  return { error: 'Account not found. Check your details.', status: 401 as const };
 }
 
 export async function POST(request: NextRequest) {
@@ -164,6 +174,9 @@ export async function POST(request: NextRequest) {
 
       const loginUrl = new URL('/login', requestOrigin);
       loginUrl.searchParams.set('error', errorMessage);
+      if (redirectTo !== '/dashboard') {
+        loginUrl.searchParams.set('next', redirectTo);
+      }
       return NextResponse.redirect(loginUrl, { status: 303 });
     }
 

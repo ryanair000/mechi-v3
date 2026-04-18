@@ -34,6 +34,8 @@ export async function GET(
         id: match.id,
         game: match.game,
         winner_id: match.winner_id,
+        player1_score: match.player1_score ?? null,
+        player2_score: match.player2_score ?? null,
         rating_change_p1: match.rating_change_p1,
         rating_change_p2: match.rating_change_p2,
         completed_at: match.completed_at,

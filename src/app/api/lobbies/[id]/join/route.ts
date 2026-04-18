@@ -26,8 +26,8 @@ export async function POST(
       return NextResponse.json({ error: 'Lobby not found' }, { status: 404 });
     }
 
-    if (lobby.status === 'closed') {
-      return NextResponse.json({ error: 'Lobby is closed' }, { status: 400 });
+    if (lobby.status !== 'open') {
+      return NextResponse.json({ error: `Lobby is ${lobby.status}` }, { status: 400 });
     }
 
     // Check if already a member

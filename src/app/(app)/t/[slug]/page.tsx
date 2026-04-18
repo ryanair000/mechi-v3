@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { ArrowLeft, CheckCircle2, Clock, Copy, Swords, Trophy, Users } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { ActionFeedback, type ActionFeedbackState } from '@/components/ActionFeedback';
 import { ShareMenu } from '@/components/ShareMenu';
 import { useAuthFetch } from '@/components/AuthProvider';
 import { getRoundLabel } from '@/lib/bracket';
@@ -45,6 +46,7 @@ export default function TournamentDetailPage() {
   const [loading, setLoading] = useState(true);
   const [joining, setJoining] = useState(false);
   const [starting, setStarting] = useState(false);
+  const [actionFeedback, setActionFeedback] = useState<ActionFeedbackState | null>(null);
 
   const fetchTournament = useCallback(async () => {
     setLoading(true);
@@ -74,16 +76,31 @@ export default function TournamentDetailPage() {
 
     paymentVerifiedRef.current = reference;
     async function verifyPayment() {
+      setActionFeedback({
+        tone: 'loading',
+        title: 'Confirming your payment...',
+        detail: "We're checking the payment provider and locking your bracket slot.",
+      });
       const res = await authFetch(`/api/tournaments/${slug}/verify-payment`, {
         method: 'POST',
         body: JSON.stringify({ reference }),
       });
       const payload = await res.json();
       if (res.ok) {
+        setActionFeedback({
+          tone: 'success',
+          title: 'Payment confirmed.',
+          detail: 'Your slot is locked in. Refreshing the bracket now.',
+        });
         toast.success('Payment confirmed. You are in.');
         router.replace(`/t/${slug}`);
         void fetchTournament();
       } else {
+        setActionFeedback({
+          tone: 'error',
+          title: 'Payment not confirmed yet.',
+          detail: payload.error ?? 'Try again once the payment provider finishes processing it.',
+        });
         toast.error(payload.error ?? 'Payment not confirmed yet');
       }
     }
@@ -101,20 +118,52 @@ export default function TournamentDetailPage() {
 
   const handleJoin = async () => {
     setJoining(true);
+    setActionFeedback({
+      tone: 'loading',
+      title:
+        data?.tournament.entry_fee && data.tournament.entry_fee > 0
+          ? 'Preparing secure checkout...'
+          : 'Joining the bracket...',
+      detail:
+        data?.tournament.entry_fee && data.tournament.entry_fee > 0
+          ? "We're reserving your slot and opening payment."
+          : "We're locking your spot and refreshing the bracket.",
+    });
     try {
       const res = await authFetch(`/api/tournaments/${slug}/join`, { method: 'POST' });
       const payload = await res.json();
       if (!res.ok) {
+        setActionFeedback({
+          tone: 'error',
+          title: 'Could not join this bracket.',
+          detail: payload.error ?? 'Please fix the issue and try again.',
+        });
         toast.error(payload.error ?? 'Could not join tournament');
         return;
       }
       if (payload.authorization_url) {
+        setActionFeedback({
+          tone: 'success',
+          title: 'Slot reserved.',
+          detail: 'Redirecting you to secure payment now.',
+        });
+        toast.success('Slot reserved. Redirecting to payment...');
         window.location.href = payload.authorization_url;
         return;
       }
+      setActionFeedback({
+        tone: 'success',
+        title: 'You joined the bracket.',
+        detail: 'Refreshing the tournament board with your confirmed slot.',
+      });
       toast.success('You joined the bracket');
       await fetchTournament();
     } catch {
+      setActionFeedback({
+        tone: 'error',
+        title: 'Could not join this bracket.',
+        detail: 'We could not reach the server. Please try again.',
+      });
       toast.error('Could not join tournament');
     } finally {
       setJoining(false);
@@ -123,16 +172,36 @@ export default function TournamentDetailPage() {
 
   const handleStart = async () => {
     setStarting(true);
+    setActionFeedback({
+      tone: 'loading',
+      title: 'Starting the bracket...',
+      detail: "We're generating the opening matches and refreshing the live bracket.",
+    });
     try {
       const res = await authFetch(`/api/tournaments/${slug}/start`, { method: 'POST' });
       const payload = await res.json();
       if (!res.ok) {
+        setActionFeedback({
+          tone: 'error',
+          title: 'Could not start the tournament.',
+          detail: payload.error ?? 'Please check the bracket and try again.',
+        });
         toast.error(payload.error ?? 'Could not start tournament');
         return;
       }
+      setActionFeedback({
+        tone: 'success',
+        title: 'Bracket started.',
+        detail: 'Round one is live and the match path has been refreshed.',
+      });
       toast.success('Bracket started');
       await fetchTournament();
     } catch {
+      setActionFeedback({
+        tone: 'error',
+        title: 'Could not start the tournament.',
+        detail: 'We could not reach the server. Please try again.',
+      });
       toast.error('Could not start tournament');
     } finally {
       setStarting(false);
@@ -208,6 +277,14 @@ export default function TournamentDetailPage() {
         </div>
       </div>
 
+      {actionFeedback ? (
+        <ActionFeedback
+          tone={actionFeedback.tone}
+          title={actionFeedback.title}
+          detail={actionFeedback.detail}
+          className="mb-3"
+        />
+      ) : null}
       <div className="mb-5 flex flex-col gap-3 sm:flex-row">
         {!viewer.joined && tournament.status === 'open' && (
           <button onClick={handleJoin} disabled={joining} className="btn-primary flex-1">
@@ -254,6 +331,14 @@ export default function TournamentDetailPage() {
                       <PlayerLine name={match.player1?.username ?? 'TBD'} won={match.winner_id === match.player1_id} />
                       <div className="my-2 border-t border-[var(--border-color)]" />
                       <PlayerLine name={match.player2?.username ?? 'TBD'} won={match.winner_id === match.player2_id} />
+                      {match.match?.player1_score !== null &&
+                      match.match?.player1_score !== undefined &&
+                      match.match?.player2_score !== null &&
+                      match.match?.player2_score !== undefined ? (
+                        <div className="mt-3 rounded-xl border border-[var(--border-color)] bg-[var(--surface-elevated)] px-3 py-2 text-xs font-bold text-[var(--text-primary)]">
+                          Final score: {match.match.player1_score} - {match.match.player2_score}
+                        </div>
+                      ) : null}
                       <div className="mt-3 flex items-center justify-between gap-2">
                         <span className="text-xs font-bold uppercase tracking-[0.12em] text-[var(--text-soft)]">
                           {match.status}

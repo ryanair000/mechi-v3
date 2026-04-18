@@ -1,11 +1,37 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuthUser } from '@/lib/auth';
 import { createServiceClient } from '@/lib/supabase';
-import { GAMES, getDefaultLobbyMode, getLobbyModeOptions, getLobbyPopularMaps } from '@/lib/config';
+import {
+  GAMES,
+  getCanonicalGameKey,
+  getDefaultLobbyMode,
+  getLobbyModeOptions,
+  getLobbyPopularMaps,
+  supportsLobbyMode,
+} from '@/lib/config';
+import { notifyGameAudienceAboutLobby } from '@/lib/game-audience';
 import type { GameKey } from '@/types';
 
 function generateRoomCode(): string {
   return Math.random().toString(36).substring(2, 8).toUpperCase();
+}
+
+function readRelationCount(value: unknown): number {
+  if (typeof value === 'number') {
+    return value;
+  }
+
+  if (Array.isArray(value)) {
+    const first = value[0] as { count?: unknown } | undefined;
+    return typeof first?.count === 'number' ? first.count : 0;
+  }
+
+  if (value && typeof value === 'object' && 'count' in value) {
+    const count = (value as { count?: unknown }).count;
+    return typeof count === 'number' ? count : 0;
+  }
+
+  return 0;
 }
 
 export async function GET(request: NextRequest) {
@@ -28,7 +54,7 @@ export async function GET(request: NextRequest) {
       .limit(30);
 
     if (game && GAMES[game as GameKey]) {
-      query = query.eq('game', game);
+      query = query.eq('game', getCanonicalGameKey(game as GameKey));
     }
 
     const { data: lobbies, error } = await query;
@@ -37,7 +63,12 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to fetch lobbies' }, { status: 500 });
     }
 
-    return NextResponse.json({ lobbies: lobbies ?? [] });
+    const normalizedLobbies = ((lobbies ?? []) as Array<Record<string, unknown>>).map((lobby) => ({
+      ...lobby,
+      member_count: readRelationCount(lobby.member_count),
+    }));
+
+    return NextResponse.json({ lobbies: normalizedLobbies });
   } catch (err) {
     console.error('[Lobbies GET] Error:', err);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
@@ -52,7 +83,10 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const { game, title, mode, map_name, scheduled_for } = body;
+    const { game: requestedGame, title, mode, map_name, scheduled_for } = body;
+    const game = requestedGame && GAMES[requestedGame as GameKey]
+      ? getCanonicalGameKey(requestedGame as GameKey)
+      : requestedGame;
     const normalizedTitle = String(title ?? '').trim();
     const normalizedSchedule = String(scheduled_for ?? '').trim();
 
@@ -63,6 +97,9 @@ export async function POST(request: NextRequest) {
     const gameConfig = GAMES[game as GameKey];
     if (!gameConfig) {
       return NextResponse.json({ error: 'Invalid game' }, { status: 400 });
+    }
+    if (!supportsLobbyMode(game as GameKey)) {
+      return NextResponse.json({ error: 'Pick a supported lobby game' }, { status: 400 });
     }
 
     const normalizedMode = String(mode ?? '').trim();
@@ -97,6 +134,11 @@ export async function POST(request: NextRequest) {
     }
 
     const supabase = createServiceClient();
+    const { data: hostProfile } = await supabase
+      .from('profiles')
+      .select('username')
+      .eq('id', authUser.sub)
+      .maybeSingle();
 
     const { data: lobby, error } = await supabase
       .from('lobbies')
@@ -123,6 +165,22 @@ export async function POST(request: NextRequest) {
       lobby_id: lobby.id,
       user_id: authUser.sub,
     });
+
+    try {
+      await notifyGameAudienceAboutLobby({
+        supabase,
+        game: game as GameKey,
+        hostName: String((hostProfile as { username?: string } | null)?.username ?? 'A player'),
+        lobbyId: String(lobby.id),
+        title: normalizedTitle,
+        mode: normalizedMode || getDefaultLobbyMode(game as GameKey),
+        mapName: normalizedMap || null,
+        scheduledFor: scheduledAt.toISOString(),
+        excludeUserIds: [authUser.sub],
+      });
+    } catch (broadcastError) {
+      console.error('[Lobbies POST] Broadcast error:', broadcastError);
+    }
 
     return NextResponse.json({ lobby }, { status: 201 });
   } catch (err) {

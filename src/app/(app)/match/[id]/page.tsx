@@ -15,14 +15,18 @@ import {
   Upload,
   X,
 } from 'lucide-react';
+import { ActionFeedback, type ActionFeedbackState } from '@/components/ActionFeedback';
 import { useAuth, useAuthFetch } from '@/components/AuthProvider';
 import { createClient } from '@/lib/supabase';
 import {
   GAMES,
   PLATFORMS,
+  getCanonicalGameKey,
   getGameIdValue,
+  getGameRatingKey,
   getMatchingPlatform,
   getPlatformAddUrl,
+  requiresMatchScoreReport,
 } from '@/lib/config';
 import { PlatformBadge } from '@/components/PlatformBadge';
 import { PlatformLogo } from '@/components/PlatformLogo';
@@ -47,6 +51,12 @@ interface MatchData {
   winner_id: string | null;
   player1_reported_winner: string | null;
   player2_reported_winner: string | null;
+  player1_reported_player1_score?: number | null;
+  player1_reported_player2_score?: number | null;
+  player2_reported_player1_score?: number | null;
+  player2_reported_player2_score?: number | null;
+  player1_score?: number | null;
+  player2_score?: number | null;
   rating_change_p1: number | null;
   rating_change_p2: number | null;
   gamification_summary_p1?: GamificationResult | null;
@@ -59,6 +69,28 @@ interface MatchData {
 }
 
 const QUICK_RESULT_COMMENTS = ['GG', 'Close one', 'Lucky', 'Run it back'] as const;
+const MATCH_STATUS_POLL_INTERVAL_MS = 3000;
+
+function hasSubmittedScore(value: number | null | undefined) {
+  return value !== null && value !== undefined;
+}
+
+function hasUserSubmittedResultReport(match: MatchData, userId: string) {
+  const isPlayer1 = userId === match.player1_id;
+
+  if (requiresMatchScoreReport(match.game)) {
+    const reportedPlayer1Score = isPlayer1
+      ? match.player1_reported_player1_score
+      : match.player2_reported_player1_score;
+    const reportedPlayer2Score = isPlayer1
+      ? match.player1_reported_player2_score
+      : match.player2_reported_player2_score;
+
+    return hasSubmittedScore(reportedPlayer1Score) && hasSubmittedScore(reportedPlayer2Score);
+  }
+
+  return Boolean(isPlayer1 ? match.player1_reported_winner : match.player2_reported_winner);
+}
 
 export default function MatchPage() {
   const params = useParams();
@@ -72,22 +104,35 @@ export default function MatchPage() {
   const [reporting, setReporting] = useState<string | null>(null);
   const [uploadingScreenshot, setUploadingScreenshot] = useState(false);
   const [cancelling, setCancelling] = useState(false);
+  const [reportFeedback, setReportFeedback] = useState<ActionFeedbackState | null>(null);
+  const [disputeFeedback, setDisputeFeedback] = useState<ActionFeedbackState | null>(null);
   const [selectedQuickComment, setSelectedQuickComment] = useState<string | null>(null);
   const [sentQuickComment, setSentQuickComment] = useState<string | null>(null);
   const [receivedQuickComment, setReceivedQuickComment] = useState<{
     from: string;
     comment: string;
   } | null>(null);
+  const [reportScores, setReportScores] = useState({ player1: '', player2: '' });
   const [keepResultOpen, setKeepResultOpen] = useState(false);
   const [autoCloseCountdown, setAutoCloseCountdown] = useState<number | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const channelRef = useRef<{ send: (payload: unknown) => Promise<unknown> } | null>(null);
+  const previousStatusRef = useRef<MatchData['status'] | null>(null);
+  const suppressNextStatusToastRef = useRef<MatchData['status'] | null>(null);
 
   const fetchMatch = useCallback(async () => {
-    const res = await authFetch(`/api/matches/${matchId}`);
+    const res = await authFetch(`/api/matches/${matchId}`, { cache: 'no-store' });
     if (res.ok) {
       const data = await res.json();
-      setMatch(data.match);
+      setMatch((current) => {
+        const nextMatch = data.match as MatchData;
+
+        if (current?.id === nextMatch.id && current.status !== 'pending' && nextMatch.status === 'pending') {
+          return current;
+        }
+
+        return nextMatch;
+      });
     } else {
       router.push('/dashboard');
     }
@@ -124,6 +169,19 @@ export default function MatchPage() {
           toast(`${note.from}: ${note.comment}`, {
             icon: '💬',
           });
+        }
+      )
+      .on(
+        'broadcast',
+        { event: 'match-updated' },
+        ({ payload }) => {
+          const nextPayload = payload as { matchId?: string } | undefined;
+
+          if (nextPayload?.matchId && nextPayload.matchId !== matchId) {
+            return;
+          }
+
+          void fetchMatch();
         }
       )
       .on(
@@ -179,15 +237,192 @@ export default function MatchPage() {
     return () => window.clearTimeout(timer);
   }, [autoCloseCountdown, keepResultOpen, router]);
 
-  const handleReport = async (winnerId: string) => {
-    setReporting(winnerId);
+  useEffect(() => {
+    if (!match || !user) {
+      return;
+    }
+
+    const reporterIsPlayer1 = user.id === match.player1_id;
+    const reportedPlayer1Score = reporterIsPlayer1
+      ? match.player1_reported_player1_score
+      : match.player2_reported_player1_score;
+    const reportedPlayer2Score = reporterIsPlayer1
+      ? match.player1_reported_player2_score
+      : match.player2_reported_player2_score;
+
+    if (
+      reportedPlayer1Score === null ||
+      reportedPlayer1Score === undefined ||
+      reportedPlayer2Score === null ||
+      reportedPlayer2Score === undefined
+    ) {
+      setReportScores({ player1: '', player2: '' });
+      return;
+    }
+
+    setReportScores({
+      player1: String(reportedPlayer1Score),
+      player2: String(reportedPlayer2Score),
+    });
+  }, [match, user]);
+
+  useEffect(() => {
+    if (!match || !user || match.status !== 'pending') {
+      return;
+    }
+
+    if (!hasUserSubmittedResultReport(match, user.id)) {
+      return;
+    }
+
+    // Realtime can be missed in some Supabase configs, so keep this fallback
+    // narrow: only poll while this user is waiting for the opponent's report.
+    const pollTimer = window.setInterval(() => {
+      if (document.visibilityState === 'hidden') {
+        return;
+      }
+
+      void fetchMatch();
+    }, MATCH_STATUS_POLL_INTERVAL_MS);
+
+    return () => window.clearInterval(pollTimer);
+  }, [fetchMatch, match, user]);
+
+  useEffect(() => {
+    if (!match) {
+      return;
+    }
+
+    if (match.status === 'disputed') {
+      setDisputeFeedback({
+        tone: match.dispute_screenshot_url ? 'info' : 'error',
+        title: match.dispute_screenshot_url ? 'Proof uploaded.' : 'Reports did not match.',
+        detail: match.dispute_screenshot_url
+          ? "Admin review is in progress. We'll keep the screenshot here until it is resolved."
+          : 'Upload a screenshot of the final result so the dispute can be resolved faster.',
+      });
+    } else {
+      setDisputeFeedback(null);
+    }
+  }, [match]);
+
+  useEffect(() => {
+    if (!match) {
+      return;
+    }
+
+    const previousStatus = previousStatusRef.current;
+
+    if (
+      previousStatus &&
+      previousStatus !== match.status &&
+      previousStatus === 'pending'
+    ) {
+      const suppressToast = suppressNextStatusToastRef.current === match.status;
+      const scoreline =
+        match.player1_score !== null &&
+        match.player1_score !== undefined &&
+        match.player2_score !== null &&
+        match.player2_score !== undefined
+          ? `${match.player1_score}-${match.player2_score}`
+          : null;
+
+      if (!suppressToast && match.status === 'completed') {
+        toast.success(
+          scoreline
+            ? `Result confirmed at ${scoreline}.`
+            : 'Result confirmed. Match complete.'
+        );
+        setReportFeedback({
+          tone: 'success',
+          title: 'Result confirmed.',
+          detail: scoreline
+            ? `Both players matched the ${scoreline} report.`
+            : 'Both players agreed on the final result.',
+        });
+      }
+
+      if (!suppressToast && match.status === 'disputed') {
+        toast.error('Reports did not match. Upload proof to resolve the dispute.');
+        setReportFeedback({
+          tone: 'error',
+          title: 'Reports did not match.',
+          detail: 'The match is disputed until proof is uploaded or an admin resolves it.',
+        });
+      }
+    }
+
+    if (suppressNextStatusToastRef.current === match.status) {
+      suppressNextStatusToastRef.current = null;
+    }
+
+    previousStatusRef.current = match.status;
+  }, [match]);
+
+  const handleReport = async (winnerId?: string) => {
+    if (!match) {
+      return;
+    }
+
+    const scoreReportingEnabled = requiresMatchScoreReport(match.game);
+    const payload: Record<string, unknown> = {};
+    const nextReportingState = scoreReportingEnabled ? 'score' : (winnerId ?? 'report');
+
+    if (scoreReportingEnabled) {
+      const player1ScoreText = reportScores.player1.trim();
+      const player2ScoreText = reportScores.player2.trim();
+
+      if (!/^\d+$/.test(player1ScoreText) || !/^\d+$/.test(player2ScoreText)) {
+        setReportFeedback({
+          tone: 'error',
+          title: 'Enter both scorelines first.',
+          detail: 'Only whole numbers are allowed in the score report.',
+        });
+        toast.error('Enter both scorelines as whole numbers');
+        return;
+      }
+
+      const player1Score = Number(player1ScoreText);
+      const player2Score = Number(player2ScoreText);
+
+      payload.player1_score = player1Score;
+      payload.player2_score = player2Score;
+      payload.winner_id =
+        player1Score > player2Score
+          ? match.player1_id
+          : player1Score < player2Score
+            ? match.player2_id
+            : null;
+    } else if (!winnerId) {
+      setReportFeedback({
+        tone: 'error',
+        title: 'Pick a winner before you submit.',
+        detail: 'Mechi cannot lock the match until you choose who won.',
+      });
+      toast.error('Pick a winner first');
+      return;
+    } else {
+      payload.winner_id = winnerId;
+    }
+
+    setReporting(nextReportingState);
+    setReportFeedback({
+      tone: 'loading',
+      title: scoreReportingEnabled ? 'Submitting your scoreline...' : 'Submitting your result...',
+      detail: "We're saving your report and checking whether the opponent already reported.",
+    });
     try {
       const res = await authFetch(`/api/matches/${matchId}/report`, {
         method: 'POST',
-        body: JSON.stringify({ winner_id: winnerId }),
+        body: JSON.stringify(payload),
       });
       const data = await res.json();
       if (!res.ok) {
+        setReportFeedback({
+          tone: 'error',
+          title: 'Could not submit your report.',
+          detail: data.error ?? 'Please try again.',
+        });
         toast.error(data.error ?? 'Failed to report');
         return;
       }
@@ -206,15 +441,57 @@ export default function MatchPage() {
         setSelectedQuickComment(null);
       }
 
+      if (channelRef.current) {
+        void channelRef.current.send({
+          type: 'broadcast',
+          event: 'match-updated',
+          payload: {
+            matchId,
+            fromUserId: user?.id,
+            status: data.status,
+          },
+        });
+      }
+
       if (data.status === 'completed') {
-        toast.success('Match completed! Your climb is updated.');
+        suppressNextStatusToastRef.current = 'completed';
+        setReportFeedback({
+          tone: 'success',
+          title: data.result === 'draw' ? 'Draw confirmed.' : 'Result confirmed.',
+          detail:
+            data.result === 'draw'
+              ? 'Both score reports matched and the draw is locked in.'
+              : 'Both reports matched, so the match is now complete.',
+        });
+        toast.success(data.result === 'draw' ? 'Draw confirmed. Score locked.' : 'Match completed! Your climb is updated.');
       } else if (data.status === 'disputed') {
+        suppressNextStatusToastRef.current = 'disputed';
+        setReportFeedback({
+          tone: 'error',
+          title: 'Reports did not match.',
+          detail: 'Upload a screenshot so the dispute can be resolved.',
+        });
+        setDisputeFeedback({
+          tone: 'error',
+          title: 'Reports did not match.',
+          detail: 'Upload a screenshot of the result to help resolve the dispute quickly.',
+        });
         toast.error('Result disputed! Upload a screenshot.');
       } else {
+        setReportFeedback({
+          tone: 'info',
+          title: 'Your report is in.',
+          detail: "We're waiting for the opponent to submit the same result.",
+        });
         toast.success('Result reported. Waiting for opponent...');
       }
       void fetchMatch();
     } catch {
+      setReportFeedback({
+        tone: 'error',
+        title: 'Could not submit your report.',
+        detail: 'We could not reach the server. Please try again.',
+      });
       toast.error('Network error');
     } finally {
       setReporting(null);
@@ -225,15 +502,30 @@ export default function MatchPage() {
     const file = event.target.files?.[0];
     if (!file) return;
     if (!file.type.startsWith('image/')) {
+      setDisputeFeedback({
+        tone: 'error',
+        title: 'That file is not an image.',
+        detail: 'Upload a PNG, JPG, or WEBP screenshot.',
+      });
       toast.error('Please upload an image');
       return;
     }
     if (file.size > 10 * 1024 * 1024) {
+      setDisputeFeedback({
+        tone: 'error',
+        title: 'Screenshot is too large.',
+        detail: 'Keep the upload under 10MB and try again.',
+      });
       toast.error('Image must be under 10MB');
       return;
     }
 
     setUploadingScreenshot(true);
+    setDisputeFeedback({
+      tone: 'loading',
+      title: 'Uploading screenshot...',
+      detail: "We're attaching your proof to the dispute now.",
+    });
     try {
       const formData = new FormData();
       formData.append('screenshot', file);
@@ -243,12 +535,27 @@ export default function MatchPage() {
       });
       const data = await res.json();
       if (!res.ok) {
+        setDisputeFeedback({
+          tone: 'error',
+          title: 'Screenshot upload failed.',
+          detail: data.error ?? 'Please try again with a clearer image.',
+        });
         toast.error(data.error ?? 'Upload failed');
         return;
       }
+      setDisputeFeedback({
+        tone: 'success',
+        title: 'Screenshot uploaded.',
+        detail: 'Your proof is attached and ready for review.',
+      });
       toast.success('Screenshot uploaded');
       void fetchMatch();
     } catch {
+      setDisputeFeedback({
+        tone: 'error',
+        title: 'Screenshot upload failed.',
+        detail: 'We could not reach the server. Please try again.',
+      });
       toast.error('Upload failed');
     } finally {
       setUploadingScreenshot(false);
@@ -291,27 +598,92 @@ export default function MatchPage() {
   const isPlayer1 = user.id === match.player1_id;
   const me = isPlayer1 ? match.player1 : match.player2;
   const opponent = isPlayer1 ? match.player2 : match.player1;
-  const game = GAMES[match.game];
+  const matchGame = getCanonicalGameKey(match.game);
+  const game = GAMES[matchGame];
   const gamePlatforms = game?.platforms ?? [];
   const myPlatform = getMatchingPlatform(me.platforms, gamePlatforms);
   const opponentPlatform = getMatchingPlatform(opponent.platforms, gamePlatforms);
   const displayPlatform = match.platform ?? opponentPlatform ?? myPlatform;
   const opponentPlatformId = displayPlatform
-    ? getGameIdValue(opponent.game_ids ?? {}, match.game, displayPlatform) || 'Not set'
+    ? getGameIdValue(opponent.game_ids ?? {}, matchGame, displayPlatform) || 'Not set'
     : 'Not set';
   const gamificationResult = isPlayer1
     ? match.gamification_summary_p1 ?? null
     : match.gamification_summary_p2 ?? null;
+  const usesScoreReport = requiresMatchScoreReport(matchGame);
   const iWon = match.winner_id === user.id;
   const myReport = isPlayer1 ? match.player1_reported_winner : match.player2_reported_winner;
   const opponentReport = isPlayer1 ? match.player2_reported_winner : match.player1_reported_winner;
+  const myReportedPlayer1Score = isPlayer1
+    ? match.player1_reported_player1_score
+    : match.player2_reported_player1_score;
+  const myReportedPlayer2Score = isPlayer1
+    ? match.player1_reported_player2_score
+    : match.player2_reported_player2_score;
+  const opponentReportedPlayer1Score = isPlayer1
+    ? match.player2_reported_player1_score
+    : match.player1_reported_player1_score;
+  const opponentReportedPlayer2Score = isPlayer1
+    ? match.player2_reported_player2_score
+    : match.player1_reported_player2_score;
+  const myReportedScoreline =
+    myReportedPlayer1Score !== null &&
+    myReportedPlayer1Score !== undefined &&
+    myReportedPlayer2Score !== null &&
+    myReportedPlayer2Score !== undefined
+      ? `${myReportedPlayer1Score}-${myReportedPlayer2Score}`
+      : null;
+  const opponentReportedScoreline =
+    opponentReportedPlayer1Score !== null &&
+    opponentReportedPlayer1Score !== undefined &&
+    opponentReportedPlayer2Score !== null &&
+    opponentReportedPlayer2Score !== undefined
+      ? `${opponentReportedPlayer1Score}-${opponentReportedPlayer2Score}`
+      : null;
+  const confirmedScoreline =
+    match.player1_score !== null &&
+    match.player1_score !== undefined &&
+    match.player2_score !== null &&
+    match.player2_score !== undefined
+      ? `${match.player1_score}-${match.player2_score}`
+      : null;
+  const hasMyReport = usesScoreReport ? Boolean(myReportedScoreline) : Boolean(myReport);
+  const hasOpponentReport = usesScoreReport
+    ? Boolean(opponentReportedScoreline)
+    : Boolean(opponentReport);
+  const myReportLabel =
+    usesScoreReport && myReportedScoreline
+      ? myReportedPlayer1Score === myReportedPlayer2Score
+        ? 'Draw reported'
+        : myReport === user.id
+          ? 'You won'
+          : `${opponent.username} won`
+      : myReport === user.id
+        ? 'You won'
+        : `${opponent.username} won`;
+  const isDrawResult =
+    match.status === 'completed' &&
+    match.winner_id === null &&
+    match.player1_score !== null &&
+    match.player1_score !== undefined &&
+    match.player2_score !== null &&
+    match.player2_score !== undefined &&
+    match.player1_score === match.player2_score;
   const platformAddUrl = displayPlatform
     ? getPlatformAddUrl(displayPlatform, opponentPlatformId)
     : null;
-  const resultHeading = iWon ? 'Victory locked in' : 'Tough one';
-  const resultCopy = iWon
-    ? 'Both players confirmed it. Your win, streak, and climb progress are now locked in.'
-    : 'Both players confirmed the result. The match is closed and your climb progress is updated.';
+  const resultHeading = isDrawResult ? 'Draw locked in' : iWon ? 'Victory locked in' : 'Tough one';
+  const resultCopy = isDrawResult
+    ? confirmedScoreline
+      ? `Both players matched the ${confirmedScoreline} scoreline. The draw is now locked in.`
+      : 'Both players confirmed the draw. The match is closed.'
+    : iWon
+    ? confirmedScoreline
+      ? `Both players matched the scoreline. Your ${confirmedScoreline} win is now locked in.`
+      : 'Both players confirmed it. Your win, streak, and climb progress are now locked in.'
+    : confirmedScoreline
+      ? `Both players matched the scoreline. The ${confirmedScoreline} result is now locked in.`
+      : 'Both players confirmed the result. The match is closed and your climb progress is updated.';
 
   const statusTone =
     match.status === 'completed'
@@ -406,7 +778,15 @@ export default function MatchPage() {
             <p className="mb-4 text-xs text-[var(--text-secondary)]">
               Both players must agree on the result.
             </p>
-            {!myReport && (
+            {reportFeedback ? (
+              <ActionFeedback
+                tone={reportFeedback.tone}
+                title={reportFeedback.title}
+                detail={reportFeedback.detail}
+                className="mb-4"
+              />
+            ) : null}
+            {!hasMyReport && (
               <div className="mb-4 rounded-2xl border border-[var(--border-color)] bg-[var(--surface-elevated)] p-3.5">
                 <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--text-soft)]">
                   Quick comment
@@ -440,22 +820,85 @@ export default function MatchPage() {
                 </p>
               </div>
             )}
-            {myReport ? (
+            {hasMyReport ? (
               <div className="surface-live mb-3 rounded-xl p-3">
                 <p className="text-sm font-medium text-[var(--accent-secondary-text)]">
                   You reported:{' '}
-                  <strong>{myReport === user.id ? 'You won' : `${opponent.username} won`}</strong>
+                  <strong>{myReportLabel}</strong>
                 </p>
+                {usesScoreReport && myReportedScoreline ? (
+                  <p className="mt-1 text-xs text-[var(--text-secondary)]">
+                    Submitted score: <span className="font-semibold text-[var(--text-primary)]">{myReportedScoreline}</span>
+                  </p>
+                ) : null}
                 {sentQuickComment && (
                   <p className="mt-1 text-xs text-[var(--text-secondary)]">
                     Your note: <span className="font-semibold text-[var(--text-primary)]">{sentQuickComment}</span>
                   </p>
                 )}
-                {!opponentReport && (
+                {!hasOpponentReport && (
                   <p className="mt-1 text-xs text-[var(--text-secondary)]">
                     Waiting for opponent...
                   </p>
                 )}
+              </div>
+            ) : usesScoreReport ? (
+              <div className="space-y-4">
+                <div className="rounded-2xl border border-[var(--border-color)] bg-[var(--surface-elevated)] p-4">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--text-soft)]">
+                    Final score
+                  </p>
+                  <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">
+                    Enter the result in match order. Draws are allowed when both players submit the same scoreline.
+                  </p>
+
+                  <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                    <label className="block">
+                      <span className="mb-1.5 block text-xs font-semibold text-[var(--text-primary)]">
+                        {match.player1.username}
+                      </span>
+                      <input
+                        inputMode="numeric"
+                        value={reportScores.player1}
+                        onChange={(event) =>
+                          setReportScores((current) => ({
+                            ...current,
+                            player1: event.target.value.replace(/[^0-9]/g, ''),
+                          }))
+                        }
+                        className="input"
+                        placeholder="0"
+                      />
+                    </label>
+
+                    <label className="block">
+                      <span className="mb-1.5 block text-xs font-semibold text-[var(--text-primary)]">
+                        {match.player2.username}
+                      </span>
+                      <input
+                        inputMode="numeric"
+                        value={reportScores.player2}
+                        onChange={(event) =>
+                          setReportScores((current) => ({
+                            ...current,
+                            player2: event.target.value.replace(/[^0-9]/g, ''),
+                          }))
+                        }
+                        className="input"
+                        placeholder="0"
+                      />
+                    </label>
+                  </div>
+                </div>
+
+                <button
+                  onClick={() => void handleReport()}
+                  disabled={!!reporting}
+                  className="btn-primary w-full justify-center"
+                >
+                  <Check size={16} />
+                  {reporting ? 'Submitting score...' : 'Submit Score'}
+                </button>
               </div>
             ) : (
               <div className="grid grid-cols-2 gap-3">
@@ -487,6 +930,16 @@ export default function MatchPage() {
                 </p>
               </div>
             )}
+            {usesScoreReport && opponentReportedScoreline && !hasMyReport ? (
+              <div className="mt-3 rounded-xl border border-[var(--border-color)] bg-[var(--surface-elevated)] px-3 py-2.5">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--text-soft)]">
+                  Opponent score
+                </p>
+                <p className="mt-1 text-sm font-semibold text-[var(--text-primary)]">
+                  {opponent.username} submitted {opponentReportedScoreline}
+                </p>
+              </div>
+            ) : null}
             <button onClick={handleCancel} disabled={cancelling} className="btn-danger mt-3 w-full text-sm">
               {cancelling ? 'Cancelling...' : 'Cancel Match'}
             </button>
@@ -502,6 +955,14 @@ export default function MatchPage() {
             <p className="mb-4 text-sm text-[var(--text-secondary)]">
               Upload a screenshot of the result to help resolve the dispute.
             </p>
+            {disputeFeedback ? (
+              <ActionFeedback
+                tone={disputeFeedback.tone}
+                title={disputeFeedback.title}
+                detail={disputeFeedback.detail}
+                className="mb-4"
+              />
+            ) : null}
             {match.dispute_screenshot_url ? (
               <div className="mb-4">
                 <div className="relative aspect-video overflow-hidden rounded-xl border border-[var(--border-color)]">
@@ -552,13 +1013,13 @@ export default function MatchPage() {
         {match.status === 'completed' && (
           <div
             className={`card result-panel mb-4 overflow-hidden p-6 text-center ${
-              iWon ? 'result-panel-win' : 'result-panel-loss'
+              isDrawResult ? '' : iWon ? 'result-panel-win' : 'result-panel-loss'
             }`}
           >
-            <div className={`result-burst ${iWon ? 'result-burst-win' : 'result-burst-loss'}`} />
+            <div className={`result-burst ${isDrawResult ? 'result-burst-win' : iWon ? 'result-burst-win' : 'result-burst-loss'}`} />
             <div className="relative">
-              <div className={`result-emblem ${iWon ? 'result-emblem-win' : 'result-emblem-loss'}`}>
-                {iWon ? <Trophy size={30} /> : <X size={30} />}
+              <div className={`result-emblem ${isDrawResult || iWon ? 'result-emblem-win' : 'result-emblem-loss'}`}>
+                {isDrawResult ? <Check size={30} /> : iWon ? <Trophy size={30} /> : <X size={30} />}
               </div>
               <h3 className="mb-1 text-2xl font-black text-[var(--text-primary)]">
                 {resultHeading}
@@ -592,6 +1053,11 @@ export default function MatchPage() {
                 </strong>
               </p>
             )}
+            {confirmedScoreline ? (
+              <div className="mt-3 inline-flex rounded-full border border-[var(--border-color)] bg-[var(--surface-elevated)] px-4 py-2 text-sm font-black text-[var(--text-primary)]">
+                Final score: {confirmedScoreline}
+              </div>
+            ) : null}
             {gamificationResult?.newAchievements?.length ? (
               <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
                 {gamificationResult.newAchievements.map((achievement) => (
@@ -649,7 +1115,7 @@ export default function MatchPage() {
               <p className="mb-1 text-xs text-[var(--text-soft)]">Your Rank</p>
               <RatingBadge
                 rating={
-                  ((user as unknown as Record<string, unknown>)[`rating_${match.game}`] as number) ??
+                  ((user as unknown as Record<string, unknown>)[getGameRatingKey(matchGame)] as number) ??
                   1000
                 }
                 size="sm"
@@ -665,6 +1131,11 @@ export default function MatchPage() {
               Match payout: {gamificationResult.xpEarned} XP / {gamificationResult.mpEarned} MP
             </p>
           )}
+          {confirmedScoreline ? (
+            <p className="mt-3 text-center text-xs text-[var(--text-secondary)]">
+              Confirmed score: {match.player1.username} {match.player1_score} - {match.player2_score} {match.player2.username}
+            </p>
+          ) : null}
           <p className="mt-3 text-center text-xs text-[var(--text-soft)]">
             Started {new Date(match.created_at).toLocaleString()}
           </p>

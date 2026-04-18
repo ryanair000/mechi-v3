@@ -1,26 +1,56 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
+import { useCallback, useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
 import { AlertTriangle, Check, Loader2, Swords, X } from 'lucide-react';
 import { useAuthFetch } from '@/components/AuthProvider';
-import { GAMES } from '@/lib/config';
-import type { GameKey } from '@/types';
+import { GAMES, PLATFORMS } from '@/lib/config';
+import type { GameKey, PlatformKey } from '@/types';
 
 interface MatchRow {
   id: string;
-  game: string;
-  platform: string | null;
+  game: GameKey;
+  platform: PlatformKey | null;
   region: string;
   status: string;
   winner_id: string | null;
+  player1_score?: number | null;
+  player2_score?: number | null;
   created_at: string;
   completed_at: string | null;
   dispute_screenshot_url: string | null;
   tournament_id: string | null;
   player1: { id: string; username: string } | null;
   player2: { id: string; username: string } | null;
+}
+
+interface MatchDetail {
+  match: MatchRow & {
+    player1_id: string;
+    player2_id: string;
+    player1_reported_winner: string | null;
+    player2_reported_winner: string | null;
+    player1_reported_player1_score?: number | null;
+    player1_reported_player2_score?: number | null;
+    player2_reported_player1_score?: number | null;
+    player2_reported_player2_score?: number | null;
+    player1_score?: number | null;
+    player2_score?: number | null;
+    rating_change_p1: number | null;
+    rating_change_p2: number | null;
+    dispute_requested_by: string | null;
+    gamification_summary_p1?: unknown;
+    gamification_summary_p2?: unknown;
+    player1: { id: string; username: string; email?: string | null; phone?: string | null } | null;
+    player2: { id: string; username: string; email?: string | null; phone?: string | null } | null;
+  };
+  disputeRequester: { id: string; username: string } | null;
+  reportState: {
+    player1ReportedWinner: { id: string; username: string } | null;
+    player2ReportedWinner: { id: string; username: string } | null;
+  };
+  tournament: { id: string; slug: string; title: string; status: string; payout_status?: string | null } | null;
 }
 
 const STATUS_TABS = ['all', 'disputed', 'pending', 'completed', 'cancelled'] as const;
@@ -31,13 +61,16 @@ export default function AdminMatchesPage() {
   const [tab, setTab] = useState<(typeof STATUS_TABS)[number]>('disputed');
   const [loading, setLoading] = useState(true);
   const [actingOn, setActingOn] = useState<string | null>(null);
+  const [detailMatchId, setDetailMatchId] = useState<string | null>(null);
+  const [detail, setDetail] = useState<MatchDetail | null>(null);
+  const [detailLoading, setDetailLoading] = useState(false);
 
   const fetchMatches = useCallback(async () => {
     setLoading(true);
     try {
       const params = new URLSearchParams({ limit: '60' });
       if (tab !== 'all') params.set('status', tab);
-      const res = await authFetch(`/api/admin/matches?${params}`);
+      const res = await authFetch(`/api/admin/matches?${params.toString()}`);
       const data = await res.json();
       if (!res.ok) {
         toast.error(data.error ?? 'Failed to load matches');
@@ -52,6 +85,33 @@ export default function AdminMatchesPage() {
       setLoading(false);
     }
   }, [authFetch, tab]);
+
+  const fetchMatchDetail = useCallback(
+    async (matchId: string) => {
+      setDetailLoading(true);
+      try {
+        const res = await authFetch(`/api/admin/matches/${matchId}`);
+        const data = await res.json();
+        if (!res.ok) {
+          toast.error(data.error ?? 'Failed to load match detail');
+          setDetail(null);
+          return null;
+        }
+
+        const nextDetail = data as MatchDetail;
+        setDetail(nextDetail);
+        setDetailMatchId(matchId);
+        return nextDetail;
+      } catch {
+        toast.error('Network error while loading match detail');
+        setDetail(null);
+        return null;
+      } finally {
+        setDetailLoading(false);
+      }
+    },
+    [authFetch]
+  );
 
   useEffect(() => {
     void fetchMatches();
@@ -72,13 +132,29 @@ export default function AdminMatchesPage() {
         }
         toast.success(successMessage);
         await fetchMatches();
+        if (detailMatchId === matchId) {
+          await fetchMatchDetail(matchId);
+        }
       } catch {
         toast.error('Network error');
       } finally {
         setActingOn(null);
       }
     },
-    [authFetch, fetchMatches]
+    [authFetch, detailMatchId, fetchMatchDetail, fetchMatches]
+  );
+
+  const handleToggleDetail = useCallback(
+    async (matchId: string) => {
+      if (detailMatchId === matchId) {
+        setDetailMatchId(null);
+        setDetail(null);
+        return;
+      }
+
+      await fetchMatchDetail(matchId);
+    },
+    [detailMatchId, fetchMatchDetail]
   );
 
   return (
@@ -91,7 +167,8 @@ export default function AdminMatchesPage() {
               Match reviews and dispute fixes
             </h1>
             <p className="mt-3 max-w-2xl text-sm leading-7 text-[var(--text-secondary)]">
-              Step into broken results fast, resolve disputes, and keep the queue from stalling.
+              Step into broken results fast, inspect proof and report state, and keep the ranked lane
+              from stalling.
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -130,7 +207,8 @@ export default function AdminMatchesPage() {
       ) : (
         <div className="space-y-3">
           {matches.map((match) => {
-            const gameLabel = GAMES[match.game as GameKey]?.label ?? match.game;
+            const gameLabel = GAMES[match.game]?.label ?? match.game;
+            const platformLabel = match.platform ? (PLATFORMS[match.platform]?.label ?? match.platform) : 'Any platform';
             const player1 = match.player1;
             const player2 = match.player2;
             const winnerName =
@@ -139,11 +217,19 @@ export default function AdminMatchesPage() {
                 : match.winner_id === player2?.id
                   ? player2?.username
                   : null;
+            const confirmedScoreline =
+              match.player1_score !== null &&
+              match.player1_score !== undefined &&
+              match.player2_score !== null &&
+              match.player2_score !== undefined
+                ? `${match.player1_score}-${match.player2_score}`
+                : null;
+            const isExpanded = detailMatchId === match.id;
 
             return (
               <div key={match.id} className="card p-5">
                 <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
-                  <div className="min-w-0">
+                  <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
                       <p className="text-lg font-black text-[var(--text-primary)]">
                         {match.player1?.username ?? 'Unknown'} vs {match.player2?.username ?? 'Unknown'}
@@ -168,13 +254,14 @@ export default function AdminMatchesPage() {
                     </div>
 
                     <p className="mt-1 text-sm text-[var(--text-secondary)]">
-                      {match.region}
-                      {match.platform ? ` • ${match.platform}` : ''} • Started{' '}
-                      {new Date(match.created_at).toLocaleString()}
+                      {match.region} | {platformLabel} | Started {new Date(match.created_at).toLocaleString()}
                     </p>
 
                     {winnerName ? (
                       <p className="mt-2 text-sm text-[var(--brand-teal)]">Winner set: {winnerName}</p>
+                    ) : null}
+                    {confirmedScoreline ? (
+                      <p className="mt-1 text-sm text-[var(--text-secondary)]">Final score: {confirmedScoreline}</p>
                     ) : null}
 
                     {match.dispute_screenshot_url ? (
@@ -189,6 +276,14 @@ export default function AdminMatchesPage() {
                   </div>
 
                   <div className="flex flex-wrap items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => void handleToggleDetail(match.id)}
+                      className="btn-ghost"
+                    >
+                      {isExpanded ? 'Hide details' : 'View details'}
+                    </button>
+
                     {actingOn === match.id ? (
                       <div className="inline-flex items-center gap-2 rounded-full border border-[var(--border-color)] px-3 py-2 text-sm text-[var(--text-secondary)]">
                         <Loader2 size={14} className="animate-spin" />
@@ -264,6 +359,113 @@ export default function AdminMatchesPage() {
                     )}
                   </div>
                 </div>
+
+                {isExpanded ? (
+                  <div className="mt-5 border-t border-[var(--border-color)] pt-5">
+                    {detailLoading || !detail ? (
+                      <div className="h-40 shimmer rounded-3xl" />
+                    ) : (
+                      <div className="grid gap-3 lg:grid-cols-[0.95fr_1.05fr]">
+                        <div className="rounded-3xl border border-[var(--border-color)] bg-[var(--surface-elevated)] p-4">
+                          <p className="text-sm font-semibold text-[var(--text-primary)]">Match snapshot</p>
+                          <div className="mt-4 space-y-2 text-sm text-[var(--text-secondary)]">
+                            <p>Status: {detail.match.status}</p>
+                            <p>Platform: {detail.match.platform ? (PLATFORMS[detail.match.platform]?.label ?? detail.match.platform) : 'Any platform'}</p>
+                            <p>Region: {detail.match.region}</p>
+                            <p>Created: {new Date(detail.match.created_at).toLocaleString()}</p>
+                            <p>
+                              Completed:{' '}
+                              {detail.match.completed_at
+                                ? new Date(detail.match.completed_at).toLocaleString()
+                                : 'Not completed'}
+                            </p>
+                            <p>Rating delta P1: {detail.match.rating_change_p1 ?? 0}</p>
+                            <p>Rating delta P2: {detail.match.rating_change_p2 ?? 0}</p>
+                            {detail.match.player1_score !== null &&
+                            detail.match.player1_score !== undefined &&
+                            detail.match.player2_score !== null &&
+                            detail.match.player2_score !== undefined ? (
+                              <p>
+                                Final score: {detail.match.player1_score} - {detail.match.player2_score}
+                              </p>
+                            ) : null}
+                            {detail.tournament ? (
+                              <p>
+                                Tournament:{' '}
+                                <Link href={`/t/${detail.tournament.slug}`} className="brand-link font-semibold">
+                                  {detail.tournament.title}
+                                </Link>
+                              </p>
+                            ) : null}
+                          </div>
+                        </div>
+
+                        <div className="rounded-3xl border border-[var(--border-color)] bg-[var(--surface-elevated)] p-4">
+                          <p className="text-sm font-semibold text-[var(--text-primary)]">Report state</p>
+                          <div className="mt-4 space-y-3">
+                            <div className="rounded-2xl border border-[var(--border-color)] bg-[var(--surface)] px-4 py-3">
+                              <p className="text-sm font-black text-[var(--text-primary)]">
+                                {detail.match.player1?.username ?? 'Unknown'}
+                              </p>
+                              <p className="mt-1 text-xs text-[var(--text-secondary)]">
+                                {detail.match.player1?.phone ?? 'No phone'}{detail.match.player1?.email ? ` | ${detail.match.player1.email}` : ''}
+                              </p>
+                              <p className="mt-2 text-xs text-[var(--text-soft)]">
+                                Reported winner: {detail.reportState.player1ReportedWinner?.username ?? 'No report yet'}
+                              </p>
+                              {detail.match.player1_reported_player1_score !== null &&
+                              detail.match.player1_reported_player1_score !== undefined &&
+                              detail.match.player1_reported_player2_score !== null &&
+                              detail.match.player1_reported_player2_score !== undefined ? (
+                                <p className="mt-1 text-xs text-[var(--text-soft)]">
+                                  Reported score: {detail.match.player1_reported_player1_score} - {detail.match.player1_reported_player2_score}
+                                </p>
+                              ) : null}
+                            </div>
+
+                            <div className="rounded-2xl border border-[var(--border-color)] bg-[var(--surface)] px-4 py-3">
+                              <p className="text-sm font-black text-[var(--text-primary)]">
+                                {detail.match.player2?.username ?? 'Unknown'}
+                              </p>
+                              <p className="mt-1 text-xs text-[var(--text-secondary)]">
+                                {detail.match.player2?.phone ?? 'No phone'}{detail.match.player2?.email ? ` | ${detail.match.player2.email}` : ''}
+                              </p>
+                              <p className="mt-2 text-xs text-[var(--text-soft)]">
+                                Reported winner: {detail.reportState.player2ReportedWinner?.username ?? 'No report yet'}
+                              </p>
+                              {detail.match.player2_reported_player1_score !== null &&
+                              detail.match.player2_reported_player1_score !== undefined &&
+                              detail.match.player2_reported_player2_score !== null &&
+                              detail.match.player2_reported_player2_score !== undefined ? (
+                                <p className="mt-1 text-xs text-[var(--text-soft)]">
+                                  Reported score: {detail.match.player2_reported_player1_score} - {detail.match.player2_reported_player2_score}
+                                </p>
+                              ) : null}
+                            </div>
+
+                            <div className="rounded-2xl border border-[var(--border-color)] bg-[var(--surface)] px-4 py-3">
+                              <p className="text-sm font-black text-[var(--text-primary)]">Dispute lane</p>
+                              <p className="mt-2 text-xs text-[var(--text-secondary)]">
+                                Requested by: {detail.disputeRequester?.username ?? 'No dispute requester recorded'}
+                              </p>
+                              {detail.match.dispute_screenshot_url ? (
+                                <Link
+                                  href={detail.match.dispute_screenshot_url}
+                                  target="_blank"
+                                  className="brand-link mt-3 inline-flex text-xs font-semibold"
+                                >
+                                  Open screenshot proof
+                                </Link>
+                              ) : (
+                                <p className="mt-2 text-xs text-[var(--text-soft)]">No proof URL attached.</p>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ) : null}
               </div>
             );
           })}

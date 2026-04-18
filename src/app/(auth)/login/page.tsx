@@ -1,26 +1,44 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { use, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
 import { Eye, EyeOff, Loader2 } from 'lucide-react';
 import { useAuth } from '@/components/AuthProvider';
 import { FullScreenSignup } from '@/components/ui/full-screen-signup';
+import { isPrimaryAdminHost } from '@/lib/admin-access';
+import { getRegisterPath, getSafeNextPath } from '@/lib/navigation';
 
-export default function LoginPage() {
+type LoginSearchParams = Promise<{ [key: string]: string | string[] | undefined }>;
+
+export default function LoginPage({ searchParams }: { searchParams: LoginSearchParams }) {
   const { user, loading: authLoading, login } = useAuth();
   const router = useRouter();
+  const resolvedSearchParams = use(searchParams);
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const rawNextValue = resolvedSearchParams.next;
+  const rawNext =
+    typeof rawNextValue === 'string'
+      ? rawNextValue
+      : Array.isArray(rawNextValue)
+        ? rawNextValue[0] ?? null
+        : null;
+  const hostFallbackPath =
+    typeof window !== 'undefined' && isPrimaryAdminHost(window.location.host)
+      ? '/admin'
+      : '/dashboard';
+  const nextPath = getSafeNextPath(rawNext, hostFallbackPath);
+  const registerHref = getRegisterPath({ next: rawNext ? nextPath : null });
 
   useEffect(() => {
     if (!authLoading && user) {
-      router.replace('/dashboard');
+      router.replace(nextPath);
     }
-  }, [authLoading, user, router]);
+  }, [authLoading, nextPath, user, router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -34,7 +52,7 @@ export default function LoginPage() {
       const res = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ identifier: identifier.trim(), password }),
+        body: JSON.stringify({ identifier: identifier.trim(), password, redirect_to: nextPath }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -43,7 +61,7 @@ export default function LoginPage() {
       }
       login(data.token, data.user);
       toast.success(`Welcome back, ${data.user.username}!`);
-      window.location.assign('/dashboard');
+      window.location.assign(nextPath);
     } catch {
       toast.error('Network error.');
     } finally {
@@ -65,7 +83,7 @@ export default function LoginPage() {
     >
       <div className="card p-4 sm:p-6">
         <form onSubmit={handleSubmit} action="/api/auth/login" method="post" className="space-y-4">
-          <input type="hidden" name="redirect_to" value="/dashboard" />
+          <input type="hidden" name="redirect_to" value={nextPath} />
           <div>
             <label className="label">Phone, username, or email</label>
             <input
@@ -118,7 +136,7 @@ export default function LoginPage() {
 
         <p className="mt-6 text-center text-sm text-[var(--text-secondary)]">
           New to Mechi?{' '}
-          <Link href="/register" className="brand-link-coral inline-flex min-h-11 items-center font-semibold">
+          <Link href={registerHref} className="brand-link-coral inline-flex min-h-11 items-center font-semibold">
             Create your account
           </Link>
         </p>

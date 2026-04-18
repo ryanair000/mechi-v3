@@ -6,7 +6,8 @@ CREATE TABLE IF NOT EXISTS profiles (
   phone text NOT NULL UNIQUE,
   email text,
   password_hash text NOT NULL,
-  region text NOT NULL DEFAULT 'Nairobi',
+  country text,
+  region text NOT NULL DEFAULT 'Other',
   platforms text[] NOT NULL DEFAULT '{}',
   game_ids jsonb NOT NULL DEFAULT '{}'::jsonb,
   selected_games text[] NOT NULL DEFAULT '{}',
@@ -17,6 +18,7 @@ CREATE TABLE IF NOT EXISTS profiles (
   rating_nba2k26 integer NOT NULL DEFAULT 1000,
   rating_tekken8 integer NOT NULL DEFAULT 1000,
   rating_sf6 integer NOT NULL DEFAULT 1000,
+  rating_ludo integer NOT NULL DEFAULT 1000,
   wins_efootball integer NOT NULL DEFAULT 0,
   wins_efootball_mobile integer NOT NULL DEFAULT 0,
   wins_fc26 integer NOT NULL DEFAULT 0,
@@ -24,6 +26,7 @@ CREATE TABLE IF NOT EXISTS profiles (
   wins_nba2k26 integer NOT NULL DEFAULT 0,
   wins_tekken8 integer NOT NULL DEFAULT 0,
   wins_sf6 integer NOT NULL DEFAULT 0,
+  wins_ludo integer NOT NULL DEFAULT 0,
   losses_efootball integer NOT NULL DEFAULT 0,
   losses_efootball_mobile integer NOT NULL DEFAULT 0,
   losses_fc26 integer NOT NULL DEFAULT 0,
@@ -31,6 +34,7 @@ CREATE TABLE IF NOT EXISTS profiles (
   losses_nba2k26 integer NOT NULL DEFAULT 0,
   losses_tekken8 integer NOT NULL DEFAULT 0,
   losses_sf6 integer NOT NULL DEFAULT 0,
+  losses_ludo integer NOT NULL DEFAULT 0,
   created_at timestamptz NOT NULL DEFAULT timezone('utc', now())
 );
 
@@ -39,7 +43,7 @@ CREATE TABLE IF NOT EXISTS queue (
   user_id uuid NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
   game text NOT NULL,
   platform text,
-  region text NOT NULL DEFAULT 'kenya',
+  region text NOT NULL DEFAULT 'Unspecified',
   rating integer NOT NULL DEFAULT 1000,
   status text NOT NULL DEFAULT 'waiting' CHECK (status IN ('waiting', 'matched', 'cancelled')),
   joined_at timestamptz NOT NULL DEFAULT timezone('utc', now())
@@ -51,7 +55,7 @@ CREATE TABLE IF NOT EXISTS matches (
   player2_id uuid NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
   game text NOT NULL,
   platform text,
-  region text NOT NULL DEFAULT 'kenya',
+  region text NOT NULL DEFAULT 'Unspecified',
   status text NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'completed', 'disputed', 'cancelled')),
   winner_id uuid REFERENCES profiles(id) ON DELETE SET NULL,
   player1_reported_winner uuid REFERENCES profiles(id) ON DELETE SET NULL,

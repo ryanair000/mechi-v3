@@ -601,7 +601,12 @@ export default function RegisterPage({ searchParams }: { searchParams: RegisterS
                           <GameCover gameKey={gameKey} variant="header" className="h-full w-full" />
                         </div>
                         <div className="min-w-0 flex-1">
-                          <span className="block truncate text-sm font-medium text-[var(--text-primary)]">{game.label}</span>
+                          <span
+                            className="block whitespace-normal text-sm font-medium leading-snug text-[var(--text-primary)]"
+                            title={game.label}
+                          >
+                            {game.label}
+                          </span>
                           <div className="mt-1 flex gap-1">
                             {game.platforms.map((platform) => (
                               <PlatformLogo key={platform} platform={platform} size={12} />

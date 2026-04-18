@@ -295,7 +295,10 @@ export default function GamesPage() {
                         <GameCover gameKey={game} variant="header" className="h-full w-full" />
                       </div>
                       <div className="min-w-0 flex-1">
-                        <span className="block truncate text-sm font-semibold text-[var(--text-primary)]">
+                        <span
+                          className="block whitespace-normal text-sm font-semibold leading-snug text-[var(--text-primary)]"
+                          title={GAMES[game].label}
+                        >
                           {GAMES[game].label}
                         </span>
                         <span className="mt-1 flex gap-1">
@@ -343,12 +346,15 @@ export default function GamesPage() {
                         key={game}
                         className="rounded-lg border border-[var(--border-color)] bg-[var(--surface-elevated)] p-3"
                       >
-                        <div className="mb-3 flex items-center justify-between gap-3">
+                        <div className="mb-3 flex items-start justify-between gap-3">
                           <div className="flex min-w-0 items-center gap-2">
                             <div className="h-10 w-10 flex-shrink-0 overflow-hidden rounded-lg border border-[var(--border-color)] bg-[var(--surface)]">
                               <GameCover gameKey={game} variant="header" className="h-full w-full" />
                             </div>
-                            <p className="truncate text-sm font-semibold text-[var(--text-primary)]">
+                            <p
+                              className="min-w-0 whitespace-normal text-sm font-semibold leading-snug text-[var(--text-primary)]"
+                              title={gameConfig.label}
+                            >
                               {gameConfig.label}
                             </p>
                           </div>

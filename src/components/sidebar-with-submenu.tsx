@@ -6,6 +6,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
+  CirclePlay,
   Home,
   Gamepad2,
   Lightbulb,
@@ -33,6 +34,7 @@ type NavItem = {
 
 const PRIMARY_ITEMS: NavItem[] = [
   { href: '/dashboard', label: 'Dashboard', icon: Home },
+  { href: '/tutorials', label: 'Tutorials', icon: CirclePlay },
   { href: '/leaderboard', label: 'Leaderboard', icon: Trophy },
 ];
 

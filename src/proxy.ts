@@ -19,6 +19,7 @@ const PROTECTED_PREFIXES = [
   '/notifications',
   '/share',
   '/suggest',
+  '/tutorials',
   '/api/queue',
   '/api/challenges',
   '/api/matches',

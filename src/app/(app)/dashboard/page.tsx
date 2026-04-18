@@ -347,8 +347,11 @@ export default function DashboardPage() {
                 className="btn-outline text-sm"
               >
                 <CirclePlay size={14} />
-                How Mechi works
+                Quick intro
               </button>
+              <Link href="/tutorials" className="btn-outline text-sm">
+                Full tutorial
+              </Link>
               {userGames.length === 0 ? (
                 <Link href="/games" className="btn-primary text-sm">
                   Finish Game Setup

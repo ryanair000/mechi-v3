@@ -559,6 +559,115 @@ html[data-theme='dark'] {
     background: var(--accent-primary-soft);
   }
 
+  .tutorial-anchor {
+    @apply inline-flex items-center rounded-full border px-3 py-1.5 text-sm font-semibold;
+    border-color: var(--border-color);
+    background: var(--surface-strong);
+    color: var(--text-secondary);
+  }
+
+  .tutorial-anchor:hover {
+    border-color: rgba(50, 224, 196, 0.24);
+    background: var(--surface-elevated);
+    color: var(--text-primary);
+  }
+
+  .tutorial-stage {
+    position: relative;
+    overflow: hidden;
+    border-radius: 1.5rem;
+    border: 1px solid rgba(50, 224, 196, 0.18);
+    background:
+      linear-gradient(160deg, rgba(50, 224, 196, 0.08), transparent 42%),
+      linear-gradient(180deg, var(--surface-strong), var(--surface));
+    padding: 1.35rem;
+    box-shadow: var(--surface-highlight), var(--shadow-soft);
+  }
+
+  .tutorial-stage-glow {
+    position: absolute;
+    border-radius: 999px;
+    filter: blur(18px);
+    opacity: 0.8;
+    pointer-events: none;
+  }
+
+  .tutorial-stage-glow-teal {
+    left: -1.5rem;
+    top: -1.75rem;
+    height: 8rem;
+    width: 8rem;
+    background: radial-gradient(circle, rgba(50, 224, 196, 0.22), transparent 68%);
+  }
+
+  .tutorial-stage-glow-coral {
+    bottom: -2rem;
+    right: -1.25rem;
+    height: 9rem;
+    width: 9rem;
+    background: radial-gradient(circle, rgba(255, 107, 107, 0.18), transparent 70%);
+  }
+
+  .tutorial-stage-step {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 0.85rem;
+    align-items: start;
+    border: 1px solid var(--border-color);
+    border-radius: 1.05rem;
+    background: rgba(255, 255, 255, 0.56);
+    padding: 0.85rem;
+    backdrop-filter: blur(10px);
+  }
+
+  .tutorial-step-badge {
+    display: inline-flex;
+    min-width: 2.35rem;
+    justify-content: center;
+    border-radius: 999px;
+    background: rgba(50, 224, 196, 0.14);
+    color: var(--accent-secondary-text);
+    padding: 0.35rem 0.55rem;
+    font-size: 0.72rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+  }
+
+  .tutorial-warning {
+    @apply flex items-start gap-3 rounded-[1rem] border p-3.5;
+    border-color: rgba(255, 107, 107, 0.14);
+    background: rgba(255, 107, 107, 0.07);
+  }
+
+  .tutorial-preview {
+    @apply rounded-[1.2rem] border p-4 sm:p-5;
+    border-color: var(--border-color);
+    background: linear-gradient(180deg, var(--surface-elevated), var(--surface));
+    box-shadow: var(--surface-highlight), var(--shadow-soft);
+  }
+
+  .tutorial-preview-row {
+    border: 1px solid var(--border-color);
+    border-radius: 1rem;
+    background: var(--surface-strong);
+    padding: 0.9rem;
+  }
+
+  .tutorial-preview-bar {
+    height: 0.4rem;
+    border-radius: 999px;
+    background: linear-gradient(90deg, var(--brand-teal), rgba(255, 107, 107, 0.8));
+  }
+
+  .tutorial-preview-dot {
+    margin-top: 0.15rem;
+    height: 0.6rem;
+    width: 0.6rem;
+    flex-shrink: 0;
+    border-radius: 999px;
+    background: rgba(50, 224, 196, 0.34);
+  }
+
   .avatar-shell {
     @apply flex items-center justify-center rounded-2xl font-bold;
     background: var(--accent-secondary-soft);

@@ -3,7 +3,7 @@ import type { JWTPayload } from '@/types';
 import { hasPrimaryAdminAccess } from '@/lib/admin-access';
 import { getLoginPath, getSafeNextPath } from '@/lib/navigation';
 import { createServiceClient } from '@/lib/supabase';
-import { ADMIN_HOST, APP_URL } from '@/lib/urls';
+import { ADMIN_HOST, ADMIN_URL, APP_URL } from '@/lib/urls';
 
 const PROTECTED_PREFIXES = [
   '/dashboard',
@@ -171,6 +171,18 @@ function unauthorizedResponse(pathname: string, request: NextRequest) {
   return NextResponse.redirect(new URL(getLoginPath(nextPath), request.url));
 }
 
+function adminHostOnlyResponse(pathname: string, request: NextRequest) {
+  if (pathname.startsWith('/api/')) {
+    return NextResponse.json(
+      { error: 'Admin API is only available on mechi.lokimax.top' },
+      { status: 404 }
+    );
+  }
+
+  const redirectUrl = new URL(`${ADMIN_URL}${pathname}${request.nextUrl.search}`);
+  return NextResponse.redirect(redirectUrl);
+}
+
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const adminHost = isAdminHost(request);
@@ -194,6 +206,9 @@ export async function proxy(request: NextRequest) {
   }
 
   if (isAdminRoute(effectivePathname)) {
+    if (!adminHost) {
+      return adminHostOnlyResponse(effectivePathname, request);
+    }
     if (!payload) return unauthorizedResponse(effectivePathname, request);
     const access = await getCurrentAccess(payload);
     if (!access) return unauthorizedResponse(effectivePathname, request);

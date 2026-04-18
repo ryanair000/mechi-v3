@@ -11,6 +11,7 @@ import {
   type SupportUserSummary,
 } from '@/lib/support-context';
 import { requestSupportReply, type SupportBridgeConversationMessage } from '@/lib/openclaw-bridge';
+import { executeWhatsAppPlayerAction } from '@/lib/whatsapp-player-actions';
 import { formatWhatsAppDeliveryError, sendSupportWhatsAppMessage } from '@/lib/whatsapp';
 import { writeAuditLog } from '@/lib/audit';
 import type {
@@ -772,6 +773,25 @@ async function handleInboundSupportMessage(message: NormalizedWhatsAppMessage) {
     escalation_reason: null,
     last_message_at: message.timestampIso,
   });
+
+  const actionResult = await executeWhatsAppPlayerAction({
+    body: message.body,
+    user: userSummary,
+  });
+
+  if (actionResult.handled) {
+    await sendOutboundSupportMessage({
+      thread,
+      senderType: actionResult.senderType,
+      message: actionResult.message,
+      meta: actionResult.meta,
+      successStatus: 'open',
+      failureStatus: 'waiting_on_human',
+      escalationReason: 'reply_delivery_failed',
+    });
+
+    return { duplicate: false, escalated: false, reason: null };
+  }
 
   const conversation = await getConversationWindow(thread.id);
 

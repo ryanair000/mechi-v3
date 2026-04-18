@@ -1,7 +1,7 @@
 'use client';
 
 import { createContext, useContext, useEffect, useState, useCallback } from 'react';
-import { hasPrimaryAdminAccess } from '@/lib/admin-access';
+import { getScopedRoleForHost } from '@/lib/admin-access';
 import type { AuthUser } from '@/types';
 
 const TOKEN_STORAGE_KEY = 'mechi_token';
@@ -35,6 +35,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [token, setToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
+  const normalizeUserForCurrentHost = useCallback((candidate: AuthUser | null): AuthUser | null => {
+    if (!candidate) {
+      return null;
+    }
+
+    const scopedRole = getScopedRoleForHost(candidate, window.location.host);
+    if ((candidate.role ?? 'user') === scopedRole) {
+      return candidate;
+    }
+
+    return {
+      ...candidate,
+      role: scopedRole,
+    };
+  }, []);
+
   const refresh = useCallback(async () => {
     const clearStoredAuth = () => {
       localStorage.removeItem(TOKEN_STORAGE_KEY);
@@ -47,13 +63,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     if (storedUser) {
       try {
-        cachedUser = JSON.parse(storedUser) as AuthUser;
-        if (cachedUser.role && !hasPrimaryAdminAccess(cachedUser)) {
-          cachedUser = {
-            ...cachedUser,
-            role: 'user',
-          };
-        }
+        cachedUser = normalizeUserForCurrentHost(JSON.parse(storedUser) as AuthUser);
       } catch {
         localStorage.removeItem(USER_STORAGE_KEY);
       }
@@ -85,9 +95,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (res.ok) {
         const data = await res.json();
-        setUser(data.user);
+        const nextUser = normalizeUserForCurrentHost(data.user as AuthUser);
+        setUser(nextUser);
         setToken(storedToken ?? null);
-        localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(data.user));
+        localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(nextUser));
       } else {
         clearStoredAuth();
         setUser(null);
@@ -103,18 +114,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       window.clearTimeout(timeoutId);
       setLoading(false);
     }
-  }, []);
+  }, [normalizeUserForCurrentHost]);
 
   useEffect(() => {
     refresh();
   }, [refresh]);
 
   const login = useCallback((newToken: string, newUser: AuthUser) => {
+    const normalizedUser = normalizeUserForCurrentHost(newUser);
     localStorage.setItem(TOKEN_STORAGE_KEY, newToken);
-    localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(newUser));
+    localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(normalizedUser));
     setToken(newToken);
-    setUser(newUser);
-  }, []);
+    setUser(normalizedUser);
+  }, [normalizeUserForCurrentHost]);
 
   const logout = useCallback(() => {
     localStorage.removeItem(TOKEN_STORAGE_KEY);

@@ -7,6 +7,7 @@ import toast from 'react-hot-toast';
 import { Eye, EyeOff, Loader2 } from 'lucide-react';
 import { useAuth } from '@/components/AuthProvider';
 import { FullScreenSignup } from '@/components/ui/full-screen-signup';
+import { isPrimaryAdminHost } from '@/lib/admin-access';
 import { getRegisterPath, getSafeNextPath } from '@/lib/navigation';
 
 type LoginSearchParams = Promise<{ [key: string]: string | string[] | undefined }>;
@@ -26,7 +27,11 @@ export default function LoginPage({ searchParams }: { searchParams: LoginSearchP
       : Array.isArray(rawNextValue)
         ? rawNextValue[0] ?? null
         : null;
-  const nextPath = getSafeNextPath(rawNext);
+  const hostFallbackPath =
+    typeof window !== 'undefined' && isPrimaryAdminHost(window.location.host)
+      ? '/admin'
+      : '/dashboard';
+  const nextPath = getSafeNextPath(rawNext, hostFallbackPath);
   const registerHref = getRegisterPath({ next: rawNext ? nextPath : null });
 
   useEffect(() => {

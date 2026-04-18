@@ -65,6 +65,51 @@ function toLobbySummary(row: Record<string, unknown>): AdminLobbySummary {
   };
 }
 
+function getLobbyUrgencyRank(lobby: AdminLobbySummary) {
+  const scheduledAt = lobby.scheduled_for ? new Date(lobby.scheduled_for).getTime() : null;
+  const isOverdue =
+    scheduledAt !== null &&
+    Number.isFinite(scheduledAt) &&
+    ['open', 'full'].includes(lobby.status) &&
+    scheduledAt < Date.now();
+
+  if (isOverdue) {
+    return 0;
+  }
+
+  if (lobby.status === 'full') {
+    return 1;
+  }
+
+  if (lobby.status === 'open') {
+    return 2;
+  }
+
+  if (lobby.status === 'in_progress') {
+    return 3;
+  }
+
+  return 4;
+}
+
+function compareLobbyUrgency(a: AdminLobbySummary, b: AdminLobbySummary) {
+  const rankDiff = getLobbyUrgencyRank(a) - getLobbyUrgencyRank(b);
+  if (rankDiff !== 0) {
+    return rankDiff;
+  }
+
+  const aScheduled = a.scheduled_for ? new Date(a.scheduled_for).getTime() : Number.POSITIVE_INFINITY;
+  const bScheduled = b.scheduled_for ? new Date(b.scheduled_for).getTime() : Number.POSITIVE_INFINITY;
+
+  if (Number.isFinite(aScheduled) || Number.isFinite(bScheduled)) {
+    if (aScheduled !== bScheduled) {
+      return aScheduled - bScheduled;
+    }
+  }
+
+  return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+}
+
 export async function GET(request: NextRequest) {
   const user = await getRequestAccessProfile(request);
   if (!user || !hasModeratorAccess(user) || user.is_banned) {
@@ -78,7 +123,7 @@ export async function GET(request: NextRequest) {
     const search = safeSearch(searchParams.get('q') ?? '');
     const limit = Math.min(Math.max(Number(searchParams.get('limit') ?? 50), 1), 100);
     const offset = Math.max(Number(searchParams.get('offset') ?? 0), 0);
-    const fetchSize = search ? Math.min(offset + limit + 80, 250) : limit;
+    const fetchSize = Math.min(offset + limit + 80, 250);
     const supabase = createServiceClient();
 
     let query = supabase
@@ -87,7 +132,8 @@ export async function GET(request: NextRequest) {
         'id, host_id, game, mode, map_name, scheduled_for, title, max_players, room_code, status, created_at, host:host_id(id, username, phone, email, role, is_banned), member_count:lobby_members(count)',
         { count: 'exact' }
       )
-      .order('created_at', { ascending: false });
+      .order('created_at', { ascending: false })
+      .limit(fetchSize);
 
     if (status && ['open', 'full', 'in_progress', 'closed'].includes(status)) {
       query = query.eq('status', status);
@@ -95,12 +141,6 @@ export async function GET(request: NextRequest) {
 
     if (game && GAMES[game as GameKey]) {
       query = query.eq('game', getCanonicalGameKey(game as GameKey));
-    }
-
-    if (!search) {
-      query = query.range(offset, offset + limit - 1);
-    } else {
-      query = query.limit(fetchSize);
     }
 
     const { data, error, count } = await query;
@@ -117,12 +157,12 @@ export async function GET(request: NextRequest) {
           return values.includes(search);
         })
       : summaries;
-
-    const lobbies = search ? filtered.slice(offset, offset + limit) : filtered;
+    const sorted = [...filtered].sort(compareLobbyUrgency);
+    const lobbies = sorted.slice(offset, offset + limit);
 
     return NextResponse.json({
       lobbies,
-      total: search ? filtered.length : count ?? filtered.length,
+      total: search ? filtered.length : count ?? sorted.length,
     });
   } catch (err) {
     console.error('[Admin Lobbies] Error:', err);

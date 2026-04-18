@@ -2,7 +2,33 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getRequestAccessProfile, hasModeratorAccess } from '@/lib/access';
 import { GAMES, getCanonicalGameKey } from '@/lib/config';
 import { createServiceClient } from '@/lib/supabase';
-import type { GameKey } from '@/types';
+import type { GameKey, MatchStatus } from '@/types';
+
+function getMatchUrgencyRank(status: MatchStatus) {
+  switch (status) {
+    case 'disputed':
+      return 0;
+    case 'pending':
+      return 1;
+    case 'completed':
+      return 2;
+    case 'cancelled':
+    default:
+      return 3;
+  }
+}
+
+function compareMatchesByUrgency(
+  a: { status: MatchStatus; created_at: string },
+  b: { status: MatchStatus; created_at: string }
+) {
+  const rankDiff = getMatchUrgencyRank(a.status) - getMatchUrgencyRank(b.status);
+  if (rankDiff !== 0) {
+    return rankDiff;
+  }
+
+  return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+}
 
 export async function GET(request: NextRequest) {
   const user = await getRequestAccessProfile(request);
@@ -34,7 +60,14 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to fetch matches' }, { status: 500 });
     }
 
-    return NextResponse.json({ matches: data ?? [] });
+    const matches = [...(data ?? [])].sort((a, b) =>
+      compareMatchesByUrgency(
+        a as { status: MatchStatus; created_at: string },
+        b as { status: MatchStatus; created_at: string }
+      )
+    );
+
+    return NextResponse.json({ matches });
   } catch (err) {
     console.error('[Admin Matches] Error:', err);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });

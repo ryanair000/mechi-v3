@@ -53,7 +53,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     redirect(appDashboardUrl);
   }
 
-  const visibleNav = ADMIN_NAV;
+  const visibleNav = ADMIN_NAV.filter((item) => !item.adminOnly || profile.role === 'admin');
 
   return (
     <div className="page-base min-h-screen lg:grid lg:grid-cols-[16rem_1fr]">
@@ -96,6 +96,24 @@ export default async function AdminLayout({ children }: { children: React.ReactN
               App
             </a>
           </div>
+
+          <div className="mb-6 lg:hidden">
+            <div className="-mx-4 overflow-x-auto pb-1 no-scrollbar sm:-mx-6">
+              <nav className="flex gap-2 px-4 sm:px-6" aria-label="Admin sections">
+                {visibleNav.map(({ href, label, icon: Icon }) => (
+                  <Link
+                    key={href}
+                    href={href}
+                    className="inline-flex items-center gap-2 rounded-full border border-[var(--border-color)] bg-[var(--surface)] px-3 py-2 text-sm font-semibold text-[var(--text-secondary)] whitespace-nowrap"
+                  >
+                    <Icon size={14} />
+                    <span>{label}</span>
+                  </Link>
+                ))}
+              </nav>
+            </div>
+          </div>
+
           {children}
         </div>
       </main>

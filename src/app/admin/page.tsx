@@ -6,7 +6,7 @@ import {
   Clock3,
   DoorOpen,
   Headset,
-  MessageCircle,
+  ScrollText,
   Shield,
   Swords,
   Trophy,
@@ -71,7 +71,7 @@ function formatActionLabel(action: string) {
 
 function formatWaitLabel(minutes: number) {
   if (minutes <= 0) {
-    return 'Fresh queue';
+    return 'Queue is healthy';
   }
 
   if (minutes < 60) {
@@ -204,315 +204,265 @@ async function getOverviewData(): Promise<AdminOverviewData> {
 export default async function AdminOverviewPage() {
   const overview = await getOverviewData();
 
-  const statCards = [
-    {
-      label: 'Players',
-      value: overview.totalUsers.toLocaleString(),
-      detail: `${overview.newUsers7d.toLocaleString()} joined in the last 7 days`,
-      accent: 'var(--brand-teal)',
-      icon: Users,
-    },
-    {
-      label: 'Queue',
-      value: overview.waitingQueue.toLocaleString(),
-      detail: `${overview.staleQueueEntries.toLocaleString()} waiting longer than 10 minutes`,
-      accent: '#60A5FA',
-      icon: Clock3,
-    },
-    {
-      label: 'Lobbies',
-      value: overview.openLobbies.toLocaleString(),
-      detail: `${overview.fullLobbies.toLocaleString()} full, ${overview.liveLobbies.toLocaleString()} in progress`,
-      accent: 'var(--brand-coral)',
-      icon: DoorOpen,
-    },
-    {
-      label: 'Live matches',
-      value: overview.activeMatches.toLocaleString(),
-      detail: `${overview.disputedMatches.toLocaleString()} disputed right now`,
-      accent: '#F59E0B',
-      icon: Swords,
-    },
-    {
-      label: 'Tournaments',
-      value: overview.activeTournaments.toLocaleString(),
-      detail: `${overview.pendingPayouts.toLocaleString()} pending payout reviews`,
-      accent: '#F97316',
-      icon: Trophy,
-    },
-    {
-      label: 'Safety',
-      value: overview.bannedUsers.toLocaleString(),
-      detail: `KSh ${overview.totalPrizeDistributed.toLocaleString()} paid out so far`,
-      accent: '#F87171',
-      icon: Shield,
-    },
-  ];
-
-  const heroLinks = [
+  const attentionCards = [
     {
       href: '/admin/queue',
-      title: 'Queue ops',
-      body: 'Cancel stuck entries, inspect waiting times, and rerun matchmaking when the pool needs a push.',
+      title: 'Queue backlog',
+      value: overview.staleQueueEntries,
+      detail:
+        overview.staleQueueEntries > 0
+          ? `${formatWaitLabel(overview.longestQueueWaitMinutes)}. Review stuck entrants before churn starts.`
+          : 'All waiting players are still within the expected matchmaking window.',
       icon: Clock3,
     },
     {
       href: '/admin/lobbies',
-      title: 'Lobby ops',
-      body: 'Clean up bad rooms, remove members, and keep team titles from drifting into chaos.',
+      title: 'Overdue lobbies',
+      value: overview.overdueLobbies,
+      detail:
+        overview.overdueLobbies > 0
+          ? `${overview.openLobbies.toLocaleString()} open and ${overview.fullLobbies.toLocaleString()} full rooms need a look.`
+          : 'No open or full rooms have drifted past their scheduled start time.',
       icon: DoorOpen,
+    },
+    {
+      href: '/admin/matches',
+      title: 'Disputed matches',
+      value: overview.disputedMatches,
+      detail:
+        overview.disputedMatches > 0
+          ? `${overview.activeMatches.toLocaleString()} live matches are still in progress behind them.`
+          : 'No disputes are waiting on manual review right now.',
+      icon: Swords,
+    },
+    {
+      href: '/admin/tournaments',
+      title: 'Pending payouts',
+      value: overview.pendingPayouts,
+      detail:
+        overview.pendingPayouts > 0
+          ? 'Completed events are waiting on payout follow-through.'
+          : 'Tournament payouts are caught up for completed events.',
+      icon: Trophy,
+    },
+  ];
+
+  const primaryActions = [
+    {
+      href: '/admin/queue',
+      title: 'Queue control',
+      detail: `${overview.waitingQueue.toLocaleString()} players waiting across ranked matchmaking.`,
+      icon: Clock3,
+    },
+    {
+      href: '/admin/lobbies',
+      title: 'Lobby cleanup',
+      detail: `${(overview.openLobbies + overview.fullLobbies + overview.liveLobbies).toLocaleString()} total rooms across open, full, and live states.`,
+      icon: DoorOpen,
+    },
+    {
+      href: '/admin/matches',
+      title: 'Match review',
+      detail: `${overview.disputedMatches.toLocaleString()} disputes and ${overview.activeMatches.toLocaleString()} pending matches in the lane.`,
+      icon: Swords,
+    },
+    {
+      href: '/admin/tournaments',
+      title: 'Tournament ops',
+      detail: `${overview.activeTournaments.toLocaleString()} active brackets and ${overview.pendingPayouts.toLocaleString()} finance follow-ups.`,
+      icon: Trophy,
+    },
+    {
+      href: '/admin/users',
+      title: 'Player accounts',
+      detail: `${overview.totalUsers.toLocaleString()} total players and ${overview.bannedUsers.toLocaleString()} suspended accounts.`,
+      icon: Users,
     },
     {
       href: '/admin/support',
       title: 'Support inbox',
-      body: 'Watch WhatsApp escalations, pick up human handoffs, and keep player conversations tracked.',
+      detail: 'Review WhatsApp escalations and human handoffs in one place.',
       icon: Headset,
     },
   ];
 
-  const fastActions = [
-    { href: '/admin/users', title: 'Review players', meta: 'Search, filter, ban, or update roles.' },
-    { href: '/admin/queue', title: 'Clear queue issues', meta: 'Find long waits and cancel broken entries.' },
-    { href: '/admin/lobbies', title: 'Clean rooms', meta: 'Close stale lobbies or remove bad actors.' },
-    { href: '/admin/matches', title: 'Resolve matches', meta: 'Handle disputes and stuck pending matches.' },
-    { href: '/admin/tournaments', title: 'Watch brackets', meta: 'Inspect tournament health and payout state.' },
-    { href: '/admin/support', title: 'Support inbox', meta: 'Handle WhatsApp escalations and human replies.' },
-    ...(overview.role === 'admin'
-      ? [
-          { href: '/admin/whatsapp', title: 'Test WhatsApp', meta: 'Preview sandbox alerts and delivery wiring.' },
-          { href: '/admin/logs', title: 'Audit trail', meta: 'Review the latest staff actions across ops.' },
-        ]
-      : []),
+  const snapshotCards = [
+    {
+      label: 'New players this week',
+      value: overview.newUsers7d.toLocaleString(),
+      detail: `${overview.totalUsers.toLocaleString()} total player accounts`,
+    },
+    {
+      label: 'Matches tracked',
+      value: overview.totalMatches.toLocaleString(),
+      detail: `${overview.activeMatches.toLocaleString()} still live or waiting on completion`,
+    },
+    {
+      label: 'Active tournaments',
+      value: overview.activeTournaments.toLocaleString(),
+      detail: `${overview.totalTournaments.toLocaleString()} tournament records overall`,
+    },
+    {
+      label: 'Prize paid out',
+      value: `KSh ${overview.totalPrizeDistributed.toLocaleString()}`,
+      detail: `${overview.bannedUsers.toLocaleString()} accounts currently suspended`,
+    },
   ];
 
   return (
     <div className="space-y-6">
-      <section className="card overflow-hidden">
-        <div className="grid gap-5 p-5 lg:grid-cols-[1.15fr_0.85fr] lg:p-6">
-          <div>
+      <section className="card p-5 lg:p-6">
+        <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
+          <div className="max-w-3xl">
             <p className="brand-kicker">Admin control room</p>
-            <h1 className="mt-3 text-3xl font-black tracking-tight text-[var(--text-primary)] sm:text-[3.2rem]">
-              Run the platform without losing the plot.
+            <h1 className="mt-3 text-3xl font-black tracking-tight text-[var(--text-primary)] sm:text-[3rem]">
+              Keep the platform calm, clear, and easy to operate.
             </h1>
-            <p className="mt-4 max-w-2xl text-sm leading-7 text-[var(--text-secondary)] sm:text-base">
-              Watch queue health, clean up lobby mess, moderate players, and keep tournament ops moving
-              before problems spill into the live competition lane.
+            <p className="mt-3 text-sm leading-7 text-[var(--text-secondary)] sm:text-base">
+              Start with what needs intervention, jump straight into the operational lane you need,
+              then use the activity feed to verify what changed.
             </p>
-            <div className="mt-5 flex flex-wrap gap-2">
-              <span className="brand-chip px-3 py-1.5">{overview.totalMatches.toLocaleString()} matches tracked</span>
-              <span className="brand-chip-coral px-3 py-1.5">{overview.role} access</span>
-              <span className="rounded-full border border-[var(--border-color)] bg-[var(--surface-elevated)] px-3 py-1.5 text-xs font-semibold text-[var(--text-secondary)]">
-                {formatWaitLabel(overview.longestQueueWaitMinutes)}
-              </span>
-            </div>
           </div>
 
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
-            {heroLinks.map(({ href, title, body, icon: Icon }) => (
+          <div className="grid gap-3 sm:grid-cols-3">
+            <div className="rounded-2xl border border-[var(--border-color)] bg-[var(--surface-elevated)] px-4 py-3">
+              <p className="section-title">Queue pulse</p>
+              <p className="mt-2 text-lg font-black text-[var(--text-primary)]">
+                {formatWaitLabel(overview.longestQueueWaitMinutes)}
+              </p>
+            </div>
+            <div className="rounded-2xl border border-[var(--border-color)] bg-[var(--surface-elevated)] px-4 py-3">
+              <p className="section-title">Live rooms</p>
+              <p className="mt-2 text-lg font-black text-[var(--text-primary)]">
+                {(overview.openLobbies + overview.fullLobbies + overview.liveLobbies).toLocaleString()}
+              </p>
+            </div>
+            <div className="rounded-2xl border border-[var(--border-color)] bg-[var(--surface-elevated)] px-4 py-3">
+              <p className="section-title">Access</p>
+              <p className="mt-2 text-lg font-black text-[var(--text-primary)]">
+                {overview.role}
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="space-y-3">
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <p className="section-title">Needs attention</p>
+            <p className="mt-1 text-sm text-[var(--text-secondary)]">
+              Start with the lanes most likely to create player friction.
+            </p>
+          </div>
+          <AlertTriangle size={18} className="text-[var(--brand-coral)]" />
+        </div>
+
+        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+          {attentionCards.map(({ href, title, value, detail, icon: Icon }) => {
+            const isActive = value > 0;
+
+            return (
               <Link
                 key={href}
                 href={href}
-                className="rounded-2xl border border-[var(--border-color)] bg-[var(--surface-elevated)] p-4 transition-colors hover:border-[rgba(50,224,196,0.24)] hover:bg-[var(--surface)]"
+                className={`rounded-3xl border p-4 transition-colors ${
+                  isActive
+                    ? 'border-[rgba(255,107,107,0.22)] bg-[rgba(255,107,107,0.08)] hover:bg-[rgba(255,107,107,0.12)]'
+                    : 'border-[var(--border-color)] bg-[var(--surface)] hover:bg-[var(--surface-elevated)]'
+                }`}
               >
-                <div className="flex items-start gap-3">
-                  <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[rgba(50,224,196,0.14)] text-[var(--brand-teal)]">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="section-title">{title}</p>
+                    <p className="mt-3 text-3xl font-black text-[var(--text-primary)]">
+                      {value.toLocaleString()}
+                    </p>
+                  </div>
+                  <div
+                    className={`flex h-11 w-11 items-center justify-center rounded-2xl ${
+                      isActive
+                        ? 'bg-[rgba(255,107,107,0.14)] text-[var(--brand-coral)]'
+                        : 'bg-[rgba(50,224,196,0.14)] text-[var(--brand-teal)]'
+                    }`}
+                  >
                     <Icon size={18} />
                   </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-sm font-black text-[var(--text-primary)]">{title}</p>
-                    <p className="mt-1 text-xs leading-6 text-[var(--text-secondary)]">{body}</p>
-                    <span className="brand-link mt-3 inline-flex items-center gap-1 text-xs font-black">
-                      Open
-                      <ArrowRight size={12} />
-                    </span>
-                  </div>
                 </div>
+                <p className="mt-3 text-sm leading-6 text-[var(--text-secondary)]">{detail}</p>
+                <span className="brand-link mt-4 inline-flex items-center gap-1 text-sm font-semibold">
+                  Open lane
+                  <ArrowRight size={13} />
+                </span>
               </Link>
-            ))}
-          </div>
+            );
+          })}
         </div>
       </section>
 
-      <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-        {statCards.map(({ label, value, detail, accent, icon: Icon }) => (
-          <div key={label} className="card p-5">
-            <div className="flex items-center justify-between gap-3">
-              <p className="section-title">{label}</p>
-              <div
-                className="flex h-11 w-11 items-center justify-center rounded-2xl"
-                style={{ background: `${accent}1f`, color: accent }}
-              >
-                <Icon size={18} />
-              </div>
-            </div>
-            <p className="mt-4 text-3xl font-black tracking-tight text-[var(--text-primary)]">{value}</p>
-            <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">{detail}</p>
-          </div>
-        ))}
-      </section>
-
-      <section className="grid gap-4 xl:grid-cols-[1.05fr_0.95fr]">
+      <section className="grid gap-4 xl:grid-cols-[1.02fr_0.98fr]">
         <div className="card p-5">
           <div className="flex items-center justify-between gap-3">
             <div>
-              <p className="section-title">Urgent lanes</p>
-              <p className="mt-2 text-sm text-[var(--text-secondary)]">
-                The quickest places to jump when live competition starts feeling off.
-              </p>
-            </div>
-            <AlertTriangle size={18} className="text-[var(--brand-coral)]" />
-          </div>
-
-          <div className="mt-5 grid gap-3 lg:grid-cols-2">
-            <Link
-              href="/admin/queue"
-              className="rounded-2xl border border-[var(--border-color)] bg-[var(--surface-elevated)] p-4 transition-colors hover:bg-[var(--surface)]"
-            >
-              <div className="flex items-start gap-3">
-                <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[rgba(96,165,250,0.12)] text-[#60A5FA]">
-                  <Clock3 size={18} />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-black text-[var(--text-primary)]">Stuck queue</p>
-                  <p className="mt-1 text-xs leading-6 text-[var(--text-secondary)]">
-                    {overview.staleQueueEntries.toLocaleString()} entries have been waiting more than 10 minutes.
-                  </p>
-                  <p className="mt-2 text-xs font-semibold text-[var(--text-soft)]">
-                    {formatWaitLabel(overview.longestQueueWaitMinutes)}
-                  </p>
-                </div>
-              </div>
-            </Link>
-
-            <Link
-              href="/admin/lobbies"
-              className="rounded-2xl border border-[var(--border-color)] bg-[var(--surface-elevated)] p-4 transition-colors hover:bg-[var(--surface)]"
-            >
-              <div className="flex items-start gap-3">
-                <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[rgba(255,107,107,0.12)] text-[var(--brand-coral)]">
-                  <DoorOpen size={18} />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-black text-[var(--text-primary)]">Bad room cleanup</p>
-                  <p className="mt-1 text-xs leading-6 text-[var(--text-secondary)]">
-                    {overview.overdueLobbies.toLocaleString()} open or full rooms are already past their expected start time.
-                  </p>
-                  <p className="mt-2 text-xs font-semibold text-[var(--text-soft)]">
-                    {overview.openLobbies.toLocaleString()} open, {overview.fullLobbies.toLocaleString()} full, {overview.liveLobbies.toLocaleString()} live
-                  </p>
-                </div>
-              </div>
-            </Link>
-          </div>
-        </div>
-
-        <div className="card p-5">
-          <div className="flex items-center justify-between gap-3">
-            <div>
-              <p className="section-title">Fast actions</p>
-              <p className="mt-2 text-sm text-[var(--text-secondary)]">
-                The control-room links that matter most when ops needs a decision.
+              <p className="section-title">Primary lanes</p>
+              <p className="mt-1 text-sm text-[var(--text-secondary)]">
+                The areas most admins will jump between during live operations.
               </p>
             </div>
             <Shield size={18} className="text-[var(--brand-teal)]" />
           </div>
 
           <div className="mt-5 grid gap-3 sm:grid-cols-2">
-            {fastActions.map((item) => (
+            {primaryActions.map(({ href, title, detail, icon: Icon }) => (
               <Link
-                key={item.href + item.title}
-                href={item.href}
-                className="rounded-2xl border border-[var(--border-color)] bg-[var(--surface-elevated)] px-4 py-4 transition-colors hover:bg-[var(--surface)]"
+                key={href}
+                href={href}
+                className="rounded-2xl border border-[var(--border-color)] bg-[var(--surface-elevated)] p-4 transition-colors hover:bg-[var(--surface)]"
               >
-                <p className="text-sm font-black text-[var(--text-primary)]">{item.title}</p>
-                <p className="mt-1 text-xs leading-6 text-[var(--text-secondary)]">{item.meta}</p>
+                <div className="flex items-start gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[rgba(50,224,196,0.14)] text-[var(--brand-teal)]">
+                    <Icon size={17} />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-base font-black text-[var(--text-primary)]">{title}</p>
+                    <p className="mt-1 text-sm leading-6 text-[var(--text-secondary)]">{detail}</p>
+                  </div>
+                </div>
               </Link>
             ))}
           </div>
-        </div>
-      </section>
 
-      <section className="grid gap-4 lg:grid-cols-[1.1fr_0.9fr]">
-        <div className="card p-5">
-          <div className="flex items-center justify-between gap-3">
-            <div>
-              <p className="section-title">Competition health</p>
-              <p className="mt-2 text-sm text-[var(--text-secondary)]">
-                A quick read on the live ops stack across lobbies, ranked runs, and brackets.
-              </p>
+          {overview.role === 'admin' ? (
+            <div className="mt-5 flex flex-wrap gap-2">
+              <Link href="/admin/whatsapp" className="brand-link text-sm font-semibold">
+                WhatsApp tools
+              </Link>
+              <Link href="/admin/logs" className="brand-link text-sm font-semibold">
+                Audit log
+              </Link>
             </div>
-            <Trophy size={18} className="text-[var(--brand-coral)]" />
-          </div>
-
-          <div className="mt-5 grid gap-3 sm:grid-cols-2">
-            <div className="rounded-2xl border border-[var(--border-color)] bg-[var(--surface-elevated)] p-4">
-              <p className="text-[10px] font-black uppercase tracking-[0.18em] text-[var(--text-soft)]">
-                Queue pressure
-              </p>
-              <p className="mt-3 text-2xl font-black text-[var(--text-primary)]">
-                {overview.waitingQueue.toLocaleString()}
-              </p>
-              <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">
-                Waiting players across ranked matchmaking.
-              </p>
-            </div>
-
-            <div className="rounded-2xl border border-[var(--border-color)] bg-[var(--surface-elevated)] p-4">
-              <p className="text-[10px] font-black uppercase tracking-[0.18em] text-[var(--text-soft)]">
-                Room activity
-              </p>
-              <p className="mt-3 text-2xl font-black text-[var(--text-primary)]">
-                {overview.openLobbies + overview.fullLobbies + overview.liveLobbies}
-              </p>
-              <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">
-                Open, full, and in-progress lobbies in the system right now.
-              </p>
-            </div>
-
-            <div className="rounded-2xl border border-[var(--border-color)] bg-[var(--surface-elevated)] p-4">
-              <p className="text-[10px] font-black uppercase tracking-[0.18em] text-[var(--text-soft)]">
-                Tournament finance
-              </p>
-              <p className="mt-3 text-2xl font-black text-[var(--text-primary)]">
-                {overview.pendingPayouts.toLocaleString()}
-              </p>
-              <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">
-                Completed events still waiting on payout follow-through.
-              </p>
-            </div>
-
-            <div className="rounded-2xl border border-[var(--border-color)] bg-[var(--surface-elevated)] p-4">
-              <p className="text-[10px] font-black uppercase tracking-[0.18em] text-[var(--text-soft)]">
-                Suspended accounts
-              </p>
-              <p className="mt-3 text-2xl font-black text-[var(--text-primary)]">
-                {overview.bannedUsers.toLocaleString()}
-              </p>
-              <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">
-                Accounts currently blocked from entering the competition lanes.
-              </p>
-            </div>
-          </div>
+          ) : null}
         </div>
 
         <div className="card p-5">
           <div className="flex items-center justify-between gap-3">
             <div>
               <p className="section-title">Recent admin activity</p>
-              <p className="mt-2 text-sm text-[var(--text-secondary)]">
-                {overview.role === 'admin'
-                  ? 'The latest staff actions across moderation and ops.'
-                  : 'Admins can view the full audit trail. Moderators stay focused on ops tools.'}
+              <p className="mt-1 text-sm text-[var(--text-secondary)]">
+                Quick confirmation of the latest staff actions across the platform.
               </p>
             </div>
-            <Shield size={18} className="text-[var(--brand-teal)]" />
+            <ScrollText size={18} className="text-[var(--brand-teal)]" />
           </div>
 
           {overview.role !== 'admin' ? (
             <div className="mt-5 rounded-2xl border border-[var(--border-color)] bg-[var(--surface-elevated)] p-4">
-              <p className="text-sm font-semibold text-[var(--text-primary)]">Audit log is admin-only.</p>
+              <p className="text-base font-semibold text-[var(--text-primary)]">
+                Full audit visibility is admin-only.
+              </p>
               <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">
-                You can still handle queues, lobbies, users, matches, and tournaments from here.
+                Queue, lobby, match, tournament, and support tools remain available from the lanes on
+                the left.
               </p>
             </div>
           ) : overview.recentLogs.length === 0 ? (
@@ -520,7 +470,7 @@ export default async function AdminOverviewPage() {
               No admin actions logged yet.
             </div>
           ) : (
-            <div className="mt-5 space-y-2">
+            <div className="mt-5 space-y-3">
               {overview.recentLogs.map((log) => {
                 const details = log.details ?? {};
                 const subject =
@@ -537,18 +487,20 @@ export default async function AdminOverviewPage() {
                     key={log.id}
                     className="rounded-2xl border border-[var(--border-color)] bg-[var(--surface-elevated)] px-4 py-3"
                   >
-                    <div className="flex items-center justify-between gap-3">
-                      <p className="text-sm font-bold text-[var(--text-primary)]">
-                        {formatActionLabel(log.action)}
-                      </p>
-                      <span className="text-[11px] text-[var(--text-soft)]">
+                    <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                      <div className="min-w-0">
+                        <p className="text-sm font-black text-[var(--text-primary)]">
+                          {formatActionLabel(log.action)}
+                        </p>
+                        <p className="mt-1 text-sm leading-6 text-[var(--text-secondary)]">
+                          {(log.admin?.username ?? 'Unknown admin')} acted on {log.target_type}
+                          {subject ? `: ${subject}` : log.target_id ? `: ${log.target_id.slice(0, 8)}...` : ''}.
+                        </p>
+                      </div>
+                      <span className="text-xs text-[var(--text-soft)]">
                         {new Date(log.created_at).toLocaleString()}
                       </span>
                     </div>
-                    <p className="mt-1 text-xs leading-6 text-[var(--text-secondary)]">
-                      {(log.admin?.username ?? 'Unknown admin')} acted on {log.target_type}
-                      {subject ? `: ${subject}` : log.target_id ? `: ${log.target_id.slice(0, 8)}...` : ''}.
-                    </p>
                   </div>
                 );
               })}
@@ -557,25 +509,30 @@ export default async function AdminOverviewPage() {
         </div>
       </section>
 
-      {overview.role === 'admin' ? (
-        <section className="card p-5">
-          <div className="flex items-start gap-3">
-            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[rgba(255,107,107,0.14)] text-[var(--brand-coral)]">
-              <MessageCircle size={18} />
-            </div>
-            <div className="min-w-0 flex-1">
-              <p className="text-sm font-black text-[var(--text-primary)]">WhatsApp control lane</p>
-              <p className="mt-1 text-sm leading-6 text-[var(--text-secondary)]">
-                Sandbox-test 1:1 alerts, inspect recipient errors, and keep the lobby-group setup in one place.
-              </p>
-              <Link href="/admin/whatsapp" className="brand-link-coral mt-3 inline-flex items-center gap-1 text-xs font-semibold">
-                Open WhatsApp tools
-                <ArrowRight size={12} />
-              </Link>
-            </div>
+      <section className="card p-5">
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <p className="section-title">Platform snapshot</p>
+            <p className="mt-1 text-sm text-[var(--text-secondary)]">
+              A compact read on player growth, live competition, and finance state.
+            </p>
           </div>
-        </section>
-      ) : null}
+          <Users size={18} className="text-[var(--brand-teal)]" />
+        </div>
+
+        <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+          {snapshotCards.map(({ label, value, detail }) => (
+            <div
+              key={label}
+              className="rounded-2xl border border-[var(--border-color)] bg-[var(--surface-elevated)] p-4"
+            >
+              <p className="section-title">{label}</p>
+              <p className="mt-3 text-2xl font-black text-[var(--text-primary)]">{value}</p>
+              <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">{detail}</p>
+            </div>
+          ))}
+        </div>
+      </section>
     </div>
   );
 }

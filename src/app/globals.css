@@ -375,9 +375,9 @@ html[data-theme='dark'] {
   }
 
   .label {
-    @apply mb-1.5 block text-[10px] font-semibold uppercase;
+    @apply mb-1.5 block text-xs font-semibold;
     color: var(--text-soft);
-    letter-spacing: 0.18em;
+    letter-spacing: 0.03em;
   }
 
   .page-container {
@@ -419,9 +419,9 @@ html[data-theme='dark'] {
   }
 
   .section-title {
-    @apply text-[11px] font-semibold uppercase;
+    @apply text-xs font-semibold;
     color: var(--accent-secondary-text);
-    letter-spacing: 0.24em;
+    letter-spacing: 0.04em;
   }
 
   .brand-link {
@@ -441,26 +441,27 @@ html[data-theme='dark'] {
   }
 
   .brand-kicker {
-    @apply inline-flex items-center gap-2 rounded-full border px-3 py-1 text-[11px] font-semibold;
+    @apply inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-semibold;
     border-color: rgba(50, 224, 196, 0.24);
     background: var(--accent-secondary-soft);
     color: var(--accent-secondary-text);
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
+    letter-spacing: 0.04em;
   }
 
   .brand-chip {
-    @apply inline-flex items-center gap-2 rounded-full border px-2.5 py-1 text-[10px] font-semibold uppercase;
+    @apply inline-flex items-center gap-2 rounded-full border px-2.5 py-1 text-[11px] font-semibold;
     border-color: rgba(50, 224, 196, 0.18);
     background: rgba(50, 224, 196, 0.1);
     color: var(--accent-secondary-text);
-    letter-spacing: 0.14em;
+    letter-spacing: 0.03em;
   }
 
   .brand-chip-coral {
+    @apply inline-flex items-center gap-2 rounded-full border px-2.5 py-1 text-[11px] font-semibold;
     border-color: rgba(255, 107, 107, 0.22);
     background: var(--accent-primary-soft);
     color: #c95252;
+    letter-spacing: 0.03em;
   }
 
   .brand-signal {
@@ -516,9 +517,9 @@ html[data-theme='dark'] {
   }
 
   .stat-label {
-    @apply text-[11px] font-medium uppercase;
+    @apply text-xs font-medium;
     color: var(--text-soft);
-    letter-spacing: 0.12em;
+    letter-spacing: 0.04em;
   }
 
   .no-scrollbar {
@@ -680,7 +681,7 @@ html[data-theme='dark'] {
   .brand-chip,
   .brand-chip-coral,
   .brand-kicker {
-    letter-spacing: 0.1em;
+    letter-spacing: 0.03em;
   }
 }
 

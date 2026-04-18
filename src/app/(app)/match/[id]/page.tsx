@@ -37,6 +37,7 @@ import type {
   GamificationResult,
   MatchChatMessage,
   MatchChatThreadState,
+  MatchEscalationReason,
   PlatformKey,
 } from '@/types';
 
@@ -85,6 +86,125 @@ const MATCH_CHAT_QUICK_REPLIES = [
   'Join now',
   'Report result now',
 ] as const;
+const MATCH_ESCALATION_DETAIL_MAX_LENGTH = 400;
+const MATCH_ESCALATION_REASON_LABELS: Record<MatchEscalationReason, string> = {
+  setup_issue: 'Setup issue',
+  stalling: 'Stalling',
+  wrong_result: 'Wrong result',
+  abuse: 'Abuse',
+  other: 'Other',
+};
+const MATCH_ESCALATION_OPTIONS: ReadonlyArray<{
+  value: MatchEscalationReason;
+  label: string;
+  helper: string;
+}> = [
+  {
+    value: 'setup_issue',
+    label: 'Setup issue',
+    helper: 'Room code, invite, or platform setup is breaking the start.',
+  },
+  {
+    value: 'stalling',
+    label: 'Stalling',
+    helper: 'The opponent is delaying, going quiet, or refusing to start.',
+  },
+  {
+    value: 'wrong_result',
+    label: 'Wrong result',
+    helper: 'The report or scoreline is off and you want admin eyes on it.',
+  },
+  {
+    value: 'abuse',
+    label: 'Abuse',
+    helper: 'Toxic behavior, harassment, or suspicious conduct.',
+  },
+  {
+    value: 'other',
+    label: 'Other',
+    helper: 'Anything else that needs moderator help in this match.',
+  },
+] as const;
+
+type MatchEscalationThreadSummary = {
+  id: string;
+  reason: MatchEscalationReason;
+  status: 'open' | 'resolved' | 'dismissed';
+  details: string | null;
+  resolutionNote: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+function isMatchEscalationReason(value: unknown): value is MatchEscalationReason {
+  return (
+    typeof value === 'string' &&
+    ['setup_issue', 'stalling', 'wrong_result', 'abuse', 'other'].includes(value)
+  );
+}
+
+function getMatchEscalationSummaries(messages: MatchChatMessage[]) {
+  const escalations = new Map<string, MatchEscalationThreadSummary>();
+
+  messages.forEach((message) => {
+    const event = typeof message.meta?.event === 'string' ? message.meta.event : '';
+    const escalationId =
+      typeof message.meta?.escalation_id === 'string' ? message.meta.escalation_id : null;
+
+    if (!escalationId) {
+      return;
+    }
+
+    if (event === 'admin_help_requested') {
+      const reason = isMatchEscalationReason(message.meta?.reason)
+        ? message.meta.reason
+        : 'other';
+      const details =
+        typeof message.meta?.details === 'string' && message.meta.details.trim().length > 0
+          ? message.meta.details.trim()
+          : null;
+
+      escalations.set(escalationId, {
+        id: escalationId,
+        reason,
+        status: 'open',
+        details,
+        resolutionNote: null,
+        createdAt: message.created_at,
+        updatedAt: message.created_at,
+      });
+      return;
+    }
+
+    if (event === 'admin_help_resolved' || event === 'admin_help_dismissed') {
+      const current = escalations.get(escalationId);
+      const reason = current?.reason ?? (
+        isMatchEscalationReason(message.meta?.escalation_reason)
+          ? message.meta.escalation_reason
+          : 'other'
+      );
+      const resolutionNote =
+        typeof message.meta?.resolution_note === 'string' &&
+        message.meta.resolution_note.trim().length > 0
+          ? message.meta.resolution_note.trim()
+          : null;
+
+      escalations.set(escalationId, {
+        id: escalationId,
+        reason,
+        status: event === 'admin_help_resolved' ? 'resolved' : 'dismissed',
+        details: current?.details ?? null,
+        resolutionNote,
+        createdAt: current?.createdAt ?? message.created_at,
+        updatedAt: message.created_at,
+      });
+    }
+  });
+
+  return [...escalations.values()].sort(
+    (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
+  );
+}
 
 export default function MatchPage() {
   const params = useParams();
@@ -115,6 +235,11 @@ export default function MatchPage() {
   const [sendingChat, setSendingChat] = useState(false);
   const [chatLocked, setChatLocked] = useState(false);
   const [chatState, setChatState] = useState<MatchChatThreadState | null>(null);
+  const [showEscalationComposer, setShowEscalationComposer] = useState(false);
+  const [requestingAdminHelp, setRequestingAdminHelp] = useState(false);
+  const [escalationReason, setEscalationReason] =
+    useState<MatchEscalationReason>('setup_issue');
+  const [escalationDetails, setEscalationDetails] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
   const channelRef = useRef<{ send: (payload: unknown) => Promise<unknown> } | null>(null);
   const previousStatusRef = useRef<MatchData['status'] | null>(null);
@@ -210,9 +335,7 @@ export default function MatchPage() {
           };
 
           setReceivedQuickComment(note);
-          toast(`${note.from}: ${note.comment}`, {
-            icon: '💬',
-          });
+          toast(`${note.from}: ${note.comment}`);
         }
       )
       .on(
@@ -235,9 +358,7 @@ export default function MatchPage() {
           void fetchChat(true);
 
           if (nextPayload.fromUserId && nextPayload.fromUserId !== user?.id && nextPayload.preview) {
-            toast(`${nextPayload.fromUsername ?? 'Opponent'}: ${nextPayload.preview}`, {
-              icon: '💬',
-            });
+            toast(`${nextPayload.fromUsername ?? 'Opponent'}: ${nextPayload.preview}`);
           }
         }
       )
@@ -672,6 +793,66 @@ export default function MatchPage() {
     }
   };
 
+  const handleRequestAdminHelp = async () => {
+    const trimmedDetails = escalationDetails.trim();
+
+    if (trimmedDetails.length > MATCH_ESCALATION_DETAIL_MAX_LENGTH) {
+      toast.error(`Keep the note under ${MATCH_ESCALATION_DETAIL_MAX_LENGTH} characters`);
+      return;
+    }
+
+    setRequestingAdminHelp(true);
+
+    try {
+      const res = await authFetch(`/api/matches/${matchId}/escalate`, {
+        method: 'POST',
+        body: JSON.stringify({
+          reason: escalationReason,
+          details: trimmedDetails,
+        }),
+      });
+      const data = (await res.json()) as { error?: string };
+
+      if (!res.ok) {
+        toast.error(data.error ?? 'Could not request admin help');
+        return;
+      }
+
+      setEscalationDetails('');
+      setEscalationReason('setup_issue');
+      setShowEscalationComposer(false);
+      toast.success('Admin help requested');
+      await fetchChat(true);
+
+      if (channelRef.current) {
+        void channelRef.current.send({
+          type: 'broadcast',
+          event: 'match-chat-message',
+          payload: {
+            matchId,
+            fromUserId: user?.id,
+            fromUsername: user?.username ?? 'Player',
+            preview: 'Requested admin help',
+          },
+        });
+
+        void channelRef.current.send({
+          type: 'broadcast',
+          event: 'match-updated',
+          payload: {
+            matchId,
+            fromUserId: user?.id,
+            status: match?.status,
+          },
+        });
+      }
+    } catch {
+      toast.error('Network error');
+    } finally {
+      setRequestingAdminHelp(false);
+    }
+  };
+
   const handleSendChat = async (
     nextMessage = chatInput,
     messageType: MatchChatMessage['message_type'] = 'text'
@@ -836,6 +1017,12 @@ export default function MatchPage() {
         : match.status === 'pending'
           ? 'bg-[var(--surface-elevated)] text-[var(--text-secondary)]'
           : 'bg-[var(--surface-elevated)] text-[var(--text-soft)]';
+  const escalationSummaries = getMatchEscalationSummaries(chatMessages);
+  const openEscalation =
+    escalationSummaries.find((escalation) => escalation.status === 'open') ?? null;
+  const latestClosedEscalation =
+    escalationSummaries.find((escalation) => escalation.status !== 'open') ?? null;
+  const canRequestAdminHelp = ['pending', 'disputed'].includes(match.status) && !openEscalation;
 
   return (
     <div className="page-container">
@@ -929,6 +1116,167 @@ export default function MatchPage() {
           onQuickReply={(value) => void handleSendChat(value, 'quick_reply')}
           onSend={() => void handleSendChat()}
         />
+
+        {['pending', 'disputed'].includes(match.status) ? (
+          <div className="card mb-4 p-5">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+              <div className="max-w-2xl">
+                <div className="flex items-center gap-2">
+                  <AlertTriangle size={15} className="text-amber-400" />
+                  <h3 className="text-sm font-semibold text-[var(--text-primary)]">
+                    Need admin help?
+                  </h3>
+                </div>
+                <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">
+                  Use this if setup stalls, the scoreline feels wrong, or behavior gets messy.
+                  Mechi adds the request to the match thread so nothing is blind or lost.
+                </p>
+              </div>
+
+              {openEscalation ? (
+                <span className="inline-flex items-center rounded-full bg-amber-500/12 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-amber-400">
+                  Admin reviewing
+                </span>
+              ) : latestClosedEscalation ? (
+                <span
+                  className={`inline-flex items-center rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] ${
+                    latestClosedEscalation.status === 'resolved'
+                      ? 'bg-[rgba(50,224,196,0.12)] text-[var(--brand-teal)]'
+                      : 'bg-[var(--surface-elevated)] text-[var(--text-secondary)]'
+                  }`}
+                >
+                  {latestClosedEscalation.status === 'resolved'
+                    ? 'Last issue resolved'
+                    : 'Last issue closed'}
+                </span>
+              ) : null}
+            </div>
+
+            {openEscalation ? (
+              <div className="mt-4 rounded-2xl border border-amber-500/18 bg-amber-500/8 p-4">
+                <p className="text-sm font-semibold text-[var(--text-primary)]">
+                  Admin help is already open for{' '}
+                  <span className="text-amber-400">
+                    {MATCH_ESCALATION_REASON_LABELS[openEscalation.reason]}
+                  </span>
+                  .
+                </p>
+                <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">
+                  Requested {new Date(openEscalation.createdAt).toLocaleString()}.
+                  {openEscalation.details ? ` Note: ${openEscalation.details}` : ' Keep chatting here while the team reviews it.'}
+                </p>
+              </div>
+            ) : latestClosedEscalation ? (
+              <div className="mt-4 rounded-2xl border border-[var(--border-color)] bg-[var(--surface-elevated)] p-4">
+                <p className="text-sm font-semibold text-[var(--text-primary)]">
+                  Last admin update: {MATCH_ESCALATION_REASON_LABELS[latestClosedEscalation.reason]}
+                </p>
+                <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">
+                  {latestClosedEscalation.status === 'resolved'
+                    ? 'Resolved'
+                    : 'Closed'}{' '}
+                  {new Date(latestClosedEscalation.updatedAt).toLocaleString()}.
+                  {latestClosedEscalation.resolutionNote
+                    ? ` Note: ${latestClosedEscalation.resolutionNote}`
+                    : ' Open the chat above to see the full moderator update.'}
+                </p>
+              </div>
+            ) : null}
+
+            {showEscalationComposer ? (
+              <div className="mt-4 space-y-4 rounded-2xl border border-[var(--border-color)] bg-[var(--surface-elevated)] p-4">
+                <div>
+                  <p className="text-sm font-semibold text-[var(--text-primary)]">
+                    What do you need help with?
+                  </p>
+                  <p className="mt-1 text-sm text-[var(--text-secondary)]">
+                    Pick the clearest reason so the admin team can step in faster.
+                  </p>
+                </div>
+
+                <div className="grid gap-2 sm:grid-cols-2">
+                  {MATCH_ESCALATION_OPTIONS.map((option) => {
+                    const isSelected = escalationReason === option.value;
+
+                    return (
+                      <button
+                        key={option.value}
+                        type="button"
+                        onClick={() => setEscalationReason(option.value)}
+                        className={`rounded-2xl border px-4 py-3 text-left transition-all ${
+                          isSelected
+                            ? 'border-[rgba(50,224,196,0.28)] bg-[rgba(50,224,196,0.1)]'
+                            : 'border-[var(--border-color)] bg-[var(--surface)] hover:border-[rgba(255,107,107,0.2)]'
+                        }`}
+                      >
+                        <p className="text-sm font-semibold text-[var(--text-primary)]">
+                          {option.label}
+                        </p>
+                        <p className="mt-1 text-xs leading-5 text-[var(--text-secondary)]">
+                          {option.helper}
+                        </p>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                <div>
+                  <label
+                    htmlFor="admin-help-note"
+                    className="mb-2 block text-xs font-semibold uppercase tracking-[0.12em] text-[var(--text-soft)]"
+                  >
+                    Quick note
+                  </label>
+                  <textarea
+                    id="admin-help-note"
+                    value={escalationDetails}
+                    onChange={(event) => setEscalationDetails(event.target.value)}
+                    maxLength={MATCH_ESCALATION_DETAIL_MAX_LENGTH}
+                    placeholder="Add a short note so admin can understand what is stuck."
+                    className="input-field min-h-[6.5rem] resize-none"
+                  />
+                  <div className="mt-2 flex items-center justify-between gap-3 text-xs text-[var(--text-soft)]">
+                    <span>Optional, but it helps the team move faster.</span>
+                    <span>
+                      {escalationDetails.length}/{MATCH_ESCALATION_DETAIL_MAX_LENGTH}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="flex flex-col gap-2 sm:flex-row">
+                  <button
+                    type="button"
+                    onClick={() => void handleRequestAdminHelp()}
+                    disabled={requestingAdminHelp}
+                    className="btn-primary justify-center sm:flex-1"
+                  >
+                    {requestingAdminHelp ? 'Requesting help...' : 'Request admin help'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowEscalationComposer(false);
+                      setEscalationDetails('');
+                      setEscalationReason('setup_issue');
+                    }}
+                    disabled={requestingAdminHelp}
+                    className="btn-outline justify-center sm:flex-1"
+                  >
+                    Not now
+                  </button>
+                </div>
+              </div>
+            ) : canRequestAdminHelp ? (
+              <button
+                type="button"
+                onClick={() => setShowEscalationComposer(true)}
+                className="btn-outline mt-4"
+              >
+                Ask admin to step in
+              </button>
+            ) : null}
+          </div>
+        ) : null}
 
         {match.status === 'pending' && (
           <div className="card mb-4 p-5">

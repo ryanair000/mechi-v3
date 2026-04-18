@@ -60,6 +60,10 @@ function getSenderLabel(
     return 'Mechi';
   }
 
+  if (message.sender_type === 'admin') {
+    return message.sender?.username ?? 'Admin';
+  }
+
   if (message.sender_user_id === currentUserId) {
     return 'You';
   }
@@ -92,6 +96,18 @@ function getSystemEventLabel(message: MatchChatMessage) {
 
   if (event === 'match_cancelled') {
     return 'Cancelled';
+  }
+
+  if (event === 'admin_help_requested') {
+    return 'Admin help';
+  }
+
+  if (event === 'admin_help_resolved') {
+    return 'Resolved';
+  }
+
+  if (event === 'admin_help_dismissed') {
+    return 'Closed';
   }
 
   return 'Timeline';
@@ -268,6 +284,8 @@ export function MatchChatPanel({
                     className={`max-w-[88%] rounded-[1.1rem] px-4 py-3 ${
                       isMine
                         ? 'bg-[rgba(255,107,107,0.12)] text-[var(--text-primary)]'
+                        : message.sender_type === 'admin'
+                          ? 'border border-[rgba(50,224,196,0.22)] bg-[rgba(50,224,196,0.08)] text-[var(--text-primary)]'
                         : 'border border-[var(--border-color)] bg-[var(--surface)] text-[var(--text-primary)]'
                     }`}
                   >

@@ -170,6 +170,22 @@ CREATE TABLE IF NOT EXISTS match_message_reads (
   PRIMARY KEY (match_id, user_id)
 );
 
+CREATE TABLE IF NOT EXISTS match_escalations (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  match_id uuid NOT NULL REFERENCES matches(id) ON DELETE CASCADE,
+  requested_by uuid NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+  reason text NOT NULL
+    CHECK (reason IN ('setup_issue', 'stalling', 'wrong_result', 'abuse', 'other')),
+  details text,
+  status text NOT NULL DEFAULT 'open'
+    CHECK (status IN ('open', 'resolved', 'dismissed')),
+  resolution_note text,
+  resolved_by uuid REFERENCES profiles(id) ON DELETE SET NULL,
+  created_at timestamptz NOT NULL DEFAULT timezone('utc', now()),
+  resolved_at timestamptz,
+  updated_at timestamptz NOT NULL DEFAULT timezone('utc', now())
+);
+
 CREATE TABLE IF NOT EXISTS lobbies (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   host_id uuid NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
@@ -251,6 +267,10 @@ CREATE INDEX IF NOT EXISTS idx_match_messages_match_created_at
   ON match_messages(match_id, created_at ASC);
 CREATE INDEX IF NOT EXISTS idx_match_message_reads_user_id
   ON match_message_reads(user_id);
+CREATE INDEX IF NOT EXISTS idx_match_escalations_match_status_created
+  ON match_escalations(match_id, status, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_match_escalations_requested_by
+  ON match_escalations(requested_by, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_lobbies_status_created_at ON lobbies(status, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_lobby_members_lobby_id ON lobby_members(lobby_id);
 CREATE INDEX IF NOT EXISTS idx_suggestions_votes ON suggestions(votes DESC);
@@ -267,6 +287,7 @@ ALTER TABLE support_threads ENABLE ROW LEVEL SECURITY;
 ALTER TABLE support_messages ENABLE ROW LEVEL SECURITY;
 ALTER TABLE match_messages ENABLE ROW LEVEL SECURITY;
 ALTER TABLE match_message_reads ENABLE ROW LEVEL SECURITY;
+ALTER TABLE match_escalations ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY notifications_select_own
   ON notifications
@@ -293,6 +314,7 @@ REVOKE ALL ON TABLE support_threads FROM anon, authenticated;
 REVOKE ALL ON TABLE support_messages FROM anon, authenticated;
 REVOKE ALL ON TABLE match_messages FROM anon, authenticated;
 REVOKE ALL ON TABLE match_message_reads FROM anon, authenticated;
+REVOKE ALL ON TABLE match_escalations FROM anon, authenticated;
 
 -- Tournaments + Paystack-backed entry payments.
 CREATE TABLE IF NOT EXISTS tournaments (

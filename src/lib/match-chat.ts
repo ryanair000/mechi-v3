@@ -65,7 +65,7 @@ function truncatePreview(body: string, maxLength = 72) {
     return body;
   }
 
-  return `${body.slice(0, maxLength - 1).trimEnd()}…`;
+  return `${body.slice(0, maxLength - 3).trimEnd()}...`;
 }
 
 async function ensureMatchReadRows(match: MatchAccessRow) {
@@ -325,6 +325,12 @@ export async function getMatchChatThread(matchId: string, userId: string) {
   };
 }
 
+export async function getAdminMatchChatThread(matchId: string) {
+  await ensureMatchChatSeeded(matchId);
+  const rows = await listMatchMessageRows(matchId);
+  return mapMatchMessages(rows);
+}
+
 export async function createMatchChatMessage(params: {
   matchId: string;
   senderUserId?: string | null;
@@ -438,3 +444,4 @@ export async function createMatchChatMessage(params: {
   const [message] = await mapMatchMessages([data as MatchChatRow]);
   return { ok: true as const, message };
 }
+

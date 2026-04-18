@@ -1,6 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getRequestAccessProfile, hasModeratorAccess } from '@/lib/access';
 import { writeAuditLog } from '@/lib/audit';
+import { getAdminMatchChatThread, createMatchChatMessage } from '@/lib/match-chat';
+import {
+  listMatchEscalations,
+  MATCH_ESCALATION_REASON_LABELS,
+  updateMatchEscalation,
+} from '@/lib/match-escalations';
+import { createNotifications } from '@/lib/notifications';
 import { getClientIp } from '@/lib/rateLimit';
 import { createServiceClient } from '@/lib/supabase';
 import { firstRelation } from '@/lib/tournaments';
@@ -43,7 +50,7 @@ export async function GET(
       match.dispute_requested_by,
     ].filter((value): value is string => Boolean(value));
 
-    const [{ data: profiles }, tournamentResult] = await Promise.all([
+    const [{ data: profiles }, tournamentResult, chatMessages, escalations] = await Promise.all([
       relatedProfileIds.length
         ? supabase.from('profiles').select('id, username').in('id', relatedProfileIds)
         : Promise.resolve({ data: [], error: null }),
@@ -54,6 +61,8 @@ export async function GET(
             .eq('id', match.tournament_id)
             .maybeSingle()
         : Promise.resolve({ data: null, error: null }),
+      getAdminMatchChatThread(id),
+      listMatchEscalations(id),
     ]);
 
     const profileMap = new Map(
@@ -79,6 +88,9 @@ export async function GET(
             : null,
       },
       tournament: tournamentResult.data ?? null,
+      chatMessages,
+      escalations,
+      openEscalationCount: escalations.filter((item) => item.status === 'open').length,
     });
   } catch (err) {
     console.error('[Admin Match GET] Error:', err);
@@ -102,6 +114,8 @@ export async function PATCH(
       action?: string;
       winner_id?: string;
       reason?: string;
+      escalation_id?: string;
+      note?: string;
     };
     const supabase = createServiceClient();
 
@@ -133,6 +147,97 @@ export async function PATCH(
       });
 
       return NextResponse.json({ success: true });
+    }
+
+    if (body.action === 'resolve_escalation' || body.action === 'dismiss_escalation') {
+      if (!body.escalation_id) {
+        return NextResponse.json({ error: 'Escalation id is required' }, { status: 400 });
+      }
+
+      const escalationResult = await updateMatchEscalation({
+        escalationId: body.escalation_id,
+        matchId: id,
+        status: body.action === 'resolve_escalation' ? 'resolved' : 'dismissed',
+        resolvedBy: admin.id,
+        resolutionNote: body.note ?? '',
+      });
+
+      if (!escalationResult.ok) {
+        return NextResponse.json(
+          {
+            error:
+              escalationResult.reason === 'too_long'
+                ? 'Keep the resolution note under 400 characters'
+                : 'Could not update escalation',
+          },
+          { status: escalationResult.reason === 'too_long' ? 400 : 500 }
+        );
+      }
+
+      const escalation = escalationResult.escalation;
+      const resolutionLabel =
+        body.action === 'resolve_escalation' ? 'resolved' : 'dismissed';
+      const reasonLabel = MATCH_ESCALATION_REASON_LABELS[escalation.reason];
+      const note = String(body.note ?? '').trim();
+
+      await createMatchChatMessage({
+        matchId: id,
+        senderUserId: admin.id,
+        senderType: 'admin',
+        body: note
+          ? `Admin reviewed the ${reasonLabel.toLowerCase()} escalation and marked it ${resolutionLabel}: ${note}`
+          : `Admin reviewed the ${reasonLabel.toLowerCase()} escalation and marked it ${resolutionLabel}.`,
+        meta: {
+          event:
+            body.action === 'resolve_escalation'
+              ? 'admin_help_resolved'
+              : 'admin_help_dismissed',
+          escalation_id: escalation.id,
+          escalation_reason: escalation.reason,
+          resolution_note: note || null,
+          admin_id: admin.id,
+        },
+        senderUsername: admin.username,
+      });
+
+      await createNotifications(
+        [match.player1_id, match.player2_id].map((userId) => ({
+          user_id: userId,
+          type: 'match_chat_message' as const,
+          title:
+            body.action === 'resolve_escalation'
+              ? 'Admin reviewed your match issue'
+              : 'Admin closed a match issue',
+          body: note
+            ? note
+            : `Open the match thread to see the ${reasonLabel.toLowerCase()} review update.`,
+          href: `/match/${id}`,
+          metadata: {
+            match_id: id,
+            escalation_id: escalation.id,
+            escalation_status: escalation.status,
+          },
+        })),
+        supabase
+      );
+
+      await writeAuditLog({
+        adminId: admin.id,
+        action:
+          body.action === 'resolve_escalation'
+            ? 'resolve_match_escalation'
+            : 'dismiss_match_escalation',
+        targetType: 'match',
+        targetId: id,
+        details: {
+          escalationId: escalation.id,
+          escalationReason: escalation.reason,
+          note: note || null,
+        },
+        ipAddress: getClientIp(request),
+      });
+
+      return NextResponse.json({ success: true, escalation });
     }
 
     if (body.action === 'override_winner' || body.action === 'resolve_dispute') {

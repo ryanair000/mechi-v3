@@ -21,6 +21,9 @@ export type AuditAction =
   | 'reopen_support_thread'
   | 'block_support_thread'
   | 'relink_support_thread'
+  | 'reply_match_chat'
+  | 'resolve_match_escalation'
+  | 'dismiss_match_escalation'
   | 'system_note';
 
 export interface AuditEntry {

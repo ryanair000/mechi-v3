@@ -201,6 +201,13 @@ export interface QueueEntry {
 export type MatchStatus = 'pending' | 'completed' | 'disputed' | 'cancelled';
 export type MatchChatMessageType = 'text' | 'system' | 'quick_reply';
 export type MatchChatSenderType = 'player' | 'system' | 'admin';
+export type MatchEscalationReason =
+  | 'setup_issue'
+  | 'stalling'
+  | 'wrong_result'
+  | 'abuse'
+  | 'other';
+export type MatchEscalationStatus = 'open' | 'resolved' | 'dismissed';
 
 export interface Match {
   id: string;
@@ -257,6 +264,22 @@ export interface MatchChatThreadState {
   latest_player_message_at?: string | null;
   latest_player_message_sender_user_id?: string | null;
   opponent_has_seen_latest_message: boolean;
+}
+
+export interface MatchEscalation {
+  id: string;
+  match_id: string;
+  requested_by: string;
+  reason: MatchEscalationReason;
+  details?: string | null;
+  status: MatchEscalationStatus;
+  resolution_note?: string | null;
+  resolved_by?: string | null;
+  created_at: string;
+  resolved_at?: string | null;
+  updated_at: string;
+  requester?: Pick<Profile, 'id' | 'username' | 'avatar_url'> | null;
+  resolver?: Pick<Profile, 'id' | 'username' | 'role'> | null;
 }
 
 export interface MatchChallenge {

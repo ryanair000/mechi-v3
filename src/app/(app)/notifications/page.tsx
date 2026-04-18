@@ -282,6 +282,8 @@ export default function NotificationsPage() {
                     <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-[rgba(50,224,196,0.14)] text-[var(--accent-secondary-text)]">
                       {item.type.includes('challenge') ? (
                         <Swords size={16} />
+                      ) : item.type === 'match_chat_message' ? (
+                        <MessageCircle size={16} />
                       ) : item.type.includes('tournament') ? (
                         <Trophy size={16} />
                       ) : (

@@ -32,7 +32,13 @@ import {
 import { PlatformBadge } from '@/components/PlatformBadge';
 import { PlatformLogo } from '@/components/PlatformLogo';
 import { RatingBadge } from '@/components/RatingBadge';
-import type { GameKey, GamificationResult, MatchChatMessage, PlatformKey } from '@/types';
+import type {
+  GameKey,
+  GamificationResult,
+  MatchChatMessage,
+  MatchChatThreadState,
+  PlatformKey,
+} from '@/types';
 
 interface MatchPlayer {
   id: string;
@@ -108,6 +114,7 @@ export default function MatchPage() {
   const [chatInput, setChatInput] = useState('');
   const [sendingChat, setSendingChat] = useState(false);
   const [chatLocked, setChatLocked] = useState(false);
+  const [chatState, setChatState] = useState<MatchChatThreadState | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const channelRef = useRef<{ send: (payload: unknown) => Promise<unknown> } | null>(null);
   const previousStatusRef = useRef<MatchData['status'] | null>(null);
@@ -148,17 +155,31 @@ export default function MatchPage() {
         const data = (await res.json()) as {
           messages?: MatchChatMessage[];
           can_reply?: boolean;
+          state?: MatchChatThreadState;
+          did_mark_read?: boolean;
         };
 
         setChatMessages(data.messages ?? []);
         setChatLocked(data.can_reply === false);
+        setChatState(data.state ?? null);
+
+        if (data.did_mark_read && channelRef.current) {
+          void channelRef.current.send({
+            type: 'broadcast',
+            event: 'match-chat-read',
+            payload: {
+              matchId,
+              readByUserId: user?.id,
+            },
+          });
+        }
       } finally {
         if (!silent) {
           setChatLoading(false);
         }
       }
     },
-    [authFetch, matchId]
+    [authFetch, matchId, user?.id]
   );
 
   useEffect(() => {
@@ -218,6 +239,24 @@ export default function MatchPage() {
               icon: '💬',
             });
           }
+        }
+      )
+      .on(
+        'broadcast',
+        { event: 'match-chat-read' },
+        ({ payload }) => {
+          const nextPayload = payload as
+            | {
+                matchId?: string;
+                readByUserId?: string;
+              }
+            | undefined;
+
+          if (nextPayload?.matchId !== matchId || nextPayload.readByUserId === user?.id) {
+            return;
+          }
+
+          void fetchChat(true);
         }
       )
       .on(
@@ -880,6 +919,7 @@ export default function MatchPage() {
           currentUserId={user.id}
           opponentUsername={opponent.username}
           messages={chatMessages}
+          state={chatState}
           loading={chatLoading}
           canReply={!chatLocked}
           input={chatInput}

@@ -11,6 +11,7 @@ const HIGH_SIGNAL_NOTIFICATION_TYPES = new Set<NotificationType>([
   'match_found',
   'challenge_received',
   'challenge_accepted',
+  'match_chat_message',
   'match_completed',
   'match_disputed',
   'tournament_started',

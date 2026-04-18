@@ -160,6 +160,16 @@ CREATE TABLE IF NOT EXISTS match_messages (
   created_at timestamptz NOT NULL DEFAULT timezone('utc', now())
 );
 
+CREATE TABLE IF NOT EXISTS match_message_reads (
+  match_id uuid NOT NULL REFERENCES matches(id) ON DELETE CASCADE,
+  user_id uuid NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+  last_read_at timestamptz,
+  last_notified_at timestamptz,
+  created_at timestamptz NOT NULL DEFAULT timezone('utc', now()),
+  updated_at timestamptz NOT NULL DEFAULT timezone('utc', now()),
+  PRIMARY KEY (match_id, user_id)
+);
+
 CREATE TABLE IF NOT EXISTS lobbies (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   host_id uuid NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
@@ -239,6 +249,8 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_support_messages_provider_message_id
   WHERE provider_message_id IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_match_messages_match_created_at
   ON match_messages(match_id, created_at ASC);
+CREATE INDEX IF NOT EXISTS idx_match_message_reads_user_id
+  ON match_message_reads(user_id);
 CREATE INDEX IF NOT EXISTS idx_lobbies_status_created_at ON lobbies(status, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_lobby_members_lobby_id ON lobby_members(lobby_id);
 CREATE INDEX IF NOT EXISTS idx_suggestions_votes ON suggestions(votes DESC);
@@ -254,6 +266,7 @@ ALTER TABLE match_challenges ENABLE ROW LEVEL SECURITY;
 ALTER TABLE support_threads ENABLE ROW LEVEL SECURITY;
 ALTER TABLE support_messages ENABLE ROW LEVEL SECURITY;
 ALTER TABLE match_messages ENABLE ROW LEVEL SECURITY;
+ALTER TABLE match_message_reads ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY notifications_select_own
   ON notifications
@@ -279,6 +292,7 @@ REVOKE ALL ON TABLE match_challenges FROM anon, authenticated;
 REVOKE ALL ON TABLE support_threads FROM anon, authenticated;
 REVOKE ALL ON TABLE support_messages FROM anon, authenticated;
 REVOKE ALL ON TABLE match_messages FROM anon, authenticated;
+REVOKE ALL ON TABLE match_message_reads FROM anon, authenticated;
 
 -- Tournaments + Paystack-backed entry payments.
 CREATE TABLE IF NOT EXISTS tournaments (

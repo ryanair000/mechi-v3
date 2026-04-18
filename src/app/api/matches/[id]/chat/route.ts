@@ -29,6 +29,8 @@ export async function GET(
     messages: result.messages,
     can_reply: result.canReply,
     match_status: result.match.status,
+    state: result.state,
+    did_mark_read: result.didMarkRead,
   });
 }
 
@@ -57,6 +59,7 @@ export async function POST(
       meta: {
         sender_username: access.profile.username,
       },
+      senderUsername: access.profile.username,
     });
 
     if (!result.ok) {

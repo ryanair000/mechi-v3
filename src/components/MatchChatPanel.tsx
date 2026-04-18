@@ -1,13 +1,14 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
-import { Loader2, Lock, MessageCircle, Send } from 'lucide-react';
-import type { MatchChatMessage } from '@/types';
+import { CheckCheck, Loader2, Lock, MessageCircle, Send } from 'lucide-react';
+import type { MatchChatMessage, MatchChatThreadState } from '@/types';
 
 type MatchChatPanelProps = {
   currentUserId: string;
   opponentUsername: string;
   messages: MatchChatMessage[];
+  state: MatchChatThreadState | null;
   loading: boolean;
   canReply: boolean;
   input: string;
@@ -23,6 +24,31 @@ function formatChatTime(value: string) {
     hour: 'numeric',
     minute: '2-digit',
   });
+}
+
+function formatRelativeTime(value?: string | null) {
+  if (!value) {
+    return 'just now';
+  }
+
+  const diffMs = Date.now() - new Date(value).getTime();
+  const diffMinutes = Math.max(0, Math.round(diffMs / 60000));
+
+  if (diffMinutes < 1) {
+    return 'just now';
+  }
+
+  if (diffMinutes < 60) {
+    return `${diffMinutes}m ago`;
+  }
+
+  const diffHours = Math.round(diffMinutes / 60);
+  if (diffHours < 24) {
+    return `${diffHours}h ago`;
+  }
+
+  const diffDays = Math.round(diffHours / 24);
+  return `${diffDays}d ago`;
 }
 
 function getSenderLabel(
@@ -41,10 +67,41 @@ function getSenderLabel(
   return message.sender?.username ?? opponentUsername;
 }
 
+function getSystemEventLabel(message: MatchChatMessage) {
+  const event = String(message.meta?.event ?? message.meta?.seed ?? 'timeline');
+
+  if (event === 'match-start' || event === 'timeline') {
+    return 'Match live';
+  }
+
+  if (event === 'match_reported') {
+    return 'Result submitted';
+  }
+
+  if (event === 'match_disputed') {
+    return 'Dispute';
+  }
+
+  if (event === 'dispute_proof_uploaded') {
+    return 'Proof uploaded';
+  }
+
+  if (event === 'match_completed') {
+    return 'Closed';
+  }
+
+  if (event === 'match_cancelled') {
+    return 'Cancelled';
+  }
+
+  return 'Timeline';
+}
+
 export function MatchChatPanel({
   currentUserId,
   opponentUsername,
   messages,
+  state,
   loading,
   canReply,
   input,
@@ -55,6 +112,31 @@ export function MatchChatPanel({
   onSend,
 }: MatchChatPanelProps) {
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
+  const latestPlayerMessage =
+    [...messages].reverse().find((message) => message.sender_type === 'player') ?? null;
+  const waitingOnOpponent =
+    state?.latest_player_message_sender_user_id === currentUserId &&
+    !state?.opponent_has_seen_latest_message &&
+    canReply;
+  const opponentsTurn =
+    Boolean(state?.latest_player_message_sender_user_id) &&
+    state?.latest_player_message_sender_user_id !== currentUserId &&
+    canReply;
+  const lastActorLabel =
+    state?.latest_message_sender_type === 'system'
+      ? 'Mechi'
+      : state?.latest_message_sender_user_id === currentUserId
+        ? 'You'
+        : opponentUsername;
+  const headerStatus = state?.opponent_has_seen_latest_message
+    ? `Seen by ${opponentUsername}`
+    : waitingOnOpponent
+      ? `Waiting on ${opponentUsername}`
+      : opponentsTurn
+        ? 'Your turn'
+        : canReply
+          ? 'Thread open'
+          : 'Read only';
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ block: 'end' });
@@ -75,7 +157,53 @@ export function MatchChatPanel({
         </div>
 
         <div className="inline-flex items-center gap-2 rounded-full border border-[var(--border-color)] bg-[var(--surface-strong)] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--text-soft)]">
-          {canReply ? 'Private to this match' : 'Read only'}
+          {headerStatus}
+        </div>
+      </div>
+
+      <div className="mt-4 grid gap-3 sm:grid-cols-3">
+        <div className="rounded-[1rem] border border-[var(--border-color)] bg-[var(--surface-strong)] px-4 py-3">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--text-soft)]">
+            Last move
+          </p>
+          <p className="mt-1 text-sm font-semibold text-[var(--text-primary)]">{lastActorLabel}</p>
+          <p className="mt-1 text-xs text-[var(--text-soft)]">
+            {formatRelativeTime(state?.latest_message_at)}
+          </p>
+        </div>
+        <div className="rounded-[1rem] border border-[var(--border-color)] bg-[var(--surface-strong)] px-4 py-3">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--text-soft)]">
+            Handoff
+          </p>
+          <p className="mt-1 text-sm font-semibold text-[var(--text-primary)]">
+            {state?.opponent_has_seen_latest_message
+              ? `${opponentUsername} saw your latest note`
+              : waitingOnOpponent
+                ? 'Pending opponent read'
+                : opponentsTurn
+                  ? 'They moved last'
+                  : 'No pressure'}
+          </p>
+          <p className="mt-1 text-xs text-[var(--text-soft)]">
+            {state?.opponent_has_seen_latest_message
+              ? `Read ${formatRelativeTime(state?.opponent_last_read_at)}`
+              : waitingOnOpponent
+                ? 'They have not opened your latest message yet'
+                : opponentsTurn
+                  ? 'You can reply when ready'
+                  : 'Keep coordination simple and fast'}
+          </p>
+        </div>
+        <div className="rounded-[1rem] border border-[var(--border-color)] bg-[var(--surface-strong)] px-4 py-3">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--text-soft)]">
+            Thread
+          </p>
+          <p className="mt-1 text-sm font-semibold text-[var(--text-primary)]">
+            {messages.length} {messages.length === 1 ? 'message' : 'messages'}
+          </p>
+          <p className="mt-1 text-xs text-[var(--text-soft)]">
+            {canReply ? 'Private to this match only' : 'Saved here for reference'}
+          </p>
         </div>
       </div>
 
@@ -95,7 +223,7 @@ export function MatchChatPanel({
                   No chat messages yet.
                 </p>
                 <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">
-                  Send a quick note like “I&apos;m here” or “Send room code” to kick things off.
+                  Send a quick note like &quot;I&apos;m here&quot; or &quot;Send room code&quot; to kick things off.
                 </p>
               </div>
             </div>
@@ -112,9 +240,14 @@ export function MatchChatPanel({
                     className="rounded-[1rem] border border-[rgba(50,224,196,0.18)] bg-[rgba(50,224,196,0.08)] px-4 py-3"
                   >
                     <div className="flex items-center justify-between gap-3">
-                      <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--accent-secondary-text)]">
-                        {senderLabel}
-                      </p>
+                      <div className="flex items-center gap-2">
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--accent-secondary-text)]">
+                          {senderLabel}
+                        </p>
+                        <span className="rounded-full bg-[rgba(50,224,196,0.12)] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--accent-secondary-text)]">
+                          {getSystemEventLabel(message)}
+                        </span>
+                      </div>
                       <span className="text-[11px] text-[var(--text-soft)]">
                         {formatChatTime(message.created_at)}
                       </span>
@@ -147,6 +280,18 @@ export function MatchChatPanel({
                       </span>
                     </div>
                     <p className="mt-2 text-sm leading-6 text-[inherit]">{message.body}</p>
+                    {isMine && latestPlayerMessage?.id === message.id ? (
+                      <div className="mt-2 flex items-center gap-1 text-[11px] font-medium text-[var(--text-soft)]">
+                        {state?.opponent_has_seen_latest_message ? (
+                          <>
+                            <CheckCheck size={12} className="text-[var(--accent-secondary-text)]" />
+                            Seen {formatRelativeTime(state?.opponent_last_read_at)}
+                          </>
+                        ) : (
+                          'Sent'
+                        )}
+                      </div>
+                    ) : null}
                   </div>
                 </div>
               );

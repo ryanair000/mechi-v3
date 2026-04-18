@@ -54,6 +54,7 @@ export type NotificationType =
   | 'tournament_player_joined'
   | 'tournament_started'
   | 'match_found'
+  | 'match_chat_message'
   | 'match_reported'
   | 'match_completed'
   | 'match_disputed';
@@ -244,6 +245,18 @@ export interface MatchChatMessage {
   meta?: Record<string, unknown> | null;
   created_at: string;
   sender?: Pick<Profile, 'id' | 'username' | 'avatar_url'> | null;
+}
+
+export interface MatchChatThreadState {
+  unread_count: number;
+  my_last_read_at?: string | null;
+  opponent_last_read_at?: string | null;
+  latest_message_at?: string | null;
+  latest_message_sender_user_id?: string | null;
+  latest_message_sender_type?: MatchChatSenderType | null;
+  latest_player_message_at?: string | null;
+  latest_player_message_sender_user_id?: string | null;
+  opponent_has_seen_latest_message: boolean;
 }
 
 export interface MatchChallenge {

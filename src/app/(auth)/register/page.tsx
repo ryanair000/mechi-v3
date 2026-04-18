@@ -37,6 +37,7 @@ import type { GameKey, PlatformKey } from '@/types';
 
 type Step = 1 | 2 | 3 | 4;
 const STARTER_TRIAL_GAME_LIMIT = PLANS.pro.maxGames;
+const MIN_PASSWORD_LENGTH = 9;
 type RegisterSearchParams = Promise<{ [key: string]: string | string[] | undefined }>;
 
 interface FormData {
@@ -134,7 +135,7 @@ export default function RegisterPage({ searchParams }: { searchParams: RegisterS
     emailIsValid;
   const step2Valid =
     formData.region.trim().length > 0 &&
-    formData.password.length >= 6;
+    formData.password.length >= MIN_PASSWORD_LENGTH;
   const setupPlatforms = getPlatformsForGameSetup(
     formData.selected_games,
     formData.game_ids,
@@ -415,9 +416,9 @@ export default function RegisterPage({ searchParams }: { searchParams: RegisterS
                         type={showPassword ? 'text' : 'password'}
                         value={formData.password}
                         onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                        placeholder="Min 6 characters"
+                        placeholder="More than 8 characters"
                         className="input pr-12"
-                        minLength={6}
+                        minLength={MIN_PASSWORD_LENGTH}
                       />
                       <button
                         type="button"
@@ -428,6 +429,15 @@ export default function RegisterPage({ searchParams }: { searchParams: RegisterS
                         {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                       </button>
                     </div>
+                    <p
+                      className={`mt-2 text-xs ${
+                        formData.password.length > 0 && formData.password.length < MIN_PASSWORD_LENGTH
+                          ? 'text-[var(--brand-coral)]'
+                          : 'text-[var(--text-soft)]'
+                      }`}
+                    >
+                      Password must be more than 8 characters.
+                    </p>
                   </div>
                   <div className="rounded-xl border border-[var(--border-color)] bg-[var(--surface-elevated)] p-4">
                     <label className="flex cursor-pointer items-start gap-3">

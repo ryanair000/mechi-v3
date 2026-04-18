@@ -20,6 +20,7 @@ import { sendNewRegistrationTelegramNotification } from '@/lib/telegram';
 import type { GameKey, PlatformKey } from '@/types';
 
 const STARTER_TRIAL_PLAN = 'pro';
+const MIN_PASSWORD_LENGTH = 9;
 
 function getStarterTrialWindow() {
   const startedAt = new Date();
@@ -142,8 +143,11 @@ export async function POST(request: NextRequest) {
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail)) {
       return NextResponse.json({ error: 'Enter a valid email address' }, { status: 400 });
     }
-    if (password.length < 6) {
-      return NextResponse.json({ error: 'Password must be at least 6 characters' }, { status: 400 });
+    if (password.length < MIN_PASSWORD_LENGTH) {
+      return NextResponse.json(
+        { error: 'Password must be more than 8 characters' },
+        { status: 400 }
+      );
     }
     if (hasInvalidPlatform) {
       return NextResponse.json({ error: 'Choose valid platforms' }, { status: 400 });

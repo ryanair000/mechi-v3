@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { cookies } from 'next/headers';
 import {
+  AtSign,
   BarChart2,
   ChevronRight,
   Clock3,
@@ -29,6 +30,7 @@ const ADMIN_NAV = [
   { href: '/admin/tournaments', label: 'Tournaments', icon: Trophy },
   { href: '/admin/support', label: 'Support', icon: Headset },
   { href: '/admin/whatsapp', label: 'WhatsApp', icon: MessageCircle, adminOnly: true },
+  { href: '/admin/instagram', label: 'Instagram', icon: AtSign, adminOnly: true },
   { href: '/admin/logs', label: 'Audit Log', icon: ScrollText, adminOnly: true },
 ];
 

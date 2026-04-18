@@ -26,6 +26,8 @@ interface ShareMenuProps {
   variant?: 'primary' | 'ghost' | 'inline' | 'unstyled';
   /** Optional extra button classes */
   className?: string;
+  /** Optional callback after a successful share action */
+  onShared?: (action: string) => void | Promise<void>;
 }
 
 export function ShareMenu({
@@ -36,30 +38,47 @@ export function ShareMenu({
   imageFilename,
   variant = 'ghost',
   className = '',
+  onShared,
 }: ShareMenuProps) {
   const [open, setOpen] = useState(false);
 
+  const notifyShared = async (action: string) => {
+    try {
+      await onShared?.(action);
+    } catch {
+      // Non-blocking: sharing should still succeed even if reward tracking fails.
+    }
+  };
+
   const handleNativeShare = async () => {
     const success = await nativeShare({ title, text, url });
-    if (success) setOpen(false);
+    if (success) {
+      await notifyShared('native_share');
+      setOpen(false);
+    }
   };
 
   const handleWhatsApp = () => {
     shareToWhatsApp(text, url);
+    void notifyShared('whatsapp_share');
     setOpen(false);
   };
 
   const handleCopyLink = async () => {
     const success = await copyLink(url);
-    if (success) toast.success('Link copied!');
+    if (success) {
+      toast.success('Link copied!');
+      await notifyShared('copy_link');
+    }
     else toast.error('Failed to copy');
     setOpen(false);
   };
 
-  const handleDownloadImage = () => {
+  const handleDownloadImage = async () => {
     if (imageUrl) {
       downloadImage(imageUrl, imageFilename ?? 'mechi-share.png');
       toast.success('Image downloading. Share it on Instagram!');
+      await notifyShared('download_image');
     }
     setOpen(false);
   };

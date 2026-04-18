@@ -29,7 +29,7 @@ type SupportListResponse = {
 type SupportDetailResponse = {
   thread: SupportThread;
   messages: SupportMessage[];
-  phoneMatches: Array<
+  contactMatches: Array<
     Pick<Profile, 'id' | 'username' | 'phone' | 'whatsapp_number' | 'plan' | 'region'>
   >;
 };
@@ -81,6 +81,35 @@ function priorityClass(priority: SupportThreadPriority) {
     default:
       return 'text-[var(--text-soft)]';
   }
+}
+
+function channelClass(channel: SupportThread['channel']) {
+  return channel === 'instagram'
+    ? 'bg-[rgba(244,114,182,0.14)] text-pink-400'
+    : 'bg-[rgba(50,224,196,0.14)] text-[var(--brand-teal)]';
+}
+
+function channelLabel(channel: SupportThread['channel']) {
+  return channel === 'instagram' ? 'Instagram' : 'WhatsApp';
+}
+
+function threadIdentity(thread: SupportThread) {
+  return (
+    thread.user?.username ??
+    thread.contact_name ??
+    thread.phone ??
+    `${channelLabel(thread.channel)} user ${thread.wa_id}`
+  );
+}
+
+function threadContactLine(thread: SupportThread) {
+  if (thread.channel === 'instagram') {
+    return thread.contact_name
+      ? `@${thread.contact_name} | IG ${thread.wa_id}`
+      : `Instagram sender ID ${thread.wa_id}`;
+  }
+
+  return `${thread.phone ?? 'No phone'} | WA ${thread.wa_id}`;
 }
 
 function latestPreview(thread: SupportThread) {
@@ -262,11 +291,11 @@ export default function SupportInboxClient() {
           <div>
             <p className="brand-kicker">Support Inbox</p>
             <h1 className="mt-3 text-3xl font-black tracking-tight text-[var(--text-primary)]">
-              WhatsApp conversations, AI handoffs, and human follow-through.
+              WhatsApp and Instagram conversations, AI handoffs, and human follow-through.
             </h1>
             <p className="mt-3 max-w-2xl text-sm leading-7 text-[var(--text-secondary)]">
-              Every inbound WhatsApp message lands here first, links to a Mechi player by phone when
-              possible, and either gets an AI answer or a clean handoff to the support lane.
+              Every inbound Meta message lands here first, links to a Mechi player when possible, and
+              either gets an AI answer or a clean handoff to the support lane.
             </p>
           </div>
 
@@ -327,7 +356,7 @@ export default function SupportInboxClient() {
             <div>
               <p className="section-title">Threads</p>
               <p className="mt-1 text-sm text-[var(--text-secondary)]">
-                Pick a conversation to review transcript, assignee, and AI confidence.
+                Pick a conversation to review transcript, assignee, delivery state, and AI confidence.
               </p>
             </div>
             <span className="brand-chip px-3 py-1">{threads.length} loaded</span>
@@ -358,8 +387,11 @@ export default function SupportInboxClient() {
                 >
                   <div className="flex flex-wrap items-center gap-2">
                     <p className="text-sm font-black text-[var(--text-primary)]">
-                      {thread.user?.username ?? thread.phone}
+                      {threadIdentity(thread)}
                     </p>
+                    <span className={`rounded-full px-2.5 py-1 text-[11px] font-bold ${channelClass(thread.channel)}`}>
+                      {channelLabel(thread.channel)}
+                    </span>
                     <span className={`rounded-full px-2.5 py-1 text-[11px] font-bold ${statusClass(thread.status)}`}>
                       {thread.status.replaceAll('_', ' ')}
                     </span>
@@ -369,7 +401,7 @@ export default function SupportInboxClient() {
                   </div>
 
                   <p className="mt-2 text-xs text-[var(--text-secondary)]">
-                    {thread.phone}
+                    {threadContactLine(thread)}
                     {thread.user?.plan ? ` | ${thread.user.plan}` : ''}
                     {thread.assignee?.username ? ` | assigned to ${thread.assignee.username}` : ' | unassigned'}
                   </p>
@@ -409,8 +441,13 @@ export default function SupportInboxClient() {
                   <div>
                     <div className="flex flex-wrap items-center gap-2">
                       <p className="text-xl font-black text-[var(--text-primary)]">
-                        {detail.thread.user?.username ?? detail.thread.phone}
+                        {threadIdentity(detail.thread)}
                       </p>
+                      <span
+                        className={`rounded-full px-2.5 py-1 text-[11px] font-bold ${channelClass(detail.thread.channel)}`}
+                      >
+                        {channelLabel(detail.thread.channel)}
+                      </span>
                       <span className={`rounded-full px-2.5 py-1 text-[11px] font-bold ${statusClass(detail.thread.status)}`}>
                         {detail.thread.status.replaceAll('_', ' ')}
                       </span>
@@ -419,7 +456,7 @@ export default function SupportInboxClient() {
                       </span>
                     </div>
                     <p className="mt-2 text-sm text-[var(--text-secondary)]">
-                      {detail.thread.phone} | WA {detail.thread.wa_id}
+                      {threadContactLine(detail.thread)}
                     </p>
                     <p className="mt-1 text-xs text-[var(--text-soft)]">
                       Last message {formatTimestamp(detail.thread.last_message_at)}
@@ -467,7 +504,7 @@ export default function SupportInboxClient() {
                     <p className="mt-1 text-xs text-[var(--text-secondary)]">
                       {detail.thread.user
                         ? `${detail.thread.user.plan} | ${detail.thread.user.region ?? 'No region'}`
-                        : 'Use relink below if this number belongs to a Mechi player.'}
+                        : 'Use relink below if this contact belongs to a Mechi player.'}
                     </p>
                   </div>
 
@@ -507,7 +544,7 @@ export default function SupportInboxClient() {
                     value={relinkLookup}
                     onChange={(event) => setRelinkLookup(event.target.value)}
                     className="input"
-                    placeholder="Enter username, user ID, or phone number"
+                    placeholder="Enter username, user ID, or phone / handle"
                   />
                   <button
                     type="button"
@@ -518,9 +555,9 @@ export default function SupportInboxClient() {
                     Relink
                   </button>
                 </div>
-                {detail.phoneMatches.length > 0 ? (
+                {detail.contactMatches.length > 0 ? (
                   <div className="mt-4 flex flex-wrap gap-2">
-                    {detail.phoneMatches.map((match) => (
+                    {detail.contactMatches.map((match) => (
                       <button
                         key={match.id}
                         type="button"
@@ -531,7 +568,7 @@ export default function SupportInboxClient() {
                         disabled={actioning !== null}
                         className="rounded-full border border-[var(--border-color)] bg-[var(--surface)] px-3 py-1.5 text-xs font-semibold text-[var(--text-secondary)]"
                       >
-                        {match.username} | {match.phone}
+                        {match.username} | {match.phone ?? match.whatsapp_number ?? 'No phone'}
                       </button>
                     ))}
                   </div>
@@ -547,7 +584,7 @@ export default function SupportInboxClient() {
                   value={reply}
                   onChange={(event) => setReply(event.target.value)}
                   className="input mt-4 min-h-32 resize-y py-3"
-                  placeholder="Send a human follow-up through the official Mechi WhatsApp lane..."
+                  placeholder={`Send a human follow-up through the official Mechi ${channelLabel(detail.thread.channel)} lane...`}
                 />
                 <div className="mt-3 flex flex-wrap gap-2">
                   <button
@@ -583,7 +620,9 @@ export default function SupportInboxClient() {
                     </div>
                   ) : (
                     detail.messages.map((message) => {
-                      const whatsappMeta = (message.meta?.whatsapp ?? {}) as Record<string, unknown>;
+                      const deliveryMeta = (
+                        message.meta?.delivery ?? message.meta?.whatsapp ?? message.meta?.instagram ?? {}
+                      ) as Record<string, unknown>;
                       return (
                         <div
                           key={message.id}
@@ -620,9 +659,15 @@ export default function SupportInboxClient() {
 
                           <div className="mt-3 flex flex-wrap gap-3 text-[11px] text-[var(--text-soft)]">
                             <span>{formatTimestamp(message.created_at)}</span>
-                            {typeof whatsappMeta.status === 'string' ? <span>WhatsApp: {whatsappMeta.status}</span> : null}
-                            {typeof whatsappMeta.error === 'string' && whatsappMeta.error ? (
-                              <span className="text-red-400">{whatsappMeta.error}</span>
+                            {typeof deliveryMeta.status === 'string' ? (
+                              <span>
+                                {typeof deliveryMeta.channel === 'string'
+                                  ? `${deliveryMeta.channel}: ${deliveryMeta.status}`
+                                  : `delivery: ${deliveryMeta.status}`}
+                              </span>
+                            ) : null}
+                            {typeof deliveryMeta.error === 'string' && deliveryMeta.error ? (
+                              <span className="text-red-400">{deliveryMeta.error}</span>
                             ) : null}
                           </div>
                         </div>

@@ -1,9 +1,10 @@
 CREATE TABLE IF NOT EXISTS support_threads (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   channel text NOT NULL DEFAULT 'whatsapp'
-    CHECK (channel IN ('whatsapp')),
-  phone text NOT NULL,
+    CHECK (channel IN ('whatsapp', 'instagram')),
+  phone text,
   wa_id text NOT NULL,
+  contact_name text,
   user_id uuid REFERENCES profiles(id) ON DELETE SET NULL,
   status text NOT NULL DEFAULT 'open'
     CHECK (status IN ('open', 'waiting_on_ai', 'waiting_on_human', 'resolved', 'blocked')),

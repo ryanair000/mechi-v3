@@ -16,16 +16,26 @@ interface InviteMenuProps {
   inviteCode: string;
   username: string;
   variant?: 'primary' | 'ghost' | 'inline';
+  onShared?: (action: string) => void | Promise<void>;
 }
 
 export function InviteMenu({
   inviteCode,
   username,
   variant = 'ghost',
+  onShared,
 }: InviteMenuProps) {
   const [open, setOpen] = useState(false);
   const inviteUrl = useMemo(() => getInviteUrl(inviteCode), [inviteCode]);
   const shareText = useMemo(() => inviteShareText(username), [username]);
+
+  const notifyShared = async (action: string) => {
+    try {
+      await onShared?.(action);
+    } catch {
+      // Keep invite actions resilient even if reward tracking fails.
+    }
+  };
 
   const buttonClass =
     variant === 'primary'
@@ -38,6 +48,7 @@ export function InviteMenu({
     const copied = await copyLink(value);
     if (copied) {
       toast.success(successMessage);
+      await notifyShared('invite_copy');
     } else {
       toast.error('Failed to copy');
     }
@@ -111,6 +122,7 @@ export function InviteMenu({
                 type="button"
                 onClick={() => {
                   shareToWhatsApp(shareText, inviteUrl);
+                  void notifyShared('invite_whatsapp');
                   setOpen(false);
                 }}
                 className="flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left transition-colors hover:bg-white/[0.04]"
@@ -134,6 +146,7 @@ export function InviteMenu({
                       url: inviteUrl,
                     });
                     if (shared) {
+                      await notifyShared('invite_native');
                       setOpen(false);
                     }
                   }}

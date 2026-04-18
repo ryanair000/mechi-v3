@@ -11,6 +11,7 @@ import {
   TRACKED_RANKED_GAMES,
   XP_RULES,
 } from '@/lib/gamification';
+import { processMatchRewardMilestones } from '@/lib/rewards';
 import { createServiceClient } from '@/lib/supabase';
 import { sendMatchDisputeEmail, sendResultConfirmedEmail } from '@/lib/email';
 import { notifyMatchDispute, notifyResultConfirmed } from '@/lib/whatsapp';
@@ -31,6 +32,8 @@ type ProfileRow = Record<string, unknown> & {
   username: string;
   phone?: string | null;
   email?: string | null;
+  invited_by?: string | null;
+  chezahub_user_id?: string | null;
   whatsapp_number?: string | null;
   whatsapp_notifications?: boolean | null;
   xp?: number | null;
@@ -865,6 +868,26 @@ export async function POST(
         ],
         supabase
       );
+
+      await processMatchRewardMilestones(supabase, {
+        matchId: id,
+        matchDate: todayNairobi,
+        winner: {
+          id: winnerId,
+          totalMatchesBefore: getTotalWins(winnerProfile) + getTotalLosses(winnerProfile),
+          firstMatchToday: winnerFirstMatchToday,
+          newStreak: winnerNewStreak,
+          invitedBy: winnerProfile.invited_by ?? null,
+          chezahubUserId: winnerProfile.chezahub_user_id ?? null,
+        },
+        loser: {
+          id: loserId,
+          totalMatchesBefore: getTotalWins(loserProfile) + getTotalLosses(loserProfile),
+          firstMatchToday: loserFirstMatchToday,
+          invitedBy: loserProfile.invited_by ?? null,
+          chezahubUserId: loserProfile.chezahub_user_id ?? null,
+        },
+      });
 
       return NextResponse.json({
         status: 'completed',

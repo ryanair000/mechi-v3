@@ -12,6 +12,10 @@ import {
 } from '@/lib/support-context';
 import { requestSupportReply, type SupportBridgeConversationMessage } from '@/lib/openclaw-bridge';
 import { executeWhatsAppPlayerAction } from '@/lib/whatsapp-player-actions';
+import {
+  formatInstagramDeliveryError,
+  sendSupportInstagramMessage,
+} from '@/lib/instagram';
 import { formatWhatsAppDeliveryError, sendSupportWhatsAppMessage } from '@/lib/whatsapp';
 import { writeAuditLog } from '@/lib/audit';
 import type {
@@ -20,6 +24,7 @@ import type {
   Profile,
   SupportMessage,
   SupportThread,
+  SupportThreadChannel,
   SupportThreadPriority,
   SupportThreadStatus,
 } from '@/types';
@@ -43,9 +48,10 @@ type SupportProfileRow = {
 
 type SupportThreadRow = {
   id: string;
-  channel: 'whatsapp';
-  phone: string;
+  channel: SupportThreadChannel;
+  phone?: string | null;
   wa_id: string;
+  contact_name?: string | null;
   user_id?: string | null;
   status: SupportThreadStatus;
   priority: SupportThreadPriority;
@@ -85,15 +91,30 @@ type WhatsAppWebhookPayload = {
   }>;
 };
 
-type NormalizedWhatsAppMessage = {
+type InstagramWebhookPayload = {
+  entry?: Array<{
+    changes?: Array<{
+      field?: string;
+      value?: Record<string, unknown>;
+    }>;
+  }>;
+};
+
+type NormalizedSupportMessage = {
   id: string;
+  channel: SupportThreadChannel;
   from: string;
-  phone: string;
+  phone?: string | null;
   messageType: string;
   body: string | null;
   timestampIso: string;
   contactName?: string | null;
   raw: Record<string, unknown>;
+};
+
+type NormalizedWhatsAppMessage = NormalizedSupportMessage & {
+  channel: 'whatsapp';
+  phone: string;
 };
 
 type NormalizedWhatsAppStatus = {
@@ -114,13 +135,27 @@ export interface SupportThreadListResult {
 export interface SupportThreadDetailResult {
   thread: SupportThread;
   messages: SupportMessage[];
-  phoneMatches: Array<
+  contactMatches: Array<
     Pick<Profile, 'id' | 'username' | 'phone' | 'whatsapp_number' | 'plan' | 'region'>
   >;
 }
 
 function getWhatsAppAppSecret() {
-  return (process.env.WHATSAPP_APP_SECRET ?? '').trim();
+  return (
+    process.env.WHATSAPP_APP_SECRET ??
+    process.env.META_APP_SECRET ??
+    process.env.INSTAGRAM_APP_SECRET ??
+    ''
+  ).trim();
+}
+
+function getInstagramAppSecret() {
+  return (
+    process.env.INSTAGRAM_APP_SECRET ??
+    process.env.META_APP_SECRET ??
+    process.env.WHATSAPP_APP_SECRET ??
+    ''
+  ).trim();
 }
 
 function safeTimingEqual(left: string, right: string) {
@@ -134,8 +169,11 @@ function safeTimingEqual(left: string, right: string) {
   return crypto.timingSafeEqual(leftBuffer, rightBuffer);
 }
 
-export function hasValidWhatsAppSignature(rawBody: string, signatureHeader: string | null) {
-  const appSecret = getWhatsAppAppSecret();
+function hasValidMetaSignature(
+  rawBody: string,
+  signatureHeader: string | null,
+  appSecret: string
+) {
   if (!appSecret || !signatureHeader) {
     return false;
   }
@@ -147,6 +185,14 @@ export function hasValidWhatsAppSignature(rawBody: string, signatureHeader: stri
 
   const digest = crypto.createHmac('sha256', appSecret).update(rawBody).digest('hex');
   return safeTimingEqual(signature, digest);
+}
+
+export function hasValidWhatsAppSignature(rawBody: string, signatureHeader: string | null) {
+  return hasValidMetaSignature(rawBody, signatureHeader, getWhatsAppAppSecret());
+}
+
+export function hasValidInstagramSignature(rawBody: string, signatureHeader: string | null) {
+  return hasValidMetaSignature(rawBody, signatureHeader, getInstagramAppSecret());
 }
 
 function getSupabase() {
@@ -239,8 +285,9 @@ function mapSupportThread(
   return {
     id: row.id,
     channel: row.channel,
-    phone: row.phone,
+    phone: row.phone ?? null,
     wa_id: row.wa_id,
+    contact_name: row.contact_name ?? null,
     user_id: row.user_id ?? null,
     status: row.status,
     priority: row.priority,
@@ -287,7 +334,7 @@ function getInlineMessageBody(message: Record<string, unknown>) {
   };
 }
 
-function extractNormalizedMessages(payload: WhatsAppWebhookPayload): NormalizedWhatsAppMessage[] {
+function extractNormalizedWhatsAppMessages(payload: WhatsAppWebhookPayload): NormalizedWhatsAppMessage[] {
   const normalized: NormalizedWhatsAppMessage[] = [];
 
   for (const entry of payload.entry ?? []) {
@@ -314,6 +361,7 @@ function extractNormalizedMessages(payload: WhatsAppWebhookPayload): NormalizedW
         const inline = getInlineMessageBody(message);
         normalized.push({
           id,
+          channel: 'whatsapp',
           from,
           phone: normalizePhoneNumber(from),
           messageType: inline.messageType,
@@ -357,6 +405,78 @@ function extractNormalizedStatuses(payload: WhatsAppWebhookPayload): NormalizedW
           raw: status,
         });
       }
+    }
+  }
+
+  return normalized;
+}
+
+function extractNormalizedInstagramMessages(payload: InstagramWebhookPayload): NormalizedSupportMessage[] {
+  const normalized: NormalizedSupportMessage[] = [];
+
+  for (const entry of payload.entry ?? []) {
+    for (const change of entry.changes ?? []) {
+      if (change.field !== 'messages') {
+        continue;
+      }
+
+      const value = change.value ?? {};
+      const sender = value.sender as { id?: string; username?: string } | undefined;
+      const message = value.message as
+        | {
+            mid?: string;
+            text?: string;
+            is_deleted?: boolean;
+            is_self?: boolean;
+            attachments?: Array<{ type?: string; payload?: { url?: string } }>;
+            reply_to?: Record<string, unknown>;
+          }
+        | undefined;
+
+      const from = typeof sender?.id === 'string' ? sender.id.trim() : '';
+      const id = typeof message?.mid === 'string' ? message.mid.trim() : '';
+
+      if (!from || !id || !message || message.is_deleted || message.is_self) {
+        continue;
+      }
+
+      const textBody = typeof message.text === 'string' ? message.text.trim() : null;
+      const firstAttachment = Array.isArray(message.attachments) ? message.attachments[0] : null;
+      const attachmentType =
+        typeof firstAttachment?.type === 'string' && firstAttachment.type.trim().length > 0
+          ? firstAttachment.type.trim().toLowerCase()
+          : null;
+      const attachmentUrl =
+        typeof firstAttachment?.payload?.url === 'string' && firstAttachment.payload.url.trim().length > 0
+          ? firstAttachment.payload.url.trim()
+          : null;
+
+      let body = textBody;
+      let messageType = textBody ? 'text' : attachmentType ?? 'unsupported';
+
+      if (!body && attachmentUrl) {
+        body = attachmentUrl;
+      }
+
+      if (!body && message.reply_to) {
+        body = '[Story reply]';
+        messageType = 'reply';
+      }
+
+      normalized.push({
+        id,
+        channel: 'instagram',
+        from,
+        phone: null,
+        messageType,
+        body: body ?? null,
+        timestampIso: toIsoFromUnix(value.timestamp),
+        contactName:
+          typeof sender?.username === 'string' && sender.username.trim().length > 0
+            ? sender.username.trim()
+            : null,
+        raw: value,
+      });
     }
   }
 
@@ -439,13 +559,13 @@ function toSupportUserSummary(profile: SupportProfileRow | null): SupportUserSum
   };
 }
 
-async function getExistingThread(waId: string) {
+async function getExistingThread(channel: SupportThreadChannel, externalId: string) {
   const supabase = getSupabase();
   const { data } = await supabase
     .from('support_threads')
     .select('*')
-    .eq('channel', 'whatsapp')
-    .eq('wa_id', waId)
+    .eq('channel', channel)
+    .eq('wa_id', externalId)
     .maybeSingle();
 
   return (data as SupportThreadRow | null) ?? null;
@@ -470,15 +590,17 @@ async function updateThread(
 }
 
 async function upsertInboundThread(params: {
-  waId: string;
-  phone: string;
+  channel: SupportThreadChannel;
+  externalId: string;
+  phone?: string | null;
+  contactName?: string | null;
   user: SupportProfileRow | null;
   lastMessageAt: string;
   priority: SupportThreadPriority;
 }) {
   const supabase = getSupabase();
   const nowIso = new Date().toISOString();
-  const existing = await getExistingThread(params.waId);
+  const existing = await getExistingThread(params.channel, params.externalId);
 
   if (existing) {
     const nextStatus: SupportThreadStatus =
@@ -491,7 +613,8 @@ async function upsertInboundThread(params: {
     const { data } = await supabase
       .from('support_threads')
       .update({
-        phone: params.phone || existing.phone,
+        phone: params.phone ?? existing.phone ?? null,
+        contact_name: params.contactName ?? existing.contact_name ?? null,
         user_id: params.user?.id ?? existing.user_id ?? null,
         priority: clampPriority(existing.priority, params.priority),
         status: nextStatus,
@@ -508,9 +631,10 @@ async function upsertInboundThread(params: {
   const { data } = await supabase
     .from('support_threads')
     .insert({
-      channel: 'whatsapp',
-      phone: params.phone,
-      wa_id: params.waId,
+      channel: params.channel,
+      phone: params.phone ?? null,
+      wa_id: params.externalId,
+      contact_name: params.contactName ?? null,
       user_id: params.user?.id ?? null,
       status: 'open',
       priority: params.priority,
@@ -603,21 +727,56 @@ async function sendOutboundSupportMessage(params: {
   failureStatus?: SupportThreadStatus;
   escalationReason?: string | null;
 }) {
-  const delivery = await sendSupportWhatsAppMessage({
-    whatsappNumber: params.thread.wa_id || params.thread.phone,
-    message: params.message,
-  });
+  const delivery =
+    params.thread.channel === 'instagram'
+      ? await sendSupportInstagramMessage({
+          recipientId: params.thread.wa_id,
+          message: params.message,
+        })
+      : await sendSupportWhatsAppMessage({
+          whatsappNumber: params.thread.wa_id || params.thread.phone || '',
+          message: params.message,
+        });
 
   const nowIso = new Date().toISOString();
+  const deliveryError =
+    params.thread.channel === 'instagram'
+      ? formatInstagramDeliveryError(
+          delivery as Parameters<typeof formatInstagramDeliveryError>[0]
+        )
+      : formatWhatsAppDeliveryError(
+          delivery as Parameters<typeof formatWhatsAppDeliveryError>[0]
+        );
   const deliveryMeta = {
     ...(params.meta ?? {}),
-    whatsapp: {
+    delivery: {
+      channel: params.thread.channel,
       status: delivery.ok ? 'sent' : 'failed',
       transport_status: delivery.status,
       message_id: delivery.messageId ?? null,
-      wa_id: delivery.waId ?? null,
-      error: delivery.ok ? null : formatWhatsAppDeliveryError(delivery),
+      participant_id:
+        'recipientId' in delivery ? delivery.recipientId ?? null : ('waId' in delivery ? delivery.waId ?? null : null),
+      error: delivery.ok ? null : deliveryError,
     },
+    ...(params.thread.channel === 'whatsapp'
+      ? {
+          whatsapp: {
+            status: delivery.ok ? 'sent' : 'failed',
+            transport_status: delivery.status,
+            message_id: delivery.messageId ?? null,
+            wa_id: 'waId' in delivery ? delivery.waId ?? null : null,
+            error: delivery.ok ? null : deliveryError,
+          },
+        }
+      : {
+          instagram: {
+            status: delivery.ok ? 'sent' : 'failed',
+            transport_status: delivery.status,
+            message_id: delivery.messageId ?? null,
+            recipient_id: 'recipientId' in delivery ? delivery.recipientId ?? null : null,
+            error: delivery.ok ? null : deliveryError,
+          },
+        }),
   };
 
   const supportMessage = await insertSupportMessageRow({
@@ -674,6 +833,13 @@ async function recordOutboundStatus(status: NormalizedWhatsAppStatus) {
 
   const nextMeta = {
     ...(existing.meta ?? {}),
+    delivery: {
+      ...(((existing.meta ?? {}) as { delivery?: Record<string, unknown> }).delivery ?? {}),
+      status: status.status,
+      status_timestamp: status.timestampIso,
+      participant_id: status.recipientId ?? null,
+      last_status_payload: status.raw,
+    },
     whatsapp: {
       ...(((existing.meta ?? {}) as { whatsapp?: Record<string, unknown> }).whatsapp ?? {}),
       status: status.status,
@@ -696,14 +862,15 @@ async function recordOutboundStatus(status: NormalizedWhatsAppStatus) {
   return true;
 }
 
-async function handleInboundSupportMessage(message: NormalizedWhatsAppMessage) {
+async function handleInboundSupportMessage(message: NormalizedSupportMessage) {
   const existingMessage = await getMessageByProviderId(message.id);
   if (existingMessage) {
     return { duplicate: true };
   }
 
-  const existingThread = await getExistingThread(message.from);
-  const linkedProfile = await findLinkedProfileByPhone(message.from);
+  const existingThread = await getExistingThread(message.channel, message.from);
+  const linkedProfile =
+    message.channel === 'whatsapp' ? await findLinkedProfileByPhone(message.from) : null;
   const userSummary = toSupportUserSummary(linkedProfile);
   const classification = classifySupportMessage({
     body: message.body,
@@ -713,8 +880,10 @@ async function handleInboundSupportMessage(message: NormalizedWhatsAppMessage) {
   });
 
   const thread = await upsertInboundThread({
-    waId: message.from,
-    phone: message.phone,
+    channel: message.channel,
+    externalId: message.from,
+    phone: message.phone ?? null,
+    contactName: message.contactName ?? null,
     user: linkedProfile,
     lastMessageAt: message.timestampIso,
     priority: classification.priority,
@@ -798,7 +967,7 @@ async function handleInboundSupportMessage(message: NormalizedWhatsAppMessage) {
   try {
     const bridgeResult = await requestSupportReply({
       thread_id: thread.id,
-      phone: thread.phone,
+      phone: thread.phone ?? `${thread.channel}:${thread.wa_id}`,
       user_summary: userSummary,
       conversation,
       mechi_context: buildMechiSupportContext(userSummary),
@@ -868,7 +1037,7 @@ async function handleInboundSupportMessage(message: NormalizedWhatsAppMessage) {
 
 export async function processWhatsAppWebhook(payload: WhatsAppWebhookPayload) {
   const statuses = extractNormalizedStatuses(payload);
-  const messages = extractNormalizedMessages(payload);
+  const messages = extractNormalizedWhatsAppMessages(payload);
   let processedStatuses = 0;
   let processedMessages = 0;
 
@@ -889,6 +1058,23 @@ export async function processWhatsAppWebhook(payload: WhatsAppWebhookPayload) {
   return {
     processedMessages,
     processedStatuses,
+  };
+}
+
+export async function processInstagramWebhook(payload: InstagramWebhookPayload) {
+  const messages = extractNormalizedInstagramMessages(payload);
+  let processedMessages = 0;
+
+  for (const message of messages) {
+    const result = await handleInboundSupportMessage(message);
+    if (!result.duplicate) {
+      processedMessages += 1;
+    }
+  }
+
+  return {
+    processedMessages,
+    processedStatuses: 0,
   };
 }
 
@@ -1021,8 +1207,9 @@ export async function getSupportThreadList(params?: {
     const lowercaseQuery = rawQuery.toLowerCase();
     mappedThreads = mappedThreads.filter((thread) => {
       return [
-        thread.phone,
+        thread.phone ?? '',
         thread.wa_id,
+        thread.contact_name ?? '',
         thread.user?.username ?? '',
         thread.user?.phone ?? '',
         thread.user?.whatsapp_number ?? '',
@@ -1044,9 +1231,26 @@ export async function getSupportThreadList(params?: {
   } satisfies SupportThreadListResult;
 }
 
-async function resolvePhoneMatches(phoneOrWaId: string) {
-  const variants = getPhoneLookupVariants(phoneOrWaId);
+async function resolveContactMatches(thread: SupportThreadRow) {
   const supabase = getSupabase();
+  if (thread.channel === 'instagram') {
+    const lookup = thread.contact_name?.trim();
+    if (!lookup) {
+      return [];
+    }
+
+    const { data } = await supabase
+      .from('profiles')
+      .select('id, username, phone, whatsapp_number, plan, region')
+      .ilike('username', lookup)
+      .limit(5);
+
+    return (data ?? []) as Array<
+      Pick<Profile, 'id' | 'username' | 'phone' | 'whatsapp_number' | 'plan' | 'region'>
+    >;
+  }
+
+  const variants = getPhoneLookupVariants(thread.wa_id || thread.phone || '');
   const [whatsappMatches, phoneMatches] = await Promise.all([
     supabase
       .from('profiles')
@@ -1094,11 +1298,11 @@ export async function getSupportThreadDetail(threadId: string) {
     .eq('thread_id', threadId)
     .order('created_at', { ascending: true });
 
-  const [profilesById, assigneesById, latestMessagesByThreadId, phoneMatches] = await Promise.all([
+  const [profilesById, assigneesById, latestMessagesByThreadId, contactMatches] = await Promise.all([
     getSupportProfilesByIds(uniqueIds([thread.user_id])),
     getAssigneesByIds(uniqueIds([thread.assigned_to])),
     getLatestMessagesByThreadIds([threadId]),
-    resolvePhoneMatches(thread.wa_id || thread.phone),
+    resolveContactMatches(thread),
   ]);
 
   return {
@@ -1108,7 +1312,7 @@ export async function getSupportThreadDetail(threadId: string) {
       latestMessage: latestMessagesByThreadId.get(thread.id) ?? null,
     }),
     messages: ((messagesRaw ?? []) as SupportMessageRow[]).map(mapSupportMessage),
-    phoneMatches,
+    contactMatches,
   } satisfies SupportThreadDetailResult;
 }
 
@@ -1238,8 +1442,9 @@ export async function sendManualSupportReply(params: {
     thread: {
       id: threadDetail.thread.id,
       channel: threadDetail.thread.channel,
-      phone: threadDetail.thread.phone,
+      phone: threadDetail.thread.phone ?? null,
       wa_id: threadDetail.thread.wa_id,
+      contact_name: threadDetail.thread.contact_name ?? null,
       user_id: threadDetail.thread.user_id ?? null,
       status: threadDetail.thread.status,
       priority: threadDetail.thread.priority,
@@ -1274,7 +1479,15 @@ export async function sendManualSupportReply(params: {
   });
 
   if (!result.delivery.ok) {
-    throw new Error(formatWhatsAppDeliveryError(result.delivery));
+    throw new Error(
+      threadDetail.thread.channel === 'instagram'
+        ? formatInstagramDeliveryError(
+            result.delivery as Parameters<typeof formatInstagramDeliveryError>[0]
+          )
+        : formatWhatsAppDeliveryError(
+            result.delivery as Parameters<typeof formatWhatsAppDeliveryError>[0]
+          )
+    );
   }
 
   return getSupportThreadDetail(params.threadId);

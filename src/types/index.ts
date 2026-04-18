@@ -34,7 +34,7 @@ export type MatchChallengeStatus =
   | 'declined'
   | 'cancelled'
   | 'expired';
-export type SupportThreadChannel = 'whatsapp';
+export type SupportThreadChannel = 'whatsapp' | 'instagram';
 export type SupportThreadStatus =
   | 'open'
   | 'waiting_on_ai'
@@ -153,6 +153,11 @@ export interface Profile {
   win_streak?: number;
   max_win_streak?: number;
   last_match_date?: string | null;
+  reward_points_available?: number;
+  reward_points_pending?: number;
+  reward_points_lifetime?: number;
+  chezahub_user_id?: string | null;
+  chezahub_linked_at?: string | null;
   plan?: Plan;
   plan_since?: string | null;
   plan_expires_at?: string | null;
@@ -271,8 +276,9 @@ export interface SupportMessage {
 export interface SupportThread {
   id: string;
   channel: SupportThreadChannel;
-  phone: string;
+  phone?: string | null;
   wa_id: string;
+  contact_name?: string | null;
   user_id?: string | null;
   status: SupportThreadStatus;
   priority: SupportThreadPriority;
@@ -408,6 +414,11 @@ export interface AuthUser {
   mp?: number;
   win_streak?: number;
   max_win_streak?: number;
+  reward_points_available?: number;
+  reward_points_pending?: number;
+  reward_points_lifetime?: number;
+  chezahub_user_id?: string | null;
+  chezahub_linked_at?: string | null;
   plan?: Plan;
   plan_since?: string | null;
   plan_expires_at?: string | null;

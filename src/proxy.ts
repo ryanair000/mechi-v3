@@ -41,6 +41,7 @@ const ADMIN_HOST_PATH_ALIASES: Record<string, string> = {
   '/tournaments': '/admin/tournaments',
   '/support': '/admin/support',
   '/whatsapp': '/admin/whatsapp',
+  '/instagram': '/admin/instagram',
   '/logs': '/admin/logs',
 };
 

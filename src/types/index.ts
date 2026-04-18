@@ -198,6 +198,8 @@ export interface QueueEntry {
 }
 
 export type MatchStatus = 'pending' | 'completed' | 'disputed' | 'cancelled';
+export type MatchChatMessageType = 'text' | 'system' | 'quick_reply';
+export type MatchChatSenderType = 'player' | 'system' | 'admin';
 
 export interface Match {
   id: string;
@@ -230,6 +232,18 @@ export interface Match {
 export interface MatchWithProfiles extends Match {
   player1: Pick<Profile, 'id' | 'username' | 'game_ids' | 'platforms'>;
   player2: Pick<Profile, 'id' | 'username' | 'game_ids' | 'platforms'>;
+}
+
+export interface MatchChatMessage {
+  id: string;
+  match_id: string;
+  sender_user_id?: string | null;
+  sender_type: MatchChatSenderType;
+  message_type: MatchChatMessageType;
+  body?: string | null;
+  meta?: Record<string, unknown> | null;
+  created_at: string;
+  sender?: Pick<Profile, 'id' | 'username' | 'avatar_url'> | null;
 }
 
 export interface MatchChallenge {

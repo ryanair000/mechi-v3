@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireActiveAccessProfile } from '@/lib/access';
+import { createMatchChatMessage } from '@/lib/match-chat';
 import { createServiceClient } from '@/lib/supabase';
 
 export async function POST(
@@ -43,6 +44,16 @@ export async function POST(
     if (updateError) {
       return NextResponse.json({ error: 'Failed to cancel match' }, { status: 500 });
     }
+
+    await createMatchChatMessage({
+      matchId: id,
+      senderType: 'system',
+      body: `${authUser.username} cancelled this match. The thread is now read-only.`,
+      meta: {
+        event: 'match_cancelled',
+        cancelled_by: authUser.id,
+      },
+    });
 
     return NextResponse.json({ success: true });
   } catch (err) {

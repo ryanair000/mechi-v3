@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireActiveAccessProfile } from '@/lib/access';
+import { createMatchChatMessage } from '@/lib/match-chat';
 import { createServiceClient } from '@/lib/supabase';
 import { v2 as cloudinary } from 'cloudinary';
 
@@ -78,6 +79,17 @@ export async function POST(
     if (updateError) {
       return NextResponse.json({ error: 'Failed to save screenshot' }, { status: 500 });
     }
+
+    await createMatchChatMessage({
+      matchId: id,
+      senderType: 'system',
+      body: `${authUser.username} uploaded a dispute screenshot for review.`,
+      meta: {
+        event: 'dispute_proof_uploaded',
+        uploaded_by: authUser.id,
+        screenshot_url: screenshotUrl,
+      },
+    });
 
     return NextResponse.json({ screenshot_url: screenshotUrl });
   } catch (err) {

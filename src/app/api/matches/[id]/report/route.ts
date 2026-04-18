@@ -23,6 +23,7 @@ import {
   getGameWinsKey,
   requiresMatchScoreReport,
 } from '@/lib/config';
+import { createMatchChatMessage } from '@/lib/match-chat';
 import { createNotifications } from '@/lib/notifications';
 import { advanceTournamentAfterMatch } from '@/lib/tournaments';
 import type { GameKey, GamificationResult, Match } from '@/types';
@@ -515,6 +516,16 @@ export async function POST(
           supabase
         );
 
+        await createMatchChatMessage({
+          matchId: id,
+          senderType: 'system',
+          body: 'Reports did not match. This match is now disputed while proof or admin review resolves it.',
+          meta: {
+            event: 'match_disputed',
+            disputed_by: authUser.id,
+          },
+        });
+
         return NextResponse.json({ status: 'disputed' });
       }
 
@@ -578,6 +589,18 @@ export async function POST(
           })),
           supabase
         );
+
+        await createMatchChatMessage({
+          matchId: id,
+          senderType: 'system',
+          body: `Draw confirmed at ${scoreline}. This match is now closed.`,
+          meta: {
+            event: 'match_completed',
+            result: 'draw',
+            player1_score: finalPlayer1Score,
+            player2_score: finalPlayer2Score,
+          },
+        });
 
         return NextResponse.json({
           status: 'completed',
@@ -890,6 +913,21 @@ export async function POST(
         },
       });
 
+      await createMatchChatMessage({
+        matchId: id,
+        senderType: 'system',
+        body:
+          usesScoreReport && finalPlayer1Score !== null && finalPlayer2Score !== null
+            ? `Result confirmed. ${winnerProfile.username} won ${formatScoreline(finalPlayer1Score, finalPlayer2Score)}.`
+            : `Result confirmed. ${winnerProfile.username} won the match.`,
+        meta: {
+          event: 'match_completed',
+          winner_id: winnerId,
+          player1_score: finalPlayer1Score,
+          player2_score: finalPlayer2Score,
+        },
+      });
+
       return NextResponse.json({
         status: 'completed',
         winner_id: winnerId,
@@ -926,6 +964,18 @@ export async function POST(
       ],
       supabase
     );
+
+    await createMatchChatMessage({
+      matchId: id,
+      senderType: 'system',
+      body: `${authUser.username} submitted a result. Waiting for the other player to confirm it.`,
+      meta: {
+        event: 'match_reported',
+        reported_by: authUser.id,
+        player1_score: reportedPlayer1Score,
+        player2_score: reportedPlayer2Score,
+      },
+    });
 
     return NextResponse.json({ status: 'waiting_for_opponent' });
   } catch (err) {

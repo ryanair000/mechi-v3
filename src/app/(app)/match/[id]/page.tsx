@@ -16,6 +16,7 @@ import {
   X,
 } from 'lucide-react';
 import { ActionFeedback, type ActionFeedbackState } from '@/components/ActionFeedback';
+import { MatchChatPanel } from '@/components/MatchChatPanel';
 import { useAuth, useAuthFetch } from '@/components/AuthProvider';
 import { createClient } from '@/lib/supabase';
 import {
@@ -31,7 +32,7 @@ import {
 import { PlatformBadge } from '@/components/PlatformBadge';
 import { PlatformLogo } from '@/components/PlatformLogo';
 import { RatingBadge } from '@/components/RatingBadge';
-import type { GameKey, GamificationResult, PlatformKey } from '@/types';
+import type { GameKey, GamificationResult, MatchChatMessage, PlatformKey } from '@/types';
 
 interface MatchPlayer {
   id: string;
@@ -70,6 +71,14 @@ interface MatchData {
 
 const QUICK_RESULT_COMMENTS = ['GG', 'Close one', 'Lucky', 'Run it back'] as const;
 const MATCH_STATUS_POLL_INTERVAL_MS = 3000;
+const MATCH_CHAT_POLL_INTERVAL_MS = 5000;
+const MATCH_CHAT_QUICK_REPLIES = [
+  "I'm here",
+  'Send room code',
+  'Ready in 2 mins',
+  'Join now',
+  'Report result now',
+] as const;
 
 export default function MatchPage() {
   const params = useParams();
@@ -94,6 +103,11 @@ export default function MatchPage() {
   const [reportScores, setReportScores] = useState({ player1: '', player2: '' });
   const [keepResultOpen, setKeepResultOpen] = useState(false);
   const [autoCloseCountdown, setAutoCloseCountdown] = useState<number | null>(null);
+  const [chatMessages, setChatMessages] = useState<MatchChatMessage[]>([]);
+  const [chatLoading, setChatLoading] = useState(true);
+  const [chatInput, setChatInput] = useState('');
+  const [sendingChat, setSendingChat] = useState(false);
+  const [chatLocked, setChatLocked] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const channelRef = useRef<{ send: (payload: unknown) => Promise<unknown> } | null>(null);
   const previousStatusRef = useRef<MatchData['status'] | null>(null);
@@ -118,8 +132,38 @@ export default function MatchPage() {
     setLoading(false);
   }, [authFetch, matchId, router]);
 
+  const fetchChat = useCallback(
+    async (silent = false) => {
+      if (!silent) {
+        setChatLoading(true);
+      }
+
+      try {
+        const res = await authFetch(`/api/matches/${matchId}/chat`, { cache: 'no-store' });
+
+        if (!res.ok) {
+          return;
+        }
+
+        const data = (await res.json()) as {
+          messages?: MatchChatMessage[];
+          can_reply?: boolean;
+        };
+
+        setChatMessages(data.messages ?? []);
+        setChatLocked(data.can_reply === false);
+      } finally {
+        if (!silent) {
+          setChatLoading(false);
+        }
+      }
+    },
+    [authFetch, matchId]
+  );
+
   useEffect(() => {
     void fetchMatch();
+    void fetchChat();
     const supabase = createClient();
     const channel = supabase
       .channel(`match_${matchId}`)
@@ -152,6 +196,32 @@ export default function MatchPage() {
       )
       .on(
         'broadcast',
+        { event: 'match-chat-message' },
+        ({ payload }) => {
+          const nextPayload = payload as
+            | {
+                matchId?: string;
+                fromUserId?: string;
+                fromUsername?: string;
+                preview?: string;
+              }
+            | undefined;
+
+          if (nextPayload?.matchId !== matchId) {
+            return;
+          }
+
+          void fetchChat(true);
+
+          if (nextPayload.fromUserId && nextPayload.fromUserId !== user?.id && nextPayload.preview) {
+            toast(`${nextPayload.fromUsername ?? 'Opponent'}: ${nextPayload.preview}`, {
+              icon: '💬',
+            });
+          }
+        }
+      )
+      .on(
+        'broadcast',
         { event: 'match-updated' },
         ({ payload }) => {
           const nextPayload = payload as { matchId?: string } | undefined;
@@ -161,6 +231,7 @@ export default function MatchPage() {
           }
 
           void fetchMatch();
+          void fetchChat(true);
         }
       )
       .subscribe();
@@ -171,7 +242,7 @@ export default function MatchPage() {
       channelRef.current = null;
       channel.unsubscribe();
     };
-  }, [matchId, fetchMatch, user?.id]);
+  }, [matchId, fetchChat, fetchMatch, user?.id]);
 
   useEffect(() => {
     if (match?.status !== 'completed') {
@@ -250,6 +321,22 @@ export default function MatchPage() {
 
     return () => window.clearInterval(pollTimer);
   }, [fetchMatch, match, user]);
+
+  useEffect(() => {
+    if (!match || !user || !['pending', 'disputed'].includes(match.status)) {
+      return;
+    }
+
+    const pollTimer = window.setInterval(() => {
+      if (document.visibilityState === 'hidden') {
+        return;
+      }
+
+      void fetchChat(true);
+    }, MATCH_CHAT_POLL_INTERVAL_MS);
+
+    return () => window.clearInterval(pollTimer);
+  }, [fetchChat, match, user]);
 
   useEffect(() => {
     if (!match) {
@@ -513,6 +600,7 @@ export default function MatchPage() {
       });
       toast.success('Screenshot uploaded');
       void fetchMatch();
+      void fetchChat(true);
     } catch {
       setDisputeFeedback({
         tone: 'error',
@@ -542,6 +630,59 @@ export default function MatchPage() {
       }
     } finally {
       setCancelling(false);
+    }
+  };
+
+  const handleSendChat = async (
+    nextMessage = chatInput,
+    messageType: MatchChatMessage['message_type'] = 'text'
+  ) => {
+    const trimmedMessage = nextMessage.trim();
+
+    if (!trimmedMessage) {
+      return;
+    }
+
+    setSendingChat(true);
+
+    try {
+      const res = await authFetch(`/api/matches/${matchId}/chat`, {
+        method: 'POST',
+        body: JSON.stringify({
+          message: trimmedMessage,
+          message_type: messageType,
+        }),
+      });
+
+      const data = (await res.json()) as {
+        error?: string;
+        message?: MatchChatMessage;
+      };
+
+      if (!res.ok || !data.message) {
+        toast.error(data.error ?? 'Could not send message');
+        return;
+      }
+
+      setChatMessages((current) => [...current, data.message as MatchChatMessage]);
+      setChatInput('');
+
+      if (channelRef.current) {
+        void channelRef.current.send({
+          type: 'broadcast',
+          event: 'match-chat-message',
+          payload: {
+            matchId,
+            fromUserId: user?.id,
+            fromUsername: user?.username ?? 'Player',
+            preview: trimmedMessage,
+          },
+        });
+      }
+    } catch {
+      toast.error('Network error');
+    } finally {
+      setSendingChat(false);
     }
   };
 
@@ -734,6 +875,20 @@ export default function MatchPage() {
             </div>
           </div>
         </div>
+
+        <MatchChatPanel
+          currentUserId={user.id}
+          opponentUsername={opponent.username}
+          messages={chatMessages}
+          loading={chatLoading}
+          canReply={!chatLocked}
+          input={chatInput}
+          sending={sendingChat}
+          quickReplies={MATCH_CHAT_QUICK_REPLIES}
+          onInputChange={setChatInput}
+          onQuickReply={(value) => void handleSendChat(value, 'quick_reply')}
+          onSend={() => void handleSendChat()}
+        />
 
         {match.status === 'pending' && (
           <div className="card mb-4 p-5">

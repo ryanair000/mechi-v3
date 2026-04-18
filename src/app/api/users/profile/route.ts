@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getAuthUser } from '@/lib/auth';
+import { requireActiveAccessProfile } from '@/lib/access';
 import {
   PLATFORMS,
   getConfiguredPlatformForGame,
@@ -62,10 +62,12 @@ function normalizeGameIds(value: Record<string, unknown>): Record<string, string
 }
 
 export async function GET(request: NextRequest) {
-  const authUser = getAuthUser(request);
-  if (!authUser) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const access = await requireActiveAccessProfile(request);
+  if (access.response) {
+    return access.response;
   }
+
+  const authUser = access.profile;
 
   try {
     const supabase = createServiceClient();
@@ -73,7 +75,7 @@ export async function GET(request: NextRequest) {
     const { data: profile, error } = await supabase
       .from('profiles')
       .select('*')
-      .eq('id', authUser.sub)
+      .eq('id', authUser.id)
       .single();
 
     if (error || !profile) {
@@ -109,10 +111,12 @@ export async function GET(request: NextRequest) {
 }
 
 export async function PATCH(request: NextRequest) {
-  const authUser = getAuthUser(request);
-  if (!authUser) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const access = await requireActiveAccessProfile(request);
+  if (access.response) {
+    return access.response;
   }
+
+  const authUser = access.profile;
 
   try {
     const body = await request.json();
@@ -133,7 +137,7 @@ export async function PATCH(request: NextRequest) {
     const { data: currentProfile, error: currentProfileError } = await supabase
       .from('profiles')
       .select('*')
-      .eq('id', authUser.sub)
+      .eq('id', authUser.id)
       .single();
 
     if (currentProfileError || !currentProfile) {
@@ -329,7 +333,7 @@ export async function PATCH(request: NextRequest) {
     let updateResult = await supabase
       .from('profiles')
       .update(finalUpdateData)
-      .eq('id', authUser.sub)
+      .eq('id', authUser.id)
       .select()
       .single();
 
@@ -344,7 +348,7 @@ export async function PATCH(request: NextRequest) {
       updateResult = await supabase
         .from('profiles')
         .update(finalUpdateData)
-        .eq('id', authUser.sub)
+        .eq('id', authUser.id)
         .select()
         .single();
     }
@@ -360,7 +364,7 @@ export async function PATCH(request: NextRequest) {
       updateResult = await supabase
         .from('profiles')
         .update(finalUpdateData)
-        .eq('id', authUser.sub)
+        .eq('id', authUser.id)
         .select()
         .single();
     }

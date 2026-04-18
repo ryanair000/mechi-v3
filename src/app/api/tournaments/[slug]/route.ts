@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getAuthUser } from '@/lib/auth';
+import { requireActiveAccessProfile } from '@/lib/access';
 import { createServiceClient } from '@/lib/supabase';
 import {
   CONFIRMED_PAYMENT_STATUSES,
@@ -42,7 +42,12 @@ export async function GET(
   { params }: { params: Promise<{ slug: string }> }
 ) {
   const { slug } = await params;
-  const authUser = getAuthUser(request);
+  const access = await requireActiveAccessProfile(request);
+  if (access.response) {
+    return access.response;
+  }
+
+  const authUser = access.profile;
 
   try {
     const supabase = createServiceClient();
@@ -87,9 +92,7 @@ export async function GET(
         player.payment_status as (typeof CONFIRMED_PAYMENT_STATUSES)[number]
       )
     ).length;
-    const viewerPlayer = authUser
-      ? playerRows.find((player) => player.user_id === authUser.sub) ?? null
-      : null;
+    const viewerPlayer = playerRows.find((player) => player.user_id === authUser.id) ?? null;
 
     return NextResponse.json({
       tournament: {
@@ -107,7 +110,7 @@ export async function GET(
       })),
       viewer: {
         joined: Boolean(viewerPlayer),
-        isOrganizer: authUser?.sub === tournament.organizer_id,
+        isOrganizer: authUser.id === tournament.organizer_id,
         paymentStatus: viewerPlayer?.payment_status ?? null,
       },
     });

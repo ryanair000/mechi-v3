@@ -24,6 +24,7 @@ import { APP_URL } from '@/lib/urls';
 const ADMIN_NAV = [
   { href: '/admin', label: 'Overview', icon: BarChart2 },
   { href: '/admin/users', label: 'Users', icon: Users },
+  { href: '/admin/rewards', label: 'Rewards', icon: Shield },
   { href: '/admin/queue', label: 'Queue', icon: Clock3 },
   { href: '/admin/lobbies', label: 'Lobbies', icon: DoorOpen },
   { href: '/admin/matches', label: 'Matches', icon: Swords },

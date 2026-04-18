@@ -1,5 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { REWARD_RULES, applyRewardEvent, hasValidSignedAction, hashRewardBindingValue, verifyChezahubLinkToken } from '@/lib/rewards';
+import {
+  REWARD_RULES,
+  addRewardReviewQueueItem,
+  applyRewardEvent,
+  hasValidSignedAction,
+  hashRewardBindingValue,
+  verifyChezahubLinkToken,
+} from '@/lib/rewards';
 import { createServiceClient } from '@/lib/supabase';
 
 type LinkConfirmBody = {
@@ -76,6 +83,18 @@ export async function POST(request: NextRequest) {
   };
 
   if (profile.chezahub_user_id && profile.chezahub_user_id !== chezahubUserId) {
+    await addRewardReviewQueueItem(supabase, {
+      userId: profile.id,
+      reason: 'chezahub_link_conflict',
+      dedupeKey: `reward-review:link-conflict:${profile.id}`,
+      metadata: {
+        existing_chezahub_user_id: profile.chezahub_user_id,
+        attempted_chezahub_user_id: chezahubUserId,
+        customer_email: body.customer_email ?? null,
+        customer_phone: body.customer_phone ?? null,
+      },
+    }).catch(() => null);
+
     await supabase
       .from('reward_link_sessions')
       .update({

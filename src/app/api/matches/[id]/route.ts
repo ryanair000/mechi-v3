@@ -1,16 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getAuthUser } from '@/lib/auth';
+import { requireActiveAccessProfile } from '@/lib/access';
 import { createServiceClient } from '@/lib/supabase';
 
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const authUser = getAuthUser(request);
-  if (!authUser) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const access = await requireActiveAccessProfile(request);
+  if (access.response) {
+    return access.response;
   }
 
+  const authUser = access.profile;
   const { id } = await params;
 
   try {
@@ -27,7 +28,7 @@ export async function GET(
     }
 
     // Verify user is part of this match
-    if (match.player1_id !== authUser.sub && match.player2_id !== authUser.sub) {
+    if (match.player1_id !== authUser.id && match.player2_id !== authUser.id) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 

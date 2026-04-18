@@ -405,14 +405,37 @@ export async function addRewardReviewQueueItem(
   params: {
     userId?: string | null;
     reason: string;
+    dedupeKey?: string | null;
     metadata?: Record<string, unknown> | null;
   }
 ) {
-  await supabase.from('reward_review_queue').insert({
+  const dedupeKey = params.dedupeKey?.trim() ? params.dedupeKey.trim() : null;
+
+  if (dedupeKey) {
+    const { data: existingItem } = await supabase
+      .from('reward_review_queue')
+      .select('id')
+      .eq('dedupe_key', dedupeKey)
+      .in('status', ['open', 'reviewing'])
+      .maybeSingle();
+
+    if (existingItem?.id) {
+      return existingItem.id;
+    }
+  }
+
+  const { error } = await supabase.from('reward_review_queue').insert({
     user_id: params.userId ?? null,
     reason: params.reason,
+    dedupe_key: dedupeKey,
     metadata: params.metadata ?? {},
   });
+
+  if (error && error.code !== '23505') {
+    throw error;
+  }
+
+  return null;
 }
 
 function getIsoWeekStamp(dayStamp: string) {
@@ -881,6 +904,7 @@ export async function handleChezahubOrderEvent(
       await addRewardReviewQueueItem(supabase, {
         userId: profile.id,
         reason: 'matching_contact_details',
+        dedupeKey: `reward-review:matching-contact:${profile.id}:${event.order_id}`,
         metadata: {
           inviter_user_id: inviter.id,
           order_id: event.order_id,
@@ -1073,6 +1097,50 @@ export async function handleChezahubOrderEvent(
           })
           .eq('id', redemption.id);
       }
+    }
+  }
+
+  if (event.status === 'abuse_review') {
+    await addRewardReviewQueueItem(supabase, {
+      userId: profile.id,
+      reason: 'chezahub_abuse_review',
+      dedupeKey: `reward-review:abuse:${profile.id}:${event.order_id}`,
+      metadata: {
+        order_id: event.order_id,
+        reward_code: event.reward_code ?? null,
+        reward_issuance_id: event.reward_issuance_id ?? null,
+        order_total_kes: event.order_total_kes,
+        customer_email: event.customer_email ?? null,
+        customer_phone: event.customer_phone ?? null,
+      },
+    });
+  }
+
+  if (
+    event.status === 'cancelled' ||
+    event.status === 'expired' ||
+    event.status === 'refunded' ||
+    event.status === 'abuse_review'
+  ) {
+    const reversalWindowStart = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+    const { count: recentReversalCount } = await supabase
+      .from('reward_events')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', profile.id)
+      .in('event_type', ['chezahub_first_paid_order_reversal', 'reward_redemption_reversal'])
+      .gte('created_at', reversalWindowStart);
+
+    if ((recentReversalCount ?? 0) >= 2) {
+      await addRewardReviewQueueItem(supabase, {
+        userId: profile.id,
+        reason: 'repeat_reward_reversals',
+        dedupeKey: `reward-review:repeat-reversals:${profile.id}`,
+        metadata: {
+          recent_reversal_count: recentReversalCount ?? 0,
+          last_order_id: event.order_id,
+          window_days: 30,
+        },
+      });
     }
   }
 

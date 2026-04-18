@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { v2 as cloudinary } from 'cloudinary';
-import { getAuthUser } from '@/lib/auth';
+import { requireActiveAccessProfile } from '@/lib/access';
 import { createServiceClient } from '@/lib/supabase';
 
 cloudinary.config({
@@ -31,10 +31,12 @@ function isMediaKind(value: string): value is MediaKind {
 }
 
 export async function POST(request: NextRequest) {
-  const authUser = getAuthUser(request);
-  if (!authUser) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const access = await requireActiveAccessProfile(request);
+  if (access.response) {
+    return access.response;
   }
+
+  const authUser = access.profile;
 
   try {
     const formData = await request.formData();
@@ -65,7 +67,7 @@ export async function POST(request: NextRequest) {
 
     const uploadResult = await cloudinary.uploader.upload(dataUri, {
       folder: mediaConfig.folder,
-      public_id: `${authUser.sub}_${kindValue}_${Date.now()}`,
+      public_id: `${authUser.id}_${kindValue}_${Date.now()}`,
       transformation: mediaConfig.transformation,
     });
 
@@ -73,7 +75,7 @@ export async function POST(request: NextRequest) {
     const { data: profile, error } = await supabase
       .from('profiles')
       .update({ [mediaConfig.field]: uploadResult.secure_url })
-      .eq('id', authUser.sub)
+      .eq('id', authUser.id)
       .select('*')
       .single();
 

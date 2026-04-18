@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getAuthUser } from '@/lib/auth';
+import { requireActiveAccessProfile } from '@/lib/access';
 import {
   createChezahubLinkToken,
   getChezahubBaseUrl,
@@ -9,17 +9,19 @@ import {
 import { createServiceClient } from '@/lib/supabase';
 
 export async function POST(request: NextRequest) {
-  const authUser = getAuthUser(request);
-  if (!authUser) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const access = await requireActiveAccessProfile(request);
+  if (access.response) {
+    return access.response;
   }
+
+  const authUser = access.profile;
 
   try {
     const supabase = createServiceClient();
     const { data: profileRaw, error } = await supabase
       .from('profiles')
       .select('id, username, invite_code, chezahub_user_id')
-      .eq('id', authUser.sub)
+      .eq('id', authUser.id)
       .single();
 
     if (error || !profileRaw) {

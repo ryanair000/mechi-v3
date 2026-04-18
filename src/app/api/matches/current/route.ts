@@ -1,12 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getAuthUser } from '@/lib/auth';
+import { requireActiveAccessProfile } from '@/lib/access';
 import { createServiceClient } from '@/lib/supabase';
 
 export async function GET(request: NextRequest) {
-  const authUser = getAuthUser(request);
-  if (!authUser) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const access = await requireActiveAccessProfile(request);
+  if (access.response) {
+    return access.response;
   }
+
+  const authUser = access.profile;
 
   try {
     const supabase = createServiceClient();
@@ -14,7 +16,7 @@ export async function GET(request: NextRequest) {
     const { data: match, error } = await supabase
       .from('matches')
       .select('*')
-      .or(`player1_id.eq.${authUser.sub},player2_id.eq.${authUser.sub}`)
+      .or(`player1_id.eq.${authUser.id},player2_id.eq.${authUser.id}`)
       .eq('status', 'pending')
       .order('created_at', { ascending: false })
       .limit(1)

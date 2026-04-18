@@ -28,6 +28,7 @@ const PROTECTED_PREFIXES = [
   '/api/lobbies',
   '/api/suggestions',
   '/api/tournaments',
+  '/api/rewards',
 ];
 
 const ADMIN_PREFIXES = ['/admin', '/api/admin'];

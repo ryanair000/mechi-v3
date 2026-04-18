@@ -486,6 +486,37 @@ export interface AdminQueueEntry {
   } | null;
 }
 
+export type RewardReviewStatus = 'open' | 'reviewing' | 'resolved' | 'dismissed';
+
+export interface AdminRewardReviewItem {
+  id: string;
+  user_id: string | null;
+  reason: string;
+  status: RewardReviewStatus;
+  dedupe_key?: string | null;
+  resolution_note?: string | null;
+  created_at: string;
+  reviewed_at?: string | null;
+  resolved_at?: string | null;
+  metadata?: Record<string, unknown> | null;
+  user?: {
+    id: string;
+    username: string;
+    phone: string | null;
+    email: string | null;
+    invite_code?: string | null;
+    invited_by?: string | null;
+    chezahub_user_id?: string | null;
+    reward_points_available?: number;
+    reward_points_pending?: number;
+    reward_points_lifetime?: number;
+  } | null;
+  reviewer?: {
+    id: string;
+    username: string;
+  } | null;
+}
+
 export interface AdminLobbySummary
   extends Omit<Lobby, 'member_count' | 'host'> {
   member_count: number;

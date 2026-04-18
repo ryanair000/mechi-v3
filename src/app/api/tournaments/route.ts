@@ -5,6 +5,7 @@ import { isTournamentSize } from '@/lib/bracket';
 import { notifyGameAudienceAboutTournament } from '@/lib/game-audience';
 import { resolveProfileLocation, validateLocationSelection } from '@/lib/location';
 import { getPlan } from '@/lib/plans';
+import { checkRateLimit, getClientIp, rateLimitResponse } from '@/lib/rateLimit';
 import { makeSlug } from '@/lib/slug';
 import { maybeExpireProfilePlan } from '@/lib/subscription';
 import { createServiceClient } from '@/lib/supabase';
@@ -101,6 +102,15 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Pick a supported 1v1 game' }, { status: 400 });
     }
 
+    const createRateLimit = checkRateLimit(
+      `tournament-create:${authUser.sub}:${game}:${getClientIp(request)}`,
+      2,
+      60 * 60 * 1000
+    );
+    if (!createRateLimit.allowed) {
+      return rateLimitResponse(createRateLimit.retryAfterSeconds);
+    }
+
     if (!isTournamentSize(size)) {
       return NextResponse.json({ error: 'Tournament size must be 4, 8, or 16' }, { status: 400 });
     }
@@ -186,6 +196,7 @@ export async function POST(request: NextRequest) {
     try {
       await notifyGameAudienceAboutTournament({
         supabase,
+        actorUserId: authUser.sub,
         game,
         organizerName: organizerProfile.username?.trim() || 'A player',
         slug,

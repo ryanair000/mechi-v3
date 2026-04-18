@@ -10,6 +10,7 @@ import {
   supportsLobbyMode,
 } from '@/lib/config';
 import { notifyGameAudienceAboutLobby } from '@/lib/game-audience';
+import { checkRateLimit, getClientIp, rateLimitResponse } from '@/lib/rateLimit';
 import type { GameKey } from '@/types';
 
 function generateRoomCode(): string {
@@ -94,6 +95,15 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Game and title are required' }, { status: 400 });
     }
 
+    const createRateLimit = checkRateLimit(
+      `lobby-create:${authUser.sub}:${game}:${getClientIp(request)}`,
+      3,
+      30 * 60 * 1000
+    );
+    if (!createRateLimit.allowed) {
+      return rateLimitResponse(createRateLimit.retryAfterSeconds);
+    }
+
     const gameConfig = GAMES[game as GameKey];
     if (!gameConfig) {
       return NextResponse.json({ error: 'Invalid game' }, { status: 400 });
@@ -169,6 +179,7 @@ export async function POST(request: NextRequest) {
     try {
       await notifyGameAudienceAboutLobby({
         supabase,
+        actorUserId: authUser.sub,
         game: game as GameKey,
         hostName: String((hostProfile as { username?: string } | null)?.username ?? 'A player'),
         lobbyId: String(lobby.id),

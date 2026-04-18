@@ -71,27 +71,6 @@ interface MatchData {
 const QUICK_RESULT_COMMENTS = ['GG', 'Close one', 'Lucky', 'Run it back'] as const;
 const MATCH_STATUS_POLL_INTERVAL_MS = 3000;
 
-function hasSubmittedScore(value: number | null | undefined) {
-  return value !== null && value !== undefined;
-}
-
-function hasUserSubmittedResultReport(match: MatchData, userId: string) {
-  const isPlayer1 = userId === match.player1_id;
-
-  if (requiresMatchScoreReport(match.game)) {
-    const reportedPlayer1Score = isPlayer1
-      ? match.player1_reported_player1_score
-      : match.player2_reported_player1_score;
-    const reportedPlayer2Score = isPlayer1
-      ? match.player1_reported_player2_score
-      : match.player2_reported_player2_score;
-
-    return hasSubmittedScore(reportedPlayer1Score) && hasSubmittedScore(reportedPlayer2Score);
-  }
-
-  return Boolean(isPlayer1 ? match.player1_reported_winner : match.player2_reported_winner);
-}
-
 export default function MatchPage() {
   const params = useParams();
   const matchId = params.id as string;
@@ -184,18 +163,6 @@ export default function MatchPage() {
           void fetchMatch();
         }
       )
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'matches',
-          filter: `id=eq.${matchId}`,
-        },
-        () => {
-          void fetchMatch();
-        }
-      )
       .subscribe();
 
     channelRef.current = channel as unknown as { send: (payload: unknown) => Promise<unknown> };
@@ -271,12 +238,8 @@ export default function MatchPage() {
       return;
     }
 
-    if (!hasUserSubmittedResultReport(match, user.id)) {
-      return;
-    }
-
-    // Realtime can be missed in some Supabase configs, so keep this fallback
-    // narrow: only poll while this user is waiting for the opponent's report.
+    // Broadcast delivery can be missed, so keep a narrow polling fallback
+    // while the match is still live.
     const pollTimer = window.setInterval(() => {
       if (document.visibilityState === 'hidden') {
         return;

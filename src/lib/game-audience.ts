@@ -17,6 +17,12 @@ type GameAudienceMember = {
 
 const AUDIENCE_PAGE_SIZE = 500;
 const BROADCAST_EMAIL_BATCH_SIZE = 50;
+const BROADCAST_COOLDOWN_RETENTION_MS = 24 * 60 * 60 * 1000;
+const QUEUE_BROADCAST_COOLDOWN_MS = 10 * 60 * 1000;
+const LOBBY_BROADCAST_COOLDOWN_MS = 15 * 60 * 1000;
+const TOURNAMENT_BROADCAST_COOLDOWN_MS = 60 * 60 * 1000;
+
+const broadcastCooldowns = new Map<string, number>();
 
 function getRelatedGameKeys(game: GameKey): GameKey[] {
   const canonicalGame = getCanonicalGameKey(game);
@@ -34,6 +40,24 @@ function chunkRecipients(values: string[]): string[][] {
   }
 
   return chunks;
+}
+
+function claimBroadcastSlot(key: string, cooldownMs: number) {
+  const now = Date.now();
+
+  for (const [storedKey, timestamp] of broadcastCooldowns.entries()) {
+    if (now - timestamp > BROADCAST_COOLDOWN_RETENTION_MS) {
+      broadcastCooldowns.delete(storedKey);
+    }
+  }
+
+  const previous = broadcastCooldowns.get(key);
+  if (previous && now - previous < cooldownMs) {
+    return false;
+  }
+
+  broadcastCooldowns.set(key, now);
+  return true;
 }
 
 export async function getGameAudienceMembers(params: {
@@ -90,15 +114,21 @@ export async function getGameAudienceMembers(params: {
 
 export async function notifyGameAudienceAboutQueue(params: {
   supabase: SupabaseClient;
+  actorUserId: string;
   game: GameKey;
   username: string;
   platform: PlatformKey;
   excludeUserIds?: string[];
 }): Promise<void> {
+  const canonicalGame = getCanonicalGameKey(params.game);
+  const broadcastKey = `queue:${params.actorUserId}:${canonicalGame}:${params.platform}`;
+  if (!claimBroadcastSlot(broadcastKey, QUEUE_BROADCAST_COOLDOWN_MS)) {
+    return;
+  }
+
   const recipients = await getGameAudienceMembers(params);
   if (recipients.length === 0) return;
 
-  const canonicalGame = getCanonicalGameKey(params.game);
   const gameLabel = GAMES[canonicalGame]?.label ?? canonicalGame;
   const platformLabel = PLATFORMS[params.platform]?.label ?? params.platform;
 
@@ -118,6 +148,7 @@ export async function notifyGameAudienceAboutQueue(params: {
 
 export async function notifyGameAudienceAboutLobby(params: {
   supabase: SupabaseClient;
+  actorUserId: string;
   game: GameKey;
   hostName: string;
   lobbyId: string;
@@ -127,10 +158,15 @@ export async function notifyGameAudienceAboutLobby(params: {
   scheduledFor?: string | null;
   excludeUserIds?: string[];
 }): Promise<void> {
+  const canonicalGame = getCanonicalGameKey(params.game);
+  const broadcastKey = `lobby:${params.actorUserId}:${canonicalGame}`;
+  if (!claimBroadcastSlot(broadcastKey, LOBBY_BROADCAST_COOLDOWN_MS)) {
+    return;
+  }
+
   const recipients = await getGameAudienceMembers(params);
   if (recipients.length === 0) return;
 
-  const canonicalGame = getCanonicalGameKey(params.game);
   const gameLabel = GAMES[canonicalGame]?.label ?? canonicalGame;
 
   await Promise.allSettled(
@@ -151,6 +187,7 @@ export async function notifyGameAudienceAboutLobby(params: {
 
 export async function notifyGameAudienceAboutTournament(params: {
   supabase: SupabaseClient;
+  actorUserId: string;
   game: GameKey;
   organizerName: string;
   slug: string;
@@ -161,10 +198,15 @@ export async function notifyGameAudienceAboutTournament(params: {
   region: string;
   excludeUserIds?: string[];
 }): Promise<void> {
+  const canonicalGame = getCanonicalGameKey(params.game);
+  const broadcastKey = `tournament:${params.actorUserId}:${canonicalGame}`;
+  if (!claimBroadcastSlot(broadcastKey, TOURNAMENT_BROADCAST_COOLDOWN_MS)) {
+    return;
+  }
+
   const recipients = await getGameAudienceMembers(params);
   if (recipients.length === 0) return;
 
-  const canonicalGame = getCanonicalGameKey(params.game);
   const gameLabel = GAMES[canonicalGame]?.label ?? canonicalGame;
   const platformLabel = params.platform
     ? (PLATFORMS[params.platform]?.label ?? params.platform)

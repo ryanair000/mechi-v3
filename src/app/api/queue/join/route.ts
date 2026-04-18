@@ -15,6 +15,7 @@ import { resolveProfileLocation, UNSPECIFIED_LOCATION_LABEL } from '@/lib/locati
 import { canStartMatch } from '@/lib/plans';
 import { runMatchmaking } from '@/lib/matchmaking';
 import { expireWaitingQueueEntries } from '@/lib/queue';
+import { checkRateLimit, getClientIp, rateLimitResponse } from '@/lib/rateLimit';
 import { getTodayMatchCount, maybeExpireProfilePlan } from '@/lib/subscription';
 import type { GameKey, PlatformKey } from '@/types';
 
@@ -33,6 +34,15 @@ export async function POST(request: NextRequest) {
     }
 
     const game = getCanonicalGameKey(requestedGame as GameKey);
+
+    const joinRateLimit = checkRateLimit(
+      `queue-join:${authUser.sub}:${game}:${getClientIp(request)}`,
+      4,
+      15 * 60 * 1000
+    );
+    if (!joinRateLimit.allowed) {
+      return rateLimitResponse(joinRateLimit.retryAfterSeconds);
+    }
 
     if (GAMES[game].mode !== '1v1') {
       return NextResponse.json({ error: 'Use lobbies for this game' }, { status: 400 });
@@ -211,6 +221,7 @@ export async function POST(request: NextRequest) {
       try {
         await notifyGameAudienceAboutQueue({
           supabase,
+          actorUserId: authUser.sub,
           game,
           username: String(profile.username ?? 'A player'),
           platform: queuePlatform,

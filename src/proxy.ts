@@ -23,6 +23,7 @@ const PROTECTED_PREFIXES = [
   '/api/challenges',
   '/api/matches',
   '/api/notifications',
+  '/api/subscriptions',
   '/api/users',
   '/api/lobbies',
   '/api/suggestions',
@@ -97,11 +98,45 @@ function base64UrlDecode(value: string) {
   return atob(padded.replace(/-/g, '+').replace(/_/g, '/'));
 }
 
-function verifyToken(token: string): JWTPayload | null {
+function base64UrlToUint8Array(value: string) {
+  const decoded = base64UrlDecode(value);
+  return Uint8Array.from(decoded, (character) => character.charCodeAt(0));
+}
+
+async function verifyToken(token: string): Promise<JWTPayload | null> {
   try {
     const parts = token.split('.');
     if (parts.length !== 3) return null;
-    const payload = JSON.parse(base64UrlDecode(parts[1])) as JWTPayload;
+    const [headerSegment, payloadSegment, signatureSegment] = parts;
+    const secret = process.env.JWT_SECRET?.trim();
+    if (!secret) {
+      return null;
+    }
+
+    const header = JSON.parse(base64UrlDecode(headerSegment)) as { alg?: string };
+    if (header.alg !== 'HS256') {
+      return null;
+    }
+
+    const key = await crypto.subtle.importKey(
+      'raw',
+      new TextEncoder().encode(secret),
+      { name: 'HMAC', hash: 'SHA-256' },
+      false,
+      ['verify']
+    );
+    const signatureValid = await crypto.subtle.verify(
+      'HMAC',
+      key,
+      base64UrlToUint8Array(signatureSegment),
+      new TextEncoder().encode(`${headerSegment}.${payloadSegment}`)
+    );
+
+    if (!signatureValid) {
+      return null;
+    }
+
+    const payload = JSON.parse(base64UrlDecode(payloadSegment)) as JWTPayload;
     if (payload.exp && payload.exp * 1000 < Date.now()) return null;
     return payload;
   } catch {
@@ -109,24 +144,31 @@ function verifyToken(token: string): JWTPayload | null {
   }
 }
 
-function getPayload(request: NextRequest) {
-  const token = getToken(request);
-
-  if (!token) {
-    return null;
-  }
-
-  return verifyToken(token);
-}
-
-function getToken(request: NextRequest) {
+async function getAuthState(request: NextRequest) {
   const authHeader = request.headers.get('Authorization');
   const headerToken = authHeader?.startsWith('Bearer ')
     ? authHeader.slice(7)
     : null;
   const cookieToken = request.cookies.get('auth_token')?.value;
 
-  return headerToken ?? cookieToken ?? null;
+  if (headerToken) {
+    const payload = await verifyToken(headerToken);
+    if (payload) {
+      return { token: headerToken, payload };
+    }
+  }
+
+  if (cookieToken) {
+    const payload = await verifyToken(cookieToken);
+    if (payload) {
+      return { token: cookieToken, payload };
+    }
+  }
+
+  return {
+    token: headerToken ?? cookieToken ?? null,
+    payload: null,
+  };
 }
 
 async function getCurrentAccess(payload: JWTPayload | null) {
@@ -190,11 +232,13 @@ export async function proxy(request: NextRequest) {
   const adminHost = isAdminHost(request);
   const adminHostAlias = adminHost ? getAdminHostAlias(pathname) : null;
   const effectivePathname = adminHostAlias ?? pathname;
-  const token = getToken(request);
-  const payload = getPayload(request);
+  const { payload } = await getAuthState(request);
+  const needsProtectedAccess =
+    isAdminRoute(effectivePathname) || isProtectedRoute(effectivePathname);
+  const access =
+    payload && needsProtectedAccess ? await getCurrentAccess(payload) : null;
 
   if ((effectivePathname === '/login' || effectivePathname === '/register') && payload) {
-    const access = await getCurrentAccess(payload);
     const fallbackPath =
       adminHost && access && !access.is_banned && hasPrimaryAdminAccess(access)
         ? '/admin'
@@ -212,7 +256,6 @@ export async function proxy(request: NextRequest) {
       return adminHostOnlyResponse(effectivePathname, request);
     }
     if (!payload) return unauthorizedResponse(effectivePathname, request);
-    const access = await getCurrentAccess(payload);
     if (!access) return unauthorizedResponse(effectivePathname, request);
     if (!hasPrimaryAdminAccess(access)) {
       return forbiddenResponse(effectivePathname, request);
@@ -229,7 +272,13 @@ export async function proxy(request: NextRequest) {
   }
 
   if (isProtectedRoute(effectivePathname)) {
-    if (!token) return unauthorizedResponse(effectivePathname, request);
+    if (!payload || !access) {
+      return unauthorizedResponse(effectivePathname, request);
+    }
+
+    if (access.is_banned) {
+      return forbiddenResponse(effectivePathname, request, 'Your account has been suspended.');
+    }
   }
 
   if (adminHostAlias) {

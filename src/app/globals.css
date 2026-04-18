@@ -375,9 +375,9 @@ html[data-theme='dark'] {
   }
 
   .label {
-    @apply mb-1.5 block text-xs font-semibold;
+    @apply mb-1.5 block text-sm font-semibold;
     color: var(--text-soft);
-    letter-spacing: 0.03em;
+    letter-spacing: 0.02em;
   }
 
   .page-container {
@@ -419,9 +419,9 @@ html[data-theme='dark'] {
   }
 
   .section-title {
-    @apply text-xs font-semibold;
+    @apply text-sm font-semibold;
     color: var(--accent-secondary-text);
-    letter-spacing: 0.04em;
+    letter-spacing: 0.02em;
   }
 
   .brand-link {
@@ -441,27 +441,27 @@ html[data-theme='dark'] {
   }
 
   .brand-kicker {
-    @apply inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-semibold;
+    @apply inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-sm font-semibold;
     border-color: rgba(50, 224, 196, 0.24);
     background: var(--accent-secondary-soft);
     color: var(--accent-secondary-text);
-    letter-spacing: 0.04em;
+    letter-spacing: 0.02em;
   }
 
   .brand-chip {
-    @apply inline-flex items-center gap-2 rounded-full border px-2.5 py-1 text-[11px] font-semibold;
+    @apply inline-flex items-center gap-2 rounded-full border px-2.5 py-1 text-xs font-semibold;
     border-color: rgba(50, 224, 196, 0.18);
     background: rgba(50, 224, 196, 0.1);
     color: var(--accent-secondary-text);
-    letter-spacing: 0.03em;
+    letter-spacing: 0.02em;
   }
 
   .brand-chip-coral {
-    @apply inline-flex items-center gap-2 rounded-full border px-2.5 py-1 text-[11px] font-semibold;
+    @apply inline-flex items-center gap-2 rounded-full border px-2.5 py-1 text-xs font-semibold;
     border-color: rgba(255, 107, 107, 0.22);
     background: var(--accent-primary-soft);
     color: #c95252;
-    letter-spacing: 0.03em;
+    letter-spacing: 0.02em;
   }
 
   .brand-signal {

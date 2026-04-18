@@ -8,7 +8,6 @@ import { ActionFeedback, type ActionFeedbackState } from '@/components/ActionFee
 import { useAuth, useAuthFetch } from '@/components/AuthProvider';
 import { BrandLogo } from '@/components/BrandLogo';
 import { PlatformLogo } from '@/components/PlatformLogo';
-import { createClient } from '@/lib/supabase';
 import { GAMES, PLATFORMS, getCanonicalGameKey } from '@/lib/config';
 import type { GameKey, PlatformKey } from '@/types';
 
@@ -27,7 +26,6 @@ function QueueContent() {
   const [queueFeedback, setQueueFeedback] = useState<ActionFeedbackState | null>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const pollRef = useRef<NodeJS.Timeout | null>(null);
-  const channelRef = useRef<ReturnType<ReturnType<typeof createClient>['channel']> | null>(null);
   const resolvedRef = useRef(false);
 
   const moveToMatch = useCallback(
@@ -122,35 +120,6 @@ function QueueContent() {
     void fetchCount();
     pollRef.current = setInterval(fetchCount, 8000);
 
-    const supabase = createClient();
-    if (user?.id) {
-      const channel = supabase
-        .channel(`queue_user_${user.id}`)
-        .on(
-          'postgres_changes',
-          { event: 'UPDATE', schema: 'public', table: 'queue' },
-          (payload) => {
-            const row = payload.new as { user_id: string; status: string };
-            if (row.user_id !== user.id) return;
-
-            if (row.status === 'matched') {
-              void checkStatus();
-            } else if (row.status === 'cancelled') {
-              exitQueueToDashboard(
-                {
-                  tone: 'info',
-                  title: 'Queue search stopped.',
-                  detail: 'Returning you to the dashboard now.',
-                },
-                'Queue search stopped. Back to dashboard.'
-              );
-            }
-          }
-        )
-        .subscribe();
-      channelRef.current = channel;
-    }
-
     const statusPoll = setInterval(() => {
       void checkStatus();
     }, 4000);
@@ -159,7 +128,6 @@ function QueueContent() {
       if (timerRef.current) clearInterval(timerRef.current);
       if (pollRef.current) clearInterval(pollRef.current);
       clearInterval(statusPoll);
-      if (channelRef.current) channelRef.current.unsubscribe();
     };
   }, [game, platform, user, router, checkStatus]);
 

@@ -488,6 +488,7 @@ export async function joinQueueForUser(params: {
     try {
       await notifyGameAudienceAboutQueue({
         supabase,
+        actorUserId: params.userId,
         game,
         username: profile.username,
         platform: queuePlatform,

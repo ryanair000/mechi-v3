@@ -14,9 +14,7 @@ CREATE TABLE IF NOT EXISTS match_messages (
 CREATE INDEX IF NOT EXISTS idx_match_messages_match_created_at
   ON match_messages(match_id, created_at ASC);
 
-GRANT SELECT ON match_messages TO authenticated;
-GRANT ALL ON match_messages TO service_role;
-
 ALTER TABLE match_messages ENABLE ROW LEVEL SECURITY;
 
 REVOKE ALL ON TABLE match_messages FROM anon, authenticated;
+GRANT ALL ON match_messages TO service_role;

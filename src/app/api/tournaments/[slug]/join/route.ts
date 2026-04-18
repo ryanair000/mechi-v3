@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getAuthUser } from '@/lib/auth';
+import { requireActiveAccessProfile } from '@/lib/access';
 import { GAMES, getCanonicalGameKey, normalizeSelectedGameKeys } from '@/lib/config';
 import { createNotifications } from '@/lib/notifications';
 import { createServiceClient } from '@/lib/supabase';
@@ -22,14 +22,15 @@ export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ slug: string }> }
 ) {
-  const authUser = getAuthUser(request);
-  if (!authUser) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-
-  const { slug } = await params;
-
   try {
+    const access = await requireActiveAccessProfile(request);
+    if (access.response) {
+      return access.response;
+    }
+
+    const authUser = access.profile;
+    const { slug } = await params;
+
     const supabase = createServiceClient();
     const { data: tournamentBySlug, error: tournamentError } = await supabase
       .from('tournaments')
@@ -60,7 +61,7 @@ export async function POST(
       .from('tournament_players')
       .select('id, payment_status')
       .eq('tournament_id', tournament.id)
-      .eq('user_id', authUser.sub)
+      .eq('user_id', authUser.id)
       .maybeSingle();
 
     const existingPlayer = existing as { id: string; payment_status: string } | null;
@@ -100,7 +101,7 @@ export async function POST(
     const { data: profileRaw, error: profileError } = await supabase
       .from('profiles')
       .select('id, username, phone, email, selected_games')
-      .eq('id', authUser.sub)
+      .eq('id', authUser.id)
       .single();
 
     const profile = profileRaw as {
@@ -155,7 +156,7 @@ export async function POST(
             .from('tournament_players')
             .insert({
               tournament_id: tournament.id,
-              user_id: authUser.sub,
+              user_id: authUser.id,
               payment_status: 'free',
             });
 
@@ -174,7 +175,7 @@ export async function POST(
         metadata: Record<string, unknown>;
       }> = [
         {
-          user_id: authUser.sub,
+          user_id: authUser.id,
           type: 'tournament_joined',
           title: `You're in ${tournament.title}`,
           body: `${GAMES[tournament.game]?.label ?? tournament.game} bracket joined successfully.`,
@@ -187,7 +188,7 @@ export async function POST(
         },
       ];
 
-      if (tournament.organizer_id !== authUser.sub) {
+      if (tournament.organizer_id !== authUser.id) {
         notifications.push({
           user_id: tournament.organizer_id,
           type: 'tournament_player_joined',
@@ -197,7 +198,7 @@ export async function POST(
           metadata: {
             tournament_id: tournament.id,
             slug: tournament.slug,
-            player_id: authUser.sub,
+            player_id: authUser.id,
             game: tournament.game,
           },
         });
@@ -226,7 +227,7 @@ export async function POST(
           .from('tournament_players')
           .insert({
             tournament_id: tournament.id,
-            user_id: authUser.sub,
+            user_id: authUser.id,
             payment_status: 'pending',
             payment_ref: reference,
           });
@@ -249,7 +250,7 @@ export async function POST(
         source: 'mechi',
         tournament_id: tournament.id,
         tournament_slug: tournament.slug,
-        user_id: authUser.sub,
+        user_id: authUser.id,
         phone: normaliseKenyanPhone(profile.phone),
       },
     });

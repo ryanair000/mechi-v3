@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getAuthUser } from '@/lib/auth';
+import { requireActiveAccessProfile } from '@/lib/access';
 import { GAMES, PLATFORMS, getCanonicalGameKey } from '@/lib/config';
 import {
   canUserChallengeGame,
@@ -66,10 +66,12 @@ async function hasBlockingState(
 }
 
 export async function GET(request: NextRequest) {
-  const authUser = getAuthUser(request);
-  if (!authUser) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const access = await requireActiveAccessProfile(request);
+  if (access.response) {
+    return access.response;
   }
+
+  const authUser = access.profile;
 
   try {
     const supabase = createServiceClient();
@@ -79,13 +81,13 @@ export async function GET(request: NextRequest) {
       supabase
         .from('match_challenges')
         .select(CHALLENGE_SELECT)
-        .eq('opponent_id', authUser.sub)
+        .eq('opponent_id', authUser.id)
         .eq('status', 'pending')
         .order('created_at', { ascending: false }),
       supabase
         .from('match_challenges')
         .select(CHALLENGE_SELECT)
-        .eq('challenger_id', authUser.sub)
+        .eq('challenger_id', authUser.id)
         .eq('status', 'pending')
         .order('created_at', { ascending: false }),
     ]);
@@ -101,10 +103,12 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  const authUser = getAuthUser(request);
-  if (!authUser) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const access = await requireActiveAccessProfile(request);
+  if (access.response) {
+    return access.response;
   }
+
+  const authUser = access.profile;
 
   try {
     const body = (await request.json()) as Record<string, unknown>;
@@ -113,7 +117,7 @@ export async function POST(request: NextRequest) {
     const platform = String(body.platform ?? '').trim() as PlatformKey;
     const message = String(body.message ?? '').trim();
 
-    if (!opponentId || opponentId === authUser.sub) {
+    if (!opponentId || opponentId === authUser.id) {
       return NextResponse.json({ error: 'Pick a valid opponent' }, { status: 400 });
     }
 
@@ -123,7 +127,7 @@ export async function POST(request: NextRequest) {
 
     const game = getCanonicalGameKey(requestedGame);
     const challengeRateLimit = checkRateLimit(
-      `challenge-create:${authUser.sub}:${opponentId}:${game}:${getClientIp(request)}`,
+      `challenge-create:${authUser.id}:${opponentId}:${game}:${getClientIp(request)}`,
       4,
       30 * 60 * 1000
     );
@@ -139,10 +143,10 @@ export async function POST(request: NextRequest) {
       .select(
         'id, username, avatar_url, plan, plan_expires_at, region, email, whatsapp_number, whatsapp_notifications, selected_games, platforms, game_ids'
       )
-      .in('id', [authUser.sub, opponentId]);
+      .in('id', [authUser.id, opponentId]);
 
     const profiles = (profileRows ?? []) as ChallengeProfile[];
-    const challenger = profiles.find((profile) => profile.id === authUser.sub);
+    const challenger = profiles.find((profile) => profile.id === authUser.id);
     const opponent = profiles.find((profile) => profile.id === opponentId);
 
     if (profilesError || !challenger || !opponent) {
@@ -173,7 +177,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { waitingQueue, activeMatches } = await hasBlockingState([authUser.sub, opponentId], supabase);
+    const { waitingQueue, activeMatches } = await hasBlockingState([authUser.id, opponentId], supabase);
     if (waitingQueue.length > 0) {
       return NextResponse.json(
         { error: 'Leave the ranked queue before sending a direct challenge' },
@@ -194,15 +198,15 @@ export async function POST(request: NextRequest) {
       .eq('status', 'pending')
       .eq('game', game)
       .eq('platform', resolvedPlatform)
-      .in('challenger_id', [authUser.sub, opponentId])
-      .in('opponent_id', [authUser.sub, opponentId]);
+      .in('challenger_id', [authUser.id, opponentId])
+      .in('opponent_id', [authUser.id, opponentId]);
 
     const hasDuplicate = (duplicates ?? []).some((challenge) => {
       const challengerId = challenge.challenger_id as string;
       const targetId = challenge.opponent_id as string;
       return (
-        (challengerId === authUser.sub && targetId === opponentId) ||
-        (challengerId === opponentId && targetId === authUser.sub)
+        (challengerId === authUser.id && targetId === opponentId) ||
+        (challengerId === opponentId && targetId === authUser.id)
       );
     });
 
@@ -220,7 +224,7 @@ export async function POST(request: NextRequest) {
     const { data: challengeRow, error: insertError } = await supabase
       .from('match_challenges')
       .insert({
-        challenger_id: authUser.sub,
+        challenger_id: authUser.id,
         opponent_id: opponentId,
         game,
         platform: resolvedPlatform,
@@ -249,11 +253,11 @@ export async function POST(request: NextRequest) {
             challenge_id: challenge.id,
             game,
             platform: resolvedPlatform,
-            challenger_id: authUser.sub,
+            challenger_id: authUser.id,
           },
         },
         {
-          user_id: authUser.sub,
+          user_id: authUser.id,
           type: 'challenge_sent',
           title: `Challenge sent to ${opponent.username}`,
           body: `${GAMES[game].label} on ${resolvedPlatform.toUpperCase()} is waiting for a reply.`,

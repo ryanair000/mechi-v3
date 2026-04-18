@@ -1,15 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getAuthUser } from '@/lib/auth';
+import { requireActiveAccessProfile } from '@/lib/access';
 import { createServiceClient } from '@/lib/supabase';
 
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const authUser = getAuthUser(request);
-  if (!authUser) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const access = await requireActiveAccessProfile(request);
+  if (access.response) {
+    return access.response;
   }
+
+  const authUser = access.profile;
 
   const { id } = await params;
 
@@ -20,7 +22,7 @@ export async function POST(
       .from('lobby_members')
       .delete()
       .eq('lobby_id', id)
-      .eq('user_id', authUser.sub);
+      .eq('user_id', authUser.id);
 
     if (error) {
       return NextResponse.json({ error: 'Failed to leave lobby' }, { status: 500 });
@@ -33,7 +35,7 @@ export async function POST(
       .eq('id', id)
       .single();
 
-    if (lobby?.host_id === authUser.sub) {
+    if (lobby?.host_id === authUser.id) {
       await supabase.from('lobbies').update({ status: 'closed' }).eq('id', id);
     } else {
       // Reopen if was full

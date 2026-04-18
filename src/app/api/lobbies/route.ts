@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getAuthUser } from '@/lib/auth';
+import { requireActiveAccessProfile } from '@/lib/access';
 import { createServiceClient } from '@/lib/supabase';
 import {
   GAMES,
@@ -36,9 +36,9 @@ function readRelationCount(value: unknown): number {
 }
 
 export async function GET(request: NextRequest) {
-  const authUser = getAuthUser(request);
-  if (!authUser) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const access = await requireActiveAccessProfile(request);
+  if (access.response) {
+    return access.response;
   }
 
   try {
@@ -77,10 +77,12 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  const authUser = getAuthUser(request);
-  if (!authUser) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const access = await requireActiveAccessProfile(request);
+  if (access.response) {
+    return access.response;
   }
+
+  const authUser = access.profile;
 
   try {
     const body = await request.json();
@@ -96,7 +98,7 @@ export async function POST(request: NextRequest) {
     }
 
     const createRateLimit = checkRateLimit(
-      `lobby-create:${authUser.sub}:${game}:${getClientIp(request)}`,
+      `lobby-create:${authUser.id}:${game}:${getClientIp(request)}`,
       3,
       30 * 60 * 1000
     );
@@ -147,13 +149,13 @@ export async function POST(request: NextRequest) {
     const { data: hostProfile } = await supabase
       .from('profiles')
       .select('username')
-      .eq('id', authUser.sub)
+      .eq('id', authUser.id)
       .maybeSingle();
 
     const { data: lobby, error } = await supabase
       .from('lobbies')
       .insert({
-        host_id: authUser.sub,
+        host_id: authUser.id,
         game,
         mode: normalizedMode || getDefaultLobbyMode(game as GameKey),
         map_name: normalizedMap || null,
@@ -173,22 +175,22 @@ export async function POST(request: NextRequest) {
     // Auto-join as host
     await supabase.from('lobby_members').insert({
       lobby_id: lobby.id,
-      user_id: authUser.sub,
+      user_id: authUser.id,
     });
 
     try {
-      await notifyGameAudienceAboutLobby({
-        supabase,
-        actorUserId: authUser.sub,
-        game: game as GameKey,
+        await notifyGameAudienceAboutLobby({
+          supabase,
+          actorUserId: authUser.id,
+          game: game as GameKey,
         hostName: String((hostProfile as { username?: string } | null)?.username ?? 'A player'),
         lobbyId: String(lobby.id),
         title: normalizedTitle,
         mode: normalizedMode || getDefaultLobbyMode(game as GameKey),
         mapName: normalizedMap || null,
         scheduledFor: scheduledAt.toISOString(),
-        excludeUserIds: [authUser.sub],
-      });
+          excludeUserIds: [authUser.id],
+        });
     } catch (broadcastError) {
       console.error('[Lobbies POST] Broadcast error:', broadcastError);
     }

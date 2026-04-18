@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getAuthUser } from '@/lib/auth';
+import { requireActiveAccessProfile } from '@/lib/access';
 import {
   canUserChallengeGame,
   expirePendingChallenges,
@@ -60,10 +60,12 @@ export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const authUser = getAuthUser(request);
-  if (!authUser) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const access = await requireActiveAccessProfile(request);
+  if (access.response) {
+    return access.response;
   }
+
+  const authUser = access.profile;
 
   const { id } = await params;
 
@@ -82,7 +84,7 @@ export async function POST(
       return NextResponse.json({ error: 'Challenge not found' }, { status: 404 });
     }
 
-    if (challenge.opponent_id !== authUser.sub) {
+    if (challenge.opponent_id !== authUser.id) {
       return NextResponse.json({ error: 'Only the challenged player can accept' }, { status: 403 });
     }
 

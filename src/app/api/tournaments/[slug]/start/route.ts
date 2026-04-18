@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getAuthUser } from '@/lib/auth';
+import { requireActiveAccessProfile } from '@/lib/access';
 import { createServiceClient } from '@/lib/supabase';
 import { startTournament } from '@/lib/tournaments';
 
@@ -7,10 +7,12 @@ export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ slug: string }> }
 ) {
-  const authUser = getAuthUser(request);
-  if (!authUser) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const access = await requireActiveAccessProfile(request);
+  if (access.response) {
+    return access.response;
   }
+
+  const authUser = access.profile;
 
   const { slug } = await params;
 
@@ -29,7 +31,7 @@ export async function POST(
     const started = await startTournament({
       supabase,
       tournamentId: tournament.id,
-      requesterId: authUser.sub,
+      requesterId: authUser.id,
     });
 
     if (!started.success) {

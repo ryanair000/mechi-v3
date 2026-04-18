@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getAuthUser } from '@/lib/auth';
+import { requireActiveAccessProfile } from '@/lib/access';
 import { createServiceClient } from '@/lib/supabase';
 import { advanceTournamentAfterMatch } from '@/lib/tournaments';
 
@@ -7,10 +7,12 @@ export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ slug: string }> }
 ) {
-  const authUser = getAuthUser(request);
-  if (!authUser) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const access = await requireActiveAccessProfile(request);
+  if (access.response) {
+    return access.response;
   }
+
+  const authUser = access.profile;
 
   const { slug } = await params;
 
@@ -34,7 +36,7 @@ export async function POST(
       return NextResponse.json({ error: 'Tournament not found' }, { status: 404 });
     }
 
-    if (tournament.organizer_id !== authUser.sub) {
+    if (tournament.organizer_id !== authUser.id) {
       return NextResponse.json({ error: 'Only the organizer can repair bracket advancement' }, { status: 403 });
     }
 

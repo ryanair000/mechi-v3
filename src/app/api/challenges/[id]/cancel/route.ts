@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getAuthUser } from '@/lib/auth';
+import { requireActiveAccessProfile } from '@/lib/access';
 import { expirePendingChallenges } from '@/lib/challenges';
 import { createNotifications } from '@/lib/notifications';
 import { createServiceClient } from '@/lib/supabase';
@@ -14,10 +14,12 @@ export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const authUser = getAuthUser(request);
-  if (!authUser) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const access = await requireActiveAccessProfile(request);
+  if (access.response) {
+    return access.response;
   }
+
+  const authUser = access.profile;
 
   const { id } = await params;
 
@@ -36,7 +38,7 @@ export async function POST(
       return NextResponse.json({ error: 'Challenge not found' }, { status: 404 });
     }
 
-    if (challenge.challenger_id !== authUser.sub) {
+    if (challenge.challenger_id !== authUser.id) {
       return NextResponse.json({ error: 'Only the challenger can cancel this request' }, { status: 403 });
     }
 

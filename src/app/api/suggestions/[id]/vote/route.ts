@@ -1,15 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getAuthUser } from '@/lib/auth';
+import { requireActiveAccessProfile } from '@/lib/access';
 import { createServiceClient } from '@/lib/supabase';
 
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const authUser = getAuthUser(request);
-  if (!authUser) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const access = await requireActiveAccessProfile(request);
+  if (access.response) {
+    return access.response;
   }
+
+  const authUser = access.profile;
 
   const { id } = await params;
 
@@ -32,7 +34,7 @@ export async function POST(
       .from('suggestion_votes')
       .select('id')
       .eq('suggestion_id', id)
-      .eq('user_id', authUser.sub)
+      .eq('user_id', authUser.id)
       .single();
 
     if (existingVote) {
@@ -41,7 +43,7 @@ export async function POST(
         .from('suggestion_votes')
         .delete()
         .eq('suggestion_id', id)
-        .eq('user_id', authUser.sub);
+        .eq('user_id', authUser.id);
 
       const newVotes = Math.max(0, suggestion.votes - 1);
       await supabase.from('suggestions').update({ votes: newVotes }).eq('id', id);
@@ -52,7 +54,7 @@ export async function POST(
     // Add vote
     await supabase.from('suggestion_votes').insert({
       suggestion_id: id,
-      user_id: authUser.sub,
+      user_id: authUser.id,
     });
 
     const newVotes = suggestion.votes + 1;

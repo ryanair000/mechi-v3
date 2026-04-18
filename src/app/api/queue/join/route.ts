@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getAuthUser } from '@/lib/auth';
+import { requireActiveAccessProfile } from '@/lib/access';
 import { createServiceClient } from '@/lib/supabase';
 import {
   GAMES,
@@ -20,10 +20,12 @@ import { getTodayMatchCount, maybeExpireProfilePlan } from '@/lib/subscription';
 import type { GameKey, PlatformKey } from '@/types';
 
 export async function POST(request: NextRequest) {
-  const authUser = getAuthUser(request);
-  if (!authUser) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const access = await requireActiveAccessProfile(request);
+  if (access.response) {
+    return access.response;
   }
+
+  const authUser = access.profile;
 
   try {
     const body = await request.json();
@@ -36,7 +38,7 @@ export async function POST(request: NextRequest) {
     const game = getCanonicalGameKey(requestedGame as GameKey);
 
     const joinRateLimit = checkRateLimit(
-      `queue-join:${authUser.sub}:${game}:${getClientIp(request)}`,
+      `queue-join:${authUser.id}:${game}:${getClientIp(request)}`,
       4,
       15 * 60 * 1000
     );
@@ -54,7 +56,7 @@ export async function POST(request: NextRequest) {
     const { data: profileRaw, error: profileError } = await supabase
       .from('profiles')
       .select('*')
-      .eq('id', authUser.sub)
+      .eq('id', authUser.id)
       .single();
 
     if (profileError || !profileRaw) {
@@ -70,7 +72,7 @@ export async function POST(request: NextRequest) {
       },
       supabase
     );
-    const usedToday = await getTodayMatchCount(authUser.sub, supabase);
+    const usedToday = await getTodayMatchCount(authUser.id, supabase);
 
     if (!canStartMatch(plan, usedToday)) {
       return NextResponse.json(
@@ -111,13 +113,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    await expireWaitingQueueEntries(supabase, authUser.sub);
+    await expireWaitingQueueEntries(supabase, authUser.id);
 
     // Check if already in queue
     let existingQueueResult = await supabase
       .from('queue')
       .select('id, game, platform, status')
-      .eq('user_id', authUser.sub)
+      .eq('user_id', authUser.id)
       .eq('status', 'waiting')
       .order('joined_at', { ascending: false })
       .limit(1)
@@ -127,7 +129,7 @@ export async function POST(request: NextRequest) {
       existingQueueResult = await supabase
         .from('queue')
         .select('id, game, status')
-        .eq('user_id', authUser.sub)
+        .eq('user_id', authUser.id)
         .eq('status', 'waiting')
         .order('joined_at', { ascending: false })
         .limit(1)
@@ -154,7 +156,7 @@ export async function POST(request: NextRequest) {
     const { data: activeMatch } = await supabase
       .from('matches')
       .select('id')
-      .or(`player1_id.eq.${authUser.sub},player2_id.eq.${authUser.sub}`)
+      .or(`player1_id.eq.${authUser.id},player2_id.eq.${authUser.id}`)
       .eq('status', 'pending')
       .maybeSingle();
 
@@ -167,7 +169,7 @@ export async function POST(request: NextRequest) {
 
     const profileLocation = resolveProfileLocation(profile);
     const queuePayload = {
-      user_id: authUser.sub,
+      user_id: authUser.id,
       game,
       platform: queuePlatform,
       region: profileLocation.label || UNSPECIFIED_LOCATION_LABEL,
@@ -183,7 +185,7 @@ export async function POST(request: NextRequest) {
 
     if (insertResult.error && isMissingColumnError(insertResult.error, 'queue.platform')) {
       const legacyQueuePayload = {
-        user_id: authUser.sub,
+        user_id: authUser.id,
         game,
         region: profileLocation.label || UNSPECIFIED_LOCATION_LABEL,
         rating,
@@ -221,11 +223,11 @@ export async function POST(request: NextRequest) {
       try {
         await notifyGameAudienceAboutQueue({
           supabase,
-          actorUserId: authUser.sub,
+          actorUserId: authUser.id,
           game,
           username: String(profile.username ?? 'A player'),
           platform: queuePlatform,
-          excludeUserIds: [authUser.sub],
+          excludeUserIds: [authUser.id],
         });
       } catch (broadcastError) {
         console.error('[Queue Join] Broadcast error:', broadcastError);

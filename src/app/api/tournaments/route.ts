@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getAuthUser } from '@/lib/auth';
+import { requireActiveAccessProfile } from '@/lib/access';
 import { GAMES, getCanonicalGameKey, isValidGamePlatform } from '@/lib/config';
 import { isTournamentSize } from '@/lib/bracket';
 import { notifyGameAudienceAboutTournament } from '@/lib/game-audience';
@@ -76,10 +76,12 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  const authUser = getAuthUser(request);
-  if (!authUser) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const access = await requireActiveAccessProfile(request);
+  if (access.response) {
+    return access.response;
   }
+
+  const authUser = access.profile;
 
   try {
     const body = (await request.json()) as Record<string, unknown>;
@@ -103,7 +105,7 @@ export async function POST(request: NextRequest) {
     }
 
     const createRateLimit = checkRateLimit(
-      `tournament-create:${authUser.sub}:${game}:${getClientIp(request)}`,
+      `tournament-create:${authUser.id}:${game}:${getClientIp(request)}`,
       2,
       60 * 60 * 1000
     );
@@ -125,7 +127,7 @@ export async function POST(request: NextRequest) {
     const { data: organizerProfileRaw, error: organizerProfileError } = await supabase
       .from('profiles')
       .select('*')
-      .eq('id', authUser.sub)
+      .eq('id', authUser.id)
       .single();
 
     const organizerProfile = organizerProfileRaw as (Record<string, unknown> & {
@@ -179,6 +181,7 @@ export async function POST(request: NextRequest) {
         platform_fee_rate: organizerPlanConfig.tournamentFeePercent,
         rules: rules || null,
         organizer_id: authUser.sub,
+        organizer_id: authUser.id,
       })
       .select('*')
       .single();
@@ -189,15 +192,15 @@ export async function POST(request: NextRequest) {
 
     await supabase.from('tournament_players').insert({
       tournament_id: tournament.id,
-      user_id: authUser.sub,
+      user_id: authUser.id,
       payment_status: 'free',
     });
 
     try {
-      await notifyGameAudienceAboutTournament({
-        supabase,
-        actorUserId: authUser.sub,
-        game,
+        await notifyGameAudienceAboutTournament({
+          supabase,
+          actorUserId: authUser.id,
+          game,
         organizerName: organizerProfile.username?.trim() || 'A player',
         slug,
         title,
@@ -205,8 +208,8 @@ export async function POST(request: NextRequest) {
         entryFee,
         size,
         region: location.label,
-        excludeUserIds: [authUser.sub],
-      });
+          excludeUserIds: [authUser.id],
+        });
     } catch (broadcastError) {
       console.error('[Tournaments POST] Broadcast error:', broadcastError);
     }

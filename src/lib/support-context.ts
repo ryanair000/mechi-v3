@@ -113,6 +113,7 @@ const TAG_PATTERNS: Array<{ tag: string; patterns: RegExp[] }> = [
   { tag: 'tournaments', patterns: [/\btournament\b/i, /\bbracket\b/i, /\bentry fee\b/i] },
   { tag: 'profile', patterns: [/\bprofile\b/i, /\bavatar\b/i, /\bcover\b/i] },
   { tag: 'notifications', patterns: [/\bnotification\b/i, /\balert\b/i, /\bwhatsapp\b/i] },
+  { tag: 'greeting', patterns: [/^\s*(yo|hey|hi|hello|niaje|sasa|mambo)\b/i] },
 ];
 
 function matchesAny(text: string, patterns: RegExp[]) {
@@ -151,6 +152,11 @@ export function buildSupportSystemPrompt() {
   return [
     'You are the Mechi WhatsApp support assistant.',
     'Reply in a warm, short, confident tone that feels helpful and current, but do not use slang overload.',
+    'Format replies for WhatsApp so they are easy to scan on mobile.',
+    'Start with the direct answer first.',
+    'Use short paragraphs and only a small bullet list when it genuinely helps.',
+    'Use plain WhatsApp-friendly emphasis like *bold* sparingly for labels, not for every line.',
+    'Do not use markdown tables, hashtags, or long walls of text.',
     'You are not allowed to process money, refunds, payouts, subscription cancellations, bans, disputes, or account-changing actions.',
     'If the user needs anything operational, risky, or policy-sensitive, return disposition "escalate".',
     'If the user is asking an informational question and the answer is supported by the supplied Mechi context, return disposition "reply".',
@@ -188,17 +194,17 @@ export function buildMechiSupportContext(user?: SupportUserSummary | null) {
 function acknowledgementFor(reason: SupportClassification['reason']) {
   switch (reason) {
     case 'unsupported_media':
-      return 'I can only handle text here right now, so I’ve queued this for a human from Mechi.';
+      return "I can only handle text here right now, so I've queued this for a human from Mechi.";
     case 'requested_human':
-      return 'I’m looping in the Mechi support team. Drop any extra details here and they’ll pick it up.';
+      return "I'm looping in the Mechi support team. Drop any extra details here and they'll pick it up.";
     case 'blocked_topic':
-      return 'That needs a human from Mechi to handle properly, so I’ve pushed this into the support inbox.';
+      return "That needs a human from Mechi to handle properly, so I've pushed this into the support inbox.";
     case 'banned_account':
-      return 'This needs a human Mechi agent to review, so I’ve handed it to the support inbox.';
+      return "This needs a human Mechi agent to review, so I've handed it to the support inbox.";
     case 'blocked_thread':
-      return 'This lane is already with the Mechi support team, so they’ll continue from here.';
+      return "This lane is already with the Mechi support team, so they'll continue from here.";
     case 'empty_message':
-      return 'Send me a quick text message with what you need and I’ll try to point you the right way.';
+      return "Send me a quick text message with what you need and I'll try to point you the right way.";
     case 'ai_safe':
     default:
       return '';

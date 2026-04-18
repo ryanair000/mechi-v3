@@ -13,7 +13,7 @@ const HERO_STATS = [
   { value: '16+', label: 'Supported titles' },
   { value: '1v1', label: 'Ranked direct challenges' },
   { value: '24/7', label: 'Queue access' },
-  { value: 'KES 299', label: 'Pro monthly' },
+  { value: 'KES 299', label: 'Pro monthly', note: '1 month free trial' },
 ];
 
 const LAUNCH_CHIPS = [
@@ -181,6 +181,11 @@ export default function LandingPage() {
                       <div className="mt-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--text-soft)] sm:text-[11px]">
                         {item.label}
                       </div>
+                      {'note' in item ? (
+                        <div className="mt-1 text-[9px] font-semibold uppercase tracking-[0.12em] text-[var(--brand-teal)] sm:text-[10px]">
+                          {item.note}
+                        </div>
+                      ) : null}
                     </div>
                   ))}
                 </div>

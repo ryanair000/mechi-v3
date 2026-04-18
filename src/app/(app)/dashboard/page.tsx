@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
 import { AlertCircle, ChevronRight, CirclePlay, Radar, Swords } from 'lucide-react';
+import { ActionFeedback, type ActionFeedbackState } from '@/components/ActionFeedback';
 import { openAppOnboarding } from '@/components/AppOnboarding';
 import { useAuth, useAuthFetch } from '@/components/AuthProvider';
 import { GameCard } from '@/components/GameCard';
@@ -56,6 +57,7 @@ export default function DashboardPage() {
   const [activeMatch, setActiveMatch] = useState<Match | null>(null);
   const [queueCounts, setQueueCounts] = useState<Record<string, number>>({});
   const [queuingGame, setQueuingGame] = useState<GameKey | null>(null);
+  const [queueFeedback, setQueueFeedback] = useState<ActionFeedbackState | null>(null);
   const [loading, setLoading] = useState(true);
   const [showPaywall, setShowPaywall] = useState(false);
   const [paywallReason, setPaywallReason] = useState<'match_limit' | 'game_limit' | 'feature'>('match_limit');
@@ -174,7 +176,14 @@ export default function DashboardPage() {
   }, [profile]);
 
   const handleJoinQueue = async (game: GameKey) => {
+    const gameLabel = GAMES[game]?.label ?? game;
+
     if (activeMatch) {
+      setQueueFeedback({
+        tone: 'info',
+        title: 'You already have a live match.',
+        detail: 'Opening that match so you can finish it before joining another queue.',
+      });
       toast.error('You have an active match');
       router.push(`/match/${activeMatch.id}`);
       return;
@@ -183,12 +192,23 @@ export default function DashboardPage() {
     const profileGameIds = (profile?.game_ids as Record<string, string>) ?? {};
     const platform = getConfiguredPlatformForGame(game, profileGameIds, profile?.platforms ?? []);
     if (!platform) {
+      setQueueFeedback({
+        tone: 'error',
+        title: `Set up your ${gameLabel} platform first.`,
+        detail: 'Mechi needs the right platform to place you in the correct matchmaking pool.',
+      });
       toast.error('Choose a platform for this game in your profile');
       router.push('/profile');
       return;
     }
 
+    const joiningToast = toast.loading(`Checking the ${gameLabel} queue...`);
     setQueuingGame(game);
+    setQueueFeedback({
+      tone: 'loading',
+      title: `Joining ${gameLabel} matchmaking...`,
+      detail: `We're checking your ${platform.toUpperCase()} lane and making sure you do not already have a live match.`,
+    });
     try {
       const res = await authFetch('/api/queue/join', {
         method: 'POST',
@@ -197,27 +217,67 @@ export default function DashboardPage() {
       const data = await res.json();
       if (!res.ok) {
         if (data.limit_reached) {
+          setQueueFeedback({
+            tone: 'error',
+            title: 'Daily ranked limit reached.',
+            detail: 'Upgrade your plan to keep queueing matches today.',
+          });
+          toast.error('Daily ranked limit reached', { id: joiningToast });
           setPaywallReason('match_limit');
           setShowPaywall(true);
           setQueuingGame(null);
           return;
         }
         if (data.matchId) {
+          setQueueFeedback({
+            tone: 'info',
+            title: 'Match already live.',
+            detail: 'Opening your active match now.',
+          });
+          toast.success('Active match found. Opening it now.', { id: joiningToast });
           router.push(`/match/${data.matchId}`);
         } else if (data.queueEntry?.game) {
+          setQueueFeedback({
+            tone: 'info',
+            title: 'Your queue session is already live.',
+            detail: 'Reopening the active search so you can keep tracking it.',
+          });
           if (!resumeQueue(data.queueEntry)) {
-            toast.error('You already have a live queue session');
+            setQueueFeedback({
+              tone: 'error',
+              title: 'We found your queue session, but could not reopen it cleanly.',
+              detail: 'Try joining again in a moment.',
+            });
+            toast.error('You already have a live queue session', { id: joiningToast });
             setQueuingGame(null);
+          } else {
+            toast.success('Queue still active. Reopening it now.', { id: joiningToast });
           }
         } else {
-          toast.error(data.error ?? 'Failed to join queue');
+          setQueueFeedback({
+            tone: 'error',
+            title: `Could not join the ${gameLabel} queue.`,
+            detail: data.error ?? 'Please try again in a moment.',
+          });
+          toast.error(data.error ?? 'Failed to join queue', { id: joiningToast });
           setQueuingGame(null);
         }
         return;
       }
+      setQueueFeedback({
+        tone: 'success',
+        title: `${gameLabel} queue joined.`,
+        detail: "We'll keep searching and notify you the moment a match lands.",
+      });
+      toast.success('Queue joined. Searching for a match now.', { id: joiningToast });
       router.push(`/queue?game=${game}&platform=${platform}`);
     } catch {
-      toast.error('Network error');
+      setQueueFeedback({
+        tone: 'error',
+        title: 'Queue request failed.',
+        detail: 'Check your connection and try joining again.',
+      });
+      toast.error('Network error', { id: joiningToast });
       setQueuingGame(null);
     }
   };
@@ -379,6 +439,14 @@ export default function DashboardPage() {
               View leaderboard
             </Link>
           </div>
+          {queueFeedback ? (
+            <ActionFeedback
+              tone={queueFeedback.tone}
+              title={queueFeedback.title}
+              detail={queueFeedback.detail}
+              className="mb-4"
+            />
+          ) : null}
           <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
             {rankedGames.map((game) => (
               <GameCard

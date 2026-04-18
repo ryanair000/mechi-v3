@@ -13,12 +13,17 @@ export const metadata: Metadata = {
   metadataBase: new URL('https://mechi.club'),
   title: 'Mechi | Compete. Connect. Rise.',
   description:
-    'Mechi helps Kenyan players find proper 1v1s, clean lobbies, and prize-backed tournaments without the WhatsApp chaos.',
+    'Mechi helps East African players find proper 1v1s, clean lobbies, and prize-backed tournaments without the WhatsApp chaos.',
   keywords: [
     'mechi',
     'gaming',
     'matchmaking',
+    'east africa',
     'kenya',
+    'tanzania',
+    'uganda',
+    'rwanda',
+    'ethiopia',
     'esports',
     '1v1',
     'competitive gaming',
@@ -29,17 +34,17 @@ export const metadata: Metadata = {
   openGraph: {
     title: 'Mechi | Compete. Connect. Rise.',
     description:
-      'Queue clean 1v1s, spin up proper lobbies, and run prize-backed tournaments for Kenyan players in one place.',
+      'Queue clean 1v1s, spin up proper lobbies, and run prize-backed tournaments for players across East Africa in one place.',
     url: 'https://mechi.club',
     siteName: 'Mechi',
-    locale: 'en_KE',
+    locale: 'en',
     type: 'website',
   },
   twitter: {
     card: 'summary_large_image',
     title: 'Mechi | Compete. Connect. Rise.',
     description:
-      'Kenyan players use Mechi to find cleaner 1v1s, better lobbies, and smoother tournament runs.',
+      'Players across Kenya, Tanzania, Uganda, Rwanda, and Ethiopia use Mechi for cleaner 1v1s, better lobbies, and smoother tournament runs.',
   },
 };
 

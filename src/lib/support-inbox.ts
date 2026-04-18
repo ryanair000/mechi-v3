@@ -193,7 +193,7 @@ function mapSupportUser(
     phone: profile.phone,
     whatsapp_number: profile.whatsapp_number ?? null,
     plan: (profile.plan as 'free' | 'pro' | 'elite' | undefined) ?? 'free',
-    region: profile.region ?? 'Nairobi',
+    region: profile.region ?? 'Unspecified',
     selected_games: (profile.selected_games ?? []) as GameKey[],
     platforms: (profile.platforms ?? []) as PlatformKey[],
   };

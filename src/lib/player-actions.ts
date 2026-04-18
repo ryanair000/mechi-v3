@@ -7,8 +7,11 @@ import {
   normalizeSelectedGameKeys,
   supportsLobbyMode,
 } from '@/lib/config';
+import { notifyGameAudienceAboutQueue } from '@/lib/game-audience';
+import { resolveProfileLocation, UNSPECIFIED_LOCATION_LABEL } from '@/lib/location';
 import { canStartMatch } from '@/lib/plans';
 import { runMatchmaking } from '@/lib/matchmaking';
+import { expireWaitingQueueEntries } from '@/lib/queue';
 import { maybeExpireProfilePlan, getTodayMatchCount } from '@/lib/subscription';
 import { createServiceClient } from '@/lib/supabase';
 import { CONFIRMED_PAYMENT_STATUSES } from '@/lib/tournaments';
@@ -260,6 +263,8 @@ async function getActiveMatchForUser(userId: string, supabase = getSupabase()) {
 }
 
 async function getQueueEntryForUser(userId: string, profile?: PlayerActionProfile | null, supabase = getSupabase()) {
+  await expireWaitingQueueEntries(supabase, userId);
+
   const { data } = await supabase
     .from('queue')
     .select('*')
@@ -439,11 +444,12 @@ export async function joinQueueForUser(params: {
   }
 
   const rating = Number((profile as Record<string, unknown>)[getGameRatingKey(game)] ?? 1000);
+  const profileLocation = resolveProfileLocation(profile);
   const queuePayload = {
     user_id: params.userId,
     game,
     platform: queuePlatform,
-    region: (profile.region as string) ?? 'kenya',
+    region: profileLocation.label || UNSPECIFIED_LOCATION_LABEL,
     rating,
     status: 'waiting' as const,
   };
@@ -476,6 +482,20 @@ export async function joinQueueForUser(params: {
       game: matchedMatch.game,
       match: matchedMatch,
     };
+  }
+
+  if (matchedQueueEntry?.status === 'waiting') {
+    try {
+      await notifyGameAudienceAboutQueue({
+        supabase,
+        game,
+        username: profile.username,
+        platform: queuePlatform,
+        excludeUserIds: [params.userId],
+      });
+    } catch (broadcastError) {
+      console.error('[Player Actions] Queue broadcast error:', broadcastError);
+    }
   }
 
   return {

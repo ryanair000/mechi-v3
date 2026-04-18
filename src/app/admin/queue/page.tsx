@@ -5,6 +5,7 @@ import toast from 'react-hot-toast';
 import { Clock3, Loader2, RefreshCw, Search, Shield, Users, X } from 'lucide-react';
 import { useAuth, useAuthFetch } from '@/components/AuthProvider';
 import { GAMES, PLATFORMS, REGIONS, getSelectableGameKeys } from '@/lib/config';
+import { QUEUE_MAX_WAIT_MINUTES } from '@/lib/queue';
 import type { AdminQueueEntry, GameKey, PlatformKey } from '@/types';
 
 const STATUS_OPTIONS = [
@@ -138,7 +139,8 @@ export default function AdminQueuePage() {
     const waiting = entries.filter((entry) => entry.status === 'waiting').length;
     const matched = entries.filter((entry) => entry.status === 'matched').length;
     const stuck = entries.filter(
-      (entry) => entry.status === 'waiting' && getWaitMinutes(entry.joined_at) >= 10
+      (entry) =>
+        entry.status === 'waiting' && getWaitMinutes(entry.joined_at) >= QUEUE_MAX_WAIT_MINUTES
     ).length;
 
     return { waiting, matched, stuck };
@@ -344,7 +346,9 @@ export default function AdminQueuePage() {
                           {formatWaitTime(entry.joined_at)}
                         </p>
                         <p className="mt-1 text-xs text-[var(--text-secondary)]">
-                          {waitMinutes >= 10 ? 'Needs attention soon' : 'Still inside the normal window'}
+                          {waitMinutes >= QUEUE_MAX_WAIT_MINUTES
+                            ? `Past the ${QUEUE_MAX_WAIT_MINUTES} minute queue window`
+                            : 'Still inside the live queue window'}
                         </p>
                       </div>
 

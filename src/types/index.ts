@@ -1,4 +1,5 @@
 export type PlatformKey = 'ps' | 'xbox' | 'nintendo' | 'mobile' | 'pc';
+export type CountryKey = 'kenya' | 'tanzania' | 'uganda' | 'rwanda' | 'ethiopia';
 
 export type GameKey =
   | 'efootball'
@@ -111,6 +112,7 @@ export interface Profile {
   cover_url?: string | null;
   whatsapp_number?: string | null;
   whatsapp_notifications?: boolean;
+  country?: CountryKey | null;
   role?: UserRole;
   is_banned?: boolean;
   ban_reason?: string | null;
@@ -394,6 +396,7 @@ export interface AuthUser {
   cover_url?: string | null;
   whatsapp_number?: string | null;
   whatsapp_notifications?: boolean;
+  country?: CountryKey | null;
   region: string;
   platforms: PlatformKey[];
   game_ids: Record<string, string>;

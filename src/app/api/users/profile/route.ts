@@ -10,6 +10,7 @@ import {
   normalizeSelectedGameKeys,
 } from '@/lib/config';
 import { isMissingColumnError } from '@/lib/db-compat';
+import { resolveProfileLocation, validateLocationSelection } from '@/lib/location';
 import { isValidPhoneNumber, normalizePhoneNumber } from '@/lib/phone';
 import { createServiceClient } from '@/lib/supabase';
 import { canUseSelectedGames, maybeExpireProfilePlan, resolvePlan } from '@/lib/subscription';
@@ -25,9 +26,12 @@ function withProfileDefaults(profile: Record<string, unknown>) {
   const selectedGames = Array.isArray(profile.selected_games)
     ? normalizeSelectedGameKeys(profile.selected_games)
     : [];
+  const location = resolveProfileLocation(profile);
 
   return {
     ...profile,
+    country: location.country,
+    region: location.region,
     game_ids: gameIds,
     selected_games: selectedGames,
     whatsapp_notifications:
@@ -111,6 +115,7 @@ export async function PATCH(request: NextRequest) {
       platforms,
       game_ids,
       selected_games,
+      country,
       region,
       avatar_url,
       cover_url,
@@ -141,10 +146,11 @@ export async function PATCH(request: NextRequest) {
     let nextWhatsappNotifications =
       (currentProfile.whatsapp_notifications as boolean | undefined) ??
       Boolean(currentProfile.whatsapp_number);
+    let nextLocation = resolveProfileLocation(currentProfile as Record<string, unknown>);
     let nextWhatsappNumber =
       typeof currentProfile.whatsapp_number === 'string' &&
       currentProfile.whatsapp_number.trim().length > 0
-        ? normalizePhoneNumber(currentProfile.whatsapp_number)
+        ? normalizePhoneNumber(currentProfile.whatsapp_number, nextLocation.country)
         : null;
 
     if (platforms !== undefined) {
@@ -242,11 +248,22 @@ export async function PATCH(request: NextRequest) {
         );
       }
     }
-    if (region !== undefined) {
-      if (typeof region !== 'string' || region.trim().length === 0) {
-        return NextResponse.json({ error: 'Region is required' }, { status: 400 });
+    if (country !== undefined || region !== undefined) {
+      const resolvedLocation = validateLocationSelection({
+        country: country !== undefined ? country : nextLocation.country,
+        region: region !== undefined ? region : nextLocation.region,
+      });
+
+      if (!resolvedLocation) {
+        return NextResponse.json(
+          { error: 'Choose a supported country and region' },
+          { status: 400 }
+        );
       }
-      updateData.region = region.trim();
+
+      nextLocation = resolvedLocation;
+      updateData.country = resolvedLocation.country;
+      updateData.region = resolvedLocation.region;
     }
     if (avatar_url !== undefined) updateData.avatar_url = avatar_url;
     if (cover_url !== undefined) updateData.cover_url = cover_url;
@@ -268,9 +285,11 @@ export async function PATCH(request: NextRequest) {
         return NextResponse.json({ error: 'WhatsApp number must be a string or null' }, { status: 400 });
       }
       nextWhatsappNumber =
-        typeof whatsapp_number === 'string' ? normalizePhoneNumber(whatsapp_number.trim()) : null;
+        typeof whatsapp_number === 'string'
+          ? normalizePhoneNumber(whatsapp_number.trim(), nextLocation.country)
+          : null;
 
-      if (nextWhatsappNumber && !isValidPhoneNumber(nextWhatsappNumber)) {
+      if (nextWhatsappNumber && !isValidPhoneNumber(nextWhatsappNumber, nextLocation.country)) {
         return NextResponse.json({ error: 'Enter a valid WhatsApp number' }, { status: 400 });
       }
 
@@ -280,8 +299,10 @@ export async function PATCH(request: NextRequest) {
     if (nextWhatsappNotifications) {
       if (!nextWhatsappNumber) {
         const fallbackPhone =
-          typeof currentProfile.phone === 'string' ? normalizePhoneNumber(currentProfile.phone) : '';
-        if (!isValidPhoneNumber(fallbackPhone)) {
+          typeof currentProfile.phone === 'string'
+            ? normalizePhoneNumber(currentProfile.phone, nextLocation.country)
+            : '';
+        if (!isValidPhoneNumber(fallbackPhone, nextLocation.country)) {
           return NextResponse.json(
             { error: 'Add a valid WhatsApp number before turning alerts on' },
             { status: 400 }
@@ -290,7 +311,7 @@ export async function PATCH(request: NextRequest) {
 
         nextWhatsappNumber = fallbackPhone;
         updateData.whatsapp_number = nextWhatsappNumber;
-      } else if (!isValidPhoneNumber(nextWhatsappNumber)) {
+      } else if (!isValidPhoneNumber(nextWhatsappNumber, nextLocation.country)) {
         return NextResponse.json({ error: 'Enter a valid WhatsApp number' }, { status: 400 });
       }
     }
@@ -299,24 +320,41 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ error: 'Nothing to update' }, { status: 400 });
     }
 
+    let finalUpdateData = { ...updateData };
     let updateResult = await supabase
       .from('profiles')
-      .update(updateData)
+      .update(finalUpdateData)
       .eq('id', authUser.sub)
       .select()
       .single();
 
-    if (updateResult.error && isMissingColumnError(updateResult.error, 'profiles.whatsapp_notifications')) {
-      const legacyUpdateData = { ...updateData };
-      delete legacyUpdateData.whatsapp_notifications;
+    if (updateResult.error && isMissingColumnError(updateResult.error, 'profiles.country')) {
+      finalUpdateData = { ...finalUpdateData };
+      delete finalUpdateData.country;
 
-      if (whatsapp_notifications !== undefined) {
-        legacyUpdateData.whatsapp_number = nextWhatsappNotifications ? nextWhatsappNumber : null;
+      if (country !== undefined || region !== undefined) {
+        finalUpdateData.region = nextLocation.label || nextLocation.region;
       }
 
       updateResult = await supabase
         .from('profiles')
-        .update(legacyUpdateData)
+        .update(finalUpdateData)
+        .eq('id', authUser.sub)
+        .select()
+        .single();
+    }
+
+    if (updateResult.error && isMissingColumnError(updateResult.error, 'profiles.whatsapp_notifications')) {
+      finalUpdateData = { ...finalUpdateData };
+      delete finalUpdateData.whatsapp_notifications;
+
+      if (whatsapp_notifications !== undefined) {
+        finalUpdateData.whatsapp_number = nextWhatsappNotifications ? nextWhatsappNumber : null;
+      }
+
+      updateResult = await supabase
+        .from('profiles')
+        .update(finalUpdateData)
         .eq('id', authUser.sub)
         .select()
         .single();

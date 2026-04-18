@@ -27,7 +27,6 @@ import { TierMedal } from '@/components/TierMedal';
 import {
   GAMES,
   PLATFORMS,
-  REGIONS,
   getConfiguredPlatformForGame,
   getGameIdKey,
   getGameIdLabel,
@@ -43,6 +42,12 @@ import {
   normalizeSelectedGameKeys,
 } from '@/lib/config';
 import {
+  COUNTRY_OPTIONS,
+  formatLocationLabel,
+  getRegionsForCountry,
+  resolveProfileLocation,
+} from '@/lib/location';
+import {
   ACHIEVEMENTS,
   getLevelFromXp,
   getRankDivision,
@@ -55,10 +60,11 @@ import {
   getProfileShareUrl,
   profileShareText,
 } from '@/lib/share';
-import type { GameKey, Plan, PlatformKey } from '@/types';
+import type { CountryKey, GameKey, Plan, PlatformKey } from '@/types';
 
 interface Profile {
   [key: string]: unknown;
+  country?: CountryKey | null;
   region?: string;
   avatar_url?: string | null;
   cover_url?: string | null;
@@ -91,7 +97,8 @@ export default function ProfilePage() {
   const [tab, setTab] = useState<'stats' | 'settings'>('stats');
   const [showPaywall, setShowPaywall] = useState(false);
 
-  const [region, setRegion] = useState('Nairobi');
+  const [country, setCountry] = useState<CountryKey | ''>('');
+  const [region, setRegion] = useState('');
   const [platforms, setPlatforms] = useState<PlatformKey[]>([]);
   const [gameIds, setGameIds] = useState<Record<string, string>>({});
   const [selectedGames, setSelectedGames] = useState<GameKey[]>([]);
@@ -105,8 +112,14 @@ export default function ProfilePage() {
 
       if (profileRes.ok) {
         const data = await profileRes.json();
-        setProfile(data.profile);
-        setRegion((data.profile.region as string) ?? 'Nairobi');
+        const location = resolveProfileLocation(data.profile as Record<string, unknown>);
+        setProfile({
+          ...(data.profile as Profile),
+          country: location.country,
+          region: location.region,
+        });
+        setCountry(location.country ?? '');
+        setRegion(location.region);
         setPlatforms((data.profile.platforms as PlatformKey[]) ?? []);
         setGameIds(normalizeGameIdKeys((data.profile.game_ids as Record<string, string>) ?? {}));
         setSelectedGames(normalizeSelectedGameKeys(data.profile.selected_games ?? []));
@@ -244,6 +257,11 @@ export default function ProfilePage() {
       return;
     }
 
+    if ((country && !region) || (!country && region)) {
+      toast.error('Choose both country and region');
+      return;
+    }
+
     const setupPlatforms = getPlatformsForGameSetup(selectedGames, gameIds, platforms);
     const hasMissingPlatform = selectedGames.some(
       (game) => !getConfiguredPlatformForGame(game, gameIds, setupPlatforms)
@@ -271,10 +289,20 @@ export default function ProfilePage() {
       };
 
       const payload: Record<string, unknown> = {
-        region,
         whatsapp_notifications: profile.whatsapp_notifications ?? false,
         whatsapp_number: profile.whatsapp_number ?? null,
       };
+      const currentLocation = resolveProfileLocation(profile);
+      const nextLocationCountry = country || null;
+      const nextLocationRegion = region.trim();
+
+      if (nextLocationCountry && nextLocationRegion) {
+        payload.country = nextLocationCountry;
+        payload.region = nextLocationRegion;
+      } else if (currentLocation.country && currentLocation.region) {
+        payload.country = currentLocation.country;
+        payload.region = currentLocation.region;
+      }
 
       const nextSelectedGames = normalizeArray(selectedGames);
       const prevSelectedGames = normalizeArray(currentSelectedGames);
@@ -328,6 +356,7 @@ export default function ProfilePage() {
   }
 
   const selectableGames = getSelectableGameKeys();
+  const availableRegions = getRegionsForCountry(country || null);
   const setupPlatforms = getPlatformsForGameSetup(selectedGames, gameIds, platforms);
   const requiredIdFields = selectedGames.reduce<
     Array<{ key: string; game: GameKey; platform: PlatformKey }>
@@ -379,10 +408,12 @@ export default function ProfilePage() {
   const platformCount = connectedPlatforms.length;
   const currentPlan = getPlan(((profile?.plan as Plan | undefined) ?? user?.plan ?? 'free'));
   const gameCountLabel = userGames.length === 1 ? '1 game selected' : `${userGames.length} games selected`;
+  const profileLocation = resolveProfileLocation(profile ?? {});
+  const locationLabel = profileLocation.label;
   const setupChecklist = [
     { label: 'Display photo', complete: Boolean(avatarUrl) },
     { label: 'Cover image', complete: Boolean(coverUrl) },
-    { label: 'Region chosen', complete: Boolean(profile?.region) },
+    { label: 'Location chosen', complete: Boolean(locationLabel) },
     { label: 'Games selected', complete: userGames.length > 0 },
     { label: 'Platforms linked', complete: connectedPlatforms.length > 0 },
   ];
@@ -434,9 +465,9 @@ export default function ProfilePage() {
       color: bestDivision.color,
     },
     {
-      label: 'Region',
-      value: profile?.region ? (profile.region as string) : 'Add region',
-      hint: 'Used for local matchmaking',
+      label: 'Location',
+      value: locationLabel || 'Add location',
+      hint: 'Used for local matchmaking and discovery',
       color: 'var(--text-primary)',
     },
     {
@@ -589,10 +620,10 @@ export default function ProfilePage() {
                       {bestDivision.label} / Lv. {level}
                     </span>
                     <PlanBadge plan={currentPlan.id} size="md" />
-                    {profile?.region ? (
+                    {locationLabel ? (
                       <span className="inline-flex items-center gap-1.5 rounded-full border border-[var(--border-color)] bg-[var(--surface-elevated)] px-3 py-1 text-xs font-medium text-[var(--text-secondary)]">
                         <MapPin size={12} />
-                        {profile.region as string}
+                        {locationLabel}
                       </span>
                     ) : null}
                     <span className="brand-chip px-3 py-1">{gameCountLabel}</span>
@@ -1108,25 +1139,45 @@ export default function ProfilePage() {
 
             <div className="grid gap-4 xl:grid-cols-2">
               <div className="card p-5">
-                <label className="label">Region</label>
+                <label className="label">Location</label>
                 <p className="mb-3 mt-2 text-sm text-[var(--text-secondary)]">
-                  Set the place you mostly queue from so nearby players can read you quickly.
+                  Set where you mostly play from so nearby players and brackets read you correctly.
                 </p>
-                <input
-                  type="text"
-                  list="profile-region-options"
-                  value={region}
-                  onChange={(e) => setRegion(e.target.value)}
-                  className="input w-full"
-                  placeholder="Type your region"
-                />
-                <datalist id="profile-region-options">
-                  {REGIONS.map((item) => (
-                    <option key={item} value={item}>
-                      {item}
-                    </option>
-                  ))}
-                </datalist>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <select
+                    value={country}
+                    onChange={(e) => {
+                      setCountry(e.target.value as CountryKey | '');
+                      setRegion('');
+                    }}
+                    className="input w-full"
+                  >
+                    <option value="">Select country</option>
+                    {COUNTRY_OPTIONS.map((option) => (
+                      <option key={option.key} value={option.key}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                  <select
+                    value={region}
+                    onChange={(e) => setRegion(e.target.value)}
+                    className="input w-full"
+                    disabled={!country}
+                  >
+                    <option value="">{country ? 'Select region' : 'Choose country first'}</option>
+                    {availableRegions.map((item) => (
+                      <option key={item} value={item}>
+                        {item}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                {locationLabel ? (
+                  <p className="mt-3 text-xs text-[var(--text-soft)]">
+                    Current public location: {formatLocationLabel(country || null, region) || locationLabel}
+                  </p>
+                ) : null}
               </div>
 
               <div className="card p-5">

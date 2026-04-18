@@ -11,6 +11,7 @@ import {
   EyeOff,
   Loader2,
 } from 'lucide-react';
+import { ActionFeedback, type ActionFeedbackState } from '@/components/ActionFeedback';
 import { useAuth } from '@/components/AuthProvider';
 import { GameCover } from '@/components/GameCover';
 import { PlatformLogo } from '@/components/PlatformLogo';
@@ -18,7 +19,6 @@ import { FullScreenSignup } from '@/components/ui/full-screen-signup';
 import {
   GAMES,
   PLATFORMS,
-  REGIONS,
   getConfiguredPlatformForGame,
   getGameIdKey,
   getGameIdLabel,
@@ -30,10 +30,11 @@ import {
 } from '@/lib/config';
 import type { InvitePreview } from '@/lib/invite';
 import { normalizeInviteCode } from '@/lib/invite';
+import { COUNTRY_OPTIONS, getRegionsForCountry } from '@/lib/location';
 import { getLoginPath, getSafeNextPath } from '@/lib/navigation';
 import { normalizePhoneNumber } from '@/lib/phone';
 import { PLANS } from '@/lib/plans';
-import type { GameKey, PlatformKey } from '@/types';
+import type { CountryKey, GameKey, PlatformKey } from '@/types';
 
 type Step = 1 | 2 | 3 | 4;
 const STARTER_TRIAL_GAME_LIMIT = PLANS.pro.maxGames;
@@ -47,6 +48,7 @@ interface FormData {
   whatsapp_notifications: boolean;
   whatsapp_number: string;
   password: string;
+  country: CountryKey | '';
   region: string;
   platforms: PlatformKey[];
   game_ids: Record<string, string>;
@@ -60,6 +62,7 @@ export default function RegisterPage({ searchParams }: { searchParams: RegisterS
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [invitePreview, setInvitePreview] = useState<InvitePreview | null>(null);
+  const [submitFeedback, setSubmitFeedback] = useState<ActionFeedbackState | null>(null);
 
   const [formData, setFormData] = useState<FormData>({
     username: '',
@@ -68,7 +71,8 @@ export default function RegisterPage({ searchParams }: { searchParams: RegisterS
     whatsapp_notifications: false,
     whatsapp_number: '',
     password: '',
-    region: 'Nairobi',
+    country: '',
+    region: '',
     platforms: [],
     game_ids: {},
     selected_games: [],
@@ -134,8 +138,10 @@ export default function RegisterPage({ searchParams }: { searchParams: RegisterS
     formData.phone.trim().length >= 9 &&
     emailIsValid;
   const step2Valid =
+    Boolean(formData.country) &&
     formData.region.trim().length > 0 &&
     formData.password.length >= MIN_PASSWORD_LENGTH;
+  const availableRegions = getRegionsForCountry(formData.country || null);
   const setupPlatforms = getPlatformsForGameSetup(
     formData.selected_games,
     formData.game_ids,
@@ -219,6 +225,11 @@ export default function RegisterPage({ searchParams }: { searchParams: RegisterS
 
   const handleSubmit = async () => {
     if (formData.selected_games.length === 0) {
+      setSubmitFeedback({
+        tone: 'error',
+        title: 'Choose at least one game before you create your account.',
+        detail: 'Your Pro trial starts with the games you lock in here.',
+      });
       toast.error('Select at least 1 game');
       return;
     }
@@ -233,6 +244,11 @@ export default function RegisterPage({ searchParams }: { searchParams: RegisterS
         (game) => !getConfiguredPlatformForGame(game, formData.game_ids, finalPlatforms)
       )
     ) {
+      setSubmitFeedback({
+        tone: 'error',
+        title: 'Every selected game needs a platform.',
+        detail: 'Pick the platform you actually play on so Mechi can match you correctly.',
+      });
       toast.error('Choose a platform for each game');
       return;
     }
@@ -242,11 +258,21 @@ export default function RegisterPage({ searchParams }: { searchParams: RegisterS
         return !platform || !getGameIdValue(formData.game_ids, game, platform).trim();
       })
     ) {
+      setSubmitFeedback({
+        tone: 'error',
+        title: 'Some game IDs are still missing.',
+        detail: 'Add the IDs opponents need before you finish registration.',
+      });
       toast.error('Add the game IDs opponents will need');
       return;
     }
 
     setLoading(true);
+    setSubmitFeedback({
+      tone: 'loading',
+      title: 'Creating your Mechi account...',
+      detail: "We're saving your profile, game setup, and Pro trial access now.",
+    });
     try {
       const res = await fetch('/api/auth/register', {
         method: 'POST',
@@ -255,22 +281,37 @@ export default function RegisterPage({ searchParams }: { searchParams: RegisterS
           ...formData,
           invite_code: invitePreview?.invite_code ?? null,
           platforms: finalPlatforms,
-          phone: normalizePhoneNumber(formData.phone),
+          phone: normalizePhoneNumber(formData.phone, formData.country || null),
           whatsapp_number: formData.whatsapp_number
-            ? normalizePhoneNumber(formData.whatsapp_number)
-            : normalizePhoneNumber(formData.phone),
+            ? normalizePhoneNumber(formData.whatsapp_number, formData.country || null)
+            : normalizePhoneNumber(formData.phone, formData.country || null),
         }),
       });
       const data = await res.json();
       if (!res.ok) {
+        setSubmitFeedback({
+          tone: 'error',
+          title: 'Registration did not go through.',
+          detail: data.error ?? 'Please check your details and try again.',
+        });
         toast.error(data.error ?? 'Registration failed');
         return;
       }
       login(data.token, data.user);
+      setSubmitFeedback({
+        tone: 'success',
+        title: `Welcome to Mechi, ${data.user.username}.`,
+        detail: 'Your Pro trial is live. Taking you into the app now.',
+      });
       toast.success(`Welcome to Mechi, ${data.user.username}! Your Pro trial is active.`);
       // Use a hard navigation so auth cookie guards see the latest cookie immediately.
       window.location.assign(nextPath);
     } catch {
+      setSubmitFeedback({
+        tone: 'error',
+        title: 'We could not reach the server.',
+        detail: 'Your account was not created. Check your connection and try again.',
+      });
       toast.error('Network error.');
     } finally {
       setLoading(false);
@@ -359,7 +400,7 @@ export default function RegisterPage({ searchParams }: { searchParams: RegisterS
                       onBlur={() =>
                         setFormData((current) => ({
                           ...current,
-                          phone: normalizePhoneNumber(current.phone),
+                          phone: normalizePhoneNumber(current.phone, current.country || null),
                         }))
                       }
                     />
@@ -392,22 +433,46 @@ export default function RegisterPage({ searchParams }: { searchParams: RegisterS
                 <p className="section-title">Step 2</p>
                 <div className="mt-4 space-y-4">
                   <div>
+                    <label className="label">Country</label>
+                    <select
+                      value={formData.country}
+                      onChange={(e) =>
+                        setFormData((current) => ({
+                          ...current,
+                          country: e.target.value as CountryKey | '',
+                          region: '',
+                        }))
+                      }
+                      className="input"
+                    >
+                      <option value="">Select country</option>
+                      {COUNTRY_OPTIONS.map((option) => (
+                        <option key={option.key} value={option.key}>
+                          {option.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
                     <label className="label">Region</label>
-                    <input
-                      type="text"
-                      list="register-region-options"
+                    <select
                       value={formData.region}
                       onChange={(e) => setFormData({ ...formData, region: e.target.value })}
                       className="input"
-                      placeholder="Type your region"
-                    />
-                    <datalist id="register-region-options">
-                      {REGIONS.map((region) => (
+                      disabled={!formData.country}
+                    >
+                      <option value="">
+                        {formData.country ? 'Select region' : 'Choose country first'}
+                      </option>
+                      {availableRegions.map((region) => (
                         <option key={region} value={region}>
                           {region}
                         </option>
                       ))}
-                    </datalist>
+                    </select>
+                    <p className="mt-2 text-xs text-[var(--text-soft)]">
+                      Pick where you mainly play from so Mechi can place you in the right local lane.
+                    </p>
                   </div>
                   <div>
                     <label className="label">Password</label>
@@ -664,6 +729,14 @@ export default function RegisterPage({ searchParams }: { searchParams: RegisterS
                       ? 'Choose a platform for every selected game.'
                       : 'Add each game ID to create your account.'}
                   </p>
+                ) : null}
+                {submitFeedback ? (
+                  <ActionFeedback
+                    tone={submitFeedback.tone}
+                    title={submitFeedback.title}
+                    detail={submitFeedback.detail}
+                    className="mb-4"
+                  />
                 ) : null}
                 <div className="flex gap-3">
                   <button type="button" onClick={() => setStep(3)} className="btn-ghost flex-1">

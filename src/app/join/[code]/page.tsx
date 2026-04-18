@@ -3,6 +3,7 @@ import Link from 'next/link';
 import type { Metadata } from 'next';
 import { BrandLogo } from '@/components/BrandLogo';
 import { findInviterByCode } from '@/lib/invite';
+import { formatLocationLabel } from '@/lib/location';
 import { getLoginPath, getRegisterPath } from '@/lib/navigation';
 import { createServiceClient } from '@/lib/supabase';
 
@@ -76,6 +77,7 @@ export default async function JoinInvitePage({ params }: Props) {
   }
 
   const registerHref = getRegisterPath({ invite: inviter.invite_code });
+  const inviterLocation = formatLocationLabel(inviter.country ?? null, inviter.region ?? '');
 
   return (
     <div className="page-base flex min-h-screen flex-col">
@@ -102,9 +104,9 @@ export default async function JoinInvitePage({ params }: Props) {
               </p>
               <div className="mt-6 flex flex-wrap gap-2">
                 <span className="brand-chip px-3 py-1">{inviter.invite_code}</span>
-                {inviter.region ? (
+                {inviterLocation ? (
                   <span className="rounded-full border border-[var(--border-color)] px-3 py-1 text-xs font-semibold text-[var(--text-secondary)]">
-                    {inviter.region}
+                    {inviterLocation}
                   </span>
                 ) : null}
               </div>

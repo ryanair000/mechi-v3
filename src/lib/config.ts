@@ -1,4 +1,5 @@
 import type { Platform, Game, Tier, PlatformKey, GameKey } from '@/types';
+import { LOCATION_LABELS } from '@/lib/location';
 
 export const PLATFORMS: Record<PlatformKey, Platform> = {
   ps: {
@@ -246,7 +247,7 @@ export const TIERS: Tier[] = [
   { name: 'Legend', min: 1900, max: Infinity, color: 'text-purple-500', bgColor: 'bg-purple-50 dark:bg-purple-900/30' },
 ];
 
-export const REGIONS = ['Nairobi', 'Mombasa', 'Kisumu', 'Nakuru', 'Eldoret', 'Other'];
+export const REGIONS = LOCATION_LABELS;
 
 export const DEFAULT_RATING = 1000;
 

@@ -3,6 +3,7 @@ import { NextRequest } from 'next/server';
 import { createServiceClient } from '@/lib/supabase';
 import { getGameRatingKey } from '@/lib/config';
 import { ACHIEVEMENTS, getLevelFromXp, getRankDivision } from '@/lib/gamification';
+import { resolveProfileLocation } from '@/lib/location';
 import { getProfileShareStats } from '@/lib/share';
 
 export const runtime = 'edge';
@@ -89,6 +90,8 @@ export async function GET(request: NextRequest) {
   const totalMatches = totalWins + totalLosses;
   const winRate = totalMatches > 0 ? Math.round((totalWins / totalMatches) * 100) : 0;
   const platforms = (profile.platforms as string[]) ?? [];
+  const location = resolveProfileLocation(profile as Record<string, unknown>);
+  const locationLabel = location.label || 'Location not set';
 
   return new ImageResponse(
     (
@@ -196,7 +199,7 @@ export async function GET(request: NextRequest) {
               {profile.username}
             </span>
             <span style={{ marginTop: '8px', fontSize: '16px', color: 'rgba(255,255,255,0.56)' }}>
-              {profile.region} / {platforms.length} platform{platforms.length === 1 ? '' : 's'}
+              {locationLabel} / {platforms.length} platform{platforms.length === 1 ? '' : 's'}
             </span>
             <div
               style={{

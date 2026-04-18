@@ -10,8 +10,11 @@ import {
   normalizeSelectedGameKeys,
 } from '@/lib/config';
 import { isMissingColumnError } from '@/lib/db-compat';
+import { notifyGameAudienceAboutQueue } from '@/lib/game-audience';
+import { resolveProfileLocation, UNSPECIFIED_LOCATION_LABEL } from '@/lib/location';
 import { canStartMatch } from '@/lib/plans';
 import { runMatchmaking } from '@/lib/matchmaking';
+import { expireWaitingQueueEntries } from '@/lib/queue';
 import { getTodayMatchCount, maybeExpireProfilePlan } from '@/lib/subscription';
 import type { GameKey, PlatformKey } from '@/types';
 
@@ -98,6 +101,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    await expireWaitingQueueEntries(supabase, authUser.sub);
+
     // Check if already in queue
     let existingQueueResult = await supabase
       .from('queue')
@@ -150,11 +155,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const profileLocation = resolveProfileLocation(profile);
     const queuePayload = {
       user_id: authUser.sub,
       game,
       platform: queuePlatform,
-      region: (profile.region as string) ?? 'kenya',
+      region: profileLocation.label || UNSPECIFIED_LOCATION_LABEL,
       rating,
       status: 'waiting',
     };
@@ -169,7 +175,7 @@ export async function POST(request: NextRequest) {
       const legacyQueuePayload = {
         user_id: authUser.sub,
         game,
-        region: (profile.region as string) ?? 'kenya',
+        region: profileLocation.label || UNSPECIFIED_LOCATION_LABEL,
         rating,
         status: 'waiting' as const,
       };
@@ -193,6 +199,26 @@ export async function POST(request: NextRequest) {
       await runMatchmaking(supabase);
     } catch (e) {
       console.error('[Queue Join] Matchmaking error:', e);
+    }
+
+    const { data: latestQueueEntry } = await supabase
+      .from('queue')
+      .select('status')
+      .eq('id', entry.id)
+      .maybeSingle();
+
+    if (latestQueueEntry?.status === 'waiting') {
+      try {
+        await notifyGameAudienceAboutQueue({
+          supabase,
+          game,
+          username: String(profile.username ?? 'A player'),
+          platform: queuePlatform,
+          excludeUserIds: [authUser.sub],
+        });
+      } catch (broadcastError) {
+        console.error('[Queue Join] Broadcast error:', broadcastError);
+      }
     }
 
     return NextResponse.json({

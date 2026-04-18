@@ -4,8 +4,14 @@ import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { ChallengePlayerButton } from '@/components/ChallengePlayerButton';
 import { GAMES, getConfiguredPlatformForGame, normalizeSelectedGameKeys } from '@/lib/config';
+import { isMissingColumnError } from '@/lib/db-compat';
 import { getRankDivision } from '@/lib/gamification';
-import { PUBLIC_PROFILE_SHARE_SELECT, getProfileShareStats } from '@/lib/share';
+import { resolveProfileLocation } from '@/lib/location';
+import {
+  PUBLIC_PROFILE_SHARE_SELECT,
+  PUBLIC_PROFILE_SHARE_SELECT_WITH_COUNTRY,
+  getProfileShareStats,
+} from '@/lib/share';
 import { createServiceClient } from '@/lib/supabase';
 import type { GameKey, PlatformKey } from '@/types';
 
@@ -28,19 +34,38 @@ function getTierColor(tier: string): string {
 
 async function getProfileData(username: string) {
   const supabase = createServiceClient();
-  const { data: profile } = await supabase
+  let result = await supabase
     .from('profiles')
-    .select(PUBLIC_PROFILE_SHARE_SELECT)
+    .select(PUBLIC_PROFILE_SHARE_SELECT_WITH_COUNTRY)
     .ilike('username', username)
     .single();
+
+  if (result.error && isMissingColumnError(result.error, 'profiles.country')) {
+    result = await supabase
+      .from('profiles')
+      .select(PUBLIC_PROFILE_SHARE_SELECT)
+      .ilike('username', username)
+      .single();
+  }
+
+  const profile = result.data;
 
   if (!profile) return null;
 
   const { bestRating, totalWins, totalLosses } = getProfileShareStats(
     profile as Record<string, unknown>
   );
+  const location = resolveProfileLocation(profile as Record<string, unknown>);
 
-  return { ...profile, bestRating, totalWins, totalLosses };
+  return {
+    ...profile,
+    country: location.country,
+    region: location.region,
+    location_label: location.label,
+    bestRating,
+    totalWins,
+    totalLosses,
+  };
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
@@ -180,7 +205,7 @@ export default async function ShareProfilePage({ params }: Props) {
                     {profile.username}
                   </h1>
                   <p className="mt-3 text-sm leading-6 text-white/66">
-                    {profile.region || 'Region not set'} with {selectedGames.length}{' '}
+                    {profile.location_label || 'Location not set'} with {selectedGames.length}{' '}
                     {selectedGames.length === 1 ? 'game' : 'games'} on Mechi.
                   </p>
                   <div className="mt-4 flex flex-wrap items-center gap-2">

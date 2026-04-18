@@ -1,5 +1,6 @@
 'use client';
 
+import type { ReactNode } from 'react';
 import { useSyncExternalStore } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -10,7 +11,9 @@ import {
   Lightbulb,
   type LucideIcon,
   LogOut,
+  MessageCircle,
   Settings,
+  Share2,
   Swords,
   Trophy,
   User,
@@ -36,12 +39,47 @@ const PRIMARY_ITEMS: NavItem[] = [
 const COMPETE_ITEMS: NavItem[] = [
   { href: '/tournaments', label: 'Tournaments', icon: Swords },
   { href: '/lobbies', label: 'Lobbies', icon: Users },
-  { href: '/suggest', label: 'Suggest', icon: Lightbulb },
+  { href: '/challenges', label: 'Challenges', icon: MessageCircle },
+];
+
+const GAME_ITEMS: NavItem[] = [
   { href: '/games', label: 'Games', icon: Gamepad2 },
+  { href: '/suggest', label: 'Suggest', icon: Lightbulb },
+];
+
+const SHARE_ITEMS: NavItem[] = [
+  { href: '/share', label: 'Share', icon: Share2 },
 ];
 
 function isPathActive(pathname: string, href: string) {
   return pathname === href || (href !== '/dashboard' && pathname.startsWith(href));
+}
+
+function getNavItemClass(isActive: boolean) {
+  return `flex items-center gap-3 rounded-2xl border px-3.5 py-3 text-sm font-semibold transition-all ${
+    isActive
+      ? 'border-[rgba(50,224,196,0.22)] bg-[var(--surface-elevated)] text-[var(--text-primary)] shadow-[0_16px_28px_rgba(50,224,196,0.12)]'
+      : 'border-transparent text-[var(--text-secondary)] hover:border-[var(--border-color)] hover:bg-[var(--surface-elevated)] hover:text-[var(--text-primary)]'
+  }`;
+}
+
+function SidebarSection({
+  title,
+  children,
+}: {
+  title?: string;
+  children: ReactNode;
+}) {
+  return (
+    <div className="space-y-1.5">
+      {title ? (
+        <p className="px-3.5 pt-2 text-[10px] font-bold uppercase tracking-[0.18em] text-[var(--text-soft)]">
+          {title}
+        </p>
+      ) : null}
+      {children}
+    </div>
+  );
 }
 
 export default function SidebarWithSubmenu() {
@@ -79,50 +117,69 @@ export default function SidebarWithSubmenu() {
       </div>
 
       <nav className="flex-1 space-y-1.5 overflow-y-auto px-1 py-4">
-        {PRIMARY_ITEMS.map(({ href, label, icon: Icon }) => {
-          const isActive = isPathActive(pathname, href);
-          return (
-            <Link
-              key={href}
-              href={href}
-              className={`flex items-center gap-3 rounded-2xl border px-3.5 py-3 text-sm font-semibold transition-all ${
-                isActive
-                  ? 'border-[rgba(50,224,196,0.22)] bg-[var(--surface-elevated)] text-[var(--text-primary)] shadow-[0_16px_28px_rgba(50,224,196,0.12)]'
-                  : 'border-transparent text-[var(--text-secondary)] hover:border-[var(--border-color)] hover:bg-[var(--surface-elevated)] hover:text-[var(--text-primary)]'
-              }`}
-            >
-              <Icon
-                size={18}
-                strokeWidth={isActive ? 2 : 1.65}
-                className={isActive ? 'text-[var(--accent-secondary-text)]' : undefined}
-              />
-              {label}
-            </Link>
-          );
-        })}
+        <SidebarSection>
+          {PRIMARY_ITEMS.map(({ href, label, icon: Icon }) => {
+            const isActive = isPathActive(pathname, href);
+            return (
+              <Link key={href} href={href} className={getNavItemClass(isActive)}>
+                <Icon
+                  size={18}
+                  strokeWidth={isActive ? 2 : 1.65}
+                  className={isActive ? 'text-[var(--accent-secondary-text)]' : undefined}
+                />
+                {label}
+              </Link>
+            );
+          })}
+        </SidebarSection>
 
-        {COMPETE_ITEMS.map(({ href, label, icon: Icon }) => {
-          const isActive = isPathActive(pathname, href);
-          return (
-            <Link
-              key={href}
-              href={href}
-              className={`flex items-center gap-3 rounded-2xl border px-3.5 py-3 text-sm font-semibold transition-all ${
-                isActive
-                  ? 'border-[rgba(50,224,196,0.22)] bg-[var(--surface-elevated)] text-[var(--text-primary)] shadow-[0_16px_28px_rgba(50,224,196,0.12)]'
-                  : 'border-transparent text-[var(--text-secondary)] hover:border-[var(--border-color)] hover:bg-[var(--surface-elevated)] hover:text-[var(--text-primary)]'
-              }`}
-            >
-              <Icon
-                size={18}
-                strokeWidth={isActive ? 2 : 1.65}
-                className={isActive ? 'text-[var(--accent-secondary-text)]' : undefined}
-              />
-              {label}
-            </Link>
-          );
-        })}
+        <SidebarSection title="Compete">
+          {COMPETE_ITEMS.map(({ href, label, icon: Icon }) => {
+            const isActive = isPathActive(pathname, href);
+            return (
+              <Link key={href} href={href} className={getNavItemClass(isActive)}>
+                <Icon
+                  size={18}
+                  strokeWidth={isActive ? 2 : 1.65}
+                  className={isActive ? 'text-[var(--accent-secondary-text)]' : undefined}
+                />
+                {label}
+              </Link>
+            );
+          })}
+        </SidebarSection>
 
+        <SidebarSection title="Games">
+          {GAME_ITEMS.map(({ href, label, icon: Icon }) => {
+            const isActive = isPathActive(pathname, href);
+            return (
+              <Link key={href} href={href} className={getNavItemClass(isActive)}>
+                <Icon
+                  size={18}
+                  strokeWidth={isActive ? 2 : 1.65}
+                  className={isActive ? 'text-[var(--accent-secondary-text)]' : undefined}
+                />
+                {label}
+              </Link>
+            );
+          })}
+        </SidebarSection>
+
+        <SidebarSection title="Share">
+          {SHARE_ITEMS.map(({ href, label, icon: Icon }) => {
+            const isActive = isPathActive(pathname, href);
+            return (
+              <Link key={href} href={href} className={getNavItemClass(isActive)}>
+                <Icon
+                  size={18}
+                  strokeWidth={isActive ? 2 : 1.65}
+                  className={isActive ? 'text-[var(--accent-secondary-text)]' : undefined}
+                />
+                {label}
+              </Link>
+            );
+          })}
+        </SidebarSection>
       </nav>
 
       <div className="space-y-2 px-1 pb-1">

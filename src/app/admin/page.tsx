@@ -12,6 +12,7 @@ import {
   Trophy,
   Users,
 } from 'lucide-react';
+import { expireWaitingQueueEntries, getQueueExpiryCutoffIso } from '@/lib/queue';
 import { createServiceClient } from '@/lib/supabase';
 import { verifyToken } from '@/lib/auth';
 import type { AuditLog } from '@/types';
@@ -94,12 +95,14 @@ async function getOverviewData(): Promise<AdminOverviewData> {
   const payload = token ? verifyToken(token) : null;
   const supabase = createServiceClient();
   const since7d = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
-  const staleQueueThreshold = new Date(Date.now() - 10 * 60 * 1000).toISOString();
+  const staleQueueThreshold = getQueueExpiryCutoffIso();
   const nowIso = new Date().toISOString();
 
   if (!payload?.sub) {
     return buildEmptyOverview();
   }
+
+  await expireWaitingQueueEntries(supabase);
 
   const { data: profile } = await supabase
     .from('profiles')

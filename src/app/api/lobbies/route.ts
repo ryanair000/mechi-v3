@@ -9,6 +9,7 @@ import {
   getLobbyPopularMaps,
   supportsLobbyMode,
 } from '@/lib/config';
+import { notifyGameAudienceAboutLobby } from '@/lib/game-audience';
 import type { GameKey } from '@/types';
 
 function generateRoomCode(): string {
@@ -133,6 +134,11 @@ export async function POST(request: NextRequest) {
     }
 
     const supabase = createServiceClient();
+    const { data: hostProfile } = await supabase
+      .from('profiles')
+      .select('username')
+      .eq('id', authUser.sub)
+      .maybeSingle();
 
     const { data: lobby, error } = await supabase
       .from('lobbies')
@@ -159,6 +165,22 @@ export async function POST(request: NextRequest) {
       lobby_id: lobby.id,
       user_id: authUser.sub,
     });
+
+    try {
+      await notifyGameAudienceAboutLobby({
+        supabase,
+        game: game as GameKey,
+        hostName: String((hostProfile as { username?: string } | null)?.username ?? 'A player'),
+        lobbyId: String(lobby.id),
+        title: normalizedTitle,
+        mode: normalizedMode || getDefaultLobbyMode(game as GameKey),
+        mapName: normalizedMap || null,
+        scheduledFor: scheduledAt.toISOString(),
+        excludeUserIds: [authUser.sub],
+      });
+    } catch (broadcastError) {
+      console.error('[Lobbies POST] Broadcast error:', broadcastError);
+    }
 
     return NextResponse.json({ lobby }, { status: 201 });
   } catch (err) {

@@ -12,6 +12,7 @@ const BASE_URL =
 
 export const PUBLIC_PROFILE_SHARE_SELECT =
   'id, username, region, level, avatar_url, cover_url, platforms, game_ids, selected_games, rating_efootball, rating_efootball_mobile, rating_fc26, rating_mk11, rating_nba2k26, rating_tekken8, rating_sf6, wins_efootball, wins_efootball_mobile, wins_fc26, wins_mk11, wins_nba2k26, wins_tekken8, wins_sf6, losses_efootball, losses_efootball_mobile, losses_fc26, losses_mk11, losses_nba2k26, losses_tekken8, losses_sf6';
+export const PUBLIC_PROFILE_SHARE_SELECT_WITH_COUNTRY = `country, ${PUBLIC_PROFILE_SHARE_SELECT}`;
 
 export interface ShareData {
   title: string;

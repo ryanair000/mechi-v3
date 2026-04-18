@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuthUser } from '@/lib/auth';
 import { getConfiguredPlatformForGame } from '@/lib/config';
-import { createServiceClient } from '@/lib/supabase';
 import { runMatchmaking } from '@/lib/matchmaking';
+import { expireWaitingQueueEntries } from '@/lib/queue';
+import { createServiceClient } from '@/lib/supabase';
 import type { GameKey, PlatformKey } from '@/types';
 
 export async function GET(request: NextRequest) {
@@ -13,6 +14,7 @@ export async function GET(request: NextRequest) {
 
   try {
     const supabase = createServiceClient();
+    await expireWaitingQueueEntries(supabase, authUser.sub);
 
     // Get current queue entry (check both waiting and matched)
     const { data: queueEntry } = await supabase

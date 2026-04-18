@@ -1,5 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { calculateElo } from './elo';
+import { sendMatchFoundEmail } from './email';
 import {
   GAMES,
   getCanonicalGameKey,
@@ -10,13 +11,14 @@ import {
   getGameWinsKey,
 } from './config';
 import { isMissingColumnError } from './db-compat';
+import { UNSPECIFIED_LOCATION_LABEL } from './location';
+import { createNotifications } from './notifications';
 import { getPlan } from './plans';
+import { expireWaitingQueueEntries, getQueueWaitMinutes } from './queue';
 import { incrementMatchUsage } from './subscription';
 import { resolvePlan } from './subscription';
 import type { GameKey, PlatformKey } from '@/types';
 import { notifyMatchFound } from './whatsapp';
-import { sendMatchFoundEmail } from './email';
-import { createNotifications } from './notifications';
 
 const BASE_RATING_TOLERANCE = 300;
 const RATING_TOLERANCE_STEP = 150;
@@ -36,15 +38,6 @@ type QueueEntryRow = {
   profiles?: Record<string, unknown> | null;
 };
 
-function getWaitMinutes(joinedAt: string | null | undefined): number {
-  if (!joinedAt) return 0;
-
-  const joinedAtMs = new Date(joinedAt).getTime();
-  if (Number.isNaN(joinedAtMs)) return 0;
-
-  return Math.max(0, Math.floor((Date.now() - joinedAtMs) / 60000));
-}
-
 function getRatingTolerance(
   joinedAt: string | null | undefined,
   profile: Record<string, unknown> | null
@@ -54,7 +47,7 @@ function getRatingTolerance(
     profile?.plan_expires_at as string | null | undefined
   );
   const priorityBonus = getPlan(resolvedPlan).priorityMatchmaking ? PRIORITY_WAIT_BONUS_MINUTES : 0;
-  const effectiveWaitMinutes = getWaitMinutes(joinedAt) + priorityBonus;
+  const effectiveWaitMinutes = getQueueWaitMinutes(joinedAt) + priorityBonus;
   const expansionSteps = Math.floor(effectiveWaitMinutes / RATING_TOLERANCE_STEP_MINUTES);
 
   return Math.min(
@@ -73,12 +66,7 @@ function getJoinedAtMs(joinedAt: string | null | undefined): number {
 }
 
 export async function runMatchmaking(supabase: SupabaseClient): Promise<number> {
-  // First clean up stale entries older than 30 minutes
-  await supabase
-    .from('queue')
-    .update({ status: 'cancelled' })
-    .eq('status', 'waiting')
-    .lt('joined_at', new Date(Date.now() - 30 * 60 * 1000).toISOString());
+  await expireWaitingQueueEntries(supabase);
 
   // Get all waiting queue entries ordered by join time
   let queueEntriesRaw: unknown = null;
@@ -196,7 +184,7 @@ export async function runMatchmaking(supabase: SupabaseClient): Promise<number> 
       player2_id: opponent.user_id,
       game: entryGame,
       platform: p1Platform,
-      region: entry.region ?? 'kenya',
+      region: entry.region ?? UNSPECIFIED_LOCATION_LABEL,
       status: 'pending',
     };
 
@@ -211,7 +199,7 @@ export async function runMatchmaking(supabase: SupabaseClient): Promise<number> 
         player1_id: entry.user_id,
         player2_id: opponent.user_id,
         game: entryGame,
-        region: entry.region ?? 'kenya',
+        region: entry.region ?? UNSPECIFIED_LOCATION_LABEL,
         status: 'pending' as const,
       };
       matchResult = await supabase

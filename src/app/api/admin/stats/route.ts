@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getRequestAccessProfile, hasModeratorAccess } from '@/lib/access';
+import { expireWaitingQueueEntries, getQueueExpiryCutoffIso } from '@/lib/queue';
 import { createServiceClient } from '@/lib/supabase';
 
 export async function GET(request: NextRequest) {
@@ -10,7 +11,9 @@ export async function GET(request: NextRequest) {
 
   try {
     const supabase = createServiceClient();
+    await expireWaitingQueueEntries(supabase);
     const since7d = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+    const staleQueueThreshold = getQueueExpiryCutoffIso();
 
     const [
       { count: totalUsers },
@@ -51,7 +54,7 @@ export async function GET(request: NextRequest) {
         .from('queue')
         .select('id', { count: 'exact', head: true })
         .eq('status', 'waiting')
-        .lt('joined_at', new Date(Date.now() - 10 * 60 * 1000).toISOString()),
+        .lt('joined_at', staleQueueThreshold),
       supabase.from('lobbies').select('id', { count: 'exact', head: true }).eq('status', 'open'),
       supabase.from('lobbies').select('id', { count: 'exact', head: true }).eq('status', 'full'),
       supabase.from('lobbies').select('id', { count: 'exact', head: true }).eq('status', 'in_progress'),

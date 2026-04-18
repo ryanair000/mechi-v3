@@ -1,4 +1,4 @@
-import { normalizePhoneNumber } from '@/lib/phone';
+import { getPhoneLookupVariants } from '@/lib/phone';
 import { ADMIN_HOST } from '@/lib/urls';
 import type { UserRole } from '@/types';
 
@@ -17,7 +17,10 @@ function normalizeHost(value: string | null | undefined): string {
 }
 
 export function isPrimaryAdminPhone(phone: string | null | undefined): boolean {
-  return normalizePhoneNumber(phone ?? '') === PRIMARY_ADMIN_PHONE;
+  const phoneVariants = new Set(getPhoneLookupVariants(phone ?? ''));
+  const adminVariants = getPhoneLookupVariants(PRIMARY_ADMIN_PHONE, 'kenya');
+
+  return adminVariants.some((candidate) => phoneVariants.has(candidate));
 }
 
 export function hasPrimaryAdminAccess(identity: AdminIdentity | null | undefined): boolean {

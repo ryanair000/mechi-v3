@@ -63,7 +63,7 @@ export async function sendNewRegistrationTelegramNotification(params: {
   username: string;
   email: string;
   phone: string;
-  region: string;
+  location: string;
   selectedGames: string[];
   plan: string;
   inviteCode?: string | null;
@@ -77,7 +77,7 @@ export async function sendNewRegistrationTelegramNotification(params: {
     formatField('Username', params.username),
     formatField('Email', params.email),
     formatField('Phone', params.phone),
-    formatField('Region', params.region),
+    formatField('Location', params.location),
     formatField('Plan', params.plan),
     formatField('Games', selectedGames),
     params.inviteCode ? formatField('Invite code used', params.inviteCode) : null,

@@ -13,6 +13,7 @@ import {
 } from '@/lib/config';
 import { isMissingColumnError, isMissingTableError } from '@/lib/db-compat';
 import { findInviterByCode, generateUniqueInviteCode, normalizeInviteCode } from '@/lib/invite';
+import { guessCountryFromRegion, validateLocationSelection } from '@/lib/location';
 import { getPhoneLookupVariants, isValidPhoneNumber, normalizePhoneNumber } from '@/lib/phone';
 import { canSelectGames } from '@/lib/plans';
 import { checkRateLimit, getClientIp, rateLimitResponse } from '@/lib/rateLimit';
@@ -109,6 +110,7 @@ export async function POST(request: NextRequest) {
       phone,
       email,
       password,
+      country,
       region,
       platforms,
       game_ids,
@@ -128,16 +130,14 @@ export async function POST(request: NextRequest) {
       requestedPlatforms
     );
     const trimmedEmail = String(email ?? '').trim();
-    const trimmedRegion = String(region ?? '').trim();
     const normalizedInviteCode = normalizeInviteCode(invite_code);
-    const normalizedPhone = normalizePhoneNumber(phone ?? '');
-    const normalizedWhatsappNumber = normalizePhoneNumber(
-      whatsapp_number || normalizedPhone
-    );
-    const resolvedWhatsappNumber = whatsapp_notifications ? normalizedWhatsappNumber : null;
+    const location = validateLocationSelection({
+      country: country ?? guessCountryFromRegion(String(region ?? '')),
+      region,
+    });
 
     // Validation
-    if (!username || !phone || !password || !trimmedEmail || !trimmedRegion) {
+    if (!username || !phone || !password || !trimmedEmail || !region) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail)) {
@@ -149,6 +149,18 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
+    if (!location) {
+      return NextResponse.json(
+        { error: 'Choose a supported country and region' },
+        { status: 400 }
+      );
+    }
+    const normalizedPhone = normalizePhoneNumber(phone ?? '', location.country);
+    const normalizedWhatsappNumber = normalizePhoneNumber(
+      whatsapp_number || normalizedPhone,
+      location.country
+    );
+    const resolvedWhatsappNumber = whatsapp_notifications ? normalizedWhatsappNumber : null;
     if (hasInvalidPlatform) {
       return NextResponse.json({ error: 'Choose valid platforms' }, { status: 400 });
     }
@@ -182,15 +194,15 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
-    if (!isValidPhoneNumber(phone)) {
+    if (!isValidPhoneNumber(phone, location.country)) {
       return NextResponse.json({ error: 'Enter a valid phone number' }, { status: 400 });
     }
-    if (whatsapp_notifications && !isValidPhoneNumber(normalizedWhatsappNumber)) {
+    if (whatsapp_notifications && !isValidPhoneNumber(normalizedWhatsappNumber, location.country)) {
       return NextResponse.json({ error: 'Enter a valid WhatsApp number' }, { status: 400 });
     }
 
     const supabase = createServiceClient();
-    const phoneVariants = getPhoneLookupVariants(normalizedPhone);
+    const phoneVariants = getPhoneLookupVariants(normalizedPhone, location.country);
 
     // Check username uniqueness
     const { data: existingUser } = await supabase
@@ -229,7 +241,8 @@ export async function POST(request: NextRequest) {
       invite_code: ownInviteCode,
       invited_by: inviter?.id ?? null,
       password_hash,
-      region: trimmedRegion,
+      country: location.country,
+      region: location.region,
       plan: STARTER_TRIAL_PLAN,
       plan_since: trialWindow.startedAtIso,
       plan_expires_at: trialWindow.expiresAtIso,
@@ -263,7 +276,7 @@ export async function POST(request: NextRequest) {
       phone: normalizedPhone,
       email: trimmedEmail,
       password_hash,
-      region: trimmedRegion,
+      region: location.label,
       platforms: finalPlatforms,
       game_ids: submittedGameIds,
       selected_games: selectedGames,
@@ -321,7 +334,7 @@ export async function POST(request: NextRequest) {
       username: profile.username as string,
       email: trimmedEmail,
       phone: normalizedPhone,
-      region: trimmedRegion,
+      location: location.label,
       selectedGames,
       plan: STARTER_TRIAL_PLAN,
       inviteCode: normalizedInviteCode,

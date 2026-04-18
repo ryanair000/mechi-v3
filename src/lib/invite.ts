@@ -1,5 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { isMissingColumnError } from '@/lib/db-compat';
+import { resolveProfileLocation } from '@/lib/location';
+import type { CountryKey } from '@/types';
 
 export const INVITE_CODE_MAX_LENGTH = 24;
 
@@ -7,6 +9,7 @@ export interface InvitePreview {
   id: string;
   username: string;
   avatar_url: string | null;
+  country?: CountryKey | null;
   region: string | null;
   invite_code: string;
 }
@@ -89,11 +92,21 @@ export async function findInviterByCode(
     return null;
   }
 
-  const { data, error } = await supabase
+  let result = await supabase
     .from('profiles')
-    .select('id, username, avatar_url, region, invite_code')
+    .select('id, username, avatar_url, country, region, invite_code')
     .eq('invite_code', normalizedCode)
     .maybeSingle();
+
+  if (result.error && isMissingColumnError(result.error, 'profiles.country')) {
+    result = await supabase
+      .from('profiles')
+      .select('id, username, avatar_url, region, invite_code')
+      .eq('invite_code', normalizedCode)
+      .maybeSingle();
+  }
+
+  const { data, error } = result;
 
   if (error && isMissingColumnError(error, 'profiles.invite_code')) {
     return null;
@@ -103,11 +116,14 @@ export async function findInviterByCode(
     return null;
   }
 
+  const location = resolveProfileLocation(data as Record<string, unknown>);
+
   return {
     id: data.id as string,
     username: data.username as string,
     avatar_url: (data.avatar_url as string | null | undefined) ?? null,
-    region: (data.region as string | null | undefined) ?? null,
+    country: location.country,
+    region: location.region || null,
     invite_code: data.invite_code as string,
   };
 }

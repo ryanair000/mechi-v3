@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getAuthUser } from '@/lib/auth';
 import { GAMES, getCanonicalGameKey, isValidGamePlatform } from '@/lib/config';
 import { isTournamentSize } from '@/lib/bracket';
+import { notifyGameAudienceAboutTournament } from '@/lib/game-audience';
+import { resolveProfileLocation, validateLocationSelection } from '@/lib/location';
 import { getPlan } from '@/lib/plans';
 import { makeSlug } from '@/lib/slug';
 import { maybeExpireProfilePlan } from '@/lib/subscription';
@@ -85,7 +87,8 @@ export async function POST(request: NextRequest) {
     const requestedPlatform = (body.platform ? String(body.platform) : null) as PlatformKey | null;
     const size = Number(body.size);
     const entryFee = Math.max(0, Math.round(Number(body.entry_fee ?? 0)));
-    const region = String(body.region ?? 'Nairobi').trim() || 'Nairobi';
+    const requestedCountry = body.country;
+    const requestedRegion = body.region;
     const rules = String(body.rules ?? '').trim();
 
     if (title.length < 3) {
@@ -111,18 +114,32 @@ export async function POST(request: NextRequest) {
     const slug = makeSlug(title);
     const { data: organizerProfileRaw, error: organizerProfileError } = await supabase
       .from('profiles')
-      .select('id, plan, plan_expires_at')
+      .select('*')
       .eq('id', authUser.sub)
       .single();
 
-    const organizerProfile = organizerProfileRaw as {
+    const organizerProfile = organizerProfileRaw as (Record<string, unknown> & {
       id: string;
+      username?: string | null;
       plan?: string | null;
       plan_expires_at?: string | null;
-    } | null;
+    }) | null;
 
     if (organizerProfileError || !organizerProfile) {
       return NextResponse.json({ error: 'Organizer profile not found' }, { status: 404 });
+    }
+
+    const organizerLocation = resolveProfileLocation(organizerProfile as Record<string, unknown>);
+    const location = validateLocationSelection({
+      country: requestedCountry ?? organizerLocation.country,
+      region: requestedRegion ?? organizerLocation.region,
+    });
+
+    if (!location) {
+      return NextResponse.json(
+        { error: 'Choose a supported country and region for the tournament' },
+        { status: 400 }
+      );
     }
 
     const organizerPlan = await maybeExpireProfilePlan(organizerProfile, supabase);
@@ -146,7 +163,7 @@ export async function POST(request: NextRequest) {
         title,
         game,
         platform,
-        region,
+        region: location.label,
         size,
         entry_fee: entryFee,
         platform_fee_rate: organizerPlanConfig.tournamentFeePercent,
@@ -165,6 +182,23 @@ export async function POST(request: NextRequest) {
       user_id: authUser.sub,
       payment_status: 'free',
     });
+
+    try {
+      await notifyGameAudienceAboutTournament({
+        supabase,
+        game,
+        organizerName: organizerProfile.username?.trim() || 'A player',
+        slug,
+        title,
+        platform,
+        entryFee,
+        size,
+        region: location.label,
+        excludeUserIds: [authUser.sub],
+      });
+    } catch (broadcastError) {
+      console.error('[Tournaments POST] Broadcast error:', broadcastError);
+    }
 
     return NextResponse.json({ tournament }, { status: 201 });
   } catch (err) {

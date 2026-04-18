@@ -15,6 +15,7 @@ import {
   Upload,
   X,
 } from 'lucide-react';
+import { ActionFeedback, type ActionFeedbackState } from '@/components/ActionFeedback';
 import { useAuth, useAuthFetch } from '@/components/AuthProvider';
 import { createClient } from '@/lib/supabase';
 import {
@@ -103,6 +104,8 @@ export default function MatchPage() {
   const [reporting, setReporting] = useState<string | null>(null);
   const [uploadingScreenshot, setUploadingScreenshot] = useState(false);
   const [cancelling, setCancelling] = useState(false);
+  const [reportFeedback, setReportFeedback] = useState<ActionFeedbackState | null>(null);
+  const [disputeFeedback, setDisputeFeedback] = useState<ActionFeedbackState | null>(null);
   const [selectedQuickComment, setSelectedQuickComment] = useState<string | null>(null);
   const [sentQuickComment, setSentQuickComment] = useState<string | null>(null);
   const [receivedQuickComment, setReceivedQuickComment] = useState<{
@@ -114,6 +117,8 @@ export default function MatchPage() {
   const [autoCloseCountdown, setAutoCloseCountdown] = useState<number | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const channelRef = useRef<{ send: (payload: unknown) => Promise<unknown> } | null>(null);
+  const previousStatusRef = useRef<MatchData['status'] | null>(null);
+  const suppressNextStatusToastRef = useRef<MatchData['status'] | null>(null);
 
   const fetchMatch = useCallback(async () => {
     const res = await authFetch(`/api/matches/${matchId}`, { cache: 'no-store' });
@@ -283,6 +288,77 @@ export default function MatchPage() {
     return () => window.clearInterval(pollTimer);
   }, [fetchMatch, match, user]);
 
+  useEffect(() => {
+    if (!match) {
+      return;
+    }
+
+    if (match.status === 'disputed') {
+      setDisputeFeedback({
+        tone: match.dispute_screenshot_url ? 'info' : 'error',
+        title: match.dispute_screenshot_url ? 'Proof uploaded.' : 'Reports did not match.',
+        detail: match.dispute_screenshot_url
+          ? "Admin review is in progress. We'll keep the screenshot here until it is resolved."
+          : 'Upload a screenshot of the final result so the dispute can be resolved faster.',
+      });
+    } else {
+      setDisputeFeedback(null);
+    }
+  }, [match]);
+
+  useEffect(() => {
+    if (!match) {
+      return;
+    }
+
+    const previousStatus = previousStatusRef.current;
+
+    if (
+      previousStatus &&
+      previousStatus !== match.status &&
+      previousStatus === 'pending'
+    ) {
+      const suppressToast = suppressNextStatusToastRef.current === match.status;
+      const scoreline =
+        match.player1_score !== null &&
+        match.player1_score !== undefined &&
+        match.player2_score !== null &&
+        match.player2_score !== undefined
+          ? `${match.player1_score}-${match.player2_score}`
+          : null;
+
+      if (!suppressToast && match.status === 'completed') {
+        toast.success(
+          scoreline
+            ? `Result confirmed at ${scoreline}.`
+            : 'Result confirmed. Match complete.'
+        );
+        setReportFeedback({
+          tone: 'success',
+          title: 'Result confirmed.',
+          detail: scoreline
+            ? `Both players matched the ${scoreline} report.`
+            : 'Both players agreed on the final result.',
+        });
+      }
+
+      if (!suppressToast && match.status === 'disputed') {
+        toast.error('Reports did not match. Upload proof to resolve the dispute.');
+        setReportFeedback({
+          tone: 'error',
+          title: 'Reports did not match.',
+          detail: 'The match is disputed until proof is uploaded or an admin resolves it.',
+        });
+      }
+    }
+
+    if (suppressNextStatusToastRef.current === match.status) {
+      suppressNextStatusToastRef.current = null;
+    }
+
+    previousStatusRef.current = match.status;
+  }, [match]);
+
   const handleReport = async (winnerId?: string) => {
     if (!match) {
       return;
@@ -297,6 +373,11 @@ export default function MatchPage() {
       const player2ScoreText = reportScores.player2.trim();
 
       if (!/^\d+$/.test(player1ScoreText) || !/^\d+$/.test(player2ScoreText)) {
+        setReportFeedback({
+          tone: 'error',
+          title: 'Enter both scorelines first.',
+          detail: 'Only whole numbers are allowed in the score report.',
+        });
         toast.error('Enter both scorelines as whole numbers');
         return;
       }
@@ -313,6 +394,11 @@ export default function MatchPage() {
             ? match.player2_id
             : null;
     } else if (!winnerId) {
+      setReportFeedback({
+        tone: 'error',
+        title: 'Pick a winner before you submit.',
+        detail: 'Mechi cannot lock the match until you choose who won.',
+      });
       toast.error('Pick a winner first');
       return;
     } else {
@@ -320,6 +406,11 @@ export default function MatchPage() {
     }
 
     setReporting(nextReportingState);
+    setReportFeedback({
+      tone: 'loading',
+      title: scoreReportingEnabled ? 'Submitting your scoreline...' : 'Submitting your result...',
+      detail: "We're saving your report and checking whether the opponent already reported.",
+    });
     try {
       const res = await authFetch(`/api/matches/${matchId}/report`, {
         method: 'POST',
@@ -327,6 +418,11 @@ export default function MatchPage() {
       });
       const data = await res.json();
       if (!res.ok) {
+        setReportFeedback({
+          tone: 'error',
+          title: 'Could not submit your report.',
+          detail: data.error ?? 'Please try again.',
+        });
         toast.error(data.error ?? 'Failed to report');
         return;
       }
@@ -358,14 +454,44 @@ export default function MatchPage() {
       }
 
       if (data.status === 'completed') {
+        suppressNextStatusToastRef.current = 'completed';
+        setReportFeedback({
+          tone: 'success',
+          title: data.result === 'draw' ? 'Draw confirmed.' : 'Result confirmed.',
+          detail:
+            data.result === 'draw'
+              ? 'Both score reports matched and the draw is locked in.'
+              : 'Both reports matched, so the match is now complete.',
+        });
         toast.success(data.result === 'draw' ? 'Draw confirmed. Score locked.' : 'Match completed! Your climb is updated.');
       } else if (data.status === 'disputed') {
+        suppressNextStatusToastRef.current = 'disputed';
+        setReportFeedback({
+          tone: 'error',
+          title: 'Reports did not match.',
+          detail: 'Upload a screenshot so the dispute can be resolved.',
+        });
+        setDisputeFeedback({
+          tone: 'error',
+          title: 'Reports did not match.',
+          detail: 'Upload a screenshot of the result to help resolve the dispute quickly.',
+        });
         toast.error('Result disputed! Upload a screenshot.');
       } else {
+        setReportFeedback({
+          tone: 'info',
+          title: 'Your report is in.',
+          detail: "We're waiting for the opponent to submit the same result.",
+        });
         toast.success('Result reported. Waiting for opponent...');
       }
       void fetchMatch();
     } catch {
+      setReportFeedback({
+        tone: 'error',
+        title: 'Could not submit your report.',
+        detail: 'We could not reach the server. Please try again.',
+      });
       toast.error('Network error');
     } finally {
       setReporting(null);
@@ -376,15 +502,30 @@ export default function MatchPage() {
     const file = event.target.files?.[0];
     if (!file) return;
     if (!file.type.startsWith('image/')) {
+      setDisputeFeedback({
+        tone: 'error',
+        title: 'That file is not an image.',
+        detail: 'Upload a PNG, JPG, or WEBP screenshot.',
+      });
       toast.error('Please upload an image');
       return;
     }
     if (file.size > 10 * 1024 * 1024) {
+      setDisputeFeedback({
+        tone: 'error',
+        title: 'Screenshot is too large.',
+        detail: 'Keep the upload under 10MB and try again.',
+      });
       toast.error('Image must be under 10MB');
       return;
     }
 
     setUploadingScreenshot(true);
+    setDisputeFeedback({
+      tone: 'loading',
+      title: 'Uploading screenshot...',
+      detail: "We're attaching your proof to the dispute now.",
+    });
     try {
       const formData = new FormData();
       formData.append('screenshot', file);
@@ -394,12 +535,27 @@ export default function MatchPage() {
       });
       const data = await res.json();
       if (!res.ok) {
+        setDisputeFeedback({
+          tone: 'error',
+          title: 'Screenshot upload failed.',
+          detail: data.error ?? 'Please try again with a clearer image.',
+        });
         toast.error(data.error ?? 'Upload failed');
         return;
       }
+      setDisputeFeedback({
+        tone: 'success',
+        title: 'Screenshot uploaded.',
+        detail: 'Your proof is attached and ready for review.',
+      });
       toast.success('Screenshot uploaded');
       void fetchMatch();
     } catch {
+      setDisputeFeedback({
+        tone: 'error',
+        title: 'Screenshot upload failed.',
+        detail: 'We could not reach the server. Please try again.',
+      });
       toast.error('Upload failed');
     } finally {
       setUploadingScreenshot(false);
@@ -622,6 +778,14 @@ export default function MatchPage() {
             <p className="mb-4 text-xs text-[var(--text-secondary)]">
               Both players must agree on the result.
             </p>
+            {reportFeedback ? (
+              <ActionFeedback
+                tone={reportFeedback.tone}
+                title={reportFeedback.title}
+                detail={reportFeedback.detail}
+                className="mb-4"
+              />
+            ) : null}
             {!hasMyReport && (
               <div className="mb-4 rounded-2xl border border-[var(--border-color)] bg-[var(--surface-elevated)] p-3.5">
                 <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--text-soft)]">
@@ -791,6 +955,14 @@ export default function MatchPage() {
             <p className="mb-4 text-sm text-[var(--text-secondary)]">
               Upload a screenshot of the result to help resolve the dispute.
             </p>
+            {disputeFeedback ? (
+              <ActionFeedback
+                tone={disputeFeedback.tone}
+                title={disputeFeedback.title}
+                detail={disputeFeedback.detail}
+                className="mb-4"
+              />
+            ) : null}
             {match.dispute_screenshot_url ? (
               <div className="mb-4">
                 <div className="relative aspect-video overflow-hidden rounded-xl border border-[var(--border-color)]">

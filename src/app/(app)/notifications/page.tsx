@@ -12,12 +12,11 @@ import {
   Smartphone,
   Swords,
   Trophy,
-  X,
 } from 'lucide-react';
 import { useAuth, useAuthFetch } from '@/components/AuthProvider';
+import { ChallengesPanel } from '@/components/ChallengesPanel';
 import { emitNotificationRefresh } from '@/components/NotificationNavButton';
-import { GAMES, PLATFORMS } from '@/lib/config';
-import type { MatchChallenge, Notification, PlatformKey } from '@/types';
+import type { MatchChallenge, Notification } from '@/types';
 
 type NotificationProfile = {
   username?: string;
@@ -34,12 +33,6 @@ function formatTimestamp(value: string) {
     hour: 'numeric',
     minute: '2-digit',
   });
-}
-
-function challengeLabel(challenge: MatchChallenge) {
-  const gameLabel = GAMES[challenge.game]?.label ?? challenge.game;
-  const platformLabel = PLATFORMS[challenge.platform as PlatformKey]?.label ?? challenge.platform;
-  return `${gameLabel} on ${platformLabel}`;
 }
 
 export default function NotificationsPage() {
@@ -253,101 +246,13 @@ export default function NotificationsPage() {
 
       <section className="mt-5 grid gap-5 xl:grid-cols-[minmax(0,0.98fr)_minmax(0,1.02fr)]">
         <div className="space-y-5">
-          <div className="card p-5">
-            <div className="flex items-center justify-between gap-3">
-              <div>
-                <p className="section-title">Direct Challenges</p>
-                <h2 className="mt-2 text-xl font-black text-[var(--text-primary)]">Pending replies</h2>
-              </div>
-              <span className="brand-chip px-3 py-1">{inboundChallenges.length + outboundChallenges.length} live</span>
-            </div>
-
-            <div className="mt-4 space-y-3">
-              {loading ? (
-                <>
-                  <div className="h-24 shimmer" />
-                  <div className="h-24 shimmer" />
-                </>
-              ) : inboundChallenges.length === 0 && outboundChallenges.length === 0 ? (
-                <div className="rounded-2xl border border-[var(--border-color)] bg-[var(--surface-elevated)] p-4 text-sm text-[var(--text-secondary)]">
-                  No pending direct challenges yet. Use the leaderboard or a public profile to call someone out.
-                </div>
-              ) : (
-                <>
-                  {inboundChallenges.map((challenge) => {
-                    const pendingAccept = actionId === `${challenge.id}:accept`;
-                    const pendingDecline = actionId === `${challenge.id}:decline`;
-                    return (
-                      <div key={challenge.id} className="rounded-2xl border border-[var(--border-color)] bg-[var(--surface-elevated)] p-4">
-                        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-                          <div>
-                            <p className="text-sm font-black text-[var(--text-primary)]">
-                              {challenge.challenger?.username ?? 'A player'} challenged you
-                            </p>
-                            <p className="mt-1 text-sm text-[var(--text-secondary)]">{challengeLabel(challenge)}</p>
-                            <p className="mt-2 text-xs text-[var(--text-soft)]">
-                              Sent {formatTimestamp(challenge.created_at)}
-                            </p>
-                            {challenge.message ? (
-                              <p className="mt-3 rounded-xl border border-[var(--border-color)] bg-[var(--surface)] px-3 py-2 text-sm text-[var(--text-secondary)]">
-                                {challenge.message}
-                              </p>
-                            ) : null}
-                          </div>
-                          <div className="flex flex-wrap gap-2 sm:justify-end">
-                            <button
-                              type="button"
-                              onClick={() => void handleChallengeAction(challenge.id, 'accept')}
-                              disabled={pendingAccept || pendingDecline}
-                              className="btn-primary"
-                            >
-                              {pendingAccept ? 'Accepting...' : 'Accept'}
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => void handleChallengeAction(challenge.id, 'decline')}
-                              disabled={pendingAccept || pendingDecline}
-                              className="btn-outline"
-                            >
-                              {pendingDecline ? 'Declining...' : 'Decline'}
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-
-                  {outboundChallenges.map((challenge) => {
-                    const pendingCancel = actionId === `${challenge.id}:cancel`;
-                    return (
-                      <div key={challenge.id} className="rounded-2xl border border-[var(--border-color)] bg-[var(--surface-elevated)] p-4">
-                        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-                          <div>
-                            <p className="text-sm font-black text-[var(--text-primary)]">
-                              Waiting on {challenge.opponent?.username ?? 'your opponent'}
-                            </p>
-                            <p className="mt-1 text-sm text-[var(--text-secondary)]">{challengeLabel(challenge)}</p>
-                            <p className="mt-2 text-xs text-[var(--text-soft)]">
-                              Expires {formatTimestamp(challenge.expires_at)}
-                            </p>
-                          </div>
-                          <button
-                            type="button"
-                            onClick={() => void handleChallengeAction(challenge.id, 'cancel')}
-                            disabled={pendingCancel}
-                            className="btn-outline"
-                          >
-                            <X size={14} />
-                            {pendingCancel ? 'Cancelling...' : 'Cancel'}
-                          </button>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </>
-              )}
-            </div>
-          </div>
+          <ChallengesPanel
+            inboundChallenges={inboundChallenges}
+            outboundChallenges={outboundChallenges}
+            loading={loading}
+            actionId={actionId}
+            onAction={handleChallengeAction}
+          />
         </div>
 
         <div className="card p-5">

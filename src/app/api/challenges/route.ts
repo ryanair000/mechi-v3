@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuthUser } from '@/lib/auth';
-import { GAMES, getCanonicalGameKey } from '@/lib/config';
+import { GAMES, PLATFORMS, getCanonicalGameKey } from '@/lib/config';
 import {
   canUserChallengeGame,
   expirePendingChallenges,
@@ -8,8 +8,12 @@ import {
   MATCH_CHALLENGE_EXPIRY_HOURS,
   resolveChallengePlatform,
 } from '@/lib/challenges';
+import { sendChallengeReceivedEmail } from '@/lib/email';
 import { createNotifications } from '@/lib/notifications';
+import { expireWaitingQueueEntries } from '@/lib/queue';
 import { createServiceClient } from '@/lib/supabase';
+import { APP_URL } from '@/lib/urls';
+import { notifyChallengeReceived } from '@/lib/whatsapp';
 import type { GameKey, PlatformKey } from '@/types';
 
 type ChallengeProfile = {
@@ -19,6 +23,9 @@ type ChallengeProfile = {
   plan?: string | null;
   plan_expires_at?: string | null;
   region?: string | null;
+  email?: string | null;
+  whatsapp_number?: string | null;
+  whatsapp_notifications?: boolean | null;
   selected_games?: string[] | null;
   platforms?: PlatformKey[] | null;
   game_ids?: Record<string, string> | null;
@@ -31,6 +38,8 @@ async function hasBlockingState(
   userIds: string[],
   supabase: ReturnType<typeof createServiceClient>
 ) {
+  await Promise.all(userIds.map((userId) => expireWaitingQueueEntries(supabase, userId)));
+
   const [queueResult, matchResult] = await Promise.all([
     supabase
       .from('queue')
@@ -118,7 +127,9 @@ export async function POST(request: NextRequest) {
 
     const { data: profileRows, error: profilesError } = await supabase
       .from('profiles')
-      .select('id, username, avatar_url, plan, plan_expires_at, region, selected_games, platforms, game_ids')
+      .select(
+        'id, username, avatar_url, plan, plan_expires_at, region, email, whatsapp_number, whatsapp_notifications, selected_games, platforms, game_ids'
+      )
       .in('id', [authUser.sub, opponentId]);
 
     const profiles = (profileRows ?? []) as ChallengeProfile[];
@@ -216,6 +227,7 @@ export async function POST(request: NextRequest) {
 
     const challenge = mapChallengeRelations(challengeRow as Record<string, unknown>);
     const challengeHref = '/notifications';
+    const challengeUrl = `${APP_URL}${challengeHref}`;
     await createNotifications(
       [
         {
@@ -247,6 +259,45 @@ export async function POST(request: NextRequest) {
       ],
       supabase
     );
+
+    const platformLabel = PLATFORMS[resolvedPlatform]?.label ?? resolvedPlatform;
+    const deliveryTasks: Promise<void>[] = [];
+    const opponentWhatsAppEnabled =
+      ('whatsapp_notifications' in opponent
+        ? Boolean(opponent.whatsapp_notifications)
+        : Boolean(opponent.whatsapp_number)) && Boolean(opponent.whatsapp_number);
+
+    if (opponent.email) {
+      deliveryTasks.push(
+        sendChallengeReceivedEmail({
+          to: opponent.email,
+          username: opponent.username,
+          challengerUsername: challenger.username,
+          game: GAMES[game].label,
+          platform: platformLabel,
+          challengeUrl,
+          message: message || null,
+        })
+      );
+    }
+
+    if (opponentWhatsAppEnabled && opponent.whatsapp_number) {
+      deliveryTasks.push(
+        notifyChallengeReceived({
+          whatsappNumber: opponent.whatsapp_number,
+          username: opponent.username,
+          challengerUsername: challenger.username,
+          game: GAMES[game].label,
+          platform: platformLabel,
+          challengeUrl,
+          message: message || null,
+        })
+      );
+    }
+
+    if (deliveryTasks.length > 0) {
+      await Promise.allSettled(deliveryTasks);
+    }
 
     return NextResponse.json({ challenge }, { status: 201 });
   } catch (error) {

@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getRequestAccessProfile, hasModeratorAccess } from '@/lib/access';
-import { createServiceClient } from '@/lib/supabase';
 import { GAMES, getCanonicalGameKey } from '@/lib/config';
+import { expireWaitingQueueEntries } from '@/lib/queue';
+import { createServiceClient } from '@/lib/supabase';
 import { firstRelation } from '@/lib/tournaments';
 import type { AdminQueueEntry, GameKey, MatchStatus, PlatformKey, UserRole } from '@/types';
 
@@ -95,6 +96,7 @@ export async function GET(request: NextRequest) {
     const offset = Math.max(Number(searchParams.get('offset') ?? 0), 0);
     const fetchSize = search ? Math.min(offset + limit + 80, 250) : limit;
     const supabase = createServiceClient();
+    await expireWaitingQueueEntries(supabase);
 
     let query = supabase
       .from('queue')

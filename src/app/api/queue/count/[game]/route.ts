@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createServiceClient } from '@/lib/supabase';
 import { GAMES, getCanonicalGameKey } from '@/lib/config';
 import { isMissingColumnError } from '@/lib/db-compat';
+import { getQueueExpiryCutoffIso } from '@/lib/queue';
 import type { GameKey } from '@/types';
 
 export async function GET(
@@ -20,14 +21,16 @@ export async function GET(
 
   try {
     const supabase = createServiceClient();
+    const activeQueueCutoff = getQueueExpiryCutoffIso();
 
     const buildCountQuery = () =>
       supabase
-      .from('queue')
-      .select('id', { count: 'exact' })
-      .eq('game', game)
-      .eq('status', 'waiting')
-      .limit(1);
+        .from('queue')
+        .select('id', { count: 'exact' })
+        .eq('game', game)
+        .eq('status', 'waiting')
+        .gte('joined_at', activeQueueCutoff)
+        .limit(1);
 
     let query = buildCountQuery();
     if (platform) {

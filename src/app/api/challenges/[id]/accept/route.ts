@@ -8,7 +8,9 @@ import {
 } from '@/lib/challenges';
 import { GAMES, getCanonicalGameKey } from '@/lib/config';
 import { isMissingColumnError } from '@/lib/db-compat';
+import { resolveProfileLocation, UNSPECIFIED_LOCATION_LABEL } from '@/lib/location';
 import { createNotifications } from '@/lib/notifications';
+import { expireWaitingQueueEntries } from '@/lib/queue';
 import { incrementMatchUsage } from '@/lib/subscription';
 import { createServiceClient } from '@/lib/supabase';
 import type { GameKey, MatchChallenge, PlatformKey } from '@/types';
@@ -17,6 +19,7 @@ type ChallengeProfile = {
   id: string;
   username: string;
   avatar_url?: string | null;
+  country?: string | null;
   region?: string | null;
   selected_games?: string[] | null;
   platforms?: PlatformKey[] | null;
@@ -27,6 +30,8 @@ async function hasBlockingState(
   userIds: string[],
   supabase: ReturnType<typeof createServiceClient>
 ) {
+  await Promise.all(userIds.map((userId) => expireWaitingQueueEntries(supabase, userId)));
+
   const [queueResult, matchResult] = await Promise.all([
     supabase
       .from('queue')
@@ -98,7 +103,7 @@ export async function POST(
 
     const { data: profileRows, error: profilesError } = await supabase
       .from('profiles')
-      .select('id, username, avatar_url, region, selected_games, platforms, game_ids')
+      .select('*')
       .in('id', [challenge.challenger_id, challenge.opponent_id]);
 
     const profiles = (profileRows ?? []) as ChallengeProfile[];
@@ -145,12 +150,19 @@ export async function POST(
       );
     }
 
+    const challengerLocation = resolveProfileLocation(challenger);
+    const opponentLocation = resolveProfileLocation(opponent);
+    const matchLocationLabel =
+      challengerLocation.label ||
+      opponentLocation.label ||
+      UNSPECIFIED_LOCATION_LABEL;
+
     const matchPayload = {
       player1_id: challenge.challenger_id,
       player2_id: challenge.opponent_id,
       game,
       platform,
-      region: challenger.region ?? opponent.region ?? 'kenya',
+      region: matchLocationLabel,
       status: 'pending',
     };
 
@@ -167,7 +179,7 @@ export async function POST(
           player1_id: challenge.challenger_id,
           player2_id: challenge.opponent_id,
           game,
-          region: challenger.region ?? opponent.region ?? 'kenya',
+          region: matchLocationLabel,
           status: 'pending',
         })
         .select('id')

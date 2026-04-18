@@ -1,4 +1,5 @@
 import { APP_URL } from '@/lib/urls';
+import { normalizePhoneNumber } from '@/lib/phone';
 
 const WHATSAPP_TOKEN = process.env.WHATSAPP_TOKEN;
 const PHONE_NUMBER_ID = process.env.WHATSAPP_PHONE_NUMBER_ID;
@@ -8,6 +9,7 @@ const TEST_TEMPLATE_NAME = process.env.WHATSAPP_TEST_TEMPLATE_NAME ?? 'hello_wor
 const MATCH_FOUND_TEMPLATE = process.env.WHATSAPP_TEMPLATE_MATCH_FOUND;
 const RESULT_CONFIRMED_TEMPLATE = process.env.WHATSAPP_TEMPLATE_RESULT_CONFIRMED;
 const MATCH_DISPUTE_TEMPLATE = process.env.WHATSAPP_TEMPLATE_MATCH_DISPUTE;
+const CHALLENGE_RECEIVED_TEMPLATE = process.env.WHATSAPP_TEMPLATE_CHALLENGE_RECEIVED;
 const WHATSAPP_ENABLED = Boolean(WHATSAPP_TOKEN && PHONE_NUMBER_ID);
 
 type WhatsAppTemplateParameter = {
@@ -36,17 +38,17 @@ export interface WhatsAppSendResult {
 }
 
 function normalizeRecipient(to: string): string {
-  let phone = to.replace(/\D/g, '');
+  const normalized = normalizePhoneNumber(to);
 
-  if (phone.startsWith('0')) {
-    phone = `254${phone.slice(1)}`;
+  if (/^(254|255|256|250|251)\d{9}$/.test(normalized)) {
+    return normalized;
   }
 
-  if (!phone.startsWith('254')) {
-    phone = `254${phone}`;
+  if (/^0\d{9}$/.test(normalized)) {
+    return `254${normalized.slice(1)}`;
   }
 
-  return phone;
+  return normalized;
 }
 
 function createBodyParameters(values: string[]): WhatsAppTemplateParameter[] {
@@ -275,6 +277,27 @@ export function buildMatchDisputeMessage(params: {
   );
 }
 
+export function buildChallengeReceivedMessage(params: {
+  username: string;
+  challengerUsername: string;
+  game: string;
+  platform: string;
+  message?: string | null;
+  challengeUrl?: string;
+  appUrl?: string;
+}): string {
+  const destination = params.challengeUrl ?? `${params.appUrl ?? APP_URL}/notifications`;
+  const challengeNote = params.message ? `Message: ${params.message}\n` : '';
+
+  return (
+    `${params.username}, ${params.challengerUsername} challenged you on Mechi.\n` +
+    `Game: ${params.game}\n` +
+    `Platform: ${params.platform}\n` +
+    challengeNote +
+    `Review it here: ${destination}`
+  );
+}
+
 export async function notifyMatchFound(params: {
   whatsappNumber: string;
   username: string;
@@ -357,6 +380,38 @@ export async function notifyMatchDispute(params: {
           ],
         })
       : await sendWhatsApp(params.whatsappNumber, buildMatchDisputeMessage(params));
+
+    if (!result.ok) {
+      throw new Error(formatWhatsAppDeliveryError(result));
+    }
+  });
+}
+
+export async function notifyChallengeReceived(params: {
+  whatsappNumber: string;
+  username: string;
+  challengerUsername: string;
+  game: string;
+  platform: string;
+  message?: string | null;
+  challengeUrl?: string;
+  appUrl?: string;
+}): Promise<void> {
+  await safeNotify('challenge_received', async () => {
+    const challengeUrl = params.challengeUrl ?? `${params.appUrl ?? APP_URL}/notifications`;
+    const result = CHALLENGE_RECEIVED_TEMPLATE
+      ? await sendWhatsAppTemplate({
+          to: params.whatsappNumber,
+          name: CHALLENGE_RECEIVED_TEMPLATE,
+          bodyParameters: [
+            params.username,
+            params.challengerUsername,
+            params.game,
+            params.platform,
+            challengeUrl,
+          ],
+        })
+      : await sendWhatsApp(params.whatsappNumber, buildChallengeReceivedMessage(params));
 
     if (!result.ok) {
       throw new Error(formatWhatsAppDeliveryError(result));

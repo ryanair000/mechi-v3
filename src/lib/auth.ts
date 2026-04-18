@@ -2,6 +2,7 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { NextRequest } from 'next/server';
 import { normalizeGameIdKeys, normalizeSelectedGameKeys } from '@/lib/config';
+import { resolveProfileLocation } from '@/lib/location';
 import type { JWTPayload, AuthUser, UserRole } from '@/types';
 
 const JWT_SECRET = process.env.JWT_SECRET!;
@@ -69,6 +70,8 @@ export function getTokenFromRequest(request: NextRequest): string | null {
 }
 
 export function profileToAuthUser(profile: Record<string, unknown>): AuthUser {
+  const location = resolveProfileLocation(profile);
+
   return {
     id: profile.id as string,
     username: profile.username as string,
@@ -78,7 +81,8 @@ export function profileToAuthUser(profile: Record<string, unknown>): AuthUser {
     invited_by: (profile.invited_by as string | null | undefined) ?? null,
     avatar_url: (profile.avatar_url as string | null | undefined) ?? null,
     cover_url: (profile.cover_url as string | null | undefined) ?? null,
-    region: profile.region as string,
+    country: location.country,
+    region: location.region,
     platforms: ((profile.platforms as string[]) ?? []) as import('@/types').PlatformKey[],
     game_ids: normalizeGameIdKeys((profile.game_ids as Record<string, string>) ?? {}),
     selected_games: normalizeSelectedGameKeys((profile.selected_games as string[]) ?? []),

@@ -73,11 +73,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     if (!cachedUser) {
-      clearStoredAuth();
       setUser(null);
       setToken(null);
-      setLoading(false);
-      return;
     }
 
     const controller = new AbortController();
@@ -96,9 +93,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setToken(null);
         localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(nextUser));
       } else {
-        clearStoredAuth();
-        setUser(null);
-        setToken(null);
+        if (!cachedUser) {
+          clearStoredAuth();
+          setUser(null);
+          setToken(null);
+        }
       }
     } catch {
       if (!cachedUser) {

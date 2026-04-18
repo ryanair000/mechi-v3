@@ -6,7 +6,7 @@ import { useEffect, useState } from 'react';
 import { Bell } from 'lucide-react';
 import { useAuth, useAuthFetch } from '@/components/AuthProvider';
 
-const NOTIFICATION_EVENT = 'mechi:notifications-changed';
+export const NOTIFICATION_EVENT = 'mechi:notifications-changed';
 
 interface NotificationNavButtonProps {
   className?: string;

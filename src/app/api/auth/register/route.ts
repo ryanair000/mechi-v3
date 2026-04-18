@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServiceClient } from '@/lib/supabase';
-import { hashPassword, profileToAuthUser, signToken } from '@/lib/auth';
+import { applyAuthCookie, createSessionForProfile, hashPassword } from '@/lib/auth';
 import { sendWelcomeEmail } from '@/lib/email';
 import {
   DEFAULT_RATING,
@@ -321,13 +321,6 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    const token = signToken({
-      sub: profile.id,
-      username: profile.username,
-      role: 'user',
-      is_banned: false,
-    });
-
     // Send welcome email async
     sendWelcomeEmail({ to: trimmedEmail, username }).catch(console.error);
     sendNewRegistrationTelegramNotification({
@@ -342,18 +335,9 @@ export async function POST(request: NextRequest) {
       console.error('[Telegram] Registration notification error:', error);
     });
 
-    const response = NextResponse.json({
-      token,
-      user: profileToAuthUser(profile as unknown as Record<string, unknown>),
-    });
-
-    response.cookies.set('auth_token', token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      maxAge: 60 * 60 * 24 * 7, // 7 days
-      path: '/',
-    });
+    const { token, user } = createSessionForProfile(profile as unknown as Record<string, unknown>);
+    const response = NextResponse.json({ token, user });
+    applyAuthCookie(response, token);
 
     return response;
   } catch (err) {

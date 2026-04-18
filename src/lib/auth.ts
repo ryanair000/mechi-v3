@@ -1,6 +1,6 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import { NextRequest } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { normalizeGameIdKeys, normalizeSelectedGameKeys } from '@/lib/config';
 import { resolveProfileLocation } from '@/lib/location';
 import type { JWTPayload, AuthUser, UserRole } from '@/types';
@@ -8,6 +8,16 @@ import type { JWTPayload, AuthUser, UserRole } from '@/types';
 const JWT_SECRET = process.env.JWT_SECRET!;
 const SALT_ROUNDS = 12;
 const TOKEN_EXPIRY = '7d';
+
+export function getAuthCookieOptions() {
+  return {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax' as const,
+    maxAge: 60 * 60 * 24 * 7,
+    path: '/',
+  };
+}
 
 export async function hashPassword(password: string): Promise<string> {
   return bcrypt.hash(password, SALT_ROUNDS);
@@ -67,6 +77,24 @@ export function getTokenFromRequest(request: NextRequest): string | null {
     return cookieToken;
   }
   return null;
+}
+
+export function createSessionForProfile(profile: Record<string, unknown>) {
+  const token = signToken({
+    sub: profile.id as string,
+    username: profile.username as string,
+    role: (profile.role as UserRole | undefined) ?? 'user',
+    is_banned: (profile.is_banned as boolean | undefined) ?? false,
+  });
+
+  return {
+    token,
+    user: profileToAuthUser(profile),
+  };
+}
+
+export function applyAuthCookie(response: NextResponse, token: string) {
+  response.cookies.set('auth_token', token, getAuthCookieOptions());
 }
 
 export function profileToAuthUser(profile: Record<string, unknown>): AuthUser {

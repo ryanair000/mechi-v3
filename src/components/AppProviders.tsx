@@ -1,7 +1,10 @@
 'use client';
 
+import { Suspense } from 'react';
 import { Toaster } from 'react-hot-toast';
+import { AuthFlashToastBridge } from '@/components/AuthFlashToastBridge';
 import { AuthProvider } from '@/components/AuthProvider';
+import { NotificationToastBridge } from '@/components/NotificationToastBridge';
 import { ThemeProvider, useTheme } from '@/components/ThemeProvider';
 
 function ThemedToaster() {
@@ -36,6 +39,10 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
   return (
     <ThemeProvider>
       <AuthProvider>
+        <Suspense fallback={null}>
+          <AuthFlashToastBridge />
+        </Suspense>
+        <NotificationToastBridge />
         {children}
         <ThemedToaster />
       </AuthProvider>

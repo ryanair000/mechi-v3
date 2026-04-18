@@ -50,6 +50,8 @@ const PUBLIC_PREFIXES = [
   '/',
   '/login',
   '/register',
+  '/forgot-password',
+  '/reset-password',
   '/banned',
   '/api/auth',
   '/api/invite',

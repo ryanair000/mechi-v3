@@ -3,9 +3,18 @@ import { DEFAULT_RATING } from '@/lib/config';
 import { getRankDivision } from '@/lib/gamification';
 import { APP_URL } from '@/lib/urls';
 
-const resend = new Resend(process.env.RESEND_API_KEY);
 const FROM_ADDRESS = process.env.RESEND_FROM_EMAIL ?? 'noreply@mechi.club';
 const FROM = `Mechi <${FROM_ADDRESS}>`;
+let resendClient: Resend | null = null;
+
+function getResend() {
+  if (!process.env.RESEND_API_KEY) {
+    throw new Error('RESEND_API_KEY is not configured');
+  }
+
+  resendClient ??= new Resend(process.env.RESEND_API_KEY);
+  return resendClient;
+}
 
 async function sendBccEmail(params: {
   bcc: string[];
@@ -18,7 +27,7 @@ async function sendBccEmail(params: {
   }
 
   try {
-    await resend.emails.send({
+    await getResend().emails.send({
       from: FROM,
       to: FROM_ADDRESS,
       bcc: params.bcc,
@@ -108,7 +117,7 @@ export async function sendWelcomeEmail(params: {
   `;
 
   try {
-    await resend.emails.send({
+    await getResend().emails.send({
       from: FROM,
       to: params.to,
       subject: `Welcome to Mechi, ${params.username}!`,
@@ -116,6 +125,78 @@ export async function sendWelcomeEmail(params: {
     });
   } catch (err) {
     console.error('[Email] Welcome send error:', err);
+  }
+}
+
+export async function sendMagicLinkEmail(params: {
+  to: string;
+  username?: string | null;
+  magicLink: string;
+  expiresInMinutes: number;
+}): Promise<void> {
+  const recipientName = params.username?.trim() || 'there';
+  const content = `
+    <h2>Sign in to Mechi</h2>
+    <p>Hey ${recipientName}, use this secure link to open your account without typing your password.</p>
+    <div class="info-box">
+      <div class="info-row">
+        <span class="info-label">Link expires in</span>
+        <span class="info-value">${params.expiresInMinutes} minutes</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">Requested for</span>
+        <span class="info-value">${params.to}</span>
+      </div>
+    </div>
+    <p>If you did not request this, you can ignore the email. Your password stays unchanged.</p>
+    <a href="${params.magicLink}" class="btn">Sign in to Mechi</a>
+  `;
+
+  try {
+    await getResend().emails.send({
+      from: FROM,
+      to: params.to,
+      subject: 'Your Mechi sign-in link',
+      html: baseLayout('Sign in to Mechi', content),
+    });
+  } catch (err) {
+    console.error('[Email] Magic link send error:', err);
+  }
+}
+
+export async function sendPasswordResetEmail(params: {
+  to: string;
+  username?: string | null;
+  resetLink: string;
+  expiresInMinutes: number;
+}): Promise<void> {
+  const recipientName = params.username?.trim() || 'there';
+  const content = `
+    <h2>Reset your password</h2>
+    <p>Hey ${recipientName}, use this secure link to set a new password for your Mechi account.</p>
+    <div class="info-box">
+      <div class="info-row">
+        <span class="info-label">Link expires in</span>
+        <span class="info-value">${params.expiresInMinutes} minutes</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">Requested for</span>
+        <span class="info-value">${params.to}</span>
+      </div>
+    </div>
+    <p>If you did not request this, you can ignore the email and keep your current password.</p>
+    <a href="${params.resetLink}" class="btn">Reset password</a>
+  `;
+
+  try {
+    await getResend().emails.send({
+      from: FROM,
+      to: params.to,
+      subject: 'Reset your Mechi password',
+      html: baseLayout('Reset your Mechi password', content),
+    });
+  } catch (err) {
+    console.error('[Email] Password reset send error:', err);
   }
 }
 
@@ -154,7 +235,7 @@ export async function sendMatchFoundEmail(params: {
   `;
 
   try {
-    await resend.emails.send({
+    await getResend().emails.send({
       from: FROM,
       to: params.to,
       subject: `Match found! You vs ${params.opponentUsername}`,
@@ -201,7 +282,7 @@ export async function sendResultConfirmedEmail(params: {
   `;
 
   try {
-    await resend.emails.send({
+    await getResend().emails.send({
       from: FROM,
       to: params.to,
       subject: `Match result: ${params.won ? 'You won!' : 'Match complete'} / ${params.rankLabel}`,
@@ -241,7 +322,7 @@ export async function sendMatchDisputeEmail(params: {
   `;
 
   try {
-    await resend.emails.send({
+    await getResend().emails.send({
       from: FROM,
       to: params.to,
       subject: 'Match disputed - upload screenshot to resolve',
@@ -289,7 +370,7 @@ export async function sendChallengeReceivedEmail(params: {
   `;
 
   try {
-    await resend.emails.send({
+    await getResend().emails.send({
       from: FROM,
       to: params.to,
       subject: `${params.challengerUsername} challenged you on Mechi`,
@@ -463,7 +544,7 @@ export async function sendTournamentFullEmail(params: {
   `;
 
   try {
-    await resend.emails.send({
+    await getResend().emails.send({
       from: FROM,
       to: params.to,
       subject: `${params.tournamentTitle} is full - start it now`,
@@ -499,7 +580,7 @@ export async function sendTournamentMatchReadyEmail(params: {
   `;
 
   try {
-    await resend.emails.send({
+    await getResend().emails.send({
       from: FROM,
       to: params.to,
       subject: `Your Mechi tournament match is ready`,
@@ -530,7 +611,7 @@ export async function sendTournamentWinnerEmail(params: {
   `;
 
   try {
-    await resend.emails.send({
+    await getResend().emails.send({
       from: FROM,
       to: params.to,
       subject: `You won ${params.tournamentTitle}`,
@@ -572,7 +653,7 @@ export async function sendSubscriptionConfirmEmail(params: {
   `;
 
   try {
-    await resend.emails.send({
+    await getResend().emails.send({
       from: FROM,
       to: params.to,
       subject: `${planName} activated on Mechi`,

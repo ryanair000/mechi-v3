@@ -349,19 +349,19 @@ export default async function AdminOverviewPage() {
           </div>
 
           <div className="grid gap-3 sm:grid-cols-3">
-            <div className="rounded-2xl border border-[var(--border-color)] bg-[var(--surface-elevated)] px-4 py-3">
+            <div className="rounded-[var(--radius-card)] border border-[var(--border-color)] bg-[var(--surface-elevated)] px-4 py-3">
               <p className="section-title">Queue pulse</p>
               <p className="mt-2 text-lg font-black text-[var(--text-primary)]">
                 {formatWaitLabel(overview.longestQueueWaitMinutes)}
               </p>
             </div>
-            <div className="rounded-2xl border border-[var(--border-color)] bg-[var(--surface-elevated)] px-4 py-3">
+            <div className="rounded-[var(--radius-card)] border border-[var(--border-color)] bg-[var(--surface-elevated)] px-4 py-3">
               <p className="section-title">Live rooms</p>
               <p className="mt-2 text-lg font-black text-[var(--text-primary)]">
                 {(overview.openLobbies + overview.fullLobbies + overview.liveLobbies).toLocaleString()}
               </p>
             </div>
-            <div className="rounded-2xl border border-[var(--border-color)] bg-[var(--surface-elevated)] px-4 py-3">
+            <div className="rounded-[var(--radius-card)] border border-[var(--border-color)] bg-[var(--surface-elevated)] px-4 py-3">
               <p className="section-title">Access</p>
               <p className="mt-2 text-lg font-black text-[var(--text-primary)]">
                 {overview.role}
@@ -390,7 +390,7 @@ export default async function AdminOverviewPage() {
               <Link
                 key={href}
                 href={href}
-                className={`rounded-3xl border p-4 transition-colors ${
+                className={`rounded-[var(--radius-card)] border p-4 transition-colors ${
                   isActive
                     ? 'border-[rgba(255,107,107,0.22)] bg-[rgba(255,107,107,0.08)] hover:bg-[rgba(255,107,107,0.12)]'
                     : 'border-[var(--border-color)] bg-[var(--surface)] hover:bg-[var(--surface-elevated)]'
@@ -404,7 +404,7 @@ export default async function AdminOverviewPage() {
                     </p>
                   </div>
                   <div
-                    className={`flex h-11 w-11 items-center justify-center rounded-2xl ${
+                    className={`flex h-11 w-11 items-center justify-center rounded-[var(--radius-panel)] ${
                       isActive
                         ? 'bg-[rgba(255,107,107,0.14)] text-[var(--brand-coral)]'
                         : 'bg-[rgba(50,224,196,0.14)] text-[var(--brand-teal)]'
@@ -441,10 +441,10 @@ export default async function AdminOverviewPage() {
               <Link
                 key={href}
                 href={href}
-                className="rounded-2xl border border-[var(--border-color)] bg-[var(--surface-elevated)] p-4 transition-colors hover:bg-[var(--surface)]"
+                className="rounded-[var(--radius-card)] border border-[var(--border-color)] bg-[var(--surface-elevated)] p-4 transition-colors hover:bg-[var(--surface)]"
               >
                 <div className="flex items-start gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[rgba(50,224,196,0.14)] text-[var(--brand-teal)]">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-[var(--radius-panel)] bg-[rgba(50,224,196,0.14)] text-[var(--brand-teal)]">
                     <Icon size={17} />
                   </div>
                   <div className="min-w-0 flex-1">
@@ -480,7 +480,7 @@ export default async function AdminOverviewPage() {
           </div>
 
           {overview.role !== 'admin' ? (
-            <div className="mt-5 rounded-2xl border border-[var(--border-color)] bg-[var(--surface-elevated)] p-4">
+            <div className="mt-5 rounded-[var(--radius-card)] border border-[var(--border-color)] bg-[var(--surface-elevated)] p-4">
               <p className="text-base font-semibold text-[var(--text-primary)]">
                 Full audit visibility is admin-only.
               </p>
@@ -490,7 +490,7 @@ export default async function AdminOverviewPage() {
               </p>
             </div>
           ) : overview.recentLogs.length === 0 ? (
-            <div className="mt-5 rounded-2xl border border-[var(--border-color)] bg-[var(--surface-elevated)] p-4 text-sm text-[var(--text-secondary)]">
+            <div className="mt-5 rounded-[var(--radius-card)] border border-[var(--border-color)] bg-[var(--surface-elevated)] p-4 text-sm text-[var(--text-secondary)]">
               No admin actions logged yet.
             </div>
           ) : (
@@ -509,7 +509,7 @@ export default async function AdminOverviewPage() {
                 return (
                   <div
                     key={log.id}
-                    className="rounded-2xl border border-[var(--border-color)] bg-[var(--surface-elevated)] px-4 py-3"
+                    className="rounded-[var(--radius-card)] border border-[var(--border-color)] bg-[var(--surface-elevated)] px-4 py-3"
                   >
                     <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                       <div className="min-w-0">

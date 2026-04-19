@@ -62,7 +62,11 @@
   --chart-3: oklch(0.439 0 0);
   --chart-4: oklch(0.371 0 0);
   --chart-5: oklch(0.269 0 0);
-  --radius: 0.625rem;
+  --radius: 0.95rem;
+  --radius-control: 1rem;
+  --radius-panel: 1.35rem;
+  --radius-card: 1.7rem;
+  --radius-hero: 1.95rem;
   --sidebar: oklch(0.985 0 0);
   --sidebar-foreground: oklch(0.145 0 0);
   --sidebar-primary: oklch(0.205 0 0);
@@ -210,6 +214,7 @@ html[data-theme='dark'] {
   }
 
   .nav-panel {
+    border-radius: var(--radius-card);
     border-color: var(--border-color);
     background: linear-gradient(180deg, var(--surface-strong), var(--surface-soft));
     box-shadow: var(--shadow-soft);
@@ -222,7 +227,8 @@ html[data-theme='dark'] {
   }
 
   .icon-button {
-    @apply inline-flex items-center justify-center rounded-xl border;
+    @apply inline-flex items-center justify-center border;
+    border-radius: var(--radius-control);
     min-height: 2.75rem;
     min-width: 2.75rem;
     border-color: var(--border-color);
@@ -238,7 +244,8 @@ html[data-theme='dark'] {
   }
 
   .theme-toggle {
-    @apply inline-flex items-center justify-center gap-2 rounded-lg border px-2.5 py-1.5 text-sm font-semibold;
+    @apply inline-flex items-center justify-center gap-2 border px-2.5 py-1.5 text-sm font-semibold;
+    border-radius: var(--radius-control);
     min-height: 2.75rem;
     min-width: 2.75rem;
     border-color: var(--border-color);
@@ -254,7 +261,8 @@ html[data-theme='dark'] {
   }
 
   .btn-primary {
-    @apply inline-flex cursor-pointer items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold;
+    @apply inline-flex cursor-pointer items-center justify-center gap-2 px-4 py-2 text-sm font-semibold;
+    border-radius: var(--radius-control);
     min-height: 2.75rem;
     font-size: 1rem;
     line-height: 1.25;
@@ -278,7 +286,8 @@ html[data-theme='dark'] {
   }
 
   .btn-ghost {
-    @apply inline-flex cursor-pointer items-center justify-center gap-2 rounded-lg border px-4 py-2 text-sm font-semibold;
+    @apply inline-flex cursor-pointer items-center justify-center gap-2 border px-4 py-2 text-sm font-semibold;
+    border-radius: var(--radius-control);
     min-height: 2.75rem;
     font-size: 1rem;
     line-height: 1.25;
@@ -298,7 +307,8 @@ html[data-theme='dark'] {
   }
 
   .btn-danger {
-    @apply inline-flex cursor-pointer items-center justify-center gap-2 rounded-lg border px-4 py-2 text-sm font-semibold;
+    @apply inline-flex cursor-pointer items-center justify-center gap-2 border px-4 py-2 text-sm font-semibold;
+    border-radius: var(--radius-control);
     min-height: 2.75rem;
     font-size: 1rem;
     line-height: 1.25;
@@ -316,7 +326,8 @@ html[data-theme='dark'] {
   }
 
   .btn-outline {
-    @apply inline-flex cursor-pointer items-center justify-center gap-2 rounded-lg border px-4 py-2 text-sm font-semibold;
+    @apply inline-flex cursor-pointer items-center justify-center gap-2 border px-4 py-2 text-sm font-semibold;
+    border-radius: var(--radius-control);
     min-height: 2.75rem;
     font-size: 1rem;
     line-height: 1.25;
@@ -333,7 +344,8 @@ html[data-theme='dark'] {
   }
 
   .card {
-    @apply rounded-[1.2rem] border;
+    @apply border;
+    border-radius: var(--radius-card);
     border-color: var(--border-color);
     background: linear-gradient(180deg, var(--surface-strong), var(--surface));
     box-shadow: var(--surface-highlight), var(--shadow-soft);
@@ -341,7 +353,8 @@ html[data-theme='dark'] {
   }
 
   .card-hover {
-    @apply cursor-pointer rounded-[1.2rem] border;
+    @apply cursor-pointer border;
+    border-radius: var(--radius-card);
     border-color: var(--border-color);
     background: linear-gradient(180deg, var(--surface-strong), var(--surface));
     box-shadow: var(--surface-highlight), var(--shadow-soft);
@@ -354,7 +367,8 @@ html[data-theme='dark'] {
   }
 
   .input {
-    @apply w-full rounded-lg border px-3.5 py-2.5 text-sm;
+    @apply w-full border px-3.5 py-2.5 text-sm;
+    border-radius: var(--radius-control);
     min-height: 2.75rem;
     font-size: 1rem;
     line-height: 1.35;
@@ -501,7 +515,8 @@ html[data-theme='dark'] {
   }
 
   .shimmer {
-    @apply animate-pulse rounded-[1.2rem];
+    @apply animate-pulse;
+    border-radius: var(--radius-card);
     background:
       linear-gradient(
         90deg,
@@ -634,13 +649,15 @@ html[data-theme='dark'] {
   }
 
   .tutorial-warning {
-    @apply flex items-start gap-3 rounded-[1rem] border p-3.5;
+    @apply flex items-start gap-3 border p-3.5;
+    border-radius: var(--radius-panel);
     border-color: rgba(255, 107, 107, 0.14);
     background: rgba(255, 107, 107, 0.07);
   }
 
   .tutorial-preview {
-    @apply rounded-[1.2rem] border p-4 sm:p-5;
+    @apply border p-4 sm:p-5;
+    border-radius: var(--radius-card);
     border-color: var(--border-color);
     background: linear-gradient(180deg, var(--surface-elevated), var(--surface));
     box-shadow: var(--surface-highlight), var(--shadow-soft);
@@ -648,9 +665,13 @@ html[data-theme='dark'] {
 
   .tutorial-preview-row {
     border: 1px solid var(--border-color);
-    border-radius: 1rem;
+    border-radius: var(--radius-panel);
     background: var(--surface-strong);
     padding: 0.9rem;
+  }
+
+  .page-base :is(.rounded-lg, .rounded-xl, .rounded-2xl, .rounded-3xl):not(.rounded-full) {
+    border-radius: var(--radius-panel);
   }
 
   .tutorial-preview-bar {

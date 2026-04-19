@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import NumberFlow from '@number-flow/react';
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
@@ -69,18 +69,15 @@ export default function AnimatedNumberCountdown({
   }, [values, endDate]);
 
   const displayValues = values ?? liveValues;
-  const countdownItems = useMemo(
-    () => [
-      { value: displayValues.days, label: 'Days left', minimumIntegerDigits: 2 },
-      { value: displayValues.hours, label: 'Hours left', minimumIntegerDigits: 2 },
-      { value: displayValues.minutes, label: 'Minutes left', minimumIntegerDigits: 2 },
-      { value: displayValues.seconds, label: 'Seconds left', minimumIntegerDigits: 2 },
-    ],
-    [displayValues]
-  );
+  const countdownItems = [
+    { value: displayValues.days, label: 'Days', minimumIntegerDigits: 2 },
+    { value: displayValues.hours, label: 'Hours', minimumIntegerDigits: 2 },
+    { value: displayValues.minutes, label: 'Minutes', minimumIntegerDigits: 2 },
+    { value: displayValues.seconds, label: 'Seconds', minimumIntegerDigits: 2 },
+  ];
 
   return (
-    <div className={cn('grid gap-3 sm:grid-cols-2 xl:grid-cols-4', className)}>
+    <div className={cn('grid grid-cols-2 gap-3 sm:grid-cols-4', className)}>
       {countdownItems.map((item) => (
         <div
           key={item.label}

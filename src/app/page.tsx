@@ -3,6 +3,7 @@ import { connection } from 'next/server';
 import { ArrowRight, Zap } from 'lucide-react';
 import { BrandLogo } from '@/components/BrandLogo';
 import FooterSection from '@/components/footer';
+import FeatureShaderCards from '@/components/feature-shader-cards';
 import { GameCarousel } from '@/components/GameCarousel';
 import { HomeFloatingHeader } from '@/components/HomeFloatingHeader';
 import { LandingCountdownSection } from '@/components/LandingCountdownSection';
@@ -22,29 +23,6 @@ const HERO_STATS = [
   { value: '1v1', label: 'Ranked direct challenges' },
   { value: '24/7', label: 'Queue access' },
   { value: 'KES 299', label: 'Pro monthly', note: '1 month free trial' },
-];
-
-const HOW_IT_WORKS = [
-  {
-    step: '01',
-    title: 'Build one clean setup',
-    desc: 'Pick your games, link your platform IDs, and let Mechi keep your profile ready for queues, direct challenges, and brackets.',
-  },
-  {
-    step: '02',
-    title: 'Queue or call someone out',
-    desc: 'Run ranked matchmaking when you want a fast lobby, or challenge any player directly without waiting on random pairing.',
-  },
-  {
-    step: '03',
-    title: 'Create smarter tournaments',
-    desc: 'Host paid or free-entry brackets, keep players informed, and let the bracket update itself as results come in.',
-  },
-  {
-    step: '04',
-    title: 'Lock scores and keep moving',
-    desc: 'Football titles use scorelines, disputes stay visible, and every completed match feeds the same climb and notification system.',
-  },
 ];
 
 const PLATFORM_CHIPS: Array<{ platform: PlatformKey; label: string }> = [
@@ -287,31 +265,7 @@ export default async function LandingPage() {
         </div>
       </section>
 
-      <section id="how-it-works" className="landing-section">
-        <div className="landing-shell">
-          <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
-            <div>
-              <p className="section-title">How it works</p>
-              <h2 className="mt-3 max-w-2xl text-3xl font-black text-[var(--text-primary)] sm:text-[2.2rem]">
-                V3 keeps every competitive move in one cleaner loop.
-              </h2>
-            </div>
-            <p className="max-w-xl text-sm leading-6 text-[var(--text-secondary)]">
-              Set up once, play how you want, and stay informed at every step instead of chasing updates across chats.
-            </p>
-          </div>
-
-          <div className="mt-7 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-            {HOW_IT_WORKS.map((item) => (
-              <div key={item.step} className="card p-5">
-                <div className="section-title">{item.step}</div>
-                <h3 className="mt-3 text-base font-black text-[var(--text-primary)]">{item.title}</h3>
-                <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">{item.desc}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
+      <FeatureShaderCards />
 
       <section id="supported" className="landing-section">
         <div className="landing-shell">

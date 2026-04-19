@@ -285,13 +285,13 @@ export default function GamesPage() {
                       key={game}
                       type="button"
                       onClick={() => toggleGame(game)}
-                      className={`flex min-h-16 items-center gap-3 rounded-lg border p-3 text-left transition-all ${
+                      className={`flex min-h-16 items-center gap-3 rounded-[var(--radius-panel)] border p-3 text-left transition-all ${
                         isSelected
                           ? 'surface-action'
                           : 'border-[var(--border-color)] bg-[var(--surface-elevated)] hover:bg-[var(--surface)]'
                       }`}
                     >
-                      <div className="h-10 w-10 flex-shrink-0 overflow-hidden rounded-lg border border-[var(--border-color)] bg-[var(--surface)]">
+                      <div className="h-10 w-10 flex-shrink-0 overflow-hidden rounded-[var(--radius-control)] border border-[var(--border-color)] bg-[var(--surface)]">
                         <GameCover gameKey={game} variant="header" className="h-full w-full" />
                       </div>
                       <div className="min-w-0 flex-1">
@@ -344,11 +344,11 @@ export default function GamesPage() {
                     return (
                       <div
                         key={game}
-                        className="rounded-lg border border-[var(--border-color)] bg-[var(--surface-elevated)] p-3"
+                        className="rounded-[var(--radius-panel)] border border-[var(--border-color)] bg-[var(--surface-elevated)] p-3"
                       >
                         <div className="mb-3 flex items-start justify-between gap-3">
                           <div className="flex min-w-0 items-center gap-2">
-                            <div className="h-10 w-10 flex-shrink-0 overflow-hidden rounded-lg border border-[var(--border-color)] bg-[var(--surface)]">
+                            <div className="h-10 w-10 flex-shrink-0 overflow-hidden rounded-[var(--radius-control)] border border-[var(--border-color)] bg-[var(--surface)]">
                               <GameCover gameKey={game} variant="header" className="h-full w-full" />
                             </div>
                             <p
@@ -378,7 +378,7 @@ export default function GamesPage() {
                                   key={platform}
                                   type="button"
                                   onClick={() => selectPlatformForGame(game, platform)}
-                                  className={`inline-flex min-h-11 items-center gap-2 rounded-lg border px-3 py-2 text-xs font-semibold transition-all ${
+                                  className={`inline-flex min-h-11 items-center gap-2 rounded-[var(--radius-control)] border px-3 py-2 text-xs font-semibold transition-all ${
                                     isSelected
                                       ? 'border-[rgba(50,224,196,0.28)] bg-[rgba(50,224,196,0.14)] text-[var(--accent-secondary-text)]'
                                       : 'border-[var(--border-color)] bg-[var(--surface)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
@@ -391,7 +391,7 @@ export default function GamesPage() {
                             })}
                           </div>
                         ) : (
-                          <div className="inline-flex min-h-11 items-center gap-2 rounded-lg border border-[var(--border-color)] bg-[var(--surface)] px-3 py-2 text-xs font-semibold text-[var(--text-secondary)]">
+                          <div className="inline-flex min-h-11 items-center gap-2 rounded-[var(--radius-control)] border border-[var(--border-color)] bg-[var(--surface)] px-3 py-2 text-xs font-semibold text-[var(--text-secondary)]">
                             <PlatformLogo platform={gameConfig.platforms[0]} size={16} />
                             {PLATFORMS[gameConfig.platforms[0]]?.label}
                           </div>
@@ -422,7 +422,7 @@ export default function GamesPage() {
               </div>
             ) : (
               <div className="card p-10 text-center">
-                <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-lg bg-[rgba(50,224,196,0.14)] text-[var(--accent-secondary-text)]">
+                <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-[var(--radius-panel)] bg-[rgba(50,224,196,0.14)] text-[var(--accent-secondary-text)]">
                   <Gamepad2 size={24} />
                 </div>
                 <p className="font-semibold text-[var(--text-primary)]">No games selected</p>
@@ -442,7 +442,7 @@ export default function GamesPage() {
               </p>
 
               {hasMissingPlatform || hasMissingGameId ? (
-                <p className="mt-4 rounded-lg border border-[rgba(255,107,107,0.24)] bg-[rgba(255,107,107,0.08)] px-3 py-2 text-sm text-[var(--brand-coral)]">
+                <p className="mt-4 rounded-[var(--radius-control)] border border-[rgba(255,107,107,0.24)] bg-[rgba(255,107,107,0.08)] px-3 py-2 text-sm text-[var(--brand-coral)]">
                   {hasMissingPlatform
                     ? 'Choose a platform for every selected game.'
                     : 'Add each game ID before saving.'}

@@ -43,6 +43,42 @@ function getUniqueValues(values: string[]) {
   return Array.from(new Set(values));
 }
 
+function parseQueueRows(data: unknown): QueuePlayerRow[] {
+  if (!Array.isArray(data)) {
+    return [];
+  }
+
+  return data.flatMap((row) => {
+    if (!row || typeof row !== 'object') {
+      return [];
+    }
+
+    const record = row as Record<string, unknown>;
+    const userId = record.user_id;
+    const game = record.game;
+    const joinedAt = record.joined_at;
+    const platform = record.platform;
+
+    if (
+      typeof userId !== 'string' ||
+      typeof game !== 'string' ||
+      !(game in GAMES) ||
+      typeof joinedAt !== 'string'
+    ) {
+      return [];
+    }
+
+    return [
+      {
+        user_id: userId,
+        game: game as GameKey,
+        platform: typeof platform === 'string' ? (platform as PlatformKey) : null,
+        joined_at: joinedAt,
+      },
+    ];
+  });
+}
+
 export async function GET(request: NextRequest) {
   const access = await requireActiveAccessProfile(request);
   if (access.response) {
@@ -109,7 +145,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to fetch queue players' }, { status: 500 });
     }
 
-    queueRows = ((queueResult.data as QueuePlayerRow[] | null) ?? []);
+    queueRows = parseQueueRows(queueResult.data);
 
     if (queueRows.length === 0) {
       return NextResponse.json({ players: [] });

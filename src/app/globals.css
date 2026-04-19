@@ -399,6 +399,59 @@ html[data-theme='dark'] {
     padding-bottom: max(4rem, calc(4rem + env(safe-area-inset-bottom)));
   }
 
+  .app-utility-header {
+    position: sticky;
+    top: 0;
+    z-index: 30;
+    padding-top: env(safe-area-inset-top);
+    border-bottom: 1px solid var(--border-color);
+    background: color-mix(in srgb, var(--surface-soft) 92%, transparent);
+    backdrop-filter: blur(14px);
+  }
+
+  .app-page-eyebrow {
+    margin-bottom: 0.25rem;
+    color: var(--text-soft);
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+
+  .subtle-card {
+    @apply border;
+    border-radius: var(--radius-panel);
+    border-color: var(--border-color);
+    background: color-mix(in srgb, var(--surface-strong) 86%, transparent);
+    box-shadow: none;
+  }
+
+  .subtle-stat-strip {
+    @apply grid gap-3 border p-4 sm:p-5;
+    border-radius: var(--radius-card);
+    border-color: var(--border-color);
+    background: color-mix(in srgb, var(--surface-strong) 88%, transparent);
+    box-shadow: none;
+  }
+
+  .subtle-stat-item {
+    @apply rounded-2xl border px-3 py-3;
+    border-color: var(--border-color);
+    background: color-mix(in srgb, var(--surface) 84%, transparent);
+  }
+
+  .subtle-stat-value {
+    @apply text-lg font-bold;
+    color: var(--text-primary);
+  }
+
+  .subtle-stat-label {
+    @apply mt-1 text-xs font-semibold;
+    color: var(--text-soft);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
   .landing-shell {
     @apply mx-auto w-full;
     max-width: 63rem;

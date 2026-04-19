@@ -67,7 +67,7 @@ export function NotificationNavButton({ className = '' }: NotificationNavButtonP
       href="/notifications"
       className={`relative inline-flex h-10 w-10 items-center justify-center rounded-full text-[var(--text-secondary)] transition-colors hover:bg-[var(--surface-elevated)] hover:text-[var(--text-primary)] ${
         isActive
-          ? 'bg-[var(--surface-elevated)] text-[var(--accent-secondary-text)] shadow-[0_12px_24px_rgba(50,224,196,0.12)]'
+          ? 'bg-[var(--accent-secondary-soft)] text-[var(--accent-secondary-text)]'
           : ''
       } ${className}`}
       aria-label="Notifications"

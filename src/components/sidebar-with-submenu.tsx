@@ -1,7 +1,6 @@
 'use client';
 
 import type { ReactNode } from 'react';
-import { useSyncExternalStore } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -60,7 +59,7 @@ function isPathActive(pathname: string, href: string) {
 function getNavItemClass(isActive: boolean) {
   return `flex items-center gap-3 rounded-2xl border px-3.5 py-3 text-sm font-semibold transition-all ${
     isActive
-      ? 'border-[rgba(50,224,196,0.22)] bg-[var(--surface-elevated)] text-[var(--text-primary)] shadow-[0_16px_28px_rgba(50,224,196,0.12)]'
+      ? 'border-[rgba(50,224,196,0.2)] bg-[var(--accent-secondary-soft)] text-[var(--text-primary)]'
       : 'border-transparent text-[var(--text-secondary)] hover:border-[var(--border-color)] hover:bg-[var(--surface-elevated)] hover:text-[var(--text-primary)]'
   }`;
 }
@@ -88,30 +87,12 @@ export default function SidebarWithSubmenu() {
   const pathname = usePathname();
   const { user, logout } = useAuth();
   const currentPlan = getPlan(user?.plan ?? 'free');
-  const profileHash = useSyncExternalStore(
-    (onStoreChange) => {
-      if (typeof window === 'undefined') {
-        return () => undefined;
-      }
-
-      window.addEventListener('hashchange', onStoreChange);
-      window.addEventListener('popstate', onStoreChange);
-
-      return () => {
-        window.removeEventListener('hashchange', onStoreChange);
-        window.removeEventListener('popstate', onStoreChange);
-      };
-    },
-    () => (typeof window === 'undefined' ? '' : window.location.hash),
-    () => ''
-  );
-
-  const profileActive = pathname === '/profile' && profileHash !== '#settings';
-  const settingsActive = pathname === '/profile' && profileHash === '#settings';
+  const profileActive = pathname === '/profile';
+  const settingsActive = pathname === '/profile/settings';
 
   return (
-    <aside className="fixed bottom-0 left-0 top-0 z-40 hidden w-[17rem] flex-col border-r border-[var(--border-color)] bg-[linear-gradient(180deg,var(--surface-strong),var(--surface-soft))] px-3 py-3 shadow-[var(--shadow-soft)] backdrop-blur-xl lg:flex">
-      <div className="flex items-center justify-between rounded-[1.35rem] border border-[var(--border-color)] bg-[var(--surface)] px-4 py-3 shadow-[var(--shadow-soft)]">
+    <aside className="fixed bottom-0 left-0 top-0 z-40 hidden w-[17rem] flex-col border-r border-[var(--border-color)] bg-[var(--surface-soft)] px-3 py-3 lg:flex">
+      <div className="flex items-center justify-between rounded-[1.35rem] border border-[var(--border-color)] bg-[var(--surface-strong)] px-4 py-3">
         <Link href="/dashboard" className="flex items-center">
           <BrandLogo size="md" variant="full" />
         </Link>
@@ -191,7 +172,7 @@ export default function SidebarWithSubmenu() {
             href="/profile"
             className={`inline-flex h-10 w-10 items-center justify-center rounded-full text-[var(--text-secondary)] transition-colors hover:bg-[var(--surface-elevated)] hover:text-[var(--text-primary)] ${
               profileActive
-                ? 'bg-[var(--surface-elevated)] text-[var(--accent-secondary-text)] shadow-[0_12px_24px_rgba(50,224,196,0.12)]'
+                ? 'bg-[var(--accent-secondary-soft)] text-[var(--accent-secondary-text)]'
                 : ''
             }`}
             aria-label="Profile"
@@ -200,10 +181,10 @@ export default function SidebarWithSubmenu() {
             <User size={16} />
           </Link>
           <Link
-            href="/profile#settings"
+            href="/profile/settings"
             className={`inline-flex h-10 w-10 items-center justify-center rounded-full text-[var(--text-secondary)] transition-colors hover:bg-[var(--surface-elevated)] hover:text-[var(--text-primary)] ${
               settingsActive
-                ? 'bg-[var(--surface-elevated)] text-[var(--accent-secondary-text)] shadow-[0_12px_24px_rgba(50,224,196,0.12)]'
+                ? 'bg-[var(--accent-secondary-soft)] text-[var(--accent-secondary-text)]'
                 : ''
             }`}
             aria-label="Settings"

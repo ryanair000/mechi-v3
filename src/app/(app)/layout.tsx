@@ -3,8 +3,8 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { AppOnboarding } from '@/components/AppOnboarding';
+import { AppMobileUtilityHeader } from '@/components/AppMobileUtilityHeader';
 import { useAuth } from '@/components/AuthProvider';
-import { Navbar } from '@/components/Navbar';
 import { BottomNav } from '@/components/BottomNav';
 import { Sidebar } from '@/components/Sidebar';
 import { BrandLogo } from '@/components/BrandLogo';
@@ -43,9 +43,11 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       />
       <div className="relative z-10">
         <Sidebar />
-        <Navbar />
         <div className="lg:pl-[17rem]">
-          <main className="pb-[calc(5rem+env(safe-area-inset-bottom))] lg:pb-8">{children}</main>
+          <AppMobileUtilityHeader />
+          <main className="pb-[calc(5rem+env(safe-area-inset-bottom))] pt-2 lg:pb-8 lg:pt-0">
+            {children}
+          </main>
         </div>
         <BottomNav />
         <AppOnboarding />

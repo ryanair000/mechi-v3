@@ -105,14 +105,17 @@ function isAdminHostLocalPublicPath(pathname: string) {
   return ADMIN_HOST_LOCAL_PUBLIC_PREFIXES.some((prefix) => pathname.startsWith(prefix));
 }
 
+function normalizeHost(value: string | null | undefined) {
+  const firstHost = value?.split(',')[0]?.trim() ?? '';
+  return firstHost.split(':')[0].toLowerCase();
+}
+
 function getRequestHost(request: NextRequest) {
   return (
-    request.headers.get('x-forwarded-host') ??
-    request.headers.get('host') ??
-    request.nextUrl.host
-  )
-    .split(':')[0]
-    .toLowerCase();
+    normalizeHost(request.headers.get('host')) ||
+    normalizeHost(request.nextUrl.host) ||
+    normalizeHost(request.headers.get('x-forwarded-host'))
+  );
 }
 
 function isAdminHost(request: NextRequest) {

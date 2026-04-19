@@ -17,7 +17,7 @@ interface ThemeContextValue {
 }
 
 const ThemeContext = createContext<ThemeContextValue>({
-  theme: 'system',
+  theme: 'dark',
   resolvedTheme: 'dark',
   setTheme: () => {},
 });
@@ -25,17 +25,13 @@ const ThemeContext = createContext<ThemeContextValue>({
 const STORAGE_KEY = 'mechi-theme';
 const DARK_MEDIA_QUERY = '(prefers-color-scheme: dark)';
 
-function isTheme(value: string | null): value is Theme {
-  return value === 'light' || value === 'dark' || value === 'system';
-}
-
 function getStoredTheme(): Theme {
   if (typeof window === 'undefined') {
-    return 'system';
+    return 'dark';
   }
 
   const storedTheme = localStorage.getItem(STORAGE_KEY);
-  return isTheme(storedTheme) ? storedTheme : 'system';
+  return storedTheme === 'light' || storedTheme === 'dark' ? storedTheme : 'dark';
 }
 
 function getSystemTheme(): 'light' | 'dark' {

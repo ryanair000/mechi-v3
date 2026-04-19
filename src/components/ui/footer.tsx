@@ -1,13 +1,13 @@
 import Link from 'next/link';
 import {
-  AtSign,
-  Camera,
-  Gamepad2,
-  MessageCircle,
-  Music2,
-  Play,
-  Users,
-} from 'lucide-react';
+  FaDiscord,
+  FaFacebook,
+  FaInstagram,
+  FaTiktok,
+  FaTwitch,
+  FaXTwitter,
+  FaYoutube,
+} from 'react-icons/fa6';
 import { BrandLogo } from '@/components/BrandLogo';
 
 const links = [
@@ -35,43 +35,51 @@ const links = [
     title: 'Sign In',
     href: '/login',
   },
+  {
+    title: 'Privacy Policy',
+    href: '/privacy-policy',
+  },
+  {
+    title: 'Terms of Service',
+    href: '/terms-of-service',
+  },
 ];
 
 const socialLinks = [
   {
     label: 'Instagram',
     href: '#',
-    Icon: Camera,
+    Icon: FaInstagram,
   },
   {
     label: 'Facebook',
     href: '#',
-    Icon: Users,
+    Icon: FaFacebook,
   },
   {
     label: 'X / Twitter',
     href: '#',
-    Icon: AtSign,
+    Icon: FaXTwitter,
   },
   {
     label: 'Twitch',
     href: '#',
-    Icon: Gamepad2,
+    Icon: FaTwitch,
   },
   {
     label: 'YouTube',
     href: '#',
-    Icon: Play,
+    Icon: FaYoutube,
   },
   {
     label: 'Discord',
     href: '#',
-    Icon: MessageCircle,
+    Icon: FaDiscord,
   },
   {
     label: 'TikTok',
     href: '#',
-    Icon: Music2,
+    Icon: FaTiktok,
   },
 ] as const;
 

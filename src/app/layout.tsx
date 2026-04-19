@@ -62,8 +62,7 @@ const themeScript = `
     try {
       const root = document.documentElement;
       const storedTheme = localStorage.getItem('mechi-theme');
-      const systemTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-      const theme = storedTheme === 'light' || storedTheme === 'dark' ? storedTheme : systemTheme;
+      const theme = storedTheme === 'light' || storedTheme === 'dark' ? storedTheme : 'dark';
       root.classList.toggle('dark', theme === 'dark');
       root.dataset.theme = theme;
       root.style.colorScheme = theme;
@@ -73,7 +72,13 @@ const themeScript = `
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className="font-sans" suppressHydrationWarning>
+    <html
+      lang="en"
+      className="font-sans dark"
+      data-theme="dark"
+      style={{ colorScheme: 'dark' }}
+      suppressHydrationWarning
+    >
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
       </head>

@@ -139,19 +139,19 @@ export default function NotificationsPage() {
       <section className="card circuit-panel overflow-hidden p-5 sm:p-6">
         <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
           <div className="max-w-2xl">
-            <p className="section-title">Notifications</p>
+            <p className="section-title">Notifications Center</p>
             <h1 className="mt-3 text-[1.5rem] font-black leading-[1.05] text-[var(--text-primary)] sm:text-[2rem]">
-              Your inbox for challenges, brackets, and match moments.
+              Every app alert and WhatsApp backup now lives here.
             </h1>
             <p className="mt-3 max-w-xl text-sm leading-6 text-[var(--text-secondary)]">
-              Nothing should happen off-screen. This is where Mechi keeps the receipts when someone challenges you,
-              your bracket moves, or a result needs your attention.
+              This page owns your match alerts now. Challenges, bracket movement, result reminders, and WhatsApp
+              fallback all stay here instead of crowding the home dashboard.
             </p>
           </div>
 
           <div className="inline-flex w-fit items-center gap-2 rounded-full border border-[rgba(50,224,196,0.2)] bg-[rgba(50,224,196,0.12)] px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--accent-secondary-text)]">
             <BellRing size={14} />
-            {whatsappEnabled ? 'Inbox + alerts on' : 'Inbox only'}
+            {whatsappEnabled ? 'Inbox + WhatsApp live' : 'Inbox only'}
           </div>
         </div>
 
@@ -162,11 +162,14 @@ export default function NotificationsPage() {
                 <MessageCircle size={18} />
               </div>
               <div className="min-w-0">
-                <p className="text-base font-black text-[var(--text-primary)]">WhatsApp backup</p>
+                <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--text-soft)]">
+                  Alert channel
+                </p>
+                <p className="mt-1 text-base font-black text-[var(--text-primary)]">WhatsApp notifications</p>
                 <p className="mt-1 text-sm leading-6 text-[var(--text-secondary)]">
                   {whatsappEnabled
-                    ? 'You will still catch queue and match updates on WhatsApp when you are away from the app.'
-                    : 'Turn WhatsApp on in profile if you want match alerts to hit your phone too.'}
+                    ? 'Queue, challenge, and match updates can still hit your phone when you step away from the app.'
+                    : 'Turn WhatsApp alerts on in profile if you want a phone-first backup channel for your matches.'}
                 </p>
               </div>
             </div>
@@ -193,7 +196,7 @@ export default function NotificationsPage() {
 
             <div className="mt-5 flex flex-wrap gap-3">
               <Link href="/profile" className="btn-primary shadow-none">
-                Manage in profile
+                Manage alerts
                 <ChevronRight size={15} />
               </Link>
               {WHATSAPP_JOIN_URL ? (
@@ -222,10 +225,10 @@ export default function NotificationsPage() {
               },
               {
                 icon: Smartphone,
-                title: whatsappEnabled ? 'Alerts synced' : 'Phone alerts off',
+                title: whatsappEnabled ? 'WhatsApp alerts ready' : 'Phone alerts off',
                 copy: whatsappEnabled
-                  ? 'Your inbox stays backed up with WhatsApp reminders.'
-                  : 'App inbox is live. Add WhatsApp if you want backup pings too.',
+                  ? 'Your notifications page and your phone are now working as one alert lane.'
+                  : 'Your app inbox is live. Add WhatsApp if you want backup pings too.',
               },
             ].map((item) => (
               <div key={item.title} className="rounded-[1.05rem] border border-[var(--border-color)] bg-[var(--surface-strong)] p-4">

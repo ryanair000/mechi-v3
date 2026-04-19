@@ -4,19 +4,19 @@ import { ArrowRight, Zap } from 'lucide-react';
 import { BrandLogo } from '@/components/BrandLogo';
 import FooterSection from '@/components/footer';
 import FeatureShaderCards from '@/components/feature-shader-cards';
-import { GameCarousel } from '@/components/GameCarousel';
 import { HomeFloatingHeader } from '@/components/HomeFloatingHeader';
 import { LandingCountdownSection } from '@/components/LandingCountdownSection';
 import { PlatformLogo } from '@/components/PlatformLogo';
 import { TierMedal } from '@/components/TierMedal';
+import { Gallery4, type Gallery4Item } from '@/components/ui/gallery4';
+import { GAMES, PLATFORMS, getGameImage } from '@/lib/config';
 import { PLANS } from '@/lib/plans';
 import { createServiceClient } from '@/lib/supabase';
-import type { PlatformKey } from '@/types';
+import type { GameKey, PlatformKey } from '@/types';
 
 const BETA_PLAYER_CAP = 100;
 const FALLBACK_REGISTERED_PLAYERS = 50;
 const REGISTRATION_CLOSES_AT = '2026-05-08T00:00:00+03:00';
-const REGISTRATION_CLOSES_LABEL = 'May 7, 2026';
 
 const HERO_STATS = [
   { value: '16+', label: 'Supported titles' },
@@ -31,6 +31,23 @@ const PLATFORM_CHIPS: Array<{ platform: PlatformKey; label: string }> = [
   { platform: 'nintendo', label: 'Nintendo' },
   { platform: 'pc', label: 'PC' },
   { platform: 'mobile', label: 'Mobile' },
+];
+
+const FEATURED_GALLERY_GAMES: GameKey[] = [
+  'efootball',
+  'fc26',
+  'tekken8',
+  'sf6',
+  'nba2k26',
+  'mk11',
+  'cs2',
+  'valorant',
+  'rocketleague',
+  'fortnite',
+  'codm',
+  'pubgm',
+  'freefire',
+  'ludo',
 ];
 
 const PRICING_PLANS = [
@@ -87,6 +104,25 @@ const RANK_TIERS = [
   { name: 'Legend', note: 'Top ladder', rating: 1900 },
 ];
 
+function formatGamePlatforms(platforms: PlatformKey[]) {
+  return platforms.map((platform) => PLATFORMS[platform].label).join(', ');
+}
+
+const SUPPORTED_GALLERY_ITEMS: Gallery4Item[] = FEATURED_GALLERY_GAMES.map((gameKey) => {
+  const game = GAMES[gameKey];
+
+  return {
+    id: gameKey,
+    title: game.label,
+    description:
+      game.mode === 'lobby'
+        ? `Lobby matchmaking on ${formatGamePlatforms(game.platforms)}${game.maxPlayers ? ` for up to ${game.maxPlayers} players.` : '.'}`
+        : `1v1 matchmaking on ${formatGamePlatforms(game.platforms)}.`,
+    href: '/games',
+    image: getGameImage(gameKey) ?? '',
+  };
+});
+
 type CountdownSnapshot = {
   days: number;
   hours: number;
@@ -125,6 +161,16 @@ function formatRegistrationChip(snapshot: CountdownSnapshot) {
   return `Registration closes in ${minuteCount} ${minuteCount === 1 ? 'minute' : 'minutes'}`;
 }
 
+function formatRegistrationDeadlineLabel(targetIso: string) {
+  const closesAt = new Date(targetIso);
+  const dateLabel = new Intl.DateTimeFormat('en-US', {
+    dateStyle: 'long',
+    timeZone: 'Africa/Nairobi',
+  }).format(closesAt);
+
+  return `${dateLabel} (EAT)`;
+}
+
 async function getLaunchOverview() {
   const countdownSnapshot = getCountdownSnapshot(REGISTRATION_CLOSES_AT);
   let registeredPlayers = FALLBACK_REGISTERED_PLAYERS;
@@ -147,6 +193,7 @@ async function getLaunchOverview() {
   const spotsLeft = Math.max(0, BETA_PLAYER_CAP - registeredPlayers);
 
   return {
+    closesLabel: formatRegistrationDeadlineLabel(REGISTRATION_CLOSES_AT),
     countdownSnapshot,
     registeredPlayers,
     launchChips: countdownSnapshot.expired
@@ -165,7 +212,7 @@ async function getLaunchOverview() {
 
 export default async function LandingPage() {
   await connection();
-  const { countdownSnapshot, registeredPlayers, launchChips } = await getLaunchOverview();
+  const { closesLabel, countdownSnapshot, launchChips, registeredPlayers } = await getLaunchOverview();
 
   return (
     <div className="page-base">
@@ -267,60 +314,13 @@ export default async function LandingPage() {
 
       <FeatureShaderCards />
 
-      <section id="supported" className="landing-section">
-        <div className="landing-shell">
-          <div className="card circuit-panel p-6 sm:p-7">
-            <div className="grid gap-8 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)]">
-              <div>
-                <p className="section-title">Games only</p>
-                <h2 className="mt-3 max-w-lg text-3xl font-black text-[var(--text-primary)] sm:text-[2.2rem]">
-                  Keep the spotlight on the titles you actually grind.
-                </h2>
-                <p className="mt-3 max-w-xl text-sm leading-6 text-[var(--text-secondary)]">
-                  Football, fighters, sports, and mobile play can sit under one cleaner identity without turning your profile into a cluttered wall.
-                </p>
-
-                <div className="mt-5">
-                  <GameCarousel />
-                  <p className="mt-3 text-xs text-[var(--text-soft)]">
-                    Plus Fortnite, Mario Kart, Smash Bros, Free Fire, PUBG Mobile and more.
-                  </p>
-                </div>
-              </div>
-
-              <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-1">
-                {[
-                  {
-                    label: 'Direct calls',
-                    value: 'Challenge any player',
-                    tone: 'bg-[rgba(50,224,196,0.14)] text-[var(--accent-secondary-text)]',
-                  },
-                  {
-                    label: 'Tournament flow',
-                    value: 'Paid or free entry',
-                    tone: 'bg-[rgba(96,165,250,0.14)] text-[#60a5fa]',
-                  },
-                  {
-                    label: 'Result lock',
-                    value: 'Scorelines + disputes',
-                    tone: 'bg-[rgba(255,107,107,0.14)] text-[#ff8a8a]',
-                  },
-                ].map((item) => (
-                  <div
-                    key={item.label}
-                    className="rounded-[1.05rem] border border-[var(--border-color)] bg-[var(--surface-strong)] p-4 sm:p-5"
-                  >
-                    <span className={`inline-flex rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] ${item.tone}`}>
-                      {item.label}
-                    </span>
-                    <p className="mt-4 text-lg font-black text-[var(--text-primary)]">{item.value}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
+      <div id="supported">
+        <Gallery4
+          title="Games only"
+          description="Football, fighters, sports, and mobile play can sit under one cleaner identity without turning your profile into a cluttered wall."
+          items={SUPPORTED_GALLERY_ITEMS}
+        />
+      </div>
 
       <section id="pricing" className="landing-section">
         <div className="landing-shell">
@@ -469,14 +469,6 @@ export default async function LandingPage() {
         </div>
       </section>
 
-      <LandingCountdownSection
-        closesAt={REGISTRATION_CLOSES_AT}
-        closesLabel={REGISTRATION_CLOSES_LABEL}
-        playerCap={BETA_PLAYER_CAP}
-        registeredPlayers={registeredPlayers}
-        initialSnapshot={countdownSnapshot}
-      />
-
       <section className="landing-section pt-0">
         <div className="landing-shell">
           <div className="card circuit-panel p-6 sm:p-7 lg:flex lg:items-center lg:justify-between lg:gap-8">
@@ -502,6 +494,14 @@ export default async function LandingPage() {
           </div>
         </div>
       </section>
+
+      <LandingCountdownSection
+        closesAt={REGISTRATION_CLOSES_AT}
+        closesLabel={closesLabel}
+        playerCap={BETA_PLAYER_CAP}
+        registeredPlayers={registeredPlayers}
+        initialSnapshot={countdownSnapshot}
+      />
 
       <FooterSection />
     </div>

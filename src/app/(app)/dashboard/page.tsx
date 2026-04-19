@@ -48,6 +48,18 @@ interface QueueStatusResponse {
   } | null;
 }
 
+interface OnlineQueuePlayer {
+  id: string;
+  username: string;
+  avatar_url?: string | null;
+  level: number;
+  region?: string | null;
+  game: GameKey;
+  platform?: PlatformKey | null;
+  joined_at: string;
+  wait_minutes: number;
+}
+
 export default function DashboardPage() {
   const { user } = useAuth();
   const authFetch = useAuthFetch();
@@ -56,6 +68,7 @@ export default function DashboardPage() {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [activeMatch, setActiveMatch] = useState<Match | null>(null);
   const [queueCounts, setQueueCounts] = useState<Record<string, number>>({});
+  const [onlinePlayers, setOnlinePlayers] = useState<OnlineQueuePlayer[]>([]);
   const [queuingGame, setQueuingGame] = useState<GameKey | null>(null);
   const [queueFeedback, setQueueFeedback] = useState<ActionFeedbackState | null>(null);
   const [loading, setLoading] = useState(true);
@@ -82,18 +95,22 @@ export default function DashboardPage() {
 
     async function loadDashboard() {
       try {
-        const [profileRes, activeMatchRes, queueStatusRes] = await Promise.all([
+        const [profileRes, activeMatchRes, queueStatusRes, onlinePlayersRes] = await Promise.all([
           authFetch('/api/users/profile'),
           authFetch('/api/matches/current'),
           authFetch('/api/queue/status'),
+          authFetch('/api/queue/players'),
         ]);
 
         if (cancelled) return;
 
-        const [profileData, matchData, queueData] = await Promise.all([
+        const [profileData, matchData, queueData, onlinePlayersData] = await Promise.all([
           profileRes.ok ? profileRes.json() : Promise.resolve(null),
           activeMatchRes.ok ? activeMatchRes.json() : Promise.resolve(null),
           queueStatusRes.ok ? queueStatusRes.json() as Promise<QueueStatusResponse> : Promise.resolve(null),
+          onlinePlayersRes.ok
+            ? onlinePlayersRes.json() as Promise<{ players?: OnlineQueuePlayer[] }>
+            : Promise.resolve(null),
         ]);
 
         if (cancelled) return;
@@ -113,6 +130,12 @@ export default function DashboardPage() {
 
         if (activeMatchRes.ok) {
           setActiveMatch(matchData.match);
+        }
+
+        if (onlinePlayersRes.ok) {
+          setOnlinePlayers((onlinePlayersData?.players ?? []) as OnlineQueuePlayer[]);
+        } else {
+          setOnlinePlayers([]);
         }
       } finally {
         if (!cancelled) {
@@ -298,6 +321,30 @@ export default function DashboardPage() {
   const streak = (profile?.win_streak as number) ?? 0;
   const xpProgress = getXpProgress(xp, level);
   const currentPlan = getPlan((profile?.plan as string | undefined) ?? user?.plan ?? 'free');
+  const queueHeat =
+    queueTotal >= 8
+      ? {
+          label: 'Hot',
+          tone: 'text-[var(--brand-teal)]',
+          detail: 'Queue traffic is moving fast across your ranked lane.',
+        }
+      : queueTotal >= 4
+        ? {
+            label: 'Warm',
+            tone: 'text-[var(--accent-secondary-text)]',
+            detail: 'There is enough activity for a healthy match pulse.',
+          }
+        : queueTotal >= 1
+          ? {
+              label: 'Building',
+              tone: 'text-[var(--brand-coral)]',
+              detail: 'A few players are live, so the queue is warming up.',
+            }
+          : {
+              label: 'Quiet',
+              tone: 'text-[var(--text-primary)]',
+              detail: 'No live players are sitting in your lane just yet.',
+            };
 
   if (loading) {
     return (
@@ -383,9 +430,20 @@ export default function DashboardPage() {
 
           <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
             <div className="card p-4">
-              <p className="stat-label">Queue Heat</p>
-              <p className="mt-2 text-[1.7rem] font-black text-[var(--brand-teal)]">{queueTotal}</p>
-              <p className="mt-2 text-xs leading-5 text-[var(--text-soft)]">Players on your platform right now</p>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="stat-label">Queue Heat</p>
+                  <p className={`mt-2 text-[1.45rem] font-black ${queueHeat.tone}`}>{queueHeat.label}</p>
+                  <p className="mt-2 text-xs leading-5 text-[var(--text-soft)]">{queueHeat.detail}</p>
+                </div>
+                <div className="border-l border-[var(--border-color)] pl-4">
+                  <p className="stat-label">Players Online</p>
+                  <p className="mt-2 text-[1.7rem] font-black text-[var(--accent-secondary-text)]">{queueTotal}</p>
+                  <p className="mt-2 text-xs leading-5 text-[var(--text-soft)]">
+                    Same-platform players live in your ranked pool
+                  </p>
+                </div>
+              </div>
             </div>
             <div className="card p-4">
               <p className="stat-label">Win Streak</p>
@@ -427,6 +485,73 @@ export default function DashboardPage() {
             </Link>
           </div>
         </div>
+      )}
+
+      {rankedGames.length > 0 && (
+        <section className="mb-8">
+          <div className="mb-4 flex items-center justify-between gap-3">
+            <div>
+              <p className="section-title">Players Online Now</p>
+              <p className="mt-2 text-sm text-[var(--text-secondary)]">
+                Live players in your same-platform ranked lane. Tap a card to open their public profile.
+              </p>
+            </div>
+            <div className="brand-chip w-fit">
+              <Radar size={12} />
+              <span>{onlinePlayers.length} live now</span>
+            </div>
+          </div>
+
+          {onlinePlayers.length > 0 ? (
+            <div className="grid grid-cols-1 gap-3 lg:grid-cols-2 xl:grid-cols-3">
+              {onlinePlayers.map((player) => (
+                <Link
+                  key={`${player.id}-${player.game}`}
+                  href={`/s/${encodeURIComponent(player.username)}`}
+                  className="card group flex items-center gap-3 p-4 transition-all hover:-translate-y-0.5 hover:border-[rgba(50,224,196,0.24)] hover:bg-[var(--surface)]"
+                >
+                  <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-2xl border border-[rgba(50,224,196,0.2)] bg-[rgba(50,224,196,0.1)] text-sm font-black text-[var(--brand-teal)]">
+                    {player.username[0]?.toUpperCase() ?? '?'}
+                  </div>
+
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <p className="truncate text-sm font-semibold text-[var(--text-primary)]">
+                        {player.username}
+                      </p>
+                      <span className="brand-chip px-1.5 py-0.5 text-[9px]">Lv. {player.level}</span>
+                    </div>
+                    <p className="mt-1 text-xs text-[var(--text-secondary)]">
+                      {GAMES[player.game].label}
+                      {player.platform ? ` / ${player.platform.toUpperCase()}` : ''}
+                      {player.region ? ` / ${player.region}` : ''}
+                    </p>
+                    <p className="mt-1 text-[11px] text-[var(--text-soft)]">
+                      {player.wait_minutes > 0
+                        ? `${player.wait_minutes}m in queue right now`
+                        : 'Just joined the queue'}
+                    </p>
+                  </div>
+
+                  <ChevronRight
+                    size={16}
+                    className="flex-shrink-0 text-[var(--text-soft)] transition-transform group-hover:translate-x-0.5"
+                  />
+                </Link>
+              ))}
+            </div>
+          ) : (
+            <div className="card p-5">
+              <p className="text-sm font-semibold text-[var(--text-primary)]">
+                No same-platform players are live right now
+              </p>
+              <p className="mt-1 text-xs leading-5 text-[var(--text-secondary)]">
+                When players enter your ranked queue lane, they will show up here and you can jump into
+                their public profiles in one tap.
+              </p>
+            </div>
+          )}
+        </section>
       )}
 
       {rankedGames.length > 0 && (

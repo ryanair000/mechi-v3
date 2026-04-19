@@ -3,7 +3,7 @@ import type { JWTPayload } from '@/types';
 import { hasPrimaryAdminAccess } from '@/lib/admin-access';
 import { getLoginPath, getSafeNextPath } from '@/lib/navigation';
 import { createServiceClient } from '@/lib/supabase';
-import { ADMIN_HOST, ADMIN_URL, APP_URL } from '@/lib/urls';
+import { ADMIN_HOST as CONFIGURED_ADMIN_HOST, ADMIN_URL, APP_URL } from '@/lib/urls';
 
 const PROTECTED_PREFIXES = [
   '/dashboard',
@@ -34,6 +34,9 @@ const PROTECTED_PREFIXES = [
 
 const ADMIN_PREFIXES = ['/admin', '/api/admin'];
 const CONNECT_HOSTS = new Set(['connect.mechi.club']);
+const CANONICAL_ADMIN_HOST = 'mechi.lokimax.top';
+const CANONICAL_APP_URL = 'https://mechi.club';
+const ADMIN_HOSTS = new Set([CONFIGURED_ADMIN_HOST, CANONICAL_ADMIN_HOST]);
 
 const ADMIN_HOST_PATH_ALIASES: Record<string, string> = {
   '/': '/admin',
@@ -119,7 +122,7 @@ function getRequestHost(request: NextRequest) {
 }
 
 function isAdminHost(request: NextRequest) {
-  return getRequestHost(request) === ADMIN_HOST;
+  return ADMIN_HOSTS.has(getRequestHost(request));
 }
 
 function getAdminHostAlias(pathname: string) {
@@ -127,7 +130,7 @@ function getAdminHostAlias(pathname: string) {
 }
 
 function redirectToAppHost(pathname: string, request: NextRequest) {
-  return NextResponse.redirect(new URL(`${pathname}${request.nextUrl.search}`, APP_URL));
+  return NextResponse.redirect(new URL(`${pathname}${request.nextUrl.search}`, CANONICAL_APP_URL));
 }
 
 function base64UrlDecode(value: string) {
@@ -237,7 +240,7 @@ function forbiddenResponse(pathname: string, request: NextRequest, message = 'Fo
   }
 
   if (isAdminHost(request)) {
-    return NextResponse.redirect(new URL('/dashboard', APP_URL));
+    return NextResponse.redirect(new URL('/dashboard', CANONICAL_APP_URL));
   }
 
   return NextResponse.redirect(new URL('/dashboard', request.url));
@@ -273,7 +276,7 @@ export async function proxy(request: NextRequest) {
     return NextResponse.rewrite(connectUrl);
   }
 
-  const adminHost = host === ADMIN_HOST;
+  const adminHost = ADMIN_HOSTS.has(host);
   const adminHostAlias = adminHost ? getAdminHostAlias(pathname) : null;
   const effectivePathname = adminHostAlias ?? pathname;
 

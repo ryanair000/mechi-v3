@@ -17,7 +17,7 @@ export interface Gallery4Item {
   title: string;
   description: string;
   href: string;
-  image: string;
+  image?: string | null;
 }
 
 export interface Gallery4Props {
@@ -157,11 +157,15 @@ const Gallery4 = ({
               >
                 <a href={item.href} className="group rounded-xl">
                   <div className="group relative h-full min-h-[19rem] max-w-full overflow-hidden rounded-xl md:aspect-[5/4] lg:aspect-[16/9]">
-                    <img
-                      src={item.image}
-                      alt={item.title}
-                      className="absolute h-full w-full object-cover object-center transition-transform duration-300 group-hover:scale-105"
-                    />
+                    {item.image ? (
+                      <img
+                        src={item.image}
+                        alt={item.title}
+                        className="absolute h-full w-full object-cover object-center transition-transform duration-300 group-hover:scale-105"
+                      />
+                    ) : (
+                      <div className="absolute inset-0 bg-[linear-gradient(145deg,rgba(10,16,28,0.98),rgba(24,38,60,0.92))]" />
+                    )}
                     <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/72 via-[44%] to-black/12" />
                     <div className="absolute inset-x-0 bottom-0 flex flex-col items-start bg-gradient-to-t from-black/38 via-black/10 to-transparent p-5 text-primary-foreground md:p-6">
                       <div className="mb-2 pt-3 text-lg font-semibold text-white drop-shadow-[0_2px_12px_rgba(0,0,0,0.95)] md:mb-2.5 md:pt-4 md:text-xl">

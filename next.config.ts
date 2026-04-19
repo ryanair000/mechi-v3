@@ -45,6 +45,22 @@ const nextConfig: NextConfig = {
       ],
     },
   },
+  async redirects() {
+    return [
+      {
+        source:
+          "/:path((?!$|admin(?:/|$)|dashboard(?:/|$)|login(?:/|$)|register(?:/|$)|forgot-password(?:/|$)|reset-password(?:/|$)|banned(?:/|$)|api(?:/|$)|_next(?:/|$)|favicon|icon|robots|sitemap).*)",
+        has: [
+          {
+            type: "host",
+            value: "mechi.lokimax.top",
+          },
+        ],
+        destination: "https://mechi.club/:path",
+        permanent: false,
+      },
+    ];
+  },
   async headers() {
     return [
       {

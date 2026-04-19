@@ -119,7 +119,7 @@ const SUPPORTED_GALLERY_ITEMS: Gallery4Item[] = FEATURED_GALLERY_GAMES.map((game
         ? `Lobby matchmaking on ${formatGamePlatforms(game.platforms)}${game.maxPlayers ? ` for up to ${game.maxPlayers} players.` : '.'}`
         : `1v1 matchmaking on ${formatGamePlatforms(game.platforms)}.`,
     href: '/games',
-    image: getGameImage(gameKey) ?? '',
+    image: getGameImage(gameKey),
   };
 });
 

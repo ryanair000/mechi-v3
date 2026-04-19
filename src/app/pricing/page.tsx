@@ -4,9 +4,10 @@ import Link from 'next/link';
 import { Suspense, useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import toast from 'react-hot-toast';
-import { ArrowRight, Check, Crown, Sparkles } from 'lucide-react';
+import { Crown, Sparkles } from 'lucide-react';
 import { BrandLogo } from '@/components/BrandLogo';
 import { PlanBadge } from '@/components/PlanBadge';
+import PricingSection from '@/components/pricing-section';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { useAuth, useAuthFetch } from '@/components/AuthProvider';
 import { type BillingCycle, type Plan, PLANS } from '@/lib/plans';
@@ -114,6 +115,61 @@ function PricingPageContent() {
     }
   };
 
+  const pricingCards = VISIBLE_PLAN_ORDER.map((planKey) => {
+    const plan = PLANS[planKey];
+    const isCurrent = currentPlan === planKey;
+    const isDowngradeFromElite = currentPlan === 'elite' && planKey === 'pro';
+    const actionDisabled =
+      planKey === 'free' || isCurrent || isDowngradeFromElite || loadingPlan !== null;
+    const price = billingCycle === 'annual' ? plan.annualKes : plan.monthlyKes;
+    const savings = planKey === 'pro' || planKey === 'elite' ? annualSavings[planKey] : 0;
+
+    const description =
+      planKey === 'free'
+        ? 'Jump into ranked matches, direct challenges, and free-entry tournaments without paying first.'
+        : planKey === 'pro'
+          ? 'Unlock unlimited ranked runs, more game slots, and hosting tools for your next grind.'
+          : 'Own the premium lane with zero tournament platform fees, early access, and streaming perks.';
+
+    return {
+      id: planKey,
+      title: plan.name,
+      price: planKey === 'free' ? 'Free' : `KSH ${price}`,
+      description,
+      features: plan.features,
+      cta:
+        loadingPlan === planKey
+          ? 'Starting checkout...'
+          : getPlanActionLabel(currentPlan, planKey),
+      href:
+        planKey === 'free'
+          ? user
+            ? '/dashboard'
+            : '/register'
+          : !user
+            ? '/register'
+            : undefined,
+      onSelect:
+        user && planKey !== 'free'
+          ? () => {
+              void handleUpgrade(planKey);
+            }
+          : undefined,
+      featured: planKey === 'pro',
+      tone: planKey,
+      badge: <PlanBadge plan={planKey} size="md" />,
+      helperText:
+        planKey === 'free'
+          ? 'No payment needed'
+          : billingCycle === 'annual'
+            ? `Billed yearly, save KSH ${savings}`
+            : 'Billed monthly via Paystack',
+      footnote: planKey === 'pro' ? '1-month trial on new signups' : undefined,
+      current: isCurrent,
+      disabled: planKey === 'free' ? false : user ? actionDisabled : false,
+    };
+  });
+
   return (
     <div className="page-base">
       <header className="sticky top-2 z-50 sm:top-4">
@@ -209,104 +265,11 @@ function PricingPageContent() {
           </div>
         </section>
 
-        <section className="landing-section border-none px-0 pb-0 pt-8 sm:pt-10">
-          <div className="grid gap-4 lg:grid-cols-3">
-            {VISIBLE_PLAN_ORDER.map((planKey) => {
-              const plan = PLANS[planKey];
-              const isCurrent = currentPlan === planKey;
-              const isDowngradeFromElite = currentPlan === 'elite' && planKey === 'pro';
-              const actionDisabled =
-                planKey === 'free' || isCurrent || isDowngradeFromElite || loadingPlan !== null;
-              const price = billingCycle === 'annual' ? plan.annualKes : plan.monthlyKes;
-              const savings =
-                planKey === 'pro' || planKey === 'elite' ? annualSavings[planKey] : 0;
-
-              return (
-                <div
-                  key={planKey}
-                  className={`card flex h-full flex-col p-5 sm:p-6 ${
-                    planKey === 'pro'
-                      ? 'circuit-panel border-[rgba(255,107,107,0.24)]'
-                      : planKey === 'elite'
-                        ? 'circuit-panel border-[rgba(246,196,83,0.32)]'
-                      : ''
-                  }`}
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <p className="text-lg font-black text-[var(--text-primary)]">{plan.name}</p>
-                      <div className="mt-2 flex flex-wrap items-center gap-2">
-                        <PlanBadge plan={planKey} size="md" />
-                        {planKey === 'pro' ? (
-                          <span className="brand-chip-coral px-2.5 py-1">Most popular</span>
-                        ) : planKey === 'elite' ? (
-                          <span className="rounded-full border border-[rgba(246,196,83,0.32)] bg-[rgba(246,196,83,0.14)] px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-[#b88919]">
-                            All access
-                          </span>
-                        ) : null}
-                      </div>
-                    </div>
-                    {isCurrent ? (
-                      <span className="rounded-full bg-[var(--surface-elevated)] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--text-soft)]">
-                        Current
-                      </span>
-                    ) : null}
-                  </div>
-
-                  <div className="mt-6">
-                    <p className="text-4xl font-black tracking-normal text-[var(--text-primary)]">
-                      {planKey === 'free' ? 'Free' : `KSH ${price}`}
-                    </p>
-                    <p className="mt-2 text-sm text-[var(--text-soft)]">
-                      {planKey === 'free'
-                        ? 'No payment needed'
-                        : billingCycle === 'annual'
-                          ? `Billed yearly, save KSH ${savings}`
-                          : 'Billed monthly via Paystack'}
-                    </p>
-                    {planKey === 'pro' ? (
-                      <p className="mt-2 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--brand-coral)]">
-                        1-month trial on new signups
-                      </p>
-                    ) : null}
-                  </div>
-
-                  <div className="mt-6 space-y-3">
-                    {plan.features.map((feature) => (
-                      <div key={feature} className="flex items-start gap-2 text-sm text-[var(--text-secondary)]">
-                        <Check size={14} className="mt-0.5 text-[var(--brand-teal)]" />
-                        <span>{feature}</span>
-                      </div>
-                    ))}
-                  </div>
-
-                  <div className="mt-7">
-                    {planKey === 'free' ? (
-                      <Link href={user ? '/dashboard' : '/register'} className="btn-outline w-full justify-center">
-                        {getPlanActionLabel(currentPlan, planKey)}
-                      </Link>
-                    ) : user ? (
-                      <button
-                        type="button"
-                        onClick={() => void handleUpgrade(planKey)}
-                        disabled={actionDisabled}
-                        className="btn-primary w-full justify-center disabled:opacity-45"
-                      >
-                        {loadingPlan === planKey ? 'Starting checkout...' : getPlanActionLabel(currentPlan, planKey)}
-                        {loadingPlan !== planKey ? <ArrowRight size={14} /> : null}
-                      </button>
-                    ) : (
-                      <Link href="/register" className="btn-primary w-full justify-center">
-                        {getPlanActionLabel(currentPlan, planKey)}
-                        <ArrowRight size={14} />
-                      </Link>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </section>
+        <PricingSection
+          title="Pick the plan that fits your Mechi season"
+          description="Free gets you in the arena. Pro opens up unlimited ranked volume and hosting tools. Elite removes platform fees and adds the premium lane."
+          plans={pricingCards}
+        />
 
         <section className="landing-section">
           <div className="card overflow-hidden p-5 sm:p-6">

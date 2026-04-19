@@ -10,21 +10,30 @@ import {
 import { BrandLogo } from '@/components/BrandLogo';
 
 const links = [
-  { title: 'Home', href: '/' },
-  { title: 'Pricing', href: '/pricing' },
-  { title: 'Leaderboard', href: '/leaderboard' },
-  { title: 'Tournaments', href: '/tournaments' },
-  { title: 'Lobbies', href: '/lobbies' },
-  { title: 'Sign in', href: '/login' },
-];
-
-const socialLinks = [
-  { href: '/pricing', label: 'Pricing', Icon: Share2 },
-  { href: '/leaderboard', label: 'Leaderboard', Icon: MessageCircle },
-  { href: '/tournaments', label: 'Tournaments', Icon: LinkIcon },
-  { href: '/lobbies', label: 'Lobbies', Icon: Globe },
-  { href: '/register', label: 'Register', Icon: Send },
-  { href: '/', label: 'Home', Icon: Feather },
+  {
+    title: 'Features',
+    href: '#',
+  },
+  {
+    title: 'Solution',
+    href: '#',
+  },
+  {
+    title: 'Customers',
+    href: '#',
+  },
+  {
+    title: 'Pricing',
+    href: '/pricing',
+  },
+  {
+    title: 'Help',
+    href: '#',
+  },
+  {
+    title: 'About',
+    href: '#',
+  },
 ];
 
 export default function FooterSection() {
@@ -48,16 +57,60 @@ export default function FooterSection() {
         </div>
 
         <div className="my-8 flex flex-wrap justify-center gap-6 text-sm">
-          {socialLinks.map(({ href, label, Icon }) => (
-            <Link
-              key={label}
-              href={href}
-              aria-label={label}
-              className="text-muted-foreground hover:text-primary block"
-            >
-              <Icon className="size-6" />
-            </Link>
-          ))}
+          <Link
+            href="#"
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="Social Link 1"
+            className="text-muted-foreground hover:text-primary block"
+          >
+            <Share2 className="size-6" />
+          </Link>
+          <Link
+            href="#"
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="Social Link 2"
+            className="text-muted-foreground hover:text-primary block"
+          >
+            <MessageCircle className="size-6" />
+          </Link>
+          <Link
+            href="#"
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="Social Link 3"
+            className="text-muted-foreground hover:text-primary block"
+          >
+            <LinkIcon className="size-6" />
+          </Link>
+          <Link
+            href="#"
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="Social Link 4"
+            className="text-muted-foreground hover:text-primary block"
+          >
+            <Globe className="size-6" />
+          </Link>
+          <Link
+            href="#"
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="Social Link 5"
+            className="text-muted-foreground hover:text-primary block"
+          >
+            <Send className="size-6" />
+          </Link>
+          <Link
+            href="#"
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="Social Link 6"
+            className="text-muted-foreground hover:text-primary block"
+          >
+            <Feather className="size-6" />
+          </Link>
         </div>
 
         <span className="text-muted-foreground block text-center text-sm">

@@ -21,9 +21,11 @@ const PROTECTED_PREFIXES = [
 ];
 
 const ADMIN_PREFIXES = ['/admin', '/api/admin'];
+const CONNECT_HOSTS = new Set(['connect.mechi.club']);
 
 const PUBLIC_PREFIXES = [
   '/',
+  '/connect',
   '/login',
   '/register',
   '/banned',
@@ -126,10 +128,23 @@ function unauthorizedResponse(pathname: string, request: NextRequest) {
   return NextResponse.redirect(new URL('/login', request.url));
 }
 
+function getRequestHost(request: NextRequest) {
+  const forwardedHost = request.headers.get('x-forwarded-host');
+  const host = forwardedHost ?? request.headers.get('host') ?? request.nextUrl.host;
+  return host.split(':')[0].toLowerCase();
+}
+
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
+  const host = getRequestHost(request);
   const token = getToken(request);
   const payload = getPayload(request);
+
+  if (CONNECT_HOSTS.has(host) && pathname === '/') {
+    const connectUrl = request.nextUrl.clone();
+    connectUrl.pathname = '/connect';
+    return NextResponse.rewrite(connectUrl);
+  }
 
   if ((pathname === '/login' || pathname === '/register') && payload) {
     return NextResponse.redirect(new URL('/dashboard', request.url));

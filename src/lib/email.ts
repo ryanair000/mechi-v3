@@ -2,13 +2,33 @@ import { Resend } from 'resend';
 import { DEFAULT_RATING } from '@/lib/config';
 import { getRankDivision } from '@/lib/gamification';
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+let resendClient: Resend | null | undefined;
 const FROM_ADDRESS = process.env.RESEND_FROM_EMAIL ?? 'noreply@mechi.club';
 const FROM = `Mechi <${FROM_ADDRESS}>`;
 const APP_URL =
   process.env.NEXT_PUBLIC_APP_URL ??
   process.env.NEXT_PUBLIC_BASE_URL ??
   'https://mechi.club';
+
+function getResendClient(): Resend | null {
+  if (resendClient !== undefined) {
+    return resendClient;
+  }
+
+  const apiKey = process.env.RESEND_API_KEY?.trim();
+  resendClient = apiKey ? new Resend(apiKey) : null;
+  return resendClient;
+}
+
+async function sendEmail(payload: Parameters<Resend['emails']['send']>[0]): Promise<void> {
+  const resend = getResendClient();
+  if (!resend) {
+    console.warn('[Email] Send skipped - RESEND_API_KEY is not configured');
+    return;
+  }
+
+  await resend.emails.send(payload);
+}
 
 function baseLayout(title: string, content: string): string {
   return `<!DOCTYPE html>
@@ -88,7 +108,7 @@ export async function sendWelcomeEmail(params: {
   `;
 
   try {
-    await resend.emails.send({
+    await sendEmail({
       from: FROM,
       to: params.to,
       subject: `Welcome to Mechi, ${params.username}!`,
@@ -134,7 +154,7 @@ export async function sendMatchFoundEmail(params: {
   `;
 
   try {
-    await resend.emails.send({
+    await sendEmail({
       from: FROM,
       to: params.to,
       subject: `Match found! You vs ${params.opponentUsername}`,
@@ -181,7 +201,7 @@ export async function sendResultConfirmedEmail(params: {
   `;
 
   try {
-    await resend.emails.send({
+    await sendEmail({
       from: FROM,
       to: params.to,
       subject: `Match result: ${params.won ? 'You won!' : 'Match complete'} / ${params.rankLabel}`,
@@ -221,7 +241,7 @@ export async function sendMatchDisputeEmail(params: {
   `;
 
   try {
-    await resend.emails.send({
+    await sendEmail({
       from: FROM,
       to: params.to,
       subject: 'Match disputed - upload screenshot to resolve',
@@ -246,7 +266,7 @@ export async function sendTournamentFullEmail(params: {
   `;
 
   try {
-    await resend.emails.send({
+    await sendEmail({
       from: FROM,
       to: params.to,
       subject: `${params.tournamentTitle} is full - start it now`,
@@ -282,7 +302,7 @@ export async function sendTournamentMatchReadyEmail(params: {
   `;
 
   try {
-    await resend.emails.send({
+    await sendEmail({
       from: FROM,
       to: params.to,
       subject: `Your Mechi tournament match is ready`,
@@ -313,7 +333,7 @@ export async function sendTournamentWinnerEmail(params: {
   `;
 
   try {
-    await resend.emails.send({
+    await sendEmail({
       from: FROM,
       to: params.to,
       subject: `You won ${params.tournamentTitle}`,
@@ -355,7 +375,7 @@ export async function sendSubscriptionConfirmEmail(params: {
   `;
 
   try {
-    await resend.emails.send({
+    await sendEmail({
       from: FROM,
       to: params.to,
       subject: `${planName} activated on Mechi`,

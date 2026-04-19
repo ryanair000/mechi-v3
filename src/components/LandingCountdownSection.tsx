@@ -1,6 +1,7 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
+import AnimatedNumberCountdown from '@/components/countdown-number';
 
 type CountdownSnapshot = {
   days: number;
@@ -31,10 +32,6 @@ function getCountdownSnapshot(closesAt: string, nowMs = Date.now()): CountdownSn
   };
 }
 
-function formatUnit(value: number, pad = true) {
-  return pad ? String(value).padStart(2, '0') : String(value);
-}
-
 export function LandingCountdownSection({
   closesAt,
   closesLabel,
@@ -53,15 +50,6 @@ export function LandingCountdownSection({
   }, [closesAt]);
 
   const spotsLeft = Math.max(0, playerCap - registeredPlayers);
-  const countdownBlocks = useMemo(
-    () => [
-      { value: formatUnit(snapshot.days, false), label: 'Days left' },
-      { value: formatUnit(snapshot.hours), label: 'Hours left' },
-      { value: formatUnit(snapshot.minutes), label: 'Minutes left' },
-      { value: formatUnit(snapshot.seconds), label: 'Seconds left' },
-    ],
-    [snapshot]
-  );
 
   return (
     <section className="landing-section">
@@ -91,19 +79,7 @@ export function LandingCountdownSection({
           </div>
 
           <div className="mt-5 flex-1 lg:mt-0 lg:max-w-2xl">
-            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-              {countdownBlocks.map((item) => (
-                <div
-                  key={item.label}
-                  className="rounded-2xl border border-[var(--border-color)] bg-[var(--surface-strong)] px-4 py-4 text-center"
-                >
-                  <p className="text-3xl font-black text-[var(--text-primary)]">{item.value}</p>
-                  <p className="mt-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--text-soft)]">
-                    {item.label}
-                  </p>
-                </div>
-              ))}
-            </div>
+            <AnimatedNumberCountdown values={snapshot} />
 
             <div className="mt-3 rounded-2xl border border-[var(--border-color)] bg-[var(--surface-strong)] px-4 py-3 text-sm text-[var(--text-secondary)]">
               {snapshot.expired

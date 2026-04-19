@@ -52,6 +52,7 @@ function buildLobbyDetail(
     id: lobby.id as string,
     host_id: lobby.host_id as string,
     game: lobby.game as GameKey,
+    visibility: lobby.visibility === 'private' ? 'private' : 'public',
     mode: lobby.mode as string,
     map_name: (lobby.map_name as string | null | undefined) ?? null,
     scheduled_for: (lobby.scheduled_for as string | null | undefined) ?? null,
@@ -112,7 +113,7 @@ export async function GET(
     const { data: lobby, error: lobbyError } = await supabase
       .from('lobbies')
       .select(
-        'id, host_id, game, mode, map_name, scheduled_for, title, max_players, room_code, status, created_at, host:host_id(id, username, phone, email, role, is_banned), member_count:lobby_members(count)'
+        'id, host_id, game, visibility, mode, map_name, scheduled_for, title, max_players, room_code, status, created_at, host:host_id(id, username, phone, email, role, is_banned), member_count:lobby_members(count)'
       )
       .eq('id', id)
       .single();
@@ -163,7 +164,7 @@ export async function PATCH(
     const supabase = createServiceClient();
     const { data: lobby, error: lobbyError } = await supabase
       .from('lobbies')
-      .select('id, title, room_code, host_id, max_players, status')
+      .select('id, title, room_code, host_id, max_players, status, visibility')
       .eq('id', id)
       .single();
 

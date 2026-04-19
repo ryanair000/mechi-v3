@@ -7,7 +7,7 @@ import { PlatformLogo } from '@/components/PlatformLogo';
 import { GAMES, PLATFORMS } from '@/lib/config';
 import type { GameKey, Lobby, LobbyMember } from '@/types';
 import toast from 'react-hot-toast';
-import { Users, Copy, ArrowLeft, LogOut, Crown, Trash2, Compass, Swords, CalendarClock } from 'lucide-react';
+import { Users, Copy, ArrowLeft, LogOut, Crown, Trash2, Compass, Swords, CalendarClock, Globe, Lock, Link2 } from 'lucide-react';
 
 interface LobbyDetail extends Lobby { host: { id: string; username: string }; }
 interface MemberWithUser extends LobbyMember { user: { id: string; username: string }; }
@@ -69,6 +69,15 @@ export default function LobbyDetailPage() {
     if (lobby?.room_code) { navigator.clipboard.writeText(lobby.room_code); toast.success('Room code copied!'); }
   };
 
+  const copyLobbyLink = () => {
+    if (typeof window === 'undefined') {
+      return;
+    }
+
+    navigator.clipboard.writeText(`${window.location.origin}/lobbies/${lobbyId}`);
+    toast.success(lobby?.visibility === 'private' ? 'Invite link copied!' : 'Lobby link copied!');
+  };
+
   if (loading) {
     return <div className="page-container"><div className="max-w-2xl mx-auto space-y-4"><div className="h-32 shimmer" /><div className="h-48 shimmer" /></div></div>;
   }
@@ -77,6 +86,7 @@ export default function LobbyDetailPage() {
   const game = GAMES[lobby.game as GameKey];
   const isHost = lobby.host_id === user?.id;
   const isMember = members.some((m) => m.user_id === user?.id);
+  const visibility = lobby.visibility === 'private' ? 'private' : 'public';
   const displayMode = lobby.mode && lobby.mode !== 'lobby' ? lobby.mode : null;
   const displayMap = typeof lobby.map_name === 'string' && lobby.map_name.length > 0 ? lobby.map_name : null;
   const displaySchedule = formatLobbySchedule(lobby.scheduled_for);
@@ -94,30 +104,40 @@ export default function LobbyDetailPage() {
             <div>
               <p className="text-blue-400 text-xs font-medium uppercase tracking-wide mb-1">{game?.label}</p>
               <h1 className="font-bold text-2xl text-white">{lobby.title}</h1>
-              {displayMode || displayMap || displaySchedule ? (
-                <div className="mt-3 flex flex-wrap gap-2">
-                  {displayMode ? (
-                    <span className="brand-chip gap-1 px-2.5 py-1">
-                      <Swords size={11} />
-                      {displayMode}
+              <div className="mt-3 flex flex-wrap gap-2">
+                <span
+                  className={`rounded-full border px-2.5 py-1 text-[11px] font-medium ${
+                    visibility === 'public'
+                      ? 'border-[rgba(50,224,196,0.22)] bg-[rgba(50,224,196,0.12)] text-[var(--brand-teal)]'
+                      : 'border-white/[0.12] bg-white/[0.04] text-white/70'
+                  }`}
+                >
+                  <span className="inline-flex items-center gap-1">
+                    {visibility === 'public' ? <Globe size={11} /> : <Lock size={11} />}
+                    {visibility === 'public' ? 'Public room' : 'Private room'}
+                  </span>
+                </span>
+                {displayMode ? (
+                  <span className="brand-chip gap-1 px-2.5 py-1">
+                    <Swords size={11} />
+                    {displayMode}
+                  </span>
+                ) : null}
+                {displayMap ? (
+                  <span className="brand-chip-coral gap-1 px-2.5 py-1">
+                    <Compass size={11} />
+                    {displayMap}
+                  </span>
+                ) : null}
+                {displaySchedule ? (
+                  <span className="rounded-full border border-white/[0.08] bg-white/[0.04] px-2.5 py-1 text-[11px] font-medium text-white/70">
+                    <span className="inline-flex items-center gap-1">
+                      <CalendarClock size={11} />
+                      {displaySchedule}
                     </span>
-                  ) : null}
-                  {displayMap ? (
-                    <span className="brand-chip-coral gap-1 px-2.5 py-1">
-                      <Compass size={11} />
-                      {displayMap}
-                    </span>
-                  ) : null}
-                  {displaySchedule ? (
-                    <span className="rounded-full border border-white/[0.08] bg-white/[0.04] px-2.5 py-1 text-[11px] font-medium text-white/70">
-                      <span className="inline-flex items-center gap-1">
-                        <CalendarClock size={11} />
-                        {displaySchedule}
-                      </span>
-                    </span>
-                  ) : null}
-                </div>
-              ) : null}
+                  </span>
+                ) : null}
+              </div>
             </div>
             <span className={`text-xs font-medium px-3 py-1 rounded-lg ${
               lobby.status === 'open' ? 'bg-emerald-500/15 text-emerald-400' :
@@ -135,10 +155,21 @@ export default function LobbyDetailPage() {
               ))}
             </div>
           </div>
-          <button onClick={copyRoomCode}
-            className="mt-4 flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-white/[0.08] bg-white/[0.06] px-4 py-2.5 text-sm font-mono font-medium text-white transition-all hover:bg-white/[0.1] sm:w-auto">
-            Room Code: {lobby.room_code} <Copy size={12} className="text-white/30" />
-          </button>
+          <div className="mt-4 flex flex-col gap-2 sm:flex-row">
+            <button
+              onClick={copyRoomCode}
+              className="flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-white/[0.08] bg-white/[0.06] px-4 py-2.5 text-sm font-mono font-medium text-white transition-all hover:bg-white/[0.1] sm:w-auto"
+            >
+              Room Code: {lobby.room_code} <Copy size={12} className="text-white/30" />
+            </button>
+            <button
+              onClick={copyLobbyLink}
+              className="flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-white/[0.08] bg-white/[0.04] px-4 py-2.5 text-sm font-medium text-white/80 transition-all hover:bg-white/[0.08] sm:w-auto"
+            >
+              <Link2 size={13} />
+              {visibility === 'private' ? 'Copy invite link' : 'Copy lobby link'}
+            </button>
+          </div>
         </div>
 
         {/* Members */}

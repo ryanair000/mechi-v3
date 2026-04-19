@@ -190,6 +190,8 @@ CREATE TABLE IF NOT EXISTS lobbies (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   host_id uuid NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
   game text NOT NULL,
+  visibility text NOT NULL DEFAULT 'public'
+    CHECK (visibility IN ('public', 'private')),
   mode text NOT NULL,
   map_name text,
   scheduled_for timestamptz,
@@ -238,6 +240,8 @@ CREATE INDEX IF NOT EXISTS idx_match_challenges_challenger_status
   ON match_challenges(challenger_id, status, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_match_challenges_opponent_status
   ON match_challenges(opponent_id, status, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_lobbies_visibility_status_created_at
+  ON lobbies(visibility, status, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_match_challenges_expires_at
   ON match_challenges(expires_at);
 CREATE INDEX IF NOT EXISTS idx_match_challenges_match_id

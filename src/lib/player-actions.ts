@@ -575,6 +575,7 @@ export async function listOpenLobbies(params: {
   let query = supabase
     .from('lobbies')
     .select('*, host:host_id(id, username), member_count:lobby_members(count)')
+    .eq('visibility', 'public')
     .eq('status', 'open')
     .order('scheduled_for', { ascending: true })
     .limit(limit);

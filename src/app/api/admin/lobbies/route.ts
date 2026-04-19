@@ -43,6 +43,7 @@ function toLobbySummary(row: Record<string, unknown>): AdminLobbySummary {
     id: row.id as string,
     host_id: row.host_id as string,
     game: row.game as GameKey,
+    visibility: row.visibility === 'private' ? 'private' : 'public',
     mode: row.mode as string,
     map_name: (row.map_name as string | null | undefined) ?? null,
     scheduled_for: (row.scheduled_for as string | null | undefined) ?? null,
@@ -129,7 +130,7 @@ export async function GET(request: NextRequest) {
     let query = supabase
       .from('lobbies')
       .select(
-        'id, host_id, game, mode, map_name, scheduled_for, title, max_players, room_code, status, created_at, host:host_id(id, username, phone, email, role, is_banned), member_count:lobby_members(count)',
+        'id, host_id, game, visibility, mode, map_name, scheduled_for, title, max_players, room_code, status, created_at, host:host_id(id, username, phone, email, role, is_banned), member_count:lobby_members(count)',
         { count: 'exact' }
       )
       .order('created_at', { ascending: false })
@@ -151,7 +152,7 @@ export async function GET(request: NextRequest) {
     const summaries = ((data ?? []) as Array<Record<string, unknown>>).map(toLobbySummary);
     const filtered = search
       ? summaries.filter((lobby) => {
-          const values = [lobby.title, lobby.room_code, lobby.host?.username ?? '', lobby.game]
+          const values = [lobby.title, lobby.room_code, lobby.host?.username ?? '', lobby.game, lobby.visibility]
             .join(' ')
             .toLowerCase();
           return values.includes(search);

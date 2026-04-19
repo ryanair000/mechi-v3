@@ -7,7 +7,7 @@ import { ArrowRight, Loader2, Search, Shield, ShieldOff, UserCog, Users } from '
 import { useAuth, useAuthFetch } from '@/components/AuthProvider';
 import { GAMES, PLATFORMS, normalizeSelectedGameKeys } from '@/lib/config';
 import { cn } from '@/lib/utils';
-import type { AdminUser, GameKey, PlatformKey, UserRole } from '@/types';
+import type { AdminUser, GameKey, LobbyVisibility, PlatformKey, UserRole } from '@/types';
 
 interface UserDetailMatch {
   id: string;
@@ -27,6 +27,7 @@ interface UserDetailLobby {
   id: string;
   game: GameKey;
   title: string;
+  visibility: LobbyVisibility;
   status: string;
   room_code: string;
   member_count?: number;
@@ -723,6 +724,9 @@ export default function AdminUsersPage() {
                             <div className="flex items-start justify-between gap-3">
                               <div className="min-w-0">
                                 <p className="text-sm font-black text-[var(--text-primary)]">{item.lobby.title}</p>
+                                <p className="mt-1 text-xs text-[var(--text-soft)]">
+                                  {item.lobby.visibility === 'private' ? 'Private room' : 'Public room'}
+                                </p>
                                 <p className="mt-1 text-sm text-[var(--text-secondary)]">
                                   {item.type} · {item.lobby.status} · Room {item.lobby.room_code}
                                 </p>

@@ -7,6 +7,8 @@ import {
   CalendarClock,
   DoorOpen,
   ExternalLink,
+  Globe,
+  Lock,
   Loader2,
   RefreshCw,
   Search,
@@ -339,6 +341,7 @@ export default function AdminLobbiesPage() {
             const gameLabel = GAMES[lobby.game]?.label ?? lobby.game;
             const selected = selectedLobbyId === lobby.id;
             const closing = actingKey === `close:${lobby.id}`;
+            const visibility = lobby.visibility === 'private' ? 'private' : 'public';
 
             return (
               <div key={lobby.id} className="card p-5">
@@ -347,6 +350,16 @@ export default function AdminLobbiesPage() {
                     <div className="flex flex-wrap items-center gap-2">
                       <p className="text-lg font-black text-[var(--text-primary)]">{lobby.title}</p>
                       <span className="brand-chip px-2 py-0.5">{gameLabel}</span>
+                      <span
+                        className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-bold ${
+                          visibility === 'public'
+                            ? 'bg-[rgba(50,224,196,0.14)] text-[var(--brand-teal)]'
+                            : 'bg-white/[0.06] text-[var(--text-secondary)]'
+                        }`}
+                      >
+                        {visibility === 'public' ? <Globe size={11} /> : <Lock size={11} />}
+                        {visibility === 'public' ? 'Public room' : 'Private room'}
+                      </span>
                       <span
                         className={`rounded-full px-2.5 py-1 text-[11px] font-bold ${
                           lobby.status === 'open'
@@ -368,7 +381,7 @@ export default function AdminLobbiesPage() {
                     </div>
 
                     <p className="mt-1 text-sm text-[var(--text-secondary)]">
-                      Host {lobby.host?.username ?? 'Unknown'} | {lobby.member_count}/{lobby.max_players} players | Room code {lobby.room_code}
+                      Host {lobby.host?.username ?? 'Unknown'} | {lobby.member_count}/{lobby.max_players} players | Room code {lobby.room_code} | {visibility === 'public' ? 'Public room' : 'Private room'}
                     </p>
 
                     <div className="mt-3 grid gap-3 md:grid-cols-3">
@@ -416,7 +429,7 @@ export default function AdminLobbiesPage() {
                     </button>
                     <Link href={`/lobbies/${lobby.id}`} className="btn-ghost">
                       <ExternalLink size={14} />
-                      Public view
+                      Open room page
                     </Link>
                     {closing ? (
                       <div className="inline-flex items-center gap-2 rounded-full border border-[var(--border-color)] px-3 py-2 text-sm text-[var(--text-secondary)]">
@@ -456,6 +469,7 @@ export default function AdminLobbiesPage() {
                             <div className="mt-4 space-y-2 text-sm text-[var(--text-secondary)]">
                               <p>Host: {selectedLobby.host?.username ?? 'Unknown'}</p>
                               <p>Status: {selectedLobby.status}</p>
+                              <p>Visibility: {selectedLobby.visibility === 'private' ? 'Private room' : 'Public room'}</p>
                               <p>Room code: {selectedLobby.room_code}</p>
                               <p>Players: {selectedLobby.member_count}/{selectedLobby.max_players}</p>
                               <p>Schedule: {formatSchedule(selectedLobby.scheduled_for)}</p>

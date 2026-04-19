@@ -1,5 +1,6 @@
 export type PlatformKey = 'ps' | 'xbox' | 'nintendo' | 'mobile' | 'pc';
 export type CountryKey = 'kenya' | 'tanzania' | 'uganda' | 'rwanda' | 'ethiopia';
+export type LobbyVisibility = 'public' | 'private';
 
 export type GameKey =
   | 'efootball'
@@ -364,6 +365,7 @@ export interface Lobby {
   id: string;
   host_id: string;
   game: GameKey;
+  visibility: LobbyVisibility;
   mode: string;
   map_name?: string | null;
   scheduled_for?: string | null;
@@ -373,6 +375,7 @@ export interface Lobby {
   status: 'open' | 'full' | 'in_progress' | 'closed';
   created_at: string;
   member_count?: number;
+  is_member?: boolean;
   host?: Pick<Profile, 'id' | 'username'>;
 }
 

@@ -16,11 +16,12 @@ import {
   getLobbyPopularMaps,
   supportsLobbyMode,
 } from '@/lib/config';
-import type { GameKey, Lobby } from '@/types';
+import type { GameKey, Lobby, LobbyVisibility } from '@/types';
 
 const WHATSAPP_GROUP_URL =
   process.env.NEXT_PUBLIC_WHATSAPP_GROUP_URL ??
   'https://chat.whatsapp.com/GRquLpTxzQ35er85N33Ec7';
+const LOBBY_VISIBILITY_OPTIONS: LobbyVisibility[] = ['public', 'private'];
 
 function toDateTimeLocalValue(date: Date) {
   const timezoneOffsetMs = date.getTimezoneOffset() * 60_000;
@@ -68,10 +69,15 @@ function readLobbyMemberCount(value: unknown): number {
   return 0;
 }
 
+function getLobbyVisibility(value?: LobbyVisibility | null): LobbyVisibility {
+  return value === 'private' ? 'private' : 'public';
+}
+
 function createLobbyDraft(game: GameKey) {
   return {
     game,
     title: '',
+    visibility: 'public' as LobbyVisibility,
     mode: getDefaultLobbyMode(game),
     map_name: getDefaultLobbyMap(game),
     scheduled_for: getDefaultLobbyScheduleValue(),
@@ -139,6 +145,7 @@ function LobbiesContent() {
       return {
         ...createLobbyDraft(gameFilter),
         title: current.title,
+        visibility: current.visibility,
         scheduled_for: current.scheduled_for,
       };
     });
@@ -227,7 +234,7 @@ function LobbiesContent() {
               Lobbies
             </h1>
             <p className="mt-3 text-sm leading-7 text-[var(--text-secondary)]">
-              Create organized rooms for team titles, drop into open scrims, and keep your squad play moving.
+              Create organized rooms for team titles, drop into open scrims, or keep private squad plans off the public feed.
             </p>
           </div>
           <button onClick={() => setShowCreate(true)} className="btn-primary text-sm">
@@ -308,6 +315,7 @@ function LobbiesContent() {
                     setNewLobby((current) => ({
                       ...createLobbyDraft(nextGame),
                       title: current.title,
+                      visibility: current.visibility,
                       scheduled_for: current.scheduled_for,
                     }));
                   }}
@@ -330,6 +338,36 @@ function LobbiesContent() {
                   className="input"
                   maxLength={60}
                 />
+              </div>
+              <div>
+                <label className="label">Visibility</label>
+                <div className="grid grid-cols-2 gap-2">
+                  {LOBBY_VISIBILITY_OPTIONS.map((visibility) => {
+                    const isActive = newLobby.visibility === visibility;
+                    const Icon = visibility === 'public' ? Globe : Lock;
+
+                    return (
+                      <button
+                        key={visibility}
+                        type="button"
+                        onClick={() => setNewLobby({ ...newLobby, visibility })}
+                        className={`flex min-h-11 items-center justify-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium transition-all ${
+                          isActive
+                            ? 'border-[rgba(50,224,196,0.32)] bg-[rgba(50,224,196,0.16)] text-[var(--text-primary)]'
+                            : 'border-[var(--border-color)] bg-[var(--surface-elevated)] text-[var(--text-soft)] hover:text-[var(--text-primary)]'
+                        }`}
+                      >
+                        <Icon size={14} />
+                        {visibility === 'public' ? 'Public' : 'Private'}
+                      </button>
+                    );
+                  })}
+                </div>
+                <p className="mt-2 text-xs leading-6 text-[var(--text-secondary)]">
+                  {newLobby.visibility === 'public'
+                    ? 'Public rooms show up in discovery and get wider lobby pings.'
+                    : 'Private rooms stay off discovery. Share the room link directly with your squad.'}
+                </p>
               </div>
               <div>
                 <label className="label">Expected match date and time</label>
@@ -425,8 +463,10 @@ function LobbiesContent() {
           {lobbies.map((lobby) => {
             const game = GAMES[lobby.game];
             const isHost = lobby.host_id === user?.id;
+            const isMember = Boolean(lobby.is_member) || isHost;
             const memberCount = readLobbyMemberCount(lobby.member_count);
             const isFull = memberCount >= lobby.max_players;
+            const visibility = getLobbyVisibility(lobby.visibility);
             const displayMode = lobby.mode && lobby.mode !== 'lobby' ? lobby.mode : null;
             const displayMap = typeof lobby.map_name === 'string' && lobby.map_name.length > 0 ? lobby.map_name : null;
             const displaySchedule = formatLobbySchedule(lobby.scheduled_for);
@@ -440,21 +480,24 @@ function LobbiesContent() {
                         {lobby.title}
                       </span>
                       {isHost && <span className="badge-emerald text-[10px]">Host</span>}
+                      {!isHost && isMember ? (
+                        <span className="rounded-full border border-[var(--border-color)] px-2 py-0.5 text-[10px] font-medium text-[var(--text-secondary)]">
+                          Joined
+                        </span>
+                      ) : null}
                     </div>
                     <p className="text-xs text-[var(--text-secondary)]">{game?.label}</p>
                   </div>
-                  <span className="flex items-center gap-1 text-xs font-medium">
-                    {lobby.status === 'open' ? (
-                      <>
-                        <Globe size={11} className="text-[var(--brand-teal)]" />
-                        <span className="text-[var(--brand-teal)]">Open</span>
-                      </>
-                    ) : (
-                      <>
-                        <Lock size={11} className="text-red-500" />
-                        <span className="text-red-500">Full</span>
-                      </>
-                    )}
+                  <span
+                    className={`rounded-full px-2.5 py-1 text-[11px] font-medium ${
+                      lobby.status === 'open'
+                        ? 'bg-[rgba(50,224,196,0.14)] text-[var(--brand-teal)]'
+                        : lobby.status === 'in_progress'
+                          ? 'bg-blue-500/14 text-blue-400'
+                          : 'bg-red-500/14 text-red-400'
+                    }`}
+                  >
+                    {lobby.status === 'in_progress' ? 'Live' : lobby.status}
                   </span>
                 </div>
 
@@ -475,36 +518,46 @@ function LobbiesContent() {
                   </p>
                 )}
 
-                {displayMode || displayMap || displaySchedule ? (
-                  <div className="mb-3 flex flex-wrap gap-2">
-                    {displayMode ? (
-                      <span className="brand-chip gap-1 px-2.5 py-1">
-                        <Swords size={11} />
-                        {displayMode}
+                <div className="mb-3 flex flex-wrap gap-2">
+                  <span
+                    className={`rounded-full border px-2.5 py-1 text-[11px] font-medium ${
+                      visibility === 'public'
+                        ? 'border-[rgba(50,224,196,0.22)] bg-[rgba(50,224,196,0.12)] text-[var(--brand-teal)]'
+                        : 'border-[rgba(255,255,255,0.12)] bg-white/[0.04] text-white/70'
+                    }`}
+                  >
+                    <span className="inline-flex items-center gap-1">
+                      {visibility === 'public' ? <Globe size={11} /> : <Lock size={11} />}
+                      {visibility === 'public' ? 'Public room' : 'Private room'}
+                    </span>
+                  </span>
+                  {displayMode ? (
+                    <span className="brand-chip gap-1 px-2.5 py-1">
+                      <Swords size={11} />
+                      {displayMode}
+                    </span>
+                  ) : null}
+                  {displayMap ? (
+                    <span className="brand-chip-coral gap-1 px-2.5 py-1">
+                      <Compass size={11} />
+                      {displayMap}
+                    </span>
+                  ) : null}
+                  {displaySchedule ? (
+                    <span className="rounded-full border border-[var(--border-color)] bg-[var(--surface-elevated)] px-2.5 py-1 text-[11px] font-medium text-[var(--text-secondary)]">
+                      <span className="inline-flex items-center gap-1">
+                        <CalendarClock size={11} />
+                        {displaySchedule}
                       </span>
-                    ) : null}
-                    {displayMap ? (
-                      <span className="brand-chip-coral gap-1 px-2.5 py-1">
-                        <Compass size={11} />
-                        {displayMap}
-                      </span>
-                    ) : null}
-                    {displaySchedule ? (
-                      <span className="rounded-full border border-[var(--border-color)] bg-[var(--surface-elevated)] px-2.5 py-1 text-[11px] font-medium text-[var(--text-secondary)]">
-                        <span className="inline-flex items-center gap-1">
-                          <CalendarClock size={11} />
-                          {displaySchedule}
-                        </span>
-                      </span>
-                    ) : null}
-                  </div>
-                ) : null}
+                    </span>
+                  ) : null}
+                </div>
 
                 <div className="flex gap-2">
                   <button onClick={() => router.push(`/lobbies/${lobby.id}`)} className="btn-outline flex-1 py-2 text-xs">
                     View
                   </button>
-                  {!isHost && !isFull && (
+                  {!isMember && !isFull && (
                     <button
                       onClick={() => handleJoin(lobby.id)}
                       disabled={joiningId === lobby.id}

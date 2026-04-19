@@ -78,7 +78,7 @@ export async function GET(
       supabase
         .from('lobby_members')
         .select(
-          'id, joined_at, lobby:lobby_id(id, host_id, game, mode, map_name, scheduled_for, title, max_players, room_code, status, created_at)'
+          'id, joined_at, lobby:lobby_id(id, host_id, game, visibility, mode, map_name, scheduled_for, title, max_players, room_code, status, created_at)'
         )
         .eq('user_id', id)
         .order('joined_at', { ascending: false })
@@ -86,7 +86,7 @@ export async function GET(
       supabase
         .from('lobbies')
         .select(
-          'id, host_id, game, mode, map_name, scheduled_for, title, max_players, room_code, status, created_at, member_count:lobby_members(count)'
+          'id, host_id, game, visibility, mode, map_name, scheduled_for, title, max_players, room_code, status, created_at, member_count:lobby_members(count)'
         )
         .eq('host_id', id)
         .order('created_at', { ascending: false })

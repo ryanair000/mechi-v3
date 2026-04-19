@@ -1,25 +1,27 @@
 import Link from 'next/link';
+import { connection } from 'next/server';
 import { ArrowRight, Zap } from 'lucide-react';
 import { BrandLogo } from '@/components/BrandLogo';
 import FooterSection from '@/components/footer';
 import { GameCarousel } from '@/components/GameCarousel';
 import { HomeFloatingHeader } from '@/components/HomeFloatingHeader';
+import { LandingCountdownSection } from '@/components/LandingCountdownSection';
 import { PlatformLogo } from '@/components/PlatformLogo';
 import { TierMedal } from '@/components/TierMedal';
 import { PLANS } from '@/lib/plans';
+import { createServiceClient } from '@/lib/supabase';
 import type { PlatformKey } from '@/types';
+
+const BETA_PLAYER_CAP = 100;
+const FALLBACK_REGISTERED_PLAYERS = 50;
+const REGISTRATION_CLOSES_AT = '2026-05-08T00:00:00+03:00';
+const REGISTRATION_CLOSES_LABEL = 'May 7, 2026';
 
 const HERO_STATS = [
   { value: '16+', label: 'Supported titles' },
   { value: '1v1', label: 'Ranked direct challenges' },
   { value: '24/7', label: 'Queue access' },
   { value: 'KES 299', label: 'Pro monthly', note: '1 month free trial' },
-];
-
-const LAUNCH_CHIPS = [
-  'Open to first 100 players',
-  '50 more players to close registration',
-  'Registration closes in 20 days',
 ];
 
 const HOW_IT_WORKS = [
@@ -107,13 +109,86 @@ const RANK_TIERS = [
   { name: 'Legend', note: 'Top ladder', rating: 1900 },
 ];
 
-const COUNTDOWN_BLOCKS = [
-  { value: '20', label: 'Days left' },
-  { value: '50', label: 'Spots left' },
-  { value: '100', label: 'Player cap' },
-];
+type CountdownSnapshot = {
+  days: number;
+  hours: number;
+  minutes: number;
+  seconds: number;
+  expired: boolean;
+};
 
-export default function LandingPage() {
+function getCountdownSnapshot(targetIso: string, nowMs = Date.now()): CountdownSnapshot {
+  const remainingMs = Math.max(0, new Date(targetIso).getTime() - nowMs);
+  const totalSeconds = Math.floor(remainingMs / 1000);
+
+  return {
+    days: Math.floor(totalSeconds / 86400),
+    hours: Math.floor((totalSeconds % 86400) / 3600),
+    minutes: Math.floor((totalSeconds % 3600) / 60),
+    seconds: totalSeconds % 60,
+    expired: remainingMs <= 0,
+  };
+}
+
+function formatRegistrationChip(snapshot: CountdownSnapshot) {
+  if (snapshot.expired) {
+    return 'Registration is closed';
+  }
+
+  if (snapshot.days > 0) {
+    return `Registration closes in ${snapshot.days} ${snapshot.days === 1 ? 'day' : 'days'}`;
+  }
+
+  if (snapshot.hours > 0) {
+    return `Registration closes in ${snapshot.hours} ${snapshot.hours === 1 ? 'hour' : 'hours'}`;
+  }
+
+  const minuteCount = Math.max(1, snapshot.minutes);
+  return `Registration closes in ${minuteCount} ${minuteCount === 1 ? 'minute' : 'minutes'}`;
+}
+
+async function getLaunchOverview() {
+  const countdownSnapshot = getCountdownSnapshot(REGISTRATION_CLOSES_AT);
+  let registeredPlayers = FALLBACK_REGISTERED_PLAYERS;
+
+  try {
+    const supabase = createServiceClient();
+    const [{ count: totalProfiles }, { count: bannedProfiles }] = await Promise.all([
+      supabase.from('profiles').select('id', { count: 'exact', head: true }),
+      supabase.from('profiles').select('id', { count: 'exact', head: true }).eq('is_banned', true),
+    ]);
+
+    registeredPlayers = Math.max(
+      0,
+      (totalProfiles ?? FALLBACK_REGISTERED_PLAYERS) - (bannedProfiles ?? 0)
+    );
+  } catch (error) {
+    console.error('[LandingPage] Failed to load registration stats:', error);
+  }
+
+  const spotsLeft = Math.max(0, BETA_PLAYER_CAP - registeredPlayers);
+
+  return {
+    countdownSnapshot,
+    registeredPlayers,
+    launchChips: countdownSnapshot.expired
+      ? [
+          `First ${BETA_PLAYER_CAP} players only`,
+          'Registration window is closed',
+          `${registeredPlayers} players joined this beta lane`,
+        ]
+      : [
+          `Open to first ${BETA_PLAYER_CAP} players`,
+          `${spotsLeft} ${spotsLeft === 1 ? 'spot' : 'spots'} left before registration closes`,
+          formatRegistrationChip(countdownSnapshot),
+        ],
+  };
+}
+
+export default async function LandingPage() {
+  await connection();
+  const { countdownSnapshot, registeredPlayers, launchChips } = await getLaunchOverview();
+
   return (
     <div className="page-base">
       <HomeFloatingHeader />
@@ -152,7 +227,7 @@ export default function LandingPage() {
               </div>
 
               <div className="mt-5 flex flex-wrap gap-2">
-                {LAUNCH_CHIPS.map((chip) => (
+                {launchChips.map((chip) => (
                   <span key={chip} className="rounded-full border border-[var(--border-color)] bg-[var(--surface-strong)] px-3 py-1.5 text-xs font-semibold text-[var(--text-secondary)]">
                     {chip}
                   </span>
@@ -440,32 +515,13 @@ export default function LandingPage() {
         </div>
       </section>
 
-      <section className="landing-section">
-        <div className="landing-shell">
-          <div className="card circuit-panel p-6 sm:p-7 lg:flex lg:items-center lg:justify-between lg:gap-8">
-            <div className="max-w-2xl">
-              <p className="section-title">Countdown</p>
-              <h2 className="mt-3 text-3xl font-black text-[var(--text-primary)] sm:text-[2.2rem]">
-                Beta V3 registration closes May 7, 2026.
-              </h2>
-              <p className="mt-3 text-sm leading-6 text-[var(--text-secondary)]">
-                Open to the first 100 players. Right now there are 50 spots left before the gate shuts on this beta run.
-              </p>
-            </div>
-
-            <div className="mt-5 grid flex-1 gap-3 sm:grid-cols-3 lg:mt-0 lg:max-w-xl">
-              {COUNTDOWN_BLOCKS.map((item) => (
-                <div key={item.label} className="rounded-2xl border border-[var(--border-color)] bg-[var(--surface-strong)] px-4 py-4 text-center">
-                  <p className="text-3xl font-black text-[var(--text-primary)]">{item.value}</p>
-                  <p className="mt-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--text-soft)]">
-                    {item.label}
-                  </p>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </section>
+      <LandingCountdownSection
+        closesAt={REGISTRATION_CLOSES_AT}
+        closesLabel={REGISTRATION_CLOSES_LABEL}
+        playerCap={BETA_PLAYER_CAP}
+        registeredPlayers={registeredPlayers}
+        initialSnapshot={countdownSnapshot}
+      />
 
       <section className="landing-section pt-0">
         <div className="landing-shell">

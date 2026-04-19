@@ -93,7 +93,9 @@ type WayToEarn = {
 
 const CHEZAHUB_BASE_URL =
   process.env.NEXT_PUBLIC_CHEZAHUB_BASE_URL || 'https://chezahub.co.ke';
-const CHEZAHUB_REWARDS_URL = `${CHEZAHUB_BASE_URL.replace(/\/$/, '')}/profile`;
+const CHEZAHUB_REDEEM_URL =
+  process.env.NEXT_PUBLIC_CHEZAHUB_REDEEM_URL || 'https://redeem.chezahub.co.ke';
+const CHEZAHUB_REWARD_CLAIM_URL = CHEZAHUB_REDEEM_URL.replace(/\/$/, '');
 const DAILY_SHARE_REWARD_POINTS = 25;
 
 function formatRewardDate(value: string | null | undefined) {
@@ -416,14 +418,14 @@ export default function SharePage() {
             </h1>
             <p className="mt-3 max-w-2xl text-sm leading-6 text-[var(--text-secondary)]">
               This is now your affiliate hub. Share your public card, invite new players, link
-              ChezaHub once, and turn Mechi reward points into real checkout codes for{' '}
+              ChezaHub once, and turn Mechi reward points into real store savings and claimable rewards through{' '}
               <a
-                href={CHEZAHUB_BASE_URL}
+                href={CHEZAHUB_REWARD_CLAIM_URL}
                 target="_blank"
                 rel="noreferrer"
                 className="font-semibold text-[var(--text-primary)] underline decoration-[var(--brand-coral)] decoration-2 underline-offset-4"
               >
-                chezahub.co.ke
+                redeem.chezahub.co.ke
               </a>
               .
             </p>
@@ -753,12 +755,12 @@ export default function SharePage() {
                   {linkingAccount ? 'Opening ChezaHub...' : linkedToChezaHub ? 'Already linked' : 'Link ChezaHub now'}
                 </button>
                 <a
-                  href={CHEZAHUB_BASE_URL}
+                  href={CHEZAHUB_REWARD_CLAIM_URL}
                   target="_blank"
                   rel="noreferrer"
                   className="btn-ghost"
                 >
-                  Open ChezaHub
+                  Open redeem portal
                   <ArrowUpRight size={14} />
                 </a>
               </div>
@@ -774,7 +776,7 @@ export default function SharePage() {
                 <div>
                   <p className="text-sm font-black text-[var(--text-primary)]">Active codes</p>
                   <p className="mt-1 text-sm text-[var(--text-secondary)]">
-                    Discount codes go in checkout. Reward claim codes go in ChezaHub Profile &gt; Rewards.
+                    Discount codes go in checkout. Reward claim codes go in the ChezaHub redeem portal.
                     Physical rewards may ask for dispatch or pickup details.
                   </p>
                 </div>
@@ -819,7 +821,7 @@ export default function SharePage() {
                     <p className="mt-3 text-sm text-[var(--text-secondary)]">
                       {code.reward_type === 'discount_code'
                         ? 'Apply this code in the ChezaHub cart promo field.'
-                        : 'Claim this code from ChezaHub Profile > Rewards to create your reward order. Physical rewards require dispatch or pickup details.'}
+                        : 'Claim this code from redeem.chezahub.co.ke to create your reward order. Physical rewards require dispatch or pickup details.'}
                     </p>
 
                     <p className="mt-2 text-sm text-[var(--text-secondary)]">
@@ -839,8 +841,8 @@ export default function SharePage() {
                   Fixed-value rewards, not open-ended wallet credit
                 </h2>
               </div>
-              <a href={CHEZAHUB_BASE_URL} target="_blank" rel="noreferrer" className="btn-ghost">
-                ChezaHub store
+              <a href={CHEZAHUB_REWARD_CLAIM_URL} target="_blank" rel="noreferrer" className="btn-ghost">
+                Redeem portal
                 <ArrowUpRight size={14} />
               </a>
             </div>
@@ -916,12 +918,12 @@ export default function SharePage() {
                                 : 'Redeem reward'}
                         </button>
                         <a
-                          href={reward.reward_type === 'reward_claim' ? CHEZAHUB_REWARDS_URL : CHEZAHUB_BASE_URL}
+                          href={reward.reward_type === 'reward_claim' ? CHEZAHUB_REWARD_CLAIM_URL : CHEZAHUB_BASE_URL}
                           target="_blank"
                           rel="noreferrer"
                           className="btn-ghost"
                         >
-                          {reward.reward_type === 'reward_claim' ? 'Open rewards' : 'Open store'}
+                          {reward.reward_type === 'reward_claim' ? 'Open redeem portal' : 'Open store'}
                           <ArrowUpRight size={14} />
                         </a>
                       </div>
@@ -999,7 +1001,7 @@ export default function SharePage() {
             </div>
 
             <div className="mt-4 flex flex-wrap gap-3">
-              <Link href="/profile#settings" className="btn-primary">
+              <Link href="/profile/settings" className="btn-primary">
                 Improve profile
               </Link>
               <Link href="/leaderboard" className="btn-ghost">

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireActiveAccessProfile } from '@/lib/access';
 import {
   createChezahubLinkToken,
-  getChezahubBaseUrl,
+  getChezahubRedeemBaseUrl,
   hashRewardBindingValue,
   verifyChezahubLinkToken,
 } from '@/lib/rewards';
@@ -77,7 +77,7 @@ export async function POST(request: NextRequest) {
       throw sessionError;
     }
 
-    const linkUrl = new URL(getChezahubBaseUrl());
+    const linkUrl = new URL(getChezahubRedeemBaseUrl());
     linkUrl.searchParams.set('mechi_link_token', token);
     linkUrl.searchParams.set('mechi_return', returnUrl);
 

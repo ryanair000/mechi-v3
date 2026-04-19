@@ -121,6 +121,7 @@ type RewardProfileFields = Pick<
 };
 
 const DEFAULT_CHEZAHUB_BASE_URL = 'https://chezahub.co.ke';
+const DEFAULT_CHEZAHUB_REDEEM_URL = 'https://redeem.chezahub.co.ke';
 const DEFAULT_LINK_TOKEN_TTL_MS = 1000 * 60 * 15;
 
 export const REWARD_RULES = {
@@ -209,6 +210,14 @@ function stableStringify(value: unknown): string {
 
 export function getChezahubBaseUrl() {
   return process.env.CHEZAHUB_BASE_URL || DEFAULT_CHEZAHUB_BASE_URL;
+}
+
+export function getChezahubRedeemBaseUrl() {
+  return (
+    process.env.CHEZAHUB_REDEEM_URL ||
+    process.env.NEXT_PUBLIC_CHEZAHUB_REDEEM_URL ||
+    DEFAULT_CHEZAHUB_REDEEM_URL
+  );
 }
 
 export function getRewardSharedSecret() {
@@ -1189,7 +1198,7 @@ export function buildChezahubLinkUrl(params: {
     invite_code: params.inviteCode,
     return_url: params.returnUrl,
   });
-  const url = new URL(getChezahubBaseUrl());
+  const url = new URL(getChezahubRedeemBaseUrl());
   url.searchParams.set('mechi_link_token', token);
   url.searchParams.set('mechi_return', params.returnUrl);
   return url.toString();

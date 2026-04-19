@@ -17,23 +17,36 @@ import {
 } from 'lucide-react';
 import { useAuth, useAuthFetch } from '@/components/AuthProvider';
 import { GameCover } from '@/components/GameCover';
+import { InviteMenu } from '@/components/InviteMenu';
 import { PaywallModal } from '@/components/PaywallModal';
 import { PlanBadge } from '@/components/PlanBadge';
 import { PlatformLogo } from '@/components/PlatformLogo';
+import { ProfileImageCropper } from '@/components/ProfileImageCropper';
 import { ShareMenu } from '@/components/ShareMenu';
 import { TierMedal } from '@/components/TierMedal';
 import {
   GAMES,
   PLATFORMS,
-  REGIONS,
   getConfiguredPlatformForGame,
   getGameIdKey,
   getGameIdLabel,
   getGameIdPlaceholder,
   getGameIdValue,
+  getGameLossesKey,
   getGamePlatformKey,
+  getGameRatingKey,
+  getSelectableGameKeys,
+  getGameWinsKey,
   getPlatformsForGameSetup,
+  normalizeGameIdKeys,
+  normalizeSelectedGameKeys,
 } from '@/lib/config';
+import {
+  COUNTRY_OPTIONS,
+  formatLocationLabel,
+  getRegionsForCountry,
+  resolveProfileLocation,
+} from '@/lib/location';
 import {
   ACHIEVEMENTS,
   getLevelFromXp,
@@ -47,13 +60,15 @@ import {
   getProfileShareUrl,
   profileShareText,
 } from '@/lib/share';
-import type { GameKey, Plan, PlatformKey } from '@/types';
+import type { CountryKey, GameKey, Plan, PlatformKey } from '@/types';
 
 interface Profile {
   [key: string]: unknown;
+  country?: CountryKey | null;
   region?: string;
   avatar_url?: string | null;
   cover_url?: string | null;
+  invite_code?: string;
   platforms?: PlatformKey[];
   game_ids?: Record<string, string>;
   selected_games?: GameKey[];
@@ -75,10 +90,15 @@ export default function ProfilePage() {
   const [saving, setSaving] = useState(false);
   const [subscriptionLoading, setSubscriptionLoading] = useState(false);
   const [uploadingMedia, setUploadingMedia] = useState<'avatar' | 'cover' | null>(null);
+  const [pendingMedia, setPendingMedia] = useState<{
+    kind: 'avatar' | 'cover';
+    file: File;
+  } | null>(null);
   const [tab, setTab] = useState<'stats' | 'settings'>('stats');
   const [showPaywall, setShowPaywall] = useState(false);
 
-  const [region, setRegion] = useState('Nairobi');
+  const [country, setCountry] = useState<CountryKey | ''>('');
+  const [region, setRegion] = useState('');
   const [platforms, setPlatforms] = useState<PlatformKey[]>([]);
   const [gameIds, setGameIds] = useState<Record<string, string>>({});
   const [selectedGames, setSelectedGames] = useState<GameKey[]>([]);
@@ -92,11 +112,17 @@ export default function ProfilePage() {
 
       if (profileRes.ok) {
         const data = await profileRes.json();
-        setProfile(data.profile);
-        setRegion((data.profile.region as string) ?? 'Nairobi');
+        const location = resolveProfileLocation(data.profile as Record<string, unknown>);
+        setProfile({
+          ...(data.profile as Profile),
+          country: location.country,
+          region: location.region,
+        });
+        setCountry(location.country ?? '');
+        setRegion(location.region);
         setPlatforms((data.profile.platforms as PlatformKey[]) ?? []);
-        setGameIds((data.profile.game_ids as Record<string, string>) ?? {});
-        setSelectedGames((data.profile.selected_games as GameKey[]) ?? []);
+        setGameIds(normalizeGameIdKeys((data.profile.game_ids as Record<string, string>) ?? {}));
+        setSelectedGames(normalizeSelectedGameKeys(data.profile.selected_games ?? []));
       }
 
       if (achievementsRes.ok) {
@@ -113,6 +139,19 @@ export default function ProfilePage() {
   useEffect(() => {
     void fetchProfile();
   }, [fetchProfile]);
+
+  useEffect(() => {
+    const syncTabFromHash = () => {
+      setTab(window.location.hash === '#settings' ? 'settings' : 'stats');
+    };
+
+    syncTabFromHash();
+    window.addEventListener('hashchange', syncTabFromHash);
+
+    return () => {
+      window.removeEventListener('hashchange', syncTabFromHash);
+    };
+  }, []);
 
   const toggleGame = (game: GameKey) => {
     setSelectedGames((prev) => {
@@ -138,12 +177,15 @@ export default function ProfilePage() {
         setShowPaywall(true);
         return prev;
       }
-      const defaultPlatform = GAMES[game]?.platforms.length === 1 ? GAMES[game].platforms[0] : null;
+      const defaultPlatform = GAMES[game]?.platforms[0] ?? null;
       if (defaultPlatform) {
         setGameIds((ids) => ({
           ...ids,
           [getGamePlatformKey(game)]: ids[getGamePlatformKey(game)] ?? defaultPlatform,
         }));
+        setPlatforms((prevPlatforms) =>
+          prevPlatforms.includes(defaultPlatform) ? prevPlatforms : [...prevPlatforms, defaultPlatform]
+        );
       }
       return [...prev, game];
     });
@@ -154,6 +196,9 @@ export default function ProfilePage() {
       ...ids,
       [getGamePlatformKey(game)]: platform,
     }));
+    setPlatforms((prevPlatforms) =>
+      prevPlatforms.includes(platform) ? prevPlatforms : [...prevPlatforms, platform]
+    );
   };
 
   const handleMediaUpload = async (kind: 'avatar' | 'cover', file: File | null) => {
@@ -193,34 +238,92 @@ export default function ProfilePage() {
     }
   };
 
+  const openMediaEditor = (kind: 'avatar' | 'cover', file: File | null) => {
+    if (!file) {
+      return;
+    }
+
+    if (!file.type.startsWith('image/')) {
+      toast.error('Pick an image file');
+      return;
+    }
+
+    setPendingMedia({ kind, file });
+  };
+
   const handleSave = async () => {
+    if (!profile) {
+      toast.error('Profile not loaded');
+      return;
+    }
+
+    if ((country && !region) || (!country && region)) {
+      toast.error('Choose both country and region');
+      return;
+    }
+
     const setupPlatforms = getPlatformsForGameSetup(selectedGames, gameIds, platforms);
     const hasMissingPlatform = selectedGames.some(
       (game) => !getConfiguredPlatformForGame(game, gameIds, setupPlatforms)
     );
 
-    if (selectedGames.length === 0) {
-      toast.error('Pick at least 1 game');
-      return;
-    }
-
-    if (hasMissingPlatform) {
+    if (selectedGames.length > 0 && hasMissingPlatform) {
       toast.error('Choose a platform for each game');
       return;
     }
 
     setSaving(true);
     try {
+      const currentSelectedGames = normalizeSelectedGameKeys(
+        (profile.selected_games as GameKey[]) ?? []
+      );
+      const currentGameIds = normalizeGameIdKeys(
+        (profile.game_ids as Record<string, string>) ?? {}
+      );
+      const currentPlatforms = (profile.platforms as PlatformKey[]) ?? [];
+
+      const normalizeArray = (values: string[]) => [...values].sort();
+      const stableStringify = (value: Record<string, string>) => {
+        const sortedEntries = Object.entries(value).sort(([a], [b]) => a.localeCompare(b));
+        return JSON.stringify(Object.fromEntries(sortedEntries));
+      };
+
+      const payload: Record<string, unknown> = {
+        whatsapp_notifications: profile.whatsapp_notifications ?? false,
+        whatsapp_number: profile.whatsapp_number ?? null,
+      };
+      const currentLocation = resolveProfileLocation(profile);
+      const nextLocationCountry = country || null;
+      const nextLocationRegion = region.trim();
+
+      if (nextLocationCountry && nextLocationRegion) {
+        payload.country = nextLocationCountry;
+        payload.region = nextLocationRegion;
+      } else if (currentLocation.country && currentLocation.region) {
+        payload.country = currentLocation.country;
+        payload.region = currentLocation.region;
+      }
+
+      const nextSelectedGames = normalizeArray(selectedGames);
+      const prevSelectedGames = normalizeArray(currentSelectedGames);
+      const nextPlatforms = normalizeArray(setupPlatforms);
+      const prevPlatforms = normalizeArray(currentPlatforms);
+
+      if (JSON.stringify(nextSelectedGames) !== JSON.stringify(prevSelectedGames)) {
+        payload.selected_games = selectedGames;
+      }
+
+      if (stableStringify(gameIds) !== stableStringify(currentGameIds)) {
+        payload.game_ids = gameIds;
+      }
+
+      if (JSON.stringify(nextPlatforms) !== JSON.stringify(prevPlatforms)) {
+        payload.platforms = setupPlatforms;
+      }
+
       const res = await authFetch('/api/users/profile', {
         method: 'PATCH',
-        body: JSON.stringify({
-          region,
-          platforms: setupPlatforms,
-          game_ids: gameIds,
-          selected_games: selectedGames,
-          whatsapp_notifications: profile?.whatsapp_notifications ?? false,
-          whatsapp_number: profile?.whatsapp_number ?? null,
-        }),
+        body: JSON.stringify(payload),
       });
       if (res.ok) {
         toast.success('Profile updated!');
@@ -252,7 +355,8 @@ export default function ProfilePage() {
     );
   }
 
-  const selectableGames = Object.keys(GAMES) as GameKey[];
+  const selectableGames = getSelectableGameKeys();
+  const availableRegions = getRegionsForCountry(country || null);
   const setupPlatforms = getPlatformsForGameSetup(selectedGames, gameIds, platforms);
   const requiredIdFields = selectedGames.reduce<
     Array<{ key: string; game: GameKey; platform: PlatformKey }>
@@ -267,16 +371,22 @@ export default function ProfilePage() {
 
     return fields;
   }, []);
-  const userGames = (profile?.selected_games as GameKey[]) ?? [];
+  const userGames = normalizeSelectedGameKeys((profile?.selected_games as GameKey[]) ?? []);
   const connectedPlatforms = ((profile?.platforms ?? []) as PlatformKey[]);
   const rankedUserGames = userGames.filter((game) => GAMES[game]?.mode === '1v1');
   const bestRating = rankedUserGames.reduce((best, game) => {
-    const rating = (profile?.[`rating_${game}`] as number) ?? 1000;
+    const rating = (profile?.[getGameRatingKey(game)] as number) ?? 1000;
     return rating > best ? rating : best;
   }, 1000);
   const bestDivision = getRankDivision(bestRating);
-  const totalWins = rankedUserGames.reduce((sum, game) => sum + (((profile?.[`wins_${game}`] as number) ?? 0)), 0);
-  const totalLosses = rankedUserGames.reduce((sum, game) => sum + (((profile?.[`losses_${game}`] as number) ?? 0)), 0);
+  const totalWins = rankedUserGames.reduce(
+    (sum, game) => sum + (((profile?.[getGameWinsKey(game)] as number) ?? 0)),
+    0
+  );
+  const totalLosses = rankedUserGames.reduce(
+    (sum, game) => sum + (((profile?.[getGameLossesKey(game)] as number) ?? 0)),
+    0
+  );
   const totalMatches = totalWins + totalLosses;
   const overallWinRate = totalMatches > 0 ? Math.round((totalWins / totalMatches) * 100) : 0;
   const xp = (profile?.xp as number) ?? 0;
@@ -292,14 +402,18 @@ export default function ProfilePage() {
   const whatsappNumber = typeof profile?.whatsapp_number === 'string' ? profile.whatsapp_number : '';
   const avatarUrl = (profile?.avatar_url as string | null | undefined) ?? user?.avatar_url ?? null;
   const coverUrl = (profile?.cover_url as string | null | undefined) ?? user?.cover_url ?? null;
+  const inviteCode =
+    (typeof profile?.invite_code === 'string' ? profile.invite_code : null) ?? user?.invite_code ?? null;
   const usernameInitial = user?.username?.[0]?.toUpperCase() ?? '?';
   const platformCount = connectedPlatforms.length;
   const currentPlan = getPlan(((profile?.plan as Plan | undefined) ?? user?.plan ?? 'free'));
   const gameCountLabel = userGames.length === 1 ? '1 game selected' : `${userGames.length} games selected`;
+  const profileLocation = resolveProfileLocation(profile ?? {});
+  const locationLabel = profileLocation.label;
   const setupChecklist = [
     { label: 'Display photo', complete: Boolean(avatarUrl) },
     { label: 'Cover image', complete: Boolean(coverUrl) },
-    { label: 'Region chosen', complete: Boolean(profile?.region) },
+    { label: 'Location chosen', complete: Boolean(locationLabel) },
     { label: 'Games selected', complete: userGames.length > 0 },
     { label: 'Platforms linked', complete: connectedPlatforms.length > 0 },
   ];
@@ -347,13 +461,13 @@ export default function ProfilePage() {
     {
       label: 'Strongest rank',
       value: bestDivision.label,
-      hint: `${bestRating} rating`,
+      hint: `Lv. ${level} progression`,
       color: bestDivision.color,
     },
     {
-      label: 'Region',
-      value: profile?.region ? (profile.region as string) : 'Add region',
-      hint: 'Used for local matchmaking',
+      label: 'Location',
+      value: locationLabel || 'Add location',
+      hint: 'Used for local matchmaking and discovery',
       color: 'var(--text-primary)',
     },
     {
@@ -375,6 +489,20 @@ export default function ProfilePage() {
       {showPaywall ? (
         <PaywallModal reason="game_limit" onClose={() => setShowPaywall(false)} />
       ) : null}
+      {pendingMedia ? (
+        <ProfileImageCropper
+          kind={pendingMedia.kind}
+          file={pendingMedia.file}
+          onCancel={() => setPendingMedia(null)}
+          onConfirm={async (blob) => {
+            const nextFile = new File([blob], pendingMedia.file.name, {
+              type: blob.type || pendingMedia.file.type,
+            });
+            await handleMediaUpload(pendingMedia.kind, nextFile);
+            setPendingMedia(null);
+          }}
+        />
+      ) : null}
       <div className="mx-auto w-full max-w-[88rem]">
         <div className="card mb-5 overflow-hidden">
           <div
@@ -390,7 +518,7 @@ export default function ProfilePage() {
                 fill
                 sizes="(min-width: 1280px) 1200px, 100vw"
                 className="object-cover"
-                priority
+                preload
               />
             ) : null}
             <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(11,17,33,0.08),rgba(11,17,33,0.52))]" />
@@ -415,7 +543,7 @@ export default function ProfilePage() {
                   className="sr-only"
                   onChange={(event) => {
                     const file = event.target.files?.[0] ?? null;
-                    void handleMediaUpload('cover', file);
+                    openMediaEditor('cover', file);
                     event.target.value = '';
                   }}
                   disabled={uploadingMedia !== null}
@@ -465,7 +593,7 @@ export default function ProfilePage() {
                       className="sr-only"
                       onChange={(event) => {
                         const file = event.target.files?.[0] ?? null;
-                        void handleMediaUpload('avatar', file);
+                        openMediaEditor('avatar', file);
                         event.target.value = '';
                       }}
                       disabled={uploadingMedia !== null}
@@ -492,10 +620,10 @@ export default function ProfilePage() {
                       {bestDivision.label} / Lv. {level}
                     </span>
                     <PlanBadge plan={currentPlan.id} size="md" />
-                    {profile?.region ? (
+                    {locationLabel ? (
                       <span className="inline-flex items-center gap-1.5 rounded-full border border-[var(--border-color)] bg-[var(--surface-elevated)] px-3 py-1 text-xs font-medium text-[var(--text-secondary)]">
                         <MapPin size={12} />
-                        {profile.region as string}
+                        {locationLabel}
                       </span>
                     ) : null}
                     <span className="brand-chip px-3 py-1">{gameCountLabel}</span>
@@ -511,6 +639,9 @@ export default function ProfilePage() {
                   <Settings size={14} />
                   Edit profile
                 </button>
+                {inviteCode && user?.username ? (
+                  <InviteMenu inviteCode={inviteCode} username={user.username} />
+                ) : null}
                 {user?.username ? (
                   <ShareMenu
                     text={profileShareText(user.username, bestDivision.label, level)}
@@ -609,7 +740,9 @@ export default function ProfilePage() {
             <div className="space-y-4">
             {userGames.length === 0 ? (
               <div className="card p-10 text-center">
-                <div className="mb-4 text-5xl">Ã°Å¸Å½Â®</div>
+                <div className="mb-4 inline-flex h-16 w-16 items-center justify-center rounded-3xl bg-[rgba(50,224,196,0.14)] text-[var(--accent-secondary-text)]">
+                  <Swords size={28} />
+                </div>
                 <p className="mb-1 font-semibold text-[var(--text-primary)]">No games set up yet</p>
                 <p className="mx-auto mb-5 max-w-xs text-sm text-[var(--text-soft)]">
                   Add your platforms and choose your focus games to start climbing the ranks.
@@ -620,7 +753,9 @@ export default function ProfilePage() {
               </div>
             ) : rankedUserGames.length === 0 ? (
               <div className="card p-10 text-center">
-                <div className="mb-4 text-5xl">Ã°Å¸Å½Â®</div>
+                <div className="mb-4 inline-flex h-16 w-16 items-center justify-center rounded-3xl bg-[rgba(255,107,107,0.14)] text-[var(--brand-coral)]">
+                  <BarChart2 size={28} />
+                </div>
                 <p className="mb-1 font-semibold text-[var(--text-primary)]">No ranked games selected</p>
                 <p className="mx-auto mb-5 max-w-xs text-sm text-[var(--text-soft)]">
                   Your mobile lobby games are saved. Add a 1v1 title when you want a tracked ladder.
@@ -632,9 +767,9 @@ export default function ProfilePage() {
             ) : (
               <div className="grid gap-3 lg:grid-cols-2">
                 {rankedUserGames.map((game) => {
-                  const rating = (profile?.[`rating_${game}`] as number) ?? 1000;
-                  const wins = (profile?.[`wins_${game}`] as number) ?? 0;
-                  const losses = (profile?.[`losses_${game}`] as number) ?? 0;
+                  const rating = (profile?.[getGameRatingKey(game)] as number) ?? 1000;
+                  const wins = (profile?.[getGameWinsKey(game)] as number) ?? 0;
+                  const losses = (profile?.[getGameLossesKey(game)] as number) ?? 0;
                   const winRate = wins + losses > 0 ? Math.round((wins / (wins + losses)) * 100) : 0;
                   const division = getRankDivision(rating);
 
@@ -844,8 +979,8 @@ export default function ProfilePage() {
                       {currentPlan.id === 'free'
                         ? 'Free plan gives you 5 ranked matches/day and 1 selected game.'
                         : currentPlan.id === 'pro'
-                          ? 'Pro unlocks unlimited ranked matches and up to 3 selected games.'
-                          : 'Elite unlocks full history, priority perks, and premium access.'}
+                          ? 'Pro unlocks unlimited ranked matches, direct challenges, and up to 3 selected games.'
+                          : 'Elite keeps the full stack live with zero tournament fee, early access, and streaming perks.'}
                     </p>
                     {typeof profile?.plan_expires_at === 'string' && currentPlan.id !== 'free' ? (
                       <p className="mt-2 text-xs text-[var(--text-soft)]">
@@ -896,7 +1031,7 @@ export default function ProfilePage() {
                 <div className="mb-4">
                   <p className="section-title">Profile look</p>
                   <p className="mt-2 text-sm text-[var(--text-secondary)]">
-                    Swap your display photo and cover any time to make the page feel more like yours.
+                    Crop and reposition your display photo or cover before upload so the page always frames them cleanly.
                   </p>
                 </div>
 
@@ -943,7 +1078,7 @@ export default function ProfilePage() {
                         className="sr-only"
                         onChange={(event) => {
                           const file = event.target.files?.[0] ?? null;
-                          void handleMediaUpload('avatar', file);
+                          openMediaEditor('avatar', file);
                           event.target.value = '';
                         }}
                         disabled={uploadingMedia !== null}
@@ -991,7 +1126,7 @@ export default function ProfilePage() {
                         className="sr-only"
                         onChange={(event) => {
                           const file = event.target.files?.[0] ?? null;
-                          void handleMediaUpload('cover', file);
+                          openMediaEditor('cover', file);
                           event.target.value = '';
                         }}
                         disabled={uploadingMedia !== null}
@@ -1004,25 +1139,45 @@ export default function ProfilePage() {
 
             <div className="grid gap-4 xl:grid-cols-2">
               <div className="card p-5">
-                <label className="label">Region</label>
+                <label className="label">Location</label>
                 <p className="mb-3 mt-2 text-sm text-[var(--text-secondary)]">
-                  Set the place you mostly queue from so nearby players can read you quickly.
+                  Set where you mostly play from so nearby players and brackets read you correctly.
                 </p>
-                <input
-                  type="text"
-                  list="profile-region-options"
-                  value={region}
-                  onChange={(e) => setRegion(e.target.value)}
-                  className="input w-full"
-                  placeholder="Type your region"
-                />
-                <datalist id="profile-region-options">
-                  {REGIONS.map((item) => (
-                    <option key={item} value={item}>
-                      {item}
-                    </option>
-                  ))}
-                </datalist>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <select
+                    value={country}
+                    onChange={(e) => {
+                      setCountry(e.target.value as CountryKey | '');
+                      setRegion('');
+                    }}
+                    className="input w-full"
+                  >
+                    <option value="">Select country</option>
+                    {COUNTRY_OPTIONS.map((option) => (
+                      <option key={option.key} value={option.key}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                  <select
+                    value={region}
+                    onChange={(e) => setRegion(e.target.value)}
+                    className="input w-full"
+                    disabled={!country}
+                  >
+                    <option value="">{country ? 'Select region' : 'Choose country first'}</option>
+                    {availableRegions.map((item) => (
+                      <option key={item} value={item}>
+                        {item}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                {locationLabel ? (
+                  <p className="mt-3 text-xs text-[var(--text-soft)]">
+                    Current public location: {formatLocationLabel(country || null, region) || locationLabel}
+                  </p>
+                ) : null}
               </div>
 
               <div className="card p-5">

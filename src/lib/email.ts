@@ -1,14 +1,11 @@
 import { Resend } from 'resend';
 import { DEFAULT_RATING } from '@/lib/config';
 import { getRankDivision } from '@/lib/gamification';
+import { APP_URL } from '@/lib/urls';
 
 let resendClient: Resend | null | undefined;
 const FROM_ADDRESS = process.env.RESEND_FROM_EMAIL ?? 'noreply@mechi.club';
 const FROM = `Mechi <${FROM_ADDRESS}>`;
-const APP_URL =
-  process.env.NEXT_PUBLIC_APP_URL ??
-  process.env.NEXT_PUBLIC_BASE_URL ??
-  'https://mechi.club';
 
 function getResendClient(): Resend | null {
   if (resendClient !== undefined) {
@@ -28,6 +25,29 @@ async function sendEmail(payload: Parameters<Resend['emails']['send']>[0]): Prom
   }
 
   await resend.emails.send(payload);
+}
+
+async function sendBccEmail(params: {
+  bcc: string[];
+  subject: string;
+  title: string;
+  content: string;
+}): Promise<void> {
+  if (params.bcc.length === 0) {
+    return;
+  }
+
+  try {
+    await sendEmail({
+      from: FROM,
+      to: FROM_ADDRESS,
+      bcc: params.bcc,
+      subject: params.subject,
+      html: baseLayout(params.title, params.content),
+    });
+  } catch (err) {
+    console.error(`[Email] ${params.title} broadcast send error:`, err);
+  }
 }
 
 function baseLayout(title: string, content: string): string {
@@ -116,6 +136,78 @@ export async function sendWelcomeEmail(params: {
     });
   } catch (err) {
     console.error('[Email] Welcome send error:', err);
+  }
+}
+
+export async function sendMagicLinkEmail(params: {
+  to: string;
+  username?: string | null;
+  magicLink: string;
+  expiresInMinutes: number;
+}): Promise<void> {
+  const recipientName = params.username?.trim() || 'there';
+  const content = `
+    <h2>Sign in to Mechi</h2>
+    <p>Hey ${recipientName}, use this secure link to open your account without typing your password.</p>
+    <div class="info-box">
+      <div class="info-row">
+        <span class="info-label">Link expires in</span>
+        <span class="info-value">${params.expiresInMinutes} minutes</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">Requested for</span>
+        <span class="info-value">${params.to}</span>
+      </div>
+    </div>
+    <p>If you did not request this, you can ignore the email. Your password stays unchanged.</p>
+    <a href="${params.magicLink}" class="btn">Sign in to Mechi</a>
+  `;
+
+  try {
+    await sendEmail({
+      from: FROM,
+      to: params.to,
+      subject: 'Your Mechi sign-in link',
+      html: baseLayout('Sign in to Mechi', content),
+    });
+  } catch (err) {
+    console.error('[Email] Magic link send error:', err);
+  }
+}
+
+export async function sendPasswordResetEmail(params: {
+  to: string;
+  username?: string | null;
+  resetLink: string;
+  expiresInMinutes: number;
+}): Promise<void> {
+  const recipientName = params.username?.trim() || 'there';
+  const content = `
+    <h2>Reset your password</h2>
+    <p>Hey ${recipientName}, use this secure link to set a new password for your Mechi account.</p>
+    <div class="info-box">
+      <div class="info-row">
+        <span class="info-label">Link expires in</span>
+        <span class="info-value">${params.expiresInMinutes} minutes</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">Requested for</span>
+        <span class="info-value">${params.to}</span>
+      </div>
+    </div>
+    <p>If you did not request this, you can ignore the email and keep your current password.</p>
+    <a href="${params.resetLink}" class="btn">Reset password</a>
+  `;
+
+  try {
+    await sendEmail({
+      from: FROM,
+      to: params.to,
+      subject: 'Reset your Mechi password',
+      html: baseLayout('Reset your Mechi password', content),
+    });
+  } catch (err) {
+    console.error('[Email] Password reset send error:', err);
   }
 }
 
@@ -250,6 +342,203 @@ export async function sendMatchDisputeEmail(params: {
   } catch (err) {
     console.error('[Email] Dispute send error:', err);
   }
+}
+
+export async function sendChallengeReceivedEmail(params: {
+  to: string;
+  username: string;
+  challengerUsername: string;
+  game: string;
+  platform: string;
+  challengeUrl: string;
+  message?: string | null;
+}): Promise<void> {
+  const messageBlock = params.message
+    ? `
+      <div class="info-row">
+        <span class="info-label">Message</span>
+        <span class="info-value">${params.message}</span>
+      </div>
+    `
+    : '';
+
+  const content = `
+    <h2>Direct challenge received</h2>
+    <p>Hey ${params.username}, ${params.challengerUsername} wants to run a direct match with you on Mechi.</p>
+    <div class="info-box">
+      <div class="info-row">
+        <span class="info-label">Game</span>
+        <span class="info-value">${params.game}</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">Platform</span>
+        <span class="info-value">${params.platform}</span>
+      </div>
+      ${messageBlock}
+    </div>
+    <p>Open your notifications to accept, decline, or keep the challenge moving.</p>
+    <a href="${params.challengeUrl}" class="btn">Review Challenge</a>
+  `;
+
+  try {
+    await sendEmail({
+      from: FROM,
+      to: params.to,
+      subject: `${params.challengerUsername} challenged you on Mechi`,
+      html: baseLayout('Challenge Received', content),
+    });
+  } catch (err) {
+    console.error('[Email] Challenge received send error:', err);
+  }
+}
+
+export async function sendQueueBroadcastEmail(params: {
+  bcc: string[];
+  username: string;
+  game: string;
+  platform: string;
+  queueWindowMinutes: number;
+  queueUrl: string;
+}): Promise<void> {
+  const content = `
+    <h2>Fresh queue run available</h2>
+    <p>${params.username} just joined the ${params.game} queue on ${params.platform}.</p>
+    <div class="info-box">
+      <div class="info-row">
+        <span class="info-label">Game</span>
+        <span class="info-value">${params.game}</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">Platform</span>
+        <span class="info-value">${params.platform}</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">Queue window</span>
+        <span class="info-value">Up to ${params.queueWindowMinutes} minutes</span>
+      </div>
+    </div>
+    <p>If you are ready to play now, join the queue before the current window closes.</p>
+    <a href="${params.queueUrl}" class="btn">Open Queue</a>
+  `;
+
+  await sendBccEmail({
+    bcc: params.bcc,
+    subject: `${params.game}: a player is waiting right now`,
+    title: 'Queue Opportunity',
+    content,
+  });
+}
+
+export async function sendLobbyBroadcastEmail(params: {
+  bcc: string[];
+  hostName: string;
+  game: string;
+  lobbyTitle: string;
+  mode: string;
+  mapName?: string | null;
+  scheduledFor?: string | null;
+  lobbyUrl: string;
+}): Promise<void> {
+  const scheduledCopy = params.scheduledFor
+    ? new Date(params.scheduledFor).toLocaleString('en-KE', {
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric',
+        hour: 'numeric',
+        minute: '2-digit',
+      })
+    : 'ASAP';
+  const mapBlock = params.mapName
+    ? `
+      <div class="info-row">
+        <span class="info-label">Map</span>
+        <span class="info-value">${params.mapName}</span>
+      </div>
+    `
+    : '';
+
+  const content = `
+    <h2>New lobby is open</h2>
+    <p>${params.hostName} opened a new ${params.game} lobby on Mechi.</p>
+    <div class="info-box">
+      <div class="info-row">
+        <span class="info-label">Lobby</span>
+        <span class="info-value">${params.lobbyTitle}</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">Mode</span>
+        <span class="info-value">${params.mode}</span>
+      </div>
+      ${mapBlock}
+      <div class="info-row">
+        <span class="info-label">Starts</span>
+        <span class="info-value">${scheduledCopy}</span>
+      </div>
+    </div>
+    <p>Join the room early so the host knows the slot is taken.</p>
+    <a href="${params.lobbyUrl}" class="btn">View Lobby</a>
+  `;
+
+  await sendBccEmail({
+    bcc: params.bcc,
+    subject: `${params.game}: ${params.lobbyTitle} is now open`,
+    title: 'Lobby Open',
+    content,
+  });
+}
+
+export async function sendTournamentBroadcastEmail(params: {
+  bcc: string[];
+  organizerName: string;
+  tournamentTitle: string;
+  game: string;
+  platform?: string | null;
+  entryFee: number;
+  size: number;
+  region: string;
+  tournamentUrl: string;
+}): Promise<void> {
+  const platformBlock = params.platform
+    ? `
+      <div class="info-row">
+        <span class="info-label">Platform</span>
+        <span class="info-value">${params.platform}</span>
+      </div>
+    `
+    : '';
+
+  const content = `
+    <h2>New tournament live</h2>
+    <p>${params.organizerName} just opened ${params.tournamentTitle} on Mechi.</p>
+    <div class="info-box">
+      <div class="info-row">
+        <span class="info-label">Game</span>
+        <span class="info-value">${params.game}</span>
+      </div>
+      ${platformBlock}
+      <div class="info-row">
+        <span class="info-label">Bracket size</span>
+        <span class="info-value">${params.size} players</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">Entry fee</span>
+        <span class="info-value">KES ${params.entryFee.toLocaleString()}</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">Location</span>
+        <span class="info-value">${params.region}</span>
+      </div>
+    </div>
+    <p>Open the bracket page to join before the slots fill up.</p>
+    <a href="${params.tournamentUrl}" class="btn">View Tournament</a>
+  `;
+
+  await sendBccEmail({
+    bcc: params.bcc,
+    subject: `${params.tournamentTitle} is open for ${params.game}`,
+    title: 'Tournament Open',
+    content,
+  });
 }
 
 export async function sendTournamentFullEmail(params: {

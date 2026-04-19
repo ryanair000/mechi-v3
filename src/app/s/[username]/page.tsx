@@ -2,8 +2,18 @@ import type { Metadata } from 'next';
 import Image from 'next/image';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
+import { ChallengePlayerButton } from '@/components/ChallengePlayerButton';
+import { GAMES, getConfiguredPlatformForGame, normalizeSelectedGameKeys } from '@/lib/config';
+import { isMissingColumnError } from '@/lib/db-compat';
 import { getRankDivision } from '@/lib/gamification';
+import { resolveProfileLocation } from '@/lib/location';
+import {
+  PUBLIC_PROFILE_SHARE_SELECT,
+  PUBLIC_PROFILE_SHARE_SELECT_WITH_COUNTRY,
+  getProfileShareStats,
+} from '@/lib/share';
 import { createServiceClient } from '@/lib/supabase';
+import type { GameKey, PlatformKey } from '@/types';
 
 interface Props {
   params: Promise<{ username: string }>;
@@ -24,32 +34,38 @@ function getTierColor(tier: string): string {
 
 async function getProfileData(username: string) {
   const supabase = createServiceClient();
-  const { data: profile } = await supabase
+  let result = await supabase
     .from('profiles')
-    .select(
-      'username, region, level, avatar_url, cover_url, platforms, selected_games, rating_efootball, rating_fc26, rating_mk11, rating_nba2k26, rating_tekken8, rating_sf6, wins_efootball, wins_fc26, wins_mk11, wins_nba2k26, wins_tekken8, wins_sf6, losses_efootball, losses_fc26, losses_mk11, losses_nba2k26, losses_tekken8, losses_sf6'
-    )
+    .select(PUBLIC_PROFILE_SHARE_SELECT_WITH_COUNTRY)
     .ilike('username', username)
     .single();
 
-  if (!profile) return null;
-
-  const games = (profile.selected_games as string[]) ?? [];
-  let bestRating = 1000;
-  let totalWins = 0;
-  let totalLosses = 0;
-
-  for (const game of games) {
-    const rating = ((profile as Record<string, unknown>)[`rating_${game}`] as number) ?? 1000;
-    const wins = ((profile as Record<string, unknown>)[`wins_${game}`] as number) ?? 0;
-    const losses = ((profile as Record<string, unknown>)[`losses_${game}`] as number) ?? 0;
-
-    if (rating > bestRating) bestRating = rating;
-    totalWins += wins;
-    totalLosses += losses;
+  if (result.error && isMissingColumnError(result.error, 'profiles.country')) {
+    result = await supabase
+      .from('profiles')
+      .select(PUBLIC_PROFILE_SHARE_SELECT)
+      .ilike('username', username)
+      .single();
   }
 
-  return { ...profile, bestRating, totalWins, totalLosses };
+  const profile = result.data;
+
+  if (!profile) return null;
+
+  const { bestRating, totalWins, totalLosses } = getProfileShareStats(
+    profile as Record<string, unknown>
+  );
+  const location = resolveProfileLocation(profile as Record<string, unknown>);
+
+  return {
+    ...profile,
+    country: location.country,
+    region: location.region,
+    location_label: location.label,
+    bestRating,
+    totalWins,
+    totalLosses,
+  };
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
@@ -102,8 +118,20 @@ export default async function ShareProfilePage({ params }: Props) {
   const level = typeof profile.level === 'number' ? profile.level : 1;
   const totalMatches = profile.totalWins + profile.totalLosses;
   const winRate = totalMatches > 0 ? Math.round((profile.totalWins / totalMatches) * 100) : 0;
-  const selectedGames = (profile.selected_games as string[]) ?? [];
-  const platformCount = ((profile.platforms as string[] | null | undefined) ?? []).length;
+  const selectedGames = normalizeSelectedGameKeys((profile.selected_games as string[]) ?? []);
+  const profilePlatforms = ((profile.platforms as PlatformKey[] | null | undefined) ?? []);
+  const platformCount = profilePlatforms.length;
+  const primaryChallengeGame =
+    selectedGames.find(
+      (game): game is GameKey => Boolean(GAMES[game as GameKey]) && GAMES[game as GameKey].mode === '1v1'
+    ) ?? null;
+  const primaryChallengePlatform = primaryChallengeGame
+    ? getConfiguredPlatformForGame(
+        primaryChallengeGame,
+        (profile.game_ids as Record<string, string> | undefined) ?? {},
+        profilePlatforms
+      )
+    : null;
   const avatarUrl = typeof profile.avatar_url === 'string' ? profile.avatar_url : null;
   const coverUrl = typeof profile.cover_url === 'string' ? profile.cover_url : null;
   const usernameInitial = profile.username[0]?.toUpperCase() ?? '?';
@@ -134,7 +162,7 @@ export default async function ShareProfilePage({ params }: Props) {
                 fill
                 sizes="(min-width: 1280px) 1200px, 100vw"
                 className="object-cover"
-                priority
+                preload
               />
             ) : null}
             <div className="absolute inset-0 bg-[linear-gradient(135deg,rgba(17,24,39,0.38),rgba(7,11,20,0.16)_45%,rgba(7,11,20,0.72))]" />
@@ -177,7 +205,7 @@ export default async function ShareProfilePage({ params }: Props) {
                     {profile.username}
                   </h1>
                   <p className="mt-3 text-sm leading-6 text-white/66">
-                    {profile.region || 'Region not set'} and ready to compete across {selectedGames.length}{' '}
+                    {profile.location_label || 'Location not set'} with {selectedGames.length}{' '}
                     {selectedGames.length === 1 ? 'game' : 'games'} on Mechi.
                   </p>
                   <div className="mt-4 flex flex-wrap items-center gap-2">
@@ -211,8 +239,18 @@ export default async function ShareProfilePage({ params }: Props) {
             </div>
 
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-              <Link href="/register" className="btn-primary">
-                Challenge Them - Join Free
+              {primaryChallengeGame && primaryChallengePlatform ? (
+                <ChallengePlayerButton
+                  opponentId={profile.id as string}
+                  opponentUsername={profile.username as string}
+                  game={primaryChallengeGame}
+                  platform={primaryChallengePlatform}
+                  label={`Challenge on ${GAMES[primaryChallengeGame].label}`}
+                  className="btn-primary"
+                />
+              ) : null}
+              <Link href="/register" className={primaryChallengeGame && primaryChallengePlatform ? 'btn-outline' : 'btn-primary'}>
+                Join Mechi Free
               </Link>
               <Link href="/login" className="btn-ghost">
                 Sign In

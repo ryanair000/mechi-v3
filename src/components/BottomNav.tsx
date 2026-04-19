@@ -3,7 +3,9 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Home, Shield, Swords, Trophy, User, Users } from 'lucide-react';
+import { hasPrimaryAdminAccess } from '@/lib/admin-access';
 import { useAuth } from '@/components/AuthProvider';
+import { ADMIN_URL } from '@/lib/urls';
 
 const NAV_ITEMS = [
   { href: '/dashboard', label: 'Home', icon: Home },
@@ -37,9 +39,9 @@ export function BottomNav() {
             </Link>
           );
         })}
-        {user?.role === 'admin' || user?.role === 'moderator' ? (
-          <Link
-            href="/admin"
+        {hasPrimaryAdminAccess(user) ? (
+          <a
+            href={ADMIN_URL}
             className={`flex min-w-0 flex-1 flex-col items-center justify-center gap-1 self-stretch rounded-lg px-1 py-2 transition-colors ${
               pathname.startsWith('/admin')
                 ? 'text-[var(--brand-coral)]'
@@ -50,7 +52,7 @@ export function BottomNav() {
             <span className={`text-[10px] ${pathname.startsWith('/admin') ? 'font-semibold' : 'font-normal'}`}>
               Admin
             </span>
-          </Link>
+          </a>
         ) : null}
       </div>
     </nav>

@@ -1,9 +1,9 @@
 'use client';
 
 import { createContext, useContext, useEffect, useState, useCallback } from 'react';
+import { getScopedRoleForHost } from '@/lib/admin-access';
 import type { AuthUser } from '@/types';
 
-const TOKEN_STORAGE_KEY = 'mechi_token';
 const USER_STORAGE_KEY = 'mechi_user';
 const AUTH_REFRESH_TIMEOUT_MS = 8000;
 
@@ -34,19 +34,33 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [token, setToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
+  const normalizeUserForCurrentHost = useCallback((candidate: AuthUser | null): AuthUser | null => {
+    if (!candidate) {
+      return null;
+    }
+
+    const scopedRole = getScopedRoleForHost(candidate, window.location.host);
+    if ((candidate.role ?? 'user') === scopedRole) {
+      return candidate;
+    }
+
+    return {
+      ...candidate,
+      role: scopedRole,
+    };
+  }, []);
+
   const refresh = useCallback(async () => {
     const clearStoredAuth = () => {
-      localStorage.removeItem(TOKEN_STORAGE_KEY);
       localStorage.removeItem(USER_STORAGE_KEY);
     };
 
-    const storedToken = localStorage.getItem(TOKEN_STORAGE_KEY);
     const storedUser = localStorage.getItem(USER_STORAGE_KEY);
     let cachedUser: AuthUser | null = null;
 
     if (storedUser) {
       try {
-        cachedUser = JSON.parse(storedUser) as AuthUser;
+        cachedUser = normalizeUserForCurrentHost(JSON.parse(storedUser) as AuthUser);
       } catch {
         localStorage.removeItem(USER_STORAGE_KEY);
       }
@@ -54,8 +68,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     if (cachedUser) {
       setUser(cachedUser);
-      setToken(storedToken ?? null);
+      setToken(null);
       setLoading(false);
+    }
+
+    if (!cachedUser) {
+      setUser(null);
+      setToken(null);
     }
 
     const controller = new AbortController();
@@ -63,20 +82,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     try {
       const res = await fetch('/api/auth/me', {
-        headers: storedToken ? { Authorization: `Bearer ${storedToken}` } : undefined,
         credentials: 'include',
         signal: controller.signal,
       });
 
       if (res.ok) {
         const data = await res.json();
-        setUser(data.user);
-        setToken(storedToken ?? null);
-        localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(data.user));
-      } else {
-        clearStoredAuth();
-        setUser(null);
+        const nextUser = normalizeUserForCurrentHost(data.user as AuthUser);
+        setUser(nextUser);
         setToken(null);
+        localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(nextUser));
+      } else {
+        if (!cachedUser) {
+          clearStoredAuth();
+          setUser(null);
+          setToken(null);
+        }
       }
     } catch {
       if (!cachedUser) {
@@ -88,21 +109,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       window.clearTimeout(timeoutId);
       setLoading(false);
     }
-  }, []);
+  }, [normalizeUserForCurrentHost]);
 
   useEffect(() => {
     refresh();
   }, [refresh]);
 
-  const login = useCallback((newToken: string, newUser: AuthUser) => {
-    localStorage.setItem(TOKEN_STORAGE_KEY, newToken);
-    localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(newUser));
-    setToken(newToken);
-    setUser(newUser);
-  }, []);
+  const login = useCallback((_newToken: string, newUser: AuthUser) => {
+    const normalizedUser = normalizeUserForCurrentHost(newUser);
+    localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(normalizedUser));
+    setToken(null);
+    setUser(normalizedUser);
+  }, [normalizeUserForCurrentHost]);
 
   const logout = useCallback(() => {
-    localStorage.removeItem(TOKEN_STORAGE_KEY);
     localStorage.removeItem(USER_STORAGE_KEY);
     setToken(null);
     setUser(null);
@@ -120,20 +140,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
 // Hook for auth-protected API calls
 export function useAuthFetch() {
-  const { token } = useAuth();
-
   return useCallback(
     async (url: string, options: RequestInit = {}) => {
       return fetch(url, {
         ...options,
         credentials: options.credentials ?? 'include',
         headers: {
-          'Content-Type': 'application/json',
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          ...(options.body instanceof FormData ? {} : { 'Content-Type': 'application/json' }),
           ...options.headers,
         },
       });
     },
-    [token]
+    []
   );
 }

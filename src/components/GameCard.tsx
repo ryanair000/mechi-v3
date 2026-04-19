@@ -2,10 +2,10 @@
 
 import { Loader2, Swords, Users } from 'lucide-react';
 import { GAMES, PLATFORMS } from '@/lib/config';
-import { getRankDivision } from '@/lib/gamification';
+import { getRankDivision, withAlpha } from '@/lib/gamification';
 import { GameCover } from '@/components/GameCover';
 import { PlatformLogo } from '@/components/PlatformLogo';
-import type { GameKey } from '@/types';
+import type { GameKey, GameMode } from '@/types';
 
 interface GameCardProps {
   gameKey: GameKey;
@@ -17,6 +17,7 @@ interface GameCardProps {
   onViewLobby?: () => void;
   isQueuing?: boolean;
   isDisabled?: boolean;
+  displayMode?: GameMode;
 }
 
 export function GameCard({
@@ -29,11 +30,13 @@ export function GameCard({
   onViewLobby,
   isQueuing = false,
   isDisabled = false,
+  displayMode,
 }: GameCardProps) {
   const game = GAMES[gameKey];
   if (!game) return null;
 
-  const isLobby = game.mode === 'lobby';
+  const mode = displayMode ?? game.mode;
+  const isLobby = mode === 'lobby';
   const winRate =
     wins !== undefined && losses !== undefined && wins + losses > 0
       ? Math.round((wins / (wins + losses)) * 100)
@@ -41,80 +44,98 @@ export function GameCard({
   const division = rating !== undefined ? getRankDivision(rating) : null;
 
   return (
-    <div className="group overflow-hidden rounded-2xl border border-white/[0.06] bg-white/[0.03] transition-all duration-200 hover:border-white/10">
-      <div className="relative h-36 overflow-hidden bg-white/[0.03]">
+    <div className="card group overflow-hidden p-0 transition-all duration-300 hover:-translate-y-1 hover:shadow-[var(--shadow-strong)]">
+      <div className="relative h-44 overflow-hidden border-b border-[var(--border-color)] bg-[var(--surface-strong)]">
         <GameCover
           gameKey={gameKey}
           variant="header"
           className="h-full w-full transition-transform duration-500 group-hover:scale-105"
           overlay
+          displayMode={mode}
         />
 
-        <div className="absolute right-2.5 top-2.5">
+        <div className="absolute left-3 right-3 top-3 flex items-start justify-between gap-2">
+          {queueCount !== undefined && queueCount > 0 ? (
+            <span className="flex items-center gap-1 rounded-full border border-white/45 bg-white/88 px-2.5 py-1 text-[10px] font-semibold text-[var(--accent-secondary-text)] shadow-[0_12px_28px_rgba(11,17,33,0.16)] backdrop-blur-sm">
+              <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-[var(--brand-teal)]" />
+              {queueCount} in queue
+            </span>
+          ) : (
+            <span />
+          )}
+
           <span
-            className={`rounded-md px-2 py-0.5 text-[10px] font-semibold text-white ${isLobby ? 'bg-blue-500/80' : 'bg-emerald-500/80'}`}
+            className={`rounded-full px-2.5 py-1 text-[10px] font-semibold text-white shadow-[0_10px_24px_rgba(11,17,33,0.18)] ${
+              isLobby ? 'bg-blue-500/85' : 'bg-emerald-500/85'
+            }`}
           >
             {isLobby ? 'LOBBY' : '1V1'}
           </span>
         </div>
 
-        {queueCount !== undefined && queueCount > 0 ? (
-          <div className="absolute left-2.5 top-2.5">
-            <span className="flex items-center gap-1 rounded-md bg-black/50 px-2 py-0.5 text-[10px] font-medium text-emerald-400 backdrop-blur-sm">
-              <span className="h-1 w-1 animate-pulse rounded-full bg-emerald-400" />
-              {queueCount} in queue
-            </span>
-          </div>
-        ) : null}
-
-        <div className="absolute bottom-2.5 left-3 right-3">
-          <p className="text-sm font-semibold leading-tight text-white drop-shadow">{game.label}</p>
-          <div className="mt-1 flex gap-1">
-            {game.platforms.map((platform) => (
-              <span key={platform} title={PLATFORMS[platform]?.label} className="inline-flex items-center">
-                <PlatformLogo platform={platform} size={12} />
-              </span>
-            ))}
-          </div>
+        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/84 via-black/32 to-transparent px-4 pb-4 pt-10">
+          <p className="max-w-[82%] text-[1.65rem] font-black leading-[1.02] text-white [text-shadow:0_10px_28px_rgba(0,0,0,0.42)]">
+            {game.label}
+          </p>
         </div>
       </div>
 
-      <div className="p-3">
+      <div className="space-y-3.5 p-4">
+        <div className="flex flex-wrap items-center gap-1.5">
+          {game.platforms.map((platform) => (
+            <span
+              key={platform}
+              title={PLATFORMS[platform]?.label}
+              className="inline-flex items-center rounded-full border border-[var(--border-color)] bg-[var(--surface-strong)] px-2 py-1"
+            >
+              <PlatformLogo platform={platform} size={12} />
+            </span>
+          ))}
+        </div>
+
         {rating !== undefined ? (
-          <div className="mb-3 grid grid-cols-4 gap-1">
-            <div className="text-center">
-              <div className="text-sm font-bold" style={{ color: division?.color ?? '#ffffff' }}>
+          <div className="grid grid-cols-4 gap-2">
+            <div
+              className="rounded-xl border px-2 py-2 text-center"
+              style={{
+                borderColor: division ? withAlpha(division.color, '28') : 'var(--border-color)',
+                backgroundColor: division ? withAlpha(division.color, '12') : 'var(--surface-strong)',
+              }}
+            >
+              <div className="text-[0.95rem] font-bold leading-tight" style={{ color: division?.color ?? 'var(--text-primary)' }}>
                 {division?.label ?? '-'}
               </div>
-              <div className="text-[9px] uppercase text-white/20">Rank</div>
+              <div className="mt-1 text-[9px] font-semibold uppercase tracking-[0.14em] text-[var(--text-soft)]">
+                Rank
+              </div>
             </div>
-            <div className="text-center">
+            <div className="rounded-xl border border-[var(--border-color)] bg-[var(--surface-strong)] px-2 py-2 text-center">
               <div className="text-sm font-bold text-emerald-400">{wins ?? 0}</div>
-              <div className="text-[9px] uppercase text-white/20">W</div>
+              <div className="mt-1 text-[9px] font-semibold uppercase tracking-[0.14em] text-[var(--text-soft)]">W</div>
             </div>
-            <div className="text-center">
+            <div className="rounded-xl border border-[var(--border-color)] bg-[var(--surface-strong)] px-2 py-2 text-center">
               <div className="text-sm font-bold text-red-400">{losses ?? 0}</div>
-              <div className="text-[9px] uppercase text-white/20">L</div>
+              <div className="mt-1 text-[9px] font-semibold uppercase tracking-[0.14em] text-[var(--text-soft)]">L</div>
             </div>
-            <div className="text-center">
+            <div className="rounded-xl border border-[var(--border-color)] bg-[var(--surface-strong)] px-2 py-2 text-center">
               <div className="text-sm font-bold text-blue-400">{winRate !== null ? `${winRate}%` : '-'}</div>
-              <div className="text-[9px] uppercase text-white/20">WR</div>
+              <div className="mt-1 text-[9px] font-semibold uppercase tracking-[0.14em] text-[var(--text-soft)]">WR</div>
             </div>
           </div>
         ) : null}
 
         {isLobby ? (
-          <button onClick={onViewLobby} disabled={isDisabled} className="btn-ghost min-h-11 w-full py-2 text-sm">
+          <button onClick={onViewLobby} disabled={isDisabled} className="btn-outline min-h-11 w-full py-2 text-sm">
             <Users size={13} /> View Lobbies
           </button>
         ) : (
           <button
             onClick={onJoinQueue}
             disabled={isDisabled || isQueuing}
-            className={`flex min-h-11 w-full items-center justify-center gap-1.5 rounded-xl py-2 text-sm font-semibold transition-all ${
+            className={`flex min-h-12 w-full items-center justify-center gap-1.5 rounded-[1rem] border py-3 text-base font-semibold transition-all ${
               isQueuing
-                ? 'cursor-not-allowed bg-white/[0.04] text-white/30'
-                : 'cursor-pointer bg-emerald-500 text-white hover:bg-emerald-400'
+                ? 'cursor-not-allowed border-[var(--border-color)] bg-[var(--surface-strong)] text-[var(--text-soft)]'
+                : 'cursor-pointer border-[rgba(50,224,196,0.22)] bg-[var(--accent-secondary)] text-[var(--brand-night)] shadow-[0_16px_28px_rgba(50,224,196,0.22)] hover:-translate-y-0.5 hover:bg-[var(--accent-secondary-hover)]'
             }`}
           >
             {isQueuing ? (

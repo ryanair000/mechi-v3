@@ -3,7 +3,7 @@
 import { Suspense, useEffect, useState, useCallback } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
-import { CalendarClock, Compass, Globe, Lock, Plus, Swords, Users, X } from 'lucide-react';
+import { CalendarClock, Compass, Globe, Lock, MessageCircle, Plus, Swords, Users, X } from 'lucide-react';
 import { useAuth, useAuthFetch } from '@/components/AuthProvider';
 import { PlatformLogo } from '@/components/PlatformLogo';
 import {
@@ -11,10 +11,16 @@ import {
   PLATFORMS,
   getDefaultLobbyMap,
   getDefaultLobbyMode,
+  getSelectableGameKeys,
   getLobbyModeOptions,
   getLobbyPopularMaps,
+  supportsLobbyMode,
 } from '@/lib/config';
 import type { GameKey, Lobby } from '@/types';
+
+const WHATSAPP_GROUP_URL =
+  process.env.NEXT_PUBLIC_WHATSAPP_GROUP_URL ??
+  'https://chat.whatsapp.com/GRquLpTxzQ35er85N33Ec7';
 
 function toDateTimeLocalValue(date: Date) {
   const timezoneOffsetMs = date.getTimezoneOffset() * 60_000;
@@ -44,6 +50,24 @@ function formatLobbySchedule(value?: string | null) {
   }).format(date);
 }
 
+function readLobbyMemberCount(value: unknown): number {
+  if (typeof value === 'number') {
+    return value;
+  }
+
+  if (Array.isArray(value)) {
+    const first = value[0] as { count?: unknown } | undefined;
+    return typeof first?.count === 'number' ? first.count : 0;
+  }
+
+  if (value && typeof value === 'object' && 'count' in value) {
+    const count = (value as { count?: unknown }).count;
+    return typeof count === 'number' ? count : 0;
+  }
+
+  return 0;
+}
+
 function createLobbyDraft(game: GameKey) {
   return {
     game,
@@ -68,9 +92,7 @@ function LobbiesContent() {
   const [joiningId, setJoiningId] = useState<string | null>(null);
   const [newLobby, setNewLobby] = useState(() => createLobbyDraft(gameFilter ?? 'codm'));
 
-  const lobbyGames = (Object.keys(GAMES) as GameKey[]).filter(
-    (game) => GAMES[game].mode === 'lobby'
-  );
+  const lobbyGames = getSelectableGameKeys().filter((game) => supportsLobbyMode(game));
 
   const fetchLobbies = useCallback(async () => {
     setLoading(true);
@@ -105,7 +127,7 @@ function LobbiesContent() {
   }, [fetchLobbies]);
 
   useEffect(() => {
-    if (!gameFilter || GAMES[gameFilter]?.mode !== 'lobby') {
+    if (!gameFilter || !supportsLobbyMode(gameFilter)) {
       return;
     }
 
@@ -239,6 +261,30 @@ function LobbiesContent() {
           </button>
         ))}
       </div>
+
+      {WHATSAPP_GROUP_URL ? (
+        <div className="card surface-live mb-6 p-4">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+            <div>
+              <p className="text-sm font-semibold text-[var(--text-primary)]">
+                Want faster lobby pings?
+              </p>
+              <p className="mt-1 text-xs leading-6 text-[var(--text-secondary)]">
+                Join the WhatsApp group for open-room drops, squad calls, and lobby updates outside the app.
+              </p>
+            </div>
+            <a
+              href={WHATSAPP_GROUP_URL}
+              target="_blank"
+              rel="noreferrer"
+              className="btn-ghost"
+            >
+              <MessageCircle size={14} />
+              Join WhatsApp group
+            </a>
+          </div>
+        </div>
+      ) : null}
 
       {showCreate && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/55 px-4" onClick={() => setShowCreate(false)}>
@@ -379,7 +425,7 @@ function LobbiesContent() {
           {lobbies.map((lobby) => {
             const game = GAMES[lobby.game];
             const isHost = lobby.host_id === user?.id;
-            const memberCount = (lobby.member_count as unknown as number) ?? 0;
+            const memberCount = readLobbyMemberCount(lobby.member_count);
             const isFull = memberCount >= lobby.max_players;
             const displayMode = lobby.mode && lobby.mode !== 'lobby' ? lobby.mode : null;
             const displayMap = typeof lobby.map_name === 'string' && lobby.map_name.length > 0 ? lobby.map_name : null;

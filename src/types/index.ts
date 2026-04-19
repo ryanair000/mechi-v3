@@ -1,4 +1,5 @@
 export type PlatformKey = 'ps' | 'xbox' | 'nintendo' | 'mobile' | 'pc';
+export type CountryKey = 'kenya' | 'tanzania' | 'uganda' | 'rwanda' | 'ethiopia';
 
 export type GameKey =
   | 'efootball'
@@ -15,7 +16,9 @@ export type GameKey =
   | 'mariokart'
   | 'smashbros'
   | 'freefire'
-  | 'rocketleague';
+  | 'ludo'
+  | 'rocketleague'
+  | 'fortnite';
 
 export type GameMode = '1v1' | 'lobby';
 export type UserRole = 'user' | 'moderator' | 'admin';
@@ -25,6 +28,36 @@ export type TournamentStatus = 'open' | 'full' | 'active' | 'completed' | 'cance
 export type TournamentPaymentStatus = 'pending' | 'paid' | 'free' | 'failed' | 'refunded';
 export type TournamentMatchStatus = 'pending' | 'ready' | 'active' | 'completed' | 'bye';
 export type SubscriptionStatus = 'pending' | 'active' | 'cancelled' | 'expired' | 'failed';
+export type MatchChallengeStatus =
+  | 'pending'
+  | 'accepted'
+  | 'declined'
+  | 'cancelled'
+  | 'expired';
+export type SupportThreadChannel = 'whatsapp' | 'instagram';
+export type SupportThreadStatus =
+  | 'open'
+  | 'waiting_on_ai'
+  | 'waiting_on_human'
+  | 'resolved'
+  | 'blocked';
+export type SupportThreadPriority = 'low' | 'normal' | 'high' | 'urgent';
+export type SupportMessageDirection = 'inbound' | 'outbound';
+export type SupportMessageSenderType = 'user' | 'ai' | 'admin' | 'system';
+export type NotificationType =
+  | 'challenge_received'
+  | 'challenge_sent'
+  | 'challenge_accepted'
+  | 'challenge_declined'
+  | 'challenge_cancelled'
+  | 'tournament_joined'
+  | 'tournament_player_joined'
+  | 'tournament_started'
+  | 'match_found'
+  | 'match_chat_message'
+  | 'match_reported'
+  | 'match_completed'
+  | 'match_disputed';
 
 export interface Platform {
   label: string;
@@ -36,8 +69,11 @@ export interface Game {
   label: string;
   platforms: PlatformKey[];
   mode: GameMode;
+  supportsLobby?: boolean;
   maxPlayers?: number;
   steamAppId?: number;
+  hidden?: boolean;
+  canonicalGame?: GameKey;
 }
 
 export interface Tier {
@@ -71,10 +107,13 @@ export interface Profile {
   username: string;
   phone: string;
   email?: string;
+  invite_code?: string;
+  invited_by?: string | null;
   avatar_url?: string | null;
   cover_url?: string | null;
   whatsapp_number?: string | null;
   whatsapp_notifications?: boolean;
+  country?: CountryKey | null;
   role?: UserRole;
   is_banned?: boolean;
   ban_reason?: string | null;
@@ -92,6 +131,7 @@ export interface Profile {
   rating_nba2k26: number;
   rating_tekken8: number;
   rating_sf6: number;
+  rating_ludo: number;
   wins_efootball: number;
   wins_efootball_mobile: number;
   wins_fc26: number;
@@ -99,6 +139,7 @@ export interface Profile {
   wins_nba2k26: number;
   wins_tekken8: number;
   wins_sf6: number;
+  wins_ludo: number;
   losses_efootball: number;
   losses_efootball_mobile: number;
   losses_fc26: number;
@@ -106,12 +147,18 @@ export interface Profile {
   losses_nba2k26: number;
   losses_tekken8: number;
   losses_sf6: number;
+  losses_ludo: number;
   xp?: number;
   level?: number;
   mp?: number;
   win_streak?: number;
   max_win_streak?: number;
   last_match_date?: string | null;
+  reward_points_available?: number;
+  reward_points_pending?: number;
+  reward_points_lifetime?: number;
+  chezahub_user_id?: string | null;
+  chezahub_linked_at?: string | null;
   plan?: Plan;
   plan_since?: string | null;
   plan_expires_at?: string | null;
@@ -152,6 +199,15 @@ export interface QueueEntry {
 }
 
 export type MatchStatus = 'pending' | 'completed' | 'disputed' | 'cancelled';
+export type MatchChatMessageType = 'text' | 'system' | 'quick_reply';
+export type MatchChatSenderType = 'player' | 'system' | 'admin';
+export type MatchEscalationReason =
+  | 'setup_issue'
+  | 'stalling'
+  | 'wrong_result'
+  | 'abuse'
+  | 'other';
+export type MatchEscalationStatus = 'open' | 'resolved' | 'dismissed';
 
 export interface Match {
   id: string;
@@ -165,6 +221,12 @@ export interface Match {
   winner_id: string | null;
   player1_reported_winner: string | null;
   player2_reported_winner: string | null;
+  player1_reported_player1_score?: number | null;
+  player1_reported_player2_score?: number | null;
+  player2_reported_player1_score?: number | null;
+  player2_reported_player2_score?: number | null;
+  player1_score?: number | null;
+  player2_score?: number | null;
   rating_change_p1: number | null;
   rating_change_p2: number | null;
   dispute_screenshot_url: string | null;
@@ -178,6 +240,113 @@ export interface Match {
 export interface MatchWithProfiles extends Match {
   player1: Pick<Profile, 'id' | 'username' | 'game_ids' | 'platforms'>;
   player2: Pick<Profile, 'id' | 'username' | 'game_ids' | 'platforms'>;
+}
+
+export interface MatchChatMessage {
+  id: string;
+  match_id: string;
+  sender_user_id?: string | null;
+  sender_type: MatchChatSenderType;
+  message_type: MatchChatMessageType;
+  body?: string | null;
+  meta?: Record<string, unknown> | null;
+  created_at: string;
+  sender?: Pick<Profile, 'id' | 'username' | 'avatar_url'> | null;
+}
+
+export interface MatchChatThreadState {
+  unread_count: number;
+  my_last_read_at?: string | null;
+  opponent_last_read_at?: string | null;
+  latest_message_at?: string | null;
+  latest_message_sender_user_id?: string | null;
+  latest_message_sender_type?: MatchChatSenderType | null;
+  latest_player_message_at?: string | null;
+  latest_player_message_sender_user_id?: string | null;
+  opponent_has_seen_latest_message: boolean;
+}
+
+export interface MatchEscalation {
+  id: string;
+  match_id: string;
+  requested_by: string;
+  reason: MatchEscalationReason;
+  details?: string | null;
+  status: MatchEscalationStatus;
+  resolution_note?: string | null;
+  resolved_by?: string | null;
+  created_at: string;
+  resolved_at?: string | null;
+  updated_at: string;
+  requester?: Pick<Profile, 'id' | 'username' | 'avatar_url'> | null;
+  resolver?: Pick<Profile, 'id' | 'username' | 'role'> | null;
+}
+
+export interface MatchChallenge {
+  id: string;
+  challenger_id: string;
+  opponent_id: string;
+  game: GameKey;
+  platform: PlatformKey;
+  status: MatchChallengeStatus;
+  message?: string | null;
+  match_id?: string | null;
+  expires_at: string;
+  responded_at?: string | null;
+  created_at: string;
+  challenger?: Pick<Profile, 'id' | 'username' | 'avatar_url' | 'plan'> | null;
+  opponent?: Pick<Profile, 'id' | 'username' | 'avatar_url' | 'plan'> | null;
+}
+
+export interface Notification {
+  id: string;
+  user_id: string;
+  type: NotificationType;
+  title: string;
+  body?: string | null;
+  href?: string | null;
+  metadata?: Record<string, unknown> | null;
+  read_at?: string | null;
+  created_at: string;
+}
+
+export interface SupportMessage {
+  id: string;
+  thread_id: string;
+  direction: SupportMessageDirection;
+  sender_type: SupportMessageSenderType;
+  body?: string | null;
+  message_type: string;
+  provider_message_id?: string | null;
+  meta?: Record<string, unknown> | null;
+  ai_confidence?: number | null;
+  created_at: string;
+}
+
+export interface SupportThread {
+  id: string;
+  channel: SupportThreadChannel;
+  phone?: string | null;
+  wa_id: string;
+  contact_name?: string | null;
+  user_id?: string | null;
+  status: SupportThreadStatus;
+  priority: SupportThreadPriority;
+  assigned_to?: string | null;
+  escalation_reason?: string | null;
+  last_message_at: string;
+  last_ai_reply_at?: string | null;
+  created_at: string;
+  updated_at: string;
+  user?: Pick<
+    Profile,
+    'id' | 'username' | 'phone' | 'whatsapp_number' | 'plan' | 'region' | 'selected_games' | 'platforms'
+  > | null;
+  assignee?: Pick<Profile, 'id' | 'username' | 'role'> | null;
+  latest_message?: Pick<
+    SupportMessage,
+    'id' | 'body' | 'direction' | 'sender_type' | 'message_type' | 'ai_confidence' | 'created_at'
+  > | null;
 }
 
 export interface Suggestion {
@@ -269,6 +438,7 @@ export interface TournamentMatch {
   player1?: Pick<Profile, 'id' | 'username'> | null;
   player2?: Pick<Profile, 'id' | 'username'> | null;
   winner?: Pick<Profile, 'id' | 'username'> | null;
+  match?: Pick<Match, 'id' | 'status' | 'player1_score' | 'player2_score'> | null;
 }
 
 export interface AuthUser {
@@ -276,10 +446,13 @@ export interface AuthUser {
   username: string;
   phone: string;
   email?: string;
+  invite_code?: string;
+  invited_by?: string | null;
   avatar_url?: string | null;
   cover_url?: string | null;
   whatsapp_number?: string | null;
   whatsapp_notifications?: boolean;
+  country?: CountryKey | null;
   region: string;
   platforms: PlatformKey[];
   game_ids: Record<string, string>;
@@ -291,6 +464,11 @@ export interface AuthUser {
   mp?: number;
   win_streak?: number;
   max_win_streak?: number;
+  reward_points_available?: number;
+  reward_points_pending?: number;
+  reward_points_lifetime?: number;
+  chezahub_user_id?: string | null;
+  chezahub_linked_at?: string | null;
   plan?: Plan;
   plan_since?: string | null;
   plan_expires_at?: string | null;
@@ -309,7 +487,7 @@ export interface AuditLog {
   id: string;
   admin_id: string;
   action: string;
-  target_type: 'user' | 'match' | 'tournament' | 'system';
+  target_type: 'user' | 'match' | 'tournament' | 'queue' | 'lobby' | 'support' | 'system';
   target_id: string | null;
   details: Record<string, unknown> | null;
   ip_address: string | null;
@@ -329,6 +507,92 @@ export interface AdminUser {
   banned_at: string | null;
   selected_games: string[];
   created_at: string;
+}
+
+export interface AdminQueueEntry {
+  id: string;
+  user_id: string;
+  game: GameKey;
+  platform?: PlatformKey | null;
+  region: string;
+  rating: number;
+  status: 'waiting' | 'matched' | 'cancelled';
+  joined_at: string;
+  user?: {
+    id: string;
+    username: string;
+    phone: string | null;
+    email: string | null;
+    region: string;
+    role: UserRole;
+    is_banned: boolean;
+  } | null;
+  active_match?: {
+    id: string;
+    game: GameKey;
+    status: MatchStatus;
+    created_at: string;
+    opponent?: { id: string; username: string } | null;
+  } | null;
+}
+
+export type RewardReviewStatus = 'open' | 'reviewing' | 'resolved' | 'dismissed';
+
+export interface AdminRewardReviewItem {
+  id: string;
+  user_id: string | null;
+  reason: string;
+  status: RewardReviewStatus;
+  dedupe_key?: string | null;
+  resolution_note?: string | null;
+  created_at: string;
+  reviewed_at?: string | null;
+  resolved_at?: string | null;
+  metadata?: Record<string, unknown> | null;
+  user?: {
+    id: string;
+    username: string;
+    phone: string | null;
+    email: string | null;
+    invite_code?: string | null;
+    invited_by?: string | null;
+    chezahub_user_id?: string | null;
+    reward_points_available?: number;
+    reward_points_pending?: number;
+    reward_points_lifetime?: number;
+  } | null;
+  reviewer?: {
+    id: string;
+    username: string;
+  } | null;
+}
+
+export interface AdminLobbySummary
+  extends Omit<Lobby, 'member_count' | 'host'> {
+  member_count: number;
+  host?: {
+    id: string;
+    username: string;
+    phone?: string | null;
+    email?: string | null;
+    role?: UserRole;
+    is_banned?: boolean;
+  } | null;
+}
+
+export interface AdminLobbyDetail extends AdminLobbySummary {
+  members: Array<
+    LobbyMember & {
+      user?: {
+        id: string;
+        username: string;
+        phone?: string | null;
+        email?: string | null;
+        role?: UserRole;
+        is_banned?: boolean;
+      } | null;
+    }
+  >;
 }
 
 export interface EloResult {

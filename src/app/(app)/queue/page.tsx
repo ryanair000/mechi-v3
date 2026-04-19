@@ -4,11 +4,11 @@ import { Suspense, useEffect, useState, useRef, useCallback } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import toast from 'react-hot-toast';
 import { Users, X } from 'lucide-react';
+import { ActionFeedback, type ActionFeedbackState } from '@/components/ActionFeedback';
 import { useAuth, useAuthFetch } from '@/components/AuthProvider';
 import { BrandLogo } from '@/components/BrandLogo';
 import { PlatformLogo } from '@/components/PlatformLogo';
-import { createClient } from '@/lib/supabase';
-import { GAMES, PLATFORMS } from '@/lib/config';
+import { GAMES, PLATFORMS, getCanonicalGameKey } from '@/lib/config';
 import type { GameKey, PlatformKey } from '@/types';
 
 function QueueContent() {
@@ -17,17 +17,55 @@ function QueueContent() {
   const { user } = useAuth();
   const authFetch = useAuthFetch();
 
-  const game = searchParams.get('game') as GameKey | null;
+  const rawGame = searchParams.get('game') as GameKey | null;
+  const game = rawGame && GAMES[rawGame] ? getCanonicalGameKey(rawGame) : null;
   const platform = searchParams.get('platform') as PlatformKey | null;
   const [elapsed, setElapsed] = useState(0);
   const [queueCount, setQueueCount] = useState(0);
   const [leaving, setLeaving] = useState(false);
+  const [queueFeedback, setQueueFeedback] = useState<ActionFeedbackState | null>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const pollRef = useRef<NodeJS.Timeout | null>(null);
-  const channelRef = useRef<ReturnType<ReturnType<typeof createClient>['channel']> | null>(null);
+  const resolvedRef = useRef(false);
+
+  const moveToMatch = useCallback(
+    (nextMatchId: string) => {
+      if (resolvedRef.current) return;
+
+      resolvedRef.current = true;
+      setQueueFeedback({
+        tone: 'success',
+        title: 'Match found.',
+        detail: 'Opening your live match now so you can connect with your opponent.',
+      });
+      toast.success('Match found. Opening it now.');
+      router.push(`/match/${nextMatchId}`);
+    },
+    [router]
+  );
+
+  const exitQueueToDashboard = useCallback(
+    (feedback: ActionFeedbackState, toastMessage?: string) => {
+      if (resolvedRef.current) return;
+
+      resolvedRef.current = true;
+      setQueueFeedback(feedback);
+      if (toastMessage) {
+        if (feedback.tone === 'error') {
+          toast.error(toastMessage);
+        } else if (feedback.tone === 'success') {
+          toast.success(toastMessage);
+        } else {
+          toast(toastMessage);
+        }
+      }
+      router.push('/dashboard');
+    },
+    [router]
+  );
 
   const checkStatus = useCallback(async () => {
-    if (!user) return;
+    if (!user || resolvedRef.current) return;
 
     try {
       const res = await authFetch('/api/queue/status');
@@ -35,14 +73,21 @@ function QueueContent() {
 
       const data = await res.json();
       if (data.activeMatch) {
-        router.push(`/match/${data.activeMatch.id}`);
+        moveToMatch(data.activeMatch.id);
       } else if (!data.inQueue) {
-        router.push('/dashboard');
+        exitQueueToDashboard(
+          {
+            tone: 'info',
+            title: 'Queue session ended.',
+            detail: 'Returning you to the dashboard.',
+          },
+          'Queue session ended. Back to dashboard.'
+        );
       }
     } catch {
       // ignore
     }
-  }, [authFetch, user, router]);
+  }, [authFetch, exitQueueToDashboard, moveToMatch, user]);
 
   useEffect(() => {
     if (!game || !GAMES[game]) {
@@ -50,6 +95,13 @@ function QueueContent() {
       return;
     }
 
+    resolvedRef.current = false;
+    setQueueFeedback({
+      tone: 'loading',
+      title: `Searching ${GAMES[game].label} matchmaking...`,
+      detail:
+        'Keep this page open if you want live updates, or leave the app and wait for the match alert.',
+    });
     timerRef.current = setInterval(() => setElapsed((value) => value + 1), 1000);
 
     const fetchCount = async () => {
@@ -68,28 +120,6 @@ function QueueContent() {
     void fetchCount();
     pollRef.current = setInterval(fetchCount, 8000);
 
-    const supabase = createClient();
-    if (user?.id) {
-      const channel = supabase
-        .channel(`queue_user_${user.id}`)
-        .on(
-          'postgres_changes',
-          { event: 'UPDATE', schema: 'public', table: 'queue' },
-          (payload) => {
-            const row = payload.new as { user_id: string; status: string };
-            if (row.user_id !== user.id) return;
-
-            if (row.status === 'matched') {
-              void checkStatus();
-            } else if (row.status === 'cancelled') {
-              router.push('/dashboard');
-            }
-          }
-        )
-        .subscribe();
-      channelRef.current = channel;
-    }
-
     const statusPoll = setInterval(() => {
       void checkStatus();
     }, 4000);
@@ -98,18 +128,37 @@ function QueueContent() {
       if (timerRef.current) clearInterval(timerRef.current);
       if (pollRef.current) clearInterval(pollRef.current);
       clearInterval(statusPoll);
-      if (channelRef.current) channelRef.current.unsubscribe();
     };
   }, [game, platform, user, router, checkStatus]);
 
   const handleLeave = async () => {
     setLeaving(true);
+    setQueueFeedback({
+      tone: 'loading',
+      title: 'Leaving the queue...',
+      detail: "We're closing your search and taking you back to the dashboard.",
+    });
     try {
-      await authFetch('/api/queue/leave', { method: 'POST' });
-      toast.success('Left the queue');
-      router.push('/dashboard');
-    } catch {
-      toast.error('Failed to leave queue');
+      const res = await authFetch('/api/queue/leave', { method: 'POST' });
+      if (!res.ok) {
+        const payload = await res.json().catch(() => null);
+        throw new Error(payload?.error ?? 'Failed to leave queue');
+      }
+      exitQueueToDashboard(
+        {
+          tone: 'success',
+          title: 'Queue cancelled.',
+          detail: 'You are out of matchmaking and back on the dashboard.',
+        },
+        'Left the queue'
+      );
+    } catch (error) {
+      setQueueFeedback({
+        tone: 'error',
+        title: 'Could not leave the queue.',
+        detail: error instanceof Error ? error.message : 'Please try again.',
+      });
+      toast.error(error instanceof Error ? error.message : 'Failed to leave queue');
       setLeaving(false);
     }
   };
@@ -150,9 +199,17 @@ function QueueContent() {
         </div>
 
         <h1 className="text-[2rem] font-black tracking-normal text-[var(--text-primary)] sm:text-[2.15rem]">
-          Your next run is loading.
+          We&apos;re cooking up your next matchup.
         </h1>
         <p className="mt-2 text-[13px] text-[var(--text-secondary)]">{gameConfig.label}</p>
+        {queueFeedback ? (
+          <ActionFeedback
+            tone={queueFeedback.tone}
+            title={queueFeedback.title}
+            detail={queueFeedback.detail}
+            className="mx-auto mt-4 max-w-md text-left"
+          />
+        ) : null}
         <p className="mt-3 text-[2rem] font-black tabular-nums text-[var(--brand-coral)] sm:text-[2.25rem]">
           {formatTime(elapsed)}
         </p>
@@ -175,8 +232,8 @@ function QueueContent() {
         </div>
 
         <p className="mx-auto mb-6 mt-5 max-w-sm text-center text-[13px] leading-6 text-[var(--text-secondary)]">
-          We&apos;re teeing up a proper {gameConfig.label} showdown. Stay locked and Mechi
-          will drop you straight into the room the second it&apos;s go time.
+          Mechi is checking your {platformLabel} pool first, then opening the net wider if things stay quiet. You can
+          leave the app and keep your queue live. When a match lands, Mechi sends the update by email and WhatsApp.
         </p>
 
         <button onClick={handleLeave} disabled={leaving} className="btn-danger mx-auto px-4 py-2 text-sm">

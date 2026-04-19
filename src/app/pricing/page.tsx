@@ -4,23 +4,25 @@ import Link from 'next/link';
 import { Suspense, useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import toast from 'react-hot-toast';
-import { ArrowRight, Check, Crown, Sparkles } from 'lucide-react';
+import { Crown, Sparkles } from 'lucide-react';
 import { BrandLogo } from '@/components/BrandLogo';
 import { PlanBadge } from '@/components/PlanBadge';
+import PricingSection from '@/components/pricing-section';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { useAuth, useAuthFetch } from '@/components/AuthProvider';
 import { type BillingCycle, type Plan, PLANS } from '@/lib/plans';
 
-const VISIBLE_PLAN_ORDER: Array<'free' | 'pro'> = ['free', 'pro'];
+const VISIBLE_PLAN_ORDER: Array<'free' | 'pro' | 'elite'> = ['free', 'pro', 'elite'];
 
 const COMPARISON_ROWS = [
-  { label: 'Matches per day', free: '5', pro: 'Unlimited' },
-  { label: 'Games selectable', free: '1', pro: '3' },
-  { label: 'Tournament fee', free: '5%', pro: '5%' },
-  { label: 'Match history', free: '10', pro: '100' },
-  { label: 'Priority matchmaking', free: 'No', pro: 'No' },
-  { label: 'CSV export', free: 'No', pro: 'No' },
-  { label: 'Early access', free: 'No', pro: 'No' },
+  { label: 'Matches per day', free: '5', pro: 'Unlimited', elite: 'Unlimited' },
+  { label: 'Games selectable', free: '1', pro: '3', elite: '3' },
+  { label: 'Direct 1-on-1 challenges', free: 'Yes', pro: 'Yes', elite: 'Yes' },
+  { label: 'Free-entry tournament hosting', free: 'No', pro: 'Yes', elite: 'Yes' },
+  { label: 'Tournament platform fee', free: '5%', pro: '5%', elite: '0%' },
+  { label: 'Match history', free: '10', pro: '100', elite: 'Unlimited' },
+  { label: 'Early access', free: 'No', pro: 'No', elite: 'Yes' },
+  { label: 'Streaming features', free: 'No', pro: 'No', elite: 'Yes' },
 ];
 
 function getPlanActionLabel(currentPlan: Plan, targetPlan: Plan) {
@@ -33,10 +35,10 @@ function getPlanActionLabel(currentPlan: Plan, targetPlan: Plan) {
   }
 
   if (currentPlan === 'elite' && targetPlan === 'pro') {
-    return 'Already on Elite';
+    return 'Included in Elite';
   }
 
-  return 'Go Pro';
+  return targetPlan === 'elite' ? 'Go Elite' : 'Go Pro';
 }
 
 function PricingPageContent() {
@@ -63,7 +65,13 @@ function PricingPageContent() {
     }
   }, [refresh, searchParams]);
 
-  const annualSavings = useMemo(() => PLANS.pro.monthlyKes * 12 - PLANS.pro.annualKes, []);
+  const annualSavings = useMemo(
+    () => ({
+      pro: PLANS.pro.monthlyKes * 12 - PLANS.pro.annualKes,
+      elite: PLANS.elite.monthlyKes * 12 - PLANS.elite.annualKes,
+    }),
+    []
+  );
 
   const handleUpgrade = async (plan: Exclude<Plan, 'free'>) => {
     if (!user) {
@@ -106,6 +114,61 @@ function PricingPageContent() {
       setLoadingPlan(null);
     }
   };
+
+  const pricingCards = VISIBLE_PLAN_ORDER.map((planKey) => {
+    const plan = PLANS[planKey];
+    const isCurrent = currentPlan === planKey;
+    const isDowngradeFromElite = currentPlan === 'elite' && planKey === 'pro';
+    const actionDisabled =
+      planKey === 'free' || isCurrent || isDowngradeFromElite || loadingPlan !== null;
+    const price = billingCycle === 'annual' ? plan.annualKes : plan.monthlyKes;
+    const savings = planKey === 'pro' || planKey === 'elite' ? annualSavings[planKey] : 0;
+
+    const description =
+      planKey === 'free'
+        ? 'Jump into ranked matches, direct challenges, and free-entry tournaments without paying first.'
+        : planKey === 'pro'
+          ? 'Unlock unlimited ranked runs, more game slots, and hosting tools for your next grind.'
+          : 'Own the premium lane with zero tournament platform fees, early access, and streaming perks.';
+
+    return {
+      id: planKey,
+      title: plan.name,
+      price: planKey === 'free' ? 'Free' : `KSH ${price}`,
+      description,
+      features: plan.features,
+      cta:
+        loadingPlan === planKey
+          ? 'Starting checkout...'
+          : getPlanActionLabel(currentPlan, planKey),
+      href:
+        planKey === 'free'
+          ? user
+            ? '/dashboard'
+            : '/register'
+          : !user
+            ? '/register'
+            : undefined,
+      onSelect:
+        user && planKey !== 'free'
+          ? () => {
+              void handleUpgrade(planKey);
+            }
+          : undefined,
+      featured: planKey === 'pro',
+      tone: planKey,
+      badge: <PlanBadge plan={planKey} size="md" />,
+      helperText:
+        planKey === 'free'
+          ? 'No payment needed'
+          : billingCycle === 'annual'
+            ? `Billed yearly, save KSH ${savings}`
+            : 'Billed monthly via Paystack',
+      footnote: planKey === 'pro' ? '1-month trial on new signups' : undefined,
+      current: isCurrent,
+      disabled: planKey === 'free' ? false : user ? actionDisabled : false,
+    };
+  });
 
   return (
     <div className="page-base">
@@ -163,7 +226,7 @@ function PricingPageContent() {
                   Start free. Upgrade only when your Mechi climb needs more.
                 </h1>
                 <p className="mt-4 max-w-2xl text-sm leading-7 text-[var(--text-secondary)] sm:text-base">
-                  Free keeps the core open. Pro unlocks more volume for regular players who want unlimited ranked runs.
+                  New players start with a 1-month Pro trial. After that, keep it free, move to Pro at KES 299 for unlimited ranked runs and direct challenges, or go Elite at KES 999 for zero tournament fees, early access, and streaming perks.
                 </p>
               </div>
 
@@ -202,97 +265,17 @@ function PricingPageContent() {
           </div>
         </section>
 
-        <section className="landing-section border-none px-0 pb-0 pt-8 sm:pt-10">
-          <div className="grid gap-4 lg:grid-cols-2">
-            {VISIBLE_PLAN_ORDER.map((planKey) => {
-              const plan = PLANS[planKey];
-              const isCurrent = currentPlan === planKey;
-              const isDowngradeFromElite = currentPlan === 'elite' && planKey === 'pro';
-              const actionDisabled =
-                planKey === 'free' || isCurrent || isDowngradeFromElite || loadingPlan !== null;
-              const price = billingCycle === 'annual' ? plan.annualKes : plan.monthlyKes;
-
-              return (
-                <div
-                  key={planKey}
-                  className={`card flex h-full flex-col p-5 sm:p-6 ${
-                    planKey === 'pro'
-                      ? 'circuit-panel border-[rgba(255,107,107,0.24)]'
-                      : ''
-                  }`}
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <p className="text-lg font-black text-[var(--text-primary)]">{plan.name}</p>
-                      <div className="mt-2 flex flex-wrap items-center gap-2">
-                        <PlanBadge plan={planKey} size="md" />
-                        {planKey === 'pro' ? (
-                          <span className="brand-chip-coral px-2.5 py-1">Most popular</span>
-                        ) : null}
-                      </div>
-                    </div>
-                    {isCurrent ? (
-                      <span className="rounded-full bg-[var(--surface-elevated)] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--text-soft)]">
-                        Current
-                      </span>
-                    ) : null}
-                  </div>
-
-                  <div className="mt-6">
-                    <p className="text-4xl font-black tracking-normal text-[var(--text-primary)]">
-                      {planKey === 'free' ? 'Free' : `KSH ${price}`}
-                    </p>
-                    <p className="mt-2 text-sm text-[var(--text-soft)]">
-                      {planKey === 'free'
-                        ? 'No payment needed'
-                        : billingCycle === 'annual'
-                          ? `Billed yearly, save KSH ${annualSavings}`
-                          : 'Billed monthly via Paystack'}
-                    </p>
-                  </div>
-
-                  <div className="mt-6 space-y-3">
-                    {plan.features.map((feature) => (
-                      <div key={feature} className="flex items-start gap-2 text-sm text-[var(--text-secondary)]">
-                        <Check size={14} className="mt-0.5 text-[var(--brand-teal)]" />
-                        <span>{feature}</span>
-                      </div>
-                    ))}
-                  </div>
-
-                  <div className="mt-7">
-                    {planKey === 'free' ? (
-                      <Link href={user ? '/dashboard' : '/register'} className="btn-outline w-full justify-center">
-                        {getPlanActionLabel(currentPlan, planKey)}
-                      </Link>
-                    ) : user ? (
-                      <button
-                        type="button"
-                        onClick={() => void handleUpgrade(planKey)}
-                        disabled={actionDisabled}
-                        className="btn-primary w-full justify-center disabled:opacity-45"
-                      >
-                        {loadingPlan === planKey ? 'Starting checkout...' : getPlanActionLabel(currentPlan, planKey)}
-                        {loadingPlan !== planKey ? <ArrowRight size={14} /> : null}
-                      </button>
-                    ) : (
-                      <Link href="/register" className="btn-primary w-full justify-center">
-                        {getPlanActionLabel(currentPlan, planKey)}
-                        <ArrowRight size={14} />
-                      </Link>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </section>
+        <PricingSection
+          title="Pick the plan that fits your Mechi season"
+          description="Free gets you in the arena. Pro opens up unlimited ranked volume and hosting tools. Elite removes platform fees and adds the premium lane."
+          plans={pricingCards}
+        />
 
         <section className="landing-section">
           <div className="card overflow-hidden p-5 sm:p-6">
             <div className="flex items-center gap-2">
               <Crown size={16} className="text-[var(--brand-coral)]" />
-              <h2 className="text-xl font-black text-[var(--text-primary)]">Free vs Pro</h2>
+              <h2 className="text-xl font-black text-[var(--text-primary)]">Plan breakdown</h2>
             </div>
 
             <div className="mt-5 grid gap-3 sm:hidden">
@@ -315,18 +298,25 @@ function PricingPageContent() {
                       </p>
                       <p className="mt-1 font-semibold text-[var(--text-primary)]">{row.pro}</p>
                     </div>
+                    <div className="rounded-lg border border-[rgba(246,196,83,0.2)] bg-[rgba(246,196,83,0.12)] px-3 py-2">
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.1em] text-[#b88919]">
+                        Elite
+                      </p>
+                      <p className="mt-1 font-semibold text-[var(--text-primary)]">{row.elite}</p>
+                    </div>
                   </div>
                 </div>
               ))}
             </div>
 
             <div className="mt-5 hidden overflow-x-auto sm:block">
-              <table className="w-full min-w-[30rem] text-left text-sm">
+              <table className="w-full min-w-[38rem] text-left text-sm">
                 <thead>
                   <tr className="border-b border-[var(--border-color)] text-[var(--text-soft)]">
                     <th className="pb-3 pr-4 font-semibold">Feature</th>
                     <th className="pb-3 px-4 font-semibold">Free</th>
                     <th className="pb-3 px-4 font-semibold text-[var(--brand-coral)]">Pro</th>
+                    <th className="pb-3 px-4 font-semibold text-[#b88919]">Elite</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -335,6 +325,7 @@ function PricingPageContent() {
                       <td className="py-3 pr-4 text-[var(--text-secondary)]">{row.label}</td>
                       <td className="py-3 px-4 text-[var(--text-primary)]">{row.free}</td>
                       <td className="py-3 px-4 text-[var(--text-primary)]">{row.pro}</td>
+                      <td className="py-3 px-4 text-[var(--text-primary)]">{row.elite}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -355,8 +346,8 @@ function PricingPageContent() {
                 a: 'Yes. Cancelling stops renewal, but your plan stays active until the current billing period ends.',
               },
               {
-                q: 'Does free ever expire?',
-                a: 'No. Free stays free forever. You only hit the daily match cap and single-game limit.',
+                q: 'What does Elite unlock?',
+                a: 'Elite keeps everything in Pro, then adds zero tournament fee, early access to updates, a gold badge, and streaming-feature access.',
               },
             ].map((item) => (
               <div key={item.q} className="card p-5">

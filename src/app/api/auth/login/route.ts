@@ -1,19 +1,23 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServiceClient } from '@/lib/supabase';
-import { verifyPassword, signToken, profileToAuthUser } from '@/lib/auth';
+import { applyAuthCookie, createSessionForProfile, verifyPassword } from '@/lib/auth';
+import { getSafeNextPath } from '@/lib/navigation';
 import { getPhoneLookupVariants, normalizePhoneNumber } from '@/lib/phone';
 import { checkRateLimit, getClientIp, rateLimitResponse } from '@/lib/rateLimit';
-import type { Plan, UserRole } from '@/types';
+import type { CountryKey, Plan, UserRole } from '@/types';
 
 interface AuthenticatedProfile {
   id: string;
   username: string;
   phone: string;
   email: string | null;
+  invite_code?: string | null;
+  invited_by?: string | null;
   avatar_url?: string | null;
   cover_url?: string | null;
   whatsapp_number?: string | null;
   whatsapp_notifications?: boolean | null;
+  country?: CountryKey | null;
   region: string;
   platforms: string[] | null;
   game_ids: Record<string, string> | null;
@@ -32,6 +36,8 @@ interface AuthenticatedProfile {
   plan_expires_at?: string | null;
 }
 
+type LoginMethod = 'auto' | 'email' | 'phone' | 'username';
+
 type AuthFailure = {
   error: string;
   status: 400 | 401 | 403;
@@ -41,7 +47,7 @@ type AuthSuccess = {
   profile: AuthenticatedProfile;
 };
 
-function detectIdentifierType(identifier: string): 'email' | 'phone' | 'username' {
+function detectIdentifierType(identifier: string): Exclude<LoginMethod, 'auto'> {
   if (identifier.includes('@')) {
     return 'email';
   }
@@ -51,6 +57,10 @@ function detectIdentifierType(identifier: string): 'email' | 'phone' | 'username
   }
 
   return 'username';
+}
+
+function parseLoginMethod(value: unknown): LoginMethod {
+  return value === 'email' || value === 'phone' || value === 'username' ? value : 'auto';
 }
 
 function getRequestOrigin(request: NextRequest) {
@@ -65,74 +75,81 @@ function getRequestOrigin(request: NextRequest) {
   return request.nextUrl.origin;
 }
 
-function getSafeRedirectPath(value: string) {
-  if (!value.startsWith('/') || value.startsWith('//')) {
-    return '/dashboard';
-  }
-
-  return value;
-}
-
-async function authenticateUser(identifier: string, password: string): Promise<AuthFailure | AuthSuccess> {
-  if (!identifier || !password) {
-    return { error: 'Identifier and password are required', status: 400 as const };
-  }
-
+async function getCandidateProfiles(identifier: string, loginMethod: LoginMethod) {
   const supabase = createServiceClient();
   const trimmedIdentifier = identifier.trim();
-  const type = detectIdentifierType(trimmedIdentifier);
-  let profiles: AuthenticatedProfile[] | null = null;
-  let error: { message?: string } | null = null;
+  const method = loginMethod === 'auto' ? detectIdentifierType(trimmedIdentifier) : loginMethod;
 
-  if (type === 'email') {
+  if (method === 'email') {
     const result = await supabase
       .from('profiles')
       .select('*')
       .ilike('email', trimmedIdentifier.toLowerCase())
       .limit(1);
 
-    profiles = result.data as AuthenticatedProfile[] | null;
-    error = result.error;
-  } else if (type === 'phone') {
+    return {
+      profiles: (result.data as AuthenticatedProfile[] | null) ?? [],
+      error: result.error,
+    };
+  }
+
+  if (method === 'phone') {
     const phoneVariants = getPhoneLookupVariants(normalizePhoneNumber(trimmedIdentifier));
     const result = await supabase
       .from('profiles')
       .select('*')
       .in('phone', phoneVariants)
-      .limit(1);
+      .limit(10);
 
-    profiles = result.data as AuthenticatedProfile[] | null;
-    error = result.error;
-  } else {
-    const result = await supabase
-      .from('profiles')
-      .select('*')
-      .ilike('username', trimmedIdentifier)
-      .limit(1);
-
-    profiles = result.data as AuthenticatedProfile[] | null;
-    error = result.error;
-  }
-
-  const profile = profiles?.[0] as AuthenticatedProfile | undefined;
-
-  if (error || !profile) {
-    return { error: 'Account not found. Check your details.', status: 401 as const };
-  }
-
-  if (profile.is_banned) {
     return {
-      error: `Account suspended: ${profile.ban_reason ?? 'Contact support.'}`,
-      status: 403 as const,
+      profiles: (result.data as AuthenticatedProfile[] | null) ?? [],
+      error: result.error,
     };
   }
 
-  const isValid = await verifyPassword(password, profile.password_hash);
-  if (!isValid) {
-    return { error: 'Incorrect password', status: 401 as const };
+  const result = await supabase
+    .from('profiles')
+    .select('*')
+    .ilike('username', trimmedIdentifier)
+    .limit(1);
+
+  return {
+    profiles: (result.data as AuthenticatedProfile[] | null) ?? [],
+    error: result.error,
+  };
+}
+
+async function authenticateUser(
+  identifier: string,
+  password: string,
+  loginMethod: LoginMethod
+): Promise<AuthFailure | AuthSuccess> {
+  if (!identifier || !password) {
+    return { error: 'Identifier and password are required', status: 400 };
   }
 
-  return { profile };
+  const { profiles, error } = await getCandidateProfiles(identifier, loginMethod);
+  if (error || profiles.length === 0) {
+    return { error: 'Account not found. Check your details.', status: 401 };
+  }
+
+  for (const profile of profiles) {
+    const isValid = await verifyPassword(password, profile.password_hash);
+    if (!isValid) {
+      continue;
+    }
+
+    if (profile.is_banned) {
+      return {
+        error: `Account suspended: ${profile.ban_reason ?? 'Contact support.'}`,
+        status: 403,
+      };
+    }
+
+    return { profile };
+  }
+
+  return { error: 'Incorrect password', status: 401 };
 }
 
 export async function POST(request: NextRequest) {
@@ -151,46 +168,32 @@ export async function POST(request: NextRequest) {
 
     const identifier = String(payload.identifier ?? payload.phone ?? '');
     const password = String(payload.password ?? '');
-    const redirectTo = getSafeRedirectPath(String(payload.redirect_to ?? '/dashboard'));
+    const loginMethod = parseLoginMethod(payload.login_method);
+    const redirectTo = getSafeNextPath(String(payload.redirect_to ?? '/dashboard'), '/dashboard');
     const requestOrigin = getRequestOrigin(request);
 
-    const result = await authenticateUser(identifier, password);
+    const result = await authenticateUser(identifier, password, loginMethod);
     if ('error' in result) {
-      const errorMessage = result.error;
-
       if (isJsonRequest) {
-        return NextResponse.json({ error: errorMessage }, { status: result.status });
+        return NextResponse.json({ error: result.error }, { status: result.status });
       }
 
       const loginUrl = new URL('/login', requestOrigin);
-      loginUrl.searchParams.set('error', errorMessage);
+      loginUrl.searchParams.set('auth_error', result.error);
+      if (redirectTo !== '/dashboard') {
+        loginUrl.searchParams.set('next', redirectTo);
+      }
       return NextResponse.redirect(loginUrl, { status: 303 });
     }
 
-    const { profile } = result;
-
-    const token = signToken({
-      sub: profile.id,
-      username: profile.username,
-      role: profile.role ?? 'user',
-      is_banned: Boolean(profile.is_banned),
-    });
-
+    const { token, user } = createSessionForProfile(
+      result.profile as unknown as Record<string, unknown>
+    );
     const response = isJsonRequest
-      ? NextResponse.json({
-          token,
-          user: profileToAuthUser(profile as unknown as Record<string, unknown>),
-        })
+      ? NextResponse.json({ token, user })
       : NextResponse.redirect(new URL(redirectTo, requestOrigin), { status: 303 });
 
-    response.cookies.set('auth_token', token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      maxAge: 60 * 60 * 24 * 7,
-      path: '/',
-    });
-
+    applyAuthCookie(response, token);
     return response;
   } catch (err) {
     console.error('[Login] Error:', err);

@@ -1,15 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getAuthUser } from '@/lib/auth';
+import { requireActiveAccessProfile } from '@/lib/access';
 import { cancelActiveSubscription } from '@/lib/subscription';
 
 export async function POST(request: NextRequest) {
-  const authUser = getAuthUser(request);
-  if (!authUser) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const access = await requireActiveAccessProfile(request);
+  if (access.response) {
+    return access.response;
   }
 
+  const authUser = access.profile;
+
   try {
-    await cancelActiveSubscription(authUser.sub);
+    await cancelActiveSubscription(authUser.id);
     return NextResponse.json({ success: true, message: 'Subscription cancelled' });
   } catch (error) {
     console.error('[Subscription Cancel] Error:', error);

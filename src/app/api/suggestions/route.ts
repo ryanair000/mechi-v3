@@ -1,12 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getAuthUser } from '@/lib/auth';
+import { requireActiveAccessProfile } from '@/lib/access';
 import { createServiceClient } from '@/lib/supabase';
 
 export async function GET(request: NextRequest) {
-  const authUser = getAuthUser(request);
-  if (!authUser) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const access = await requireActiveAccessProfile(request);
+  if (access.response) {
+    return access.response;
   }
+
+  const authUser = access.profile;
 
   try {
     const supabase = createServiceClient();
@@ -25,7 +27,7 @@ export async function GET(request: NextRequest) {
     const { data: userVotes } = await supabase
       .from('suggestion_votes')
       .select('suggestion_id')
-      .eq('user_id', authUser.sub);
+      .eq('user_id', authUser.id);
 
     const votedIds = new Set((userVotes ?? []).map((v: { suggestion_id: string }) => v.suggestion_id));
 
@@ -42,10 +44,12 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  const authUser = getAuthUser(request);
-  if (!authUser) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const access = await requireActiveAccessProfile(request);
+  if (access.response) {
+    return access.response;
   }
+
+  const authUser = access.profile;
 
   try {
     const body = await request.json();
@@ -60,7 +64,7 @@ export async function POST(request: NextRequest) {
     const { data: suggestion, error } = await supabase
       .from('suggestions')
       .insert({
-        user_id: authUser.sub,
+        user_id: authUser.id,
         game_name: game_name.trim(),
         description: description.trim(),
         votes: 0,

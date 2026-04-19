@@ -62,5 +62,4 @@ CREATE INDEX IF NOT EXISTS idx_tournament_matches_tournament_round_slot ON tourn
 CREATE INDEX IF NOT EXISTS idx_tournament_matches_match_id ON tournament_matches(match_id);
 CREATE INDEX IF NOT EXISTS idx_matches_tournament_id ON matches(tournament_id);
 
-GRANT SELECT ON tournaments, tournament_players, tournament_matches TO anon, authenticated;
 GRANT ALL ON tournaments, tournament_players, tournament_matches TO service_role;

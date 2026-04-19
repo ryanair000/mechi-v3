@@ -8,6 +8,14 @@ const OPENCLAW_WEBHOOK_URL = process.env.OPENCLAW_WEBHOOK_URL ?? '';
 const OPENCLAW_API_KEY = process.env.OPENCLAW_API_KEY ?? '';
 const OPENCLAW_TIMEOUT_MS = Number(process.env.OPENCLAW_TIMEOUT_MS ?? 15000);
 const INSTAGRAM_FALLBACK_REPLY = process.env.INSTAGRAM_FALLBACK_REPLY?.trim() ?? '';
+const INSTAGRAM_ACCESS_TOKEN =
+  process.env.INSTAGRAM_ACCESS_TOKEN ?? process.env.INSTAGRAM_TOKEN ?? '';
+const INSTAGRAM_ACCOUNT_ID =
+  process.env.INSTAGRAM_BUSINESS_ACCOUNT_ID ??
+  process.env.INSTAGRAM_ACCOUNT_ID ??
+  process.env.INSTAGRAM_IG_ID ??
+  '';
+const INSTAGRAM_ENABLED = Boolean(INSTAGRAM_ACCESS_TOKEN && INSTAGRAM_ACCOUNT_ID);
 
 type UnknownRecord = Record<string, unknown>;
 
@@ -39,6 +47,18 @@ export interface InstagramIncomingMessage {
   attachments: InstagramAttachment[];
   sourceField: string | null;
   rawEvent: UnknownRecord;
+}
+
+export interface InstagramSendResult {
+  ok: boolean;
+  status: number;
+  to: string;
+  messageId?: string | null;
+  recipientId?: string | null;
+  skipped?: boolean;
+  error?: string;
+  details?: string;
+  responseBody?: unknown;
 }
 
 function isRecord(value: unknown): value is UnknownRecord {
@@ -102,7 +122,22 @@ function timingSafeEqualString(left: string, right: string): boolean {
   return timingSafeEqual(leftBuffer, rightBuffer);
 }
 
-export function validateInstagramWebhookSignature(rawBody: string, signatureHeader: string | null): boolean {
+export function formatInstagramDeliveryError(result: InstagramSendResult): string {
+  if (result.details) {
+    return result.details;
+  }
+
+  if (result.error) {
+    return result.error;
+  }
+
+  return 'Unknown Instagram delivery failure';
+}
+
+export function validateInstagramWebhookSignature(
+  rawBody: string,
+  signatureHeader: string | null
+): boolean {
   if (!INSTAGRAM_APP_SECRET) {
     return true;
   }
@@ -135,7 +170,9 @@ export function verifyInstagramWebhookChallenge(params: URLSearchParams): string
 }
 
 function buildEventKey(event: InstagramIncomingMessage): string {
-  const attachmentKey = event.attachments.map((attachment) => `${attachment.type}:${attachment.url ?? ''}`).join('|');
+  const attachmentKey = event.attachments
+    .map((attachment) => `${attachment.type}:${attachment.url ?? ''}`)
+    .join('|');
   return [
     event.messageId ?? '',
     event.senderId,
@@ -198,7 +235,10 @@ function buildEventFromMessengerShape(
   };
 }
 
-function normalizeChangeEvent(change: unknown, entry: MetaWebhookEntry): InstagramIncomingMessage[] {
+function normalizeChangeEvent(
+  change: unknown,
+  entry: MetaWebhookEntry
+): InstagramIncomingMessage[] {
   if (!isRecord(change)) {
     return [];
   }
@@ -358,7 +398,9 @@ function normalizeOpenClawMessages(payload: unknown): string[] {
   return messages.filter(Boolean);
 }
 
-export async function fetchOpenClawReply(event: InstagramIncomingMessage): Promise<string[]> {
+export async function fetchOpenClawReply(
+  event: InstagramIncomingMessage
+): Promise<string[]> {
   if (!OPENCLAW_WEBHOOK_URL) {
     return INSTAGRAM_FALLBACK_REPLY ? [INSTAGRAM_FALLBACK_REPLY] : [];
   }
@@ -396,7 +438,11 @@ export async function fetchOpenClawReply(event: InstagramIncomingMessage): Promi
     });
 
     if (!response.ok) {
-      console.error('[Instagram] OpenClaw request failed:', response.status, await response.text());
+      console.error(
+        '[Instagram] OpenClaw request failed:',
+        response.status,
+        await response.text()
+      );
       return INSTAGRAM_FALLBACK_REPLY ? [INSTAGRAM_FALLBACK_REPLY] : [];
     }
 
@@ -412,18 +458,25 @@ export async function fetchOpenClawReply(event: InstagramIncomingMessage): Promi
   }
 }
 
-export async function sendInstagramTextMessage(recipientId: string, text: string): Promise<void> {
+export async function sendInstagramTextMessage(
+  recipientId: string,
+  text: string
+): Promise<void> {
   const trimmedText = text.trim();
   if (!trimmedText) {
     return;
   }
 
   if (!INSTAGRAM_PAGE_ACCESS_TOKEN) {
-    console.warn('[Instagram] Reply skipped - INSTAGRAM_PAGE_ACCESS_TOKEN is not configured');
+    console.warn(
+      '[Instagram] Reply skipped - INSTAGRAM_PAGE_ACCESS_TOKEN is not configured'
+    );
     return;
   }
 
-  const url = new URL(`https://graph.facebook.com/${INSTAGRAM_GRAPH_API_VERSION}/me/messages`);
+  const url = new URL(
+    `https://graph.facebook.com/${INSTAGRAM_GRAPH_API_VERSION}/me/messages`
+  );
   url.searchParams.set('access_token', INSTAGRAM_PAGE_ACCESS_TOKEN);
 
   const response = await fetch(url, {
@@ -442,4 +495,108 @@ export async function sendInstagramTextMessage(recipientId: string, text: string
     const errorText = await response.text();
     throw new Error(`Instagram Send API error (${response.status}): ${errorText}`);
   }
+}
+
+export async function sendInstagramMessage(params: {
+  recipientId: string;
+  message: string;
+}): Promise<InstagramSendResult> {
+  const recipientId = params.recipientId.trim();
+  const message = params.message.trim();
+
+  if (!recipientId || !message) {
+    return {
+      ok: false,
+      status: 0,
+      to: recipientId,
+      error: 'Recipient ID and message are required',
+    };
+  }
+
+  if (!INSTAGRAM_ENABLED || !INSTAGRAM_ACCESS_TOKEN || !INSTAGRAM_ACCOUNT_ID) {
+    return {
+      ok: false,
+      skipped: true,
+      status: 0,
+      to: recipientId,
+      error: 'Instagram credentials not configured',
+    };
+  }
+
+  try {
+    const response = await fetch(
+      `https://graph.instagram.com/${INSTAGRAM_GRAPH_API_VERSION}/${INSTAGRAM_ACCOUNT_ID}/messages`,
+      {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${INSTAGRAM_ACCESS_TOKEN}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          recipient: {
+            id: recipientId,
+          },
+          message: {
+            text: message,
+          },
+        }),
+      }
+    );
+
+    const rawText = await response.text();
+    let responseBody: unknown = rawText;
+
+    try {
+      responseBody = rawText ? JSON.parse(rawText) : null;
+    } catch {
+      responseBody = rawText;
+    }
+
+    if (!response.ok) {
+      const metaError =
+        responseBody && typeof responseBody === 'object' && 'error' in responseBody
+          ? (responseBody as { error?: { message?: string; error_data?: { details?: string } } })
+              .error
+          : undefined;
+
+      return {
+        ok: false,
+        status: response.status,
+        to: recipientId,
+        error: metaError?.message ?? 'Instagram request failed',
+        details: metaError?.error_data?.details,
+        responseBody,
+      };
+    }
+
+    const parsedBody = responseBody as
+      | {
+          message_id?: string;
+          recipient_id?: string;
+        }
+      | null;
+
+    return {
+      ok: true,
+      status: response.status,
+      to: recipientId,
+      messageId: parsedBody?.message_id ?? null,
+      recipientId: parsedBody?.recipient_id ?? recipientId,
+      responseBody,
+    };
+  } catch (error) {
+    return {
+      ok: false,
+      status: 0,
+      to: recipientId,
+      error: error instanceof Error ? error.message : 'Network error',
+    };
+  }
+}
+
+export async function sendSupportInstagramMessage(params: {
+  recipientId: string;
+  message: string;
+}): Promise<InstagramSendResult> {
+  return sendInstagramMessage(params);
 }

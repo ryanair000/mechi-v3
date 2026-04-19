@@ -1,0 +1,40 @@
+﻿<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 1200" role="img" aria-labelledby="pubgm-capsule-title pubgm-capsule-desc">
+  <title id="pubgm-capsule-title">PUBG Mobile</title>
+  <desc id="pubgm-capsule-desc">Stylized Mechi capsule artwork for PUBG Mobile.</desc>
+  <defs>
+    <linearGradient id="bg-pubgm-c" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#11161d"/>
+      <stop offset="100%" stop-color="#31462a"/>
+    </linearGradient>
+    <linearGradient id="accent-pubgm-c" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#ffd166"/>
+      <stop offset="100%" stop-color="#5fe38d"/>
+    </linearGradient>
+    <radialGradient id="glow-pubgm-c" cx="72%" cy="20%" r="60%">
+      <stop offset="0%" stop-color="#ffd166" stop-opacity="0.34"/>
+      <stop offset="100%" stop-color="#ffd166" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="900" height="1200" fill="url(#bg-pubgm-c)"/>
+  <rect width="900" height="1200" fill="url(#glow-pubgm-c)"/>
+  <g opacity="0.82">
+    <circle cx="650" cy="260" r="180" fill="none" stroke="url(#accent-pubgm-c)" stroke-width="6" opacity="0.62"/>
+    <path d="M520 120 L840 220 L720 560 L430 470 Z" fill="url(#accent-pubgm-c)" opacity="0.14"/>
+    <path d="M120 760 L760 570 L850 1090 L250 1160 Z" fill="url(#accent-pubgm-c)" opacity="0.12"/>
+  </g>
+  <g transform="translate(58 58)">
+    <rect x="0" y="0" width="118" height="36" rx="18" fill="rgba(255,255,255,0.08)" stroke="rgba(255,255,255,0.16)"/>
+    <text x="59" y="23" text-anchor="middle" font-family="Arial, sans-serif" font-size="15" font-weight="700" fill="#ffffff" letter-spacing="2">MECHI</text>
+  </g>
+  <g transform="translate(58 160)">
+    <rect x="0" y="0" width="170" height="40" rx="20" fill="rgba(255,255,255,0.1)" stroke="rgba(255,255,255,0.18)"/>
+    <text x="85" y="26" text-anchor="middle" font-family="Arial, sans-serif" font-size="16" font-weight="700" fill="#ffffff" letter-spacing="2">LOBBY</text>
+  </g>
+  <g transform="translate(58 808)">
+    <rect x="0" y="0" width="784" height="254" rx="36" fill="rgba(8,12,18,0.44)" stroke="rgba(255,255,255,0.12)"/>
+    <text x="42" y="72" font-family="Arial, sans-serif" font-size="24" font-weight="700" fill="#5fe38d" letter-spacing="3">DROP IN</text>
+    <text x="42" y="144" font-family="Arial, sans-serif" font-size="58" font-weight="800" fill="#ffffff">PUBG Mobile</text>
+    <rect x="42" y="164" width="280" height="8" rx="4" fill="url(#accent-pubgm-c)"/>
+    <text x="42" y="214" font-family="Arial, sans-serif" font-size="18" font-weight="600" fill="rgba(255,255,255,0.72)">Queue-ready local artwork with no external dependency.</text>
+  </g>
+</svg>

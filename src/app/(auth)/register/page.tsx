@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useState } from 'react';
+import { use, useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
 import {
   Check,
@@ -11,6 +11,7 @@ import {
   EyeOff,
   Loader2,
 } from 'lucide-react';
+import { ActionFeedback, type ActionFeedbackState } from '@/components/ActionFeedback';
 import { useAuth } from '@/components/AuthProvider';
 import { GameCover } from '@/components/GameCover';
 import { PlatformLogo } from '@/components/PlatformLogo';
@@ -18,20 +19,27 @@ import { FullScreenSignup } from '@/components/ui/full-screen-signup';
 import {
   GAMES,
   PLATFORMS,
-  REGIONS,
   getConfiguredPlatformForGame,
   getGameIdKey,
   getGameIdLabel,
   getGameIdPlaceholder,
   getGameIdValue,
   getGamePlatformKey,
+  getSelectableGameKeys,
   getPlatformsForGameSetup,
 } from '@/lib/config';
+import type { InvitePreview } from '@/lib/invite';
+import { normalizeInviteCode } from '@/lib/invite';
+import { COUNTRY_OPTIONS, getRegionsForCountry } from '@/lib/location';
+import { getLoginPath, getSafeNextPath } from '@/lib/navigation';
 import { normalizePhoneNumber } from '@/lib/phone';
-import type { GameKey, PlatformKey } from '@/types';
+import { PLANS } from '@/lib/plans';
+import type { CountryKey, GameKey, PlatformKey } from '@/types';
 
 type Step = 1 | 2 | 3 | 4;
-const FREE_GAME_LIMIT = 1;
+const STARTER_TRIAL_GAME_LIMIT = PLANS.pro.maxGames;
+const MIN_PASSWORD_LENGTH = 9;
+type RegisterSearchParams = Promise<{ [key: string]: string | string[] | undefined }>;
 
 interface FormData {
   username: string;
@@ -40,17 +48,21 @@ interface FormData {
   whatsapp_notifications: boolean;
   whatsapp_number: string;
   password: string;
+  country: CountryKey | '';
   region: string;
   platforms: PlatformKey[];
   game_ids: Record<string, string>;
   selected_games: GameKey[];
 }
 
-export default function RegisterPage() {
+export default function RegisterPage({ searchParams }: { searchParams: RegisterSearchParams }) {
   const { user, login } = useAuth();
+  const resolvedSearchParams = use(searchParams);
   const [step, setStep] = useState<Step>(1);
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [invitePreview, setInvitePreview] = useState<InvitePreview | null>(null);
+  const [submitFeedback, setSubmitFeedback] = useState<ActionFeedbackState | null>(null);
 
   const [formData, setFormData] = useState<FormData>({
     username: '',
@@ -59,26 +71,83 @@ export default function RegisterPage() {
     whatsapp_notifications: false,
     whatsapp_number: '',
     password: '',
-    region: 'Nairobi',
+    country: '',
+    region: '',
     platforms: [],
     game_ids: {},
     selected_games: [],
   });
   const emailIsValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email.trim());
+  const rawInviteValue = resolvedSearchParams.invite;
+  const rawInviteCode =
+    typeof rawInviteValue === 'string'
+      ? rawInviteValue
+      : Array.isArray(rawInviteValue)
+        ? rawInviteValue[0] ?? null
+        : null;
+  const normalizedInviteCode = normalizeInviteCode(rawInviteCode);
+  const rawNextValue = resolvedSearchParams.next;
+  const rawNext =
+    typeof rawNextValue === 'string'
+      ? rawNextValue
+      : Array.isArray(rawNextValue)
+        ? rawNextValue[0] ?? null
+        : null;
+  const nextPath = getSafeNextPath(rawNext);
+  const loginHref = getLoginPath(rawNext ? nextPath : null);
+
+  useEffect(() => {
+    if (!normalizedInviteCode) {
+      setInvitePreview(null);
+      return;
+    }
+
+    const inviteCode = normalizedInviteCode;
+    let cancelled = false;
+
+    async function loadInvite() {
+      try {
+        const res = await fetch(`/api/invite/${encodeURIComponent(inviteCode)}`);
+        if (!res.ok) {
+          if (!cancelled) {
+            setInvitePreview(null);
+          }
+          return;
+        }
+
+        const data = await res.json();
+        if (!cancelled) {
+          setInvitePreview((data.inviter as InvitePreview | undefined) ?? null);
+        }
+      } catch {
+        if (!cancelled) {
+          setInvitePreview(null);
+        }
+      }
+    }
+
+    void loadInvite();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [normalizedInviteCode]);
 
   const step1Valid =
     formData.username.trim().length >= 3 &&
-    formData.phone.trim().length >= 9;
+    formData.phone.trim().length >= 9 &&
+    emailIsValid;
   const step2Valid =
-    emailIsValid &&
+    Boolean(formData.country) &&
     formData.region.trim().length > 0 &&
-    formData.password.length >= 6;
+    formData.password.length >= MIN_PASSWORD_LENGTH;
+  const availableRegions = getRegionsForCountry(formData.country || null);
   const setupPlatforms = getPlatformsForGameSetup(
     formData.selected_games,
     formData.game_ids,
     formData.platforms
   );
-  const selectableGames = Object.keys(GAMES) as GameKey[];
+  const selectableGames = getSelectableGameKeys();
   const requiredIdFields = formData.selected_games.reduce<
     Array<{ key: string; game: GameKey; platform: PlatformKey }>
   >((fields, game) => {
@@ -95,14 +164,17 @@ export default function RegisterPage() {
   const hasMissingGamePlatform = formData.selected_games.some(
     (game) => !getConfiguredPlatformForGame(game, formData.game_ids, setupPlatforms)
   );
+  const hasMissingRequiredIds = requiredIdFields.some(
+    (field) => !getGameIdValue(formData.game_ids, field.game, field.platform).trim()
+  );
   const step3Valid = formData.selected_games.length > 0;
-  const step4Valid = step3Valid && !hasMissingGamePlatform;
+  const step4Valid = step3Valid && !hasMissingGamePlatform && !hasMissingRequiredIds;
 
   const toggleGame = (game: GameKey) => {
     setFormData((prev) => {
       const hasGame = prev.selected_games.includes(game);
-      if (!hasGame && prev.selected_games.length >= FREE_GAME_LIMIT) {
-        toast.error('Free plan starts with 1 game. Upgrade later for 3.');
+      if (!hasGame && prev.selected_games.length >= STARTER_TRIAL_GAME_LIMIT) {
+        toast.error(`Your Pro trial starts with up to ${STARTER_TRIAL_GAME_LIMIT} games.`);
         return prev;
       }
 
@@ -114,9 +186,12 @@ export default function RegisterPage() {
             delete nextGameIds[getGameIdKey(game, platform)];
           }
         }
-      } else if (GAMES[game]?.platforms.length === 1) {
-        nextGameIds[getGamePlatformKey(game)] =
-          nextGameIds[getGamePlatformKey(game)] ?? GAMES[game].platforms[0];
+      } else {
+        const [defaultPlatform] = GAMES[game]?.platforms ?? [];
+        if (defaultPlatform) {
+          nextGameIds[getGamePlatformKey(game)] =
+            nextGameIds[getGamePlatformKey(game)] ?? defaultPlatform;
+        }
       }
 
       const nextSelectedGames = hasGame
@@ -150,6 +225,11 @@ export default function RegisterPage() {
 
   const handleSubmit = async () => {
     if (formData.selected_games.length === 0) {
+      setSubmitFeedback({
+        tone: 'error',
+        title: 'Choose at least one game before you create your account.',
+        detail: 'Your Pro trial starts with the games you lock in here.',
+      });
       toast.error('Select at least 1 game');
       return;
     }
@@ -164,34 +244,74 @@ export default function RegisterPage() {
         (game) => !getConfiguredPlatformForGame(game, formData.game_ids, finalPlatforms)
       )
     ) {
+      setSubmitFeedback({
+        tone: 'error',
+        title: 'Every selected game needs a platform.',
+        detail: 'Pick the platform you actually play on so Mechi can match you correctly.',
+      });
       toast.error('Choose a platform for each game');
+      return;
+    }
+    if (
+      formData.selected_games.some((game) => {
+        const platform = getConfiguredPlatformForGame(game, formData.game_ids, finalPlatforms);
+        return !platform || !getGameIdValue(formData.game_ids, game, platform).trim();
+      })
+    ) {
+      setSubmitFeedback({
+        tone: 'error',
+        title: 'Some game IDs are still missing.',
+        detail: 'Add the IDs opponents need before you finish registration.',
+      });
+      toast.error('Add the game IDs opponents will need');
       return;
     }
 
     setLoading(true);
+    setSubmitFeedback({
+      tone: 'loading',
+      title: 'Creating your Mechi account...',
+      detail: "We're saving your profile, game setup, and Pro trial access now.",
+    });
     try {
       const res = await fetch('/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           ...formData,
+          invite_code: invitePreview?.invite_code ?? null,
           platforms: finalPlatforms,
-          phone: normalizePhoneNumber(formData.phone),
+          phone: normalizePhoneNumber(formData.phone, formData.country || null),
           whatsapp_number: formData.whatsapp_number
-            ? normalizePhoneNumber(formData.whatsapp_number)
-            : normalizePhoneNumber(formData.phone),
+            ? normalizePhoneNumber(formData.whatsapp_number, formData.country || null)
+            : normalizePhoneNumber(formData.phone, formData.country || null),
         }),
       });
       const data = await res.json();
       if (!res.ok) {
+        setSubmitFeedback({
+          tone: 'error',
+          title: 'Registration did not go through.',
+          detail: data.error ?? 'Please check your details and try again.',
+        });
         toast.error(data.error ?? 'Registration failed');
         return;
       }
       login(data.token, data.user);
-      toast.success(`Welcome to Mechi, ${data.user.username}!`);
+      setSubmitFeedback({
+        tone: 'success',
+        title: `Welcome to Mechi, ${data.user.username}.`,
+        detail: 'Your Pro trial is live. Taking you into the app now.',
+      });
+      toast.success(`Welcome to Mechi, ${data.user.username}! Your Pro trial is active.`);
       // Use a hard navigation so auth cookie guards see the latest cookie immediately.
-      window.location.assign('/dashboard');
+      window.location.assign(nextPath);
     } catch {
+      setSubmitFeedback({
+        tone: 'error',
+        title: 'We could not reach the server.',
+        detail: 'Your account was not created. Check your connection and try again.',
+      });
       toast.error('Network error.');
     } finally {
       setLoading(false);
@@ -207,9 +327,9 @@ export default function RegisterPage() {
       sideTitle="Join Mechi"
       sideDescription=""
       sidePoints={[
-        'Start with 1 main game on Free',
+        'Start with a 1-month Pro trial',
+        `Save up to ${STARTER_TRIAL_GAME_LIMIT} main games`,
         'Add only the IDs those games need',
-        'Upgrade later to unlock up to 3 games',
       ]}
     >
       <div className="card p-4 sm:p-6">
@@ -241,6 +361,17 @@ export default function RegisterPage() {
               ))}
             </div>
 
+            {invitePreview ? (
+              <div className="mb-5 rounded-xl border border-[rgba(50,224,196,0.2)] bg-[rgba(50,224,196,0.08)] px-4 py-3">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--accent-secondary-text)]">
+                  Invite Active
+                </p>
+                <p className="mt-1 text-sm text-[var(--text-primary)]">
+                  Invited by <span className="font-semibold">{invitePreview.username}</span>
+                </p>
+              </div>
+            ) : null}
+
             {step === 1 && (
               <div>
                 <p className="section-title">Step 1</p>
@@ -269,9 +400,20 @@ export default function RegisterPage() {
                       onBlur={() =>
                         setFormData((current) => ({
                           ...current,
-                          phone: normalizePhoneNumber(current.phone),
+                          phone: normalizePhoneNumber(current.phone, current.country || null),
                         }))
                       }
+                    />
+                  </div>
+                  <div>
+                    <label className="label">Email</label>
+                    <input
+                      type="email"
+                      value={formData.email}
+                      onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                      placeholder="you@example.com"
+                      className="input"
+                      required
                     />
                   </div>
                   <button
@@ -291,33 +433,46 @@ export default function RegisterPage() {
                 <p className="section-title">Step 2</p>
                 <div className="mt-4 space-y-4">
                   <div>
+                    <label className="label">Country</label>
+                    <select
+                      value={formData.country}
+                      onChange={(e) =>
+                        setFormData((current) => ({
+                          ...current,
+                          country: e.target.value as CountryKey | '',
+                          region: '',
+                        }))
+                      }
+                      className="input"
+                    >
+                      <option value="">Select country</option>
+                      {COUNTRY_OPTIONS.map((option) => (
+                        <option key={option.key} value={option.key}>
+                          {option.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
                     <label className="label">Region</label>
-                    <input
-                      type="text"
-                      list="register-region-options"
+                    <select
                       value={formData.region}
                       onChange={(e) => setFormData({ ...formData, region: e.target.value })}
                       className="input"
-                      placeholder="Type your region"
-                    />
-                    <datalist id="register-region-options">
-                      {REGIONS.map((region) => (
+                      disabled={!formData.country}
+                    >
+                      <option value="">
+                        {formData.country ? 'Select region' : 'Choose country first'}
+                      </option>
+                      {availableRegions.map((region) => (
                         <option key={region} value={region}>
                           {region}
                         </option>
                       ))}
-                    </datalist>
-                  </div>
-                  <div>
-                    <label className="label">Email</label>
-                    <input
-                      type="email"
-                      value={formData.email}
-                      onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                      placeholder="you@example.com"
-                      className="input"
-                      required
-                    />
+                    </select>
+                    <p className="mt-2 text-xs text-[var(--text-soft)]">
+                      Pick where you mainly play from so Mechi can place you in the right local lane.
+                    </p>
                   </div>
                   <div>
                     <label className="label">Password</label>
@@ -326,9 +481,9 @@ export default function RegisterPage() {
                         type={showPassword ? 'text' : 'password'}
                         value={formData.password}
                         onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                        placeholder="Min 6 characters"
+                        placeholder="More than 8 characters"
                         className="input pr-12"
-                        minLength={6}
+                        minLength={MIN_PASSWORD_LENGTH}
                       />
                       <button
                         type="button"
@@ -339,6 +494,15 @@ export default function RegisterPage() {
                         {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                       </button>
                     </div>
+                    <p
+                      className={`mt-2 text-xs ${
+                        formData.password.length > 0 && formData.password.length < MIN_PASSWORD_LENGTH
+                          ? 'text-[var(--brand-coral)]'
+                          : 'text-[var(--text-soft)]'
+                      }`}
+                    >
+                      Password must be more than 8 characters.
+                    </p>
                   </div>
                   <div className="rounded-xl border border-[var(--border-color)] bg-[var(--surface-elevated)] p-4">
                     <label className="flex cursor-pointer items-start gap-3">
@@ -415,7 +579,7 @@ export default function RegisterPage() {
                   Select your games
                 </h1>
                 <p className="mb-5 text-sm leading-6 text-[var(--text-secondary)]">
-                  Pick the games you want Mechi to organize for you.
+                  Pick the games you want Mechi to organize for you during your Pro trial.
                 </p>
                 <div className="mb-5 grid max-h-none grid-cols-1 gap-2.5 sm:max-h-72 sm:grid-cols-2 sm:overflow-y-auto">
                   {selectableGames.map((gameKey) => {
@@ -437,7 +601,12 @@ export default function RegisterPage() {
                           <GameCover gameKey={gameKey} variant="header" className="h-full w-full" />
                         </div>
                         <div className="min-w-0 flex-1">
-                          <span className="block truncate text-sm font-medium text-[var(--text-primary)]">{game.label}</span>
+                          <span
+                            className="block whitespace-normal text-sm font-medium leading-snug text-[var(--text-primary)]"
+                            title={game.label}
+                          >
+                            {game.label}
+                          </span>
                           <div className="mt-1 flex gap-1">
                             {game.platforms.map((platform) => (
                               <PlatformLogo key={platform} platform={platform} size={12} />
@@ -458,7 +627,7 @@ export default function RegisterPage() {
                   })}
                 </div>
                 <p className="mb-4 text-center text-xs text-[var(--text-soft)]">
-                  {formData.selected_games.length}/{FREE_GAME_LIMIT} selected on Free
+                  {formData.selected_games.length}/{STARTER_TRIAL_GAME_LIMIT} selected on Pro trial
                 </p>
                 <div className="flex gap-3">
                   <button type="button" onClick={() => setStep(2)} className="btn-ghost flex-1">
@@ -559,6 +728,21 @@ export default function RegisterPage() {
                     </div>
                   )}
                 </div>
+                {hasMissingGamePlatform || hasMissingRequiredIds ? (
+                  <p className="mb-4 text-center text-xs text-[var(--text-soft)]">
+                    {hasMissingGamePlatform
+                      ? 'Choose a platform for every selected game.'
+                      : 'Add each game ID to create your account.'}
+                  </p>
+                ) : null}
+                {submitFeedback ? (
+                  <ActionFeedback
+                    tone={submitFeedback.tone}
+                    title={submitFeedback.title}
+                    detail={submitFeedback.detail}
+                    className="mb-4"
+                  />
+                ) : null}
                 <div className="flex gap-3">
                   <button type="button" onClick={() => setStep(3)} className="btn-ghost flex-1">
                     <ChevronLeft size={14} /> Back
@@ -584,7 +768,7 @@ export default function RegisterPage() {
             <p className="mt-6 text-center text-sm text-[var(--text-soft)]">
               Already have an account?{' '}
               <Link
-                href={user ? '/dashboard' : '/login'}
+                href={user ? nextPath : loginHref}
                 className="brand-link-coral inline-flex min-h-11 items-center font-semibold"
               >
                 Sign in

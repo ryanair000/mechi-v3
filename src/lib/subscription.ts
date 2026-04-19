@@ -192,6 +192,18 @@ export async function initiateSubscription(params: {
   }
 
   if (!isPaystackConfigured()) {
+    if (process.env.NODE_ENV === 'production') {
+      await supabase
+        .from('subscriptions')
+        .update({ status: 'failed' })
+        .eq('id', subscription.id);
+
+      return {
+        success: false,
+        error: 'Payment provider is not configured',
+      };
+    }
+
     await activateSubscription(subscription.id, supabase);
     return {
       success: true,
@@ -207,6 +219,8 @@ export async function initiateSubscription(params: {
     reference,
     callbackUrl,
     metadata: {
+      app: 'mechi',
+      source: 'mechi',
       type: 'subscription',
       subscription_id: subscription.id,
       user_id: params.userId,
@@ -305,6 +319,69 @@ export async function activateSubscription(
   };
 }
 
+export async function activateSubscriptionByReference(
+  reference: string,
+  client?: SupabaseClient
+): Promise<{ success: boolean; subscription?: SubscriptionRow; error?: string }> {
+  const supabase = getSupabaseClient(client);
+  const { data: subscriptionRaw } = await supabase
+    .from('subscriptions')
+    .select('*')
+    .eq('paystack_ref', reference)
+    .maybeSingle();
+
+  const subscription = subscriptionRaw as SubscriptionRow | null;
+  if (!subscription) {
+    return { success: false, error: 'Subscription not found' };
+  }
+
+  if (subscription.status === 'active') {
+    return { success: true, subscription };
+  }
+
+  const activated = await activateSubscription(subscription.id, supabase);
+  if (!activated) {
+    return { success: false, error: 'Could not activate subscription' };
+  }
+
+  return { success: true, subscription: activated };
+}
+
+export async function markSubscriptionPaymentFailedByReference(
+  reference: string,
+  client?: SupabaseClient
+): Promise<{ success: boolean; subscription?: SubscriptionRow; error?: string }> {
+  const supabase = getSupabaseClient(client);
+  const { data: subscriptionRaw } = await supabase
+    .from('subscriptions')
+    .select('*')
+    .eq('paystack_ref', reference)
+    .maybeSingle();
+
+  const subscription = subscriptionRaw as SubscriptionRow | null;
+  if (!subscription) {
+    return { success: false, error: 'Subscription not found' };
+  }
+
+  if (subscription.status === 'active') {
+    return { success: true, subscription };
+  }
+
+  await supabase
+    .from('subscriptions')
+    .update({ status: 'failed' })
+    .eq('id', subscription.id)
+    .in('status', ['pending', 'failed']);
+
+  return {
+    success: true,
+    subscription: {
+      ...subscription,
+      status: 'failed',
+    },
+  };
+}
+
 export async function verifyAndActivateSubscriptionByReference(reference: string) {
   const supabase = createServiceClient();
   const { data: subscriptionRaw } = await supabase
@@ -337,12 +414,7 @@ export async function verifyAndActivateSubscriptionByReference(reference: string
     return { success: false, error: verified.error ?? 'Payment not complete' };
   }
 
-  const activated = await activateSubscription(subscription.id, supabase);
-  if (!activated) {
-    return { success: false, error: 'Could not activate subscription' };
-  }
-
-  return { success: true, subscription: activated };
+  return activateSubscriptionByReference(reference, supabase);
 }
 
 export async function cancelActiveSubscription(userId: string, client?: SupabaseClient) {

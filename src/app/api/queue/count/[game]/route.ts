@@ -1,37 +1,51 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServiceClient } from '@/lib/supabase';
-import { GAMES } from '@/lib/config';
+import { GAMES, getCanonicalGameKey } from '@/lib/config';
+import { isMissingColumnError } from '@/lib/db-compat';
+import { getQueueExpiryCutoffIso } from '@/lib/queue';
 import type { GameKey } from '@/types';
 
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ game: string }> }
 ) {
-  const { game } = await params;
+  const { game: requestedGame } = await params;
   const { searchParams } = new URL(request.url);
   const platform = searchParams.get('platform');
 
-  if (!game || !GAMES[game as GameKey]) {
+  if (!requestedGame || !GAMES[requestedGame as GameKey]) {
     return NextResponse.json({ error: 'Invalid game' }, { status: 400 });
   }
 
+  const game = getCanonicalGameKey(requestedGame as GameKey);
+
   try {
     const supabase = createServiceClient();
+    const activeQueueCutoff = getQueueExpiryCutoffIso();
 
-    let query = supabase
-      .from('queue')
-      .select('*', { count: 'exact', head: true })
-      .eq('game', game)
-      .eq('status', 'waiting');
+    const buildCountQuery = () =>
+      supabase
+        .from('queue')
+        .select('id', { count: 'exact' })
+        .eq('game', game)
+        .eq('status', 'waiting')
+        .gte('joined_at', activeQueueCutoff)
+        .limit(1);
 
+    let query = buildCountQuery();
     if (platform) {
       query = query.eq('platform', platform);
     }
 
-    const { count, error } = await query;
+    let { count, error } = await query;
+
+    if (error && platform && isMissingColumnError(error, 'queue.platform')) {
+      ({ count, error } = await buildCountQuery());
+    }
 
     if (error) {
-      return NextResponse.json({ error: 'Failed to get count' }, { status: 500 });
+      console.error('[Queue Count] Query error:', error);
+      return NextResponse.json({ count: 0, game, degraded: true }, { status: 200 });
     }
 
     return NextResponse.json({ count: count ?? 0, game });

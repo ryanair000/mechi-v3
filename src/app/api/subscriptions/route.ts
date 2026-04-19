@@ -1,20 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getAuthUser } from '@/lib/auth';
+import { requireActiveAccessProfile } from '@/lib/access';
 import { createServiceClient } from '@/lib/supabase';
 import type { BillingCycle, Plan } from '@/lib/plans';
 import { initiateSubscription, getActiveOrPendingSubscription, maybeExpireProfilePlan } from '@/lib/subscription';
 
 export async function GET(request: NextRequest) {
-  const authUser = getAuthUser(request);
-  if (!authUser) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const access = await requireActiveAccessProfile(request);
+  if (access.response) {
+    return access.response;
   }
+
+  const authUser = access.profile;
 
   const supabase = createServiceClient();
   const { data: profileRaw, error: profileError } = await supabase
     .from('profiles')
     .select('*')
-    .eq('id', authUser.sub)
+    .eq('id', authUser.id)
     .maybeSingle();
 
   const profile = profileRaw as Record<string, unknown> | null;
@@ -31,7 +33,7 @@ export async function GET(request: NextRequest) {
     supabase
   );
 
-  const subscription = await getActiveOrPendingSubscription(authUser.sub, supabase);
+  const subscription = await getActiveOrPendingSubscription(authUser.id, supabase);
 
   return NextResponse.json({
     plan: resolvedPlan,
@@ -45,10 +47,12 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  const authUser = getAuthUser(request);
-  if (!authUser) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const access = await requireActiveAccessProfile(request);
+  if (access.response) {
+    return access.response;
   }
+
+  const authUser = access.profile;
 
   try {
     const body = (await request.json()) as Record<string, unknown>;
@@ -67,7 +71,7 @@ export async function POST(request: NextRequest) {
     const { data: profileRaw, error: profileError } = await supabase
       .from('profiles')
       .select('*')
-      .eq('id', authUser.sub)
+      .eq('id', authUser.id)
       .maybeSingle();
 
     const profile = profileRaw as Record<string, unknown> | null;
@@ -81,7 +85,7 @@ export async function POST(request: NextRequest) {
     }
 
     const result = await initiateSubscription({
-      userId: authUser.sub,
+      userId: authUser.id,
       email,
       plan,
       cycle,

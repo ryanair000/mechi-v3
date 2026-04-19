@@ -30,25 +30,28 @@ function notFoundCard(message: string) {
 }
 
 export async function GET(request: NextRequest) {
-  const { origin, searchParams } = new URL(request.url);
+  const { searchParams } = new URL(request.url);
   const slug = searchParams.get('slug');
-  const logoSrc = `${origin}/mechi-logo.png`;
 
   if (!slug) return notFoundCard('Mechi / Tournament not found');
 
   const supabase = createServiceClient();
   const { data: tournament } = await supabase
     .from('tournaments')
-    .select('*, player_count:tournament_players(count)')
+    .select('*')
     .eq('slug', slug)
     .single();
 
   if (!tournament) return notFoundCard('Mechi / Tournament not found');
 
+  const { data: players } = await supabase
+    .from('tournament_players')
+    .select('tournament_id')
+    .eq('tournament_id', tournament.id)
+    .in('payment_status', ['paid', 'free']);
+
   const game = GAMES[tournament.game as GameKey]?.label ?? tournament.game;
-  const playerCount = Array.isArray(tournament.player_count)
-    ? tournament.player_count[0]?.count ?? 0
-    : 0;
+  const playerCount = (players ?? []).length;
 
   return new ImageResponse(
     (
@@ -58,18 +61,42 @@ export async function GET(request: NextRequest) {
           flexDirection: 'column',
           width: '100%',
           height: '100%',
+          position: 'relative',
+          overflow: 'hidden',
           background: 'linear-gradient(135deg, #0B1121 0%, #121D2D 52%, #08101C 100%)',
           color: 'white',
           padding: '54px',
           fontFamily: 'sans-serif',
         }}
       >
+        <div
+          style={{
+            position: 'absolute',
+            top: '-14%',
+            right: '-8%',
+            width: '44%',
+            height: '84%',
+            borderRadius: '999px',
+            border: '1px solid rgba(255,255,255,0.08)',
+            background: 'radial-gradient(circle, rgba(255,107,107,0.14) 0%, rgba(255,107,107,0.03) 52%, transparent 72%)',
+          }}
+        />
+        <div
+          style={{
+            position: 'absolute',
+            bottom: '-22%',
+            left: '-12%',
+            width: '48%',
+            height: '82%',
+            borderRadius: '999px',
+            border: '1px solid rgba(255,255,255,0.08)',
+            background: 'radial-gradient(circle, rgba(50,224,196,0.16) 0%, rgba(50,224,196,0.04) 48%, transparent 70%)',
+          }}
+        />
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={logoSrc} alt="Mechi" style={{ width: 58, height: 58, objectFit: 'contain' }} />
+          <div style={{ display: 'flex', flexDirection: 'column' }}>
+            <span style={{ fontSize: 28, fontWeight: 900, letterSpacing: '0.12em' }}>MECHI</span>
             <div style={{ display: 'flex', flexDirection: 'column' }}>
-              <span style={{ fontSize: 28, fontWeight: 900, letterSpacing: '0.12em' }}>MECHI</span>
               <span style={{ fontSize: 14, color: 'rgba(255,255,255,0.58)' }}>Compete. Connect. Rise.</span>
             </div>
           </div>

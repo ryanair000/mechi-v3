@@ -43,6 +43,10 @@ const links = [
     title: 'Terms of Service',
     href: '/terms-of-service',
   },
+  {
+    title: 'User Data Deletion',
+    href: '/user-data-deletion',
+  },
 ];
 
 const socialLinks = [

@@ -1,0 +1,645 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mechi — Admin Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800;900&family=Open+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NJ9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<style>
+:root {
+  --bg:#070d18; --surf:#0d1525; --surf-hi:#111d30; --surf-lo:rgba(10,18,32,0.9);
+  --txt:#f8fbfd; --txt2:#b9c4d2; --txt3:#7b879a;
+  --bdr:rgba(226,232,240,0.08); --bdr2:rgba(226,232,240,0.14);
+  --teal:#32e0c4; --coral:#ff6b6b; --night:#0b1121;
+  --teal-txt:#8ef2e4; --teal-soft:rgba(50,224,196,0.10); --teal-bdr:rgba(50,224,196,0.2);
+  --coral-soft:rgba(255,107,107,0.12); --coral-bdr:rgba(255,107,107,0.2);
+  --red-soft:rgba(239,68,68,0.12); --red-bdr:rgba(239,68,68,0.2); --red:#ef4444;
+  --gold-soft:rgba(251,191,36,0.12); --gold-bdr:rgba(251,191,36,0.2); --gold:#d4a323;
+  --blue-soft:rgba(96,165,250,0.12); --blue-bdr:rgba(96,165,250,0.2); --blue:#60a5fa;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+html,body{height:100%;background:var(--bg);color:var(--txt);font-family:'Open Sans',sans-serif;overflow-x:hidden;}
+body{background:radial-gradient(ellipse at 0% 0%,rgba(50,224,196,0.06),transparent 28%),radial-gradient(ellipse at 100% 0%,rgba(255,107,107,0.05),transparent 28%),var(--bg);}
+body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:0;
+  background-image:linear-gradient(rgba(130,149,176,0.02) 1px,transparent 1px),linear-gradient(90deg,rgba(130,149,176,0.02) 1px,transparent 1px);
+  background-size:64px 64px;opacity:1;}
+#root{position:relative;z-index:1;display:flex;height:100%;}
+button{font-family:'Montserrat',sans-serif;cursor:pointer;transition:all 140ms ease;}
+[data-lucide]{display:block;}
+::-webkit-scrollbar{width:5px;} ::-webkit-scrollbar-thumb{background:rgba(95,109,130,0.2);border-radius:3px;}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState, useEffect } = React;
+
+// ── Palette ───────────────────────────────────────────────────
+const P = {
+  bg:'#070d18', surf:'#0d1525', surfHi:'#111d30',
+  txt:'#f8fbfd', txt2:'#b9c4d2', txt3:'#7b879a',
+  bdr:'rgba(226,232,240,0.08)', bdr2:'rgba(226,232,240,0.14)',
+  teal:'#32e0c4', coral:'#ff6b6b', night:'#0b1121',
+  tealTxt:'#8ef2e4', tealSoft:'rgba(50,224,196,0.10)', tealBdr:'rgba(50,224,196,0.2)',
+  coralSoft:'rgba(255,107,107,0.12)', coralBdr:'rgba(255,107,107,0.2)',
+  red:'#ef4444', redSoft:'rgba(239,68,68,0.12)', redBdr:'rgba(239,68,68,0.2)',
+  gold:'#d4a323', goldSoft:'rgba(251,191,36,0.12)', goldBdr:'rgba(251,191,36,0.2)',
+  blue:'#60a5fa', blueSoft:'rgba(96,165,250,0.12)', blueBdr:'rgba(96,165,250,0.2)',
+};
+
+const card = { background:P.surf, border:`1px solid ${P.bdr}`, borderRadius:6 };
+
+// ── Icon ─────────────────────────────────────────────────────
+function Icon({ name, size=16, color, style }) {
+  return (
+    <span style={{ display:'inline-flex', alignItems:'center', justifyContent:'center', flexShrink:0, color:color||'currentColor', ...style }}>
+      <i data-lucide={name} style={{ width:size, height:size, display:'block' }} />
+    </span>
+  );
+}
+
+// ── Chip ─────────────────────────────────────────────────────
+function Chip({ children, c='teal' }) {
+  const m = {
+    teal:{ bg:P.tealSoft, bdr:P.tealBdr, txt:P.tealTxt },
+    coral:{ bg:P.coralSoft, bdr:P.coralBdr, txt:'#ffaaaa' },
+    red:  { bg:P.redSoft,  bdr:P.redBdr,  txt:P.red },
+    gold: { bg:P.goldSoft, bdr:P.goldBdr, txt:P.gold },
+    blue: { bg:P.blueSoft, bdr:P.blueBdr, txt:P.blue },
+    gray: { bg:'rgba(95,109,130,0.12)', bdr:P.bdr, txt:P.txt3 },
+  };
+  const s = m[c]||m.teal;
+  return <span style={{ display:'inline-flex', alignItems:'center', gap:4, border:`1px solid ${s.bdr}`,
+    background:s.bg, color:s.txt, fontFamily:"'Montserrat',sans-serif", fontSize:9, fontWeight:800,
+    letterSpacing:'0.1em', textTransform:'uppercase', padding:'2px 8px', borderRadius:4 }}>{children}</span>;
+}
+
+// ── Btn ──────────────────────────────────────────────────────
+function Btn({ children, v='outline', onClick, sm, style }) {
+  const h = sm ? 30 : 38; const px = sm ? 10 : 14; const fs = sm ? 11 : 12;
+  const base = { display:'inline-flex', alignItems:'center', justifyContent:'center', gap:6,
+    fontFamily:"'Montserrat',sans-serif", fontWeight:700, border:'1px solid transparent',
+    borderRadius:5, minHeight:h, padding:`0 ${px}px`, fontSize:fs, cursor:'pointer', transition:'all 140ms ease', whiteSpace:'nowrap' };
+  const vs = {
+    primary: { ...base, background:P.coral, color:P.night, borderColor:'transparent' },
+    teal:    { ...base, background:P.teal, color:P.night, borderColor:'transparent' },
+    ghost:   { ...base, background:P.tealSoft, color:P.tealTxt, borderColor:P.tealBdr },
+    outline: { ...base, background:P.surfHi, color:P.txt2, borderColor:P.bdr },
+    danger:  { ...base, background:P.redSoft, color:P.red, borderColor:P.redBdr },
+  };
+  return <button style={{ ...(vs[v]||vs.outline), ...style }} onClick={onClick}>{children}</button>;
+}
+
+// ── SLabel ───────────────────────────────────────────────────
+function SLabel({ children, color, style }) {
+  return <p style={{ fontFamily:"'Montserrat',sans-serif", fontSize:9, fontWeight:800,
+    letterSpacing:'0.16em', textTransform:'uppercase', color:color||P.tealTxt, marginBottom:8, ...style }}>{children}</p>;
+}
+
+// ── Mock data ────────────────────────────────────────────────
+const STATS = {
+  totalUsers:2847, bannedUsers:14, newUsers7d:183,
+  totalMatches:12440, disputedMatches:7, activeMatches:23,
+  totalTournaments:38, activeTournaments:3, totalPrize:'KSh 620,000',
+  waitingQueue:41, longestWaitMins:12, staleQueue:3,
+  openLobbies:18, fullLobbies:5, liveLobbies:9, overdueLobbies:2,
+  openRewardReviews:4, pendingPayouts:2,
+};
+
+const ATTENTION = [
+  { id:'rewards',    title:'Reward Reviews',   value:4,  icon:'Shield',      c:'coral', detail:'Suspicious referral or redemption events need a moderator look before points leakage grows.' },
+  { id:'queue',      title:'Queue Backlog',     value:3,  icon:'Clock3',      c:'gold',  detail:'12 min longest wait. Review stuck entrants before churn starts.' },
+  { id:'lobbies',    title:'Overdue Lobbies',   value:2,  icon:'DoorOpen',    c:'coral', detail:'2 open rooms have drifted past their scheduled start time.' },
+  { id:'matches',    title:'Disputed Matches',  value:7,  icon:'Swords',      c:'red',   detail:'23 live matches are still in progress behind them.' },
+  { id:'tournaments',title:'Pending Payouts',   value:2,  icon:'Trophy',      c:'gold',  detail:'Completed events are waiting on payout follow-through.' },
+];
+
+const PRIMARY_LANES = [
+  { id:'rewards',    title:'Reward Protection', icon:'Shield',       detail:'4 suspicious reward items waiting on moderator action.' },
+  { id:'queue',      title:'Queue Control',     icon:'Clock3',       detail:'41 players waiting across ranked matchmaking.' },
+  { id:'lobbies',    title:'Lobby Cleanup',     icon:'DoorOpen',     detail:'32 total rooms across open, full, and live states.' },
+  { id:'matches',    title:'Match Review',      icon:'Swords',       detail:'7 disputes and 23 pending matches in the lane.' },
+  { id:'tournaments',title:'Tournament Ops',    icon:'Trophy',       detail:'3 active brackets and 2 finance follow-ups.' },
+  { id:'users',      title:'Player Accounts',   icon:'Users',        detail:'2,847 total players and 14 suspended accounts.' },
+  { id:'support',    title:'Support Inbox',     icon:'Headset',      detail:'Review WhatsApp escalations and human handoffs.' },
+];
+
+const AUDIT_LOGS = [
+  { id:1, action:'ban_user',            admin:'admin_ke',   target:'profiles',   subject:'SpamBot_99',    time:'2m ago' },
+  { id:2, action:'dispute_resolved',    admin:'mod_nairobi',target:'matches',    subject:'match_7fa2...',  time:'14m ago' },
+  { id:3, action:'reward_rejected',     admin:'admin_ke',   target:'rewards',    subject:'ref_bonus_x4',   time:'31m ago' },
+  { id:4, action:'tournament_created',  admin:'admin_ke',   target:'tournaments',subject:'EA FIFA Cup',    time:'1h ago' },
+  { id:5, action:'queue_entry_expired', admin:'system',     target:'queue',      subject:'queue_a8c1...',  time:'2h ago' },
+  { id:6, action:'payout_processed',    admin:'admin_ke',   target:'tournaments',subject:'Weekend Warriors',time:'3h ago' },
+  { id:7, action:'user_unbanned',       admin:'mod_nairobi',target:'profiles',   subject:'AccraFire',      time:'5h ago' },
+  { id:8, action:'lobby_closed',        admin:'system',     target:'lobbies',    subject:'Overdue room #18',time:'6h ago' },
+];
+
+const SNAPSHOT = [
+  { label:'New Players This Week', value:'183',       detail:'2,847 total player accounts',           icon:'UserPlus',  c:'teal' },
+  { label:'Matches Tracked',       value:'12,440',    detail:'23 still live or waiting completion',   icon:'Swords',    c:'blue' },
+  { label:'Active Tournaments',    value:'3',         detail:'38 tournament records overall',         icon:'Trophy',    c:'gold' },
+  { label:'Prize Paid Out',        value:'KSh 620K',  detail:'14 accounts currently suspended',       icon:'Banknote',  c:'teal' },
+];
+
+// ── Sidebar ──────────────────────────────────────────────────
+const NAV = [
+  { id:'overview',    label:'Overview',    icon:'BarChart2' },
+  { id:'users',       label:'Users',       icon:'Users' },
+  { id:'rewards',     label:'Rewards',     icon:'Shield' },
+  { id:'queue',       label:'Queue',       icon:'Clock3' },
+  { id:'lobbies',     label:'Lobbies',     icon:'DoorOpen' },
+  { id:'matches',     label:'Matches',     icon:'Swords' },
+  { id:'tournaments', label:'Tournaments', icon:'Trophy' },
+  { id:'support',     label:'Support',     icon:'Headset' },
+  { id:'whatsapp',    label:'WhatsApp',    icon:'MessageCircle', adminOnly:true },
+  { id:'instagram',   label:'Instagram',   icon:'AtSign',        adminOnly:true },
+  { id:'logs',        label:'Audit Log',   icon:'ScrollText',    adminOnly:true },
+];
+
+function AdminSidebar({ page, setPage }) {
+  return (
+    <aside style={{ width:220, flexShrink:0, position:'fixed', top:0, left:0, bottom:0, zIndex:40,
+      background:P.surf, borderRight:`1px solid ${P.bdr}`, display:'flex', flexDirection:'column' }}>
+      {/* Logo */}
+      <div style={{ padding:'14px 16px', borderBottom:`1px solid ${P.bdr}`, display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+        <div style={{ display:'flex', alignItems:'center', gap:9 }}>
+          <div style={{ width:30, height:30, borderRadius:4, overflow:'hidden', background:P.night, flexShrink:0 }}>
+            <img src="assets/mechi-logo.png" style={{ width:'100%', height:'100%', objectFit:'contain' }} alt="" />
+          </div>
+          <span style={{ fontFamily:"'Montserrat',sans-serif", fontWeight:900, fontSize:14, letterSpacing:'0.2em', textTransform:'uppercase', color:P.txt }}>MECHI</span>
+        </div>
+        <span style={{ background:P.redSoft, border:`1px solid ${P.redBdr}`, color:P.red,
+          fontFamily:"'Montserrat',sans-serif", fontSize:8, fontWeight:900, letterSpacing:'0.14em',
+          textTransform:'uppercase', padding:'2px 6px', borderRadius:3 }}>Admin</span>
+      </div>
+
+      {/* Section label */}
+      <div style={{ padding:'10px 16px 4px', display:'flex', alignItems:'center', gap:6 }}>
+        <Icon name="Shield" size={11} color={P.txt3} />
+        <span style={{ fontFamily:"'Montserrat',sans-serif", fontSize:8, fontWeight:800, letterSpacing:'0.18em', textTransform:'uppercase', color:P.txt3 }}>Control Room</span>
+      </div>
+
+      {/* Nav */}
+      <nav style={{ flex:1, overflowY:'auto', padding:'4px 8px' }}>
+        {NAV.map(item => {
+          const a = page === item.id;
+          return (
+            <button key={item.id} onClick={() => setPage(item.id)}
+              style={{ width:'100%', display:'flex', alignItems:'center', gap:10, padding:'8px 10px',
+                borderRadius:5, border:`1px solid ${a ? P.tealBdr : 'transparent'}`,
+                background: a ? P.tealSoft : 'transparent',
+                color: a ? P.txt : P.txt2,
+                fontFamily:"'Montserrat',sans-serif", fontSize:12, fontWeight: a ? 700 : 600,
+                textAlign:'left', marginBottom:1, cursor:'pointer', transition:'all 140ms' }}>
+              <Icon name={item.icon} size={14} color={a ? P.tealTxt : P.txt3} />
+              {item.label}
+              {item.adminOnly && (
+                <span style={{ marginLeft:'auto', fontFamily:"'Montserrat',sans-serif", fontSize:8, fontWeight:800,
+                  color:P.txt3, letterSpacing:'0.1em', textTransform:'uppercase' }}>ADM</span>
+              )}
+            </button>
+          );
+        })}
+      </nav>
+
+      {/* Back to app */}
+      <div style={{ padding:'10px 16px', borderTop:`1px solid ${P.bdr}` }}>
+        <button onClick={() => {}} style={{ background:'none', border:'none', color:P.tealTxt,
+          fontFamily:"'Montserrat',sans-serif", fontSize:11, fontWeight:700, cursor:'pointer',
+          display:'flex', alignItems:'center', gap:5 }}>
+          <Icon name="ArrowLeft" size={12} color={P.tealTxt} /> Back to App
+        </button>
+      </div>
+    </aside>
+  );
+}
+
+// ── Stat mini panel ──────────────────────────────────────────
+function MiniStat({ label, value, detail }) {
+  return (
+    <div style={{ ...card, padding:'12px 16px', borderRadius:6 }}>
+      <SLabel style={{ marginBottom:5 }}>{label}</SLabel>
+      <p style={{ fontFamily:"'Montserrat',sans-serif", fontSize:'1.3rem', fontWeight:900, color:P.txt, lineHeight:1 }}>{value}</p>
+      {detail && <p style={{ fontSize:11, color:P.txt3, marginTop:6, lineHeight:1.5 }}>{detail}</p>}
+    </div>
+  );
+}
+
+// ── Overview Page ─────────────────────────────────────────────
+function OverviewPage({ setPage }) {
+  return (
+    <div style={{ padding:'24px 28px 48px', maxWidth:1100, margin:'0 auto' }}>
+
+      {/* Hero */}
+      <div style={{ ...card, padding:'20px 24px', marginBottom:16 }}>
+        <div style={{ display:'grid', gridTemplateColumns:'1fr auto', gap:20, alignItems:'start' }}>
+          <div>
+            <Chip c="red" style={{ marginBottom:10 }}>Admin Control Room</Chip>
+            <h1 style={{ fontFamily:"'Montserrat',sans-serif", fontSize:'1.75rem', fontWeight:900, color:P.txt, lineHeight:1.08, marginBottom:8 }}>
+              Keep the platform calm, clear, and easy to operate.
+            </h1>
+            <p style={{ fontSize:13, color:P.txt2, maxWidth:580, lineHeight:1.65 }}>
+              Start with what needs intervention, jump straight into the operational lane you need, then use the activity feed to verify what changed.
+            </p>
+          </div>
+          <div style={{ display:'grid', gap:8, width:220 }}>
+            <div style={{ background:P.surfHi, border:`1px solid ${P.bdr}`, borderRadius:6, padding:'10px 14px' }}>
+              <SLabel style={{ marginBottom:4 }}>Queue Pulse</SLabel>
+              <p style={{ fontFamily:"'Montserrat',sans-serif", fontSize:13, fontWeight:800, color:P.txt }}>12 min longest wait</p>
+            </div>
+            <div style={{ background:P.surfHi, border:`1px solid ${P.bdr}`, borderRadius:6, padding:'10px 14px' }}>
+              <SLabel style={{ marginBottom:4 }}>Live Rooms</SLabel>
+              <p style={{ fontFamily:"'Montserrat',sans-serif", fontSize:13, fontWeight:800, color:P.txt }}>32</p>
+            </div>
+            <div style={{ background:P.surfHi, border:`1px solid ${P.bdr}`, borderRadius:6, padding:'10px 14px' }}>
+              <SLabel style={{ marginBottom:4 }}>Access Level</SLabel>
+              <p style={{ fontFamily:"'Montserrat',sans-serif", fontSize:13, fontWeight:800, color:P.red }}>admin</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Needs attention */}
+      <div style={{ marginBottom:16 }}>
+        <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:10 }}>
+          <div>
+            <SLabel style={{ marginBottom:3 }}>Needs Attention</SLabel>
+            <p style={{ fontSize:12, color:P.txt2 }}>Start with the lanes most likely to create player friction.</p>
+          </div>
+          <Icon name="AlertTriangle" size={16} color={P.coral} />
+        </div>
+        <div style={{ display:'grid', gridTemplateColumns:'repeat(5,1fr)', gap:10 }}>
+          {ATTENTION.map(a => (
+            <button key={a.id} onClick={() => setPage(a.id)}
+              style={{ ...card, padding:'14px 16px', textAlign:'left', cursor:'pointer',
+                borderColor: a.value > 0 ? (a.c==='red' ? P.redBdr : a.c==='coral' ? P.coralBdr : P.goldBdr) : P.bdr,
+                background: a.value > 0 ? (a.c==='red' ? P.redSoft : a.c==='coral' ? P.coralSoft : P.goldSoft) : P.surf,
+                transition:'all 140ms ease' }}>
+              <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', gap:8, marginBottom:10 }}>
+                <div>
+                  <SLabel color={a.value > 0 ? (a.c==='red' ? P.red : a.c==='coral' ? '#ffaaaa' : P.gold) : P.txt3} style={{ marginBottom:6 }}>{a.title}</SLabel>
+                  <p style={{ fontFamily:"'Montserrat',sans-serif", fontSize:'1.8rem', fontWeight:900, color:P.txt, lineHeight:1 }}>{a.value}</p>
+                </div>
+                <div style={{ width:36, height:36, borderRadius:5, flexShrink:0,
+                  background: a.value > 0 ? (a.c==='red' ? P.redSoft : a.c==='coral' ? P.coralSoft : P.goldSoft) : P.tealSoft,
+                  border:`1px solid ${a.value > 0 ? (a.c==='red' ? P.redBdr : a.c==='coral' ? P.coralBdr : P.goldBdr) : P.tealBdr}`,
+                  display:'flex', alignItems:'center', justifyContent:'center' }}>
+                  <Icon name={a.icon} size={16} color={a.value > 0 ? (a.c==='red' ? P.red : a.c==='coral' ? P.coral : P.gold) : P.tealTxt} />
+                </div>
+              </div>
+              <p style={{ fontSize:11, color:P.txt3, lineHeight:1.5, marginBottom:10 }}>{a.detail}</p>
+              <span style={{ fontFamily:"'Montserrat',sans-serif", fontSize:10, fontWeight:700, color:P.tealTxt }}>Open lane →</span>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Primary lanes + audit log */}
+      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12, marginBottom:16 }}>
+        {/* Lanes */}
+        <div style={{ ...card }}>
+          <div style={{ padding:'12px 18px', borderBottom:`1px solid ${P.bdr}`, display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+            <SLabel style={{ marginBottom:0 }}>Primary Lanes</SLabel>
+            <Icon name="Shield" size={14} color={P.tealTxt} />
+          </div>
+          {PRIMARY_LANES.map((l, i) => (
+            <button key={l.id} onClick={() => setPage(l.id)}
+              style={{ width:'100%', display:'flex', alignItems:'center', gap:12, padding:'12px 18px',
+                borderBottom: i < PRIMARY_LANES.length-1 ? `1px solid ${P.bdr}` : 'none',
+                background:'transparent', cursor:'pointer', transition:'background 140ms ease', textAlign:'left' }}>
+              <div style={{ width:34, height:34, borderRadius:5, background:P.tealSoft, border:`1px solid ${P.tealBdr}`,
+                display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
+                <Icon name={l.icon} size={15} color={P.tealTxt} />
+              </div>
+              <div style={{ flex:1, minWidth:0 }}>
+                <p style={{ fontFamily:"'Montserrat',sans-serif", fontSize:13, fontWeight:700, color:P.txt, marginBottom:2 }}>{l.title}</p>
+                <p style={{ fontSize:11, color:P.txt3, lineHeight:1.4 }}>{l.detail}</p>
+              </div>
+              <Icon name="ChevronRight" size={13} color={P.txt3} style={{ flexShrink:0 }} />
+            </button>
+          ))}
+        </div>
+
+        {/* Audit log */}
+        <div style={{ ...card }}>
+          <div style={{ padding:'12px 18px', borderBottom:`1px solid ${P.bdr}`, display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+            <SLabel style={{ marginBottom:0 }}>Recent Admin Activity</SLabel>
+            <Icon name="ScrollText" size={14} color={P.tealTxt} />
+          </div>
+          {AUDIT_LOGS.map((log, i) => (
+            <div key={log.id} style={{ display:'flex', alignItems:'flex-start', gap:10, padding:'11px 18px',
+              borderBottom: i < AUDIT_LOGS.length-1 ? `1px solid ${P.bdr}` : 'none' }}>
+              <div style={{ width:30, height:30, borderRadius:4, background:P.surfHi, border:`1px solid ${P.bdr}`,
+                display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
+                <Icon name="Activity" size={12} color={P.txt3} />
+              </div>
+              <div style={{ flex:1, minWidth:0 }}>
+                <p style={{ fontFamily:"'Montserrat',sans-serif", fontSize:12, fontWeight:700, color:P.txt, marginBottom:2 }}>
+                  {log.action.split('_').map(w => w[0].toUpperCase()+w.slice(1)).join(' ')}
+                </p>
+                <p style={{ fontSize:11, color:P.txt3 }}>{log.admin} · {log.target}: {log.subject}</p>
+              </div>
+              <span style={{ fontSize:10, color:P.txt3, flexShrink:0, marginTop:1 }}>{log.time}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Snapshot */}
+      <div style={{ marginBottom:0 }}>
+        <SLabel>Platform Snapshot</SLabel>
+        <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:10 }}>
+          {SNAPSHOT.map(s => (
+            <div key={s.label} style={{ ...card, padding:'16px 18px' }}>
+              <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:10 }}>
+                <SLabel style={{ marginBottom:0 }}>{s.label}</SLabel>
+                <div style={{ width:30, height:30, borderRadius:4,
+                  background: s.c==='teal' ? P.tealSoft : s.c==='blue' ? P.blueSoft : P.goldSoft,
+                  border:`1px solid ${s.c==='teal' ? P.tealBdr : s.c==='blue' ? P.blueBdr : P.goldBdr}`,
+                  display:'flex', alignItems:'center', justifyContent:'center' }}>
+                  <Icon name={s.icon} size={14} color={s.c==='teal' ? P.tealTxt : s.c==='blue' ? P.blue : P.gold} />
+                </div>
+              </div>
+              <p style={{ fontFamily:"'Montserrat',sans-serif", fontSize:'1.5rem', fontWeight:900, color:P.txt, lineHeight:1, marginBottom:6 }}>{s.value}</p>
+              <p style={{ fontSize:11, color:P.txt3, lineHeight:1.5 }}>{s.detail}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Users Page ───────────────────────────────────────────────
+const USERS = [
+  { id:1, user:'NairobiPhoenix', email:'phx@ke.com',   plan:'pro',  rating:2190, matches:106, joined:'Mar 1',  status:'active',  role:'user' },
+  { id:2, user:'MombasaGhost',   email:'gh@ke.com',    plan:'free', rating:2050, matches:100, joined:'Mar 4',  status:'active',  role:'user' },
+  { id:3, user:'KE_Striker99',   email:'ks@ke.com',    plan:'elite',rating:1890, matches:88,  joined:'Feb 12', status:'active',  role:'user' },
+  { id:4, user:'SpamBot_99',     email:'sp@test.com',  plan:'free', rating:0,    matches:0,   joined:'Apr 18', status:'banned',  role:'user' },
+  { id:5, user:'LagosElite',     email:'le@ng.com',    plan:'pro',  rating:1760, matches:87,  joined:'Jan 20', status:'active',  role:'user' },
+  { id:6, user:'AccraFire',      email:'af@gh.com',    plan:'free', rating:1680, matches:85,  joined:'Feb 3',  status:'active',  role:'user' },
+  { id:7, user:'admin_ke',       email:'adm@mechi.com',plan:'elite',rating:0,    matches:0,   joined:'Jan 1',  status:'active',  role:'admin' },
+  { id:8, user:'mod_nairobi',    email:'mod@mechi.com',plan:'elite',rating:0,    matches:0,   joined:'Jan 5',  status:'active',  role:'moderator' },
+];
+
+function UsersPage() {
+  const [search, setSearch] = useState('');
+  const filtered = USERS.filter(u => u.user.toLowerCase().includes(search.toLowerCase()) || u.email.toLowerCase().includes(search.toLowerCase()));
+
+  return (
+    <div style={{ padding:'24px 28px 48px', maxWidth:1100, margin:'0 auto' }}>
+      <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:16 }}>
+        <div><SLabel style={{ marginBottom:4 }}>Player Accounts</SLabel>
+          <h2 style={{ fontFamily:"'Montserrat',sans-serif", fontSize:'1.4rem', fontWeight:900, color:P.txt }}>User Management</h2>
+        </div>
+        <div style={{ display:'flex', gap:8 }}>
+          <Chip c="gray">{STATS.totalUsers.toLocaleString()} total</Chip>
+          <Chip c="red">{STATS.bannedUsers} banned</Chip>
+        </div>
+      </div>
+      <div style={{ marginBottom:12 }}>
+        <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search by username or email…"
+          style={{ width:320, border:`1px solid ${P.bdr}`, borderRadius:5, padding:'8px 12px', fontSize:13, color:P.txt, background:P.surfHi, outline:'none' }} />
+      </div>
+      <div style={{ ...card }}>
+        <div style={{ display:'grid', gridTemplateColumns:'1fr 160px 70px 70px 70px 70px 80px 90px',
+          padding:'9px 18px', borderBottom:`1px solid ${P.bdr}`,
+          fontSize:8, fontFamily:"'Montserrat',sans-serif", fontWeight:800, letterSpacing:'0.14em', textTransform:'uppercase', color:P.txt3 }}>
+          <span>Player</span><span>Email</span><span>Plan</span><span style={{textAlign:'center'}}>Rating</span><span style={{textAlign:'center'}}>Matches</span><span>Joined</span><span>Role</span><span style={{textAlign:'right'}}>Actions</span>
+        </div>
+        {filtered.map((u, i) => (
+          <div key={u.id} style={{ display:'grid', gridTemplateColumns:'1fr 160px 70px 70px 70px 70px 80px 90px',
+            alignItems:'center', padding:'11px 18px', borderBottom: i < filtered.length-1 ? `1px solid ${P.bdr}` : 'none',
+            background: u.status==='banned' ? P.redSoft : 'transparent' }}>
+            <div style={{ display:'flex', alignItems:'center', gap:9 }}>
+              <div style={{ width:30, height:30, borderRadius:4, background:P.tealSoft, border:`1px solid ${P.tealBdr}`,
+                display:'flex', alignItems:'center', justifyContent:'center', fontFamily:"'Montserrat',sans-serif",
+                fontSize:12, fontWeight:900, color:P.tealTxt, flexShrink:0 }}>{u.user[0].toUpperCase()}</div>
+              <p style={{ fontFamily:"'Montserrat',sans-serif", fontSize:12, fontWeight:700, color:P.txt }}>{u.user}</p>
+            </div>
+            <p style={{ fontSize:11, color:P.txt3, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{u.email}</p>
+            <Chip c={u.plan==='elite' ? 'gold' : u.plan==='pro' ? 'teal' : 'gray'}>{u.plan}</Chip>
+            <p style={{ fontFamily:"'Montserrat',sans-serif", fontSize:12, fontWeight:700, color:P.txt2, textAlign:'center' }}>{u.rating||'—'}</p>
+            <p style={{ fontSize:11, color:P.txt3, textAlign:'center' }}>{u.matches}</p>
+            <p style={{ fontSize:11, color:P.txt3 }}>{u.joined}</p>
+            <Chip c={u.role==='admin' ? 'red' : u.role==='moderator' ? 'gold' : 'gray'}>{u.role}</Chip>
+            <div style={{ display:'flex', gap:4, justifyContent:'flex-end' }}>
+              <Btn v="outline" sm>View</Btn>
+              {u.status === 'banned'
+                ? <Btn v="ghost" sm>Unban</Btn>
+                : <Btn v="danger" sm>Ban</Btn>
+              }
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ── Matches Page ─────────────────────────────────────────────
+const MATCHES = [
+  { id:'m_7fa2', game:'FIFA FC 26',  p1:'NairobiPhoenix', p2:'LagosElite',   status:'disputed',   started:'Apr 19 2:14 PM', result:'—' },
+  { id:'m_3bc1', game:'Valorant',    p1:'MombasaGhost',   p2:'KE_Striker99', status:'pending',    started:'Apr 19 3:01 PM', result:'—' },
+  { id:'m_9de4', game:'Tekken 8',    p1:'AccraFire',      p2:'DurbanRaider', status:'pending',    started:'Apr 19 3:14 PM', result:'—' },
+  { id:'m_2aa5', game:'FIFA FC 26',  p1:'KE_Striker99',   p2:'AccraFire',    status:'completed',  started:'Apr 18 7:00 PM', result:'KE_Striker99 won' },
+  { id:'m_6cf7', game:'Valorant',    p1:'NairobiPhoenix', p2:'MombasaGhost', status:'completed',  started:'Apr 17 5:30 PM', result:'MombasaGhost won' },
+  { id:'m_8ba3', game:'Tekken 8',    p1:'DurbanRaider',   p2:'CairoKing',    status:'disputed',   started:'Apr 17 4:00 PM', result:'—' },
+];
+const STATUS_STYLE = {
+  disputed: { bg:P.redSoft, bdr:P.redBdr, txt:P.red },
+  pending:  { bg:P.goldSoft, bdr:P.goldBdr, txt:P.gold },
+  completed:{ bg:P.tealSoft, bdr:P.tealBdr, txt:P.tealTxt },
+};
+
+function MatchesPage() {
+  const [filter, setFilter] = useState('all');
+  const shown = filter==='all' ? MATCHES : MATCHES.filter(m => m.status===filter);
+  return (
+    <div style={{ padding:'24px 28px 48px', maxWidth:1100, margin:'0 auto' }}>
+      <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:16 }}>
+        <div><SLabel style={{ marginBottom:4 }}>Match Review</SLabel>
+          <h2 style={{ fontFamily:"'Montserrat',sans-serif", fontSize:'1.4rem', fontWeight:900, color:P.txt }}>Match Oversight</h2>
+        </div>
+        <div style={{ display:'flex', gap:6 }}>
+          {['all','disputed','pending','completed'].map(f => (
+            <button key={f} onClick={() => setFilter(f)}
+              style={{ borderRadius:5, border:`1px solid ${filter===f ? P.tealBdr : P.bdr}`,
+                background: filter===f ? P.tealSoft : P.surf, color: filter===f ? P.tealTxt : P.txt2,
+                fontFamily:"'Montserrat',sans-serif", fontSize:11, fontWeight:700, padding:'5px 12px', cursor:'pointer', transition:'all 140ms', textTransform:'capitalize' }}>
+              {f}
+            </button>
+          ))}
+        </div>
+      </div>
+      <div style={{ ...card }}>
+        <div style={{ display:'grid', gridTemplateColumns:'80px 120px 1fr 1fr 90px 140px 100px',
+          padding:'9px 18px', borderBottom:`1px solid ${P.bdr}`,
+          fontSize:8, fontFamily:"'Montserrat',sans-serif", fontWeight:800, letterSpacing:'0.14em', textTransform:'uppercase', color:P.txt3 }}>
+          <span>Match ID</span><span>Game</span><span>Player 1</span><span>Player 2</span><span>Status</span><span>Started</span><span style={{textAlign:'right'}}>Action</span>
+        </div>
+        {shown.map((m, i) => {
+          const s = STATUS_STYLE[m.status];
+          return (
+            <div key={m.id} style={{ display:'grid', gridTemplateColumns:'80px 120px 1fr 1fr 90px 140px 100px',
+              alignItems:'center', padding:'12px 18px', borderBottom: i < shown.length-1 ? `1px solid ${P.bdr}` : 'none' }}>
+              <p style={{ fontFamily:'monospace', fontSize:11, color:P.txt3 }}>{m.id}</p>
+              <p style={{ fontSize:12, color:P.txt2 }}>{m.game}</p>
+              <p style={{ fontFamily:"'Montserrat',sans-serif", fontSize:12, fontWeight:700, color:P.txt }}>{m.p1}</p>
+              <p style={{ fontFamily:"'Montserrat',sans-serif", fontSize:12, fontWeight:700, color:P.txt }}>{m.p2}</p>
+              <span style={{ display:'inline-flex', fontFamily:"'Montserrat',sans-serif", fontSize:9, fontWeight:800,
+                letterSpacing:'0.1em', textTransform:'uppercase', padding:'2px 8px', borderRadius:4, border:`1px solid ${s.bdr}`,
+                background:s.bg, color:s.txt }}>{m.status}</span>
+              <p style={{ fontSize:11, color:P.txt3 }}>{m.started}</p>
+              <div style={{ display:'flex', gap:4, justifyContent:'flex-end' }}>
+                <Btn v="outline" sm>View</Btn>
+                {m.status==='disputed' && <Btn v="danger" sm>Resolve</Btn>}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ── Queue Page ───────────────────────────────────────────────
+const QUEUE_ENTRIES = [
+  { id:'q_a8c1', user:'ProGamer_KE',   game:'FIFA FC 26', platform:'PSN',    wait:'14m', status:'waiting',  stale:true },
+  { id:'q_b2f4', user:'DurbanRaider',  game:'FIFA FC 26', platform:'PSN',    wait:'8m',  status:'waiting',  stale:false },
+  { id:'q_c9e7', user:'CairoKing',     game:'Valorant',   platform:'PC',     wait:'5m',  status:'waiting',  stale:false },
+  { id:'q_d1a3', user:'KampalaFresh',  game:'Tekken 8',   platform:'Xbox',   wait:'21m', status:'waiting',  stale:true },
+  { id:'q_e7b5', user:'LagosRanked',   game:'FIFA FC 26', platform:'Xbox',   wait:'3m',  status:'waiting',  stale:false },
+  { id:'q_f3c9', user:'MombasaBeast',  game:'Valorant',   platform:'PC',     wait:'1m',  status:'matched',  stale:false },
+];
+
+function QueuePage() {
+  return (
+    <div style={{ padding:'24px 28px 48px', maxWidth:1060, margin:'0 auto' }}>
+      <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:16 }}>
+        <div><SLabel style={{ marginBottom:4 }}>Queue Control</SLabel>
+          <h2 style={{ fontFamily:"'Montserrat',sans-serif", fontSize:'1.4rem', fontWeight:900, color:P.txt }}>Matchmaking Queue</h2>
+        </div>
+        <div style={{ display:'flex', gap:8 }}>
+          <Chip c="teal">41 waiting</Chip>
+          <Chip c="red">3 stale</Chip>
+          <Btn v="danger" sm><Icon name="Trash2" size={12} color={P.red} /> Expire Stale</Btn>
+        </div>
+      </div>
+      <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:10, marginBottom:16 }}>
+        {[
+          ['Waiting',         '41',  P.tealTxt,  'teal'],
+          ['Stale Entries',   '3',   P.red,       'red'],
+          ['Longest Wait',    '21m', P.gold,      'gold'],
+          ['Matched Today',   '284', P.tealTxt,   'teal'],
+        ].map(([l,v,col,c]) => (
+          <div key={l} style={{ ...card, padding:'14px 16px' }}>
+            <SLabel style={{ marginBottom:6 }}>{l}</SLabel>
+            <p style={{ fontFamily:"'Montserrat',sans-serif", fontSize:'1.6rem', fontWeight:900, color:col, lineHeight:1 }}>{v}</p>
+          </div>
+        ))}
+      </div>
+      <div style={{ ...card }}>
+        <div style={{ display:'grid', gridTemplateColumns:'90px 1fr 110px 80px 60px 80px 90px',
+          padding:'9px 18px', borderBottom:`1px solid ${P.bdr}`,
+          fontSize:8, fontFamily:"'Montserrat',sans-serif", fontWeight:800, letterSpacing:'0.14em', textTransform:'uppercase', color:P.txt3 }}>
+          <span>Entry ID</span><span>Player</span><span>Game</span><span>Platform</span><span>Wait</span><span>Status</span><span style={{textAlign:'right'}}>Action</span>
+        </div>
+        {QUEUE_ENTRIES.map((q, i) => (
+          <div key={q.id} style={{ display:'grid', gridTemplateColumns:'90px 1fr 110px 80px 60px 80px 90px',
+            alignItems:'center', padding:'11px 18px', borderBottom: i < QUEUE_ENTRIES.length-1 ? `1px solid ${P.bdr}` : 'none',
+            background: q.stale ? 'rgba(239,68,68,0.04)' : 'transparent' }}>
+            <p style={{ fontFamily:'monospace', fontSize:11, color:P.txt3 }}>{q.id}</p>
+            <p style={{ fontFamily:"'Montserrat',sans-serif", fontSize:12, fontWeight:700, color:P.txt }}>{q.user}</p>
+            <p style={{ fontSize:11, color:P.txt2 }}>{q.game}</p>
+            <Chip c="gray">{q.platform}</Chip>
+            <p style={{ fontFamily:"'Montserrat',sans-serif", fontSize:12, fontWeight:700, color: q.stale ? P.red : P.txt2 }}>{q.wait}</p>
+            <Chip c={q.status==='matched' ? 'teal' : q.stale ? 'red' : 'gray'}>{q.status}</Chip>
+            <div style={{ textAlign:'right' }}>
+              {q.stale && <Btn v="danger" sm>Expire</Btn>}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ── Generic section page ─────────────────────────────────────
+function GenericPage({ title, icon, description, stats }) {
+  return (
+    <div style={{ padding:'24px 28px 48px', maxWidth:1060, margin:'0 auto' }}>
+      <SLabel style={{ marginBottom:4 }}>Admin</SLabel>
+      <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:20 }}>
+        <h2 style={{ fontFamily:"'Montserrat',sans-serif", fontSize:'1.4rem', fontWeight:900, color:P.txt }}>{title}</h2>
+      </div>
+      {description && <p style={{ fontSize:13, color:P.txt2, marginBottom:20, lineHeight:1.65, maxWidth:600 }}>{description}</p>}
+      {stats && (
+        <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(200px,1fr))', gap:10, marginBottom:20 }}>
+          {stats.map(([l,v,c]) => (
+            <div key={l} style={{ ...card, padding:'14px 18px' }}>
+              <SLabel style={{ marginBottom:6 }}>{l}</SLabel>
+              <p style={{ fontFamily:"'Montserrat',sans-serif", fontSize:'1.6rem', fontWeight:900,
+                color:c==='teal'?P.tealTxt:c==='red'?P.red:c==='gold'?P.gold:P.txt, lineHeight:1 }}>{v}</p>
+            </div>
+          ))}
+        </div>
+      )}
+      <div style={{ ...card, padding:'60px 24px', textAlign:'center' }}>
+        <Icon name={icon} size={32} color={P.txt3} style={{ margin:'0 auto 14px' }} />
+        <p style={{ fontFamily:"'Montserrat',sans-serif", fontSize:14, fontWeight:700, color:P.txt, marginBottom:6 }}>{title}</p>
+        <p style={{ fontSize:12, color:P.txt3 }}>Full tooling is available in the production app at /admin/{title.toLowerCase().replace(' ','/')}.</p>
+      </div>
+    </div>
+  );
+}
+
+// ── App ──────────────────────────────────────────────────────
+function App() {
+  const [page, setPage] = useState(() => {
+    try { return localStorage.getItem('mechi_admin_page') || 'overview'; } catch { return 'overview'; }
+  });
+
+  useEffect(() => {
+    try { localStorage.setItem('mechi_admin_page', page); } catch {}
+  }, [page]);
+
+  useEffect(() => { if (window.lucide) window.lucide.createIcons(); });
+
+  const pages = {
+    overview:    <OverviewPage setPage={setPage} />,
+    users:       <UsersPage />,
+    matches:     <MatchesPage />,
+    queue:       <QueuePage />,
+    rewards:     <GenericPage title="Reward Protection" icon="Shield"       description="Review suspicious referral and redemption events before points leakage grows."
+                   stats={[['Open Reviews','4','red'],['Resolved Today','12','teal'],['Total Reviews','340','teal']]} />,
+    lobbies:     <GenericPage title="Lobby Cleanup"     icon="DoorOpen"     description="Manage open, full, live, and overdue lobby rooms across all games."
+                   stats={[['Open','18','teal'],['Full','5','gold'],['Live','9','teal'],['Overdue','2','red']]} />,
+    tournaments: <GenericPage title="Tournament Ops"    icon="Trophy"       description="Manage active brackets, prize payouts, and tournament lifecycle."
+                   stats={[['Active','3','teal'],['Pending Payouts','2','red'],['Completed','35','teal'],['Total Prize','KSh 620K','gold']]} />,
+    support:     <GenericPage title="Support Inbox"     icon="Headset"      description="Review WhatsApp escalations and human handoffs." />,
+    whatsapp:    <GenericPage title="WhatsApp Tools"    icon="MessageCircle" description="Admin-only WhatsApp broadcast and escalation tools." />,
+    instagram:   <GenericPage title="Instagram"         icon="AtSign"       description="Admin-only Instagram integration management." />,
+    logs:        <GenericPage title="Audit Log"         icon="ScrollText"   description="Full admin action history visible to admins only." />,
+  };
+
+  return (
+    <div style={{ display:'flex', minHeight:'100vh' }}>
+      <AdminSidebar page={page} setPage={setPage} />
+      <main style={{ marginLeft:220, flex:1, minHeight:'100vh', overflowX:'hidden' }}>
+        {pages[page] || pages.overview}
+      </main>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>

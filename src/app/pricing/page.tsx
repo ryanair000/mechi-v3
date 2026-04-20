@@ -171,10 +171,10 @@ function PricingPageContent() {
   });
 
   return (
-    <div className="page-base">
+    <div className="page-base marketing-prototype-shell">
       <header className="sticky top-2 z-50 sm:top-4">
         <div className="landing-shell">
-          <div className="nav-panel rounded-[1.2rem] border p-2">
+          <div className="nav-panel rounded-[var(--radius-nav-shell)] border p-2">
             <div className="grid grid-cols-[auto_1fr_auto] items-center gap-3">
               <Link href="/" className="rounded-lg px-1 py-1" aria-label="Back to home">
                 <BrandLogo size="sm" variant="symbol" />
@@ -212,7 +212,7 @@ function PricingPageContent() {
       </header>
 
       <main className="landing-shell pb-16 pt-5 sm:pb-20 sm:pt-12">
-        <section className="relative overflow-hidden rounded-[1.25rem] border border-[var(--border-color)] bg-[var(--surface)] px-4 py-6 shadow-[var(--shadow-soft)] sm:rounded-[1.8rem] sm:px-8 sm:py-10 sm:shadow-[var(--shadow-strong)]">
+        <section className="relative overflow-hidden rounded-[var(--radius-card)] border border-[var(--border-color)] bg-[var(--surface)] px-4 py-6 shadow-[var(--shadow-soft)] sm:px-8 sm:py-10 sm:shadow-[var(--shadow-strong)]">
           <div className="pointer-events-none absolute inset-0 hidden bg-[radial-gradient(circle_at_16%_12%,rgba(50,224,196,0.12),transparent_30%),radial-gradient(circle_at_88%_24%,rgba(255,107,107,0.12),transparent_28%)] sm:block" />
           <div className="relative">
             <div className="brand-kicker">

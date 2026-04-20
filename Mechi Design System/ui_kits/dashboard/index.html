@@ -1,0 +1,1379 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mechi — Dashboard UI Kit</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800;900&family=Open+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<style>
+:root {
+  --teal:#32e0c4; --coral:#ff6b6b; --night:#0b1121;
+  --bg:#0b1121; --bg-alt:#09101b;
+  --surf:#111b2e; --surf-hi:#152033; --surf-lo:rgba(14,22,38,0.84);
+  --txt:#f8fbfd; --txt2:#b9c4d2; --txt3:#7b879a;
+  --bdr:rgba(226,232,240,0.09); --bdr2:rgba(226,232,240,0.16);
+  --teal-text:#8ef2e4; --teal-soft:rgba(50,224,196,0.10); --teal-bdr:rgba(50,224,196,0.22);
+  --coral-soft:rgba(255,107,107,0.14); --coral-bdr:rgba(255,107,107,0.22);
+  --r:6px; /* base radius — keep it tight */
+  --font-d:'Montserrat',sans-serif; --font-b:'Open Sans',sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+html,body{height:100%;background:var(--bg);color:var(--txt);font-family:var(--font-b);overflow-x:hidden;}
+body{
+  background:
+    radial-gradient(ellipse at 0% 0%,rgba(50,224,196,0.08),transparent 30%),
+    radial-gradient(ellipse at 100% 0%,rgba(255,107,107,0.07),transparent 30%),
+    var(--bg);
+}
+body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:0;
+  background-image:linear-gradient(rgba(130,149,176,0.025) 1px,transparent 1px),linear-gradient(90deg,rgba(130,149,176,0.025) 1px,transparent 1px);
+  background-size:64px 64px;mask-image:radial-gradient(ellipse at top,rgba(0,0,0,0.18),transparent 70%);opacity:1;}
+#root{position:relative;z-index:1;height:100%;}
+button{font-family:var(--font-d);cursor:pointer;transition:all 140ms ease;}
+input{font-family:var(--font-b);}
+::-webkit-scrollbar{width:5px;} ::-webkit-scrollbar-thumb{background:rgba(95,109,130,0.25);border-radius:3px;}
+/* lucide icon reset */
+[data-lucide]{display:block;}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState, useEffect, useRef } = React;
+
+// ── Icon ──────────────────────────────────────────────────────
+function Icon({ name, size=16, sw=1.75, color, style }) {
+  return (
+    <span style={{ display:'inline-flex', alignItems:'center', justifyContent:'center', flexShrink:0, color:color||'currentColor', ...style }}>
+      <i data-lucide={name} style={{ width:size, height:size, display:'block' }} />
+    </span>
+  );
+}
+
+// ── Palette ───────────────────────────────────────────────────
+const P = {
+  teal:'#32e0c4', coral:'#ff6b6b', night:'#0b1121',
+  txt:'#f8fbfd', txt2:'#b9c4d2', txt3:'#7b879a',
+  surf:'#111b2e', surfHi:'#152033',
+  bdr:'rgba(226,232,240,0.09)', bdr2:'rgba(226,232,240,0.16)',
+  tealTxt:'#8ef2e4', tealSoft:'rgba(50,224,196,0.10)', tealBdr:'rgba(50,224,196,0.22)',
+  coralSoft:'rgba(255,107,107,0.14)', coralBdr:'rgba(255,107,107,0.22)',
+};
+
+// ── Card style (used inline) ──────────────────────────────────
+const card = {
+  background: P.surf,
+  border: `1px solid ${P.bdr}`,
+  borderRadius: 8,
+};
+
+// ── Chip ──────────────────────────────────────────────────────
+function Chip({ children, c='teal' }) {
+  const map = {
+    teal: { bg:P.tealSoft, bdr:P.tealBdr, txt:P.tealTxt },
+    coral:{ bg:P.coralSoft, bdr:P.coralBdr, txt:'#ffaaaa' },
+    gray: { bg:'rgba(95,109,130,0.12)', bdr:P.bdr, txt:P.txt3 },
+    blue: { bg:'rgba(96,165,250,0.12)', bdr:'rgba(96,165,250,0.2)', txt:'#93c5fd' },
+  };
+  const s = map[c]||map.teal;
+  return <span style={{ display:'inline-flex', alignItems:'center', gap:4, border:`1px solid ${s.bdr}`,
+    background:s.bg, color:s.txt, fontFamily:P.font_d, fontSize:9, fontWeight:700,
+    letterSpacing:'0.1em', textTransform:'uppercase', padding:'2px 8px', borderRadius:4 }}>{children}</span>;
+}
+
+// ── Button ────────────────────────────────────────────────────
+function Btn({ children, v='primary', onClick, style, sm }) {
+  const h = sm ? 32 : 40;
+  const px = sm ? 12 : 16;
+  const fs = sm ? 11 : 13;
+  const base = { display:'inline-flex', alignItems:'center', justifyContent:'center', gap:6,
+    fontFamily:P.font_d || "'Montserrat',sans-serif", fontWeight:700, border:'1px solid transparent',
+    borderRadius:6, minHeight:h, padding:`0 ${px}px`, fontSize:fs, transition:'all 140ms ease',
+    whiteSpace:'nowrap', cursor:'pointer' };
+  const vs = {
+    primary: { ...base, background:P.coral, color:P.night, borderColor:'transparent', boxShadow:'0 8px 20px rgba(255,107,107,0.22)' },
+    teal:    { ...base, background:P.teal,  color:P.night, borderColor:'transparent', boxShadow:'0 8px 20px rgba(50,224,196,0.18)' },
+    ghost:   { ...base, background:P.tealSoft, color:P.tealTxt, borderColor:P.tealBdr },
+    outline: { ...base, background:P.surf, color:P.txt2, borderColor:P.bdr },
+    danger:  { ...base, background:P.coralSoft, color:'#ff8383', borderColor:P.coralBdr },
+  };
+  return <button style={{ ...(vs[v]||vs.primary), ...style }} onClick={onClick}>{children}</button>;
+}
+
+// ── Avatar ────────────────────────────────────────────────────
+function Av({ name='?', size=36 }) {
+  return <div style={{ width:size, height:size, borderRadius:4, background:P.tealSoft,
+    border:`1px solid ${P.tealBdr}`, display:'flex', alignItems:'center', justifyContent:'center',
+    fontFamily:"'Montserrat',sans-serif", fontWeight:900, fontSize:size*0.38, color:P.tealTxt, flexShrink:0 }}>
+    {name[0]?.toUpperCase()}
+  </div>;
+}
+
+// ── Section label ─────────────────────────────────────────────
+function SLabel({ children, style }) {
+  return <p style={{ fontFamily:"'Montserrat',sans-serif", fontSize:10, fontWeight:800,
+    letterSpacing:'0.14em', textTransform:'uppercase', color:P.tealTxt, marginBottom:10, ...style }}>{children}</p>;
+}
+
+// ── Divider ───────────────────────────────────────────────────
+function Div() { return <div style={{ borderTop:`1px solid ${P.bdr}`, margin:'0' }} />; }
+
+// ── Sidebar ───────────────────────────────────────────────────
+const NAV = [
+  { section:null, items:[
+    { id:'dashboard',   label:'Dashboard',   icon:'LayoutDashboard' },
+    { id:'tutorials',   label:'Tutorials',   icon:'CirclePlay' },
+    { id:'leaderboard', label:'Leaderboard', icon:'Trophy' },
+  ]},
+  { section:'Compete', items:[
+    { id:'tournaments', label:'Tournaments', icon:'Swords' },
+    { id:'lobbies',     label:'Lobbies',     icon:'Users' },
+    { id:'challenges',  label:'Challenges',  icon:'MessageCircle' },
+  ]},
+  { section:'Games', items:[
+    { id:'games',   label:'Games',  icon:'Gamepad2' },
+    { id:'suggest', label:'Suggest',icon:'Lightbulb' },
+  ]},
+];
+
+function Sidebar({ page, setPage }) {
+  return (
+    <aside style={{ position:'fixed', top:0, left:0, bottom:0, width:224,
+      display:'flex', flexDirection:'column', background:P.surf,
+      borderRight:`1px solid ${P.bdr}`, zIndex:40 }}>
+
+      {/* Logo */}
+      <div style={{ padding:'14px 16px', borderBottom:`1px solid ${P.bdr}`, display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+        <div style={{ display:'flex', alignItems:'center', gap:10 }}>
+          <div style={{ width:32, height:32, borderRadius:4, overflow:'hidden', background:P.night, flexShrink:0 }}>
+            <img src="../assets/mechi-logo-shield.png" style={{ width:'100%', height:'100%', objectFit:'contain' }} alt="" />
+          </div>
+          <span style={{ fontFamily:"'Montserrat',sans-serif", fontWeight:900, fontSize:15, letterSpacing:'0.2em', textTransform:'uppercase' }}>Mechi</span>
+        </div>
+        <Icon name="Sun" size={14} color={P.txt3} />
+      </div>
+
+      {/* Nav */}
+      <nav style={{ flex:1, overflowY:'auto', padding:'8px 8px' }}>
+        {NAV.map((grp,gi) => (
+          <div key={gi} style={{ marginBottom:4 }}>
+            {grp.section && <p style={{ padding:'10px 10px 4px', fontSize:9, fontFamily:"'Montserrat',sans-serif",
+              fontWeight:800, letterSpacing:'0.18em', textTransform:'uppercase', color:P.txt3 }}>{grp.section}</p>}
+            {grp.items.map(item => {
+              const a = page === item.id;
+              return <button key={item.id} onClick={() => setPage(item.id)}
+                style={{ width:'100%', display:'flex', alignItems:'center', gap:10, padding:'9px 10px',
+                  borderRadius:6, border:`1px solid ${a ? P.tealBdr : 'transparent'}`,
+                  background: a ? P.tealSoft : 'transparent',
+                  color: a ? P.txt : P.txt2,
+                  fontFamily:"'Montserrat',sans-serif", fontSize:12, fontWeight:a ? 700 : 600,
+                  textAlign:'left', marginBottom:2, cursor:'pointer', transition:'all 140ms ease' }}>
+                <Icon name={item.icon} size={15} color={a ? P.tealTxt : P.txt3} />
+                {item.label}
+              </button>;
+            })}
+          </div>
+        ))}
+      </nav>
+
+      {/* User */}
+      <div style={{ borderTop:`1px solid ${P.bdr}`, padding:'10px 10px' }}>
+        <div style={{ display:'flex', alignItems:'center', gap:4, marginBottom:8 }}>
+          {[['Bell','notifications'],['User','profile'],['Settings','settings']].map(([ic,pg]) => (
+            <button key={pg} onClick={() => setPage(pg)}
+              style={{ flex:1, height:30, display:'flex', alignItems:'center', justifyContent:'center',
+                borderRadius:5, border:`1px solid ${page===pg ? P.tealBdr : P.bdr}`,
+                background: page===pg ? P.tealSoft : 'transparent', color: page===pg ? P.tealTxt : P.txt3, cursor:'pointer' }}>
+              <Icon name={ic} size={13} />
+            </button>
+          ))}
+        </div>
+        <div style={{ display:'flex', alignItems:'center', gap:10, padding:'8px 10px',
+          border:`1px solid ${P.bdr}`, borderRadius:6, background:P.surfHi }}>
+          <Av name="P" size={30} />
+          <div style={{ flex:1, minWidth:0 }}>
+            <p style={{ fontSize:12, fontWeight:700, fontFamily:"'Montserrat',sans-serif", color:P.txt, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>ProGamer_KE</p>
+            <p style={{ fontSize:10, color:P.txt3 }}>Free Plan</p>
+          </div>
+          <Icon name="LogOut" size={12} color={P.txt3} />
+        </div>
+      </div>
+    </aside>
+  );
+}
+
+// ── GAMES data ────────────────────────────────────────────────
+const GAMES = [
+  { key:'fc26',     label:'FIFA FC 26',  c1:'#0d1520', c2:'#0a2540', rank:'Gold',   rColor:'#d4a323', wins:24, losses:11, wr:69, queue:4, mode:'1v1' },
+  { key:'valorant', label:'Valorant',    c1:'#1a0808', c2:'#280a0a', rank:'Plat',   rColor:'#60a5fa', wins:18, losses:14, wr:56, queue:2, mode:'1v1' },
+  { key:'tekken8',  label:'Tekken 8',    c1:'#080a18', c2:'#0c1230', rank:'Silver', rColor:'#94a0b2', wins:9,  losses:8,  wr:53, queue:1, mode:'1v1' },
+  { key:'pubgm',    label:'PUBG Mobile', c1:'#0a1218', c2:'#0e1e28', queue:0, mode:'lobby' },
+  { key:'freefire', label:'Free Fire',   c1:'#180e00', c2:'#2a1800', queue:3, mode:'lobby' },
+];
+
+// ── Game Card ─────────────────────────────────────────────────
+function GameCard({ g, setPage }) {
+  const [hov, setHov] = useState(false);
+  const isLobby = g.mode === 'lobby';
+  return (
+    <div onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
+      style={{ ...card, overflow:'hidden', transition:'all 260ms ease',
+        transform: hov ? 'translateY(-3px)' : 'none',
+        boxShadow: hov ? '0 16px 40px rgba(0,0,0,0.4)' : 'none' }}>
+      {/* Cover */}
+      <div style={{ height:120, position:'relative', overflow:'hidden',
+        background:`linear-gradient(135deg,${g.c1},${g.c2})` }}>
+        <img src={`../game-artwork/${g.key}-header.svg`} alt={g.label}
+          style={{ position:'absolute', inset:0, width:'100%', height:'100%', objectFit:'cover',
+            transform: hov ? 'scale(1.04)' : 'scale(1)', transition:'transform 500ms ease', opacity:0.65 }}
+          onError={e => { e.target.style.display='none'; }} />
+        <div style={{ position:'absolute', inset:0, background:'linear-gradient(to top,rgba(0,0,0,0.88) 0%,rgba(0,0,0,0.2) 60%,transparent 100%)' }} />
+        {g.queue > 0 && (
+          <div style={{ position:'absolute', top:8, left:8, display:'flex', alignItems:'center', gap:4,
+            background:'rgba(0,0,0,0.7)', backdropFilter:'blur(6px)', border:`1px solid ${P.tealBdr}`,
+            borderRadius:4, padding:'3px 8px', fontSize:9, fontFamily:"'Montserrat',sans-serif", fontWeight:700, color:P.tealTxt }}>
+            <span style={{ width:5, height:5, borderRadius:'50%', background:P.teal, display:'inline-block' }} />
+            {g.queue} in queue
+          </div>
+        )}
+        <span style={{ position:'absolute', top:8, right:8,
+          background: isLobby ? 'rgba(96,165,250,0.8)' : 'rgba(34,197,94,0.8)',
+          color:'white', fontFamily:"'Montserrat',sans-serif", fontSize:8, fontWeight:800,
+          letterSpacing:'0.1em', padding:'2px 7px', borderRadius:3 }}>{isLobby ? 'LOBBY' : '1V1'}</span>
+        <p style={{ position:'absolute', bottom:8, left:10, fontFamily:"'Montserrat',sans-serif",
+          fontSize:'1.1rem', fontWeight:900, color:'white', textShadow:'0 4px 16px rgba(0,0,0,0.6)', lineHeight:1.1 }}>{g.label}</p>
+      </div>
+      {/* Body */}
+      <div style={{ padding:12, display:'flex', flexDirection:'column', gap:10 }}>
+        {!isLobby && g.rank && (
+          <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:4 }}>
+            {[
+              { v:g.rank, l:'Rank', col:g.rColor },
+              { v:g.wins, l:'W', col:'#34d399' },
+              { v:g.losses, l:'L', col:'#f87171' },
+              { v:`${g.wr}%`, l:'WR', col:'#60a5fa' },
+            ].map(s => (
+              <div key={s.l} style={{ border:`1px solid ${P.bdr}`, borderRadius:5, background:P.surfHi, padding:'5px 3px', textAlign:'center' }}>
+                <div style={{ fontFamily:"'Montserrat',sans-serif", fontSize:11, fontWeight:800, color:s.col }}>{s.v}</div>
+                <div style={{ fontSize:8, fontWeight:600, letterSpacing:'0.1em', textTransform:'uppercase', color:P.txt3, marginTop:2 }}>{s.l}</div>
+              </div>
+            ))}
+          </div>
+        )}
+        <button onClick={() => setPage(isLobby ? 'lobbies' : 'dashboard')}
+          style={{ width:'100%', minHeight:38, border: isLobby ? `1px solid ${P.tealBdr}` : 'none',
+            borderRadius:6, background: isLobby ? P.tealSoft : P.teal,
+            color: isLobby ? P.tealTxt : P.night,
+            fontFamily:"'Montserrat',sans-serif", fontSize:12, fontWeight:700,
+            boxShadow: isLobby ? 'none' : '0 8px 20px rgba(50,224,196,0.18)',
+            display:'flex', alignItems:'center', justifyContent:'center', gap:6 }}>
+          <Icon name={isLobby ? 'Users' : 'Swords'} size={12} color={isLobby ? P.tealTxt : P.night} />
+          {isLobby ? 'View Lobbies' : 'Find Match'}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ── Online Player Row ─────────────────────────────────────────
+function PlayerRow({ username, level, game, platform, waitMins }) {
+  return (
+    <div style={{ display:'flex', alignItems:'center', gap:12, padding:'11px 14px',
+      ...card, transition:'border-color 140ms', cursor:'pointer' }}>
+      <div style={{ width:38, height:38, borderRadius:4, border:`1px solid ${P.tealBdr}`,
+        background:P.tealSoft, display:'flex', alignItems:'center', justifyContent:'center',
+        fontFamily:"'Montserrat',sans-serif", fontSize:15, fontWeight:900, color:P.tealTxt, flexShrink:0 }}>
+        {username[0].toUpperCase()}
+      </div>
+      <div style={{ flex:1, minWidth:0 }}>
+        <div style={{ display:'flex', alignItems:'center', gap:6, marginBottom:2 }}>
+          <p style={{ fontSize:12, fontWeight:700, color:P.txt, fontFamily:"'Montserrat',sans-serif" }}>{username}</p>
+          <Chip c="teal">Lv. {level}</Chip>
+        </div>
+        <p style={{ fontSize:11, color:P.txt2 }}>{game}{platform ? ` / ${platform}` : ''}</p>
+        <p style={{ fontSize:10, color:P.txt3, marginTop:1 }}>{waitMins > 0 ? `${waitMins}m in queue` : 'Just joined'}</p>
+      </div>
+      <Icon name="ChevronRight" size={13} color={P.txt3} />
+    </div>
+  );
+}
+
+// ── Dashboard Page ────────────────────────────────────────────
+function DashboardPage({ setPage }) {
+  const ranked = GAMES.filter(g => g.mode === '1v1');
+  const lobby  = GAMES.filter(g => g.mode === 'lobby');
+  const players = [
+    { username:'NairobiPhoenix', level:18, game:'FIFA FC 26', platform:'PSN', waitMins:3 },
+    { username:'MombasaGhost',   level:14, game:'FIFA FC 26', platform:'PSN', waitMins:1 },
+    { username:'AccraFire',      level:22, game:'Valorant',   platform:'PC',  waitMins:7 },
+  ];
+
+  return (
+    <div style={{ padding:'24px 28px 48px', maxWidth:1060, margin:'0 auto' }}>
+
+      {/* ── Hero ── */}
+      <div style={{ display:'grid', gridTemplateColumns:'1fr 240px', gap:16, marginBottom:28 }}>
+
+        {/* Left — flat, no nesting */}
+        <div style={{ ...card, padding:'22px 24px' }}>
+          <div style={{ display:'flex', gap:6, marginBottom:14 }}>
+            <Chip c="teal">Dashboard</Chip>
+            <Chip c="coral">Gold II</Chip>
+          </div>
+          <h1 style={{ fontFamily:"'Montserrat',sans-serif", fontSize:'1.75rem', fontWeight:900,
+            color:P.txt, lineHeight:1.1, marginBottom:8 }}>
+            Command your climb, ProGamer_KE.
+          </h1>
+          <p style={{ fontSize:13, color:P.txt2, lineHeight:1.6, maxWidth:480, marginBottom:16 }}>
+            Check your live queue energy, level track, and next match from one cleaner home base.
+          </p>
+          <div style={{ display:'flex', gap:8, marginBottom:20 }}>
+            <Btn v="outline" sm><Icon name="CirclePlay" size={12} /> Quick intro</Btn>
+            <Btn v="outline" sm><Icon name="BookOpen" size={12} /> Full tutorial</Btn>
+          </div>
+          {/* XP bar — inline, no wrapper card */}
+          <div style={{ borderTop:`1px solid ${P.bdr}`, paddingTop:14 }}>
+            <div style={{ display:'flex', justifyContent:'space-between', fontSize:9,
+              fontFamily:"'Montserrat',sans-serif", fontWeight:700, letterSpacing:'0.12em',
+              textTransform:'uppercase', color:P.txt3, marginBottom:8 }}>
+              <span>XP Progress</span><span>620 / 1000</span>
+            </div>
+            <div style={{ height:6, borderRadius:2, background:'rgba(255,255,255,0.06)', overflow:'hidden' }}>
+              <div style={{ height:'100%', width:'62%', borderRadius:2, background:'linear-gradient(90deg,#32e0c4,#ff6b6b)' }} />
+            </div>
+            <div style={{ display:'flex', gap:6, marginTop:10 }}>
+              <Chip c="teal">Lv. 12</Chip>
+              <Chip c="coral">350 MP</Chip>
+              <span style={{ fontSize:11, color:P.txt3 }}>380 XP until next level</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Right — two minimal stat panels */}
+        <div style={{ display:'flex', flexDirection:'column', gap:12 }}>
+          <div style={{ ...card, padding:'16px 18px', flex:1 }}>
+            <p style={{ fontSize:9, fontFamily:"'Montserrat',sans-serif", fontWeight:700, letterSpacing:'0.14em',
+              textTransform:'uppercase', color:P.txt3, marginBottom:8 }}>Queue Heat</p>
+            <p style={{ fontFamily:"'Montserrat',sans-serif", fontSize:'2rem', fontWeight:900, color:P.teal, lineHeight:1 }}>Hot</p>
+            <p style={{ fontSize:11, color:P.txt3, marginTop:8, lineHeight:1.5 }}>Queue traffic moving fast across your ranked lane.</p>
+          </div>
+          <div style={{ ...card, padding:'16px 18px', flex:1 }}>
+            <p style={{ fontSize:9, fontFamily:"'Montserrat',sans-serif", fontWeight:700, letterSpacing:'0.14em',
+              textTransform:'uppercase', color:P.txt3, marginBottom:8 }}>Win Streak</p>
+            <p style={{ fontFamily:"'Montserrat',sans-serif", fontSize:'2rem', fontWeight:900, color:P.coral, lineHeight:1 }}>7</p>
+            <p style={{ fontSize:11, color:P.txt3, marginTop:8, lineHeight:1.5 }}>Matches won in a row right now.</p>
+          </div>
+        </div>
+      </div>
+
+      {/* ── Online Players ── */}
+      <section style={{ marginBottom:28 }}>
+        <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:12 }}>
+          <SLabel style={{ marginBottom:0 }}>Players Online Now</SLabel>
+          <Chip c="teal"><span style={{ width:5, height:5, borderRadius:'50%', background:P.teal, display:'inline-block', marginRight:4 }} />{players.length} live</Chip>
+        </div>
+        <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(280px,1fr))', gap:8 }}>
+          {players.map(p => <PlayerRow key={p.username} {...p} />)}
+        </div>
+      </section>
+
+      {/* ── Ranked Games ── */}
+      <section style={{ marginBottom:28 }}>
+        <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:12 }}>
+          <SLabel style={{ marginBottom:0 }}>Ranked Games</SLabel>
+          <button onClick={() => setPage('leaderboard')} style={{ background:'none', border:'none',
+            color:P.tealTxt, fontSize:11, fontFamily:"'Montserrat',sans-serif", fontWeight:700, cursor:'pointer' }}>
+            View leaderboard →
+          </button>
+        </div>
+        <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(210px,1fr))', gap:12 }}>
+          {ranked.map(g => <GameCard key={g.key} g={g} setPage={setPage} />)}
+        </div>
+      </section>
+
+      {/* ── Lobby Games ── */}
+      <section style={{ marginBottom:28 }}>
+        <SLabel>Lobby Games</SLabel>
+        <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(210px,1fr))', gap:12 }}>
+          {lobby.map(g => <GameCard key={g.key} g={g} setPage={setPage} />)}
+        </div>
+      </section>
+
+      {/* ── Rank Overview ── */}
+      <section>
+        <SLabel>Rank Overview</SLabel>
+        <div style={{ ...card }}>
+          {ranked.map((g, i) => (
+            <div key={g.key} style={{ display:'flex', alignItems:'center', justifyContent:'space-between',
+              padding:'13px 18px', borderBottom: i < ranked.length - 1 ? `1px solid ${P.bdr}` : 'none' }}>
+              <div>
+                <p style={{ fontSize:13, fontWeight:700, color:P.txt, fontFamily:"'Montserrat',sans-serif" }}>{g.label}</p>
+                <p style={{ fontSize:11, color:P.txt3, marginTop:2 }}>{g.wins}W / {g.losses}L</p>
+              </div>
+              <div style={{ textAlign:'right' }}>
+                <p style={{ fontFamily:"'Montserrat',sans-serif", fontSize:14, fontWeight:800, color:g.rColor }}>{g.rank}</p>
+                <p style={{ fontSize:10, color:P.txt3 }}>{1000 + g.wins*15 - g.losses*10} pts</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+    </div>
+  );
+}
+
+// ── Leaderboard ───────────────────────────────────────────────
+const LB = [
+  { rank:1, user:'NairobiPhoenix', lv:31, rating:2190, wins:84, losses:22 },
+  { rank:2, user:'MombasaGhost',   lv:28, rating:2050, wins:71, losses:29 },
+  { rank:3, user:'KE_Striker99',   lv:22, rating:1890, wins:58, losses:30 },
+  { rank:4, user:'LagosElite',     lv:19, rating:1760, wins:52, losses:35 },
+  { rank:5, user:'AccraFire',      lv:17, rating:1680, wins:47, losses:38 },
+  { rank:6, user:'ProGamer_KE',    lv:12, rating:1450, wins:24, losses:11, me:true },
+  { rank:7, user:'DurbanRaider',   lv:15, rating:1380, wins:41, losses:44 },
+  { rank:8, user:'CairoKing',      lv:11, rating:1290, wins:33, losses:40 },
+];
+
+function LeaderboardPage() {
+  const [game, setGame] = useState('fc26');
+  const tabs = [['fc26','FIFA FC 26'],['valorant','Valorant'],['tekken8','Tekken 8']];
+  return (
+    <div style={{ padding:'24px 28px 48px', maxWidth:860, margin:'0 auto' }}>
+      <div style={{ marginBottom:18 }}>
+        <SLabel>Leaderboard</SLabel>
+        <h2 style={{ fontFamily:"'Montserrat',sans-serif", fontSize:'1.5rem', fontWeight:900, color:P.txt, marginBottom:14 }}>Top Players This Season</h2>
+        <div style={{ display:'flex', gap:6 }}>
+          {tabs.map(([k,l]) => (
+            <button key={k} onClick={() => setGame(k)}
+              style={{ borderRadius:5, border:`1px solid ${game===k ? P.tealBdr : P.bdr}`,
+                background: game===k ? P.tealSoft : P.surf, color: game===k ? P.tealTxt : P.txt2,
+                fontFamily:"'Montserrat',sans-serif", fontSize:11, fontWeight:700, padding:'6px 14px', cursor:'pointer', transition:'all 140ms' }}>
+              {l}
+            </button>
+          ))}
+        </div>
+      </div>
+      <div style={{ ...card }}>
+        {/* Header row */}
+        <div style={{ display:'grid', gridTemplateColumns:'40px 1fr 60px 80px 80px 80px',
+          padding:'10px 16px', borderBottom:`1px solid ${P.bdr}`,
+          fontSize:9, fontFamily:"'Montserrat',sans-serif", fontWeight:800, letterSpacing:'0.12em',
+          textTransform:'uppercase', color:P.txt3 }}>
+          <span>#</span><span>Player</span><span style={{textAlign:'center'}}>Level</span>
+          <span style={{textAlign:'right'}}>Rating</span>
+          <span style={{textAlign:'right'}}>W/L</span>
+          <span style={{textAlign:'right'}}>Win Rate</span>
+        </div>
+        {LB.map((p, i) => (
+          <div key={p.rank} style={{ display:'grid', gridTemplateColumns:'40px 1fr 60px 80px 80px 80px',
+            alignItems:'center', padding:'12px 16px',
+            borderBottom: i < LB.length - 1 ? `1px solid ${P.bdr}` : 'none',
+            background: p.me ? P.tealSoft : 'transparent' }}>
+            <span style={{ fontFamily:"'Montserrat',sans-serif", fontSize:13, fontWeight:900,
+              color: p.rank <= 3 ? P.teal : P.txt3 }}>{p.rank}</span>
+            <div style={{ display:'flex', alignItems:'center', gap:10, minWidth:0 }}>
+              <Av name={p.user} size={32} />
+              <div>
+                <div style={{ display:'flex', alignItems:'center', gap:6 }}>
+                  <p style={{ fontSize:12, fontWeight:700, color:P.txt, fontFamily:"'Montserrat',sans-serif" }}>{p.user}</p>
+                  {p.me && <Chip c="teal">You</Chip>}
+                </div>
+              </div>
+            </div>
+            <span style={{ textAlign:'center', fontSize:11, color:P.txt3 }}>{p.lv}</span>
+            <span style={{ textAlign:'right', fontFamily:"'Montserrat',sans-serif", fontSize:14, fontWeight:900, color:P.txt }}>{p.rating}</span>
+            <span style={{ textAlign:'right', fontSize:11, color:P.txt2 }}>{p.wins}/{p.losses}</span>
+            <span style={{ textAlign:'right', fontFamily:"'Montserrat',sans-serif", fontSize:12, fontWeight:700,
+              color: Math.round(p.wins/(p.wins+p.losses)*100) >= 60 ? P.tealTxt : P.txt2 }}>
+              {Math.round(p.wins/(p.wins+p.losses)*100)}%
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ── Tournaments ───────────────────────────────────────────────
+const TOURNEYS = [
+  { id:1, name:'East Africa FIFA Cup',   game:'FIFA FC 26',  prize:'KES 50,000', slots:16, max:32, date:'Apr 26', status:'open' },
+  { id:2, name:'Nairobi Valorant Clash', game:'Valorant',    prize:'KES 30,000', slots:8,  max:16, date:'Apr 28', status:'open' },
+  { id:3, name:'Weekend Warriors',       game:'Tekken 8',    prize:'KES 15,000', slots:32, max:32, date:'Apr 21', status:'full' },
+  { id:4, name:'Continental PUBG Pro',   game:'PUBG Mobile', prize:'KES 75,000', slots:14, max:64, date:'May 3',  status:'open' },
+];
+
+function TournamentsPage() {
+  return (
+    <div style={{ padding:'24px 28px 48px', maxWidth:900, margin:'0 auto' }}>
+      <div style={{ display:'flex', alignItems:'flex-end', justifyContent:'space-between', marginBottom:18 }}>
+        <div>
+          <SLabel style={{ marginBottom:4 }}>Tournaments</SLabel>
+          <h2 style={{ fontFamily:"'Montserrat',sans-serif", fontSize:'1.5rem', fontWeight:900, color:P.txt }}>Upcoming Competitions</h2>
+        </div>
+        <Btn v="primary" sm><Icon name="Plus" size={12} color={P.night} /> Host Tournament</Btn>
+      </div>
+
+      <div style={{ ...card }}>
+        {/* Header */}
+        <div style={{ display:'grid', gridTemplateColumns:'1fr 100px 100px 90px 80px',
+          padding:'10px 18px', borderBottom:`1px solid ${P.bdr}`,
+          fontSize:9, fontFamily:"'Montserrat',sans-serif", fontWeight:800, letterSpacing:'0.12em', textTransform:'uppercase', color:P.txt3 }}>
+          <span>Tournament</span><span>Slots</span><span>Starts</span><span style={{textAlign:'right'}}>Prize</span><span style={{textAlign:'right'}}>Action</span>
+        </div>
+        {TOURNEYS.map((t, i) => (
+          <div key={t.id} style={{ display:'grid', gridTemplateColumns:'1fr 100px 100px 90px 80px',
+            alignItems:'center', padding:'14px 18px',
+            borderBottom: i < TOURNEYS.length - 1 ? `1px solid ${P.bdr}` : 'none' }}>
+            <div>
+              <p style={{ fontFamily:"'Montserrat',sans-serif", fontSize:13, fontWeight:700, color:P.txt, marginBottom:4 }}>{t.name}</p>
+              <Chip c="gray">{t.game}</Chip>
+            </div>
+            <div>
+              <div style={{ height:4, borderRadius:2, background:P.bdr, overflow:'hidden', width:64, marginBottom:4 }}>
+                <div style={{ height:'100%', width:`${t.slots/t.max*100}%`, background: t.status==='full' ? P.coral : P.teal, borderRadius:2 }} />
+              </div>
+              <span style={{ fontSize:10, color:P.txt3 }}>{t.slots}/{t.max}</span>
+            </div>
+            <span style={{ fontSize:12, color:P.txt2 }}>{t.date}</span>
+            <span style={{ fontFamily:"'Montserrat',sans-serif", fontSize:13, fontWeight:800, color:P.teal, textAlign:'right' }}>{t.prize}</span>
+            <div style={{ textAlign:'right' }}>
+              <Btn v={t.status==='full' ? 'outline' : 'teal'} sm>{t.status==='full' ? 'Watch' : 'Join'}</Btn>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ── Profile ───────────────────────────────────────────────────
+function ProfilePage() {
+  const [tab, setTab] = useState('overview');
+  return (
+    <div style={{ padding:'24px 28px 48px', maxWidth:860, margin:'0 auto' }}>
+      {/* Header */}
+      <div style={{ ...card, padding:'22px 24px', marginBottom:12 }}>
+        <div style={{ display:'flex', alignItems:'center', gap:16, flexWrap:'wrap' }}>
+          <div style={{ width:64, height:64, borderRadius:6, border:`1px solid ${P.tealBdr}`,
+            background:P.tealSoft, display:'flex', alignItems:'center', justifyContent:'center',
+            fontFamily:"'Montserrat',sans-serif", fontSize:26, fontWeight:900, color:P.tealTxt, flexShrink:0 }}>P</div>
+          <div style={{ flex:1, minWidth:0 }}>
+            <div style={{ display:'flex', alignItems:'center', gap:8, flexWrap:'wrap', marginBottom:5 }}>
+              <h2 style={{ fontFamily:"'Montserrat',sans-serif", fontSize:'1.35rem', fontWeight:900, color:P.txt }}>ProGamer_KE</h2>
+              <Chip c="teal">Gold II</Chip>
+              <Chip c="gray">Free Plan</Chip>
+            </div>
+            <p style={{ fontSize:12, color:P.txt3 }}>East Africa · mechi.club/s/ProGamer_KE</p>
+          </div>
+          <Btn v="outline" sm><Icon name="Edit2" size={12} /> Edit Profile</Btn>
+        </div>
+        <Div style={{ margin:'18px 0' }} />
+        <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:0 }}>
+          {[['1,450','Rating'],['24','Wins'],['11','Losses'],['12','Level']].map(([v,l], i) => (
+            <div key={l} style={{ textAlign:'center', padding:'10px 8px',
+              borderRight: i < 3 ? `1px solid ${P.bdr}` : 'none' }}>
+              <p style={{ fontFamily:"'Montserrat',sans-serif", fontSize:'1.3rem', fontWeight:900, color:P.txt }}>{v}</p>
+              <p style={{ fontSize:9, fontWeight:700, letterSpacing:'0.12em', textTransform:'uppercase', color:P.txt3, marginTop:3 }}>{l}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Tabs */}
+      <div style={{ display:'flex', gap:4, marginBottom:14, borderBottom:`1px solid ${P.bdr}`, paddingBottom:0 }}>
+        {['overview','settings','history'].map(t => (
+          <button key={t} onClick={() => setTab(t)}
+            style={{ padding:'9px 16px', background:'none', border:'none',
+              borderBottom: tab===t ? `2px solid ${P.teal}` : '2px solid transparent',
+              color: tab===t ? P.txt : P.txt2, fontFamily:"'Montserrat',sans-serif",
+              fontSize:12, fontWeight:700, textTransform:'capitalize', cursor:'pointer',
+              marginBottom:-1, transition:'all 140ms' }}>{t}</button>
+        ))}
+      </div>
+
+      {tab === 'overview' && (
+        <div style={{ ...card }}>
+          {GAMES.filter(g=>g.mode==='1v1').map((g,i,arr) => (
+            <div key={g.key} style={{ display:'flex', alignItems:'center', justifyContent:'space-between',
+              padding:'13px 18px', borderBottom: i<arr.length-1 ? `1px solid ${P.bdr}` : 'none' }}>
+              <div>
+                <p style={{ fontFamily:"'Montserrat',sans-serif", fontSize:13, fontWeight:700, color:P.txt }}>{g.label}</p>
+                <p style={{ fontSize:11, color:P.txt3, marginTop:2 }}>{g.wins}W / {g.losses}L · {g.rank}</p>
+              </div>
+              <p style={{ fontFamily:"'Montserrat',sans-serif", fontSize:16, fontWeight:900, color:g.rColor }}>
+                {1000 + g.wins*15 - g.losses*10}
+              </p>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {tab === 'settings' && (
+        <div style={{ ...card, padding:'20px 24px' }}>
+          {['Username','WhatsApp Number','Region'].map(f => (
+            <div key={f} style={{ marginBottom:14 }}>
+              <p style={{ fontFamily:"'Montserrat',sans-serif", fontSize:9, fontWeight:700,
+                letterSpacing:'0.12em', textTransform:'uppercase', color:P.txt3, marginBottom:6 }}>{f}</p>
+              <input style={{ width:'100%', border:`1px solid ${P.bdr}`, borderRadius:6,
+                padding:'9px 12px', fontSize:13, color:P.txt, background:P.surfHi, outline:'none' }}
+                placeholder={f} />
+            </div>
+          ))}
+          <Btn v="primary"><Icon name="Save" size={12} color={P.night} /> Save Changes</Btn>
+        </div>
+      )}
+
+      {tab === 'history' && (
+        <div style={{ ...card }}>
+          {[
+            { game:'FIFA FC 26', result:'WIN',  opp:'NairobiPhoenix', pts:'+18', date:'Apr 18' },
+            { game:'Valorant',   result:'LOSS', opp:'MombasaGhost',   pts:'-14', date:'Apr 17' },
+            { game:'FIFA FC 26', result:'WIN',  opp:'AccraFire',      pts:'+16', date:'Apr 16' },
+            { game:'Tekken 8',   result:'WIN',  opp:'DurbanRaider',   pts:'+12', date:'Apr 15' },
+          ].map((m,i,arr) => (
+            <div key={i} style={{ display:'flex', alignItems:'center', gap:12, padding:'12px 16px',
+              borderBottom: i<arr.length-1 ? `1px solid ${P.bdr}` : 'none' }}>
+              <div style={{ width:32, height:32, borderRadius:4,
+                background: m.result==='WIN' ? P.tealSoft : P.coralSoft,
+                border:`1px solid ${m.result==='WIN' ? P.tealBdr : P.coralBdr}`,
+                display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
+                <Icon name={m.result==='WIN' ? 'Trophy' : 'X'} size={13}
+                  color={m.result==='WIN' ? P.tealTxt : '#ff8383'} />
+              </div>
+              <div style={{ flex:1, minWidth:0 }}>
+                <p style={{ fontSize:12, fontWeight:700, color:P.txt, fontFamily:"'Montserrat',sans-serif" }}>{m.game} vs {m.opp}</p>
+                <p style={{ fontSize:10, color:P.txt3, marginTop:2 }}>{m.date}</p>
+              </div>
+              <span style={{ fontFamily:"'Montserrat',sans-serif", fontSize:12, fontWeight:800,
+                color: m.result==='WIN' ? P.tealTxt : '#ff8383' }}>{m.pts}</span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Challenges ────────────────────────────────────────────────
+function ChallengesPage() {
+  const challenges = [
+    { from:'NairobiPhoenix', game:'FIFA FC 26', stake:'100 MP', sent:'2h ago',   status:'pending' },
+    { from:'MombasaGhost',   game:'Valorant',   stake:'50 MP',  sent:'5h ago',   status:'pending' },
+    { from:'AccraFire',      game:'FIFA FC 26', stake:'200 MP', sent:'Yesterday', status:'accepted' },
+  ];
+  return (
+    <div style={{ padding:'24px 28px 48px', maxWidth:800, margin:'0 auto' }}>
+      <SLabel>Challenges</SLabel>
+      <h2 style={{ fontFamily:"'Montserrat',sans-serif", fontSize:'1.5rem', fontWeight:900, color:P.txt, marginBottom:18 }}>Incoming Challenges</h2>
+      <div style={{ ...card }}>
+        {challenges.map((c, i) => (
+          <div key={i} style={{ display:'flex', alignItems:'center', gap:14, padding:'14px 18px',
+            borderBottom: i < challenges.length-1 ? `1px solid ${P.bdr}` : 'none',
+            background: c.status==='accepted' ? P.tealSoft : 'transparent' }}>
+            <Av name={c.from} size={40} />
+            <div style={{ flex:1, minWidth:0 }}>
+              <p style={{ fontFamily:"'Montserrat',sans-serif", fontSize:13, fontWeight:700, color:P.txt, marginBottom:5 }}>
+                {c.from} challenged you
+              </p>
+              <div style={{ display:'flex', gap:5, flexWrap:'wrap' }}>
+                <Chip c="gray">{c.game}</Chip>
+                <Chip c="coral">{c.stake}</Chip>
+                <span style={{ fontSize:10, color:P.txt3 }}>{c.sent}</span>
+              </div>
+            </div>
+            {c.status === 'pending'
+              ? <div style={{ display:'flex', gap:6, flexShrink:0 }}>
+                  <Btn v="teal" sm>Accept</Btn>
+                  <Btn v="danger" sm>Decline</Btn>
+                </div>
+              : <Chip c="teal">Accepted</Chip>
+            }
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ── Tutorials Page ────────────────────────────────────────────
+const QUICK_ROUTE = [
+  { step:'01', title:'Lock your setup',       body:'Pick your game, choose the platform, and save the right player ID.' },
+  { step:'02', title:'Choose how you play',   body:'Queue for ranked, send a challenge, join a lobby, or enter a tournament.' },
+  { step:'03', title:'Watch for the handoff', body:'When Mechi finds action, open the match fast and get into the room.' },
+  { step:'04', title:'Finish the result',     body:'A clean report keeps your rank, streak, XP, and progress moving.' },
+];
+const PLAY_MODES = [
+  { title:'I want ranked action',       body:'Use Queue for the fastest official 1v1 on your saved setup.',          cta:'Open Queue',       page:'dashboard', icon:'Trophy',         chip:'Fastest route', cc:'coral' },
+  { title:'I want one specific person', body:'Use Challenges when you know who you want and need a clean flow.',     cta:'Open Challenges',  page:'challenges', icon:'MessageCircle',  chip:'Direct match',  cc:'teal' },
+  { title:'I want a room vibe',         body:'Use Lobbies for open rooms, casual sessions, or squad spaces.',        cta:'Open Lobbies',     page:'lobbies',    icon:'Users',          chip:'Room-based',    cc:'teal' },
+  { title:'I want bracket energy',      body:'Use Tournaments for fixed rounds, slots, and a competitive event.',    cta:'Open Tournaments', page:'tournaments',icon:'Swords',         chip:'Structured',    cc:'coral' },
+];
+const CHECKLIST = [
+  'Pick your main game before doing anything else.',
+  'Choose the correct platform for every saved game.',
+  'Double-check the player ID opponents will use.',
+  'Turn on notifications so match alerts do not miss you.',
+  'Finish your first result report fully after the match ends.',
+];
+const MISTAKES = [
+  'Saving the wrong platform for a game.',
+  'Using an old or incomplete player ID.',
+  'Ignoring notifications after joining queue.',
+  'Leaving a match without finishing the report flow.',
+];
+
+function TutorialsPage({ setPage }) {
+  return (
+    <div style={{ padding:'24px 28px 48px', maxWidth:1060, margin:'0 auto' }}>
+      {/* Hero */}
+      <div style={{ ...card, padding:'22px 24px', marginBottom:16 }}>
+        <div style={{ display:'grid', gridTemplateColumns:'1fr 320px', gap:20 }}>
+          <div>
+            <Chip c="teal" style={{ marginBottom:12 }}>New Player Guide</Chip>
+            <h1 style={{ fontFamily:"'Montserrat',sans-serif", fontSize:'1.75rem', fontWeight:900, color:P.txt, lineHeight:1.08, marginBottom:10 }}>
+              Learn Mechi fast.
+            </h1>
+            <p style={{ fontSize:13, color:P.txt2, lineHeight:1.65, maxWidth:480, marginBottom:16 }}>
+              What to tap first, where to go next, and how to avoid the mistakes that trip up new players.
+            </p>
+            <div style={{ display:'flex', gap:8 }}>
+              <Btn v="primary" onClick={() => setPage('games')}><Icon name="Gamepad2" size={12} color={P.night} /> Start with Games</Btn>
+              <Btn v="outline" onClick={() => setPage('dashboard')}><Icon name="LayoutDashboard" size={12} /> Dashboard</Btn>
+            </div>
+          </div>
+          {/* 4-step map */}
+          <div style={{ background:P.surfHi, border:`1px solid ${P.tealBdr}`, borderRadius:6, padding:'16px 18px' }}>
+            <p style={{ fontFamily:"'Montserrat',sans-serif", fontSize:9, fontWeight:800, letterSpacing:'0.16em', textTransform:'uppercase', color:P.tealTxt, marginBottom:10 }}>2-Minute Map</p>
+            <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
+              {QUICK_ROUTE.map(r => (
+                <div key={r.step} style={{ display:'grid', gridTemplateColumns:'28px 1fr', gap:10, alignItems:'start' }}>
+                  <div style={{ background:P.tealSoft, border:`1px solid ${P.tealBdr}`, borderRadius:4, padding:'3px 0', textAlign:'center',
+                    fontFamily:"'Montserrat',sans-serif", fontSize:9, fontWeight:900, color:P.tealTxt }}>{r.step}</div>
+                  <div>
+                    <p style={{ fontFamily:"'Montserrat',sans-serif", fontSize:12, fontWeight:800, color:P.txt }}>{r.title}</p>
+                    <p style={{ fontSize:11, color:P.txt3, marginTop:2, lineHeight:1.5 }}>{r.body}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Play modes */}
+      <div style={{ marginBottom:16 }}>
+        <SLabel>Pick Your Lane</SLabel>
+        <div style={{ ...card }}>
+          {PLAY_MODES.map((m, i, arr) => (
+            <div key={m.title} style={{ display:'grid', gridTemplateColumns:'1fr auto', alignItems:'center', gap:16,
+              padding:'14px 18px', borderBottom: i < arr.length-1 ? `1px solid ${P.bdr}` : 'none' }}>
+              <div style={{ display:'flex', alignItems:'center', gap:14 }}>
+                <div style={{ width:36, height:36, borderRadius:5, background: m.cc==='coral' ? P.coralSoft : P.tealSoft,
+                  border:`1px solid ${m.cc==='coral' ? P.coralBdr : P.tealBdr}`, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
+                  <Icon name={m.icon} size={16} color={m.cc==='coral' ? '#ff8383' : P.tealTxt} />
+                </div>
+                <div>
+                  <div style={{ display:'flex', alignItems:'center', gap:7, marginBottom:3 }}>
+                    <p style={{ fontFamily:"'Montserrat',sans-serif", fontSize:13, fontWeight:700, color:P.txt }}>{m.title}</p>
+                    <Chip c={m.cc}>{m.chip}</Chip>
+                  </div>
+                  <p style={{ fontSize:12, color:P.txt2 }}>{m.body}</p>
+                </div>
+              </div>
+              <Btn v="outline" sm onClick={() => setPage(m.page)}>{m.cta}</Btn>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Checklist + Mistakes */}
+      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12 }}>
+        <div style={{ ...card }}>
+          <div style={{ padding:'14px 18px', borderBottom:`1px solid ${P.bdr}` }}>
+            <SLabel style={{ marginBottom:0 }}>First Day Checklist</SLabel>
+          </div>
+          {CHECKLIST.map((item, i) => (
+            <div key={i} style={{ display:'flex', alignItems:'flex-start', gap:10, padding:'11px 18px',
+              borderBottom: i < CHECKLIST.length-1 ? `1px solid ${P.bdr}` : 'none' }}>
+              <Icon name="CheckCircle2" size={14} color={P.tealTxt} style={{ marginTop:1, flexShrink:0 }} />
+              <p style={{ fontSize:12, color:P.txt2, lineHeight:1.55 }}>{item}</p>
+            </div>
+          ))}
+        </div>
+        <div style={{ ...card }}>
+          <div style={{ padding:'14px 18px', borderBottom:`1px solid ${P.bdr}` }}>
+            <SLabel style={{ marginBottom:0, color:'#ff8383' }}>Common Mistakes</SLabel>
+          </div>
+          {MISTAKES.map((item, i) => (
+            <div key={i} style={{ display:'flex', alignItems:'flex-start', gap:10, padding:'11px 18px',
+              borderBottom: i < MISTAKES.length-1 ? `1px solid ${P.bdr}` : 'none',
+              background:'rgba(255,107,107,0.04)' }}>
+              <Icon name="AlertCircle" size={14} color='#ff8383' style={{ marginTop:1, flexShrink:0 }} />
+              <p style={{ fontSize:12, color:P.txt2, lineHeight:1.55 }}>{item}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Lobbies Page ──────────────────────────────────────────────
+const LOBBY_DATA = [
+  { id:1, title:'Ranked warmup room',    game:'FIFA FC 26',  host:'NairobiPhoenix', members:4,  max:10, mode:'Seasons',   map:'Anfield',    vis:'public',  status:'open',        sched:'Apr 20, 8:00 PM' },
+  { id:2, title:'Elite squad session',   game:'PUBG Mobile', host:'MombasaGhost',   members:12, max:16, mode:'Squad TPP', map:'Erangel',    vis:'public',  status:'open',        sched:'Apr 20, 9:30 PM' },
+  { id:3, title:'Private scrim — KE',    game:'Valorant',    host:'AccraFire',      members:8,  max:10, mode:'Unrated',   map:'Ascent',     vis:'private', status:'open',        sched:'Apr 21, 7:00 PM' },
+  { id:4, title:'Free Fire squad grind', game:'Free Fire',   host:'LagosElite',     members:16, max:16, mode:'Classic',   map:'Bermuda',    vis:'public',  status:'in_progress', sched:'Apr 19, 6:00 PM' },
+  { id:5, title:'FIFA casual room',      game:'FIFA FC 26',  host:'DurbanRaider',   members:3,  max:8,  mode:'Friendlies',map:'Old Trafford',vis:'public', status:'open',        sched:'Apr 22, 5:00 PM' },
+];
+
+function LobbiesPage({ setPage }) {
+  const [filter, setFilter] = useState('all');
+  const [showCreate, setShowCreate] = useState(false);
+  const [newTitle, setNewTitle] = useState('');
+  const [newGame, setNewGame]   = useState('fc26');
+  const [newVis, setNewVis]     = useState('public');
+
+  const games = ['all','FIFA FC 26','PUBG Mobile','Valorant','Free Fire'];
+  const filtered = filter === 'all' ? LOBBY_DATA : LOBBY_DATA.filter(l => l.game === filter);
+
+  return (
+    <div style={{ padding:'24px 28px 48px', maxWidth:1060, margin:'0 auto' }}>
+      {/* Header */}
+      <div style={{ ...card, padding:'20px 24px', marginBottom:16 }}>
+        <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', gap:16, flexWrap:'wrap' }}>
+          <div>
+            <Chip c="teal" style={{ marginBottom:10 }}>Community Rooms</Chip>
+            <h1 style={{ fontFamily:"'Montserrat',sans-serif", fontSize:'1.6rem', fontWeight:900, color:P.txt, marginBottom:6 }}>Lobbies</h1>
+            <p style={{ fontSize:13, color:P.txt2, maxWidth:500, lineHeight:1.6 }}>Create organized rooms for team titles, join open scrims, or keep private squad plans off the public feed.</p>
+          </div>
+          <Btn v="primary" onClick={() => setShowCreate(true)}><Icon name="Plus" size={12} color={P.night} /> Create Lobby</Btn>
+        </div>
+      </div>
+
+      {/* WhatsApp banner */}
+      <div style={{ ...card, borderColor:P.tealBdr, background:'rgba(50,224,196,0.05)', padding:'14px 18px', marginBottom:16,
+        display:'flex', alignItems:'center', justifyContent:'space-between', gap:16, flexWrap:'wrap' }}>
+        <div>
+          <p style={{ fontFamily:"'Montserrat',sans-serif", fontSize:13, fontWeight:700, color:P.txt, marginBottom:3 }}>Want faster lobby pings?</p>
+          <p style={{ fontSize:12, color:P.txt2 }}>Join the WhatsApp group for open-room drops and squad calls outside the app.</p>
+        </div>
+        <Btn v="ghost"><Icon name="MessageCircle" size={13} color={P.tealTxt} /> Join WhatsApp Group</Btn>
+      </div>
+
+      {/* Filters */}
+      <div style={{ display:'flex', gap:6, marginBottom:14, flexWrap:'wrap' }}>
+        {games.map(g => (
+          <button key={g} onClick={() => setFilter(g)}
+            style={{ borderRadius:5, border:`1px solid ${filter===g ? P.tealBdr : P.bdr}`,
+              background: filter===g ? P.tealSoft : P.surf, color: filter===g ? P.tealTxt : P.txt2,
+              fontFamily:"'Montserrat',sans-serif", fontSize:11, fontWeight:700, padding:'6px 12px', cursor:'pointer', transition:'all 140ms' }}>
+            {g === 'all' ? 'All Games' : g}
+          </button>
+        ))}
+      </div>
+
+      {/* Lobby list */}
+      <div style={{ ...card }}>
+        <div style={{ display:'grid', gridTemplateColumns:'1fr 100px 90px 90px 100px 80px',
+          padding:'9px 18px', borderBottom:`1px solid ${P.bdr}`,
+          fontSize:8, fontFamily:"'Montserrat',sans-serif", fontWeight:800, letterSpacing:'0.14em', textTransform:'uppercase', color:P.txt3 }}>
+          <span>Room</span><span>Mode / Map</span><span>Players</span><span>Scheduled</span><span style={{textAlign:'center'}}>Visibility</span><span style={{textAlign:'right'}}>Action</span>
+        </div>
+        {filtered.map((l, i) => (
+          <div key={l.id} style={{ display:'grid', gridTemplateColumns:'1fr 100px 90px 90px 100px 80px',
+            alignItems:'center', padding:'13px 18px', borderBottom: i < filtered.length-1 ? `1px solid ${P.bdr}` : 'none',
+            gap:8 }}>
+            <div>
+              <div style={{ display:'flex', alignItems:'center', gap:7, marginBottom:3 }}>
+                <p style={{ fontFamily:"'Montserrat',sans-serif", fontSize:13, fontWeight:700, color:P.txt }}>{l.title}</p>
+                <span style={{ fontFamily:"'Montserrat',sans-serif", fontSize:9, fontWeight:700, padding:'2px 7px', borderRadius:3,
+                  background: l.status==='in_progress' ? 'rgba(96,165,250,0.15)' : 'rgba(50,224,196,0.12)',
+                  color: l.status==='in_progress' ? '#93c5fd' : P.tealTxt,
+                  border:`1px solid ${l.status==='in_progress' ? 'rgba(96,165,250,0.2)' : P.tealBdr}` }}>
+                  {l.status === 'in_progress' ? 'Live' : 'Open'}
+                </span>
+              </div>
+              <p style={{ fontSize:11, color:P.txt3 }}>{l.game} · Host: {l.host}</p>
+            </div>
+            <div>
+              <p style={{ fontSize:11, color:P.txt2, fontWeight:600 }}>{l.mode}</p>
+              <p style={{ fontSize:10, color:P.txt3 }}>{l.map}</p>
+            </div>
+            <div>
+              <div style={{ height:4, borderRadius:2, background:P.bdr, width:60, overflow:'hidden', marginBottom:4 }}>
+                <div style={{ height:'100%', width:`${l.members/l.max*100}%`, background: l.members===l.max ? P.coral : P.teal, borderRadius:2 }} />
+              </div>
+              <span style={{ fontSize:10, color:P.txt3 }}>{l.members}/{l.max}</span>
+            </div>
+            <p style={{ fontSize:11, color:P.txt2 }}>{l.sched}</p>
+            <div style={{ textAlign:'center' }}>
+              <Chip c={l.vis === 'public' ? 'teal' : 'gray'}>{l.vis === 'public' ? 'Public' : 'Private'}</Chip>
+            </div>
+            <div style={{ textAlign:'right' }}>
+              <Btn v={l.members===l.max ? 'outline' : 'teal'} sm>{l.members===l.max ? 'View' : 'Join'}</Btn>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Create modal */}
+      {showCreate && (
+        <div onClick={() => setShowCreate(false)} style={{ position:'fixed', inset:0, zIndex:50, background:'rgba(0,0,0,0.6)', display:'flex', alignItems:'center', justifyContent:'center', padding:20 }}>
+          <div onClick={e => e.stopPropagation()} style={{ ...card, padding:'22px 24px', width:'100%', maxWidth:420 }}>
+            <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:16 }}>
+              <p style={{ fontFamily:"'Montserrat',sans-serif", fontSize:15, fontWeight:900, color:P.txt }}>Create Lobby</p>
+              <button onClick={() => setShowCreate(false)} style={{ background:'none', border:'none', color:P.txt3, cursor:'pointer' }}>
+                <Icon name="X" size={16} />
+              </button>
+            </div>
+            {[['Lobby Title','text',newTitle,setNewTitle,'e.g. Ranked warmup room']].map(([lbl,type,val,set,ph]) => (
+              <div key={lbl} style={{ marginBottom:12 }}>
+                <p style={{ fontFamily:"'Montserrat',sans-serif", fontSize:9, fontWeight:800, letterSpacing:'0.12em', textTransform:'uppercase', color:P.txt3, marginBottom:5 }}>{lbl}</p>
+                <input type={type} value={val} onChange={e => set(e.target.value)} placeholder={ph}
+                  style={{ width:'100%', border:`1px solid ${P.bdr}`, borderRadius:5, padding:'9px 12px', fontSize:13, color:P.txt, background:P.surfHi, outline:'none' }} />
+              </div>
+            ))}
+            <div style={{ marginBottom:12 }}>
+              <p style={{ fontFamily:"'Montserrat',sans-serif", fontSize:9, fontWeight:800, letterSpacing:'0.12em', textTransform:'uppercase', color:P.txt3, marginBottom:6 }}>Visibility</p>
+              <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:6 }}>
+                {['public','private'].map(v => (
+                  <button key={v} onClick={() => setNewVis(v)}
+                    style={{ borderRadius:5, border:`1px solid ${newVis===v ? P.tealBdr : P.bdr}`,
+                      background: newVis===v ? P.tealSoft : P.surfHi, color: newVis===v ? P.tealTxt : P.txt2,
+                      fontFamily:"'Montserrat',sans-serif", fontSize:12, fontWeight:700, padding:'8px', cursor:'pointer',
+                      display:'flex', alignItems:'center', justifyContent:'center', gap:6 }}>
+                    <Icon name={v==='public' ? 'Globe' : 'Lock'} size={13} />
+                    {v === 'public' ? 'Public' : 'Private'}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div style={{ display:'flex', gap:8, marginTop:16 }}>
+              <Btn v="ghost" style={{ flex:1 }} onClick={() => setShowCreate(false)}>Cancel</Btn>
+              <Btn v="primary" style={{ flex:1 }} onClick={() => setShowCreate(false)}>Create Room</Btn>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Games Page ────────────────────────────────────────────────
+const ALL_GAMES = [
+  { key:'fc26',             label:'FIFA FC 26',       platforms:['psn','xbox','pc'], mode:'1v1' },
+  { key:'valorant',         label:'Valorant',          platforms:['pc'],             mode:'1v1' },
+  { key:'tekken8',          label:'Tekken 8',          platforms:['psn','xbox','pc'], mode:'1v1' },
+  { key:'cs2',              label:'CS2',               platforms:['pc'],             mode:'1v1' },
+  { key:'sf6',              label:'Street Fighter 6',  platforms:['psn','xbox','pc'], mode:'1v1' },
+  { key:'mk11',             label:'Mortal Kombat 11',  platforms:['psn','xbox','pc'], mode:'1v1' },
+  { key:'nba2k26',          label:'NBA 2K26',          platforms:['psn','xbox'],     mode:'1v1' },
+  { key:'pubgm',            label:'PUBG Mobile',       platforms:['mobile'],         mode:'lobby' },
+  { key:'freefire',         label:'Free Fire',         platforms:['mobile'],         mode:'lobby' },
+  { key:'codm',             label:'Call of Duty Mobile',platforms:['mobile'],        mode:'lobby' },
+  { key:'efootball_mobile', label:'eFootball Mobile',  platforms:['mobile'],         mode:'1v1' },
+  { key:'ludo',             label:'Ludo',              platforms:['mobile'],         mode:'lobby' },
+];
+const PLATFORM_LABELS = { psn:'PlayStation', xbox:'Xbox', pc:'PC', mobile:'Mobile' };
+
+function GamesPage() {
+  const [selected, setSelected] = useState(['fc26','valorant']);
+  const [ids, setIds] = useState({ fc26:'KE_Striker99', valorant:'' });
+  const [saved, setSaved] = useState(false);
+
+  const toggle = (key) => {
+    if (selected.includes(key)) {
+      setSelected(s => s.filter(x => x !== key));
+    } else if (selected.length < 3) {
+      setSelected(s => [...s, key]);
+    }
+  };
+
+  return (
+    <div style={{ padding:'24px 28px 48px', maxWidth:1060, margin:'0 auto' }}>
+      {/* Header */}
+      <div style={{ ...card, padding:'20px 24px', marginBottom:16 }}>
+        <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', gap:16, flexWrap:'wrap' }}>
+          <div>
+            <SLabel style={{ marginBottom:4 }}>Game Setup</SLabel>
+            <h1 style={{ fontFamily:"'Montserrat',sans-serif", fontSize:'1.6rem', fontWeight:900, color:P.txt, marginBottom:6 }}>Manage Your Games</h1>
+            <p style={{ fontSize:13, color:P.txt2, maxWidth:520, lineHeight:1.6 }}>Add or remove titles, pick the right platform, and keep your IDs up to date.</p>
+          </div>
+          <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+            <Chip c="teal">{selected.length}/3 saved</Chip>
+            <Chip c="gray">Free Plan</Chip>
+          </div>
+        </div>
+      </div>
+
+      <div style={{ display:'grid', gridTemplateColumns:'1fr 280px', gap:14, alignItems:'start' }}>
+        {/* Game grid */}
+        <div style={{ ...card }}>
+          <div style={{ padding:'12px 18px', borderBottom:`1px solid ${P.bdr}` }}>
+            <p style={{ fontFamily:"'Montserrat',sans-serif", fontSize:9, fontWeight:800, letterSpacing:'0.16em', textTransform:'uppercase', color:P.txt3 }}>Available Titles — tap to add or remove</p>
+          </div>
+          <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(180px,1fr))', gap:0 }}>
+            {ALL_GAMES.map((g, i) => {
+              const sel = selected.includes(g.key);
+              return (
+                <button key={g.key} onClick={() => toggle(g.key)}
+                  style={{ display:'flex', alignItems:'center', gap:10, padding:'12px 16px', cursor:'pointer',
+                    borderRight: (i+1) % 3 !== 0 ? `1px solid ${P.bdr}` : 'none',
+                    borderBottom:`1px solid ${P.bdr}`,
+                    background: sel ? P.coralSoft : 'transparent',
+                    border:`1px solid ${sel ? P.coralBdr : P.bdr}`,
+                    transition:'all 140ms ease', textAlign:'left' }}>
+                  <div style={{ width:38, height:38, borderRadius:4, overflow:'hidden', border:`1px solid ${P.bdr}`,
+                    background:`linear-gradient(135deg,#0d1520,#1a2540)`, flexShrink:0, position:'relative' }}>
+                    <img src={`../game-artwork/${g.key}-capsule.svg`} style={{ width:'100%', height:'100%', objectFit:'cover', opacity:0.8 }}
+                      onError={e => { e.target.style.display='none'; }} alt="" />
+                  </div>
+                  <div style={{ flex:1, minWidth:0 }}>
+                    <p style={{ fontFamily:"'Montserrat',sans-serif", fontSize:12, fontWeight:700, color:P.txt,
+                      whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{g.label}</p>
+                    <p style={{ fontSize:10, color:P.txt3, marginTop:2 }}>{g.platforms.map(p => PLATFORM_LABELS[p]).join(' · ')}</p>
+                  </div>
+                  <div style={{ width:18, height:18, borderRadius:3, border:`2px solid ${sel ? P.coral : P.bdr2}`,
+                    background: sel ? P.coral : 'transparent', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
+                    {sel && <Icon name="Check" size={10} color={P.night} />}
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Right panel */}
+        <div style={{ display:'flex', flexDirection:'column', gap:12 }}>
+          {/* Selected + IDs */}
+          {selected.length > 0 ? (
+            <div style={{ ...card }}>
+              <div style={{ padding:'12px 16px', borderBottom:`1px solid ${P.bdr}` }}>
+                <SLabel style={{ marginBottom:0 }}>Platforms & IDs</SLabel>
+              </div>
+              {selected.map((key, i, arr) => {
+                const g = ALL_GAMES.find(x => x.key === key);
+                return (
+                  <div key={key} style={{ padding:'12px 16px', borderBottom: i < arr.length-1 ? `1px solid ${P.bdr}` : 'none' }}>
+                    <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:8 }}>
+                      <p style={{ fontFamily:"'Montserrat',sans-serif", fontSize:12, fontWeight:700, color:P.txt }}>{g.label}</p>
+                      <button onClick={() => toggle(key)} style={{ background:'none', border:'none', color:'#ff8383', cursor:'pointer' }}>
+                        <Icon name="Trash2" size={13} color="#ff8383" />
+                      </button>
+                    </div>
+                    <div style={{ display:'flex', gap:5, marginBottom:8, flexWrap:'wrap' }}>
+                      {g.platforms.map(p => (
+                        <span key={p} style={{ fontFamily:"'Montserrat',sans-serif", fontSize:10, fontWeight:700, padding:'3px 8px',
+                          borderRadius:4, border:`1px solid ${P.tealBdr}`, background:P.tealSoft, color:P.tealTxt }}>{PLATFORM_LABELS[p]}</span>
+                      ))}
+                    </div>
+                    <input value={ids[key]||''} onChange={e => setIds(x => ({...x,[key]:e.target.value}))}
+                      placeholder="Your in-game ID"
+                      style={{ width:'100%', border:`1px solid ${P.bdr}`, borderRadius:5, padding:'7px 10px',
+                        fontSize:12, color:P.txt, background:P.surfHi, outline:'none' }} />
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <div style={{ ...card, padding:'24px 18px', textAlign:'center' }}>
+              <Icon name="Gamepad2" size={28} color={P.txt3} style={{ margin:'0 auto 10px' }} />
+              <p style={{ fontFamily:"'Montserrat',sans-serif", fontSize:13, fontWeight:700, color:P.txt, marginBottom:5 }}>No games selected</p>
+              <p style={{ fontSize:11, color:P.txt3, lineHeight:1.5 }}>Add at least one title to start queueing.</p>
+            </div>
+          )}
+          {/* Save */}
+          <div style={{ ...card, padding:'16px 18px' }}>
+            <p style={{ fontSize:12, color:P.txt2, lineHeight:1.55, marginBottom:12 }}>Your profile updates after saving. Removed games disappear from your public setup.</p>
+            <Btn v={saved ? 'ghost' : 'primary'} style={{ width:'100%' }} onClick={() => setSaved(true)}>
+              <Icon name={saved ? 'Check' : 'Save'} size={13} color={saved ? P.tealTxt : P.night} />
+              {saved ? 'Saved!' : 'Save Games'}
+            </Btn>
+          </div>
+          {/* Plan */}
+          <div style={{ ...card, padding:'14px 18px' }}>
+            <SLabel style={{ marginBottom:4 }}>Current Plan</SLabel>
+            <p style={{ fontFamily:"'Montserrat',sans-serif", fontSize:'1.2rem', fontWeight:900, color:P.txt, marginBottom:4 }}>Free</p>
+            <p style={{ fontSize:11, color:P.txt3, marginBottom:10 }}>One saved game included. Upgrade to unlock 3.</p>
+            <Btn v="outline" style={{ width:'100%' }} sm><Icon name="Zap" size={12} color={P.tealTxt} /> Unlock 3 Games</Btn>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Suggest Page ──────────────────────────────────────────────
+function SuggestPage() {
+  const [game, setGame] = useState('');
+  const [reason, setReason] = useState('');
+  const [sent, setSent] = useState(false);
+  const suggestions = [
+    { game:'Rocket League Mobile', votes:38, user:'NairobiPhoenix', date:'Apr 17' },
+    { game:'eFootball 2025',        votes:24, user:'MombasaGhost',   date:'Apr 15' },
+    { game:'NBA 2K Mobile',         votes:19, user:'AccraFire',      date:'Apr 12' },
+    { game:'Chess.com Blitz',       votes:14, user:'LagosElite',     date:'Apr 10' },
+    { game:'Brawl Stars',           votes:11, user:'CairoKing',      date:'Apr 8'  },
+  ];
+
+  return (
+    <div style={{ padding:'24px 28px 48px', maxWidth:860, margin:'0 auto' }}>
+      <SLabel>Suggest a Game</SLabel>
+      <h2 style={{ fontFamily:"'Montserrat',sans-serif", fontSize:'1.5rem', fontWeight:900, color:P.txt, marginBottom:18 }}>
+        What should Mechi support next?
+      </h2>
+
+      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:14, alignItems:'start' }}>
+        {/* Form */}
+        <div style={{ ...card, padding:'20px 22px' }}>
+          <p style={{ fontFamily:"'Montserrat',sans-serif", fontSize:13, fontWeight:700, color:P.txt, marginBottom:14 }}>Submit a suggestion</p>
+          {sent ? (
+            <div style={{ textAlign:'center', padding:'24px 0' }}>
+              <Icon name="CheckCircle2" size={36} color={P.tealTxt} style={{ margin:'0 auto 12px' }} />
+              <p style={{ fontFamily:"'Montserrat',sans-serif", fontSize:14, fontWeight:700, color:P.txt, marginBottom:6 }}>Suggestion submitted!</p>
+              <p style={{ fontSize:12, color:P.txt3 }}>We'll review it and update the community.</p>
+              <Btn v="outline" sm style={{ marginTop:14 }} onClick={() => { setSent(false); setGame(''); setReason(''); }}>Submit another</Btn>
+            </div>
+          ) : (
+            <>
+              <div style={{ marginBottom:12 }}>
+                <p style={{ fontFamily:"'Montserrat',sans-serif", fontSize:9, fontWeight:800, letterSpacing:'0.12em', textTransform:'uppercase', color:P.txt3, marginBottom:6 }}>Game Title</p>
+                <input value={game} onChange={e => setGame(e.target.value)} placeholder="e.g. Rocket League Mobile"
+                  style={{ width:'100%', border:`1px solid ${P.bdr}`, borderRadius:5, padding:'9px 12px', fontSize:13, color:P.txt, background:P.surfHi, outline:'none' }} />
+              </div>
+              <div style={{ marginBottom:16 }}>
+                <p style={{ fontFamily:"'Montserrat',sans-serif", fontSize:9, fontWeight:800, letterSpacing:'0.12em', textTransform:'uppercase', color:P.txt3, marginBottom:6 }}>Why should Mechi add it?</p>
+                <textarea value={reason} onChange={e => setReason(e.target.value)} placeholder="Explain the playerbase, competitive scene, or why it fits Mechi..."
+                  style={{ width:'100%', border:`1px solid ${P.bdr}`, borderRadius:5, padding:'9px 12px', fontSize:13, color:P.txt, background:P.surfHi, outline:'none', resize:'vertical', minHeight:80, fontFamily:'inherit' }} />
+              </div>
+              <Btn v="primary" style={{ width:'100%' }} onClick={() => { if(game.trim()) setSent(true); }}>
+                <Icon name="Send" size={13} color={P.night} /> Submit Suggestion
+              </Btn>
+            </>
+          )}
+        </div>
+
+        {/* Community suggestions */}
+        <div style={{ ...card }}>
+          <div style={{ padding:'12px 16px', borderBottom:`1px solid ${P.bdr}`, display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+            <SLabel style={{ marginBottom:0 }}>Community Suggestions</SLabel>
+            <Chip c="gray">{suggestions.length} open</Chip>
+          </div>
+          {suggestions.map((s, i) => (
+            <div key={i} style={{ display:'flex', alignItems:'center', gap:12, padding:'12px 16px',
+              borderBottom: i < suggestions.length-1 ? `1px solid ${P.bdr}` : 'none' }}>
+              <div style={{ width:38, height:38, borderRadius:5, border:`1px solid ${P.bdr}`, background:P.surfHi,
+                display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
+                <Icon name="Gamepad2" size={16} color={P.txt3} />
+              </div>
+              <div style={{ flex:1 }}>
+                <p style={{ fontFamily:"'Montserrat',sans-serif", fontSize:13, fontWeight:700, color:P.txt, marginBottom:2 }}>{s.game}</p>
+                <p style={{ fontSize:10, color:P.txt3 }}>by {s.user} · {s.date}</p>
+              </div>
+              <div style={{ display:'flex', alignItems:'center', gap:5, flexShrink:0 }}>
+                <button style={{ display:'flex', alignItems:'center', gap:4, borderRadius:4, border:`1px solid ${P.tealBdr}`,
+                  background:P.tealSoft, color:P.tealTxt, fontFamily:"'Montserrat',sans-serif", fontSize:11, fontWeight:700,
+                  padding:'4px 10px', cursor:'pointer' }}>
+                  <Icon name="ArrowUp" size={11} color={P.tealTxt} /> {s.votes}
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Share Page ────────────────────────────────────────────────
+function SharePage() {
+  const [copied, setCopied] = useState(false);
+  const refLink = 'mechi.club/join?ref=ProGamer_KE';
+
+  const copy = () => {
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  return (
+    <div style={{ padding:'24px 28px 48px', maxWidth:860, margin:'0 auto' }}>
+      <SLabel>Share & Refer</SLabel>
+      <h2 style={{ fontFamily:"'Montserrat',sans-serif", fontSize:'1.5rem', fontWeight:900, color:P.txt, marginBottom:18 }}>
+        Grow the scene. Earn together.
+      </h2>
+
+      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:14, marginBottom:14 }}>
+        {/* Referral card */}
+        <div style={{ ...card, padding:'20px 22px' }}>
+          <p style={{ fontFamily:"'Montserrat',sans-serif", fontSize:13, fontWeight:700, color:P.txt, marginBottom:6 }}>Your referral link</p>
+          <p style={{ fontSize:12, color:P.txt2, marginBottom:14, lineHeight:1.55 }}>Invite players and earn 50 MP for each one who completes their first ranked match.</p>
+          <div style={{ display:'flex', alignItems:'center', gap:8, border:`1px solid ${P.tealBdr}`, borderRadius:5,
+            background:P.tealSoft, padding:'10px 14px', marginBottom:12 }}>
+            <span style={{ flex:1, fontFamily:'monospace', fontSize:12, color:P.tealTxt }}>{refLink}</span>
+            <button onClick={copy} style={{ background:'none', border:'none', cursor:'pointer', color:P.tealTxt }}>
+              <Icon name={copied ? 'Check' : 'Copy'} size={14} color={copied ? P.tealTxt : P.txt3} />
+            </button>
+          </div>
+          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8 }}>
+            <Btn v="teal" onClick={copy}><Icon name={copied ? 'Check' : 'Copy'} size={12} color={P.night} />{copied ? 'Copied!' : 'Copy Link'}</Btn>
+            <Btn v="ghost"><Icon name="Share2" size={12} color={P.tealTxt} /> Share</Btn>
+          </div>
+        </div>
+
+        {/* Stats */}
+        <div style={{ ...card }}>
+          <div style={{ display:'grid', gridTemplateColumns:'1fr 1px 1fr', padding:'20px 22px', gap:16 }}>
+            <div>
+              <p style={{ fontFamily:"'Montserrat',sans-serif", fontSize:9, fontWeight:800, letterSpacing:'0.14em', textTransform:'uppercase', color:P.txt3, marginBottom:8 }}>Referrals</p>
+              <p style={{ fontFamily:"'Montserrat',sans-serif", fontSize:'2rem', fontWeight:900, color:P.teal }}>7</p>
+              <p style={{ fontSize:11, color:P.txt3, marginTop:6 }}>Players joined via your link</p>
+            </div>
+            <div style={{ background:P.bdr }} />
+            <div>
+              <p style={{ fontFamily:"'Montserrat',sans-serif", fontSize:9, fontWeight:800, letterSpacing:'0.14em', textTransform:'uppercase', color:P.txt3, marginBottom:8 }}>MP Earned</p>
+              <p style={{ fontFamily:"'Montserrat',sans-serif", fontSize:'2rem', fontWeight:900, color:P.coral }}>350</p>
+              <p style={{ fontSize:11, color:P.txt3, marginTop:6 }}>From successful referrals</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Recent referrals */}
+      <div style={{ ...card }}>
+        <div style={{ padding:'12px 18px', borderBottom:`1px solid ${P.bdr}` }}>
+          <SLabel style={{ marginBottom:0 }}>Recent Referrals</SLabel>
+        </div>
+        {[
+          { user:'NairobiFresh',  status:'complete', mp:50,   date:'Apr 18' },
+          { user:'Kampala_Beast', status:'complete', mp:50,   date:'Apr 15' },
+          { user:'Lagos_Ranked',  status:'pending',  mp:null, date:'Apr 19' },
+          { user:'Mombasa_Pro',   status:'complete', mp:50,   date:'Apr 12' },
+        ].map((r, i, arr) => (
+          <div key={i} style={{ display:'flex', alignItems:'center', gap:12, padding:'12px 18px',
+            borderBottom: i < arr.length-1 ? `1px solid ${P.bdr}` : 'none' }}>
+            <Av name={r.user} size={36} />
+            <div style={{ flex:1 }}>
+              <p style={{ fontFamily:"'Montserrat',sans-serif", fontSize:13, fontWeight:700, color:P.txt }}>{r.user}</p>
+              <p style={{ fontSize:10, color:P.txt3, marginTop:2 }}>{r.date}</p>
+            </div>
+            {r.status === 'complete'
+              ? <Chip c="teal">+{r.mp} MP</Chip>
+              : <Chip c="gray">Pending</Chip>
+            }
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ── Notifications Page ────────────────────────────────────────
+const NOTIFS = [
+  { id:1, type:'match',      title:'Match found — FIFA FC 26',           body:'Your ranked 1v1 vs NairobiPhoenix is ready. Open the room now.',        time:'2m ago',   read:false, icon:'Swords',       cc:'coral' },
+  { id:2, type:'challenge',  title:'New challenge from MombasaGhost',    body:'They want a Valorant 1v1 for 100 MP. Accept or decline.',                time:'18m ago',  read:false, icon:'MessageCircle',cc:'teal' },
+  { id:3, type:'result',     title:'Match result confirmed — WIN',        body:'Your FIFA FC 26 win over AccraFire has been recorded. +18 rating.',      time:'1h ago',   read:false, icon:'Trophy',       cc:'teal' },
+  { id:4, type:'tournament', title:'Tournament starting — East Africa Cup',body:'The bracket opens in 2 hours. Check your match schedule.',             time:'2h ago',   read:true,  icon:'Swords',       cc:'teal' },
+  { id:5, type:'system',     title:'Level up! You reached Level 12',      body:'You unlocked custom profile themes and an XP streak bonus.',            time:'5h ago',   read:true,  icon:'Zap',          cc:'coral' },
+  { id:6, type:'match',      title:'Queue match found — Tekken 8',        body:'Your 1v1 vs DurbanRaider has been matched. Open before it expires.',    time:'Yesterday',read:true,  icon:'Swords',       cc:'coral' },
+  { id:7, type:'result',     title:'Match result confirmed — LOSS',       body:'Your Valorant match vs MombasaGhost ended. −14 rating recorded.',       time:'Yesterday',read:true,  icon:'X',            cc:'gray' },
+  { id:8, type:'system',     title:'New feature: Lobby scheduling',       body:'You can now set a date and time when creating lobby rooms.',            time:'Apr 17',   read:true,  icon:'Bell',         cc:'teal' },
+];
+
+function NotificationsPage() {
+  const [notifs, setNotifs] = useState(NOTIFS);
+  const markAll = () => setNotifs(n => n.map(x => ({...x, read:true})));
+  const unread = notifs.filter(n => !n.read).length;
+
+  return (
+    <div style={{ padding:'24px 28px 48px', maxWidth:860, margin:'0 auto' }}>
+      <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:18 }}>
+        <div>
+          <SLabel style={{ marginBottom:4 }}>Notifications</SLabel>
+          <h2 style={{ fontFamily:"'Montserrat',sans-serif", fontSize:'1.5rem', fontWeight:900, color:P.txt }}>Activity Feed</h2>
+        </div>
+        <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+          {unread > 0 && <Chip c="coral">{unread} unread</Chip>}
+          <Btn v="outline" sm onClick={markAll}><Icon name="CheckCheck" size={12} /> Mark all read</Btn>
+        </div>
+      </div>
+
+      <div style={{ ...card }}>
+        {notifs.map((n, i) => (
+          <div key={n.id} onClick={() => setNotifs(ns => ns.map(x => x.id===n.id ? {...x,read:true} : x))}
+            style={{ display:'flex', alignItems:'flex-start', gap:12, padding:'14px 18px',
+              borderBottom: i < notifs.length-1 ? `1px solid ${P.bdr}` : 'none',
+              background: n.read ? 'transparent' : 'rgba(50,224,196,0.04)', cursor:'pointer',
+              transition:'background 140ms ease' }}>
+            <div style={{ width:36, height:36, borderRadius:5, flexShrink:0,
+              background: n.cc==='coral' ? P.coralSoft : n.cc==='teal' ? P.tealSoft : 'rgba(95,109,130,0.12)',
+              border:`1px solid ${n.cc==='coral' ? P.coralBdr : n.cc==='teal' ? P.tealBdr : P.bdr}`,
+              display:'flex', alignItems:'center', justifyContent:'center' }}>
+              <Icon name={n.icon} size={15} color={n.cc==='coral' ? '#ff8383' : n.cc==='teal' ? P.tealTxt : P.txt3} />
+            </div>
+            <div style={{ flex:1, minWidth:0 }}>
+              <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:8, marginBottom:3 }}>
+                <p style={{ fontFamily:"'Montserrat',sans-serif", fontSize:13, fontWeight: n.read ? 600 : 800,
+                  color: n.read ? P.txt2 : P.txt, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{n.title}</p>
+                <span style={{ fontSize:10, color:P.txt3, flexShrink:0 }}>{n.time}</span>
+              </div>
+              <p style={{ fontSize:12, color:P.txt3, lineHeight:1.55 }}>{n.body}</p>
+            </div>
+            {!n.read && (
+              <div style={{ width:7, height:7, borderRadius:'50%', background:P.teal, flexShrink:0, marginTop:5 }} />
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ── App ───────────────────────────────────────────────────────
+function App() {
+  const [page, setPage] = useState(() => {
+    try { return localStorage.getItem('mechi_ds_page') || 'dashboard'; } catch { return 'dashboard'; }
+  });
+
+  useEffect(() => {
+    try { localStorage.setItem('mechi_ds_page', page); } catch {}
+  }, [page]);
+
+  useEffect(() => {
+    if (window.lucide) window.lucide.createIcons();
+  });
+
+  const pages = {
+    dashboard:     <DashboardPage setPage={setPage} />,
+    leaderboard:   <LeaderboardPage />,
+    tournaments:   <TournamentsPage />,
+    profile:       <ProfilePage />,
+    challenges:    <ChallengesPage />,
+    tutorials:     <TutorialsPage setPage={setPage} />,
+    lobbies:       <LobbiesPage setPage={setPage} />,
+    games:         <GamesPage />,
+    suggest:       <SuggestPage />,
+    share:         <SharePage />,
+    notifications: <NotificationsPage />,
+    settings:      <ProfilePage />,
+  };
+
+  return (
+    <div style={{ display:'flex', minHeight:'100vh' }}>
+      <Sidebar page={page} setPage={setPage} />
+      <main style={{ marginLeft:224, flex:1, minHeight:'100vh', overflowX:'hidden' }}>
+        {pages[page] || <PlaceholderPage title={page} icon="Layout" />}
+      </main>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>

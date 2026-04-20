@@ -1,0 +1,815 @@
+⚠ Found a change in next.config.ts. Restarting the server to apply the changes...
+⚠ Fast Refresh had to perform a full reload when ./node_modules/next/dist/client/image-component.js changed. Read more: https://nextjs.org/docs/messages/fast-refresh-reload
+[Rewards Catalog] Error: Error: Reward integration secret is not configured
+    at createSignedActionHeaders (src\lib\rewards.ts:292:11)
+    at fetchChezahubRewardCatalog (src\lib\rewards.ts:716:10)
+    at GET (src\app\api\rewards\catalog\route.ts:12:51)
+  290 |   const secret = getRewardSharedSecret();
+  291 |   if (!secret) {
+> 292 |     throw new Error('Reward integration secret is not configured');
+      |           ^
+  293 |   }
+  294 |
+  295 |   const timestamp = Date.now().toString();
+[Rewards Catalog] Error: Error: Reward integration secret is not configured
+    at createSignedActionHeaders (src\lib\rewards.ts:292:11)
+    at fetchChezahubRewardCatalog (src\lib\rewards.ts:716:10)
+    at GET (src\app\api\rewards\catalog\route.ts:12:51)
+  290 |   const secret = getRewardSharedSecret();
+  291 |   if (!secret) {
+> 292 |     throw new Error('Reward integration secret is not configured');
+      |           ^
+  293 |   }
+  294 |
+  295 |   const timestamp = Date.now().toString();
+[Rewards Catalog] Error: Error: Reward integration secret is not configured
+    at createSignedActionHeaders (src\lib\rewards.ts:292:11)
+    at fetchChezahubRewardCatalog (src\lib\rewards.ts:716:10)
+    at GET (src\app\api\rewards\catalog\route.ts:12:51)
+  290 |   const secret = getRewardSharedSecret();
+  291 |   if (!secret) {
+> 292 |     throw new Error('Reward integration secret is not configured');
+      |           ^
+  293 |   }
+  294 |
+  295 |   const timestamp = Date.now().toString();
+⨯ The requested resource isn't a valid image for /mechi-logo.png received null
+⨯ The requested resource isn't a valid image for /mechi-logo.png received null
+[Rewards Catalog] Error: Error: Reward integration secret is not configured
+    at createSignedActionHeaders (src\lib\rewards.ts:292:11)
+    at fetchChezahubRewardCatalog (src\lib\rewards.ts:716:10)
+    at GET (src\app\api\rewards\catalog\route.ts:12:51)
+  290 |   const secret = getRewardSharedSecret();
+  291 |   if (!secret) {
+> 292 |     throw new Error('Reward integration secret is not configured');
+      |           ^
+  293 |   }
+  294 |
+  295 |   const timestamp = Date.now().toString();
+[Rewards Catalog] Error: Error: Reward integration secret is not configured
+    at createSignedActionHeaders (src\lib\rewards.ts:292:11)
+    at fetchChezahubRewardCatalog (src\lib\rewards.ts:716:10)
+    at GET (src\app\api\rewards\catalog\route.ts:12:51)
+  290 |   const secret = getRewardSharedSecret();
+  291 |   if (!secret) {
+> 292 |     throw new Error('Reward integration secret is not configured');
+      |           ^
+  293 |   }
+  294 |
+  295 |   const timestamp = Date.now().toString();
+[Rewards Catalog] Error: Error: Reward integration secret is not configured
+    at createSignedActionHeaders (src\lib\rewards.ts:292:11)
+    at fetchChezahubRewardCatalog (src\lib\rewards.ts:716:10)
+    at GET (src\app\api\rewards\catalog\route.ts:12:51)
+  290 |   const secret = getRewardSharedSecret();
+  291 |   if (!secret) {
+> 292 |     throw new Error('Reward integration secret is not configured');
+      |           ^
+  293 |   }
+  294 |
+  295 |   const timestamp = Date.now().toString();
+[Rewards Catalog] Error: Error: Reward integration secret is not configured
+    at createSignedActionHeaders (src\lib\rewards.ts:292:11)
+    at fetchChezahubRewardCatalog (src\lib\rewards.ts:716:10)
+    at GET (src\app\api\rewards\catalog\route.ts:12:51)
+  290 |   const secret = getRewardSharedSecret();
+  291 |   if (!secret) {
+> 292 |     throw new Error('Reward integration secret is not configured');
+      |           ^
+  293 |   }
+  294 |
+  295 |   const timestamp = Date.now().toString();
+⨯ The requested resource isn't a valid image for /mechi-logo.png received null
+⨯ The requested resource isn't a valid image for /mechi-logo.png received null
+[Rewards Catalog] Error: Error: Reward integration secret is not configured
+    at createSignedActionHeaders (src\lib\rewards.ts:292:11)
+    at fetchChezahubRewardCatalog (src\lib\rewards.ts:716:10)
+    at GET (src\app\api\rewards\catalog\route.ts:12:51)
+  290 |   const secret = getRewardSharedSecret();
+  291 |   if (!secret) {
+> 292 |     throw new Error('Reward integration secret is not configured');
+      |           ^
+  293 |   }
+  294 |
+  295 |   const timestamp = Date.now().toString();
+[Rewards Catalog] Error: Error: Reward integration secret is not configured
+    at createSignedActionHeaders (src\lib\rewards.ts:292:11)
+    at fetchChezahubRewardCatalog (src\lib\rewards.ts:716:10)
+    at GET (src\app\api\rewards\catalog\route.ts:12:51)
+  290 |   const secret = getRewardSharedSecret();
+  291 |   if (!secret) {
+> 292 |     throw new Error('Reward integration secret is not configured');
+      |           ^
+  293 |   }
+  294 |
+  295 |   const timestamp = Date.now().toString();
+⚠ Fast Refresh had to perform a full reload when ./node_modules/next/dist/client/image-component.js changed. Read more: https://nextjs.org/docs/messages/fast-refresh-reload
+⚠ Fast Refresh had to perform a full reload when ./node_modules/next/dist/client/image-component.js changed. Read more: https://nextjs.org/docs/messages/fast-refresh-reload
+⨯ The requested resource isn't a valid image for /mechi-logo.png received null
+Error: The requested resource isn't a valid image.
+    at ignore-listed frames {
+  statusCode: 400
+}
+[browser] A props object containing a "key" prop is being spread into JSX:
+  let props = {key: someKey, title: ..., icon: ..., items: ..., pathname: ..., collapsed: ..., active: ..., open: ..., onToggle: ...};
+  <SidebarAccordionSection {...props} />
+React keys must be passed directly to JSX without using spread:
+  let props = {title: ..., icon: ..., items: ..., pathname: ..., collapsed: ..., active: ..., open: ..., onToggle: ...};
+  <SidebarAccordionSection key={someKey} {...props} /> 
+    at <unknown> (src/components/sidebar-with-submenu.tsx:293:11)
+    at Array.map (<anonymous>)
+    at SidebarWithSubmenu (src/components/sidebar-with-submenu.tsx:292:31)
+  291 |
+  292 |         {COLLAPSIBLE_SECTIONS.map((section) => (
+> 293 |           <SidebarAccordionSection
+      |           ^
+  294 |             key={section.key}
+  295 |             {...section}
+  296 |             pathname={pathname} (src/components/sidebar-with-submenu.tsx:293:11)
+[Rewards Catalog] Error: Error: Reward integration secret is not configured
+    at createSignedActionHeaders (src\lib\rewards.ts:292:11)
+    at fetchChezahubRewardCatalog (src\lib\rewards.ts:716:10)
+    at GET (src\app\api\rewards\catalog\route.ts:12:51)
+  290 |   const secret = getRewardSharedSecret();
+  291 |   if (!secret) {
+> 292 |     throw new Error('Reward integration secret is not configured');
+      |           ^
+  293 |   }
+  294 |
+  295 |   const timestamp = Date.now().toString();
+[Rewards Catalog] Error: Error: Reward integration secret is not configured
+    at createSignedActionHeaders (src\lib\rewards.ts:292:11)
+    at fetchChezahubRewardCatalog (src\lib\rewards.ts:716:10)
+    at GET (src\app\api\rewards\catalog\route.ts:12:51)
+  290 |   const secret = getRewardSharedSecret();
+  291 |   if (!secret) {
+> 292 |     throw new Error('Reward integration secret is not configured');
+      |           ^
+  293 |   }
+  294 |
+  295 |   const timestamp = Date.now().toString();
+[Rewards Catalog] Error: Error: Reward integration secret is not configured
+    at createSignedActionHeaders (src\lib\rewards.ts:292:11)
+    at fetchChezahubRewardCatalog (src\lib\rewards.ts:716:10)
+    at GET (src\app\api\rewards\catalog\route.ts:12:51)
+  290 |   const secret = getRewardSharedSecret();
+  291 |   if (!secret) {
+> 292 |     throw new Error('Reward integration secret is not configured');
+      |           ^
+  293 |   }
+  294 |
+  295 |   const timestamp = Date.now().toString();
+[Rewards Catalog] Error: Error: Reward integration secret is not configured
+    at createSignedActionHeaders (src\lib\rewards.ts:292:11)
+    at fetchChezahubRewardCatalog (src\lib\rewards.ts:716:10)
+    at GET (src\app\api\rewards\catalog\route.ts:12:51)
+  290 |   const secret = getRewardSharedSecret();
+  291 |   if (!secret) {
+> 292 |     throw new Error('Reward integration secret is not configured');
+      |           ^
+  293 |   }
+  294 |
+  295 |   const timestamp = Date.now().toString();
+[Rewards Catalog] Error: Error: Reward integration secret is not configured
+    at createSignedActionHeaders (src\lib\rewards.ts:292:11)
+    at fetchChezahubRewardCatalog (src\lib\rewards.ts:716:10)
+    at GET (src\app\api\rewards\catalog\route.ts:12:51)
+  290 |   const secret = getRewardSharedSecret();
+  291 |   if (!secret) {
+> 292 |     throw new Error('Reward integration secret is not configured');
+      |           ^
+  293 |   }
+  294 |
+  295 |   const timestamp = Date.now().toString();
+[Rewards Catalog] Error: Error: Reward integration secret is not configured
+    at createSignedActionHeaders (src\lib\rewards.ts:292:11)
+    at fetchChezahubRewardCatalog (src\lib\rewards.ts:716:10)
+    at GET (src\app\api\rewards\catalog\route.ts:12:51)
+  290 |   const secret = getRewardSharedSecret();
+  291 |   if (!secret) {
+> 292 |     throw new Error('Reward integration secret is not configured');
+      |           ^
+  293 |   }
+  294 |
+  295 |   const timestamp = Date.now().toString();
+[Rewards Catalog] Error: Error: Reward integration secret is not configured
+    at createSignedActionHeaders (src\lib\rewards.ts:292:11)
+    at fetchChezahubRewardCatalog (src\lib\rewards.ts:716:10)
+    at GET (src\app\api\rewards\catalog\route.ts:12:51)
+  290 |   const secret = getRewardSharedSecret();
+  291 |   if (!secret) {
+> 292 |     throw new Error('Reward integration secret is not configured');
+      |           ^
+  293 |   }
+  294 |
+  295 |   const timestamp = Date.now().toString();
+[Rewards Catalog] Error: Error: Reward integration secret is not configured
+    at createSignedActionHeaders (src\lib\rewards.ts:292:11)
+    at fetchChezahubRewardCatalog (src\lib\rewards.ts:716:10)
+    at GET (src\app\api\rewards\catalog\route.ts:12:51)
+  290 |   const secret = getRewardSharedSecret();
+  291 |   if (!secret) {
+> 292 |     throw new Error('Reward integration secret is not configured');
+      |           ^
+  293 |   }
+  294 |
+  295 |   const timestamp = Date.now().toString();
+[Rewards Catalog] Error: Error: Reward integration secret is not configured
+    at createSignedActionHeaders (src\lib\rewards.ts:292:11)
+    at fetchChezahubRewardCatalog (src\lib\rewards.ts:716:10)
+    at GET (src\app\api\rewards\catalog\route.ts:12:51)
+  290 |   const secret = getRewardSharedSecret();
+  291 |   if (!secret) {
+> 292 |     throw new Error('Reward integration secret is not configured');
+      |           ^
+  293 |   }
+  294 |
+  295 |   const timestamp = Date.now().toString();
+[Rewards Catalog] Error: Error: Reward integration secret is not configured
+    at createSignedActionHeaders (src\lib\rewards.ts:292:11)
+    at fetchChezahubRewardCatalog (src\lib\rewards.ts:716:10)
+    at GET (src\app\api\rewards\catalog\route.ts:12:51)
+  290 |   const secret = getRewardSharedSecret();
+  291 |   if (!secret) {
+> 292 |     throw new Error('Reward integration secret is not configured');
+      |           ^
+  293 |   }
+  294 |
+  295 |   const timestamp = Date.now().toString();
+⨯ The requested resource isn't a valid image for /mechi-logo.png received null
+⨯ The requested resource isn't a valid image for /mechi-logo.png received null
+⨯ The requested resource isn't a valid image for /mechi-logo.png received null
+⨯ The requested resource isn't a valid image for /mechi-logo.png received null
+⨯ The requested resource isn't a valid image for /mechi-logo.png received null
+⨯ The requested resource isn't a valid image for /mechi-logo.png received null
+⨯ The requested resource isn't a valid image for /game-artwork/efootball-header.webp received null
+⨯ The requested resource isn't a valid image for /game-artwork/fc26-header.webp received null
+⨯ The requested resource isn't a valid image for /game-artwork/mk11-header.webp received null
+⨯ The requested resource isn't a valid image for /game-artwork/nba2k26-header.webp received null
+⨯ The requested resource isn't a valid image for /game-artwork/tekken8-header.webp received null
+⨯ The requested resource isn't a valid image for /game-artwork/sf6-header.webp received null
+⨯ The requested resource isn't a valid image for /game-artwork/codm-header.webp received null
+⨯ The requested resource isn't a valid image for /game-artwork/pubgm-header.webp received null
+⨯ The requested resource isn't a valid image for /game-artwork/cs2-header.webp received null
+⨯ The requested resource isn't a valid image for /game-artwork/valorant-header.webp received null
+⨯ The requested resource isn't a valid image for /game-artwork/mariokart-header.webp received null
+⨯ The requested resource isn't a valid image for /game-artwork/smashbros-header.webp received null
+⨯ The requested resource isn't a valid image for /game-artwork/freefire-header.webp received null
+⨯ The requested resource isn't a valid image for /game-artwork/ludo-header.webp received null
+⨯ The requested resource isn't a valid image for /game-artwork/rocketleague-header.webp received null
+⨯ The requested resource isn't a valid image for /game-artwork/efootball-header.webp received null
+⨯ The requested resource isn't a valid image for /game-artwork/fc26-header.webp received null
+⨯ The requested resource isn't a valid image for /mechi-logo.png received null
+⨯ The requested resource isn't a valid image for /mechi-logo.png received null
+⨯ The requested resource isn't a valid image for /game-artwork/efootball-header.webp received null
+⨯ The requested resource isn't a valid image for /mechi-logo.png received null
+⨯ The requested resource isn't a valid image for /game-artwork/efootball-header.webp received null
+⨯ The requested resource isn't a valid image for /game-artwork/efootball-header.webp received null
+⨯ The requested resource isn't a valid image for /mechi-logo.png received null
+⨯ The requested resource isn't a valid image for /mechi-logo.png received null
+⨯ The requested resource isn't a valid image for /mechi-logo.png received null
+⨯ The requested resource isn't a valid image for /mechi-logo.png received null
+⨯ The requested resource isn't a valid image for /game-artwork/efootball-header.webp received null
+⨯ The requested resource isn't a valid image for /game-artwork/fc26-header.webp received null
+⨯ The requested resource isn't a valid image for /game-artwork/mk11-header.webp received null
+⨯ The requested resource isn't a valid image for /game-artwork/nba2k26-header.webp received null
+⨯ The requested resource isn't a valid image for /game-artwork/tekken8-header.webp received null
+⨯ The requested resource isn't a valid image for /game-artwork/sf6-header.webp received null
+⨯ The requested resource isn't a valid image for /game-artwork/codm-header.webp received null
+⨯ The requested resource isn't a valid image for /game-artwork/pubgm-header.webp received null
+⨯ The requested resource isn't a valid image for /game-artwork/cs2-header.webp received null
+⨯ The requested resource isn't a valid image for /game-artwork/valorant-header.webp received null
+⨯ The requested resource isn't a valid image for /game-artwork/mariokart-header.webp received null
+⨯ The requested resource isn't a valid image for /game-artwork/smashbros-header.webp received null
+⨯ The requested resource isn't a valid image for /game-artwork/freefire-header.webp received null
+⨯ The requested resource isn't a valid image for /game-artwork/ludo-header.webp received null
+⨯ The requested resource isn't a valid image for /game-artwork/rocketleague-header.webp received null
+⨯ The requested resource isn't a valid image for /game-artwork/efootball-header.webp received null
+⨯ The requested resource isn't a valid image for /game-artwork/fc26-header.webp received null
+⨯ The requested resource isn't a valid image for /mechi-logo.png received null
+⨯ The requested resource isn't a valid image for /game-artwork/efootball-header.webp received null
+⨯ The requested resource isn't a valid image for /game-artwork/fc26-header.webp received null
+⨯ The requested resource isn't a valid image for /mechi-logo.png received null
+⨯ The requested resource isn't a valid image for /mechi-logo.png received null
+
+-----
+[1m[31mFATAL[39m[0m: An unexpected Turbopack error occurred. A panic log has been written to C:\Users\ADMIN\AppData\Local\Temp\next-panic-319c45d83b545328182006858c8d28a6.log.
+
+To help make Turbopack better, report this error by clicking here: https://bugs.nextjs.org/search?category=turbopack-error-report&title=Turbopack%20Error%3A%20failed%20to%20write%20to%20%22C%3A%5C%5CUsers%5C%5CADMIN%5C%5CDocuments%5C%5Cmechiiii%5C%5Cmechi-v3%5C%5C.next%5C%5Cdev%5C%5Cstatic%5C%5Cchunks%5C%5Csrc_app_%28app%29_layout_tsx_0l16s5-._.js%22&body=Turbopack%20version%3A%20%60c573e8c4%60%0ANext.js%20version%3A%20%600.0.0%60%0A%0AError%20message%3A%0A%60%60%60%0Afailed%20to%20write%20to%20%22C%3A%5C%5CUsers%5C%5CADMIN%5C%5CDocuments%5C%5Cmechiiii%5C%5Cmechi-v3%5C%5C.next%5C%5Cdev%5C%5Cstatic%5C%5Cchunks%5C%5Csrc_app_%28app%29_layout_tsx_0l16s5-._.js%22%0A%0ACaused%20by%3A%0A-%20The%20requested%20operation%20cannot%20be%20performed%20on%20a%20file%20with%20a%20user-mapped%20section%20open.%20%28os%20error%201224%29%0A%60%60%60&labels=Turbopack,Turbopack%20Panic%20Backtrace
+-----
+
+[Server HMR] Subscription error: Error [TurbopackInternalError]: failed to write to "C:\\Users\\ADMIN\\Documents\\mechiiii\\mechi-v3\\.next\\dev\\static\\chunks\\src_app_(app)_layout_tsx_0l16s5-._.js"
+
+Caused by:
+- The requested operation cannot be performed on a file with a user-mapped section open. (os error 1224)
+    at <unknown> (TurbopackInternalError: failed to write to "C:\\Users\\ADMIN\\Documents\\mechiiii\\mechi-v3\\.next\\dev\\static\\chunks\\src_app_(app)_layout_tsx_0l16s5-._.js") {
+  location: undefined
+}
+[Server HMR] Subscription error: Error [TurbopackInternalError]: failed to write to "C:\\Users\\ADMIN\\Documents\\mechiiii\\mechi-v3\\.next\\dev\\static\\chunks\\src_app_(app)_layout_tsx_0l16s5-._.js"
+
+Caused by:
+- The requested operation cannot be performed on a file with a user-mapped section open. (os error 1224)
+    at <unknown> (TurbopackInternalError: failed to write to "C:\\Users\\ADMIN\\Documents\\mechiiii\\mechi-v3\\.next\\dev\\static\\chunks\\src_app_(app)_layout_tsx_0l16s5-._.js") {
+  location: undefined
+}
+[Server HMR] Subscription error: Error [TurbopackInternalError]: failed to write to "C:\\Users\\ADMIN\\Documents\\mechiiii\\mechi-v3\\.next\\dev\\static\\chunks\\src_app_(app)_layout_tsx_0l16s5-._.js"
+
+Caused by:
+- The requested operation cannot be performed on a file with a user-mapped section open. (os error 1224)
+    at <unknown> (TurbopackInternalError: failed to write to "C:\\Users\\ADMIN\\Documents\\mechiiii\\mechi-v3\\.next\\dev\\static\\chunks\\src_app_(app)_layout_tsx_0l16s5-._.js") {
+  location: undefined
+}
+[Server HMR] Subscription error: Error [TurbopackInternalError]: failed to write to "C:\\Users\\ADMIN\\Documents\\mechiiii\\mechi-v3\\.next\\dev\\static\\chunks\\src_app_(app)_layout_tsx_0l16s5-._.js"
+
+Caused by:
+- The requested operation cannot be performed on a file with a user-mapped section open. (os error 1224)
+    at <unknown> (TurbopackInternalError: failed to write to "C:\\Users\\ADMIN\\Documents\\mechiiii\\mechi-v3\\.next\\dev\\static\\chunks\\src_app_(app)_layout_tsx_0l16s5-._.js") {
+  location: undefined
+}
+[Server HMR] Subscription error: Error [TurbopackInternalError]: failed to write to "C:\\Users\\ADMIN\\Documents\\mechiiii\\mechi-v3\\.next\\dev\\static\\chunks\\src_app_(app)_layout_tsx_0l16s5-._.js"
+
+Caused by:
+- The requested operation cannot be performed on a file with a user-mapped section open. (os error 1224)
+    at <unknown> (TurbopackInternalError: failed to write to "C:\\Users\\ADMIN\\Documents\\mechiiii\\mechi-v3\\.next\\dev\\static\\chunks\\src_app_(app)_layout_tsx_0l16s5-._.js") {
+  location: undefined
+}
+⨯ The requested resource isn't a valid image for /game-artwork/efootball-header.webp received null
+⨯ The requested resource isn't a valid image for /game-artwork/fc26-header.webp received null
+⨯ The requested resource isn't a valid image for /game-artwork/mk11-header.webp received null
+⨯ The requested resource isn't a valid image for /game-artwork/nba2k26-header.webp received null
+⨯ The requested resource isn't a valid image for /game-artwork/tekken8-header.webp received null
+⨯ The requested resource isn't a valid image for /game-artwork/sf6-header.webp received null
+⨯ The requested resource isn't a valid image for /game-artwork/codm-header.webp received null
+⨯ The requested resource isn't a valid image for /game-artwork/pubgm-header.webp received null
+⨯ The requested resource isn't a valid image for /game-artwork/cs2-header.webp received null
+⨯ The requested resource isn't a valid image for /game-artwork/valorant-header.webp received null
+⨯ The requested resource isn't a valid image for /game-artwork/mariokart-header.webp received null
+⨯ The requested resource isn't a valid image for /game-artwork/smashbros-header.webp received null
+⨯ The requested resource isn't a valid image for /game-artwork/freefire-header.webp received null
+⨯ The requested resource isn't a valid image for /game-artwork/ludo-header.webp received null
+⨯ The requested resource isn't a valid image for /game-artwork/rocketleague-header.webp received null
+⨯ The requested resource isn't a valid image for /mechi-logo.png received null
+⨯ The requested resource isn't a valid image for /mechi-logo.png received null
+⨯ The requested resource isn't a valid image for /mechi-logo.png received null
+⨯ The requested resource isn't a valid image for /mechi-logo.png received null
+[Rewards Catalog] Error: Error: Reward integration secret is not configured
+    at createSignedActionHeaders (src\lib\rewards.ts:292:11)
+    at fetchChezahubRewardCatalog (src\lib\rewards.ts:716:10)
+    at GET (src\app\api\rewards\catalog\route.ts:12:51)
+  290 |   const secret = getRewardSharedSecret();
+  291 |   if (!secret) {
+> 292 |     throw new Error('Reward integration secret is not configured');
+      |           ^
+  293 |   }
+  294 |
+  295 |   const timestamp = Date.now().toString();
+[Rewards Catalog] Error: Error: Reward integration secret is not configured
+    at createSignedActionHeaders (src\lib\rewards.ts:292:11)
+    at fetchChezahubRewardCatalog (src\lib\rewards.ts:716:10)
+    at GET (src\app\api\rewards\catalog\route.ts:12:51)
+  290 |   const secret = getRewardSharedSecret();
+  291 |   if (!secret) {
+> 292 |     throw new Error('Reward integration secret is not configured');
+      |           ^
+  293 |   }
+  294 |
+  295 |   const timestamp = Date.now().toString();
+⨯ The requested resource isn't a valid image for /mechi-logo.png received null
+⨯ The requested resource isn't a valid image for /game-artwork/efootball-header.webp received null
+⨯ The requested resource isn't a valid image for /game-artwork/fc26-header.webp received null
+⨯ The requested resource isn't a valid image for /game-artwork/mk11-header.webp received null
+⨯ The requested resource isn't a valid image for /game-artwork/nba2k26-header.webp received null
+⨯ The requested resource isn't a valid image for /game-artwork/tekken8-header.webp received null
+⨯ The requested resource isn't a valid image for /game-artwork/sf6-header.webp received null
+⨯ The requested resource isn't a valid image for /game-artwork/codm-header.webp received null
+⨯ The requested resource isn't a valid image for /game-artwork/pubgm-header.webp received null
+⨯ The requested resource isn't a valid image for /game-artwork/cs2-header.webp received null
+⨯ The requested resource isn't a valid image for /game-artwork/valorant-header.webp received null
+⨯ The requested resource isn't a valid image for /game-artwork/mariokart-header.webp received null
+⨯ The requested resource isn't a valid image for /game-artwork/smashbros-header.webp received null
+⨯ The requested resource isn't a valid image for /game-artwork/freefire-header.webp received null
+⨯ The requested resource isn't a valid image for /game-artwork/ludo-header.webp received null
+⨯ The requested resource isn't a valid image for /game-artwork/rocketleague-header.webp received null
+⨯ The requested resource isn't a valid image for /game-artwork/efootball-header.webp received null
+⨯ The requested resource isn't a valid image for /game-artwork/fc26-header.webp received null
+⨯ The requested resource isn't a valid image for /mechi-logo.png received null
+⨯ The requested resource isn't a valid image for /game-artwork/efootball-header.webp received null
+⨯ The requested resource isn't a valid image for /game-artwork/fc26-header.webp received null
+⨯ The requested resource isn't a valid image for /mechi-logo.png received null
+⨯ The requested resource isn't a valid image for /mechi-logo.png received null
+⨯ The requested resource isn't a valid image for /game-artwork/efootball-header.webp received null
+⨯ The requested resource isn't a valid image for /mechi-logo.png received null
+⨯ The requested resource isn't a valid image for /mechi-logo.png received null
+⨯ The requested resource isn't a valid image for /game-artwork/efootball-header.webp received null
+[browser] Image with src "/game-artwork/efootball-header.webp" was detected as the Largest Contentful Paint (LCP). Please add the `loading="eager"` property if this image is above the fold.
+Read more: https://nextjs.org/docs/app/api-reference/components/image#loading
+[browser] Image with src "/game-artwork/efootball-header.webp" was detected as the Largest Contentful Paint (LCP). Please add the `loading="eager"` property if this image is above the fold.
+Read more: https://nextjs.org/docs/app/api-reference/components/image#loading
+[Rewards Catalog] Error: Error: Reward integration secret is not configured
+    at createSignedActionHeaders (src\lib\rewards.ts:292:11)
+    at fetchChezahubRewardCatalog (src\lib\rewards.ts:716:10)
+    at GET (src\app\api\rewards\catalog\route.ts:12:51)
+  290 |   const secret = getRewardSharedSecret();
+  291 |   if (!secret) {
+> 292 |     throw new Error('Reward integration secret is not configured');
+      |           ^
+  293 |   }
+  294 |
+  295 |   const timestamp = Date.now().toString();
+[Rewards Catalog] Error: Error: Reward integration secret is not configured
+    at createSignedActionHeaders (src\lib\rewards.ts:292:11)
+    at fetchChezahubRewardCatalog (src\lib\rewards.ts:716:10)
+    at GET (src\app\api\rewards\catalog\route.ts:12:51)
+  290 |   const secret = getRewardSharedSecret();
+  291 |   if (!secret) {
+> 292 |     throw new Error('Reward integration secret is not configured');
+      |           ^
+  293 |   }
+  294 |
+  295 |   const timestamp = Date.now().toString();
+⨯ The requested resource isn't a valid image for /mechi-logo.png received null
+Error: The requested resource isn't a valid image.
+    at ignore-listed frames {
+  statusCode: 400
+}
+[browser] Image with src "/game-artwork/fc26-header.webp" was detected as the Largest Contentful Paint (LCP). Please add the `loading="eager"` property if this image is above the fold.
+Read more: https://nextjs.org/docs/app/api-reference/components/image#loading
+⨯ The requested resource isn't a valid image for /game-artwork/fc26-header.webp received null
+⨯ The requested resource isn't a valid image for /game-artwork/mk11-header.webp received null
+Error: The requested resource isn't a valid image.
+    at ignore-listed frames {
+  statusCode: 400
+}
+Error: The requested resource isn't a valid image.
+    at ignore-listed frames {
+  statusCode: 400
+}
+[browser] Failed to fetch RSC payload for http://localhost:3000/tutorials. Falling back to browser navigation. TypeError: Failed to fetch
+
+-----
+[1m[31mFATAL[39m[0m: An unexpected Turbopack error occurred. A panic log has been written to C:\Users\ADMIN\AppData\Local\Temp\next-panic-319c45d83b545328182006858c8d28a6.log.
+
+To help make Turbopack better, report this error by clicking here: https://bugs.nextjs.org/search?category=turbopack-error-report&title=Turbopack%20Error%3A%20failed%20to%20write%20to%20%22C%3A%5C%5CUsers%5C%5CADMIN%5C%5CDocuments%5C%5Cmechiiii%5C%5Cmechi-v3%5C%5C.next%5C%5Cdev%5C%5Cstatic%5C%5Cchunks%5C%5Csrc_app_%28app%29_layout_tsx_0l16s5-._.js%22&body=Turbopack%20version%3A%20%60c573e8c4%60%0ANext.js%20version%3A%20%600.0.0%60%0A%0AError%20message%3A%0A%60%60%60%0Afailed%20to%20write%20to%20%22C%3A%5C%5CUsers%5C%5CADMIN%5C%5CDocuments%5C%5Cmechiiii%5C%5Cmechi-v3%5C%5C.next%5C%5Cdev%5C%5Cstatic%5C%5Cchunks%5C%5Csrc_app_%28app%29_layout_tsx_0l16s5-._.js%22%0A%0ACaused%20by%3A%0A-%20The%20requested%20operation%20cannot%20be%20performed%20on%20a%20file%20with%20a%20user-mapped%20section%20open.%20%28os%20error%201224%29%0A%60%60%60&labels=Turbopack,Turbopack%20Panic%20Backtrace
+-----
+
+[Server HMR] Subscription error: Error [TurbopackInternalError]: failed to write to "C:\\Users\\ADMIN\\Documents\\mechiiii\\mechi-v3\\.next\\dev\\static\\chunks\\src_app_(app)_layout_tsx_0l16s5-._.js"
+
+Caused by:
+- The requested operation cannot be performed on a file with a user-mapped section open. (os error 1224)
+    at <unknown> (TurbopackInternalError: failed to write to "C:\\Users\\ADMIN\\Documents\\mechiiii\\mechi-v3\\.next\\dev\\static\\chunks\\src_app_(app)_layout_tsx_0l16s5-._.js") {
+  location: undefined
+}
+
+-----
+[1m[31mFATAL[39m[0m: An unexpected Turbopack error occurred. A panic log has been written to C:\Users\ADMIN\AppData\Local\Temp\next-panic-319c45d83b545328182006858c8d28a6.log.
+
+To help make Turbopack better, report this error by clicking here: https://bugs.nextjs.org/search?category=turbopack-error-report&title=Turbopack%20Error%3A%20failed%20to%20write%20to%20%22C%3A%5C%5CUsers%5C%5CADMIN%5C%5CDocuments%5C%5Cmechiiii%5C%5Cmechi-v3%5C%5C.next%5C%5Cdev%5C%5Cstatic%5C%5Cchunks%5C%5Csrc_app_%28app%29_layout_tsx_0l16s5-._.js%22&body=Turbopack%20version%3A%20%60c573e8c4%60%0ANext.js%20version%3A%20%600.0.0%60%0A%0AError%20message%3A%0A%60%60%60%0Afailed%20to%20write%20to%20%22C%3A%5C%5CUsers%5C%5CADMIN%5C%5CDocuments%5C%5Cmechiiii%5C%5Cmechi-v3%5C%5C.next%5C%5Cdev%5C%5Cstatic%5C%5Cchunks%5C%5Csrc_app_%28app%29_layout_tsx_0l16s5-._.js%22%0A%0ACaused%20by%3A%0A-%20The%20requested%20operation%20cannot%20be%20performed%20on%20a%20file%20with%20a%20user-mapped%20section%20open.%20%28os%20error%201224%29%0A%60%60%60&labels=Turbopack,Turbopack%20Panic%20Backtrace
+-----
+
+[Server HMR] Subscription error: Error [TurbopackInternalError]: failed to write to "C:\\Users\\ADMIN\\Documents\\mechiiii\\mechi-v3\\.next\\dev\\static\\chunks\\src_app_(app)_layout_tsx_0l16s5-._.js"
+
+Caused by:
+- The requested operation cannot be performed on a file with a user-mapped section open. (os error 1224)
+    at <unknown> (TurbopackInternalError: failed to write to "C:\\Users\\ADMIN\\Documents\\mechiiii\\mechi-v3\\.next\\dev\\static\\chunks\\src_app_(app)_layout_tsx_0l16s5-._.js") {
+  location: undefined
+}
+[Server HMR] Subscription error: Error [TurbopackInternalError]: failed to write to "C:\\Users\\ADMIN\\Documents\\mechiiii\\mechi-v3\\.next\\dev\\static\\chunks\\src_app_(app)_layout_tsx_0l16s5-._.js"
+
+Caused by:
+- The requested operation cannot be performed on a file with a user-mapped section open. (os error 1224)
+    at <unknown> (TurbopackInternalError: failed to write to "C:\\Users\\ADMIN\\Documents\\mechiiii\\mechi-v3\\.next\\dev\\static\\chunks\\src_app_(app)_layout_tsx_0l16s5-._.js") {
+  location: undefined
+}
+[Server HMR] Subscription error: Error [TurbopackInternalError]: failed to write to "C:\\Users\\ADMIN\\Documents\\mechiiii\\mechi-v3\\.next\\dev\\static\\chunks\\src_app_(app)_layout_tsx_0l16s5-._.js"
+
+Caused by:
+- The requested operation cannot be performed on a file with a user-mapped section open. (os error 1224)
+    at <unknown> (TurbopackInternalError: failed to write to "C:\\Users\\ADMIN\\Documents\\mechiiii\\mechi-v3\\.next\\dev\\static\\chunks\\src_app_(app)_layout_tsx_0l16s5-._.js") {
+  location: undefined
+}
+[Server HMR] Subscription error: Error [TurbopackInternalError]: failed to write to "C:\\Users\\ADMIN\\Documents\\mechiiii\\mechi-v3\\.next\\dev\\static\\chunks\\src_app_(app)_layout_tsx_0l16s5-._.js"
+
+Caused by:
+- The requested operation cannot be performed on a file with a user-mapped section open. (os error 1224)
+    at <unknown> (TurbopackInternalError: failed to write to "C:\\Users\\ADMIN\\Documents\\mechiiii\\mechi-v3\\.next\\dev\\static\\chunks\\src_app_(app)_layout_tsx_0l16s5-._.js") {
+  location: undefined
+}
+[Server HMR] Subscription error: Error [TurbopackInternalError]: failed to write to "C:\\Users\\ADMIN\\Documents\\mechiiii\\mechi-v3\\.next\\dev\\static\\chunks\\src_app_(app)_layout_tsx_0l16s5-._.js"
+
+Caused by:
+- The requested operation cannot be performed on a file with a user-mapped section open. (os error 1224)
+    at <unknown> (TurbopackInternalError: failed to write to "C:\\Users\\ADMIN\\Documents\\mechiiii\\mechi-v3\\.next\\dev\\static\\chunks\\src_app_(app)_layout_tsx_0l16s5-._.js") {
+  location: undefined
+}
+[Server HMR] Subscription error: Error [TurbopackInternalError]: failed to write to "C:\\Users\\ADMIN\\Documents\\mechiiii\\mechi-v3\\.next\\dev\\static\\chunks\\src_app_(app)_layout_tsx_0l16s5-._.js"
+
+Caused by:
+- The requested operation cannot be performed on a file with a user-mapped section open. (os error 1224)
+    at <unknown> (TurbopackInternalError: failed to write to "C:\\Users\\ADMIN\\Documents\\mechiiii\\mechi-v3\\.next\\dev\\static\\chunks\\src_app_(app)_layout_tsx_0l16s5-._.js") {
+  location: undefined
+}
+[Server HMR] Subscription error: Error [TurbopackInternalError]: failed to write to "C:\\Users\\ADMIN\\Documents\\mechiiii\\mechi-v3\\.next\\dev\\static\\chunks\\src_app_(app)_layout_tsx_0l16s5-._.js"
+
+Caused by:
+- The requested operation cannot be performed on a file with a user-mapped section open. (os error 1224)
+    at <unknown> (TurbopackInternalError: failed to write to "C:\\Users\\ADMIN\\Documents\\mechiiii\\mechi-v3\\.next\\dev\\static\\chunks\\src_app_(app)_layout_tsx_0l16s5-._.js") {
+  location: undefined
+}
+[Server HMR] Subscription error: Error [TurbopackInternalError]: failed to write to "C:\\Users\\ADMIN\\Documents\\mechiiii\\mechi-v3\\.next\\dev\\static\\chunks\\src_app_(app)_layout_tsx_0l16s5-._.js"
+
+Caused by:
+- The requested operation cannot be performed on a file with a user-mapped section open. (os error 1224)
+    at <unknown> (TurbopackInternalError: failed to write to "C:\\Users\\ADMIN\\Documents\\mechiiii\\mechi-v3\\.next\\dev\\static\\chunks\\src_app_(app)_layout_tsx_0l16s5-._.js") {
+  location: undefined
+}
+
+-----
+[1m[31mFATAL[39m[0m: An unexpected Turbopack error occurred. A panic log has been written to C:\Users\ADMIN\AppData\Local\Temp\next-panic-319c45d83b545328182006858c8d28a6.log.
+
+To help make Turbopack better, report this error by clicking here: https://bugs.nextjs.org/search?category=turbopack-error-report&title=Turbopack%20Error%3A%20failed%20to%20write%20to%20%22C%3A%5C%5CUsers%5C%5CADMIN%5C%5CDocuments%5C%5Cmechiiii%5C%5Cmechi-v3%5C%5C.next%5C%5Cdev%5C%5Cstatic%5C%5Cchunks%5C%5Csrc_app_%28app%29_layout_tsx_0l16s5-._.js%22&body=Turbopack%20version%3A%20%60c573e8c4%60%0ANext.js%20version%3A%20%600.0.0%60%0A%0AError%20message%3A%0A%60%60%60%0Afailed%20to%20write%20to%20%22C%3A%5C%5CUsers%5C%5CADMIN%5C%5CDocuments%5C%5Cmechiiii%5C%5Cmechi-v3%5C%5C.next%5C%5Cdev%5C%5Cstatic%5C%5Cchunks%5C%5Csrc_app_%28app%29_layout_tsx_0l16s5-._.js%22%0A%0ACaused%20by%3A%0A-%20The%20requested%20operation%20cannot%20be%20performed%20on%20a%20file%20with%20a%20user-mapped%20section%20open.%20%28os%20error%201224%29%0A%60%60%60&labels=Turbopack,Turbopack%20Panic%20Backtrace
+-----
+
+[Server HMR] Subscription error: Error [TurbopackInternalError]: failed to write to "C:\\Users\\ADMIN\\Documents\\mechiiii\\mechi-v3\\.next\\dev\\static\\chunks\\src_app_(app)_layout_tsx_0l16s5-._.js"
+
+Caused by:
+- The requested operation cannot be performed on a file with a user-mapped section open. (os error 1224)
+    at <unknown> (TurbopackInternalError: failed to write to "C:\\Users\\ADMIN\\Documents\\mechiiii\\mechi-v3\\.next\\dev\\static\\chunks\\src_app_(app)_layout_tsx_0l16s5-._.js") {
+  location: undefined
+}
+[Server HMR] Subscription error: Error [TurbopackInternalError]: failed to write to "C:\\Users\\ADMIN\\Documents\\mechiiii\\mechi-v3\\.next\\dev\\static\\chunks\\src_app_(app)_layout_tsx_0l16s5-._.js"
+
+Caused by:
+- The requested operation cannot be performed on a file with a user-mapped section open. (os error 1224)
+    at <unknown> (TurbopackInternalError: failed to write to "C:\\Users\\ADMIN\\Documents\\mechiiii\\mechi-v3\\.next\\dev\\static\\chunks\\src_app_(app)_layout_tsx_0l16s5-._.js") {
+  location: undefined
+}
+[Server HMR] Subscription error: Error [TurbopackInternalError]: failed to write to "C:\\Users\\ADMIN\\Documents\\mechiiii\\mechi-v3\\.next\\dev\\static\\chunks\\src_app_(app)_layout_tsx_0l16s5-._.js"
+
+Caused by:
+- The requested operation cannot be performed on a file with a user-mapped section open. (os error 1224)
+    at <unknown> (TurbopackInternalError: failed to write to "C:\\Users\\ADMIN\\Documents\\mechiiii\\mechi-v3\\.next\\dev\\static\\chunks\\src_app_(app)_layout_tsx_0l16s5-._.js") {
+  location: undefined
+}
+[Server HMR] Subscription error: Error [TurbopackInternalError]: failed to write to "C:\\Users\\ADMIN\\Documents\\mechiiii\\mechi-v3\\.next\\dev\\static\\chunks\\src_app_(app)_layout_tsx_0l16s5-._.js"
+
+Caused by:
+- The requested operation cannot be performed on a file with a user-mapped section open. (os error 1224)
+    at <unknown> (TurbopackInternalError: failed to write to "C:\\Users\\ADMIN\\Documents\\mechiiii\\mechi-v3\\.next\\dev\\static\\chunks\\src_app_(app)_layout_tsx_0l16s5-._.js") {
+  location: undefined
+}
+[Server HMR] Subscription error: Error [TurbopackInternalError]: failed to write to "C:\\Users\\ADMIN\\Documents\\mechiiii\\mechi-v3\\.next\\dev\\static\\chunks\\src_app_(app)_layout_tsx_0l16s5-._.js"
+
+Caused by:
+- The requested operation cannot be performed on a file with a user-mapped section open. (os error 1224)
+    at <unknown> (TurbopackInternalError: failed to write to "C:\\Users\\ADMIN\\Documents\\mechiiii\\mechi-v3\\.next\\dev\\static\\chunks\\src_app_(app)_layout_tsx_0l16s5-._.js") {
+  location: undefined
+}
+⨯ ReferenceError: APP_HOST is not defined
+    at proxy (src\proxy.ts:286:49)
+  284 | ...st host = getRequestHost(request);
+  285 | ...st adminHost = ADMIN_HOSTS.has(host);
+> 286 | ...st sharedLocalHost = adminHost && host === APP_HOST;
+      |                                               ^
+  287 | ...
+  288 | ...(pathname === '/share' && request.nextUrl.searchParams.get('chezahub_link') === 'succe...
+  289 | ...onst redirectUrl = new URL('/rewards', adminHost ? APP_URL : request.url);
+⨯ ReferenceError: APP_HOST is not defined
+    at proxy (src\proxy.ts:286:49)
+  284 | ...st host = getRequestHost(request);
+  285 | ...st adminHost = ADMIN_HOSTS.has(host);
+> 286 | ...st sharedLocalHost = adminHost && host === APP_HOST;
+      |                                               ^
+  287 | ...
+  288 | ...(pathname === '/share' && request.nextUrl.searchParams.get('chezahub_link') === 'succe...
+  289 | ...onst redirectUrl = new URL('/rewards', adminHost ? APP_URL : request.url);
+⨯ ReferenceError: APP_HOST is not defined
+    at proxy (src\proxy.ts:286:49)
+  284 | ...st host = getRequestHost(request);
+  285 | ...st adminHost = ADMIN_HOSTS.has(host);
+> 286 | ...st sharedLocalHost = adminHost && host === APP_HOST;
+      |                                               ^
+  287 | ...
+  288 | ...(pathname === '/share' && request.nextUrl.searchParams.get('chezahub_link') === 'succe...
+  289 | ...onst redirectUrl = new URL('/rewards', adminHost ? APP_URL : request.url);
+⨯ ReferenceError: APP_HOST is not defined
+    at proxy (src\proxy.ts:286:49)
+  284 | ...st host = getRequestHost(request);
+  285 | ...st adminHost = ADMIN_HOSTS.has(host);
+> 286 | ...st sharedLocalHost = adminHost && host === APP_HOST;
+      |                                               ^
+  287 | ...
+  288 | ...(pathname === '/share' && request.nextUrl.searchParams.get('chezahub_link') === 'succe...
+  289 | ...onst redirectUrl = new URL('/rewards', adminHost ? APP_URL : request.url);
+⨯ ReferenceError: APP_HOST is not defined
+    at proxy (src\proxy.ts:286:49)
+  284 | ...st host = getRequestHost(request);
+  285 | ...st adminHost = ADMIN_HOSTS.has(host);
+> 286 | ...st sharedLocalHost = adminHost && host === APP_HOST;
+      |                                               ^
+  287 | ...
+  288 | ...(pathname === '/share' && request.nextUrl.searchParams.get('chezahub_link') === 'succe...
+  289 | ...onst redirectUrl = new URL('/rewards', adminHost ? APP_URL : request.url);
+⨯ ReferenceError: APP_HOST is not defined
+    at proxy (src\proxy.ts:286:49)
+  284 | ...st host = getRequestHost(request);
+  285 | ...st adminHost = ADMIN_HOSTS.has(host);
+> 286 | ...st sharedLocalHost = adminHost && host === APP_HOST;
+      |                                               ^
+  287 | ...
+  288 | ...(pathname === '/share' && request.nextUrl.searchParams.get('chezahub_link') === 'succe...
+  289 | ...onst redirectUrl = new URL('/rewards', adminHost ? APP_URL : request.url);
+⨯ ReferenceError: APP_HOST is not defined
+    at proxy (src\proxy.ts:286:49)
+  284 | ...st host = getRequestHost(request);
+  285 | ...st adminHost = ADMIN_HOSTS.has(host);
+> 286 | ...st sharedLocalHost = adminHost && host === APP_HOST;
+      |                                               ^
+  287 | ...
+  288 | ...(pathname === '/share' && request.nextUrl.searchParams.get('chezahub_link') === 'succe...
+  289 | ...onst redirectUrl = new URL('/rewards', adminHost ? APP_URL : request.url);
+⨯ ReferenceError: APP_HOST is not defined
+    at proxy (src\proxy.ts:286:49)
+  284 | ...st host = getRequestHost(request);
+  285 | ...st adminHost = ADMIN_HOSTS.has(host);
+> 286 | ...st sharedLocalHost = adminHost && host === APP_HOST;
+      |                                               ^
+  287 | ...
+  288 | ...(pathname === '/share' && request.nextUrl.searchParams.get('chezahub_link') === 'succe...
+  289 | ...onst redirectUrl = new URL('/rewards', adminHost ? APP_URL : request.url);
+⨯ ReferenceError: APP_HOST is not defined
+    at proxy (src\proxy.ts:286:49)
+  284 | ...st host = getRequestHost(request);
+  285 | ...st adminHost = ADMIN_HOSTS.has(host);
+> 286 | ...st sharedLocalHost = adminHost && host === APP_HOST;
+      |                                               ^
+  287 | ...
+  288 | ...(pathname === '/share' && request.nextUrl.searchParams.get('chezahub_link') === 'succe...
+  289 | ...onst redirectUrl = new URL('/rewards', adminHost ? APP_URL : request.url);
+⨯ ReferenceError: APP_HOST is not defined
+    at proxy (src\proxy.ts:286:49)
+  284 | ...st host = getRequestHost(request);
+  285 | ...st adminHost = ADMIN_HOSTS.has(host);
+> 286 | ...st sharedLocalHost = adminHost && host === APP_HOST;
+      |                                               ^
+  287 | ...
+  288 | ...(pathname === '/share' && request.nextUrl.searchParams.get('chezahub_link') === 'succe...
+  289 | ...onst redirectUrl = new URL('/rewards', adminHost ? APP_URL : request.url);
+⨯ ReferenceError: APP_HOST is not defined
+    at proxy (src\proxy.ts:286:49)
+  284 | ...st host = getRequestHost(request);
+  285 | ...st adminHost = ADMIN_HOSTS.has(host);
+> 286 | ...st sharedLocalHost = adminHost && host === APP_HOST;
+      |                                               ^
+  287 | ...
+  288 | ...(pathname === '/share' && request.nextUrl.searchParams.get('chezahub_link') === 'succe...
+  289 | ...onst redirectUrl = new URL('/rewards', adminHost ? APP_URL : request.url);
+⨯ ReferenceError: APP_HOST is not defined
+    at proxy (src\proxy.ts:286:49)
+  284 | ...st host = getRequestHost(request);
+  285 | ...st adminHost = ADMIN_HOSTS.has(host);
+> 286 | ...st sharedLocalHost = adminHost && host === APP_HOST;
+      |                                               ^
+  287 | ...
+  288 | ...(pathname === '/share' && request.nextUrl.searchParams.get('chezahub_link') === 'succe...
+  289 | ...onst redirectUrl = new URL('/rewards', adminHost ? APP_URL : request.url);
+⨯ ReferenceError: APP_HOST is not defined
+    at proxy (src\proxy.ts:286:49)
+  284 | ...st host = getRequestHost(request);
+  285 | ...st adminHost = ADMIN_HOSTS.has(host);
+> 286 | ...st sharedLocalHost = adminHost && host === APP_HOST;
+      |                                               ^
+  287 | ...
+  288 | ...(pathname === '/share' && request.nextUrl.searchParams.get('chezahub_link') === 'succe...
+  289 | ...onst redirectUrl = new URL('/rewards', adminHost ? APP_URL : request.url);
+⨯ ReferenceError: APP_HOST is not defined
+    at proxy (src\proxy.ts:286:49)
+  284 | ...st host = getRequestHost(request);
+  285 | ...st adminHost = ADMIN_HOSTS.has(host);
+> 286 | ...st sharedLocalHost = adminHost && host === APP_HOST;
+      |                                               ^
+  287 | ...
+  288 | ...(pathname === '/share' && request.nextUrl.searchParams.get('chezahub_link') === 'succe...
+  289 | ...onst redirectUrl = new URL('/rewards', adminHost ? APP_URL : request.url);
+⨯ ReferenceError: APP_HOST is not defined
+    at proxy (src\proxy.ts:286:49)
+  284 | ...st host = getRequestHost(request);
+  285 | ...st adminHost = ADMIN_HOSTS.has(host);
+> 286 | ...st sharedLocalHost = adminHost && host === APP_HOST;
+      |                                               ^
+  287 | ...
+  288 | ...(pathname === '/share' && request.nextUrl.searchParams.get('chezahub_link') === 'succe...
+  289 | ...onst redirectUrl = new URL('/rewards', adminHost ? APP_URL : request.url);
+⨯ ReferenceError: APP_HOST is not defined
+    at proxy (src\proxy.ts:286:49)
+  284 | ...st host = getRequestHost(request);
+  285 | ...st adminHost = ADMIN_HOSTS.has(host);
+> 286 | ...st sharedLocalHost = adminHost && host === APP_HOST;
+      |                                               ^
+  287 | ...
+  288 | ...(pathname === '/share' && request.nextUrl.searchParams.get('chezahub_link') === 'succe...
+  289 | ...onst redirectUrl = new URL('/rewards', adminHost ? APP_URL : request.url);
+
+-----
+[1m[31mFATAL[39m[0m: An unexpected Turbopack error occurred. A panic log has been written to C:\Users\ADMIN\AppData\Local\Temp\next-panic-319c45d83b545328182006858c8d28a6.log.
+
+To help make Turbopack better, report this error by clicking here: https://bugs.nextjs.org/search?category=turbopack-error-report&title=Turbopack%20Error%3A%20failed%20to%20write%20to%20%22C%3A%5C%5CUsers%5C%5CADMIN%5C%5CDocuments%5C%5Cmechiiii%5C%5Cmechi-v3%5C%5C.next%5C%5Cdev%5C%5Cstatic%5C%5Cchunks%5C%5Csrc_app_%28app%29_layout_tsx_0l16s5-._.js%22&body=Turbopack%20version%3A%20%60c573e8c4%60%0ANext.js%20version%3A%20%600.0.0%60%0A%0AError%20message%3A%0A%60%60%60%0Afailed%20to%20write%20to%20%22C%3A%5C%5CUsers%5C%5CADMIN%5C%5CDocuments%5C%5Cmechiiii%5C%5Cmechi-v3%5C%5C.next%5C%5Cdev%5C%5Cstatic%5C%5Cchunks%5C%5Csrc_app_%28app%29_layout_tsx_0l16s5-._.js%22%0A%0ACaused%20by%3A%0A-%20The%20requested%20operation%20cannot%20be%20performed%20on%20a%20file%20with%20a%20user-mapped%20section%20open.%20%28os%20error%201224%29%0A%60%60%60&labels=Turbopack,Turbopack%20Panic%20Backtrace
+-----
+
+[Server HMR] Subscription error: Error [TurbopackInternalError]: failed to write to "C:\\Users\\ADMIN\\Documents\\mechiiii\\mechi-v3\\.next\\dev\\static\\chunks\\src_app_(app)_layout_tsx_0l16s5-._.js"
+
+Caused by:
+- The requested operation cannot be performed on a file with a user-mapped section open. (os error 1224)
+    at <unknown> (TurbopackInternalError: failed to write to "C:\\Users\\ADMIN\\Documents\\mechiiii\\mechi-v3\\.next\\dev\\static\\chunks\\src_app_(app)_layout_tsx_0l16s5-._.js") {
+  location: undefined
+}
+[Server HMR] Subscription error: Error [TurbopackInternalError]: failed to write to "C:\\Users\\ADMIN\\Documents\\mechiiii\\mechi-v3\\.next\\dev\\static\\chunks\\src_app_(app)_layout_tsx_0l16s5-._.js"
+
+Caused by:
+- The requested operation cannot be performed on a file with a user-mapped section open. (os error 1224)
+    at <unknown> (TurbopackInternalError: failed to write to "C:\\Users\\ADMIN\\Documents\\mechiiii\\mechi-v3\\.next\\dev\\static\\chunks\\src_app_(app)_layout_tsx_0l16s5-._.js") {
+  location: undefined
+}
+[Server HMR] Subscription error: Error [TurbopackInternalError]: failed to write to "C:\\Users\\ADMIN\\Documents\\mechiiii\\mechi-v3\\.next\\dev\\static\\chunks\\src_app_(app)_layout_tsx_0l16s5-._.js"
+
+Caused by:
+- The requested operation cannot be performed on a file with a user-mapped section open. (os error 1224)
+    at <unknown> (TurbopackInternalError: failed to write to "C:\\Users\\ADMIN\\Documents\\mechiiii\\mechi-v3\\.next\\dev\\static\\chunks\\src_app_(app)_layout_tsx_0l16s5-._.js") {
+  location: undefined
+}
+[Server HMR] Subscription error: Error [TurbopackInternalError]: failed to write to "C:\\Users\\ADMIN\\Documents\\mechiiii\\mechi-v3\\.next\\dev\\static\\chunks\\src_app_(app)_layout_tsx_0l16s5-._.js"
+
+Caused by:
+- The requested operation cannot be performed on a file with a user-mapped section open. (os error 1224)
+    at <unknown> (TurbopackInternalError: failed to write to "C:\\Users\\ADMIN\\Documents\\mechiiii\\mechi-v3\\.next\\dev\\static\\chunks\\src_app_(app)_layout_tsx_0l16s5-._.js") {
+  location: undefined
+}
+[Server HMR] Subscription error: Error [TurbopackInternalError]: failed to write to "C:\\Users\\ADMIN\\Documents\\mechiiii\\mechi-v3\\.next\\dev\\static\\chunks\\src_app_(app)_layout_tsx_0l16s5-._.js"
+
+Caused by:
+- The requested operation cannot be performed on a file with a user-mapped section open. (os error 1224)
+    at <unknown> (TurbopackInternalError: failed to write to "C:\\Users\\ADMIN\\Documents\\mechiiii\\mechi-v3\\.next\\dev\\static\\chunks\\src_app_(app)_layout_tsx_0l16s5-._.js") {
+  location: undefined
+}
+
+-----
+[1m[31mFATAL[39m[0m: An unexpected Turbopack error occurred. A panic log has been written to C:\Users\ADMIN\AppData\Local\Temp\next-panic-319c45d83b545328182006858c8d28a6.log.
+
+To help make Turbopack better, report this error by clicking here: https://bugs.nextjs.org/search?category=turbopack-error-report&title=Turbopack%20Error%3A%20failed%20to%20write%20to%20%22C%3A%5C%5CUsers%5C%5CADMIN%5C%5CDocuments%5C%5Cmechiiii%5C%5Cmechi-v3%5C%5C.next%5C%5Cdev%5C%5Cstatic%5C%5Cchunks%5C%5Csrc_app_%28app%29_layout_tsx_0l16s5-._.js%22&body=Turbopack%20version%3A%20%60c573e8c4%60%0ANext.js%20version%3A%20%600.0.0%60%0A%0AError%20message%3A%0A%60%60%60%0Afailed%20to%20write%20to%20%22C%3A%5C%5CUsers%5C%5CADMIN%5C%5CDocuments%5C%5Cmechiiii%5C%5Cmechi-v3%5C%5C.next%5C%5Cdev%5C%5Cstatic%5C%5Cchunks%5C%5Csrc_app_%28app%29_layout_tsx_0l16s5-._.js%22%0A%0ACaused%20by%3A%0A-%20The%20requested%20operation%20cannot%20be%20performed%20on%20a%20file%20with%20a%20user-mapped%20section%20open.%20%28os%20error%201224%29%0A%60%60%60&labels=Turbopack,Turbopack%20Panic%20Backtrace
+-----
+
+[Server HMR] Subscription error: Error [TurbopackInternalError]: failed to write to "C:\\Users\\ADMIN\\Documents\\mechiiii\\mechi-v3\\.next\\dev\\static\\chunks\\src_app_(app)_layout_tsx_0l16s5-._.js"
+
+Caused by:
+- The requested operation cannot be performed on a file with a user-mapped section open. (os error 1224)
+    at <unknown> (TurbopackInternalError: failed to write to "C:\\Users\\ADMIN\\Documents\\mechiiii\\mechi-v3\\.next\\dev\\static\\chunks\\src_app_(app)_layout_tsx_0l16s5-._.js") {
+  location: undefined
+}
+[Server HMR] Subscription error: Error [TurbopackInternalError]: failed to write to "C:\\Users\\ADMIN\\Documents\\mechiiii\\mechi-v3\\.next\\dev\\static\\chunks\\src_app_(app)_layout_tsx_0l16s5-._.js"
+
+Caused by:
+- The requested operation cannot be performed on a file with a user-mapped section open. (os error 1224)
+    at <unknown> (TurbopackInternalError: failed to write to "C:\\Users\\ADMIN\\Documents\\mechiiii\\mechi-v3\\.next\\dev\\static\\chunks\\src_app_(app)_layout_tsx_0l16s5-._.js") {
+  location: undefined
+}
+[Server HMR] Subscription error: Error [TurbopackInternalError]: failed to write to "C:\\Users\\ADMIN\\Documents\\mechiiii\\mechi-v3\\.next\\dev\\static\\chunks\\src_app_(app)_layout_tsx_0l16s5-._.js"
+
+Caused by:
+- The requested operation cannot be performed on a file with a user-mapped section open. (os error 1224)
+    at <unknown> (TurbopackInternalError: failed to write to "C:\\Users\\ADMIN\\Documents\\mechiiii\\mechi-v3\\.next\\dev\\static\\chunks\\src_app_(app)_layout_tsx_0l16s5-._.js") {
+  location: undefined
+}
+[Server HMR] Subscription error: Error [TurbopackInternalError]: failed to write to "C:\\Users\\ADMIN\\Documents\\mechiiii\\mechi-v3\\.next\\dev\\static\\chunks\\src_app_(app)_layout_tsx_0l16s5-._.js"
+
+Caused by:
+- The requested operation cannot be performed on a file with a user-mapped section open. (os error 1224)
+    at <unknown> (TurbopackInternalError: failed to write to "C:\\Users\\ADMIN\\Documents\\mechiiii\\mechi-v3\\.next\\dev\\static\\chunks\\src_app_(app)_layout_tsx_0l16s5-._.js") {
+  location: undefined
+}
+[Server HMR] Subscription error: Error [TurbopackInternalError]: failed to write to "C:\\Users\\ADMIN\\Documents\\mechiiii\\mechi-v3\\.next\\dev\\static\\chunks\\src_app_(app)_layout_tsx_0l16s5-._.js"
+
+Caused by:
+- The requested operation cannot be performed on a file with a user-mapped section open. (os error 1224)
+    at <unknown> (TurbopackInternalError: failed to write to "C:\\Users\\ADMIN\\Documents\\mechiiii\\mechi-v3\\.next\\dev\\static\\chunks\\src_app_(app)_layout_tsx_0l16s5-._.js") {
+  location: undefined
+}
+
+-----
+[1m[31mFATAL[39m[0m: An unexpected Turbopack error occurred. A panic log has been written to C:\Users\ADMIN\AppData\Local\Temp\next-panic-319c45d83b545328182006858c8d28a6.log.
+
+To help make Turbopack better, report this error by clicking here: https://bugs.nextjs.org/search?category=turbopack-error-report&title=Turbopack%20Error%3A%20failed%20to%20write%20to%20%22C%3A%5C%5CUsers%5C%5CADMIN%5C%5CDocuments%5C%5Cmechiiii%5C%5Cmechi-v3%5C%5C.next%5C%5Cdev%5C%5Cstatic%5C%5Cchunks%5C%5Csrc_app_%28app%29_layout_tsx_0l16s5-._.js%22&body=Turbopack%20version%3A%20%60c573e8c4%60%0ANext.js%20version%3A%20%600.0.0%60%0A%0AError%20message%3A%0A%60%60%60%0Afailed%20to%20write%20to%20%22C%3A%5C%5CUsers%5C%5CADMIN%5C%5CDocuments%5C%5Cmechiiii%5C%5Cmechi-v3%5C%5C.next%5C%5Cdev%5C%5Cstatic%5C%5Cchunks%5C%5Csrc_app_%28app%29_layout_tsx_0l16s5-._.js%22%0A%0ACaused%20by%3A%0A-%20The%20requested%20operation%20cannot%20be%20performed%20on%20a%20file%20with%20a%20user-mapped%20section%20open.%20%28os%20error%201224%29%0A%60%60%60&labels=Turbopack,Turbopack%20Panic%20Backtrace
+-----
+
+
+-----
+[1m[31mFATAL[39m[0m: An unexpected Turbopack error occurred. A panic log has been written to C:\Users\ADMIN\AppData\Local\Temp\next-panic-319c45d83b545328182006858c8d28a6.log.
+
+To help make Turbopack better, report this error by clicking here: https://bugs.nextjs.org/search?category=turbopack-error-report&title=Turbopack%20Error%3A%20failed%20to%20write%20to%20%22C%3A%5C%5CUsers%5C%5CADMIN%5C%5CDocuments%5C%5Cmechiiii%5C%5Cmechi-v3%5C%5C.next%5C%5Cdev%5C%5Cstatic%5C%5Cchunks%5C%5Csrc_app_%28app%29_layout_tsx_0l16s5-._.js%22&body=Turbopack%20version%3A%20%60c573e8c4%60%0ANext.js%20version%3A%20%600.0.0%60%0A%0AError%20message%3A%0A%60%60%60%0Afailed%20to%20write%20to%20%22C%3A%5C%5CUsers%5C%5CADMIN%5C%5CDocuments%5C%5Cmechiiii%5C%5Cmechi-v3%5C%5C.next%5C%5Cdev%5C%5Cstatic%5C%5Cchunks%5C%5Csrc_app_%28app%29_layout_tsx_0l16s5-._.js%22%0A%0ACaused%20by%3A%0A-%20The%20requested%20operation%20cannot%20be%20performed%20on%20a%20file%20with%20a%20user-mapped%20section%20open.%20%28os%20error%201224%29%0A%60%60%60&labels=Turbopack,Turbopack%20Panic%20Backtrace
+-----
+
+
+-----
+[1m[31mFATAL[39m[0m: An unexpected Turbopack error occurred. A panic log has been written to C:\Users\ADMIN\AppData\Local\Temp\next-panic-319c45d83b545328182006858c8d28a6.log.
+
+To help make Turbopack better, report this error by clicking here: https://bugs.nextjs.org/search?category=turbopack-error-report&title=Turbopack%20Error%3A%20failed%20to%20write%20to%20%22C%3A%5C%5CUsers%5C%5CADMIN%5C%5CDocuments%5C%5Cmechiiii%5C%5Cmechi-v3%5C%5C.next%5C%5Cdev%5C%5Cstatic%5C%5Cchunks%5C%5Csrc_app_%28app%29_layout_tsx_0l16s5-._.js%22&body=Turbopack%20version%3A%20%60c573e8c4%60%0ANext.js%20version%3A%20%600.0.0%60%0A%0AError%20message%3A%0A%60%60%60%0Afailed%20to%20write%20to%20%22C%3A%5C%5CUsers%5C%5CADMIN%5C%5CDocuments%5C%5Cmechiiii%5C%5Cmechi-v3%5C%5C.next%5C%5Cdev%5C%5Cstatic%5C%5Cchunks%5C%5Csrc_app_%28app%29_layout_tsx_0l16s5-._.js%22%0A%0ACaused%20by%3A%0A-%20The%20requested%20operation%20cannot%20be%20performed%20on%20a%20file%20with%20a%20user-mapped%20section%20open.%20%28os%20error%201224%29%0A%60%60%60&labels=Turbopack,Turbopack%20Panic%20Backtrace
+-----
+

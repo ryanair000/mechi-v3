@@ -1,0 +1,40 @@
+﻿<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 1200" role="img" aria-labelledby="codm-capsule-title codm-capsule-desc">
+  <title id="codm-capsule-title">Call of Duty Mobile</title>
+  <desc id="codm-capsule-desc">Stylized Mechi capsule artwork for Call of Duty Mobile.</desc>
+  <defs>
+    <linearGradient id="bg-codm-c" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0f1317"></stop>
+      <stop offset="100%" stop-color="#3a1f1b"></stop>
+    </linearGradient>
+    <linearGradient id="accent-codm-c" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#ff7a59"></stop>
+      <stop offset="100%" stop-color="#ffd166"></stop>
+    </linearGradient>
+    <radialGradient id="glow-codm-c" cx="72%" cy="20%" r="60%">
+      <stop offset="0%" stop-color="#ff7a59" stop-opacity="0.34"></stop>
+      <stop offset="100%" stop-color="#ff7a59" stop-opacity="0"></stop>
+    </radialGradient>
+  </defs>
+  <rect width="900" height="1200" fill="url(#bg-codm-c)"></rect>
+  <rect width="900" height="1200" fill="url(#glow-codm-c)"></rect>
+  <g opacity="0.82">
+    <circle cx="650" cy="260" r="180" fill="none" stroke="url(#accent-codm-c)" stroke-width="6" opacity="0.62"></circle>
+    <path d="M520 120 L840 220 L720 560 L430 470 Z" fill="url(#accent-codm-c)" opacity="0.14"></path>
+    <path d="M120 760 L760 570 L850 1090 L250 1160 Z" fill="url(#accent-codm-c)" opacity="0.12"></path>
+  </g>
+  <g transform="translate(58 58)">
+    <rect x="0" y="0" width="118" height="36" rx="18" fill="rgba(255,255,255,0.08)" stroke="rgba(255,255,255,0.16)"></rect>
+    <text x="59" y="23" text-anchor="middle" font-family="Arial, sans-serif" font-size="15" font-weight="700" fill="#ffffff" letter-spacing="2">MECHI</text>
+  </g>
+  <g transform="translate(58 160)">
+    <rect x="0" y="0" width="170" height="40" rx="20" fill="rgba(255,255,255,0.1)" stroke="rgba(255,255,255,0.18)"></rect>
+    <text x="85" y="26" text-anchor="middle" font-family="Arial, sans-serif" font-size="16" font-weight="700" fill="#ffffff" letter-spacing="2">LOBBY</text>
+  </g>
+  <g transform="translate(58 808)">
+    <rect x="0" y="0" width="784" height="254" rx="36" fill="rgba(8,12,18,0.44)" stroke="rgba(255,255,255,0.12)"></rect>
+    <text x="42" y="72" font-family="Arial, sans-serif" font-size="24" font-weight="700" fill="#ffd166" letter-spacing="3">SQUAD QUEUE</text>
+    <text x="42" y="144" font-family="Arial, sans-serif" font-size="58" font-weight="800" fill="#ffffff">Call of Duty Mobile</text>
+    <rect x="42" y="164" width="280" height="8" rx="4" fill="url(#accent-codm-c)"></rect>
+    <text x="42" y="214" font-family="Arial, sans-serif" font-size="18" font-weight="600" fill="rgba(255,255,255,0.72)">Queue-ready local artwork with no external dependency.</text>
+  </g>
+</svg>

@@ -1,40 +1,22 @@
-'use client';
+"use client"
 
-import React, { useEffect, useState } from 'react';
-import NumberFlow from '@number-flow/react';
-import { motion } from 'framer-motion';
-import { cn } from '@/lib/utils';
+import React, { useEffect, useState } from "react"
+import NumberFlow from "@number-flow/react"
+import { motion } from "framer-motion"
 
-const MotionNumberFlow = motion.create(NumberFlow);
+const MotionNumberFlow = motion.create(NumberFlow)
 
 interface CountdownProps {
-  endDate: Date;
-  startDate?: Date;
-  className?: string;
+  endDate: Date
+  startDate?: Date
+  className?: string
 }
 
 interface TimeLeft {
-  days: number;
-  hours: number;
-  minutes: number;
-  seconds: number;
-}
-
-function getTimeLeft(endDate: Date, startDate?: Date): TimeLeft {
-  const start = startDate ? new Date(startDate) : new Date();
-  const end = new Date(endDate);
-  const difference = end.getTime() - start.getTime();
-
-  if (difference <= 0) {
-    return { days: 0, hours: 0, minutes: 0, seconds: 0 };
-  }
-
-  return {
-    days: Math.floor(difference / (1000 * 60 * 60 * 24)),
-    hours: Math.floor((difference / (1000 * 60 * 60)) % 24),
-    minutes: Math.floor((difference / 1000 / 60) % 60),
-    seconds: Math.floor((difference / 1000) % 60),
-  };
+  days: number
+  hours: number
+  minutes: number
+  seconds: number
 }
 
 export default function AnimatedNumberCountdown({
@@ -42,54 +24,74 @@ export default function AnimatedNumberCountdown({
   startDate,
   className,
 }: CountdownProps) {
-  const [timeLeft, setTimeLeft] = useState<TimeLeft>(() => getTimeLeft(endDate, startDate));
+  const [timeLeft, setTimeLeft] = useState<TimeLeft>({
+    days: 0,
+    hours: 0,
+    minutes: 0,
+    seconds: 0,
+  })
 
   useEffect(() => {
-    const calculateTimeLeft = () => setTimeLeft(getTimeLeft(endDate, startDate));
+    const calculateTimeLeft = () => {
+      const start = startDate ? new Date(startDate) : new Date()
+      const end = new Date(endDate)
+      const difference = end.getTime() - start.getTime()
 
-    calculateTimeLeft();
-    const timer = window.setInterval(calculateTimeLeft, 1000);
+      if (difference > 0) {
+        const days = Math.floor(difference / (1000 * 60 * 60 * 24))
+        const hours = Math.floor((difference / (1000 * 60 * 60)) % 24)
+        const minutes = Math.floor((difference / 1000 / 60) % 60)
+        const seconds = Math.floor((difference / 1000) % 60)
 
-    return () => window.clearInterval(timer);
-  }, [endDate, startDate]);
+        setTimeLeft({ days, hours, minutes, seconds })
+      } else {
+        setTimeLeft({ days: 0, hours: 0, minutes: 0, seconds: 0 })
+      }
+    }
+
+    calculateTimeLeft()
+    const timer = setInterval(calculateTimeLeft, 1000)
+
+    return () => clearInterval(timer)
+  }, [endDate, startDate])
 
   return (
-    <div className={cn('flex items-center justify-center gap-4 text-[var(--text-primary)]', className)}>
+    <div className={`flex items-center justify-center gap-4 ${className}`}>
       <div className="flex flex-col items-center">
         <MotionNumberFlow
           value={timeLeft.days}
-          className="text-5xl font-semibold tracking-tighter tabular-nums"
+          className="text-5xl font-semibold tracking-tighter"
           format={{ minimumIntegerDigits: 2 }}
         />
-        <span className="text-sm text-[var(--text-soft)]">Days</span>
+        <span className="text-sm text-gray-500">Days</span>
       </div>
-      <div className="text-2xl font-bold text-[var(--text-soft)]">:</div>
+      <div className="text-2xl font-bold">:</div>
       <div className="flex flex-col items-center">
         <MotionNumberFlow
           value={timeLeft.hours}
-          className="text-5xl font-semibold tracking-tighter tabular-nums"
+          className="text-5xl font-semibold tracking-tighter"
           format={{ minimumIntegerDigits: 2 }}
         />
-        <span className="text-sm text-[var(--text-soft)]">Hours</span>
+        <span className="text-sm text-gray-500">Hours</span>
       </div>
-      <div className="text-2xl font-bold text-[var(--text-soft)]">:</div>
+      <div className="text-2xl font-bold">:</div>
       <div className="flex flex-col items-center">
         <MotionNumberFlow
           value={timeLeft.minutes}
-          className="text-5xl font-semibold tracking-tighter tabular-nums"
+          className="text-5xl font-semibold tracking-tighter"
           format={{ minimumIntegerDigits: 2 }}
         />
-        <span className="text-sm text-[var(--text-soft)]">Minutes</span>
+        <span className="text-sm text-gray-500">Minutes</span>
       </div>
-      <div className="text-2xl font-bold text-[var(--text-soft)]">:</div>
+      <div className="text-2xl font-bold">:</div>
       <div className="flex flex-col items-center">
         <MotionNumberFlow
           value={timeLeft.seconds}
-          className="text-5xl font-semibold tracking-tighter tabular-nums"
+          className="text-5xl font-semibold tracking-tighter"
           format={{ minimumIntegerDigits: 2 }}
         />
-        <span className="text-sm text-[var(--text-soft)]">Seconds</span>
+        <span className="text-sm text-gray-500">Seconds</span>
       </div>
     </div>
-  );
+  )
 }

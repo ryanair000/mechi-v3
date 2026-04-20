@@ -484,7 +484,7 @@ html[data-theme='dark'] {
   }
 
   .landing-section {
-    @apply border-t py-10 sm:py-12 lg:py-14;
+    @apply border-t py-14 sm:py-16 lg:py-20;
     border-color: var(--border-color);
   }
 
@@ -978,6 +978,14 @@ html[data-theme='dark'] {
 }
 
 @layer components {
+  .marketing-prototype-shell {
+    --radius-control: 0.55rem;
+    --radius-panel: 0.65rem;
+    --radius-card: 0.5rem;
+    --radius-hero: 0.8rem;
+    --radius-nav-shell: 1.75rem;
+  }
+
   .app-prototype-shell {
     --font-display: var(--font-montserrat), "Montserrat", "Segoe UI Semibold", sans-serif;
     --font-body: var(--font-open-sans), "Open Sans", "Segoe UI", sans-serif;

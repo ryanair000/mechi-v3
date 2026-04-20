@@ -1,9 +1,9 @@
 import Link from 'next/link';
 import { connection } from 'next/server';
-import { ArrowRight, Zap } from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
 import { BrandLogo } from '@/components/BrandLogo';
 import FooterSection from '@/components/footer';
-import FeatureShaderCards from '@/components/feature-shader-cards';
+import FeatureShaderCards from '@/components/ui/feature-shader-cards';
 import { HomeFloatingHeader } from '@/components/HomeFloatingHeader';
 import { LandingCountdownSection } from '@/components/LandingCountdownSection';
 import { PlatformLogo } from '@/components/PlatformLogo';
@@ -215,7 +215,7 @@ export default async function LandingPage() {
   const { closesLabel, countdownSnapshot, launchChips, registeredPlayers } = await getLaunchOverview();
 
   return (
-    <div className="page-base">
+    <div className="page-base marketing-prototype-shell">
       <HomeFloatingHeader />
 
       <section className="relative overflow-hidden">
@@ -226,11 +226,6 @@ export default async function LandingPage() {
           <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(320px,0.72fr)] lg:items-start lg:gap-10">
             <div className="max-w-2xl">
               <BrandLogo size="lg" showTagline />
-
-              <div className="mt-6 brand-kicker">
-                <Zap size={12} />
-                Beta V3
-              </div>
 
               <h1 className="mt-6 max-w-2xl text-[2.05rem] font-black leading-[1.04] tracking-normal text-[var(--text-primary)] sm:text-[3.2rem] sm:leading-[1.02] lg:text-[3.8rem]">
                 Find the lobby. Start competing. Lock the 1-on-1.
@@ -258,9 +253,25 @@ export default async function LandingPage() {
                   </span>
                 ))}
               </div>
+
+              {/* Mobile-only flat stats - replaces the hidden right panel */}
+              <div className="mt-6 grid grid-cols-2 gap-2 lg:hidden">
+                {HERO_STATS.map((item) => (
+                  <div
+                    key={item.label}
+                    className="rounded-[var(--radius-card)] border border-[var(--border-color)] bg-[var(--surface-soft)] px-3 py-3"
+                  >
+                    <div className="text-lg font-black text-[var(--text-primary)] sm:text-2xl">{item.value}</div>
+                    <div className="mt-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--text-soft)]">{item.label}</div>
+                    {'note' in item ? (
+                      <div className="mt-0.5 text-[9px] font-semibold uppercase tracking-[0.1em] text-[var(--brand-teal)]">{item.note}</div>
+                    ) : null}
+                  </div>
+                ))}
+              </div>
             </div>
 
-            <div className="rounded-[1.75rem] border border-[var(--border-color)] bg-[rgba(10,18,31,0.22)] p-4 sm:p-5 lg:mt-3">
+            <div className="hidden rounded-[var(--radius-card)] border border-[var(--border-color)] bg-[rgba(10,18,31,0.22)] p-4 sm:p-5 lg:mt-3 lg:block">
               <div className="flex flex-col gap-4">
                 <div>
                   <p className="section-title">Quick read</p>
@@ -273,7 +284,7 @@ export default async function LandingPage() {
                   {HERO_STATS.map((item) => (
                     <div
                       key={item.label}
-                      className="rounded-2xl border border-[var(--border-color)] bg-[var(--surface-soft)] px-3 py-3 sm:px-4 sm:py-4"
+                      className="rounded-[var(--radius-card)] border border-[var(--border-color)] bg-[var(--surface-soft)] px-3 py-3 sm:px-4 sm:py-4"
                     >
                       <div className="text-lg font-black text-[var(--text-primary)] sm:text-[1.75rem]">
                         {item.value}
@@ -290,15 +301,15 @@ export default async function LandingPage() {
                   ))}
                 </div>
 
-                <div className="rounded-2xl border border-[var(--border-color)] bg-[rgba(255,255,255,0.02)] p-4">
+                <div className="rounded-[var(--radius-card)] border border-[var(--border-color)] bg-[rgba(255,255,255,0.02)] p-4">
                   <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--accent-secondary-text)]">
                     Platforms live
                   </p>
-                  <div className="mt-3 flex flex-wrap gap-2">
+                  <div className="mt-3 flex flex-wrap justify-center gap-2">
                     {PLATFORM_CHIPS.map((platform) => (
                       <div
                         key={platform.label}
-                        className="inline-flex items-center gap-2 rounded-full border border-[var(--border-color)] bg-[var(--surface-strong)] px-3 py-1.5 text-[11px] font-semibold text-[var(--text-secondary)]"
+                        className="inline-flex items-center gap-2 rounded-[var(--radius-card)] border border-[var(--border-color)] bg-[var(--surface-strong)] px-3 py-1.5 text-[11px] font-semibold text-[var(--text-secondary)]"
                       >
                         <PlatformLogo platform={platform.platform} size={13} />
                         {platform.label}
@@ -367,7 +378,7 @@ export default async function LandingPage() {
                     <div>
                       <h3 className="text-lg font-black text-[var(--text-primary)]">{config.name}</h3>
                       <p className="mt-1 text-3xl font-black text-[var(--text-primary)]">
-                        {config.monthlyKes === 0 ? 'FREE' : `KSH ${config.monthlyKes}`}
+                        {config.monthlyKes === 0 ? 'FREE' : `KES ${config.monthlyKes}`}
                       </p>
                       <p className="mt-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--text-soft)]">
                         {config.monthlyKes === 0 ? 'No payment needed' : 'per month'}
@@ -377,16 +388,17 @@ export default async function LandingPage() {
 
                   <p className="mt-4 text-sm leading-6 text-[var(--text-secondary)]">{plan.description}</p>
 
-                  <div className="mt-5 grid gap-2.5">
+                  <ul className="mt-5 space-y-2">
                     {config.features.slice(0, 4).map((feature) => (
-                      <div
+                      <li
                         key={feature}
-                        className="rounded-xl border border-[var(--border-color)] bg-[var(--surface)] px-3 py-2 text-sm font-medium text-[var(--text-secondary)]"
+                        className="flex items-start gap-2.5 text-sm text-[var(--text-secondary)]"
                       >
+                        <span className="mt-[3px] h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--accent-secondary)]" />
                         {feature}
-                      </div>
+                      </li>
                     ))}
-                  </div>
+                  </ul>
 
                   <div className="mt-6">
                     <Link
@@ -421,11 +433,11 @@ export default async function LandingPage() {
                 No hidden math on the surface. The big tier tells you the league. The Roman numeral tells you how close you are to the next jump.
               </p>
 
-              <div className="mt-5 space-y-3">
+              <div className="mt-5 rounded-[var(--radius-card)] border border-[var(--border-color)] bg-[var(--surface-soft)] divide-y divide-[var(--border-color)]">
                 {RANK_GUIDE.map((item) => (
-                  <div key={item.title} className="rounded-2xl border border-[var(--border-color)] bg-[var(--surface-soft)] p-4">
+                  <div key={item.title} className="p-4">
                     <p className="text-sm font-black text-[var(--text-primary)]">{item.title}</p>
-                    <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">{item.copy}</p>
+                    <p className="mt-1.5 text-sm leading-6 text-[var(--text-secondary)]">{item.copy}</p>
                   </div>
                 ))}
               </div>
@@ -471,10 +483,9 @@ export default async function LandingPage() {
 
       <section className="landing-section pt-0">
         <div className="landing-shell">
-          <div className="card circuit-panel p-6 sm:p-7 lg:flex lg:items-center lg:justify-between lg:gap-8">
+          <div className="card circuit-panel p-8 sm:p-10 lg:flex lg:items-center lg:justify-between lg:gap-8 lg:p-12">
             <div className="max-w-2xl">
-              <p className="section-title">Ready to jump in</p>
-              <h2 className="mt-3 text-3xl font-black text-[var(--text-primary)] sm:text-[2.2rem]">
+              <h2 className="text-3xl font-black text-[var(--text-primary)] sm:text-[2.5rem]">
                 Pick your games. Queue up. Start climbing.
               </h2>
               <p className="mt-3 text-sm leading-6 text-[var(--text-secondary)]">

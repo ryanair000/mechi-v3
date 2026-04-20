@@ -1,0 +1,176 @@
+/* ============================================================
+   MECHI DESIGN SYSTEM — Colors & Typography
+   Competitive Gaming Platform | mechi.club
+   Source: ryanair000/mechi-v3 → src/app/globals.css
+   ============================================================ */
+
+/* ── Google Fonts (Montserrat + Open Sans) ─────────────────── */
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,400;0,600;0,700;0,800;0,900;1,400&family=Open+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap');
+
+/* NOTE: Production codebase uses "Aptos" / "Segoe UI Variable Display"
+   (Windows system fonts). Montserrat is the closest Google Fonts match. */
+
+/* ── Brand Tokens ───────────────────────────────────────────── */
+:root {
+  /* Core brand */
+  --brand-teal:    #32e0c4;
+  --brand-coral:   #ff6b6b;
+  --brand-night:   #0b1121;
+  --brand-neutral: #e2e8f0;
+  --brand-white:   #ffffff;
+
+  /* ── Light Mode Surfaces ──────────────────────────────────── */
+  --page-bg:           #f4f7fb;
+  --page-bg-alt:       #ffffff;
+  --surface:           rgba(255,255,255,0.94);
+  --surface-strong:    #ffffff;
+  --surface-soft:      rgba(255,255,255,0.82);
+  --surface-elevated:  #fdfefe;
+
+  /* ── Text ─────────────────────────────────────────────────── */
+  --text-primary:   #0b1121;
+  --text-secondary: #607086;
+  --text-soft:      #94a0b2;
+
+  /* ── Borders ──────────────────────────────────────────────── */
+  --border-color:  rgba(11,17,33,0.08);
+  --border-strong: rgba(11,17,33,0.13);
+
+  /* ── Shadows ──────────────────────────────────────────────── */
+  --shadow-soft:      0 18px 40px rgba(15,23,42,0.06);
+  --shadow-strong:    0 28px 68px rgba(15,23,42,0.11);
+  --surface-highlight: inset 0 1px 0 rgba(255,255,255,0.6);
+
+  /* ── Glows ────────────────────────────────────────────────── */
+  --page-glow-1: rgba(50,224,196,0.09);
+  --page-glow-2: rgba(96,165,250,0.08);
+
+  /* ── Semantic Accents ─────────────────────────────────────── */
+  --accent-primary:        #ff6b6b;
+  --accent-primary-hover:  #ff8383;
+  --accent-primary-soft:   rgba(255,107,107,0.14);
+
+  --accent-secondary:       #32e0c4;
+  --accent-secondary-hover: #54e7d0;
+  --accent-secondary-soft:  rgba(50,224,196,0.14);
+  --accent-secondary-text:  #0b776b;
+
+  --danger-soft:  rgba(239,68,68,0.12);
+  --success-soft: rgba(50,224,196,0.14);
+  --warning-soft: rgba(251,191,36,0.16);
+
+  /* ── Border Radius Scale ──────────────────────────────────── */
+  --radius-control: 1rem;      /* buttons, inputs */
+  --radius-panel:   1.35rem;   /* panels, nav items */
+  --radius-card:    1.7rem;    /* cards */
+  --radius-hero:    1.95rem;   /* hero/feature panels */
+
+  /* ── Typography ───────────────────────────────────────────── */
+  --font-display: 'Montserrat', 'Segoe UI Semibold', 'Trebuchet MS', sans-serif;
+  --font-body:    'Open Sans', 'Segoe UI', 'Verdana', sans-serif;
+  --font-mono:    'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+}
+
+/* ── Dark Mode Surfaces ─────────────────────────────────────── */
+[data-theme='dark'] {
+  --page-bg:          #0b1121;
+  --page-bg-alt:      #09101b;
+  --surface:          rgba(14,22,38,0.84);
+  --surface-strong:   #111b2e;
+  --surface-soft:     rgba(17,27,46,0.76);
+  --surface-elevated: #152033;
+
+  --text-primary:   #f8fbfd;
+  --text-secondary: #b9c4d2;
+  --text-soft:      #7b879a;
+
+  --border-color:  rgba(226,232,240,0.08);
+  --border-strong: rgba(226,232,240,0.14);
+
+  --shadow-soft:      0 14px 36px rgba(0,0,0,0.28);
+  --shadow-strong:    0 22px 60px rgba(0,0,0,0.38);
+  --surface-highlight: inset 0 1px 0 rgba(255,255,255,0.04);
+
+  --page-glow-1: rgba(50,224,196,0.10);
+  --page-glow-2: rgba(255,107,107,0.08);
+
+  --accent-primary-soft:   rgba(255,107,107,0.16);
+  --accent-secondary-soft: rgba(50,224,196,0.12);
+  --accent-secondary-text: #8ef2e4;
+
+  --danger-soft:  rgba(239,68,68,0.16);
+  --success-soft: rgba(50,224,196,0.16);
+  --warning-soft: rgba(251,191,36,0.18);
+}
+
+/* ── Semantic Typography Classes ────────────────────────────── */
+h1, h2, h3, h4, h5, h6,
+.display, .heading {
+  font-family: var(--font-display);
+  font-weight: 900;
+  color: var(--text-primary);
+  line-height: 1.06;
+  letter-spacing: -0.01em;
+}
+
+h1, .h1 { font-size: clamp(1.75rem, 4vw, 3rem); }
+h2, .h2 { font-size: clamp(1.4rem, 3vw, 2.2rem); }
+h3, .h3 { font-size: clamp(1.15rem, 2.5vw, 1.6rem); }
+h4, .h4 { font-size: 1.15rem; font-weight: 800; }
+h5, .h5 { font-size: 1rem;    font-weight: 700; }
+h6, .h6 { font-size: 0.875rem; font-weight: 700; }
+
+p, .body {
+  font-family: var(--font-body);
+  font-size: 1rem;
+  line-height: 1.6;
+  color: var(--text-secondary);
+}
+
+.body-sm {
+  font-family: var(--font-body);
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: var(--text-secondary);
+}
+
+.label {
+  font-family: var(--font-display);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-soft);
+}
+
+.section-title {
+  font-family: var(--font-display);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--accent-secondary-text);
+}
+
+.stat-value {
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+  font-weight: 900;
+  color: var(--text-primary);
+}
+
+.stat-label {
+  font-family: var(--font-body);
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-soft);
+}
+
+/* Brand wordmark treatment */
+.brand-wordmark {
+  font-family: var(--font-display);
+  font-weight: 900;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}

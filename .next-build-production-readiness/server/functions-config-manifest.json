@@ -1,0 +1,21 @@
+{
+  "version": 1,
+  "functions": {
+    "/_middleware": {
+      "runtime": "nodejs",
+      "matchers": [
+        {
+          "regexp": "^(?:\\/(_next\\/data\\/[^/]{1,}))?(?:\\/((?!_next\\/static|_next\\/image|favicon.ico|robots.txt|sitemap.xml).*))(\\.json)?[\\/#\\?]?$",
+          "originalSource": "/((?!_next/static|_next/image|favicon.ico|robots.txt|sitemap.xml).*)"
+        }
+      ]
+    },
+    "/api/instagram/webhook": {},
+    "/api/og/match": {},
+    "/api/og/profile": {},
+    "/api/og/tournament": {},
+    "/api/paystack/webhook": {},
+    "/api/webhooks/instagram": {},
+    "/api/whatsapp/webhook": {}
+  }
+}

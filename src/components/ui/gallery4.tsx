@@ -1,6 +1,7 @@
 /* eslint-disable @next/next/no-img-element */
 "use client";
 
+import Link from "next/link";
 import { ArrowLeft, ArrowRight } from "lucide-react";
 import { useEffect, useState } from "react";
 
@@ -26,58 +27,10 @@ export interface Gallery4Props {
   items: Gallery4Item[];
 }
 
-const data = [
-  {
-    id: "shadcn-ui",
-    title: "shadcn/ui: Building a Modern Component Library",
-    description:
-      "Explore how shadcn/ui revolutionized React component libraries by providing a unique approach to component distribution and customization, making it easier for developers to build beautiful, accessible applications.",
-    href: "https://ui.shadcn.com",
-    image:
-      "https://images.unsplash.com/photo-1551250928-243dc937c49d?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w2NDI3NzN8MHwxfGFsbHwxMjN8fHx8fHwyfHwxNzIzODA2OTM5fA&ixlib=rb-4.0.3&q=80&w=1080",
-  },
-  {
-    id: "tailwind",
-    title: "Tailwind CSS: The Utility-First Revolution",
-    description:
-      "Discover how Tailwind CSS transformed the way developers style their applications, offering a utility-first approach that speeds up development while maintaining complete design flexibility.",
-    href: "https://tailwindcss.com",
-    image:
-      "https://images.unsplash.com/photo-1551250928-e4a05afaed1e?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w2NDI3NzN8MHwxfGFsbHwxMjR8fHx8fHwyfHwxNzIzODA2OTM5fA&ixlib=rb-4.0.3&q=80&w=1080",
-  },
-  {
-    id: "astro",
-    title: "Astro: The All-in-One Web Framework",
-    description:
-      "Learn how Astro's innovative 'Islands Architecture' and zero-JS-by-default approach is helping developers build faster websites while maintaining rich interactivity where needed.",
-    href: "https://astro.build",
-    image:
-      "https://images.unsplash.com/photo-1536735561749-fc87494598cb?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w2NDI3NzN8MHwxfGFsbHwxNzd8fHx8fHwyfHwxNzIzNjM0NDc0fA&ixlib=rb-4.0.3&q=80&w=1080",
-  },
-  {
-    id: "react",
-    title: "React: Pioneering Component-Based UI",
-    description:
-      "See how React continues to shape modern web development with its component-based architecture, enabling developers to build complex user interfaces with reusable, maintainable code.",
-    href: "https://react.dev",
-    image:
-      "https://images.unsplash.com/photo-1548324215-9133768e4094?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w2NDI3NzN8MHwxfGFsbHwxMzF8fHx8fHwyfHwxNzIzNDM1MzA1fA&ixlib=rb-4.0.3&q=80&w=1080",
-  },
-  {
-    id: "nextjs",
-    title: "Next.js: The React Framework for Production",
-    description:
-      "Explore how Next.js has become the go-to framework for building full-stack React applications, offering features like server components, file-based routing, and automatic optimization.",
-    href: "https://nextjs.org",
-    image:
-      "https://images.unsplash.com/photo-1550070881-a5d71eda5800?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w2NDI3NzN8MHwxfGFsbHwxMjV8fHx8fHwyfHwxNzIzNDM1Mjk4fA&ixlib=rb-4.0.3&q=80&w=1080",
-  },
-];
-
 const Gallery4 = ({
   title = "Case Studies",
   description = "Discover how leading companies and developers are leveraging modern web technologies to build exceptional digital experiences. These case studies showcase real-world applications and success stories.",
-  items = data,
+  items = [],
 }: Gallery4Props) => {
   const [carouselApi, setCarouselApi] = useState<CarouselApi>();
   const [canScrollPrev, setCanScrollPrev] = useState(false);
@@ -102,7 +55,7 @@ const Gallery4 = ({
 
   return (
     <section className="py-16 sm:py-20">
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="landing-shell">
         <div className="mb-6 flex items-end justify-between gap-4 md:mb-8 lg:mb-10">
           <div className="flex max-w-2xl flex-col gap-3">
             <h2 className="text-3xl font-medium md:text-4xl lg:text-[2.75rem]">
@@ -116,30 +69,32 @@ const Gallery4 = ({
             <Button
               size="icon"
               variant="ghost"
+              aria-label="Previous slide"
               onClick={() => {
                 carouselApi?.scrollPrev();
               }}
               disabled={!canScrollPrev}
-              className="h-10 w-10 rounded-full border-[rgba(50,224,196,0.22)] bg-[var(--surface-strong)] text-[var(--text-primary)] hover:border-[rgba(50,224,196,0.36)] hover:bg-[var(--accent-secondary-soft)] disabled:pointer-events-auto"
+              className="h-10 w-10 rounded-full border-[rgba(50,224,196,0.22)] bg-[var(--surface-strong)] text-[var(--text-primary)] hover:border-[rgba(50,224,196,0.36)] hover:bg-[var(--accent-secondary-soft)] disabled:cursor-not-allowed disabled:opacity-40"
             >
               <ArrowLeft className="size-5" />
             </Button>
             <Button
               size="icon"
               variant="ghost"
+              aria-label="Next slide"
               onClick={() => {
                 carouselApi?.scrollNext();
               }}
               disabled={!canScrollNext}
-              className="h-10 w-10 rounded-full border-[rgba(50,224,196,0.22)] bg-[var(--surface-strong)] text-[var(--text-primary)] hover:border-[rgba(50,224,196,0.36)] hover:bg-[var(--accent-secondary-soft)] disabled:pointer-events-auto"
+              className="h-10 w-10 rounded-full border-[rgba(50,224,196,0.22)] bg-[var(--surface-strong)] text-[var(--text-primary)] hover:border-[rgba(50,224,196,0.36)] hover:bg-[var(--accent-secondary-soft)] disabled:cursor-not-allowed disabled:opacity-40"
             >
               <ArrowRight className="size-5" />
             </Button>
           </div>
         </div>
-      </div>
-      <div className="w-full px-4 sm:px-6 lg:px-8">
+
         <Carousel
+          className="pr-3 md:pr-4"
           setApi={setCarouselApi}
           opts={{
             breakpoints: {
@@ -153,10 +108,10 @@ const Gallery4 = ({
             {items.map((item) => (
               <CarouselItem
                 key={item.id}
-                className="max-w-[248px] pl-3 md:max-w-[272px] md:pl-4"
+                className="max-w-[228px] pl-3 md:max-w-[244px] md:pl-4"
               >
-                <a href={item.href} className="group rounded-xl">
-                  <div className="group relative h-full min-h-[19rem] max-w-full overflow-hidden rounded-xl md:aspect-[5/4] lg:aspect-[16/9]">
+                <Link href={item.href} className="group rounded-xl">
+                  <div className="group relative h-full min-h-[17.5rem] max-w-full overflow-hidden rounded-xl md:min-h-[18rem] md:aspect-[5/4] lg:aspect-[16/9]">
                     {item.image ? (
                       <img
                         src={item.image}
@@ -180,7 +135,7 @@ const Gallery4 = ({
                       </div>
                     </div>
                   </div>
-                </a>
+                </Link>
               </CarouselItem>
             ))}
           </CarouselContent>

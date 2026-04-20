@@ -1,0 +1,75 @@
+{"timestamp":"00:00:05.112","source":"Server","level":"LOG","message":""}
+{"timestamp":"00:00:05.113","source":"Server","level":"LOG","message":"  We detected TypeScript in your project and reconfigured your tsconfig.json file for you."}
+{"timestamp":"00:00:05.114","source":"Server","level":"LOG","message":"  The following suggested values were added to your tsconfig.json. These values can be changed to fit your project's needs:\n"}
+{"timestamp":"00:00:05.115","source":"Server","level":"LOG","message":"  \t- include was updated to add '.next-codex-shader/types/**/*.ts'"}
+{"timestamp":"00:00:05.116","source":"Server","level":"LOG","message":"  \t- include was updated to add '.next-codex-shader/dev/types/**/*.ts'"}
+{"timestamp":"00:00:05.116","source":"Server","level":"LOG","message":""}
+{"timestamp":"00:00:06.078","source":"Server","level":"LOG","message":"- Experiments (use with caution):"}
+{"timestamp":"00:00:06.079","source":"Server","level":"LOG","message":"  · serverActions"}
+{"timestamp":"00:00:06.080","source":"Server","level":"LOG","message":""}
+{"timestamp":"00:00:25.407","source":"Server","level":"LOG","message":"○ Compiling / ..."}
+{"timestamp":"00:00:41.810","source":"Browser","level":"INFO","message":"%cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold"}
+{"timestamp":"00:00:42.181","source":"Browser","level":"INFO","message":"%cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold"}
+{"timestamp":"00:00:46.015","source":"Server","level":"LOG","message":"○ Compiling /api/auth/me ..."}
+{"timestamp":"00:03:58.461","source":"Browser","level":"ERROR","message":"./src/components/ui/feature-shader-cards.tsx\nError: \n\nCaused by:\n    0: Failed to read source code from C:\\Users\\ADMIN\\Documents\\mechiiii\\mechi-v3\\src\\components\\ui\\feature-shader-cards.tsx\n    1: The system cannot find the file specified. (os error 2)\n\nImport trace for requested module:\n./src/components/ui/feature-shader-cards.tsx\n./src/app/page.tsx"}
+{"timestamp":"00:03:58.904","source":"Server","level":"ERROR","message":"⨯ ./src/components/ui/feature-shader-cards.tsx\nError: \n\nCaused by:\n    0: Failed to read source code from C:\\Users\\ADMIN\\Documents\\mechiiii\\mechi-v3\\src\\components\\ui\\feature-shader-cards.tsx\n    1: The system cannot find the file specified. (os error 2)\n\nImport trace for requested module:\n./src/components/ui/feature-shader-cards.tsx\n./src/app/page.tsx"}
+{"timestamp":"00:04:08.660","source":"Server","level":"LOG","message":"○ Compiling /_error ..."}
+{"timestamp":"00:04:09.908","source":"Server","level":"ERROR","message":"⨯ ./src/components/ui/feature-shader-cards.tsx\nError: \n\nCaused by:\n    0: Failed to read source code from C:\\Users\\ADMIN\\Documents\\mechiiii\\mechi-v3\\src\\components\\ui\\feature-shader-cards.tsx\n    1: The system cannot find the file specified. (os error 2)\n\nImport trace for requested module:\n./src/components/ui/feature-shader-cards.tsx\n./src/app/page.tsx"}
+{"timestamp":"00:04:10.578","source":"Browser","level":"ERROR","message":"./src/components/ui/feature-shader-cards.tsx\nError: \n\nCaused by:\n    0: Failed to read source code from C:\\Users\\ADMIN\\Documents\\mechiiii\\mechi-v3\\src\\components\\ui\\feature-shader-cards.tsx\n    1: The system cannot find the file specified. (os error 2)\n\nImport trace for requested module:\n./src/components/ui/feature-shader-cards.tsx\n./src/app/page.tsx"}
+{"timestamp":"00:04:14.184","source":"Browser","level":"ERROR","message":"uncaughtError: ModuleBuildError: Module build failed (from ./node_modules/next/dist/build/webpack/loaders/next-swc-loader.js):\nError: \n\nCaused by:\n    0: Failed to read source code from C:\\Users\\ADMIN\\Documents\\mechiiii\\mechi-v3\\src\\components\\ui\\feature-shader-cards.tsx\n    1: The system cannot find the file specified. (os error 2)"}
+{"timestamp":"00:04:14.224","source":"Server","level":"ERROR","message":"[browser] \"Uncaught ModuleBuildError: Module build failed (from ./node_modules/next/dist/build/webpack/loaders/next-swc-loader.js):\\nError: \\n\\nCaused by:\\n    0: Failed to read source code from C:\\\\Users\\\\ADMIN\\\\Documents\\\\mechiiii\\\\mechi-v3\\\\src\\\\components\\\\ui\\\\feature-shader-cards.tsx\\n    1: The system cannot find the file specified. (os error 2)\""}
+{"timestamp":"00:04:14.225","source":"Browser","level":"ERROR","message":"Uncaught ModuleBuildError: Module build failed (from ./node_modules/next/dist/build/webpack/loaders/next-swc-loader.js):\nError: \n\nCaused by:\n    0: Failed to read source code from C:\\Users\\ADMIN\\Documents\\mechiiii\\mechi-v3\\src\\components\\ui\\feature-shader-cards.tsx\n    1: The system cannot find the file specified. (os error 2)"}
+{"timestamp":"00:04:15.180","source":"Browser","level":"ERROR","message":"./src/components/ui/feature-shader-cards.tsx\nError: \n\nCaused by:\n    0: Failed to read source code from C:\\Users\\ADMIN\\Documents\\mechiiii\\mechi-v3\\src\\components\\ui\\feature-shader-cards.tsx\n    1: The system cannot find the file specified. (os error 2)"}
+{"timestamp":"00:04:50.941","source":"Server","level":"WARN","message":"⚠ Fast Refresh had to perform a full reload. Read more: https://nextjs.org/docs/messages/fast-refresh-reload"}
+{"timestamp":"00:04:54.100","source":"Server","level":"WARN","message":"⚠ Fast Refresh had to perform a full reload. Read more: https://nextjs.org/docs/messages/fast-refresh-reload"}
+{"timestamp":"00:04:57.744","source":"Server","level":"WARN","message":"⚠ Fast Refresh had to perform a full reload. Read more: https://nextjs.org/docs/messages/fast-refresh-reload"}
+{"timestamp":"00:05:02.856","source":"Browser","level":"INFO","message":"%cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold"}
+{"timestamp":"00:13:18.428","source":"Browser","level":"INFO","message":"%cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold"}
+{"timestamp":"00:13:21.782","source":"Server","level":"LOG","message":"○ Compiling /api/auth/me ..."}
+{"timestamp":"00:36:37.551","source":"Browser","level":"INFO","message":"%cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold"}
+{"timestamp":"00:36:41.007","source":"Server","level":"LOG","message":"○ Compiling /api/auth/me ..."}
+{"timestamp":"00:39:15.173","source":"Browser","level":"INFO","message":"%cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold"}
+{"timestamp":"00:39:21.625","source":"Browser","level":"INFO","message":"%cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold"}
+{"timestamp":"00:41:38.016","source":"Browser","level":"INFO","message":"%cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold"}
+{"timestamp":"00:42:39.901","source":"Browser","level":"ERROR","message":"uncaughtError: Error: Internal Next.js error: Router action dispatched before initialization."}
+{"timestamp":"00:44:55.765","source":"Browser","level":"INFO","message":"%cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold"}
+{"timestamp":"00:45:16.170","source":"Browser","level":"INFO","message":"%cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold"}
+{"timestamp":"00:45:18.120","source":"Browser","level":"ERROR","message":"unhandledRejection: Error: Paper Shaders: WebGL is not supported in this browser"}
+{"timestamp":"00:45:18.120","source":"Browser","level":"ERROR","message":"unhandledRejection: Error: Paper Shaders: WebGL is not supported in this browser"}
+{"timestamp":"00:45:18.120","source":"Browser","level":"ERROR","message":"unhandledRejection: Error: Paper Shaders: WebGL is not supported in this browser"}
+{"timestamp":"00:45:18.120","source":"Browser","level":"ERROR","message":"unhandledRejection: Error: Paper Shaders: WebGL is not supported in this browser"}
+{"timestamp":"00:45:18.120","source":"Browser","level":"ERROR","message":"unhandledRejection: Error: Paper Shaders: WebGL is not supported in this browser"}
+{"timestamp":"00:45:18.120","source":"Browser","level":"ERROR","message":"unhandledRejection: Error: Paper Shaders: WebGL is not supported in this browser"}
+{"timestamp":"00:45:18.316","source":"Server","level":"ERROR","message":"[browser] \"⨯ unhandledRejection: Error: Paper Shaders: WebGL is not supported in this browser\""}
+{"timestamp":"00:45:18.319","source":"Browser","level":"ERROR","message":"⨯ unhandledRejection: Error: Paper Shaders: WebGL is not supported in this browser"}
+{"timestamp":"00:45:18.320","source":"Server","level":"ERROR","message":"[browser] \"⨯ unhandledRejection: Error: Paper Shaders: WebGL is not supported in this browser\""}
+{"timestamp":"00:45:18.321","source":"Browser","level":"ERROR","message":"⨯ unhandledRejection: Error: Paper Shaders: WebGL is not supported in this browser"}
+{"timestamp":"00:45:18.322","source":"Server","level":"ERROR","message":"[browser] \"⨯ unhandledRejection: Error: Paper Shaders: WebGL is not supported in this browser\""}
+{"timestamp":"00:45:18.323","source":"Browser","level":"ERROR","message":"⨯ unhandledRejection: Error: Paper Shaders: WebGL is not supported in this browser"}
+{"timestamp":"00:45:18.324","source":"Server","level":"ERROR","message":"[browser] \"⨯ unhandledRejection: Error: Paper Shaders: WebGL is not supported in this browser\""}
+{"timestamp":"00:45:18.325","source":"Browser","level":"ERROR","message":"⨯ unhandledRejection: Error: Paper Shaders: WebGL is not supported in this browser"}
+{"timestamp":"00:45:18.328","source":"Server","level":"ERROR","message":"[browser] \"⨯ unhandledRejection: Error: Paper Shaders: WebGL is not supported in this browser\""}
+{"timestamp":"00:45:18.331","source":"Browser","level":"ERROR","message":"⨯ unhandledRejection: Error: Paper Shaders: WebGL is not supported in this browser"}
+{"timestamp":"00:45:18.333","source":"Server","level":"ERROR","message":"[browser] \"⨯ unhandledRejection: Error: Paper Shaders: WebGL is not supported in this browser\""}
+{"timestamp":"00:45:18.333","source":"Browser","level":"ERROR","message":"⨯ unhandledRejection: Error: Paper Shaders: WebGL is not supported in this browser"}
+{"timestamp":"00:45:19.978","source":"Server","level":"LOG","message":"○ Compiling /api/auth/me ..."}
+{"timestamp":"00:45:28.482","source":"Server","level":"LOG","message":"○ Compiling /api/notifications ..."}
+{"timestamp":"00:52:33.804","source":"Browser","level":"INFO","message":"%cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold"}
+{"timestamp":"00:52:50.398","source":"Browser","level":"INFO","message":"%cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold"}
+{"timestamp":"00:53:20.506","source":"Server","level":"LOG","message":"○ Compiling /api/auth/me ..."}
+{"timestamp":"00:55:11.234","source":"Browser","level":"INFO","message":"%cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold"}
+{"timestamp":"00:55:11.981","source":"Server","level":"WARN","message":"[browser] \"Image with src \\\"/mechi-logo.png\\\" was detected as the Largest Contentful Paint (LCP). Please add the `loading=\\\"eager\\\"` property if this image is above the fold.\\nRead more: https://nextjs.org/docs/app/api-reference/components/image#loading\""}
+{"timestamp":"00:55:12.002","source":"Browser","level":"WARN","message":"Image with src \"/mechi-logo.png\" was detected as the Largest Contentful Paint (LCP). Please add the `loading=\"eager\"` property if this image is above the fold.\nRead more: https://nextjs.org/docs/app/api-reference/components/image#loading"}
+{"timestamp":"00:55:12.004","source":"Browser","level":"WARN","message":"Image with src \"/mechi-logo.png\" was detected as the Largest Contentful Paint (LCP). Please add the `loading=\"eager\"` property if this image is above the fold.\nRead more: https://nextjs.org/docs/app/api-reference/components/image#loading"}
+{"timestamp":"00:55:24.431","source":"Browser","level":"INFO","message":"%cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold"}
+{"timestamp":"01:17:40.932","source":"Browser","level":"INFO","message":"%cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold"}
+{"timestamp":"01:17:41.096","source":"Browser","level":"INFO","message":"%cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold"}
+{"timestamp":"01:17:44.623","source":"Server","level":"LOG","message":"○ Compiling /api/auth/me ..."}
+{"timestamp":"01:18:14.375","source":"Browser","level":"ERROR","message":"uncaughtError: Error: Internal Next.js error: Router action dispatched before initialization."}
+{"timestamp":"01:18:19.213","source":"Server","level":"LOG","message":"○ Compiling /api/notifications ..."}
+{"timestamp":"01:18:28.763","source":"Browser","level":"INFO","message":"%cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold"}
+{"timestamp":"01:18:47.990","source":"Browser","level":"INFO","message":"%cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold"}
+{"timestamp":"01:35:40.519","source":"Browser","level":"INFO","message":"%cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold"}
+{"timestamp":"01:35:44.946","source":"Server","level":"LOG","message":"○ Compiling /api/auth/me ..."}
+{"timestamp":"01:35:51.837","source":"Browser","level":"INFO","message":"%cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold"}
+{"timestamp":"01:35:58.076","source":"Browser","level":"INFO","message":"%cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold"}

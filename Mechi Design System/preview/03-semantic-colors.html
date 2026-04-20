@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="../colors_and_type.css">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: var(--page-bg); font-family: var(--font-display); padding: 24px 20px; }
+.row { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 8px; }
+.swatch { flex: 1; min-width: 90px; border-radius: 10px; overflow: hidden; border: 1px solid var(--border-color); }
+.swatch-color { height: 48px; }
+.swatch-info { padding: 7px 9px; background: var(--surface-strong); }
+.name { font-size: 10px; font-weight: 700; color: var(--text-primary); }
+.hex { font-family: monospace; font-size: 9px; color: var(--text-soft); margin-top: 2px; }
+.sep { border-top: 1px solid var(--border-color); margin: 12px 0 10px; }
+.label { font-size: 9px; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; color: var(--text-soft); margin-bottom: 8px; }
+</style>
+</head>
+<body>
+<div class="label">Semantic — Status</div>
+<div class="row">
+  <div class="swatch">
+    <div class="swatch-color" style="background:rgba(50,224,196,0.14);border-bottom:1px solid rgba(50,224,196,0.2);"></div>
+    <div class="swatch-info"><div class="name">Success Soft</div><div class="hex">--success-soft</div></div>
+  </div>
+  <div class="swatch">
+    <div class="swatch-color" style="background:rgba(255,107,107,0.14);border-bottom:1px solid rgba(255,107,107,0.2);"></div>
+    <div class="swatch-info"><div class="name">Accent Primary Soft</div><div class="hex">--accent-primary-soft</div></div>
+  </div>
+  <div class="swatch">
+    <div class="swatch-color" style="background:rgba(239,68,68,0.12);border-bottom:1px solid rgba(239,68,68,0.18);"></div>
+    <div class="swatch-info"><div class="name">Danger Soft</div><div class="hex">--danger-soft</div></div>
+  </div>
+  <div class="swatch">
+    <div class="swatch-color" style="background:rgba(251,191,36,0.16);border-bottom:1px solid rgba(251,191,36,0.22);"></div>
+    <div class="swatch-info"><div class="name">Warning Soft</div><div class="hex">--warning-soft</div></div>
+  </div>
+  <div class="swatch">
+    <div class="swatch-color" style="background:rgba(96,165,250,0.14);border-bottom:1px solid rgba(96,165,250,0.2);"></div>
+    <div class="swatch-info"><div class="name">Blue Soft</div><div class="hex">rgba(96,165,250,0.14)</div></div>
+  </div>
+</div>
+</body>
+</html>

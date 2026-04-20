@@ -3,7 +3,7 @@ import type { JWTPayload } from '@/types';
 import { hasPrimaryAdminAccess } from '@/lib/admin-access';
 import { getLoginPath, getSafeNextPath } from '@/lib/navigation';
 import { createServiceClient } from '@/lib/supabase';
-import { ADMIN_HOST as CONFIGURED_ADMIN_HOST, ADMIN_URL, APP_URL } from '@/lib/urls';
+import { ADMIN_HOST as CONFIGURED_ADMIN_HOST, ADMIN_URL, APP_HOST, APP_URL } from '@/lib/urls';
 
 const PROTECTED_PREFIXES = [
   '/dashboard',
@@ -35,6 +35,8 @@ const PROTECTED_PREFIXES = [
 
 const ADMIN_PREFIXES = ['/admin', '/api/admin'];
 const CONNECT_HOSTS = new Set(['connect.mechi.club']);
+const TESTS_HOSTS = new Set(['tests.mechi.club']);
+const LOCAL_APP_HOSTS = new Set(['localhost', '127.0.0.1']);
 const CANONICAL_ADMIN_HOST = 'mechi.lokimax.top';
 const ADMIN_HOSTS = new Set([CONFIGURED_ADMIN_HOST, CANONICAL_ADMIN_HOST]);
 
@@ -131,6 +133,18 @@ function getAdminHostAlias(pathname: string) {
 
 function redirectToAppHost(pathname: string, request: NextRequest) {
   return NextResponse.redirect(new URL(`${pathname}${request.nextUrl.search}`, APP_URL));
+}
+
+function clearAuthCookie(response: NextResponse) {
+  response.cookies.set('auth_token', '', {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax',
+    maxAge: 0,
+    path: '/',
+  });
+
+  return response;
 }
 
 function base64UrlDecode(value: string) {
@@ -252,7 +266,7 @@ function unauthorizedResponse(pathname: string, request: NextRequest) {
   }
 
   const nextPath = `${pathname}${request.nextUrl.search}`;
-  return NextResponse.redirect(new URL(getLoginPath(nextPath), request.url));
+  return clearAuthCookie(NextResponse.redirect(new URL(getLoginPath(nextPath), request.url)));
 }
 
 function adminHostOnlyResponse(pathname: string, request: NextRequest) {
@@ -270,6 +284,7 @@ export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const host = getRequestHost(request);
   const adminHost = ADMIN_HOSTS.has(host);
+  const sharedLocalHost = adminHost && host === APP_HOST;
 
   if (pathname === '/share' && request.nextUrl.searchParams.get('chezahub_link') === 'success') {
     const redirectUrl = new URL('/rewards', adminHost ? APP_URL : request.url);
@@ -283,14 +298,31 @@ export async function proxy(request: NextRequest) {
     return NextResponse.rewrite(connectUrl);
   }
 
-  const adminHostAlias = adminHost ? getAdminHostAlias(pathname) : null;
+  if (TESTS_HOSTS.has(host) && pathname === '/') {
+    const testsUrl = request.nextUrl.clone();
+    testsUrl.pathname = '/manual-tests';
+    return NextResponse.rewrite(testsUrl);
+  }
+
+  if (
+    process.env.NODE_ENV === 'production' &&
+    LOCAL_APP_HOSTS.has(host) &&
+    pathname === '/'
+  ) {
+    const dashboardUrl = request.nextUrl.clone();
+    dashboardUrl.pathname = '/dashboard';
+    return NextResponse.redirect(dashboardUrl);
+  }
+
+  const adminHostAlias = adminHost && !sharedLocalHost ? getAdminHostAlias(pathname) : null;
   const effectivePathname = adminHostAlias ?? pathname;
 
   if (adminHost && !pathname.startsWith('/api/')) {
     const keepOnAdminHost =
       isAdminRoute(effectivePathname) ||
       isDashboardRoute(effectivePathname) ||
-      isAdminHostLocalPublicPath(pathname);
+      isAdminHostLocalPublicPath(pathname) ||
+      sharedLocalHost;
 
     if (!keepOnAdminHost) {
       return redirectToAppHost(pathname, request);
@@ -303,13 +335,17 @@ export async function proxy(request: NextRequest) {
   const access =
     payload && needsProtectedAccess ? await getCurrentAccess(payload) : null;
 
-  if ((effectivePathname === '/login' || effectivePathname === '/register') && payload) {
+  if ((effectivePathname === '/login' || effectivePathname === '/register') && payload && access) {
     const fallbackPath =
-      adminHost && access && !access.is_banned && hasPrimaryAdminAccess(access)
+      adminHost && !access.is_banned && hasPrimaryAdminAccess(access)
         ? '/admin'
         : '/dashboard';
     const nextPath = getSafeNextPath(request.nextUrl.searchParams.get('next'), fallbackPath);
     return NextResponse.redirect(new URL(nextPath, request.url));
+  }
+
+  if ((effectivePathname === '/login' || effectivePathname === '/register') && payload && !access) {
+    return clearAuthCookie(NextResponse.next());
   }
 
   if (isPublic(effectivePathname) && !isAdminRoute(effectivePathname)) {

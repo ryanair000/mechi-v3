@@ -1,0 +1,15 @@
+{
+  "headers": {
+    "x-nextjs-stale-time": "300",
+    "x-nextjs-prerender": "1",
+    "x-next-cache-tags": "_N_T_/layout,_N_T_/banned/layout,_N_T_/banned/page,_N_T_/banned"
+  },
+  "segmentPaths": [
+    "/_tree",
+    "/_full",
+    "/banned/__PAGE__",
+    "/banned",
+    "/_index",
+    "/_head"
+  ]
+}

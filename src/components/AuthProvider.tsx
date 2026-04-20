@@ -118,11 +118,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setToken(null);
         localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(nextUser));
       } else {
-        if (!cachedUser) {
-          clearStoredAuth();
-          setUser(null);
-          setToken(null);
-        }
+        clearStoredAuth();
+        setUser(null);
+        setToken(null);
       }
     } catch {
       if (!cachedUser) {

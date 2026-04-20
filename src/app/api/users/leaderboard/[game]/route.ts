@@ -188,15 +188,42 @@ export async function GET(
             legacyMetricsById.get(String(player.id ?? ''))
           );
 
-    const sorted = players.sort(
+    const topPlayers = players.sort(
       (a, b) =>
         fallbackToDefaults
           ? String(a.username ?? '').localeCompare(String(b.username ?? ''))
           : getPlayerMetrics(b).rating - getPlayerMetrics(a).rating
     ).slice(0, 50);
 
-    const leaderboard = sorted.map((p, index) => {
+    const tournamentWinsById = new Map<string, number>();
+    const playerIds = topPlayers
+      .map((player) => String(player.id ?? ''))
+      .filter(Boolean);
+
+    if (playerIds.length > 0) {
+      const tournamentWinsResult = await supabase
+        .from('tournaments')
+        .select('winner_id')
+        .eq('status', 'completed')
+        .in('winner_id', playerIds)
+        .in('game', lookupGames);
+
+      if (tournamentWinsResult.error) {
+        console.error('[Leaderboard] Tournament wins query error:', tournamentWinsResult.error);
+      } else {
+        for (const tournament of
+          (tournamentWinsResult.data as Array<{ winner_id?: string | null }> | null) ?? []) {
+          const winnerId = tournament.winner_id;
+
+          if (!winnerId) continue;
+          tournamentWinsById.set(winnerId, (tournamentWinsById.get(winnerId) ?? 0) + 1);
+        }
+      }
+    }
+
+    const leaderboard = topPlayers.map((p, index) => {
       const metrics = getPlayerMetrics(p);
+      const playerId = String(p.id ?? '');
 
       return {
         rank: index + 1,
@@ -209,6 +236,8 @@ export async function GET(
         level: (p.level as number | undefined) ?? 1,
         wins: metrics.wins,
         losses: metrics.losses,
+        matchesPlayed: metrics.wins + metrics.losses,
+        tournamentsWon: tournamentWinsById.get(playerId) ?? 0,
       };
     });
 

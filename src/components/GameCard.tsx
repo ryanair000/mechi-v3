@@ -132,10 +132,10 @@ export function GameCard({
           <button
             onClick={onJoinQueue}
             disabled={isDisabled || isQueuing}
-            className={`flex min-h-12 w-full items-center justify-center gap-1.5 rounded-[1rem] border py-3 text-base font-semibold transition-all ${
+            className={`w-full transition-all ${
               isQueuing
-                ? 'cursor-not-allowed border-[var(--border-color)] bg-[var(--surface-strong)] text-[var(--text-soft)]'
-                : 'cursor-pointer border-[rgba(50,224,196,0.22)] bg-[var(--accent-secondary)] text-[var(--brand-night)] shadow-[0_16px_28px_rgba(50,224,196,0.22)] hover:-translate-y-0.5 hover:bg-[var(--accent-secondary-hover)]'
+                ? 'btn-outline cursor-not-allowed opacity-60'
+                : 'btn-teal hover:-translate-y-0.5'
             }`}
           >
             {isQueuing ? (

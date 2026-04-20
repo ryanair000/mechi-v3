@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { AppOnboarding } from '@/components/AppOnboarding';
 import { AppMobileUtilityHeader } from '@/components/AppMobileUtilityHeader';
@@ -12,6 +12,7 @@ import { BrandLogo } from '@/components/BrandLogo';
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
   const router = useRouter();
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -40,8 +41,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     >
       <div className="app-shell-grid" />
       <div className="relative z-10">
-        <Sidebar />
-        <div className="lg:pl-56">
+        <Sidebar collapsed={sidebarCollapsed} onToggle={() => setSidebarCollapsed((current) => !current)} />
+        <div className={`transition-[padding] duration-200 ${sidebarCollapsed ? 'lg:pl-20' : 'lg:pl-56'}`}>
           <AppMobileUtilityHeader />
           <main className="min-h-screen overflow-x-hidden pb-[calc(5rem+env(safe-area-inset-bottom))] pt-2 lg:pb-8 lg:pt-0">
             {children}

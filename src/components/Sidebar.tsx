@@ -2,6 +2,11 @@
 
 import SidebarWithSubmenu from '@/components/sidebar-with-submenu';
 
-export function Sidebar() {
-  return <SidebarWithSubmenu />;
+interface SidebarProps {
+  collapsed: boolean;
+  onToggle: () => void;
+}
+
+export function Sidebar({ collapsed, onToggle }: SidebarProps) {
+  return <SidebarWithSubmenu collapsed={collapsed} onToggle={onToggle} />;
 }

@@ -19,3 +19,8 @@ start-final*.log
 .codex-prod-*.err
 vercel-live-*.log
 supabase/.temp
+.claude
+.next-build-production-readiness
+output
+Mechi Design System
+Mechi Design System.zip

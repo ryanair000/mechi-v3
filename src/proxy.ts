@@ -3,7 +3,7 @@ import type { JWTPayload } from '@/types';
 import { hasPrimaryAdminAccess } from '@/lib/admin-access';
 import { getLoginPath, getSafeNextPath } from '@/lib/navigation';
 import { createServiceClient } from '@/lib/supabase';
-import { ADMIN_HOST as CONFIGURED_ADMIN_HOST, ADMIN_URL, APP_URL } from '@/lib/urls';
+import { ADMIN_HOST as CONFIGURED_ADMIN_HOST, ADMIN_URL, APP_HOST, APP_URL } from '@/lib/urls';
 
 const PROTECTED_PREFIXES = [
   '/dashboard',
@@ -37,6 +37,7 @@ const ADMIN_PREFIXES = ['/admin', '/api/admin'];
 const CONNECT_HOSTS = new Set(['connect.mechi.club']);
 const CANONICAL_ADMIN_HOST = 'mechi.lokimax.top';
 const ADMIN_HOSTS = new Set([CONFIGURED_ADMIN_HOST, CANONICAL_ADMIN_HOST]);
+const SINGLE_HOST_MODE = APP_HOST === CONFIGURED_ADMIN_HOST;
 
 const ADMIN_HOST_PATH_ALIASES: Record<string, string> = {
   '/': '/admin',
@@ -269,7 +270,8 @@ function adminHostOnlyResponse(pathname: string, request: NextRequest) {
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const host = getRequestHost(request);
-  const adminHost = ADMIN_HOSTS.has(host);
+  const adminHost = !SINGLE_HOST_MODE && ADMIN_HOSTS.has(host);
+  const canServeAdminRoutes = adminHost || SINGLE_HOST_MODE;
 
   if (pathname === '/share' && request.nextUrl.searchParams.get('chezahub_link') === 'success') {
     const redirectUrl = new URL('/rewards', adminHost ? APP_URL : request.url);
@@ -317,7 +319,7 @@ export async function proxy(request: NextRequest) {
   }
 
   if (isAdminRoute(effectivePathname)) {
-    if (!adminHost) {
+    if (!canServeAdminRoutes) {
       return adminHostOnlyResponse(effectivePathname, request);
     }
     if (!payload) return unauthorizedResponse(effectivePathname, request);

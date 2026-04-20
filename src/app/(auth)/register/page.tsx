@@ -169,6 +169,9 @@ export default function RegisterPage({ searchParams }: { searchParams: RegisterS
   );
   const step3Valid = formData.selected_games.length > 0;
   const step4Valid = step3Valid && !hasMissingGamePlatform && !hasMissingRequiredIds;
+  const STEP_LABELS = ['Basics', 'Details', 'Games', 'Platforms'];
+  const currentStepLabel = STEP_LABELS[step - 1];
+  const progressPercent = (step / STEP_LABELS.length) * 100;
 
   const toggleGame = (game: GameKey) => {
     setFormData((prev) => {
@@ -318,14 +321,12 @@ export default function RegisterPage({ searchParams }: { searchParams: RegisterS
     }
   };
 
-  const STEP_LABELS = ['Basics', 'Details', 'Games', 'Platforms'];
-
   return (
     <FullScreenSignup
-      title=""
-      subtitle=""
-      sideTitle="Join Mechi"
-      sideDescription=""
+      title="Join Mechi."
+      subtitle="Create your account in four quick steps, then finish the rest after you land."
+      sideTitle="Starter checklist"
+      sideDescription="Keep the setup focused so your first mobile session stays quick and readable."
       sidePoints={[
         'Start with a 1-month Pro trial',
         `Save up to ${STARTER_TRIAL_GAME_LIMIT} main games`,
@@ -333,7 +334,25 @@ export default function RegisterPage({ searchParams }: { searchParams: RegisterS
       ]}
     >
       <div className="card p-4 sm:p-6">
-            <div className="mb-5 grid grid-cols-4 gap-1.5 sm:mb-6 sm:gap-2">
+            <div className="mb-5 sm:hidden">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="app-page-eyebrow">Step {step} of {STEP_LABELS.length}</p>
+                  <p className="text-sm font-black text-[var(--text-primary)]">{currentStepLabel}</p>
+                </div>
+                <span className="rounded-full border border-[var(--border-color)] bg-[var(--surface-elevated)] px-2.5 py-1 text-[11px] font-semibold text-[var(--text-secondary)]">
+                  {step}/{STEP_LABELS.length}
+                </span>
+              </div>
+              <div className="mt-3 h-2 overflow-hidden rounded-full bg-[rgba(95,109,130,0.12)]">
+                <div
+                  className="h-full rounded-full bg-[var(--brand-coral)] transition-all"
+                  style={{ width: `${progressPercent}%` }}
+                />
+              </div>
+            </div>
+
+            <div className="mb-5 hidden grid-cols-4 gap-1.5 sm:mb-6 sm:grid sm:gap-2">
               {([1, 2, 3, 4] as Step[]).map((currentStep) => (
                 <div
                   key={currentStep}

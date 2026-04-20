@@ -188,7 +188,7 @@ export default function SharePage() {
     <div className="page-container">
       <section className="card circuit-panel overflow-hidden p-5 sm:p-6">
         <div className="flex items-center justify-between gap-3">
-          <p className="section-title">Share</p>
+          <p className="section-title hidden sm:block">Share</p>
           <button
             type="button"
             onClick={() => void loadPageData({ silent: true })}
@@ -201,7 +201,7 @@ export default function SharePage() {
         </div>
 
         <div className="mt-3 max-w-2xl">
-          <h1 className="text-[1.5rem] font-black leading-[1.05] text-[var(--text-primary)] sm:text-[2rem]">
+          <h1 className="text-[1.35rem] font-black leading-[1.05] text-[var(--text-primary)] sm:text-[2rem]">
             Invite friends fast.
           </h1>
           <p className="mt-3 text-sm leading-6 text-[var(--text-secondary)]">

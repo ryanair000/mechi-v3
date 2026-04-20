@@ -8,10 +8,9 @@ import { BrandLogo } from '@/components/BrandLogo';
 import { ThemeToggle } from '@/components/ThemeToggle';
 
 const NAV_ITEMS = [
-  { href: '#how-it-works', label: 'HOW IT WORKS' },
-  { href: '#supported', label: 'GAMES' },
-  { href: '#pricing', label: 'PRICING' },
-  { href: '#ranks', label: 'RANKS' },
+  { href: '#experience', label: 'EXPERIENCE' },
+  { href: '#games', label: 'GAMES' },
+  { href: '#plans', label: 'PLANS' },
 ];
 
 const HEADER_TEXT_CLASS =

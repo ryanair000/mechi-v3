@@ -105,8 +105,19 @@ export default function LeaderboardPage() {
 
   return (
     <div className="page-container">
-      <div className="card circuit-panel mb-5 p-4 sm:p-5">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <div className="card circuit-panel mb-4 p-4 sm:mb-5 sm:p-5">
+        <div className="space-y-3 sm:hidden">
+          <p className="text-sm leading-6 text-[var(--text-secondary)]">
+            Watch the top players, compare records, and see where your climb can go next.
+          </p>
+          {selectedGame ? (
+            <div className="brand-chip-coral w-fit px-2.5 py-1 text-[11px]">
+              <Trophy size={11} />
+              <span>{GAMES[selectedGame].label}</span>
+            </div>
+          ) : null}
+        </div>
+        <div className="hidden flex-col gap-3 sm:flex sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-3">
             <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[rgba(255,107,107,0.14)] text-[var(--brand-coral)]">
               <Trophy size={16} />
@@ -129,7 +140,7 @@ export default function LeaderboardPage() {
         </div>
       </div>
 
-      <div className="card mb-5 p-3 sm:p-4">
+      <div className="card mb-4 p-3 sm:mb-5 sm:p-4">
         <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <p className="section-title">Pick a game</p>

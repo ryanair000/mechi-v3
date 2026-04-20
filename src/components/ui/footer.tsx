@@ -1,10 +1,10 @@
 import Link from 'next/link';
 import {
-  Globe,
+  LogIn,
   Mail,
   MessageCircle,
   ShieldCheck,
-  Share2,
+  Trophy,
   type LucideIcon,
 } from 'lucide-react';
 import { BrandLogo } from '@/components/BrandLogo';
@@ -24,20 +24,16 @@ const WHATSAPP_GROUP_URL = process.env.NEXT_PUBLIC_WHATSAPP_GROUP_URL;
 
 const links: FooterLink[] = [
   {
-    title: 'How It Works',
-    href: '/#how-it-works',
+    title: 'Experience',
+    href: '/#experience',
   },
   {
     title: 'Games',
-    href: '/#supported',
+    href: '/#games',
   },
   {
-    title: 'Pricing',
-    href: '/pricing',
-  },
-  {
-    title: 'Ranks',
-    href: '/#ranks',
+    title: 'Plans',
+    href: '/#plans',
   },
   {
     title: 'Tournaments',
@@ -63,25 +59,25 @@ const links: FooterLink[] = [
 
 const actionLinks: FooterActionLink[] = [
   {
-    title: 'Support',
-    href: `mailto:${SUPPORT_EMAIL}`,
-    icon: Mail,
-    external: true,
-  },
-  {
-    title: 'Connect',
-    href: '/connect',
-    icon: Globe,
-  },
-  {
     title: 'Join Free',
     href: '/register',
     icon: ShieldCheck,
   },
   {
-    title: 'Open Inbox',
+    title: 'Tournaments',
+    href: '/tournaments',
+    icon: Trophy,
+  },
+  {
+    title: 'Sign In',
     href: '/login',
-    icon: Share2,
+    icon: LogIn,
+  },
+  {
+    title: 'Support',
+    href: `mailto:${SUPPORT_EMAIL}`,
+    icon: Mail,
+    external: true,
   },
 ];
 
@@ -124,8 +120,8 @@ export default function FooterSection() {
             <div className="max-w-md">
               <BrandLogo size="sm" showTagline />
               <p className="mt-4 text-sm leading-6 text-[var(--text-secondary)]">
-                Cleaner queues, direct challenges, lobbies, and tournament flow for competitive
-                players across East Africa.
+                One cleaner public home for ranked matchmaking, direct challenges, lobbies, and
+                tournament play across East Africa.
               </p>
             </div>
 

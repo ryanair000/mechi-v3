@@ -309,7 +309,7 @@ export default function RewardsPage() {
     <div className="page-container">
       <section className="card circuit-panel overflow-hidden p-5 sm:p-6">
         <div className="flex items-center justify-between gap-3">
-          <p className="section-title">Rewards</p>
+          <p className="section-title hidden sm:block">Rewards</p>
           <button
             type="button"
             onClick={() => void loadPageData({ silent: true })}
@@ -322,7 +322,7 @@ export default function RewardsPage() {
         </div>
 
         <div className="mt-3 max-w-2xl">
-          <h1 className="text-[1.5rem] font-black leading-[1.05] text-[var(--text-primary)] sm:text-[2rem]">
+          <h1 className="text-[1.35rem] font-black leading-[1.05] text-[var(--text-primary)] sm:text-[2rem]">
             Track RP and redeem fast.
           </h1>
           <p className="mt-3 text-sm leading-6 text-[var(--text-secondary)]">
@@ -347,7 +347,7 @@ export default function RewardsPage() {
         ) : null}
 
         <div className="mt-6 rounded-[1.25rem] border border-[var(--border-color)] bg-[var(--surface-strong)] p-5">
-          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
             {heroStats.map((item) => (
               <div
                 key={item.label}
@@ -364,7 +364,7 @@ export default function RewardsPage() {
                     <p className="mt-2 text-2xl font-black text-[var(--text-primary)]">
                       {item.value}
                     </p>
-                    <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">
+                    <p className="mt-2 text-xs leading-5 text-[var(--text-secondary)] sm:text-sm sm:leading-6">
                       {item.copy}
                     </p>
                   </div>

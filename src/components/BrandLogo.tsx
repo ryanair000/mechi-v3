@@ -116,6 +116,7 @@ export function BrandLogo({
             sizes={imageSizes[size]}
             className={imageToneClasses[variant]}
             preload={size === 'lg'}
+            unoptimized
           />
         </span>
       ) : null}

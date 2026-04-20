@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
 import { BookOpen, ChevronRight, CirclePlay, Swords } from 'lucide-react';
 import { ActionFeedback, type ActionFeedbackState } from '@/components/ActionFeedback';
+import { openAppOnboarding } from '@/components/AppOnboarding';
 import { useAuthFetch } from '@/components/AuthProvider';
 import { GameCard } from '@/components/GameCard';
 import { PaywallModal } from '@/components/PaywallModal';
@@ -402,7 +403,7 @@ export default function DashboardPage() {
           }`}
         >
           <div className="flex flex-wrap gap-2">
-            <span className="brand-chip px-3 py-1">Dashboard</span>
+            <span className="brand-chip hidden px-3 py-1 sm:inline-flex">Dashboard</span>
             <span className={`${bestDivision ? 'brand-chip-coral' : 'brand-chip'} px-3 py-1`}>
               {bestDivision ? bestDivision.label : currentPlan.name}
             </span>
@@ -436,10 +437,10 @@ export default function DashboardPage() {
               </>
             ) : !userGames.length || setupGame ? (
               <>
-                <Link href="/games" className="btn-outline">
+                <button type="button" onClick={openAppOnboarding} className="btn-outline">
                   <CirclePlay size={13} />
                   Quick intro
-                </Link>
+                </button>
                 <Link href="/tutorials" className="btn-outline">
                   <BookOpen size={13} />
                   Full tutorial
@@ -447,10 +448,10 @@ export default function DashboardPage() {
               </>
             ) : (
               <>
-                <Link href="/tutorials" className="btn-outline">
+                <button type="button" onClick={openAppOnboarding} className="btn-outline">
                   <CirclePlay size={13} />
                   Quick intro
-                </Link>
+                </button>
                 <Link href="/tutorials#start-flow" className="btn-outline">
                   <BookOpen size={13} />
                   Full tutorial

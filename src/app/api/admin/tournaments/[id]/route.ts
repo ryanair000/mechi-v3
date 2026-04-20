@@ -9,9 +9,22 @@ import {
   ACTIVE_TOURNAMENT_PLAYER_STATUSES,
   getTournamentPaymentMetrics,
   getTournamentPrizeSnapshot,
+  isTournamentReviewSchemaMissing,
   mapTournamentMatchRelations,
+  withTournamentReviewDefaults,
 } from '@/lib/tournaments';
 import type { GameKey, PlatformKey, TournamentApprovalStatus, TournamentPaymentStatus } from '@/types';
+
+const ADMIN_TOURNAMENT_DETAIL_SELECT =
+  'id, slug, title, game, platform, region, size, entry_fee, prize_pool, platform_fee, platform_fee_rate, status, bracket, winner_id, organizer_id, rules, approval_status, approved_at, approved_by, is_featured, payout_status, payout_ref, payout_error, created_at, started_at, ended_at, organizer:organizer_id(id, username, email), winner:winner_id(id, username)';
+const ADMIN_TOURNAMENT_DETAIL_LEGACY_SELECT =
+  'id, slug, title, game, platform, region, size, entry_fee, prize_pool, platform_fee, platform_fee_rate, status, bracket, winner_id, organizer_id, rules, payout_status, payout_ref, payout_error, created_at, started_at, ended_at, organizer:organizer_id(id, username, email), winner:winner_id(id, username)';
+const ADMIN_TOURNAMENT_SUMMARY_SELECT =
+  'id, title, slug, game, platform, region, size, entry_fee, prize_pool, platform_fee, platform_fee_rate, status, winner_id, rules, approval_status, approved_at, approved_by, is_featured';
+const ADMIN_TOURNAMENT_SUMMARY_LEGACY_SELECT =
+  'id, title, slug, game, platform, region, size, entry_fee, prize_pool, platform_fee, platform_fee_rate, status, winner_id, rules';
+const REVIEW_CONTROLS_UNAVAILABLE_MESSAGE =
+  'Tournament review controls are unavailable until the latest database migration is applied.';
 
 export async function GET(
   request: NextRequest,
@@ -26,17 +39,37 @@ export async function GET(
 
   try {
     const supabase = createServiceClient();
-    const { data: tournament, error: tournamentError } = await supabase
+    let supportsReviewControls = true;
+    let tournamentResult = await supabase
       .from('tournaments')
-      .select(
-        'id, slug, title, game, platform, region, size, entry_fee, prize_pool, platform_fee, platform_fee_rate, status, bracket, winner_id, organizer_id, rules, approval_status, approved_at, approved_by, is_featured, payout_status, payout_ref, payout_error, created_at, started_at, ended_at, organizer:organizer_id(id, username, email), winner:winner_id(id, username)'
-      )
+      .select(ADMIN_TOURNAMENT_DETAIL_SELECT)
       .eq('id', id)
       .single();
 
-    if (tournamentError || !tournament) {
+    if (isTournamentReviewSchemaMissing(tournamentResult.error)) {
+      supportsReviewControls = false;
+      tournamentResult = await supabase
+        .from('tournaments')
+        .select(ADMIN_TOURNAMENT_DETAIL_LEGACY_SELECT)
+        .eq('id', id)
+        .single();
+    }
+
+    const { data: tournamentRaw, error: tournamentError } = tournamentResult;
+
+    if (tournamentError || !tournamentRaw) {
       return NextResponse.json({ error: 'Tournament not found' }, { status: 404 });
     }
+
+    const tournament = withTournamentReviewDefaults(
+      tournamentRaw as unknown as Record<string, unknown> & {
+        entry_fee?: number | null;
+        platform_fee?: number | null;
+        platform_fee_rate?: number | null;
+        prize_pool?: number | null;
+      },
+      supportsReviewControls
+    );
 
     const [playersResult, bracketMatchesResult, liveMatchesResult] = await Promise.all([
       supabase
@@ -96,6 +129,7 @@ export async function GET(
       bracketMatches: (bracketMatchesResult.data ?? []).map(mapTournamentMatchRelations),
       liveMatches: liveMatchesResult.data ?? [],
       paymentBreakdown,
+      supportsReviewControls,
     });
   } catch (err) {
     console.error('[Admin Tournament GET] Error:', err);
@@ -131,17 +165,46 @@ export async function PATCH(
     };
     const supabase = createServiceClient();
 
-    const { data: tournament, error: tournamentError } = await supabase
+    let supportsReviewControls = true;
+    let tournamentResult = await supabase
       .from('tournaments')
-      .select(
-        'id, title, slug, game, platform, region, size, entry_fee, prize_pool, platform_fee, platform_fee_rate, status, winner_id, rules, approval_status, approved_at, approved_by, is_featured'
-      )
+      .select(ADMIN_TOURNAMENT_SUMMARY_SELECT)
       .eq('id', id)
       .single();
 
-    if (tournamentError || !tournament) {
+    if (isTournamentReviewSchemaMissing(tournamentResult.error)) {
+      supportsReviewControls = false;
+      tournamentResult = await supabase
+        .from('tournaments')
+        .select(ADMIN_TOURNAMENT_SUMMARY_LEGACY_SELECT)
+        .eq('id', id)
+        .single();
+    }
+
+    const { data: tournamentRaw, error: tournamentError } = tournamentResult;
+
+    if (tournamentError || !tournamentRaw) {
       return NextResponse.json({ error: 'Tournament not found' }, { status: 404 });
     }
+
+    const tournament = withTournamentReviewDefaults(
+      tournamentRaw as unknown as Record<string, unknown> & {
+        title: string;
+        slug: string;
+        game: string;
+        platform?: PlatformKey | null;
+        region: string;
+        size: number;
+        entry_fee: number;
+        prize_pool?: number | null;
+        platform_fee?: number | null;
+        platform_fee_rate?: number | null;
+        status: string;
+        winner_id?: string | null;
+        rules?: string | null;
+      },
+      supportsReviewControls
+    );
 
     if (body.action === 'cancel') {
       if (!hasAdminAccess(admin)) {
@@ -170,6 +233,12 @@ export async function PATCH(
     if (body.action === 'set_approval') {
       if (!hasAdminAccess(admin)) {
         return NextResponse.json({ error: 'Only admins can review tournaments' }, { status: 403 });
+      }
+      if (!supportsReviewControls) {
+        return NextResponse.json(
+          { error: REVIEW_CONTROLS_UNAVAILABLE_MESSAGE },
+          { status: 409 }
+        );
       }
 
       const approvalStatus = body.approval_status;
@@ -214,6 +283,12 @@ export async function PATCH(
     if (body.action === 'set_featured') {
       if (!hasAdminAccess(admin)) {
         return NextResponse.json({ error: 'Only admins can feature tournaments' }, { status: 403 });
+      }
+      if (!supportsReviewControls) {
+        return NextResponse.json(
+          { error: REVIEW_CONTROLS_UNAVAILABLE_MESSAGE },
+          { status: 409 }
+        );
       }
 
       const isFeatured = Boolean(body.is_featured);

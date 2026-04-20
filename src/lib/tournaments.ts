@@ -23,6 +23,7 @@ import type {
   Match,
   PlatformKey,
   Tournament,
+  TournamentApprovalStatus,
   TournamentMatch,
   TournamentPlayer,
 } from '@/types';
@@ -36,6 +37,12 @@ export {
 } from '@/lib/tournament-metrics';
 
 const TOURNAMENT_PAYMENT_HOLD_MINUTES = 15;
+const TOURNAMENT_REVIEW_COLUMNS = [
+  'approval_status',
+  'approved_at',
+  'approved_by',
+  'is_featured',
+] as const;
 
 type ProfileLite = {
   id: string;
@@ -67,6 +74,60 @@ export function getAppUrl(): string {
 
 export function getTournamentUrl(slug: string): string {
   return `${getAppUrl()}/t/${slug}`;
+}
+
+type DatabaseErrorLike = {
+  code?: string | null;
+  message?: string | null;
+} | null | undefined;
+
+export function isTournamentReviewSchemaMissing(error: DatabaseErrorLike) {
+  if (!error || error.code !== '42703') {
+    return false;
+  }
+
+  const message = (error.message ?? '').toLowerCase();
+  return TOURNAMENT_REVIEW_COLUMNS.some(
+    (column) =>
+      message.includes(`tournaments.${column}`) ||
+      message.includes(`column ${column}`) ||
+      message.includes(column)
+  );
+}
+
+export function withTournamentReviewDefaults<T extends Record<string, unknown>>(
+  tournament: T,
+  supportsReviewControls = true
+) {
+  const approvalStatus = (
+    supportsReviewControls
+      ? ((tournament as { approval_status?: TournamentApprovalStatus | null }).approval_status ??
+        'approved')
+      : 'approved'
+  ) as TournamentApprovalStatus;
+
+  return {
+    ...tournament,
+    approval_status: approvalStatus,
+    approved_at: supportsReviewControls
+      ? ((tournament as { approved_at?: string | null }).approved_at ?? null)
+      : null,
+    approved_by: supportsReviewControls
+      ? ((tournament as { approved_by?: string | null }).approved_by ?? null)
+      : null,
+    is_featured: supportsReviewControls
+      ? Boolean((tournament as { is_featured?: unknown }).is_featured)
+      : false,
+  };
+}
+
+export function withTournamentReviewDefaultsList<T extends Record<string, unknown>>(
+  tournaments: T[] | null | undefined,
+  supportsReviewControls = true
+) {
+  return (tournaments ?? []).map((tournament) =>
+    withTournamentReviewDefaults(tournament, supportsReviewControls)
+  );
 }
 
 export async function releaseExpiredTournamentReservations(

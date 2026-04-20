@@ -5,12 +5,16 @@ import {
   firstRelation,
   getTournamentPaymentMetrics,
   getTournamentPrizeSnapshot,
+  isTournamentReviewSchemaMissing,
   isActiveTournamentPlayerStatus,
   releaseExpiredTournamentReservations,
+  withTournamentReviewDefaults,
 } from '@/lib/tournaments';
 
 const TOURNAMENT_DETAIL_SELECT =
   'id, slug, title, game, platform, region, size, entry_fee, prize_pool, platform_fee, platform_fee_rate, status, winner_id, organizer_id, rules, approval_status, approved_at, approved_by, is_featured, payout_status, created_at, started_at, ended_at, organizer:organizer_id(id, username), winner:winner_id(id, username)';
+const TOURNAMENT_DETAIL_LEGACY_SELECT =
+  'id, slug, title, game, platform, region, size, entry_fee, prize_pool, platform_fee, platform_fee_rate, status, winner_id, organizer_id, rules, payout_status, created_at, started_at, ended_at, organizer:organizer_id(id, username), winner:winner_id(id, username)';
 const TOURNAMENT_PLAYER_SELECT =
   'id, tournament_id, user_id, seed, payment_status, joined_at, user:user_id(id, username)';
 const TOURNAMENT_MATCH_SELECT =
@@ -38,6 +42,16 @@ type TournamentMatchGameRelation =
   | null
   | undefined;
 
+type TournamentDetailRow = Record<string, unknown> & {
+  id: string;
+  organizer_id: string;
+  size: number;
+  entry_fee: number;
+  platform_fee: number;
+  platform_fee_rate: number;
+  prize_pool: number;
+};
+
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ slug: string }> }
@@ -52,25 +66,45 @@ export async function GET(
 
   try {
     const supabase = createServiceClient();
-    const { data: tournamentBySlug, error } = await supabase
-      .from('tournaments')
-      .select(TOURNAMENT_DETAIL_SELECT)
-      .eq('slug', slug)
-      .single();
+    let supportsReviewControls: boolean | null = null;
+    const loadTournament = async (column: 'slug' | 'id', value: string) => {
+      const select =
+        supportsReviewControls === false ? TOURNAMENT_DETAIL_LEGACY_SELECT : TOURNAMENT_DETAIL_SELECT;
 
-    if (error || !tournamentBySlug) {
+      let result = await supabase.from('tournaments').select(select).eq(column, value).single();
+
+      if (supportsReviewControls !== false && isTournamentReviewSchemaMissing(result.error)) {
+        supportsReviewControls = false;
+        result = await supabase
+          .from('tournaments')
+          .select(TOURNAMENT_DETAIL_LEGACY_SELECT)
+          .eq(column, value)
+          .single();
+      } else if (supportsReviewControls === null) {
+        supportsReviewControls = true;
+      }
+
+      return result;
+    };
+
+    const { data: tournamentBySlugRaw, error } = await loadTournament('slug', slug);
+
+    if (error || !tournamentBySlugRaw) {
       return NextResponse.json({ error: 'Tournament not found' }, { status: 404 });
     }
 
+    const tournamentBySlug = withTournamentReviewDefaults(
+      tournamentBySlugRaw as unknown as TournamentDetailRow,
+      supportsReviewControls !== false
+    );
+
     await releaseExpiredTournamentReservations(supabase, tournamentBySlug.id);
 
-    const { data: refreshedTournament } = await supabase
-      .from('tournaments')
-      .select(TOURNAMENT_DETAIL_SELECT)
-      .eq('id', tournamentBySlug.id)
-      .single();
-
-    const tournament = (refreshedTournament ?? tournamentBySlug) as typeof tournamentBySlug;
+    const { data: refreshedTournamentRaw } = await loadTournament('id', tournamentBySlug.id);
+    const tournament = withTournamentReviewDefaults(
+      (refreshedTournamentRaw ?? tournamentBySlugRaw) as unknown as TournamentDetailRow,
+      supportsReviewControls !== false
+    );
 
     const { data: players } = await supabase
       .from('tournament_players')

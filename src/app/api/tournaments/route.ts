@@ -13,6 +13,8 @@ import {
   getPlatformForTournament,
   getTournamentPaymentMetrics,
   getTournamentPrizeSnapshot,
+  isTournamentReviewSchemaMissing,
+  withTournamentReviewDefaultsList,
 } from '@/lib/tournaments';
 import type { GameKey, PlatformKey } from '@/types';
 
@@ -25,27 +27,44 @@ export async function GET(request: NextRequest) {
     const offset = Math.max(Number(searchParams.get('offset') ?? 0), 0);
     const supabase = createServiceClient();
 
-    let query = supabase
-      .from('tournaments')
-      .select('*, organizer:organizer_id(id, username), winner:winner_id(id, username)')
-      .order('is_featured', { ascending: false })
-      .order('created_at', { ascending: false })
-      .range(offset, offset + limit - 1);
+    const buildTournamentQuery = (supportsReviewControls: boolean) => {
+      let query = supabase
+        .from('tournaments')
+        .select('*, organizer:organizer_id(id, username), winner:winner_id(id, username)')
+        .order('created_at', { ascending: false })
+        .range(offset, offset + limit - 1);
 
-    if (status !== 'all') {
-      query = query.eq('status', status);
+      if (supportsReviewControls) {
+        query = query.order('is_featured', { ascending: false });
+      }
+
+      if (status !== 'all') {
+        query = query.eq('status', status);
+      }
+
+      if (game && GAMES[game as GameKey]) {
+        query = query.eq('game', getCanonicalGameKey(game as GameKey));
+      }
+
+      return query;
+    };
+
+    let supportsReviewControls = true;
+    let tournamentResult = await buildTournamentQuery(true);
+    if (isTournamentReviewSchemaMissing(tournamentResult.error)) {
+      supportsReviewControls = false;
+      tournamentResult = await buildTournamentQuery(false);
     }
 
-    if (game && GAMES[game as GameKey]) {
-      query = query.eq('game', getCanonicalGameKey(game as GameKey));
-    }
-
-    const { data, error } = await query;
+    const { data, error } = tournamentResult;
     if (error) {
       return NextResponse.json({ error: 'Failed to fetch tournaments' }, { status: 500 });
     }
 
-    const tournaments = (data ?? []) as Array<Record<string, unknown> & { id: string }>;
+    const tournaments = withTournamentReviewDefaultsList(
+      ((data ?? []) as unknown) as Array<Record<string, unknown> & { id: string }>,
+      supportsReviewControls
+    );
     if (!tournaments.length) {
       return NextResponse.json({ tournaments: [] });
     }
@@ -187,24 +206,38 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { data: tournament, error } = await supabase
+    const baseInsertPayload = {
+      slug,
+      title,
+      game,
+      platform,
+      region: location.label,
+      size,
+      entry_fee: entryFee,
+      platform_fee_rate: organizerPlanConfig.tournamentFeePercent,
+      rules: rules || null,
+      organizer_id: authUser.id,
+    };
+
+    let insertResult = await supabase
       .from('tournaments')
       .insert({
-        slug,
-        title,
-        game,
-        platform,
-        region: location.label,
-        size,
-        entry_fee: entryFee,
-        platform_fee_rate: organizerPlanConfig.tournamentFeePercent,
-        rules: rules || null,
+        ...baseInsertPayload,
         approval_status: 'pending',
         is_featured: false,
-        organizer_id: authUser.id,
       })
       .select('*')
       .single();
+
+    if (isTournamentReviewSchemaMissing(insertResult.error)) {
+      insertResult = await supabase
+        .from('tournaments')
+        .insert(baseInsertPayload)
+        .select('*')
+        .single();
+    }
+
+    const { data: tournament, error } = insertResult;
 
     if (error || !tournament) {
       return NextResponse.json({ error: 'Failed to create tournament' }, { status: 500 });

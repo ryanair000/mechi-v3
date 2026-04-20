@@ -40,6 +40,7 @@ interface TournamentPlayerDetail {
 }
 
 interface TournamentDetail {
+  supportsReviewControls: boolean;
   tournament: TournamentRow & {
     region?: string | null;
     platform_fee?: number;
@@ -221,6 +222,7 @@ export default function AdminTournamentsPage() {
   const { user } = useAuth();
   const authFetch = useAuthFetch();
   const [tournaments, setTournaments] = useState<TournamentRow[]>([]);
+  const [supportsReviewControls, setSupportsReviewControls] = useState(true);
   const [tab, setTab] = useState<(typeof STATUS_TABS)[number]>('all');
   const [loading, setLoading] = useState(true);
   const [actingOn, setActingOn] = useState<string | null>(null);
@@ -235,13 +237,18 @@ export default function AdminTournamentsPage() {
       const params = new URLSearchParams({ limit: '60' });
       if (tab !== 'all') params.set('status', tab);
       const res = await authFetch(`/api/admin/tournaments?${params.toString()}`);
-      const data = await res.json();
+      const data = (await res.json()) as {
+        error?: string;
+        tournaments?: TournamentRow[];
+        supportsReviewControls?: boolean;
+      };
       if (!res.ok) {
         toast.error(data.error ?? 'Failed to load tournaments');
         setTournaments([]);
         return;
       }
-      setTournaments((data.tournaments ?? []) as TournamentRow[]);
+      setTournaments(data.tournaments ?? []);
+      setSupportsReviewControls(data.supportsReviewControls ?? true);
     } catch {
       toast.error('Network error while loading tournaments');
     } finally {
@@ -262,7 +269,11 @@ export default function AdminTournamentsPage() {
           return null;
         }
 
-        const nextDetail = data as TournamentDetail;
+        const parsedDetail = data as TournamentDetail;
+        const nextDetail = {
+          ...parsedDetail,
+          supportsReviewControls: parsedDetail.supportsReviewControls ?? true,
+        };
         setDetail(nextDetail);
         setEditForm(buildEditForm(nextDetail.tournament));
         setDetailTournamentId(tournamentId);
@@ -344,11 +355,13 @@ export default function AdminTournamentsPage() {
       nextDecision: sortedTournaments[0] ?? null,
       pendingReview: tournaments.filter((tournament) => tournament.approval_status === 'pending').length,
       liveNow: tournaments.filter((tournament) => tournament.status === 'active').length,
-      readyToFeature: tournaments.filter(
-        (tournament) => tournament.approval_status === 'approved' && !tournament.is_featured
-      ).length,
+      readyToFeature: supportsReviewControls
+        ? tournaments.filter(
+            (tournament) => tournament.approval_status === 'approved' && !tournament.is_featured
+          ).length
+        : 0,
     }),
-    [sortedTournaments, tournaments]
+    [sortedTournaments, supportsReviewControls, tournaments]
   );
 
   return (
@@ -364,6 +377,13 @@ export default function AdminTournamentsPage() {
               Review payout visibility, approve brackets before they get featured, and fix event
               details before players are affected.
             </p>
+            {!supportsReviewControls ? (
+              <p className="mt-3 max-w-2xl text-sm leading-7 text-amber-300">
+                Tournament review and featured placement are temporarily unavailable on the live
+                database until the latest migration is applied. Listing, edits, and bracket ops
+                still work normally.
+              </p>
+            ) : null}
           </div>
           <div className="flex flex-wrap gap-2">
             {STATUS_TABS.map((status) => (
@@ -590,9 +610,19 @@ export default function AdminTournamentsPage() {
                                 <div className="mt-4 space-y-2 text-sm text-[var(--text-secondary)]">
                                   <p>Status: {formatTournamentStatus(detail.tournament.status)}</p>
                                   <p>
-                                    Review: {formatApprovalStatus(detail.tournament.approval_status)}
+                                    Review:{' '}
+                                    {detail.supportsReviewControls
+                                      ? formatApprovalStatus(detail.tournament.approval_status)
+                                      : 'Unavailable on current schema'}
                                   </p>
-                                  <p>Featured: {detail.tournament.is_featured ? 'Yes' : 'No'}</p>
+                                  <p>
+                                    Featured:{' '}
+                                    {detail.supportsReviewControls
+                                      ? detail.tournament.is_featured
+                                        ? 'Yes'
+                                        : 'No'
+                                      : 'Unavailable on current schema'}
+                                  </p>
                                   <p>Region: {detail.tournament.region ?? 'n/a'}</p>
                                   <p>
                                     Entry fee: KSh {detail.tournament.entry_fee.toLocaleString()}
@@ -655,8 +685,9 @@ export default function AdminTournamentsPage() {
                                   Review and placement
                                 </p>
                                 <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">
-                                  Approve a tournament before featuring it. Moving a tournament back
-                                  to review or rejecting it automatically removes the featured flag.
+                                  {detail.supportsReviewControls
+                                    ? 'Approve a tournament before featuring it. Moving a tournament back to review or rejecting it automatically removes the featured flag.'
+                                    : 'This environment has not run the tournament review migration yet, so review and featured placement controls are disabled.'}
                                 </p>
 
                                 <div className="mt-4 flex flex-wrap gap-2">
@@ -676,6 +707,7 @@ export default function AdminTournamentsPage() {
                                     className="btn-ghost"
                                     disabled={
                                       isActingHere ||
+                                      !detail.supportsReviewControls ||
                                       detail.tournament.approval_status === 'approved'
                                     }
                                   >
@@ -698,6 +730,7 @@ export default function AdminTournamentsPage() {
                                     className="btn-ghost"
                                     disabled={
                                       isActingHere ||
+                                      !detail.supportsReviewControls ||
                                       detail.tournament.approval_status === 'pending'
                                     }
                                   >
@@ -719,6 +752,7 @@ export default function AdminTournamentsPage() {
                                     className="btn-danger"
                                     disabled={
                                       isActingHere ||
+                                      !detail.supportsReviewControls ||
                                       detail.tournament.approval_status === 'rejected'
                                     }
                                   >
@@ -731,7 +765,9 @@ export default function AdminTournamentsPage() {
                                     Featured placement
                                   </p>
                                   <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">
-                                    Use this for brackets you want at the top of the tournament feed.
+                                    {detail.supportsReviewControls
+                                      ? 'Use this for brackets you want at the top of the tournament feed.'
+                                      : 'Featured placement is unavailable until the live database has the review controls migration.'}
                                   </p>
                                   <button
                                     type="button"
@@ -753,11 +789,16 @@ export default function AdminTournamentsPage() {
                                     className={`mt-4 ${detail.tournament.is_featured ? 'btn-ghost' : 'btn-primary'}`}
                                     disabled={
                                       isActingHere ||
+                                      !detail.supportsReviewControls ||
                                       (!detail.tournament.is_featured &&
                                         detail.tournament.approval_status !== 'approved')
                                     }
                                   >
-                                    {detail.tournament.is_featured ? 'Remove featured flag' : 'Feature tournament'}
+                                    {detail.supportsReviewControls
+                                      ? detail.tournament.is_featured
+                                        ? 'Remove featured flag'
+                                        : 'Feature tournament'
+                                      : 'Featured placement unavailable'}
                                   </button>
                                 </div>
                               </div>

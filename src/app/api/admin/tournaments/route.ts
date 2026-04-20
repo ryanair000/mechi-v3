@@ -1,7 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getRequestAccessProfile, hasModeratorAccess } from '@/lib/access';
 import { createServiceClient } from '@/lib/supabase';
-import { getTournamentPaymentMetrics, getTournamentPrizeSnapshot } from '@/lib/tournaments';
+import {
+  getTournamentPaymentMetrics,
+  getTournamentPrizeSnapshot,
+  isTournamentReviewSchemaMissing,
+  withTournamentReviewDefaultsList,
+} from '@/lib/tournaments';
+
+const TOURNAMENT_LIST_SELECT =
+  'id, slug, title, game, platform, region, size, entry_fee, prize_pool, platform_fee, platform_fee_rate, status, approval_status, approved_at, approved_by, is_featured, payout_status, created_at, started_at, ended_at, organizer:organizer_id(id, username), winner:winner_id(id, username)';
+const TOURNAMENT_LIST_LEGACY_SELECT =
+  'id, slug, title, game, platform, region, size, entry_fee, prize_pool, platform_fee, platform_fee_rate, status, payout_status, created_at, started_at, ended_at, organizer:organizer_id(id, username), winner:winner_id(id, username)';
 
 type TournamentListItem = {
   id: string;
@@ -72,32 +82,46 @@ export async function GET(request: NextRequest) {
     const offset = Math.max(Number(searchParams.get('offset') ?? 0), 0);
     const supabase = createServiceClient();
 
-    let query = supabase
-      .from('tournaments')
-      .select(
-        'id, slug, title, game, platform, region, size, entry_fee, prize_pool, platform_fee, platform_fee_rate, status, approval_status, approved_at, approved_by, is_featured, payout_status, created_at, started_at, ended_at, organizer:organizer_id(id, username), winner:winner_id(id, username)'
-      )
-      .order('created_at', { ascending: false })
-      .range(offset, offset + limit - 1);
+    const buildTournamentQuery = (select: string) => {
+      let query = supabase
+        .from('tournaments')
+        .select(select)
+        .order('created_at', { ascending: false })
+        .range(offset, offset + limit - 1);
 
-    if (status && status !== 'all') query = query.eq('status', status);
+      if (status && status !== 'all') {
+        query = query.eq('status', status);
+      }
 
-    const { data, error } = await query;
+      return query;
+    };
+
+    let supportsReviewControls = true;
+    let tournamentResult = await buildTournamentQuery(TOURNAMENT_LIST_SELECT);
+    if (isTournamentReviewSchemaMissing(tournamentResult.error)) {
+      supportsReviewControls = false;
+      tournamentResult = await buildTournamentQuery(TOURNAMENT_LIST_LEGACY_SELECT);
+    }
+
+    const { data, error } = tournamentResult;
     if (error) {
       return NextResponse.json({ error: 'Failed to fetch tournaments' }, { status: 500 });
     }
 
-    const tournaments = (data ?? []) as Array<
-      Record<string, unknown> & {
-        id: string;
-        status: string;
-        payout_status?: string | null;
-        started_at?: string | null;
-        created_at: string;
-      }
-    >;
+    const tournaments = withTournamentReviewDefaultsList(
+      ((data ?? []) as unknown) as Array<
+        Record<string, unknown> & {
+          id: string;
+          status: string;
+          payout_status?: string | null;
+          started_at?: string | null;
+          created_at: string;
+        }
+      >,
+      supportsReviewControls
+    );
     if (!tournaments.length) {
-      return NextResponse.json({ tournaments: [] });
+      return NextResponse.json({ tournaments: [], supportsReviewControls });
     }
 
     const tournamentIds = tournaments.map((tournament) => tournament.id);
@@ -139,6 +163,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       tournaments: enrichedTournaments.sort(compareTournamentsByUrgency),
+      supportsReviewControls,
     });
   } catch (err) {
     console.error('[Admin Tournaments] Error:', err);

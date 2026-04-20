@@ -145,6 +145,27 @@ export default function AdminQueuePage() {
 
     return { waiting, matched, stuck };
   }, [entries]);
+  const sortedEntries = useMemo(
+    () =>
+      [...entries].sort((left, right) => {
+        const leftWait = getWaitMinutes(left.joined_at);
+        const rightWait = getWaitMinutes(right.joined_at);
+        const leftStuck = left.status === 'waiting' && leftWait >= QUEUE_MAX_WAIT_MINUTES;
+        const rightStuck = right.status === 'waiting' && rightWait >= QUEUE_MAX_WAIT_MINUTES;
+
+        if (leftStuck !== rightStuck) {
+          return leftStuck ? -1 : 1;
+        }
+
+        if (left.status !== right.status) {
+          const rank = { waiting: 0, matched: 1, cancelled: 2 } as const;
+          return rank[left.status as keyof typeof rank] - rank[right.status as keyof typeof rank];
+        }
+
+        return rightWait - leftWait;
+      }),
+    [entries]
+  );
 
   return (
     <div className="space-y-5">
@@ -292,7 +313,7 @@ export default function AdminQueuePage() {
         </div>
       ) : (
         <div className="space-y-3">
-          {entries.map((entry) => {
+          {sortedEntries.map((entry) => {
             const gameLabel = GAMES[entry.game]?.label ?? entry.game;
             const platformLabel = entry.platform ? (PLATFORMS[entry.platform]?.label ?? entry.platform) : 'Any platform';
             const waitMinutes = getWaitMinutes(entry.joined_at);
@@ -337,49 +358,38 @@ export default function AdminQueuePage() {
                       {entry.user?.phone ?? 'No phone'}{entry.user?.email ? ` | ${entry.user.email}` : ''}
                     </p>
 
-                    <div className="mt-4 grid gap-3 md:grid-cols-3">
-                      <div className="rounded-2xl border border-[var(--border-color)] bg-[var(--surface-elevated)] px-4 py-3">
-                        <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[var(--text-soft)]">
-                          Wait time
-                        </p>
-                        <p className="mt-2 text-xl font-black text-[var(--text-primary)]">
-                          {formatWaitTime(entry.joined_at)}
-                        </p>
-                        <p className="mt-1 text-xs text-[var(--text-secondary)]">
-                          {waitMinutes >= QUEUE_MAX_WAIT_MINUTES
-                            ? `Past the ${QUEUE_MAX_WAIT_MINUTES} minute queue window`
-                            : 'Still inside the live queue window'}
-                        </p>
-                      </div>
-
-                      <div className="rounded-2xl border border-[var(--border-color)] bg-[var(--surface-elevated)] px-4 py-3">
-                        <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[var(--text-soft)]">
-                          Rating
-                        </p>
-                        <p className="mt-2 text-xl font-black text-[var(--text-primary)]">
-                          {entry.rating.toLocaleString()}
-                        </p>
-                        <p className="mt-1 text-xs text-[var(--text-secondary)]">
-                          Matchmaking score for this queue entry
-                        </p>
-                      </div>
-
-                      <div className="rounded-2xl border border-[var(--border-color)] bg-[var(--surface-elevated)] px-4 py-3">
-                        <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[var(--text-soft)]">
-                          Pending match
-                        </p>
-                        <p className="mt-2 text-sm font-black text-[var(--text-primary)]">
-                          {entry.active_match
-                            ? `vs ${entry.active_match.opponent?.username ?? 'Unknown'}`
-                            : 'No linked pending match'}
-                        </p>
-                        <p className="mt-1 text-xs text-[var(--text-secondary)]">
-                          {entry.active_match
-                            ? `Created ${new Date(entry.active_match.created_at).toLocaleString()}`
-                            : 'Still waiting in the pool'}
-                        </p>
-                      </div>
+                    <div className="mt-4 flex flex-wrap gap-2">
+                      <span className="rounded-full border border-[var(--border-color)] bg-[var(--surface-elevated)] px-3 py-1.5 text-xs text-[var(--text-secondary)]">
+                        Wait {formatWaitTime(entry.joined_at)}
+                      </span>
+                      <span
+                        className={`rounded-full border px-3 py-1.5 text-xs ${
+                          waitMinutes >= QUEUE_MAX_WAIT_MINUTES
+                            ? 'border-[rgba(255,107,107,0.22)] bg-[rgba(255,107,107,0.1)] text-[var(--brand-coral)]'
+                            : 'border-[var(--border-color)] bg-[var(--surface-elevated)] text-[var(--text-secondary)]'
+                        }`}
+                      >
+                        {waitMinutes >= QUEUE_MAX_WAIT_MINUTES
+                          ? `Past ${QUEUE_MAX_WAIT_MINUTES} minute window`
+                          : 'Inside live queue window'}
+                      </span>
+                      <span className="rounded-full border border-[var(--border-color)] bg-[var(--surface-elevated)] px-3 py-1.5 text-xs text-[var(--text-secondary)]">
+                        Rating {entry.rating.toLocaleString()}
+                      </span>
+                      <span className="rounded-full border border-[var(--border-color)] bg-[var(--surface-elevated)] px-3 py-1.5 text-xs text-[var(--text-secondary)]">
+                        {entry.active_match
+                          ? `Pending vs ${entry.active_match.opponent?.username ?? 'Unknown'}`
+                          : 'No linked pending match'}
+                      </span>
                     </div>
+
+                    <p className="mt-3 text-sm leading-6 text-[var(--text-secondary)]">
+                      {entry.active_match
+                        ? `This player already has a pending match created on ${new Date(entry.active_match.created_at).toLocaleString()}.`
+                        : waitMinutes >= QUEUE_MAX_WAIT_MINUTES
+                          ? 'This entry is the kind most likely to create churn and should be cleaned up before newer joins.'
+                          : 'Still waiting in the pool with no linked pending match yet.'}
+                    </p>
                   </div>
 
                   <div className="flex flex-wrap items-center gap-2">

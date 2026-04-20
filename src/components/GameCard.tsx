@@ -2,10 +2,9 @@
 
 import { Loader2, Swords, Users } from 'lucide-react';
 import { GAMES, PLATFORMS } from '@/lib/config';
-import { getRankDivision, withAlpha } from '@/lib/gamification';
+import { getRankDivision } from '@/lib/gamification';
 import { GameCover } from '@/components/GameCover';
-import { PlatformLogo } from '@/components/PlatformLogo';
-import type { GameKey, GameMode } from '@/types';
+import type { GameKey, GameMode, PlatformKey } from '@/types';
 
 interface GameCardProps {
   gameKey: GameKey;
@@ -13,6 +12,7 @@ interface GameCardProps {
   wins?: number;
   losses?: number;
   queueCount?: number;
+  platform?: PlatformKey | null;
   onJoinQueue?: () => void;
   onViewLobby?: () => void;
   isQueuing?: boolean;
@@ -20,12 +20,19 @@ interface GameCardProps {
   displayMode?: GameMode;
 }
 
+function getModeChipClass(isLobby: boolean) {
+  return isLobby
+    ? 'bg-[rgba(96,165,250,0.8)] text-white'
+    : 'bg-[rgba(34,197,94,0.8)] text-white';
+}
+
 export function GameCard({
   gameKey,
   rating,
   wins,
   losses,
-  queueCount,
+  queueCount = 0,
+  platform,
   onJoinQueue,
   onViewLobby,
   isQueuing = false,
@@ -37,105 +44,115 @@ export function GameCard({
 
   const mode = displayMode ?? game.mode;
   const isLobby = mode === 'lobby';
-  const winRate =
-    wins !== undefined && losses !== undefined && wins + losses > 0
-      ? Math.round((wins / (wins + losses)) * 100)
-      : null;
   const division = rating !== undefined ? getRankDivision(rating) : null;
+  const totalMatches = (wins ?? 0) + (losses ?? 0);
+  const winRate = totalMatches > 0 ? Math.round(((wins ?? 0) / totalMatches) * 100) : 0;
+  const platformLabel = platform ? PLATFORMS[platform]?.label ?? platform.toUpperCase() : null;
 
   return (
-    <div className="card group overflow-hidden p-0 transition-all duration-300 hover:-translate-y-1 hover:shadow-[var(--shadow-strong)]">
-      <div className="relative h-44 overflow-hidden border-b border-[var(--border-color)] bg-[var(--surface-strong)]">
+    <div className="card-hover group overflow-hidden">
+      <div className="relative h-[120px] overflow-hidden">
         <GameCover
           gameKey={gameKey}
           variant="header"
-          className="h-full w-full transition-transform duration-500 group-hover:scale-105"
+          className="h-full w-full transition-transform duration-500 group-hover:scale-[1.04]"
           overlay
           displayMode={mode}
         />
 
-        <div className="absolute left-3 right-3 top-3 flex items-start justify-between gap-2">
-          {queueCount !== undefined && queueCount > 0 ? (
-            <span className="flex items-center gap-1 rounded-full border border-white/45 bg-white/88 px-2.5 py-1 text-[10px] font-semibold text-[var(--accent-secondary-text)] shadow-[0_12px_28px_rgba(11,17,33,0.16)] backdrop-blur-sm">
-              <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-[var(--brand-teal)]" />
-              {queueCount} in queue
-            </span>
-          ) : (
-            <span />
-          )}
-
-          <span
-            className={`rounded-full px-2.5 py-1 text-[10px] font-semibold text-white shadow-[0_10px_24px_rgba(11,17,33,0.18)] ${
-              isLobby ? 'bg-blue-500/85' : 'bg-emerald-500/85'
-            }`}
-          >
-            {isLobby ? 'LOBBY' : '1V1'}
-          </span>
-        </div>
-
-        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/84 via-black/32 to-transparent px-4 pb-4 pt-10">
-          <p className="max-w-[82%] text-[1.65rem] font-black leading-[1.02] text-white [text-shadow:0_10px_28px_rgba(0,0,0,0.42)]">
-            {game.label}
-          </p>
-        </div>
-      </div>
-
-      <div className="space-y-3.5 p-4">
-        <div className="flex flex-wrap items-center gap-1.5">
-          {game.platforms.map((platform) => (
-            <span
-              key={platform}
-              title={PLATFORMS[platform]?.label}
-              className="inline-flex items-center rounded-full border border-[var(--border-color)] bg-[var(--surface-strong)] px-2 py-1"
-            >
-              <PlatformLogo platform={platform} size={12} />
-            </span>
-          ))}
-        </div>
-
-        {rating !== undefined ? (
-          <div className="grid grid-cols-4 gap-2">
-            <div
-              className="rounded-xl border px-2 py-2 text-center"
-              style={{
-                borderColor: division ? withAlpha(division.color, '28') : 'var(--border-color)',
-                backgroundColor: division ? withAlpha(division.color, '12') : 'var(--surface-strong)',
-              }}
-            >
-              <div className="text-[0.95rem] font-bold leading-tight" style={{ color: division?.color ?? 'var(--text-primary)' }}>
-                {division?.label ?? '-'}
-              </div>
-              <div className="mt-1 text-[9px] font-semibold uppercase tracking-[0.14em] text-[var(--text-soft)]">
-                Rank
-              </div>
-            </div>
-            <div className="rounded-xl border border-[var(--border-color)] bg-[var(--surface-strong)] px-2 py-2 text-center">
-              <div className="text-sm font-bold text-emerald-400">{wins ?? 0}</div>
-              <div className="mt-1 text-[9px] font-semibold uppercase tracking-[0.14em] text-[var(--text-soft)]">W</div>
-            </div>
-            <div className="rounded-xl border border-[var(--border-color)] bg-[var(--surface-strong)] px-2 py-2 text-center">
-              <div className="text-sm font-bold text-red-400">{losses ?? 0}</div>
-              <div className="mt-1 text-[9px] font-semibold uppercase tracking-[0.14em] text-[var(--text-soft)]">L</div>
-            </div>
-            <div className="rounded-xl border border-[var(--border-color)] bg-[var(--surface-strong)] px-2 py-2 text-center">
-              <div className="text-sm font-bold text-blue-400">{winRate !== null ? `${winRate}%` : '-'}</div>
-              <div className="mt-1 text-[9px] font-semibold uppercase tracking-[0.14em] text-[var(--text-soft)]">WR</div>
-            </div>
+        {queueCount > 0 ? (
+          <div className="absolute left-2 top-2 inline-flex items-center gap-1 rounded-[4px] border border-[rgba(50,224,196,0.22)] bg-black/60 px-2 py-1 text-[9px] font-bold uppercase tracking-[0.08em] text-[var(--accent-secondary-text)]">
+            <span className="inline-block h-[5px] w-[5px] rounded-full bg-[var(--brand-teal)]" />
+            {queueCount} in queue
           </div>
         ) : null}
 
+        <span
+          className={`absolute right-2 top-2 rounded-[3px] px-2 py-0.5 text-[8px] font-black uppercase tracking-[0.1em] ${getModeChipClass(isLobby)}`}
+          style={{ fontFamily: 'var(--font-display)' }}
+        >
+          {isLobby ? 'LOBBY' : '1V1'}
+        </span>
+
+        <div className="absolute inset-x-0 bottom-0 p-3">
+          <p
+            className="text-[1.05rem] font-black leading-none text-white drop-shadow-[0_4px_16px_rgba(0,0,0,0.6)]"
+            style={{ fontFamily: 'var(--font-display)' }}
+          >
+            {game.label}
+          </p>
+          {platformLabel ? (
+            <p className="mt-1 text-[10px] text-white/70">{platformLabel}</p>
+          ) : null}
+        </div>
+      </div>
+
+      <div className="flex flex-col gap-3 p-3">
+        {!isLobby && division ? (
+          <div className="grid grid-cols-4 gap-1">
+            <div className="rounded-[5px] border border-[var(--border-color)] bg-[var(--surface-elevated)] px-1 py-1.5 text-center">
+              <div
+                className="text-[11px] font-black"
+                style={{ color: division.color, fontFamily: 'var(--font-display)' }}
+              >
+                {division.label}
+              </div>
+              <div className="mt-1 text-[8px] font-semibold uppercase tracking-[0.1em] text-[var(--text-soft)]">
+                Rank
+              </div>
+            </div>
+            <div className="rounded-[5px] border border-[var(--border-color)] bg-[var(--surface-elevated)] px-1 py-1.5 text-center">
+              <div className="text-[11px] font-black text-emerald-400" style={{ fontFamily: 'var(--font-display)' }}>
+                {wins ?? 0}
+              </div>
+              <div className="mt-1 text-[8px] font-semibold uppercase tracking-[0.1em] text-[var(--text-soft)]">
+                W
+              </div>
+            </div>
+            <div className="rounded-[5px] border border-[var(--border-color)] bg-[var(--surface-elevated)] px-1 py-1.5 text-center">
+              <div className="text-[11px] font-black text-rose-400" style={{ fontFamily: 'var(--font-display)' }}>
+                {losses ?? 0}
+              </div>
+              <div className="mt-1 text-[8px] font-semibold uppercase tracking-[0.1em] text-[var(--text-soft)]">
+                L
+              </div>
+            </div>
+            <div className="rounded-[5px] border border-[var(--border-color)] bg-[var(--surface-elevated)] px-1 py-1.5 text-center">
+              <div className="text-[11px] font-black text-sky-400" style={{ fontFamily: 'var(--font-display)' }}>
+                {`${winRate}%`}
+              </div>
+              <div className="mt-1 text-[8px] font-semibold uppercase tracking-[0.1em] text-[var(--text-soft)]">
+                WR
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="rounded-[5px] border border-[var(--border-color)] bg-[var(--surface-elevated)] px-3 py-3 text-center">
+            <p className="text-[11px] font-bold text-[var(--text-primary)]" style={{ fontFamily: 'var(--font-display)' }}>
+              {platformLabel ?? 'Open lobby'}
+            </p>
+            <p className="mt-1 text-[9px] uppercase tracking-[0.1em] text-[var(--text-soft)]">
+              {game.maxPlayers ? `Up to ${game.maxPlayers} players` : 'Room-based play'}
+            </p>
+          </div>
+        )}
+
         {isLobby ? (
-          <button onClick={onViewLobby} disabled={isDisabled} className="btn-outline min-h-11 w-full py-2 text-sm">
-            <Users size={13} /> View Lobbies
+          <button
+            onClick={onViewLobby}
+            disabled={isDisabled}
+            className="inline-flex min-h-[38px] w-full items-center justify-center gap-1.5 rounded-[6px] border border-[rgba(50,224,196,0.22)] bg-[rgba(50,224,196,0.1)] px-3 text-[12px] font-bold text-[var(--accent-secondary-text)]"
+          >
+            <Users size={12} /> View lobbies
           </button>
         ) : (
           <button
             onClick={onJoinQueue}
             disabled={isDisabled || isQueuing}
-            className={`flex min-h-12 w-full items-center justify-center gap-1.5 rounded-[1rem] border py-3 text-base font-semibold transition-all ${
+            className={`inline-flex min-h-[38px] w-full items-center justify-center gap-1.5 rounded-[6px] px-3 text-[12px] font-bold ${
               isQueuing
-                ? 'cursor-not-allowed border-[var(--border-color)] bg-[var(--surface-strong)] text-[var(--text-soft)]'
-                : 'cursor-pointer border-[rgba(50,224,196,0.22)] bg-[var(--accent-secondary)] text-[var(--brand-night)] shadow-[0_16px_28px_rgba(50,224,196,0.22)] hover:-translate-y-0.5 hover:bg-[var(--accent-secondary-hover)]'
+                ? 'cursor-not-allowed border border-[var(--border-color)] bg-[var(--surface-elevated)] text-[var(--text-soft)]'
+                : 'bg-[var(--brand-teal)] text-[var(--brand-night)] shadow-[0_8px_20px_rgba(50,224,196,0.18)]'
             }`}
           >
             {isQueuing ? (
@@ -144,7 +161,7 @@ export function GameCard({
               </>
             ) : (
               <>
-                <Swords size={12} /> Find Match
+                <Swords size={12} /> Find match
               </>
             )}
           </button>

@@ -1,20 +1,21 @@
 'use client';
 
 import type { ReactNode } from 'react';
-import { useSyncExternalStore } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
   CirclePlay,
-  Home,
+  Coins,
   Gamepad2,
+  LayoutDashboard,
   Lightbulb,
   type LucideIcon,
   LogOut,
   MessageCircle,
   Settings,
   Share2,
+  SunMedium,
   Swords,
   Trophy,
   User,
@@ -23,7 +24,6 @@ import {
 import { useAuth } from '@/components/AuthProvider';
 import { BrandLogo } from '@/components/BrandLogo';
 import { NotificationNavButton } from '@/components/NotificationNavButton';
-import { ThemeToggle } from '@/components/ThemeToggle';
 import { getPlan } from '@/lib/plans';
 
 type NavItem = {
@@ -33,7 +33,7 @@ type NavItem = {
 };
 
 const PRIMARY_ITEMS: NavItem[] = [
-  { href: '/dashboard', label: 'Dashboard', icon: Home },
+  { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/tutorials', label: 'Tutorials', icon: CirclePlay },
   { href: '/leaderboard', label: 'Leaderboard', icon: Trophy },
 ];
@@ -49,8 +49,9 @@ const GAME_ITEMS: NavItem[] = [
   { href: '/suggest', label: 'Suggest', icon: Lightbulb },
 ];
 
-const SHARE_ITEMS: NavItem[] = [
+const GROWTH_ITEMS: NavItem[] = [
   { href: '/share', label: 'Share', icon: Share2 },
+  { href: '/rewards', label: 'Rewards', icon: Coins },
 ];
 
 function isPathActive(pathname: string, href: string) {
@@ -58,9 +59,9 @@ function isPathActive(pathname: string, href: string) {
 }
 
 function getNavItemClass(isActive: boolean) {
-  return `flex items-center gap-3 rounded-2xl border px-3.5 py-3 text-sm font-semibold transition-all ${
+  return `flex items-center gap-2.5 rounded-md border px-2.5 py-2.5 text-[12px] font-semibold transition-all ${
     isActive
-      ? 'border-[rgba(50,224,196,0.22)] bg-[var(--surface-elevated)] text-[var(--text-primary)] shadow-[0_16px_28px_rgba(50,224,196,0.12)]'
+      ? 'border-[rgba(50,224,196,0.22)] bg-[rgba(50,224,196,0.1)] text-[var(--text-primary)]'
       : 'border-transparent text-[var(--text-secondary)] hover:border-[var(--border-color)] hover:bg-[var(--surface-elevated)] hover:text-[var(--text-primary)]'
   }`;
 }
@@ -75,7 +76,7 @@ function SidebarSection({
   return (
     <div className="space-y-1.5">
       {title ? (
-        <p className="px-3.5 pt-2 text-[10px] font-bold uppercase tracking-[0.18em] text-[var(--text-soft)]">
+        <p className="px-2.5 pt-2 text-[9px] font-bold uppercase tracking-[0.18em] text-[var(--text-soft)]">
           {title}
         </p>
       ) : null}
@@ -88,44 +89,28 @@ export default function SidebarWithSubmenu() {
   const pathname = usePathname();
   const { user, logout } = useAuth();
   const currentPlan = getPlan(user?.plan ?? 'free');
-  const profileHash = useSyncExternalStore(
-    (onStoreChange) => {
-      if (typeof window === 'undefined') {
-        return () => undefined;
-      }
-
-      window.addEventListener('hashchange', onStoreChange);
-      window.addEventListener('popstate', onStoreChange);
-
-      return () => {
-        window.removeEventListener('hashchange', onStoreChange);
-        window.removeEventListener('popstate', onStoreChange);
-      };
-    },
-    () => (typeof window === 'undefined' ? '' : window.location.hash),
-    () => ''
-  );
-
-  const profileActive = pathname === '/profile' && profileHash !== '#settings';
-  const settingsActive = pathname === '/profile' && profileHash === '#settings';
+  const profileActive = pathname === '/profile';
+  const settingsActive = pathname === '/profile/settings';
 
   return (
-    <aside className="fixed bottom-0 left-0 top-0 z-40 hidden w-[17rem] flex-col border-r border-[var(--border-color)] bg-[linear-gradient(180deg,var(--surface-strong),var(--surface-soft))] px-3 py-3 shadow-[var(--shadow-soft)] backdrop-blur-xl lg:flex">
-      <div className="flex items-center justify-between rounded-[1.35rem] border border-[var(--border-color)] bg-[var(--surface)] px-4 py-3 shadow-[var(--shadow-soft)]">
+    <aside className="fixed bottom-0 left-0 top-0 z-40 hidden w-56 flex-col border-r border-[var(--border-color)] bg-[var(--surface-strong)] lg:flex">
+      <div className="flex items-center justify-between border-b border-[var(--border-color)] px-4 py-3">
         <Link href="/dashboard" className="flex items-center">
-          <BrandLogo size="md" variant="full" />
+          <BrandLogo size="sm" variant="full" />
         </Link>
-        <ThemeToggle />
+        <span className="inline-flex h-8 w-8 items-center justify-center rounded-md text-[var(--text-soft)]">
+          <SunMedium size={14} />
+        </span>
       </div>
 
-      <nav className="flex-1 space-y-1.5 overflow-y-auto px-1 py-4">
+      <nav className="flex-1 space-y-1.5 overflow-y-auto px-2 py-3">
         <SidebarSection>
           {PRIMARY_ITEMS.map(({ href, label, icon: Icon }) => {
             const isActive = isPathActive(pathname, href);
             return (
               <Link key={href} href={href} className={getNavItemClass(isActive)}>
                 <Icon
-                  size={18}
+                  size={16}
                   strokeWidth={isActive ? 2 : 1.65}
                   className={isActive ? 'text-[var(--accent-secondary-text)]' : undefined}
                 />
@@ -141,7 +126,7 @@ export default function SidebarWithSubmenu() {
             return (
               <Link key={href} href={href} className={getNavItemClass(isActive)}>
                 <Icon
-                  size={18}
+                  size={16}
                   strokeWidth={isActive ? 2 : 1.65}
                   className={isActive ? 'text-[var(--accent-secondary-text)]' : undefined}
                 />
@@ -157,7 +142,7 @@ export default function SidebarWithSubmenu() {
             return (
               <Link key={href} href={href} className={getNavItemClass(isActive)}>
                 <Icon
-                  size={18}
+                  size={16}
                   strokeWidth={isActive ? 2 : 1.65}
                   className={isActive ? 'text-[var(--accent-secondary-text)]' : undefined}
                 />
@@ -167,13 +152,13 @@ export default function SidebarWithSubmenu() {
           })}
         </SidebarSection>
 
-        <SidebarSection title="Share">
-          {SHARE_ITEMS.map(({ href, label, icon: Icon }) => {
+        <SidebarSection title="Growth">
+          {GROWTH_ITEMS.map(({ href, label, icon: Icon }) => {
             const isActive = isPathActive(pathname, href);
             return (
               <Link key={href} href={href} className={getNavItemClass(isActive)}>
                 <Icon
-                  size={18}
+                  size={16}
                   strokeWidth={isActive ? 2 : 1.65}
                   className={isActive ? 'text-[var(--accent-secondary-text)]' : undefined}
                 />
@@ -184,66 +169,67 @@ export default function SidebarWithSubmenu() {
         </SidebarSection>
       </nav>
 
-      <div className="space-y-2 px-1 pb-1">
-        <div className="flex items-center gap-1 px-1 py-1">
-          <NotificationNavButton />
+      <div className="space-y-2 border-t border-[var(--border-color)] px-3 py-3">
+        <div className="flex items-center gap-1">
+          <NotificationNavButton className="rounded-md border border-[var(--border-color)] bg-transparent hover:border-[var(--border-strong)] hover:bg-[var(--surface-elevated)]" />
           <Link
             href="/profile"
-            className={`inline-flex h-10 w-10 items-center justify-center rounded-full text-[var(--text-secondary)] transition-colors hover:bg-[var(--surface-elevated)] hover:text-[var(--text-primary)] ${
+            className={`inline-flex h-8 w-8 items-center justify-center rounded-md border text-[var(--text-secondary)] transition-colors hover:border-[var(--border-strong)] hover:bg-[var(--surface-elevated)] hover:text-[var(--text-primary)] ${
               profileActive
-                ? 'bg-[var(--surface-elevated)] text-[var(--accent-secondary-text)] shadow-[0_12px_24px_rgba(50,224,196,0.12)]'
-                : ''
+                ? 'border-[rgba(50,224,196,0.22)] bg-[rgba(50,224,196,0.1)] text-[var(--accent-secondary-text)]'
+                : 'border-[var(--border-color)]'
             }`}
             aria-label="Profile"
             title="Profile"
           >
-            <User size={16} />
+            <User size={13} />
           </Link>
           <Link
-            href="/profile#settings"
-            className={`inline-flex h-10 w-10 items-center justify-center rounded-full text-[var(--text-secondary)] transition-colors hover:bg-[var(--surface-elevated)] hover:text-[var(--text-primary)] ${
+            href="/profile/settings"
+            className={`inline-flex h-8 w-8 items-center justify-center rounded-md border text-[var(--text-secondary)] transition-colors hover:border-[var(--border-strong)] hover:bg-[var(--surface-elevated)] hover:text-[var(--text-primary)] ${
               settingsActive
-                ? 'bg-[var(--surface-elevated)] text-[var(--accent-secondary-text)] shadow-[0_12px_24px_rgba(50,224,196,0.12)]'
-                : ''
+                ? 'border-[rgba(50,224,196,0.22)] bg-[rgba(50,224,196,0.1)] text-[var(--accent-secondary-text)]'
+                : 'border-[var(--border-color)]'
             }`}
             aria-label="Settings"
             title="Settings"
           >
-            <Settings size={16} />
+            <Settings size={13} />
           </Link>
         </div>
 
         {user && (
-          <>
-            <div className="flex items-center gap-3 rounded-[1.25rem] border border-[var(--border-color)] bg-[var(--surface-elevated)] px-3 py-3 shadow-[var(--shadow-soft)]">
-              <div className="avatar-shell relative h-8 w-8 overflow-hidden text-xs">
-                {user.avatar_url ? (
-                  <Image
-                    src={user.avatar_url}
-                    alt={`${user.username} avatar`}
-                    fill
-                    sizes="32px"
-                    className="object-cover"
-                  />
-                ) : (
-                  user.username?.[0]?.toUpperCase() ?? '?'
-                )}
-              </div>
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-semibold text-[var(--text-primary)]">
-                  {user.username}
-                </p>
-                <p className="truncate text-[11px] text-[var(--text-soft)]">{currentPlan.name}</p>
-              </div>
-              <button
-                onClick={logout}
-                className="flex h-7 w-7 items-center justify-center rounded-lg text-[var(--text-soft)] transition-colors hover:bg-red-500/10 hover:text-red-500"
-                aria-label="Sign out"
-              >
-                <LogOut size={14} />
-              </button>
+          <div className="flex items-center gap-2.5 rounded-md border border-[var(--border-color)] bg-[var(--surface-elevated)] px-3 py-2.5">
+            <div className="avatar-shell relative h-[30px] w-[30px] overflow-hidden text-[11px] font-black">
+              {user.avatar_url ? (
+                <Image
+                  src={user.avatar_url}
+                  alt={`${user.username} avatar`}
+                  fill
+                  sizes="30px"
+                  className="object-cover"
+                />
+              ) : (
+                user.username?.[0]?.toUpperCase() ?? '?'
+              )}
             </div>
-          </>
+            <div className="min-w-0 flex-1">
+              <p
+                className="truncate text-[12px] font-bold text-[var(--text-primary)]"
+                style={{ fontFamily: 'var(--font-display)' }}
+              >
+                {user.username}
+              </p>
+              <p className="truncate text-[10px] text-[var(--text-soft)]">{currentPlan.name}</p>
+            </div>
+            <button
+              onClick={logout}
+              className="inline-flex h-7 w-7 items-center justify-center rounded-md text-[var(--text-soft)] transition-colors hover:bg-red-500/10 hover:text-red-400"
+              aria-label="Sign out"
+            >
+              <LogOut size={12} />
+            </button>
+          </div>
         )}
       </div>
     </aside>

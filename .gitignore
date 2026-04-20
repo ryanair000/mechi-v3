@@ -12,6 +12,9 @@
 
 # testing
 /coverage
+/playwright-report
+/test-results
+/.e2e
 
 # next.js
 /.next/
@@ -48,6 +51,7 @@ supabase/.temp/
 # env files (can opt-in for committing if needed)
 .env*
 !.env.example
+!.env.e2e.example
 
 # vercel
 .vercel

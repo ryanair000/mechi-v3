@@ -133,6 +133,7 @@ export default function AdminRewardsPage() {
   const [loading, setLoading] = useState(true);
   const [actingOn, setActingOn] = useState<string | null>(null);
   const [notes, setNotes] = useState<Record<string, string>>({});
+  const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
 
   const fetchItems = useCallback(async () => {
     setLoading(true);
@@ -151,19 +152,27 @@ export default function AdminRewardsPage() {
         return;
       }
 
-      setItems((data.items ?? []) as AdminRewardReviewItem[]);
-      setCounts({
-        open: Number(data.counts?.open ?? 0),
-        reviewing: Number(data.counts?.reviewing ?? 0),
-        resolved: Number(data.counts?.resolved ?? 0),
-        dismissed: Number(data.counts?.dismissed ?? 0),
-      });
-      setTotal(Number(data.total ?? 0));
-    } catch {
-      toast.error('Network error while loading reward reviews');
-      setItems([]);
-    } finally {
-      setLoading(false);
+        const nextItems = (data.items ?? []) as AdminRewardReviewItem[];
+        setItems(nextItems);
+        setCounts({
+          open: Number(data.counts?.open ?? 0),
+          reviewing: Number(data.counts?.reviewing ?? 0),
+          resolved: Number(data.counts?.resolved ?? 0),
+          dismissed: Number(data.counts?.dismissed ?? 0),
+        });
+        setTotal(Number(data.total ?? 0));
+        setSelectedItemId((current) => {
+          if (current && nextItems.some((item) => item.id === current)) {
+            return current;
+          }
+
+          return nextItems[0]?.id ?? null;
+        });
+      } catch {
+        toast.error('Network error while loading reward reviews');
+        setItems([]);
+      } finally {
+        setLoading(false);
     }
   }, [authFetch, deferredQuery, reasonFilter, statusFilter]);
 
@@ -216,6 +225,10 @@ export default function AdminRewardsPage() {
       { label: 'Dismissed', value: counts.dismissed, icon: XCircle, accent: 'var(--text-soft)' },
     ],
     [counts]
+  );
+  const selectedItem = useMemo(
+    () => items.find((item) => item.id === selectedItemId) ?? items[0] ?? null,
+    [items, selectedItemId]
   );
 
   return (
@@ -326,18 +339,36 @@ export default function AdminRewardsPage() {
           </p>
         </div>
       ) : (
-        <div className="space-y-3">
-          {items.map((item) => {
-            const facts = extractMetadataFacts(item.metadata);
-            const noteValue = notes[item.id] ?? item.resolution_note ?? '';
-            const reasonMeta = REASON_LABELS[item.reason];
+        <section className="grid gap-5 xl:grid-cols-[minmax(0,0.92fr)_minmax(340px,0.78fr)]">
+          <div className="card p-4">
+            <div className="flex items-center justify-between gap-3 border-b border-[var(--border-color)] pb-4">
+              <div>
+                <p className="section-title">Suspicious items</p>
+                <p className="mt-1 text-sm text-[var(--text-secondary)]">
+                  Triage the queue first, then open one review item into a focused evidence panel.
+                </p>
+              </div>
+              <span className="brand-chip">{items.length} loaded</span>
+            </div>
 
-            return (
-              <div key={item.id} className="card p-5">
-                <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
-                  <div className="min-w-0 flex-1 space-y-4">
+            <div className="mt-4 space-y-2">
+              {items.map((item) => {
+                const facts = extractMetadataFacts(item.metadata).slice(0, 3);
+                const isSelected = item.id === selectedItem?.id;
+
+                return (
+                  <button
+                    key={item.id}
+                    type="button"
+                    onClick={() => setSelectedItemId(item.id)}
+                    className={`w-full rounded-3xl border p-4 text-left transition-colors ${
+                      isSelected
+                        ? 'border-[rgba(50,224,196,0.28)] bg-[rgba(50,224,196,0.08)]'
+                        : 'border-[var(--border-color)] bg-[var(--surface-elevated)] hover:bg-[var(--surface)]'
+                    }`}
+                  >
                     <div className="flex flex-wrap items-center gap-2">
-                      <p className="text-lg font-black text-[var(--text-primary)]">
+                      <p className="text-sm font-black text-[var(--text-primary)]">
                         {item.user?.username ?? 'Unlinked review item'}
                       </p>
                       <span className={`rounded-full px-2.5 py-1 text-[11px] font-bold ${getReasonTone(item.reason)}`}>
@@ -348,47 +379,106 @@ export default function AdminRewardsPage() {
                       </span>
                     </div>
 
-                    <p className="text-sm text-[var(--text-secondary)]">
-                      {reasonMeta?.helper ?? 'This item needs a moderator to review the reward or referral signal.'}
+                    <p className="mt-2 line-clamp-2 text-sm leading-6 text-[var(--text-secondary)]">
+                      {REASON_LABELS[item.reason]?.helper ??
+                        'This item needs a moderator to review the reward or referral signal.'}
                     </p>
 
-                    <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      {facts.length > 0 ? (
+                        facts.map((fact) => (
+                          <span
+                            key={`${item.id}-${fact.key}`}
+                            className="rounded-full border border-[var(--border-color)] bg-[var(--surface)] px-2.5 py-1 text-[11px] text-[var(--text-secondary)]"
+                          >
+                            {fact.key.replace(/_/g, ' ')}: {formatMetadataValue(fact.value)}
+                          </span>
+                        ))
+                      ) : (
+                        <span className="rounded-full border border-[var(--border-color)] bg-[var(--surface)] px-2.5 py-1 text-[11px] text-[var(--text-secondary)]">
+                          No metadata facts attached
+                        </span>
+                      )}
+                    </div>
+
+                    <p className="mt-3 text-xs text-[var(--text-soft)]">
+                      Created {formatDateTime(item.created_at)}
+                      {item.reviewer?.username ? ` | Last touched by ${item.reviewer.username}` : ' | Unclaimed'}
+                    </p>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="card self-start p-5 xl:sticky xl:top-6">
+            {selectedItem ? (
+              (() => {
+                const facts = extractMetadataFacts(selectedItem.metadata);
+                const noteValue = notes[selectedItem.id] ?? selectedItem.resolution_note ?? '';
+                const reasonMeta = REASON_LABELS[selectedItem.reason];
+
+                return (
+                  <div className="space-y-5">
+                    <div className="border-b border-[var(--border-color)] pb-5">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <h2 className="text-2xl font-black tracking-tight text-[var(--text-primary)]">
+                          {selectedItem.user?.username ?? 'Unlinked review item'}
+                        </h2>
+                        <span
+                          className={`rounded-full px-2.5 py-1 text-[11px] font-bold ${getReasonTone(selectedItem.reason)}`}
+                        >
+                          {formatReasonLabel(selectedItem.reason)}
+                        </span>
+                        <span
+                          className={`rounded-full px-2.5 py-1 text-[11px] font-bold ${getStatusTone(selectedItem.status)}`}
+                        >
+                          {selectedItem.status}
+                        </span>
+                      </div>
+
+                      <p className="mt-3 text-sm leading-7 text-[var(--text-secondary)]">
+                        {reasonMeta?.helper ??
+                          'This item needs a moderator to review the reward or referral signal.'}
+                      </p>
+                    </div>
+
+                    <div className="grid gap-3 sm:grid-cols-2">
                       <div className="rounded-2xl border border-[var(--border-color)] bg-[var(--surface-elevated)] px-4 py-3">
                         <p className="section-title">Profile</p>
                         <p className="mt-2 text-sm font-bold text-[var(--text-primary)]">
-                          {item.user?.email ?? 'No email'}
+                          {selectedItem.user?.email ?? 'No email'}
                         </p>
                         <p className="mt-1 text-xs text-[var(--text-secondary)]">
-                          {item.user?.phone ?? 'No phone'}
+                          {selectedItem.user?.phone ?? 'No phone'}
                         </p>
                       </div>
                       <div className="rounded-2xl border border-[var(--border-color)] bg-[var(--surface-elevated)] px-4 py-3">
                         <p className="section-title">Reward points</p>
                         <p className="mt-2 text-sm font-bold text-[var(--text-primary)]">
-                          {(item.user?.reward_points_available ?? 0).toLocaleString()} available
+                          {(selectedItem.user?.reward_points_available ?? 0).toLocaleString()} available
                         </p>
                         <p className="mt-1 text-xs text-[var(--text-secondary)]">
-                          {(item.user?.reward_points_pending ?? 0).toLocaleString()} pending ·{' '}
-                          {(item.user?.reward_points_lifetime ?? 0).toLocaleString()} lifetime
+                          {(selectedItem.user?.reward_points_pending ?? 0).toLocaleString()} pending | {(selectedItem.user?.reward_points_lifetime ?? 0).toLocaleString()} lifetime
                         </p>
                       </div>
                       <div className="rounded-2xl border border-[var(--border-color)] bg-[var(--surface-elevated)] px-4 py-3">
                         <p className="section-title">ChezaHub link</p>
                         <p className="mt-2 text-sm font-bold text-[var(--text-primary)]">
-                          {item.user?.chezahub_user_id ? 'Linked' : 'Not linked'}
+                          {selectedItem.user?.chezahub_user_id ? 'Linked' : 'Not linked'}
                         </p>
                         <p className="mt-1 truncate text-xs text-[var(--text-secondary)]">
-                          {item.user?.chezahub_user_id ?? item.dedupe_key ?? 'No binding id'}
+                          {selectedItem.user?.chezahub_user_id ?? selectedItem.dedupe_key ?? 'No binding id'}
                         </p>
                       </div>
                       <div className="rounded-2xl border border-[var(--border-color)] bg-[var(--surface-elevated)] px-4 py-3">
                         <p className="section-title">Review trail</p>
                         <p className="mt-2 text-sm font-bold text-[var(--text-primary)]">
-                          Created {formatDateTime(item.created_at)}
+                          Created {formatDateTime(selectedItem.created_at)}
                         </p>
                         <p className="mt-1 text-xs text-[var(--text-secondary)]">
-                          {item.reviewer?.username
-                            ? `Last touched by ${item.reviewer.username} on ${formatDateTime(item.reviewed_at)}`
+                          {selectedItem.reviewer?.username
+                            ? `Last touched by ${selectedItem.reviewer.username} on ${formatDateTime(selectedItem.reviewed_at)}`
                             : 'No moderator has claimed this item yet'}
                         </p>
                       </div>
@@ -397,9 +487,12 @@ export default function AdminRewardsPage() {
                     {facts.length > 0 ? (
                       <div className="rounded-2xl border border-[var(--border-color)] bg-[var(--surface-elevated)] p-4">
                         <p className="section-title">Evidence snapshot</p>
-                        <div className="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+                        <div className="mt-3 grid gap-2 sm:grid-cols-2">
                           {facts.map((fact) => (
-                            <div key={`${item.id}-${fact.key}`} className="rounded-xl border border-[var(--border-color)] px-3 py-2">
+                            <div
+                              key={`${selectedItem.id}-${fact.key}`}
+                              className="rounded-xl border border-[var(--border-color)] px-3 py-2"
+                            >
                               <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-[var(--text-soft)]">
                                 {fact.key.replace(/_/g, ' ')}
                               </p>
@@ -411,17 +504,15 @@ export default function AdminRewardsPage() {
                         </div>
                       </div>
                     ) : null}
-                  </div>
 
-                  <div className="w-full xl:max-w-sm">
-                    <div className="rounded-3xl border border-[var(--border-color)] bg-[var(--surface-elevated)] p-4">
+                    <div className="rounded-2xl border border-[var(--border-color)] bg-[var(--surface-elevated)] p-4">
                       <p className="section-title">Moderator note</p>
                       <textarea
                         value={noteValue}
                         onChange={(event) =>
                           setNotes((current) => ({
                             ...current,
-                            [item.id]: event.target.value,
+                            [selectedItem.id]: event.target.value,
                           }))
                         }
                         className="input mt-3 min-h-32 resize-y"
@@ -429,64 +520,64 @@ export default function AdminRewardsPage() {
                       />
 
                       <div className="mt-4 flex flex-wrap gap-2">
-                        {item.status === 'open' ? (
+                        {selectedItem.status === 'open' ? (
                           <button
                             type="button"
-                            onClick={() => void handleAction(item, 'start_review')}
-                            disabled={actingOn === item.id}
+                            onClick={() => void handleAction(selectedItem, 'start_review')}
+                            disabled={actingOn === selectedItem.id}
                             className="btn-ghost"
                           >
-                            {actingOn === item.id ? <Loader2 size={14} className="animate-spin" /> : <Eye size={14} />}
+                            {actingOn === selectedItem.id ? <Loader2 size={14} className="animate-spin" /> : <Eye size={14} />}
                             Start review
                           </button>
                         ) : null}
 
-                        {(item.status === 'open' || item.status === 'reviewing') ? (
+                        {(selectedItem.status === 'open' || selectedItem.status === 'reviewing') ? (
                           <>
                             <button
                               type="button"
-                              onClick={() => void handleAction(item, 'resolve')}
-                              disabled={actingOn === item.id}
+                              onClick={() => void handleAction(selectedItem, 'resolve')}
+                              disabled={actingOn === selectedItem.id}
                               className="btn-primary"
                             >
-                              {actingOn === item.id ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle2 size={14} />}
+                              {actingOn === selectedItem.id ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle2 size={14} />}
                               Resolve
                             </button>
                             <button
                               type="button"
-                              onClick={() => void handleAction(item, 'dismiss')}
-                              disabled={actingOn === item.id}
+                              onClick={() => void handleAction(selectedItem, 'dismiss')}
+                              disabled={actingOn === selectedItem.id}
                               className="btn-ghost"
                             >
-                              {actingOn === item.id ? <Loader2 size={14} className="animate-spin" /> : <AlertTriangle size={14} />}
+                              {actingOn === selectedItem.id ? <Loader2 size={14} className="animate-spin" /> : <AlertTriangle size={14} />}
                               Dismiss
                             </button>
                           </>
                         ) : (
                           <button
                             type="button"
-                            onClick={() => void handleAction(item, 'reopen')}
-                            disabled={actingOn === item.id}
+                            onClick={() => void handleAction(selectedItem, 'reopen')}
+                            disabled={actingOn === selectedItem.id}
                             className="btn-ghost"
                           >
-                            {actingOn === item.id ? <Loader2 size={14} className="animate-spin" /> : <RefreshCw size={14} />}
+                            {actingOn === selectedItem.id ? <Loader2 size={14} className="animate-spin" /> : <RefreshCw size={14} />}
                             Reopen
                           </button>
                         )}
                       </div>
 
-                      {item.resolved_at ? (
+                      {selectedItem.resolved_at ? (
                         <p className="mt-3 text-xs text-[var(--text-secondary)]">
-                          Resolution recorded on {formatDateTime(item.resolved_at)}.
+                          Resolution recorded on {formatDateTime(selectedItem.resolved_at)}.
                         </p>
                       ) : null}
                     </div>
                   </div>
-                </div>
-              </div>
-            );
-          })}
-        </div>
+                );
+              })()
+            ) : null}
+          </div>
+        </section>
       )}
     </div>
   );

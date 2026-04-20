@@ -1,13 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { v2 as cloudinary } from 'cloudinary';
 import { requireActiveAccessProfile } from '@/lib/access';
+import { uploadImageDataUri } from '@/lib/cloudinary';
 import { createServiceClient } from '@/lib/supabase';
-
-cloudinary.config({
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-  api_key: process.env.CLOUDINARY_API_KEY,
-  api_secret: process.env.CLOUDINARY_API_SECRET,
-});
 
 const MEDIA_CONFIG = {
   avatar: {
@@ -65,9 +59,10 @@ export async function POST(request: NextRequest) {
     const buffer = Buffer.from(arrayBuffer);
     const dataUri = `data:${file.type};base64,${buffer.toString('base64')}`;
 
-    const uploadResult = await cloudinary.uploader.upload(dataUri, {
+    const uploadResult = await uploadImageDataUri({
+      dataUri,
       folder: mediaConfig.folder,
-      public_id: `${authUser.id}_${kindValue}_${Date.now()}`,
+      publicId: `${authUser.id}_${kindValue}_${Date.now()}`,
       transformation: mediaConfig.transformation,
     });
 

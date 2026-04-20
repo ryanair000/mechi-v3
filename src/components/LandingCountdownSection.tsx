@@ -3,7 +3,6 @@
 import { useEffect, useState } from 'react';
 import { Puzzle } from 'lucide-react';
 import AnimatedNumberCountdown from '@/components/ui/countdown-number';
-import { Badge } from '@/components/ui/badge';
 
 type CountdownSnapshot = {
   days: number;
@@ -81,13 +80,10 @@ export function LandingCountdownSection({
       <div className="landing-shell">
         <div className="card !border-transparent overflow-hidden px-6 py-8 sm:px-8 sm:py-10 lg:px-12">
           <div className="mx-auto flex max-w-4xl flex-col items-center justify-center text-center">
-            <Badge
-              variant="outline"
-              className="rounded-[14px] border border-[var(--border-color)] bg-[var(--surface)] text-base text-[var(--text-primary)]"
-            >
-              <Puzzle className="fill-[#D2F583] stroke-1 text-[var(--text-primary)]" /> &nbsp;
-              CountDown component
-            </Badge>
+            <span className="inline-flex items-center gap-2 rounded-full border border-[rgba(50,224,196,0.22)] bg-[var(--accent-secondary-soft)] px-4 py-2 text-sm font-semibold uppercase tracking-[0.14em] text-[var(--accent-secondary-text)]">
+              <Puzzle size={14} />
+              Beta V3 countdown
+            </span>
 
             <p className="mt-6 text-sm font-semibold uppercase tracking-[0.18em] text-[var(--accent-secondary-text)]">
               Registration pulse

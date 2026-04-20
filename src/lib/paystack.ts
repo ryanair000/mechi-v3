@@ -1,3 +1,6 @@
+import { isMockProviderMode, shouldCaptureProviderTranscripts } from '@/lib/provider-mode';
+import { captureProviderTranscript } from '@/lib/provider-transcript';
+
 const PAYSTACK_BASE_URL = 'https://api.paystack.co';
 const DEFAULT_CURRENCY = process.env.PAYSTACK_CURRENCY ?? 'KES';
 
@@ -34,6 +37,25 @@ type TransferData = {
   reference?: string;
 };
 
+async function capturePaystackTranscript(
+  operation: string,
+  request: Record<string, unknown>,
+  response?: unknown,
+  error?: string
+) {
+  if (!shouldCaptureProviderTranscripts()) {
+    return;
+  }
+
+  await captureProviderTranscript({
+    provider: 'paystack',
+    operation,
+    request,
+    response,
+    error,
+  });
+}
+
 export function isPaystackConfigured(): boolean {
   return Boolean(process.env.PAYSTACK_SECRET_KEY);
 }
@@ -67,21 +89,39 @@ export async function initializePaystackTransaction(params: {
   reference: string;
   error?: string;
 }> {
+  if (isMockProviderMode()) {
+    const mockResult = {
+      success: true,
+      authorizationUrl: `${params.callbackUrl}?reference=${encodeURIComponent(params.reference)}`,
+      accessCode: `mock_access_${params.reference}`,
+      reference: params.reference,
+    };
+
+    await capturePaystackTranscript('initialize-transaction', params, mockResult);
+    return mockResult;
+  }
+
   if (allowDevPaymentFallback()) {
-    return {
+    const fallbackResult = {
       success: true,
       authorizationUrl: `${params.callbackUrl}?reference=${encodeURIComponent(params.reference)}`,
       accessCode: 'dev',
       reference: params.reference,
     };
+
+    await capturePaystackTranscript('initialize-transaction', params, fallbackResult);
+    return fallbackResult;
   }
 
   if (!isPaystackConfigured()) {
-    return {
+    const errorResult = {
       success: false,
       reference: params.reference,
       error: 'Payment provider is not configured',
     };
+
+    await capturePaystackTranscript('initialize-transaction', params, errorResult, errorResult.error);
+    return errorResult;
   }
 
   const response = await paystackRequest<InitializeData>('/transaction/initialize', {
@@ -97,19 +137,25 @@ export async function initializePaystackTransaction(params: {
   });
 
   if (!response.status || !response.data) {
-    return {
+    const errorResult = {
       success: false,
       reference: params.reference,
       error: response.message || 'Payment could not start',
     };
+
+    await capturePaystackTranscript('initialize-transaction', params, errorResult, errorResult.error);
+    return errorResult;
   }
 
-  return {
+  const successResult = {
     success: true,
     authorizationUrl: response.data.authorization_url,
     accessCode: response.data.access_code,
     reference: response.data.reference,
   };
+
+  await capturePaystackTranscript('initialize-transaction', params, successResult);
+  return successResult;
 }
 
 export async function verifyPaystackTransaction(params: {
@@ -122,12 +168,34 @@ export async function verifyPaystackTransaction(params: {
   metadata?: Record<string, unknown>;
   error?: string;
 }> {
+  if (isMockProviderMode()) {
+    const mockResult = {
+      success: true,
+      amountKes: params.expectedAmountKes ?? 0,
+      email: 'mock-paystack@mechi.test',
+      metadata: {},
+    };
+
+    await capturePaystackTranscript('verify-transaction', params, mockResult);
+    return mockResult;
+  }
+
   if (allowDevPaymentFallback()) {
-    return { success: true, amountKes: params.expectedAmountKes ?? 0, email: '', metadata: {} };
+    const fallbackResult = {
+      success: true,
+      amountKes: params.expectedAmountKes ?? 0,
+      email: '',
+      metadata: {},
+    };
+
+    await capturePaystackTranscript('verify-transaction', params, fallbackResult);
+    return fallbackResult;
   }
 
   if (!isPaystackConfigured()) {
-    return { success: false, error: 'Payment provider is not configured' };
+    const errorResult = { success: false, error: 'Payment provider is not configured' };
+    await capturePaystackTranscript('verify-transaction', params, errorResult, errorResult.error);
+    return errorResult;
   }
 
   const response = await paystackRequest<VerifyData>(
@@ -136,7 +204,13 @@ export async function verifyPaystackTransaction(params: {
   );
 
   if (!response.status || !response.data) {
-    return { success: false, error: response.message || 'Payment could not be verified' };
+    const errorResult = {
+      success: false,
+      error: response.message || 'Payment could not be verified',
+    };
+
+    await capturePaystackTranscript('verify-transaction', params, errorResult, errorResult.error);
+    return errorResult;
   }
 
   const paidEnough =
@@ -144,15 +218,20 @@ export async function verifyPaystackTransaction(params: {
     response.data.amount >= toPaystackAmount(params.expectedAmountKes);
 
   if (response.data.status !== 'success' || !paidEnough) {
-    return { success: false, error: 'Payment is not complete yet' };
+    const errorResult = { success: false, error: 'Payment is not complete yet' };
+    await capturePaystackTranscript('verify-transaction', params, errorResult, errorResult.error);
+    return errorResult;
   }
 
-  return {
+  const successResult = {
     success: true,
     amountKes: response.data.amount / 100,
     email: response.data.customer.email,
     metadata: response.data.metadata ?? {},
   };
+
+  await capturePaystackTranscript('verify-transaction', params, successResult);
+  return successResult;
 }
 
 export async function initializeTournamentPayment(params: {
@@ -183,17 +262,41 @@ export async function createMobileMoneyRecipient(params: {
   name: string;
   phone: string;
 }): Promise<{ success: boolean; recipientCode?: string; error?: string }> {
+  if (isMockProviderMode()) {
+    const mockResult = {
+      success: true,
+      recipientCode: `mock_recipient_${Date.now()}`,
+    };
+
+    await capturePaystackTranscript('create-recipient', params, mockResult);
+    return mockResult;
+  }
+
   if (allowDevPaymentFallback()) {
-    return { success: true, recipientCode: `dev_recipient_${Date.now()}` };
+    const fallbackResult = {
+      success: true,
+      recipientCode: `dev_recipient_${Date.now()}`,
+    };
+
+    await capturePaystackTranscript('create-recipient', params, fallbackResult);
+    return fallbackResult;
   }
 
   if (!isPaystackConfigured()) {
-    return { success: false, error: 'Payment provider is not configured' };
+    const errorResult = { success: false, error: 'Payment provider is not configured' };
+    await capturePaystackTranscript('create-recipient', params, errorResult, errorResult.error);
+    return errorResult;
   }
 
   const bankCode = process.env.PAYSTACK_MOBILE_MONEY_BANK_CODE;
   if (!bankCode) {
-    return { success: false, error: 'PAYSTACK_MOBILE_MONEY_BANK_CODE is missing' };
+    const errorResult = {
+      success: false,
+      error: 'PAYSTACK_MOBILE_MONEY_BANK_CODE is missing',
+    };
+
+    await capturePaystackTranscript('create-recipient', params, errorResult, errorResult.error);
+    return errorResult;
   }
 
   const response = await paystackRequest<RecipientData>('/transferrecipient', {
@@ -208,10 +311,18 @@ export async function createMobileMoneyRecipient(params: {
   });
 
   if (!response.status || !response.data?.recipient_code) {
-    return { success: false, error: response.message || 'Could not create payout recipient' };
+    const errorResult = {
+      success: false,
+      error: response.message || 'Could not create payout recipient',
+    };
+
+    await capturePaystackTranscript('create-recipient', params, errorResult, errorResult.error);
+    return errorResult;
   }
 
-  return { success: true, recipientCode: response.data.recipient_code };
+  const successResult = { success: true, recipientCode: response.data.recipient_code };
+  await capturePaystackTranscript('create-recipient', params, successResult);
+  return successResult;
 }
 
 export async function disbursePrize(params: {
@@ -219,12 +330,30 @@ export async function disbursePrize(params: {
   amountKes: number;
   reason: string;
 }): Promise<{ success: boolean; reference?: string; error?: string }> {
+  if (isMockProviderMode()) {
+    const mockResult = {
+      success: true,
+      reference: `mock_transfer_${Date.now()}`,
+    };
+
+    await capturePaystackTranscript('disburse-prize', params, mockResult);
+    return mockResult;
+  }
+
   if (allowDevPaymentFallback()) {
-    return { success: true, reference: `dev_transfer_${Date.now()}` };
+    const fallbackResult = {
+      success: true,
+      reference: `dev_transfer_${Date.now()}`,
+    };
+
+    await capturePaystackTranscript('disburse-prize', params, fallbackResult);
+    return fallbackResult;
   }
 
   if (!isPaystackConfigured()) {
-    return { success: false, error: 'Payment provider is not configured' };
+    const errorResult = { success: false, error: 'Payment provider is not configured' };
+    await capturePaystackTranscript('disburse-prize', params, errorResult, errorResult.error);
+    return errorResult;
   }
 
   const response = await paystackRequest<TransferData>('/transfer', {
@@ -238,13 +367,22 @@ export async function disbursePrize(params: {
   });
 
   if (!response.status) {
-    return { success: false, error: response.message || 'Prize transfer failed' };
+    const errorResult = {
+      success: false,
+      error: response.message || 'Prize transfer failed',
+    };
+
+    await capturePaystackTranscript('disburse-prize', params, errorResult, errorResult.error);
+    return errorResult;
   }
 
-  return {
+  const successResult = {
     success: true,
     reference: response.data?.transfer_code ?? response.data?.reference,
   };
+
+  await capturePaystackTranscript('disburse-prize', params, successResult);
+  return successResult;
 }
 
 async function paystackRequest<T>(

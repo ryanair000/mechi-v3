@@ -1,6 +1,8 @@
 import { Resend } from 'resend';
 import { DEFAULT_RATING } from '@/lib/config';
 import { getRankDivision } from '@/lib/gamification';
+import { isMockProviderMode, shouldCaptureProviderTranscripts } from '@/lib/provider-mode';
+import { captureProviderTranscript } from '@/lib/provider-transcript';
 import { APP_URL } from '@/lib/urls';
 
 let resendClient: Resend | null | undefined;
@@ -18,13 +20,44 @@ function getResendClient(): Resend | null {
 }
 
 async function sendEmail(payload: Parameters<Resend['emails']['send']>[0]): Promise<void> {
-  const resend = getResendClient();
-  if (!resend) {
-    console.warn('[Email] Send skipped - RESEND_API_KEY is not configured');
+  if (isMockProviderMode()) {
+    await captureProviderTranscript({
+      provider: 'email',
+      operation: 'send',
+      request: payload,
+      response: {
+        mocked: true,
+        subject: payload.subject,
+        to: payload.to,
+      },
+    });
     return;
   }
 
-  await resend.emails.send(payload);
+  const resend = getResendClient();
+  if (!resend) {
+    console.warn('[Email] Send skipped - RESEND_API_KEY is not configured');
+    if (shouldCaptureProviderTranscripts()) {
+      await captureProviderTranscript({
+        provider: 'email',
+        operation: 'send',
+        request: payload,
+        error: 'RESEND_API_KEY is not configured',
+      });
+    }
+    return;
+  }
+
+  const response = await resend.emails.send(payload);
+
+  if (shouldCaptureProviderTranscripts()) {
+    await captureProviderTranscript({
+      provider: 'email',
+      operation: 'send',
+      request: payload,
+      response,
+    });
+  }
 }
 
 async function sendBccEmail(params: {

@@ -2,14 +2,15 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireActiveAccessProfile } from '@/lib/access';
 import { createServiceClient } from '@/lib/supabase';
 import {
-  CONFIRMED_PAYMENT_STATUSES,
   firstRelation,
+  getTournamentPaymentMetrics,
+  getTournamentPrizeSnapshot,
   isActiveTournamentPlayerStatus,
   releaseExpiredTournamentReservations,
 } from '@/lib/tournaments';
 
 const TOURNAMENT_DETAIL_SELECT =
-  'id, slug, title, game, platform, region, size, entry_fee, prize_pool, platform_fee, platform_fee_rate, status, winner_id, organizer_id, rules, payout_status, created_at, started_at, ended_at, organizer:organizer_id(id, username), winner:winner_id(id, username)';
+  'id, slug, title, game, platform, region, size, entry_fee, prize_pool, platform_fee, platform_fee_rate, status, winner_id, organizer_id, rules, approval_status, approved_at, approved_by, is_featured, payout_status, created_at, started_at, ended_at, organizer:organizer_id(id, username), winner:winner_id(id, username)';
 const TOURNAMENT_PLAYER_SELECT =
   'id, tournament_id, user_id, seed, payment_status, joined_at, user:user_id(id, username)';
 const TOURNAMENT_MATCH_SELECT =
@@ -87,18 +88,23 @@ export async function GET(
     const playerRows = (players ?? []).filter((player) =>
       isActiveTournamentPlayerStatus(player.payment_status as string | null | undefined)
     );
-    const confirmedCount = playerRows.filter((player) =>
-      CONFIRMED_PAYMENT_STATUSES.includes(
-        player.payment_status as (typeof CONFIRMED_PAYMENT_STATUSES)[number]
-      )
-    ).length;
+    const { activeCount, confirmedCount, paidCount } = getTournamentPaymentMetrics(playerRows);
+    const prize = getTournamentPrizeSnapshot({
+      entryFee: tournament.entry_fee,
+      paidPlayerCount: paidCount,
+      feeRate: tournament.platform_fee_rate,
+      storedPrizePool: tournament.prize_pool,
+      storedPlatformFee: tournament.platform_fee,
+    });
     const viewerPlayer = playerRows.find((player) => player.user_id === authUser.id) ?? null;
 
     return NextResponse.json({
       tournament: {
         ...tournament,
+        prize_pool: prize.prizePool,
+        platform_fee: prize.platformFee,
         confirmed_count: confirmedCount,
-        slots_left: Math.max(0, tournament.size - confirmedCount),
+        slots_left: Math.max(0, tournament.size - activeCount),
       },
       players: playerRows,
       matches: ((matches ?? []) as Array<Record<string, unknown>>).map((match) => ({

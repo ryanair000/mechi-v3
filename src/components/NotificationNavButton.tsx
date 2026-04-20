@@ -65,17 +65,17 @@ export function NotificationNavButton({ className = '' }: NotificationNavButtonP
   return (
     <Link
       href="/notifications"
-      className={`relative inline-flex h-10 w-10 items-center justify-center rounded-full text-[var(--text-secondary)] transition-colors hover:bg-[var(--surface-elevated)] hover:text-[var(--text-primary)] ${
+      className={`relative inline-flex h-8 w-8 items-center justify-center rounded-md border text-[var(--text-secondary)] transition-colors hover:border-[var(--border-strong)] hover:bg-[var(--surface-elevated)] hover:text-[var(--text-primary)] ${
         isActive
-          ? 'bg-[var(--surface-elevated)] text-[var(--accent-secondary-text)] shadow-[0_12px_24px_rgba(50,224,196,0.12)]'
-          : ''
+          ? 'border-[rgba(50,224,196,0.22)] bg-[rgba(50,224,196,0.1)] text-[var(--accent-secondary-text)]'
+          : 'border-[var(--border-color)]'
       } ${className}`}
       aria-label="Notifications"
       title="Notifications"
     >
-      <Bell size={16} />
+      <Bell size={13} />
       {displayedUnreadCount > 0 ? (
-        <span className="absolute right-1.5 top-1.5 inline-flex min-h-4 min-w-4 items-center justify-center rounded-full bg-[var(--brand-coral)] px-1 text-[9px] font-black leading-none text-[var(--brand-night)]">
+        <span className="absolute right-0.5 top-0.5 inline-flex min-h-4 min-w-4 items-center justify-center rounded-full bg-[var(--brand-coral)] px-1 text-[9px] font-black leading-none text-[var(--brand-night)]">
           {displayedUnreadCount > 9 ? '9+' : displayedUnreadCount}
         </span>
       ) : null}

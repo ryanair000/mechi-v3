@@ -6,6 +6,26 @@ import type { AuthUser } from '@/types';
 
 const USER_STORAGE_KEY = 'mechi_user';
 const AUTH_REFRESH_TIMEOUT_MS = 8000;
+const PUBLIC_AUTH_REFRESH_SKIP_PREFIXES = [
+  '/',
+  '/connect',
+  '/pricing',
+  '/privacy-policy',
+  '/terms-of-service',
+  '/user-data-deletion',
+  '/join/',
+  '/s/',
+];
+
+function shouldSkipAnonymousRefresh(pathname: string): boolean {
+  if (pathname === '/') {
+    return true;
+  }
+
+  return PUBLIC_AUTH_REFRESH_SKIP_PREFIXES.some(
+    (prefix) => prefix !== '/' && pathname.startsWith(prefix)
+  );
+}
 
 interface AuthContextValue {
   user: AuthUser | null;
@@ -75,6 +95,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (!cachedUser) {
       setUser(null);
       setToken(null);
+    }
+
+    if (!cachedUser && shouldSkipAnonymousRefresh(window.location.pathname)) {
+      setLoading(false);
+      return;
     }
 
     const controller = new AbortController();

@@ -39,7 +39,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'ChezaHub account already linked' }, { status: 409 });
     }
 
-    const returnUrl = `${request.nextUrl.origin}/share?chezahub_link=success`;
+    const returnUrl = `${request.nextUrl.origin}/rewards?chezahub_link=success`;
     const token = createChezahubLinkToken({
       mechi_user_id: profile.id,
       username: profile.username,

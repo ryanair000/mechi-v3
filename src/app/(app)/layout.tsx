@@ -3,8 +3,8 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { AppOnboarding } from '@/components/AppOnboarding';
+import { AppMobileUtilityHeader } from '@/components/AppMobileUtilityHeader';
 import { useAuth } from '@/components/AuthProvider';
-import { Navbar } from '@/components/Navbar';
 import { BottomNav } from '@/components/BottomNav';
 import { Sidebar } from '@/components/Sidebar';
 import { BrandLogo } from '@/components/BrandLogo';
@@ -33,19 +33,19 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   if (!user) return null;
 
   return (
-    <div className="page-base relative min-h-screen">
-      <div
-        className="pointer-events-none fixed left-0 right-0 top-0 z-0 h-[500px]"
-        style={{
-          background:
-            'radial-gradient(ellipse 68% 42% at 14% -8%, var(--page-glow-1) 0%, transparent 62%), radial-gradient(ellipse 54% 38% at 92% 0%, var(--page-glow-2) 0%, transparent 58%)',
-        }}
-      />
+    <div
+      className="page-base app-prototype-shell relative min-h-screen"
+      data-theme="dark"
+      style={{ colorScheme: 'dark' }}
+    >
+      <div className="app-shell-grid" />
       <div className="relative z-10">
         <Sidebar />
-        <Navbar />
-        <div className="lg:pl-[17rem]">
-          <main className="pb-[calc(5rem+env(safe-area-inset-bottom))] lg:pb-8">{children}</main>
+        <div className="lg:pl-56">
+          <AppMobileUtilityHeader />
+          <main className="min-h-screen overflow-x-hidden pb-[calc(5rem+env(safe-area-inset-bottom))] pt-2 lg:pb-8 lg:pt-0">
+            {children}
+          </main>
         </div>
         <BottomNav />
         <AppOnboarding />

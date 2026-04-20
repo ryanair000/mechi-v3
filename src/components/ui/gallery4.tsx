@@ -108,7 +108,7 @@ const Gallery4 = ({
             <h2 className="text-3xl font-medium md:text-4xl lg:text-[2.75rem]">
               {title}
             </h2>
-            <p className="max-w-xl text-sm leading-7 text-muted-foreground sm:text-base">
+            <p className="max-w-xl text-sm leading-7 text-[var(--text-secondary)] sm:text-base">
               {description}
             </p>
           </div>
@@ -120,7 +120,7 @@ const Gallery4 = ({
                 carouselApi?.scrollPrev();
               }}
               disabled={!canScrollPrev}
-              className="h-10 w-10 rounded-full border border-[var(--border-color)] bg-[var(--surface-strong)] text-[var(--text-primary)] shadow-sm disabled:pointer-events-auto"
+              className="h-10 w-10 rounded-full border-[rgba(50,224,196,0.22)] bg-[var(--surface-strong)] text-[var(--text-primary)] hover:border-[rgba(50,224,196,0.36)] hover:bg-[var(--accent-secondary-soft)] disabled:pointer-events-auto"
             >
               <ArrowLeft className="size-5" />
             </Button>
@@ -131,7 +131,7 @@ const Gallery4 = ({
                 carouselApi?.scrollNext();
               }}
               disabled={!canScrollNext}
-              className="h-10 w-10 rounded-full border border-[var(--border-color)] bg-[var(--surface-strong)] text-[var(--text-primary)] shadow-sm disabled:pointer-events-auto"
+              className="h-10 w-10 rounded-full border-[rgba(50,224,196,0.22)] bg-[var(--surface-strong)] text-[var(--text-primary)] hover:border-[rgba(50,224,196,0.36)] hover:bg-[var(--accent-secondary-soft)] disabled:pointer-events-auto"
             >
               <ArrowRight className="size-5" />
             </Button>
@@ -190,7 +190,9 @@ const Gallery4 = ({
             <button
               key={index}
               className={`h-2 w-2 rounded-full transition-colors ${
-                currentSlide === index ? "bg-primary" : "bg-primary/20"
+                currentSlide === index
+                  ? 'bg-[var(--accent-secondary)]'
+                  : 'bg-[rgba(50,224,196,0.22)]'
               }`}
               onClick={() => carouselApi?.scrollTo(index)}
               aria-label={`Go to slide ${index + 1}`}

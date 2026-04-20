@@ -100,6 +100,15 @@ const BANNED_OPTIONS = [
   { value: 'false', label: 'Active' },
   { value: 'true', label: 'Banned' },
 ];
+const DETAIL_TABS = ['matches', 'lobbies', 'tournaments', 'billing'] as const;
+const DETAIL_TAB_LABELS: Record<(typeof DETAIL_TABS)[number], string> = {
+  matches: 'Matches',
+  lobbies: 'Lobbies',
+  tournaments: 'Tournaments',
+  billing: 'Billing',
+};
+
+type DetailTab = (typeof DETAIL_TABS)[number];
 
 function roleBadgeClass(role: UserRole) {
   if (role === 'admin') {
@@ -138,6 +147,7 @@ export default function AdminUsersPage() {
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [detail, setDetail] = useState<AdminUserDetail | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
+  const [detailTab, setDetailTab] = useState<DetailTab>('matches');
 
   const fetchUsers = useCallback(async () => {
     setLoading(true);
@@ -213,6 +223,10 @@ export default function AdminUsersPage() {
 
     void fetchUserDetail(selectedUserId);
   }, [fetchUserDetail, selectedUserId]);
+
+  useEffect(() => {
+    setDetailTab('matches');
+  }, [selectedUserId]);
 
   const handleAction = useCallback(
     async (targetId: string, body: Record<string, unknown>, successMessage: string) => {
@@ -665,8 +679,54 @@ export default function AdminUsersPage() {
                   </div>
                 </div>
 
+                <div className="rounded-3xl border border-[var(--border-color)] bg-[var(--surface-elevated)] p-4">
+                  <div className="flex flex-col gap-3">
+                    <div>
+                      <p className="section-title">Focused history</p>
+                      <p className="mt-1 text-sm text-[var(--text-secondary)]">
+                        Keep the moderation summary visible and open only the lane you need right now.
+                      </p>
+                    </div>
+
+                      <div className="flex flex-wrap gap-2">
+                       {DETAIL_TABS.map((tab) => {
+                         const count =
+                           tab === 'matches'
+                             ? detail.recentMatches.length
+                             : tab === 'lobbies'
+                               ? recentLobbyActivity.length
+                               : tab === 'tournaments'
+                                 ? recentTournamentActivity.length
+                                 : detail.currentSubscription
+                                   ? 1
+                                   : 0;
+
+                         return (
+                         <button
+                           key={tab}
+                           type="button"
+                           onClick={() => setDetailTab(tab)}
+                           className={`rounded-full px-3 py-1.5 text-xs font-bold transition-colors ${
+                             detailTab === tab
+                               ? 'bg-[rgba(50,224,196,0.14)] text-[var(--brand-teal)]'
+                               : 'bg-[var(--surface)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
+                           }`}
+                         >
+                           {DETAIL_TAB_LABELS[tab]} ({count})
+                         </button>
+                        );
+                       })}
+                     </div>
+                  </div>
+                </div>
+
                 <div className="space-y-4">
-                  <div className="rounded-3xl border border-[var(--border-color)] bg-[var(--surface-elevated)] p-4">
+                  <div
+                    className={cn(
+                      detailTab === 'matches' ? 'block' : 'hidden',
+                      'rounded-3xl border border-[var(--border-color)] bg-[var(--surface-elevated)] p-4'
+                    )}
+                  >
                     <div className="flex items-center justify-between gap-3">
                       <div>
                         <p className="section-title">Recent matches</p>
@@ -701,7 +761,12 @@ export default function AdminUsersPage() {
                     </div>
                   </div>
 
-                  <div className="rounded-3xl border border-[var(--border-color)] bg-[var(--surface-elevated)] p-4">
+                  <div
+                    className={cn(
+                      detailTab === 'lobbies' ? 'block' : 'hidden',
+                      'rounded-3xl border border-[var(--border-color)] bg-[var(--surface-elevated)] p-4'
+                    )}
+                  >
                     <div className="flex items-center justify-between gap-3">
                       <div>
                         <p className="section-title">Lobby activity</p>
@@ -741,7 +806,12 @@ export default function AdminUsersPage() {
                     </div>
                   </div>
 
-                  <div className="rounded-3xl border border-[var(--border-color)] bg-[var(--surface-elevated)] p-4">
+                  <div
+                    className={cn(
+                      detailTab === 'tournaments' ? 'block' : 'hidden',
+                      'rounded-3xl border border-[var(--border-color)] bg-[var(--surface-elevated)] p-4'
+                    )}
+                  >
                     <div className="flex items-center justify-between gap-3">
                       <div>
                         <p className="section-title">Tournament activity</p>
@@ -778,6 +848,43 @@ export default function AdminUsersPage() {
                           </div>
                         ))
                       )}
+                    </div>
+                  </div>
+
+                  <div
+                    className={cn(
+                      detailTab === 'billing' ? 'block' : 'hidden',
+                      'rounded-3xl border border-[var(--border-color)] bg-[var(--surface-elevated)] p-4'
+                    )}
+                  >
+                    <div className="flex items-center justify-between gap-3">
+                      <div>
+                        <p className="section-title">Billing snapshot</p>
+                        <p className="mt-1 text-sm text-[var(--text-secondary)]">
+                          Keep subscription state out of the core moderation scroll unless you are checking access or payment.
+                        </p>
+                      </div>
+                      <span className="brand-chip">
+                        {detail.currentSubscription ? 'Live plan' : 'Free'}
+                      </span>
+                    </div>
+
+                    <div className="mt-4 rounded-2xl border border-[var(--border-color)] bg-[var(--surface)] px-4 py-4">
+                      <p className="text-sm font-black text-[var(--text-primary)]">
+                        {detail.currentSubscription
+                          ? `${detail.currentSubscription.plan} · ${detail.currentSubscription.status}`
+                          : detail.user.plan ?? 'free'}
+                      </p>
+                      <p className="mt-2 text-sm text-[var(--text-secondary)]">
+                        {detail.currentSubscription
+                          ? `KSh ${detail.currentSubscription.amount_kes.toLocaleString()} · ${detail.currentSubscription.billing_cycle}`
+                          : 'No paid subscription record is linked to this player.'}
+                      </p>
+                      {detail.currentSubscription?.expires_at ? (
+                        <p className="mt-1 text-xs text-[var(--text-soft)]">
+                          Expires {formatDateTime(detail.currentSubscription.expires_at)}
+                        </p>
+                      ) : null}
                     </div>
                   </div>
                 </div>

@@ -1,14 +1,41 @@
 import type { NextConfig } from "next";
 
-const localDevOrigins = [
-  "localhost",
-  "127.0.0.1",
-];
+function normalizeConfiguredHost(value: string | undefined) {
+  if (!value) {
+    return null;
+  }
 
-const localActionOrigins = [
-  "localhost:3000",
-  "127.0.0.1:3000",
-];
+  try {
+    return new URL(value).host.toLowerCase();
+  } catch {
+    return null;
+  }
+}
+
+const configuredAdminHost =
+  normalizeConfiguredHost(process.env.NEXT_PUBLIC_ADMIN_URL) ??
+  "mechi.lokimax.top";
+
+const localDevOrigins = Array.from(
+  new Set([
+    "localhost",
+    "127.0.0.1",
+    "admin.localhost",
+    configuredAdminHost.split(":")[0],
+  ])
+);
+
+const localActionOrigins = Array.from(
+  new Set([
+    "localhost:3000",
+    "127.0.0.1:3000",
+    "admin.localhost:3000",
+    "localhost:3002",
+    "127.0.0.1:3002",
+    "admin.localhost:3002",
+    configuredAdminHost,
+  ])
+);
 
 const distDir = process.env.MECHI_NEXT_DIST_DIR;
 
@@ -38,8 +65,6 @@ const nextConfig: NextConfig = {
     serverActions: {
       allowedOrigins: [
         ...localActionOrigins,
-        "localhost:3002",
-        "127.0.0.1:3002",
         "mechi-v3.vercel.app",
         "mechi.club",
       ],

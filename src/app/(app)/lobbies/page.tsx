@@ -1,19 +1,21 @@
 'use client';
 
-import { Suspense, useEffect, useState, useCallback } from 'react';
-import { useSearchParams, useRouter } from 'next/navigation';
+import Link from 'next/link';
+import { Suspense, useCallback, useEffect, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import toast from 'react-hot-toast';
-import { CalendarClock, Compass, Globe, Lock, MessageCircle, Plus, Swords, Users, X } from 'lucide-react';
+import {
+  CalendarClock,
+  Globe,
+  Lock,
+  MessageCircle,
+  Plus,
+  Users,
+} from 'lucide-react';
 import { useAuth, useAuthFetch } from '@/components/AuthProvider';
-import { PlatformLogo } from '@/components/PlatformLogo';
 import {
   GAMES,
-  PLATFORMS,
-  getDefaultLobbyMap,
-  getDefaultLobbyMode,
   getSelectableGameKeys,
-  getLobbyModeOptions,
-  getLobbyPopularMaps,
   supportsLobbyMode,
 } from '@/lib/config';
 import type { GameKey, Lobby, LobbyVisibility } from '@/types';
@@ -21,28 +23,15 @@ import type { GameKey, Lobby, LobbyVisibility } from '@/types';
 const WHATSAPP_GROUP_URL =
   process.env.NEXT_PUBLIC_WHATSAPP_GROUP_URL ??
   'https://chat.whatsapp.com/GRquLpTxzQ35er85N33Ec7';
-const LOBBY_VISIBILITY_OPTIONS: LobbyVisibility[] = ['public', 'private'];
-
-function toDateTimeLocalValue(date: Date) {
-  const timezoneOffsetMs = date.getTimezoneOffset() * 60_000;
-  return new Date(date.getTime() - timezoneOffsetMs).toISOString().slice(0, 16);
-}
-
-function getDefaultLobbyScheduleValue() {
-  const date = new Date(Date.now() + 60 * 60 * 1000);
-  date.setMinutes(Math.ceil(date.getMinutes() / 15) * 15, 0, 0);
-  return toDateTimeLocalValue(date);
-}
 
 function formatLobbySchedule(value?: string | null) {
   if (!value) {
-    return null;
+    return 'Any time';
   }
 
   const date = new Date(value);
-
   if (Number.isNaN(date.getTime())) {
-    return null;
+    return 'Any time';
   }
 
   return new Intl.DateTimeFormat('en-KE', {
@@ -73,15 +62,20 @@ function getLobbyVisibility(value?: LobbyVisibility | null): LobbyVisibility {
   return value === 'private' ? 'private' : 'public';
 }
 
-function createLobbyDraft(game: GameKey) {
-  return {
-    game,
-    title: '',
-    visibility: 'public' as LobbyVisibility,
-    mode: getDefaultLobbyMode(game),
-    map_name: getDefaultLobbyMap(game),
-    scheduled_for: getDefaultLobbyScheduleValue(),
-  };
+function getStatusLabel(status: Lobby['status']) {
+  return status === 'in_progress' ? 'Live' : status === 'open' ? 'Open' : 'Closed';
+}
+
+function getStatusClasses(status: Lobby['status']) {
+  if (status === 'in_progress') {
+    return 'bg-[rgba(96,165,250,0.14)] text-[#93c5fd] border-[rgba(96,165,250,0.2)]';
+  }
+
+  if (status === 'open') {
+    return 'bg-[rgba(50,224,196,0.12)] text-[var(--accent-secondary-text)] border-[rgba(50,224,196,0.2)]';
+  }
+
+  return 'bg-red-500/12 text-red-300 border-red-400/20';
 }
 
 function LobbiesContent() {
@@ -93,10 +87,7 @@ function LobbiesContent() {
 
   const [lobbies, setLobbies] = useState<Lobby[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showCreate, setShowCreate] = useState(false);
-  const [creating, setCreating] = useState(false);
   const [joiningId, setJoiningId] = useState<string | null>(null);
-  const [newLobby, setNewLobby] = useState(() => createLobbyDraft(gameFilter ?? 'codm'));
 
   const lobbyGames = getSelectableGameKeys().filter((game) => supportsLobbyMode(game));
 
@@ -107,8 +98,8 @@ function LobbiesContent() {
       const res = await authFetch(url);
 
       if (res.ok) {
-        const data = await res.json();
-        setLobbies(data.lobbies);
+        const data = (await res.json()) as { lobbies?: Lobby[] };
+        setLobbies(data.lobbies ?? []);
         return;
       }
 
@@ -117,7 +108,9 @@ function LobbiesContent() {
         return;
       }
 
-      const data = await res.json().catch(() => ({ error: 'Could not load lobbies' }));
+      const data = (await res.json().catch(() => ({ error: 'Could not load lobbies' }))) as {
+        error?: string;
+      };
       toast.error(data.error ?? 'Could not load lobbies');
       setLobbies([]);
     } catch {
@@ -132,88 +125,11 @@ function LobbiesContent() {
     void fetchLobbies();
   }, [fetchLobbies]);
 
-  useEffect(() => {
-    if (!gameFilter || !supportsLobbyMode(gameFilter)) {
-      return;
-    }
-
-    setNewLobby((current) => {
-      if (current.game === gameFilter) {
-        return current;
-      }
-
-      return {
-        ...createLobbyDraft(gameFilter),
-        title: current.title,
-        visibility: current.visibility,
-        scheduled_for: current.scheduled_for,
-      };
-    });
-  }, [gameFilter]);
-
-  const modeOptions = getLobbyModeOptions(newLobby.game);
-  const mapOptions = getLobbyPopularMaps(newLobby.game);
-
-  const handleCreate = async () => {
-    if (!newLobby.title.trim()) {
-      toast.error('Enter a lobby title');
-      return;
-    }
-
-    if (modeOptions.length > 0 && !newLobby.mode.trim()) {
-      toast.error('Select a game mode');
-      return;
-    }
-
-    if (mapOptions.length > 0 && !newLobby.map_name.trim()) {
-      toast.error('Pick a map or type your own');
-      return;
-    }
-
-    if (!newLobby.scheduled_for.trim()) {
-      toast.error('Pick the expected date and time');
-      return;
-    }
-
-    const scheduledAt = new Date(newLobby.scheduled_for);
-
-    if (Number.isNaN(scheduledAt.getTime())) {
-      toast.error('Pick a valid date and time');
-      return;
-    }
-
-    if (scheduledAt.getTime() <= Date.now()) {
-      toast.error('Pick a future date and time');
-      return;
-    }
-
-    setCreating(true);
-    try {
-      const res = await authFetch('/api/lobbies', {
-        method: 'POST',
-        body: JSON.stringify({
-          ...newLobby,
-          scheduled_for: scheduledAt.toISOString(),
-        }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        toast.error(data.error ?? 'Failed to create lobby');
-        return;
-      }
-      toast.success('Lobby created!');
-      setShowCreate(false);
-      router.push(`/lobbies/${data.lobby.id}`);
-    } finally {
-      setCreating(false);
-    }
-  };
-
   const handleJoin = async (lobbyId: string) => {
     setJoiningId(lobbyId);
     try {
       const res = await authFetch(`/api/lobbies/${lobbyId}/join`, { method: 'POST' });
-      const data = await res.json();
+      const data = (await res.json()) as { error?: string };
       if (!res.ok) {
         toast.error(data.error ?? 'Failed to join');
         return;
@@ -225,59 +141,38 @@ function LobbiesContent() {
   };
 
   return (
-    <div className="page-container">
-      <div className="card circuit-panel mb-6 p-6">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <p className="brand-kicker">Community Rooms</p>
-            <h1 className="mt-3 text-3xl font-black tracking-normal text-[var(--text-primary)]">
+    <div className="page-container space-y-5">
+      <section className="card circuit-panel p-5 sm:p-6">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div className="max-w-2xl">
+            <p className="section-title">Community Rooms</p>
+            <h1 className="mt-3 text-[1.55rem] font-black leading-[1.05] text-[var(--text-primary)] sm:text-[2rem]">
               Lobbies
             </h1>
-            <p className="mt-3 text-sm leading-7 text-[var(--text-secondary)]">
-              Create organized rooms for team titles, drop into open scrims, or keep private squad plans off the public feed.
+            <p className="mt-3 text-sm leading-6 text-[var(--text-secondary)]">
+              Create organized rooms for team titles, join open scrims, or keep private squad plans off the public feed.
             </p>
           </div>
-          <button onClick={() => setShowCreate(true)} className="btn-primary text-sm">
-            <Plus size={14} /> Create Lobby
-          </button>
-        </div>
-      </div>
 
-      <div className="mb-6 flex gap-2 overflow-x-auto pb-2 no-scrollbar">
-        <button
-          onClick={() => router.push('/lobbies')}
-          className={`flex-shrink-0 rounded-lg px-3.5 py-2 text-xs font-medium transition-all ${
-            !gameFilter
-              ? 'bg-[var(--brand-coral)] text-[var(--brand-night)]'
-              : 'border border-[var(--border-color)] bg-[var(--surface-elevated)] text-[var(--text-soft)] hover:bg-[var(--surface)] hover:text-[var(--text-primary)]'
-          }`}
-        >
-          All
-        </button>
-        {lobbyGames.map((game) => (
-          <button
-            key={game}
-            onClick={() => router.push(`/lobbies?game=${game}`)}
-            className={`flex-shrink-0 rounded-lg px-3.5 py-2 text-xs font-medium transition-all ${
-              gameFilter === game
-                ? 'bg-[var(--brand-coral)] text-[var(--brand-night)]'
-                : 'border border-[var(--border-color)] bg-[var(--surface-elevated)] text-[var(--text-soft)] hover:bg-[var(--surface)] hover:text-[var(--text-primary)]'
-            }`}
+          <Link
+            href={gameFilter ? `/lobbies/create?game=${gameFilter}` : '/lobbies/create'}
+            className="btn-primary text-sm"
           >
-            {GAMES[game].label}
-          </button>
-        ))}
-      </div>
+            <Plus size={14} />
+            Create lobby
+          </Link>
+        </div>
+      </section>
 
       {WHATSAPP_GROUP_URL ? (
-        <div className="card surface-live mb-6 p-4">
+        <section className="subtle-card p-4">
           <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
             <div>
               <p className="text-sm font-semibold text-[var(--text-primary)]">
                 Want faster lobby pings?
               </p>
               <p className="mt-1 text-xs leading-6 text-[var(--text-secondary)]">
-                Join the WhatsApp group for open-room drops, squad calls, and lobby updates outside the app.
+                Join the WhatsApp group for open-room drops and squad calls outside the app.
               </p>
             </div>
             <a
@@ -290,287 +185,276 @@ function LobbiesContent() {
               Join WhatsApp group
             </a>
           </div>
-        </div>
+        </section>
       ) : null}
 
-      {showCreate && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/55 px-4" onClick={() => setShowCreate(false)}>
-          <div className="card w-full max-w-md p-6" onClick={(event) => event.stopPropagation()}>
-            <div className="mb-4 flex items-center justify-between">
-              <div>
-                <p className="brand-kicker">New Room</p>
-                <h2 className="mt-2 font-semibold text-[var(--text-primary)]">Create Lobby</h2>
-              </div>
-              <button onClick={() => setShowCreate(false)} className="icon-button">
-                <X size={16} />
-              </button>
-            </div>
-            <div className="space-y-3">
-              <div>
-                <label className="label">Game</label>
-                <select
-                  value={newLobby.game}
-                  onChange={(e) => {
-                    const nextGame = e.target.value as GameKey;
-                    setNewLobby((current) => ({
-                      ...createLobbyDraft(nextGame),
-                      title: current.title,
-                      visibility: current.visibility,
-                      scheduled_for: current.scheduled_for,
-                    }));
-                  }}
-                  className="input"
-                >
-                  {lobbyGames.map((game) => (
-                    <option key={game} value={game}>
-                      {GAMES[game].label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="label">Title</label>
-                <input
-                  type="text"
-                  value={newLobby.title}
-                  onChange={(e) => setNewLobby({ ...newLobby, title: e.target.value })}
-                  placeholder="e.g. Ranked warmup room"
-                  className="input"
-                  maxLength={60}
-                />
-              </div>
-              <div>
-                <label className="label">Visibility</label>
-                <div className="grid grid-cols-2 gap-2">
-                  {LOBBY_VISIBILITY_OPTIONS.map((visibility) => {
-                    const isActive = newLobby.visibility === visibility;
-                    const Icon = visibility === 'public' ? Globe : Lock;
-
-                    return (
-                      <button
-                        key={visibility}
-                        type="button"
-                        onClick={() => setNewLobby({ ...newLobby, visibility })}
-                        className={`flex min-h-11 items-center justify-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium transition-all ${
-                          isActive
-                            ? 'border-[rgba(50,224,196,0.32)] bg-[rgba(50,224,196,0.16)] text-[var(--text-primary)]'
-                            : 'border-[var(--border-color)] bg-[var(--surface-elevated)] text-[var(--text-soft)] hover:text-[var(--text-primary)]'
-                        }`}
-                      >
-                        <Icon size={14} />
-                        {visibility === 'public' ? 'Public' : 'Private'}
-                      </button>
-                    );
-                  })}
-                </div>
-                <p className="mt-2 text-xs leading-6 text-[var(--text-secondary)]">
-                  {newLobby.visibility === 'public'
-                    ? 'Public rooms show up in discovery and get wider lobby pings.'
-                    : 'Private rooms stay off discovery. Share the room link directly with your squad.'}
-                </p>
-              </div>
-              <div>
-                <label className="label">Expected match date and time</label>
-                <input
-                  type="datetime-local"
-                  value={newLobby.scheduled_for}
-                  onChange={(e) => setNewLobby({ ...newLobby, scheduled_for: e.target.value })}
-                  className="input"
-                  min={toDateTimeLocalValue(new Date())}
-                />
-              </div>
-              {modeOptions.length > 0 ? (
-                <div>
-                  <label className="label">Game mode</label>
-                  <select
-                    value={newLobby.mode}
-                    onChange={(e) => setNewLobby({ ...newLobby, mode: e.target.value })}
-                    className="input"
-                  >
-                    {modeOptions.map((mode) => (
-                      <option key={mode} value={mode}>
-                        {mode}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              ) : null}
-              {mapOptions.length > 0 ? (
-                <div>
-                  <label className="label">Map</label>
-                  <input
-                    type="text"
-                    list={`lobby-map-options-${newLobby.game}`}
-                    value={newLobby.map_name}
-                    onChange={(e) => setNewLobby({ ...newLobby, map_name: e.target.value })}
-                    placeholder="Pick a popular map or type your own"
-                    className="input"
-                    maxLength={40}
-                  />
-                  <datalist id={`lobby-map-options-${newLobby.game}`}>
-                    {mapOptions.map((mapName) => (
-                      <option key={mapName} value={mapName}>
-                        {mapName}
-                      </option>
-                    ))}
-                  </datalist>
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    {mapOptions.map((mapName) => (
-                      <button
-                        key={mapName}
-                        type="button"
-                        onClick={() => setNewLobby({ ...newLobby, map_name: mapName })}
-                        className={`rounded-full border px-3 py-1.5 text-[11px] font-medium transition-all ${
-                          newLobby.map_name === mapName
-                            ? 'border-[rgba(50,224,196,0.32)] bg-[rgba(50,224,196,0.16)] text-[var(--text-primary)]'
-                            : 'border-[var(--border-color)] bg-[var(--surface-elevated)] text-[var(--text-soft)] hover:text-[var(--text-primary)]'
-                        }`}
-                      >
-                        {mapName}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              ) : null}
-              <div className="flex gap-3 pt-2">
-                <button onClick={() => setShowCreate(false)} className="btn-ghost flex-1">Cancel</button>
-                <button onClick={handleCreate} disabled={creating} className="btn-primary flex-1">
-                  {creating ? 'Creating...' : 'Create'}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      <div className="flex gap-2 overflow-x-auto pb-2 no-scrollbar">
+        <button
+          onClick={() => router.push('/lobbies')}
+          className={`flex-shrink-0 rounded-md border px-3 py-2 text-xs font-semibold transition-all ${
+            !gameFilter
+              ? 'border-[rgba(50,224,196,0.22)] bg-[rgba(50,224,196,0.12)] text-[var(--accent-secondary-text)]'
+              : 'border-[var(--border-color)] bg-[var(--surface-elevated)] text-[var(--text-soft)] hover:bg-[var(--surface)] hover:text-[var(--text-primary)]'
+          }`}
+        >
+          All Games
+        </button>
+        {lobbyGames.map((game) => (
+          <button
+            key={game}
+            onClick={() => router.push(`/lobbies?game=${game}`)}
+            className={`flex-shrink-0 rounded-md border px-3 py-2 text-xs font-semibold transition-all ${
+              gameFilter === game
+                ? 'border-[rgba(50,224,196,0.22)] bg-[rgba(50,224,196,0.12)] text-[var(--accent-secondary-text)]'
+                : 'border-[var(--border-color)] bg-[var(--surface-elevated)] text-[var(--text-soft)] hover:bg-[var(--surface)] hover:text-[var(--text-primary)]'
+            }`}
+          >
+            {GAMES[game].label}
+          </button>
+        ))}
+      </div>
 
       {loading ? (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {[1, 2, 3].map((item) => (
-            <div key={item} className="h-32 shimmer" />
-          ))}
+        <div className="card overflow-hidden">
+          <div className="space-y-0">
+            {[1, 2, 3, 4].map((item, index) => (
+              <div
+                key={item}
+                className={`px-4 py-4 ${index < 3 ? 'border-b border-[var(--border-color)]' : ''}`}
+              >
+                <div className="h-16 shimmer rounded-xl" />
+              </div>
+            ))}
+          </div>
         </div>
       ) : lobbies.length === 0 ? (
         <div className="card py-20 text-center text-[var(--text-soft)]">
           <Globe size={32} className="mx-auto mb-3 opacity-30" />
           <p className="font-medium text-[var(--text-primary)]">No open lobbies</p>
           <p className="mt-1 text-xs">Be the first to open a room for your community.</p>
-          <button onClick={() => setShowCreate(true)} className="btn-primary mt-4">
-            <Plus size={14} /> Create Lobby
-          </button>
+          <Link
+            href={gameFilter ? `/lobbies/create?game=${gameFilter}` : '/lobbies/create'}
+            className="btn-primary mt-4 inline-flex"
+          >
+            <Plus size={14} />
+            Create lobby
+          </Link>
         </div>
       ) : (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {lobbies.map((lobby) => {
-            const game = GAMES[lobby.game];
-            const isHost = lobby.host_id === user?.id;
-            const isMember = Boolean(lobby.is_member) || isHost;
-            const memberCount = readLobbyMemberCount(lobby.member_count);
-            const isFull = memberCount >= lobby.max_players;
-            const visibility = getLobbyVisibility(lobby.visibility);
-            const displayMode = lobby.mode && lobby.mode !== 'lobby' ? lobby.mode : null;
-            const displayMap = typeof lobby.map_name === 'string' && lobby.map_name.length > 0 ? lobby.map_name : null;
-            const displaySchedule = formatLobbySchedule(lobby.scheduled_for);
+        <>
+          <div className="hidden overflow-hidden rounded-[var(--radius-panel)] border border-[var(--border-color)] bg-[var(--surface)] lg:block">
+            <div className="grid grid-cols-[minmax(0,1.4fr)_minmax(0,0.9fr)_100px_130px_110px_90px] gap-4 border-b border-[var(--border-color)] px-5 py-3 text-[10px] font-bold uppercase tracking-[0.16em] text-[var(--text-soft)]">
+              <span>Room</span>
+              <span>Mode / Map</span>
+              <span>Players</span>
+              <span>Scheduled</span>
+              <span className="text-center">Visibility</span>
+              <span className="text-right">Action</span>
+            </div>
 
-            return (
-              <div key={lobby.id} className="card p-4">
-                <div className="mb-3 flex items-start justify-between gap-3">
-                  <div className="min-w-0 flex-1">
-                    <div className="mb-1 flex items-center gap-2">
-                      <span className="truncate text-sm font-semibold text-[var(--text-primary)]">
+            {lobbies.map((lobby, index) => {
+              const game = GAMES[lobby.game];
+              const isHost = lobby.host_id === user?.id;
+              const isMember = Boolean(lobby.is_member) || isHost;
+              const memberCount = readLobbyMemberCount(lobby.member_count);
+              const isFull = memberCount >= lobby.max_players;
+              const visibility = getLobbyVisibility(lobby.visibility);
+              const progress = Math.min(100, (memberCount / Math.max(1, lobby.max_players)) * 100);
+              const actionLabel = !isMember && !isFull && lobby.status === 'open' ? 'Join' : 'View';
+
+              return (
+                <div
+                  key={lobby.id}
+                  className={`grid grid-cols-[minmax(0,1.4fr)_minmax(0,0.9fr)_100px_130px_110px_90px] items-center gap-4 px-5 py-4 ${
+                    index < lobbies.length - 1 ? 'border-b border-[var(--border-color)]' : ''
+                  }`}
+                >
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <p className="truncate text-sm font-black text-[var(--text-primary)]">
                         {lobby.title}
+                      </p>
+                      <span
+                        className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.08em] ${getStatusClasses(lobby.status)}`}
+                      >
+                        {getStatusLabel(lobby.status)}
                       </span>
-                      {isHost && <span className="badge-emerald text-[10px]">Host</span>}
+                      {isHost ? <span className="brand-chip px-2 py-0.5">Host</span> : null}
                       {!isHost && isMember ? (
-                        <span className="rounded-full border border-[var(--border-color)] px-2 py-0.5 text-[10px] font-medium text-[var(--text-secondary)]">
-                          Joined
-                        </span>
+                        <span className="brand-chip-coral px-2 py-0.5">Joined</span>
                       ) : null}
                     </div>
-                    <p className="text-xs text-[var(--text-secondary)]">{game?.label}</p>
+                    <p className="mt-1 text-xs text-[var(--text-soft)]">
+                      {game?.label ?? lobby.game}
+                      {lobby.host ? ` / Host: ${(lobby.host as { username: string }).username}` : ''}
+                    </p>
                   </div>
-                  <span
-                    className={`rounded-full px-2.5 py-1 text-[11px] font-medium ${
-                      lobby.status === 'open'
-                        ? 'bg-[rgba(50,224,196,0.14)] text-[var(--brand-teal)]'
-                        : lobby.status === 'in_progress'
-                          ? 'bg-blue-500/14 text-blue-400'
-                          : 'bg-red-500/14 text-red-400'
-                    }`}
-                  >
-                    {lobby.status === 'in_progress' ? 'Live' : lobby.status}
-                  </span>
-                </div>
 
-                <div className="mb-3 flex items-center gap-3 text-xs text-[var(--text-soft)]">
-                  <span className="flex items-center gap-1">
-                    <Users size={11} /> {memberCount}/{lobby.max_players}
-                  </span>
-                  {game?.platforms.map((platform) => (
-                    <span key={platform} title={PLATFORMS[platform]?.label}>
-                      <PlatformLogo platform={platform} size={14} />
-                    </span>
-                  ))}
-                </div>
+                  <div>
+                    <p className="text-sm font-semibold text-[var(--text-primary)]">
+                      {lobby.mode || 'Open room'}
+                    </p>
+                    <p className="mt-1 text-xs text-[var(--text-soft)]">
+                      {lobby.map_name || 'Map not set'}
+                    </p>
+                  </div>
 
-                {lobby.host && (
-                  <p className="mb-3 text-xs text-[var(--text-soft)]">
-                    Host: {(lobby.host as { username: string }).username}
-                  </p>
-                )}
+                  <div>
+                    <div className="mb-2 h-1.5 w-16 overflow-hidden rounded-full bg-[var(--border-color)]">
+                      <div
+                        className={isFull ? 'h-full bg-[var(--brand-coral)]' : 'h-full bg-[var(--brand-teal)]'}
+                        style={{ width: `${progress}%` }}
+                      />
+                    </div>
+                    <span className="text-xs text-[var(--text-soft)]">
+                      {memberCount}/{lobby.max_players}
+                    </span>
+                  </div>
 
-                <div className="mb-3 flex flex-wrap gap-2">
-                  <span
-                    className={`rounded-full border px-2.5 py-1 text-[11px] font-medium ${
-                      visibility === 'public'
-                        ? 'border-[rgba(50,224,196,0.22)] bg-[rgba(50,224,196,0.12)] text-[var(--brand-teal)]'
-                        : 'border-[rgba(255,255,255,0.12)] bg-white/[0.04] text-white/70'
-                    }`}
-                  >
-                    <span className="inline-flex items-center gap-1">
-                      {visibility === 'public' ? <Globe size={11} /> : <Lock size={11} />}
-                      {visibility === 'public' ? 'Public room' : 'Private room'}
-                    </span>
-                  </span>
-                  {displayMode ? (
-                    <span className="brand-chip gap-1 px-2.5 py-1">
-                      <Swords size={11} />
-                      {displayMode}
-                    </span>
-                  ) : null}
-                  {displayMap ? (
-                    <span className="brand-chip-coral gap-1 px-2.5 py-1">
-                      <Compass size={11} />
-                      {displayMap}
-                    </span>
-                  ) : null}
-                  {displaySchedule ? (
-                    <span className="rounded-full border border-[var(--border-color)] bg-[var(--surface-elevated)] px-2.5 py-1 text-[11px] font-medium text-[var(--text-secondary)]">
-                      <span className="inline-flex items-center gap-1">
-                        <CalendarClock size={11} />
-                        {displaySchedule}
-                      </span>
-                    </span>
-                  ) : null}
-                </div>
+                  <div className="text-sm text-[var(--text-secondary)]">
+                    {formatLobbySchedule(lobby.scheduled_for)}
+                  </div>
 
-                <div className="flex gap-2">
-                  <button onClick={() => router.push(`/lobbies/${lobby.id}`)} className="btn-outline flex-1 py-2 text-xs">
-                    View
-                  </button>
-                  {!isMember && !isFull && (
-                    <button
-                      onClick={() => handleJoin(lobby.id)}
-                      disabled={joiningId === lobby.id}
-                      className="btn-primary flex-1 py-2 text-xs"
+                  <div className="text-center">
+                    <span
+                      className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.08em] ${
+                        visibility === 'public'
+                          ? 'border-[rgba(50,224,196,0.22)] bg-[rgba(50,224,196,0.08)] text-[var(--accent-secondary-text)]'
+                          : 'border-[var(--border-color)] bg-[var(--surface-elevated)] text-[var(--text-secondary)]'
+                      }`}
                     >
-                      {joiningId === lobby.id ? '...' : 'Join'}
-                    </button>
-                  )}
+                      {visibility === 'public' ? <Globe size={11} /> : <Lock size={11} />}
+                      {visibility}
+                    </span>
+                  </div>
+
+                  <div className="text-right">
+                    {!isMember && !isFull && lobby.status === 'open' ? (
+                      <button
+                        onClick={() => void handleJoin(lobby.id)}
+                        disabled={joiningId === lobby.id}
+                        className="btn-primary min-h-8 px-3 py-2 text-xs"
+                      >
+                        {joiningId === lobby.id ? 'Joining...' : actionLabel}
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => router.push(`/lobbies/${lobby.id}`)}
+                        className="btn-outline min-h-8 px-3 py-2 text-xs"
+                      >
+                        {actionLabel}
+                      </button>
+                    )}
+                  </div>
                 </div>
-              </div>
-            );
-          })}
-        </div>
+              );
+            })}
+          </div>
+
+          <div className="grid gap-4 lg:hidden">
+            {lobbies.map((lobby) => {
+              const game = GAMES[lobby.game];
+              const isHost = lobby.host_id === user?.id;
+              const isMember = Boolean(lobby.is_member) || isHost;
+              const memberCount = readLobbyMemberCount(lobby.member_count);
+              const isFull = memberCount >= lobby.max_players;
+              const visibility = getLobbyVisibility(lobby.visibility);
+
+              return (
+                <div key={lobby.id} className="card p-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <p className="text-sm font-black text-[var(--text-primary)]">
+                          {lobby.title}
+                        </p>
+                        <span
+                          className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.08em] ${getStatusClasses(lobby.status)}`}
+                        >
+                          {getStatusLabel(lobby.status)}
+                        </span>
+                      </div>
+                      <p className="mt-1 text-xs text-[var(--text-soft)]">
+                        {game?.label ?? lobby.game}
+                      </p>
+                    </div>
+                    {isHost ? <span className="brand-chip px-2 py-0.5">Host</span> : null}
+                  </div>
+
+                  <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                    <div className="rounded-xl border border-[var(--border-color)] bg-[var(--surface-elevated)] p-3">
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--text-soft)]">
+                        Mode / map
+                      </p>
+                      <p className="mt-2 text-sm font-semibold text-[var(--text-primary)]">
+                        {lobby.mode || 'Open room'}
+                      </p>
+                      <p className="mt-1 text-xs text-[var(--text-soft)]">
+                        {lobby.map_name || 'Map not set'}
+                      </p>
+                    </div>
+
+                    <div className="rounded-xl border border-[var(--border-color)] bg-[var(--surface-elevated)] p-3">
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--text-soft)]">
+                        Players
+                      </p>
+                      <p className="mt-2 flex items-center gap-2 text-sm font-semibold text-[var(--text-primary)]">
+                        <Users size={13} className="text-[var(--accent-secondary-text)]" />
+                        {memberCount}/{lobby.max_players}
+                      </p>
+                      <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-[var(--border-color)]">
+                        <div
+                          className={isFull ? 'h-full bg-[var(--brand-coral)]' : 'h-full bg-[var(--brand-teal)]'}
+                          style={{
+                            width: `${Math.min(100, (memberCount / Math.max(1, lobby.max_players)) * 100)}%`,
+                          }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="mt-3 flex flex-wrap items-center gap-2">
+                    <span
+                      className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.08em] ${
+                        visibility === 'public'
+                          ? 'border-[rgba(50,224,196,0.22)] bg-[rgba(50,224,196,0.08)] text-[var(--accent-secondary-text)]'
+                          : 'border-[var(--border-color)] bg-[var(--surface-elevated)] text-[var(--text-secondary)]'
+                      }`}
+                    >
+                      {visibility === 'public' ? <Globe size={11} /> : <Lock size={11} />}
+                      {visibility}
+                    </span>
+                    {!isHost && isMember ? (
+                      <span className="brand-chip-coral px-2 py-0.5">Joined</span>
+                    ) : null}
+                    <span className="inline-flex items-center gap-1 rounded-full border border-[var(--border-color)] bg-[var(--surface-elevated)] px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-secondary)]">
+                      <CalendarClock size={11} />
+                      {formatLobbySchedule(lobby.scheduled_for)}
+                    </span>
+                  </div>
+
+                  <div className="mt-4 flex gap-2">
+                    <button
+                      onClick={() => router.push(`/lobbies/${lobby.id}`)}
+                      className="btn-outline flex-1 py-2 text-xs"
+                    >
+                      View
+                    </button>
+                    {!isMember && !isFull && lobby.status === 'open' ? (
+                      <button
+                        onClick={() => void handleJoin(lobby.id)}
+                        disabled={joiningId === lobby.id}
+                        className="btn-primary flex-1 py-2 text-xs"
+                      >
+                        {joiningId === lobby.id ? 'Joining...' : 'Join'}
+                      </button>
+                    ) : null}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </>
       )}
     </div>
   );
@@ -581,10 +465,17 @@ export default function LobbiesPage() {
     <Suspense
       fallback={
         <div className="page-container">
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {[1, 2, 3].map((item) => (
-              <div key={item} className="h-32 shimmer" />
-            ))}
+          <div className="card overflow-hidden">
+            <div className="space-y-0">
+              {[1, 2, 3].map((item, index) => (
+                <div
+                  key={item}
+                  className={`px-4 py-4 ${index < 2 ? 'border-b border-[var(--border-color)]' : ''}`}
+                >
+                  <div className="h-16 shimmer rounded-xl" />
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       }

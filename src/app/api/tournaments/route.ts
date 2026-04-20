@@ -9,7 +9,11 @@ import { checkRateLimit, getClientIp, rateLimitResponse } from '@/lib/rateLimit'
 import { makeSlug } from '@/lib/slug';
 import { maybeExpireProfilePlan } from '@/lib/subscription';
 import { createServiceClient } from '@/lib/supabase';
-import { CONFIRMED_PAYMENT_STATUSES, getPlatformForTournament } from '@/lib/tournaments';
+import {
+  getPlatformForTournament,
+  getTournamentPaymentMetrics,
+  getTournamentPrizeSnapshot,
+} from '@/lib/tournaments';
 import type { GameKey, PlatformKey } from '@/types';
 
 export async function GET(request: NextRequest) {
@@ -24,6 +28,7 @@ export async function GET(request: NextRequest) {
     let query = supabase
       .from('tournaments')
       .select('*, organizer:organizer_id(id, username), winner:winner_id(id, username)')
+      .order('is_featured', { ascending: false })
       .order('created_at', { ascending: false })
       .range(offset, offset + limit - 1);
 
@@ -48,25 +53,39 @@ export async function GET(request: NextRequest) {
     const tournamentIds = tournaments.map((tournament) => tournament.id);
     const { data: players, error: playersError } = await supabase
       .from('tournament_players')
-      .select('tournament_id')
+      .select('tournament_id, payment_status')
       .in('tournament_id', tournamentIds)
-      .in('payment_status', [...CONFIRMED_PAYMENT_STATUSES]);
+      .in('payment_status', ['paid', 'free']);
 
     if (playersError) {
       return NextResponse.json({ error: 'Failed to fetch tournaments' }, { status: 500 });
     }
 
-    const playerCounts = (players ?? []).reduce<Record<string, number>>((counts, player) => {
+    const playersByTournament = (players ?? []).reduce<
+      Record<string, Array<{ payment_status: string | null | undefined }>>
+    >((grouped, player) => {
       const tournamentId = player.tournament_id as string | undefined;
-      if (!tournamentId) return counts;
-      counts[tournamentId] = (counts[tournamentId] ?? 0) + 1;
-      return counts;
+      if (!tournamentId) return grouped;
+      grouped[tournamentId] = [
+        ...(grouped[tournamentId] ?? []),
+        { payment_status: (player.payment_status as string | null | undefined) ?? null },
+      ];
+      return grouped;
     }, {});
 
     return NextResponse.json({
       tournaments: tournaments.map((tournament) => ({
         ...tournament,
-        player_count: playerCounts[tournament.id] ?? 0,
+        player_count: getTournamentPaymentMetrics(playersByTournament[tournament.id] ?? [])
+          .confirmedCount,
+        prize_pool: getTournamentPrizeSnapshot({
+          entryFee: Number(tournament.entry_fee ?? 0),
+          paidPlayerCount: getTournamentPaymentMetrics(playersByTournament[tournament.id] ?? [])
+            .paidCount,
+          feeRate: Number(tournament.platform_fee_rate ?? 5),
+          storedPrizePool: Number(tournament.prize_pool ?? 0),
+          storedPlatformFee: Number(tournament.platform_fee ?? 0),
+        }).prizePool,
       })),
     });
   } catch (err) {
@@ -180,6 +199,8 @@ export async function POST(request: NextRequest) {
         entry_fee: entryFee,
         platform_fee_rate: organizerPlanConfig.tournamentFeePercent,
         rules: rules || null,
+        approval_status: 'pending',
+        is_featured: false,
         organizer_id: authUser.id,
       })
       .select('*')

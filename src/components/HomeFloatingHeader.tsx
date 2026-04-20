@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { Menu, X } from 'lucide-react';
 import { useAuth } from '@/components/AuthProvider';
 import { BrandLogo } from '@/components/BrandLogo';
+import { ThemeToggle } from '@/components/ThemeToggle';
 
 const NAV_ITEMS = [
   { href: '#how-it-works', label: 'HOW IT WORKS' },
@@ -48,6 +49,7 @@ export function HomeFloatingHeader() {
             </div>
 
             <div className="ml-auto flex items-center gap-2">
+              <ThemeToggle />
               <div className="hidden items-center gap-2 sm:flex">
                 <Link href={user ? '/dashboard' : '/login'} className={SIGN_IN_BUTTON_CLASS}>
                   {user ? 'DASHBOARD' : 'SIGN IN'}

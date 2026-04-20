@@ -1,5 +1,7 @@
 import { APP_URL } from '@/lib/urls';
 import { normalizePhoneNumber } from '@/lib/phone';
+import { isMockProviderMode, shouldCaptureProviderTranscripts } from '@/lib/provider-mode';
+import { captureProviderTranscript } from '@/lib/provider-transcript';
 
 const WHATSAPP_TOKEN = process.env.WHATSAPP_TOKEN;
 const PHONE_NUMBER_ID = process.env.WHATSAPP_PHONE_NUMBER_ID;
@@ -91,8 +93,35 @@ async function dispatchWhatsApp(
 ): Promise<WhatsAppSendResult> {
   const normalizedTo = normalizeRecipient(to);
 
+  if (isMockProviderMode()) {
+    const mockResult: WhatsAppSendResult = {
+      ok: true,
+      status: 200,
+      to,
+      normalizedTo,
+      type,
+      templateName,
+      messageId: `mock-whatsapp-${Date.now()}`,
+      waId: normalizedTo,
+    };
+
+    await captureProviderTranscript({
+      provider: 'whatsapp',
+      operation: type === 'template' ? 'send-template' : 'send-text',
+      request: {
+        to,
+        normalizedTo,
+        payload,
+        templateName,
+      },
+      response: mockResult,
+    });
+
+    return mockResult;
+  }
+
   if (!WHATSAPP_ENABLED || !WHATSAPP_TOKEN || !PHONE_NUMBER_ID) {
-    return {
+    const skippedResult: WhatsAppSendResult = {
       ok: false,
       skipped: true,
       status: 0,
@@ -102,6 +131,22 @@ async function dispatchWhatsApp(
       templateName,
       error: 'WhatsApp credentials not configured',
     };
+
+    if (shouldCaptureProviderTranscripts()) {
+      await captureProviderTranscript({
+        provider: 'whatsapp',
+        operation: type === 'template' ? 'send-template' : 'send-text',
+        request: {
+          to,
+          normalizedTo,
+          payload,
+          templateName,
+        },
+        response: skippedResult,
+      });
+    }
+
+    return skippedResult;
   }
 
   try {
@@ -136,7 +181,7 @@ async function dispatchWhatsApp(
           ? (responseBody as { error?: { message?: string; error_data?: { details?: string } } }).error
           : undefined;
 
-      return {
+      const errorResult: WhatsAppSendResult = {
         ok: false,
         status: response.status,
         to,
@@ -147,6 +192,22 @@ async function dispatchWhatsApp(
         details: metaError?.error_data?.details,
         responseBody,
       };
+
+      if (shouldCaptureProviderTranscripts()) {
+        await captureProviderTranscript({
+          provider: 'whatsapp',
+          operation: type === 'template' ? 'send-template' : 'send-text',
+          request: {
+            to,
+            normalizedTo,
+            payload,
+            templateName,
+          },
+          response: errorResult,
+        });
+      }
+
+      return errorResult;
     }
 
     const parsedBody = responseBody as {
@@ -154,7 +215,7 @@ async function dispatchWhatsApp(
       messages?: Array<{ id?: string }>;
     } | null;
 
-    return {
+    const successResult: WhatsAppSendResult = {
       ok: true,
       status: response.status,
       to,
@@ -165,8 +226,24 @@ async function dispatchWhatsApp(
       messageId: parsedBody?.messages?.[0]?.id ?? null,
       responseBody,
     };
+
+    if (shouldCaptureProviderTranscripts()) {
+      await captureProviderTranscript({
+        provider: 'whatsapp',
+        operation: type === 'template' ? 'send-template' : 'send-text',
+        request: {
+          to,
+          normalizedTo,
+          payload,
+          templateName,
+        },
+        response: successResult,
+      });
+    }
+
+    return successResult;
   } catch (err) {
-    return {
+    const errorResult: WhatsAppSendResult = {
       ok: false,
       status: 0,
       to,
@@ -175,6 +252,22 @@ async function dispatchWhatsApp(
       templateName,
       error: err instanceof Error ? err.message : 'Network error',
     };
+
+    if (shouldCaptureProviderTranscripts()) {
+      await captureProviderTranscript({
+        provider: 'whatsapp',
+        operation: type === 'template' ? 'send-template' : 'send-text',
+        request: {
+          to,
+          normalizedTo,
+          payload,
+          templateName,
+        },
+        response: errorResult,
+      });
+    }
+
+    return errorResult;
   }
 }
 

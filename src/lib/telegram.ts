@@ -1,4 +1,6 @@
 import { GAMES } from '@/lib/config';
+import { isMockProviderMode, shouldCaptureProviderTranscripts } from '@/lib/provider-mode';
+import { captureProviderTranscript } from '@/lib/provider-transcript';
 import type { GameKey } from '@/types';
 import { ADMIN_URL, APP_URL } from '@/lib/urls';
 
@@ -29,7 +31,28 @@ function formatGameList(selectedGames: string[] = []): string {
 }
 
 async function sendTelegramMessage(text: string): Promise<void> {
+  if (isMockProviderMode()) {
+    await captureProviderTranscript({
+      provider: 'telegram',
+      operation: 'send-message',
+      request: { text },
+      response: {
+        ok: true,
+        mocked: true,
+      },
+    });
+    return;
+  }
+
   if (!TELEGRAM_BOT_TOKEN || !TELEGRAM_CHAT_ID) {
+    if (shouldCaptureProviderTranscripts()) {
+      await captureProviderTranscript({
+        provider: 'telegram',
+        operation: 'send-message',
+        request: { text },
+        error: 'Telegram bot credentials are not configured',
+      });
+    }
     return;
   }
 
@@ -56,6 +79,18 @@ async function sendTelegramMessage(text: string): Promise<void> {
   if (!response.ok) {
     const details = await response.text().catch(() => 'No response body');
     throw new Error(`Telegram send failed (${response.status}): ${details}`);
+  }
+
+  if (shouldCaptureProviderTranscripts()) {
+    await captureProviderTranscript({
+      provider: 'telegram',
+      operation: 'send-message',
+      request: { text },
+      response: {
+        ok: true,
+        status: response.status,
+      },
+    });
   }
 }
 

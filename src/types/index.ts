@@ -26,6 +26,7 @@ export type UserRole = 'user' | 'moderator' | 'admin';
 export type Plan = 'free' | 'pro' | 'elite';
 export type BillingCycle = 'monthly' | 'annual';
 export type TournamentStatus = 'open' | 'full' | 'active' | 'completed' | 'cancelled';
+export type TournamentApprovalStatus = 'pending' | 'approved' | 'rejected';
 export type TournamentPaymentStatus = 'pending' | 'paid' | 'free' | 'failed' | 'refunded';
 export type TournamentMatchStatus = 'pending' | 'ready' | 'active' | 'completed' | 'bye';
 export type SubscriptionStatus = 'pending' | 'active' | 'cancelled' | 'expired' | 'failed';
@@ -404,6 +405,10 @@ export interface Tournament {
   winner_id: string | null;
   organizer_id: string;
   rules: string | null;
+  approval_status: TournamentApprovalStatus;
+  approved_at?: string | null;
+  approved_by?: string | null;
+  is_featured: boolean;
   payout_status?: 'none' | 'pending' | 'paid' | 'failed';
   payout_ref?: string | null;
   payout_error?: string | null;

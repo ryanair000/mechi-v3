@@ -134,11 +134,18 @@ export function tournamentShareText(
   title: string,
   game: string,
   entryFee: number,
-  slotsLeft: number
+  slotsLeft: number,
+  prizePool: number
 ) {
   const price = entryFee > 0 ? `KES ${entryFee.toLocaleString()} entry` : 'free entry';
   const slotCopy = slotsLeft === 1 ? '1 slot left' : `${slotsLeft} slots left`;
-  return `${title} is live on Mechi. ${game}. ${price}. ${slotCopy}. Pull up and prove it.`;
+  const prizeCopy =
+    prizePool > 0
+      ? `Prize pool KES ${prizePool.toLocaleString()}.`
+      : entryFee > 0
+        ? 'Prize pool builds as paid slots lock in.'
+        : 'No cash prize.';
+  return `${title} is live on Mechi. ${game}. ${price}. ${prizeCopy} ${slotCopy}. Pull up and prove it.`;
 }
 
 export function getProfileShareStats(profile: Record<string, unknown>) {

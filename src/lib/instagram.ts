@@ -1,4 +1,6 @@
 import { createHmac, timingSafeEqual } from 'node:crypto';
+import { isMockProviderMode, shouldCaptureProviderTranscripts } from '@/lib/provider-mode';
+import { captureProviderTranscript } from '@/lib/provider-transcript';
 
 const INSTAGRAM_GRAPH_API_VERSION = process.env.INSTAGRAM_GRAPH_API_VERSION ?? 'v25.0';
 const INSTAGRAM_VERIFY_TOKEN = process.env.INSTAGRAM_VERIFY_TOKEN ?? '';
@@ -467,10 +469,37 @@ export async function sendInstagramTextMessage(
     return;
   }
 
+  if (isMockProviderMode()) {
+    await captureProviderTranscript({
+      provider: 'instagram',
+      operation: 'reply-text',
+      request: {
+        recipientId,
+        message: trimmedText,
+      },
+      response: {
+        ok: true,
+        mocked: true,
+      },
+    });
+    return;
+  }
+
   if (!INSTAGRAM_PAGE_ACCESS_TOKEN) {
     console.warn(
       '[Instagram] Reply skipped - INSTAGRAM_PAGE_ACCESS_TOKEN is not configured'
     );
+    if (shouldCaptureProviderTranscripts()) {
+      await captureProviderTranscript({
+        provider: 'instagram',
+        operation: 'reply-text',
+        request: {
+          recipientId,
+          message: trimmedText,
+        },
+        error: 'INSTAGRAM_PAGE_ACCESS_TOKEN is not configured',
+      });
+    }
     return;
   }
 
@@ -495,6 +524,21 @@ export async function sendInstagramTextMessage(
     const errorText = await response.text();
     throw new Error(`Instagram Send API error (${response.status}): ${errorText}`);
   }
+
+  if (shouldCaptureProviderTranscripts()) {
+    await captureProviderTranscript({
+      provider: 'instagram',
+      operation: 'reply-text',
+      request: {
+        recipientId,
+        message: trimmedText,
+      },
+      response: {
+        ok: true,
+        status: response.status,
+      },
+    });
+  }
 }
 
 export async function sendInstagramMessage(params: {
@@ -513,14 +557,50 @@ export async function sendInstagramMessage(params: {
     };
   }
 
+  if (isMockProviderMode()) {
+    const mockResult: InstagramSendResult = {
+      ok: true,
+      status: 200,
+      to: recipientId,
+      messageId: `mock-instagram-${Date.now()}`,
+      recipientId,
+    };
+
+    await captureProviderTranscript({
+      provider: 'instagram',
+      operation: 'send-message',
+      request: {
+        recipientId,
+        message,
+      },
+      response: mockResult,
+    });
+
+    return mockResult;
+  }
+
   if (!INSTAGRAM_ENABLED || !INSTAGRAM_ACCESS_TOKEN || !INSTAGRAM_ACCOUNT_ID) {
-    return {
+    const skippedResult: InstagramSendResult = {
       ok: false,
       skipped: true,
       status: 0,
       to: recipientId,
       error: 'Instagram credentials not configured',
     };
+
+    if (shouldCaptureProviderTranscripts()) {
+      await captureProviderTranscript({
+        provider: 'instagram',
+        operation: 'send-message',
+        request: {
+          recipientId,
+          message,
+        },
+        response: skippedResult,
+      });
+    }
+
+    return skippedResult;
   }
 
   try {
@@ -559,7 +639,7 @@ export async function sendInstagramMessage(params: {
               .error
           : undefined;
 
-      return {
+      const errorResult: InstagramSendResult = {
         ok: false,
         status: response.status,
         to: recipientId,
@@ -567,6 +647,20 @@ export async function sendInstagramMessage(params: {
         details: metaError?.error_data?.details,
         responseBody,
       };
+
+      if (shouldCaptureProviderTranscripts()) {
+        await captureProviderTranscript({
+          provider: 'instagram',
+          operation: 'send-message',
+          request: {
+            recipientId,
+            message,
+          },
+          response: errorResult,
+        });
+      }
+
+      return errorResult;
     }
 
     const parsedBody = responseBody as
@@ -576,7 +670,7 @@ export async function sendInstagramMessage(params: {
         }
       | null;
 
-    return {
+    const successResult: InstagramSendResult = {
       ok: true,
       status: response.status,
       to: recipientId,
@@ -584,13 +678,41 @@ export async function sendInstagramMessage(params: {
       recipientId: parsedBody?.recipient_id ?? recipientId,
       responseBody,
     };
+
+    if (shouldCaptureProviderTranscripts()) {
+      await captureProviderTranscript({
+        provider: 'instagram',
+        operation: 'send-message',
+        request: {
+          recipientId,
+          message,
+        },
+        response: successResult,
+      });
+    }
+
+    return successResult;
   } catch (error) {
-    return {
+    const errorResult: InstagramSendResult = {
       ok: false,
       status: 0,
       to: recipientId,
       error: error instanceof Error ? error.message : 'Network error',
     };
+
+    if (shouldCaptureProviderTranscripts()) {
+      await captureProviderTranscript({
+        provider: 'instagram',
+        operation: 'send-message',
+        request: {
+          recipientId,
+          message,
+        },
+        response: errorResult,
+      });
+    }
+
+    return errorResult;
   }
 }
 

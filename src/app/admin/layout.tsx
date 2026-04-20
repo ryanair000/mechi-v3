@@ -1,39 +1,12 @@
-import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { cookies } from 'next/headers';
-import {
-  AtSign,
-  BarChart2,
-  ChevronRight,
-  Clock3,
-  DoorOpen,
-  MessageCircle,
-  ScrollText,
-  Shield,
-  Headset,
-  Swords,
-  Trophy,
-  Users,
-} from 'lucide-react';
+import { Shield, Siren, Wrench } from 'lucide-react';
 import { hasPrimaryAdminAccess } from '@/lib/admin-access';
 import { verifyToken } from '@/lib/auth';
+import { AdminNavigation } from '@/components/AdminNavigation';
 import { BrandLogo } from '@/components/BrandLogo';
 import { createServiceClient } from '@/lib/supabase';
 import { APP_URL } from '@/lib/urls';
-
-const ADMIN_NAV = [
-  { href: '/admin', label: 'Overview', icon: BarChart2 },
-  { href: '/admin/users', label: 'Users', icon: Users },
-  { href: '/admin/rewards', label: 'Rewards', icon: Shield },
-  { href: '/admin/queue', label: 'Queue', icon: Clock3 },
-  { href: '/admin/lobbies', label: 'Lobbies', icon: DoorOpen },
-  { href: '/admin/matches', label: 'Matches', icon: Swords },
-  { href: '/admin/tournaments', label: 'Tournaments', icon: Trophy },
-  { href: '/admin/support', label: 'Support', icon: Headset },
-  { href: '/admin/whatsapp', label: 'WhatsApp', icon: MessageCircle, adminOnly: true },
-  { href: '/admin/instagram', label: 'Instagram', icon: AtSign, adminOnly: true },
-  { href: '/admin/logs', label: 'Audit Log', icon: ScrollText, adminOnly: true },
-];
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const appDashboardUrl = `${APP_URL}/dashboard`;
@@ -56,67 +29,80 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     redirect(appDashboardUrl);
   }
 
-  const visibleNav = ADMIN_NAV.filter((item) => !item.adminOnly || profile.role === 'admin');
-
   return (
-    <div className="page-base min-h-screen lg:grid lg:grid-cols-[16rem_1fr]">
-      <aside className="hidden border-r border-[var(--border-color)] bg-[var(--surface-soft)] p-4 lg:block">
-        <div className="mb-8 flex items-center justify-between">
+    <div
+      className="page-base app-prototype-shell admin-prototype-shell relative min-h-screen"
+      data-theme="dark"
+      style={{ colorScheme: 'dark' }}
+    >
+      <div className="app-shell-grid" />
+
+      <aside className="admin-sidebar hidden border-r border-[var(--border-color)] lg:fixed lg:inset-y-0 lg:left-0 lg:z-30 lg:flex lg:w-64 lg:flex-col">
+        <div className="flex items-center justify-between border-b border-[var(--border-color)] px-4 py-4">
           <a href={appDashboardUrl} className="flex items-center">
             <BrandLogo size="sm" variant="reversed" />
           </a>
-          <span className="rounded-full bg-[var(--danger-soft)] px-2 py-1 text-[10px] font-black uppercase tracking-[0.14em] text-red-500">
-            {profile.role}
-          </span>
+          <span className="brand-chip-coral px-2.5 py-1">{profile.role}</span>
         </div>
 
-        <div className="mb-3 flex items-center gap-2 px-3 text-xs font-black uppercase tracking-[0.16em] text-[var(--text-soft)]">
-          <Shield size={13} /> Control room
+        <div className="flex flex-1 flex-col px-3 py-4">
+          <div className="mb-3 flex items-center gap-2 px-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--text-soft)]">
+            <Shield size={13} />
+            Control room
+          </div>
+          <div className="mb-5 rounded-[0.55rem] border border-[var(--border-color)] bg-white/[0.03] px-3 py-3">
+            <div className="flex items-center gap-2 text-[var(--accent-secondary-text)]">
+              <Siren size={14} />
+              <p className="text-xs font-bold uppercase tracking-[0.14em]">Live ops + risk</p>
+            </div>
+            <p className="mt-2 text-xs leading-6 text-[var(--text-secondary)]">
+              Start with urgent intervention lanes, then drill into tools only when you need deeper proof
+              or system checks.
+            </p>
+          </div>
+
+          <nav className="space-y-1">
+            <AdminNavigation role={profile.role} />
+          </nav>
+
+          <div className="admin-sidebar-card mt-auto p-3">
+            <div className="flex items-center gap-2 text-[var(--text-soft)]">
+              <Wrench size={13} />
+              <p className="text-[10px] font-semibold uppercase tracking-[0.18em]">Access</p>
+            </div>
+            <p className="mt-2 text-sm font-black text-[var(--text-primary)]">{profile.role}</p>
+            <p className="mt-2 text-xs leading-6 text-[var(--text-secondary)]">
+              Messaging tests and the audit trail stay available in the lower-weight tools area.
+            </p>
+            <a href={appDashboardUrl} className="btn-ghost mt-3 w-full justify-center">
+              Back to app
+            </a>
+          </div>
         </div>
-        <nav className="space-y-1">
-          {visibleNav.map(({ href, label, icon: Icon }) => (
-            <Link
-              key={href}
-              href={href}
-              className="group flex items-center gap-3 rounded-[var(--radius-panel)] px-3 py-2.5 text-sm font-semibold text-[var(--text-secondary)] transition-colors hover:bg-[var(--surface)] hover:text-[var(--text-primary)]"
-            >
-              <Icon size={16} />
-              <span className="flex-1">{label}</span>
-              <ChevronRight size={13} className="opacity-0 transition-opacity group-hover:opacity-50" />
-            </Link>
-          ))}
-        </nav>
-        <a href={appDashboardUrl} className="brand-link mt-8 inline-flex px-3 text-sm font-semibold">
-          Back to app
-        </a>
       </aside>
 
-      <main className="min-w-0">
-        <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6 lg:py-8">
-          <div className="mb-5 flex items-center justify-between lg:hidden">
+      <main className="relative min-h-screen overflow-x-hidden lg:pl-64">
+        <header className="app-utility-header sticky top-0 z-20 lg:hidden">
+          <div className="flex items-center justify-between px-4 py-3 sm:px-6">
             <BrandLogo size="sm" />
-            <a href={appDashboardUrl} className="brand-link text-sm font-black">
+            <a href={appDashboardUrl} className="btn-outline min-h-9 px-3 py-2 text-xs">
               App
             </a>
           </div>
 
-          <div className="mb-6 lg:hidden">
-            <div className="-mx-4 overflow-x-auto pb-1 no-scrollbar sm:-mx-6">
-              <nav className="flex gap-2 px-4 sm:px-6" aria-label="Admin sections">
-                {visibleNav.map(({ href, label, icon: Icon }) => (
-                  <Link
-                    key={href}
-                    href={href}
-                    className="inline-flex items-center gap-2 rounded-full border border-[var(--border-color)] bg-[var(--surface)] px-3 py-2 text-sm font-semibold text-[var(--text-secondary)] whitespace-nowrap"
-                  >
-                    <Icon size={14} />
-                    <span>{label}</span>
-                  </Link>
-                ))}
+          <div className="border-t border-[var(--border-color)] px-4 pb-3 pt-3 sm:px-6">
+            <div className="rounded-[0.55rem] border border-[var(--border-color)] bg-[rgba(255,255,255,0.02)] p-3">
+              <div className="mb-2 text-[10px] font-bold uppercase tracking-[0.18em] text-[var(--text-soft)]">
+                Decision lanes
+              </div>
+              <nav aria-label="Admin sections">
+                <AdminNavigation role={profile.role} variant="mobile" />
               </nav>
             </div>
           </div>
+        </header>
 
+        <div className="mx-auto w-full max-w-[72rem] px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
           {children}
         </div>
       </main>

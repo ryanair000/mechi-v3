@@ -18,6 +18,7 @@ const PROTECTED_PREFIXES = [
   '/challenges',
   '/notifications',
   '/share',
+  '/rewards',
   '/suggest',
   '/tutorials',
   '/api/queue',
@@ -35,7 +36,6 @@ const PROTECTED_PREFIXES = [
 const ADMIN_PREFIXES = ['/admin', '/api/admin'];
 const CONNECT_HOSTS = new Set(['connect.mechi.club']);
 const CANONICAL_ADMIN_HOST = 'mechi.lokimax.top';
-const CANONICAL_APP_URL = 'https://mechi.club';
 const ADMIN_HOSTS = new Set([CONFIGURED_ADMIN_HOST, CANONICAL_ADMIN_HOST]);
 
 const ADMIN_HOST_PATH_ALIASES: Record<string, string> = {
@@ -130,7 +130,7 @@ function getAdminHostAlias(pathname: string) {
 }
 
 function redirectToAppHost(pathname: string, request: NextRequest) {
-  return NextResponse.redirect(new URL(`${pathname}${request.nextUrl.search}`, CANONICAL_APP_URL));
+  return NextResponse.redirect(new URL(`${pathname}${request.nextUrl.search}`, APP_URL));
 }
 
 function base64UrlDecode(value: string) {
@@ -240,7 +240,7 @@ function forbiddenResponse(pathname: string, request: NextRequest, message = 'Fo
   }
 
   if (isAdminHost(request)) {
-    return NextResponse.redirect(new URL('/dashboard', CANONICAL_APP_URL));
+    return NextResponse.redirect(new URL('/dashboard', APP_URL));
   }
 
   return NextResponse.redirect(new URL('/dashboard', request.url));
@@ -269,6 +269,13 @@ function adminHostOnlyResponse(pathname: string, request: NextRequest) {
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const host = getRequestHost(request);
+  const adminHost = ADMIN_HOSTS.has(host);
+
+  if (pathname === '/share' && request.nextUrl.searchParams.get('chezahub_link') === 'success') {
+    const redirectUrl = new URL('/rewards', adminHost ? APP_URL : request.url);
+    redirectUrl.search = request.nextUrl.search;
+    return NextResponse.redirect(redirectUrl);
+  }
 
   if (CONNECT_HOSTS.has(host) && pathname === '/') {
     const connectUrl = request.nextUrl.clone();
@@ -276,7 +283,6 @@ export async function proxy(request: NextRequest) {
     return NextResponse.rewrite(connectUrl);
   }
 
-  const adminHost = ADMIN_HOSTS.has(host);
   const adminHostAlias = adminHost ? getAdminHostAlias(pathname) : null;
   const effectivePathname = adminHostAlias ?? pathname;
 

@@ -6,7 +6,19 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test:e2e": "node ./e2e/scripts/run-playwright.mjs",
+    "test:e2e:public-auth": "node ./e2e/scripts/run-playwright.mjs --project=desktop-core e2e/specs/public-auth.spec.ts",
+    "test:e2e:player-desktop": "node ./e2e/scripts/run-playwright.mjs --project=desktop-core e2e/specs/player-pages.spec.ts e2e/specs/competition-flows.spec.ts",
+    "test:e2e:player-mobile": "node ./e2e/scripts/run-playwright.mjs --project=mobile-core",
+    "test:e2e:core": "node ./e2e/scripts/run-playwright.mjs --project=desktop-core --project=mobile-core",
+    "test:e2e:admin": "node ./e2e/scripts/run-playwright.mjs --project=admin",
+    "test:e2e:provider-mock": "node ./e2e/scripts/run-playwright.mjs --project=providers-mock",
+    "test:e2e:provider-sandbox": "node ./e2e/scripts/run-playwright.mjs --provider-mode=sandbox --project=providers-sandbox",
+    "test:e2e:cross-browser": "node ./e2e/scripts/run-playwright.mjs --project=cross-browser-chromium --project=cross-browser-firefox --project=cross-browser-webkit",
+    "test:e2e:headed": "node ./e2e/scripts/run-playwright.mjs --headed",
+    "test:e2e:report": "playwright show-report playwright-report",
+    "test:e2e:install": "playwright install chromium firefox webkit"
   },
   "dependencies": {
     "@number-flow/react": "^0.6.0",
@@ -36,6 +48,7 @@
     "zustand": "^5.0.12"
   },
   "devDependencies": {
+    "@playwright/test": "^1.56.0",
     "@tailwindcss/postcss": "^4",
     "@types/bcryptjs": "^2.4.6",
     "@types/jsonwebtoken": "^9.0.10",

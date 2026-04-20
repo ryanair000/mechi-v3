@@ -258,7 +258,8 @@ export default function CreateTournamentPage() {
                 {
                   key: 'paid' as const,
                   title: 'Paid entry',
-                  copy: 'Players pay a KES fee to join and the winner gets the prize pool after platform fee.',
+                  copy:
+                    'Players pay to join, and every successful paid checkout adds to the live prize pool.',
                 },
                 {
                   key: 'free' as const,
@@ -318,7 +319,7 @@ export default function CreateTournamentPage() {
                 Platform fee
               </p>
               <p className="mt-1 text-sm font-black text-[var(--text-primary)]">
-                {currentPlan.tournamentFeePercent}% on this plan
+                {currentPlan.tournamentFeePercent}% reference rate
               </p>
             </div>
           </div>
@@ -341,7 +342,7 @@ export default function CreateTournamentPage() {
             </div>
             {form.entry_type === 'free'
               ? 'Free-entry brackets stay open to join. Pro and Elite can host them, and Elite pays 0% platform fee.'
-              : `Mechi keeps ${currentPlan.tournamentFeePercent}%. The winner gets the remaining pool when the final result is confirmed.`}
+              : 'Every paid slot grows the live prize pool. Free organizer or comped slots do not add cash to the pool.'}
           </div>
 
           {createFeedback ? (

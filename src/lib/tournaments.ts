@@ -8,6 +8,11 @@ import {
   normaliseKenyanPhone,
 } from '@/lib/paystack';
 import {
+  CONFIRMED_PAYMENT_STATUSES,
+  getTournamentPaymentMetrics,
+  getTournamentPrize,
+} from '@/lib/tournament-metrics';
+import {
   sendTournamentFullEmail,
   sendTournamentMatchReadyEmail,
   sendTournamentWinnerEmail,
@@ -21,9 +26,14 @@ import type {
   TournamentMatch,
   TournamentPlayer,
 } from '@/types';
-
-export const CONFIRMED_PAYMENT_STATUSES = ['paid', 'free'] as const;
-export const ACTIVE_TOURNAMENT_PLAYER_STATUSES = ['pending', ...CONFIRMED_PAYMENT_STATUSES] as const;
+export {
+  ACTIVE_TOURNAMENT_PLAYER_STATUSES,
+  CONFIRMED_PAYMENT_STATUSES,
+  getTournamentPaymentMetrics,
+  getTournamentPrize,
+  getTournamentPrizeSnapshot,
+  isActiveTournamentPlayerStatus,
+} from '@/lib/tournament-metrics';
 
 const TOURNAMENT_PAYMENT_HOLD_MINUTES = 15;
 
@@ -57,25 +67,6 @@ export function getAppUrl(): string {
 
 export function getTournamentUrl(slug: string): string {
   return `${getAppUrl()}/t/${slug}`;
-}
-
-export function getTournamentPrize(entryFee: number, playerCount: number, feeRate = 5) {
-  const gross = Math.max(0, entryFee) * Math.max(0, playerCount);
-  const platformFee = Math.floor((gross * feeRate) / 100);
-  return {
-    gross,
-    platformFee,
-    prizePool: Math.max(0, gross - platformFee),
-  };
-}
-
-export function isActiveTournamentPlayerStatus(status: string | null | undefined): boolean {
-  return Boolean(
-    status &&
-      ACTIVE_TOURNAMENT_PLAYER_STATUSES.includes(
-        status as (typeof ACTIVE_TOURNAMENT_PLAYER_STATUSES)[number]
-      )
-  );
 }
 
 export async function releaseExpiredTournamentReservations(
@@ -286,9 +277,10 @@ export async function startTournament(params: {
     if (error) return { success: false, error: 'Could not seed players' };
   }
 
+  const { paidCount } = getTournamentPaymentMetrics(players);
   const { prizePool, platformFee } = getTournamentPrize(
     tournament.entry_fee,
-    tournament.size,
+    paidCount,
     tournament.platform_fee_rate
   );
 

@@ -221,6 +221,25 @@ export default function AdminLobbiesPage() {
 
     return { open, full, live, overdue };
   }, [lobbies]);
+  const sortedLobbies = useMemo(
+    () =>
+      [...lobbies].sort((left, right) => {
+        const leftOverdue = isOverdue(left);
+        const rightOverdue = isOverdue(right);
+
+        if (leftOverdue !== rightOverdue) {
+          return leftOverdue ? -1 : 1;
+        }
+
+        const rank = { in_progress: 0, full: 1, open: 2, closed: 3 } as const;
+        if (left.status !== right.status) {
+          return rank[left.status as keyof typeof rank] - rank[right.status as keyof typeof rank];
+        }
+
+        return new Date(right.created_at).getTime() - new Date(left.created_at).getTime();
+      }),
+    [lobbies]
+  );
 
   const lobbyGames = useMemo(
     () => getSelectableGameKeys().filter((gameKey) => supportsLobbyMode(gameKey)),
@@ -337,7 +356,7 @@ export default function AdminLobbiesPage() {
         </div>
       ) : (
         <div className="space-y-3">
-          {lobbies.map((lobby) => {
+          {sortedLobbies.map((lobby) => {
             const gameLabel = GAMES[lobby.game]?.label ?? lobby.game;
             const selected = selectedLobbyId === lobby.id;
             const closing = actingKey === `close:${lobby.id}`;
@@ -384,38 +403,26 @@ export default function AdminLobbiesPage() {
                       Host {lobby.host?.username ?? 'Unknown'} | {lobby.member_count}/{lobby.max_players} players | Room code {lobby.room_code} | {visibility === 'public' ? 'Public room' : 'Private room'}
                     </p>
 
-                    <div className="mt-3 grid gap-3 md:grid-cols-3">
-                      <div className="rounded-2xl border border-[var(--border-color)] bg-[var(--surface-elevated)] px-4 py-3">
-                        <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[var(--text-soft)]">
-                          Schedule
-                        </p>
-                        <p className="mt-2 text-sm font-black text-[var(--text-primary)]">
-                          {formatSchedule(lobby.scheduled_for)}
-                        </p>
-                      </div>
-
-                      <div className="rounded-2xl border border-[var(--border-color)] bg-[var(--surface-elevated)] px-4 py-3">
-                        <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[var(--text-soft)]">
-                          Mode
-                        </p>
-                        <p className="mt-2 text-sm font-black text-[var(--text-primary)]">{lobby.mode || 'Lobby'}</p>
-                        <p className="mt-1 text-xs text-[var(--text-secondary)]">
-                          {lobby.map_name ? `Map ${lobby.map_name}` : 'No map set'}
-                        </p>
-                      </div>
-
-                      <div className="rounded-2xl border border-[var(--border-color)] bg-[var(--surface-elevated)] px-4 py-3">
-                        <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[var(--text-soft)]">
-                          Host lane
-                        </p>
-                        <p className="mt-2 text-sm font-black text-[var(--text-primary)]">
-                          {lobby.host?.phone ?? 'No phone on profile'}
-                        </p>
-                        <p className="mt-1 text-xs text-[var(--text-secondary)]">
-                          {lobby.host?.email ?? 'No email on profile'}
-                        </p>
-                      </div>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      <span className="rounded-full border border-[var(--border-color)] bg-[var(--surface-elevated)] px-3 py-1.5 text-xs text-[var(--text-secondary)]">
+                        Schedule {formatSchedule(lobby.scheduled_for)}
+                      </span>
+                      <span className="rounded-full border border-[var(--border-color)] bg-[var(--surface-elevated)] px-3 py-1.5 text-xs text-[var(--text-secondary)]">
+                        {lobby.mode || 'Lobby'}
+                        {lobby.map_name ? ` | ${lobby.map_name}` : ' | No map set'}
+                      </span>
+                      <span className="rounded-full border border-[var(--border-color)] bg-[var(--surface-elevated)] px-3 py-1.5 text-xs text-[var(--text-secondary)]">
+                        Host {lobby.host?.phone ?? 'No phone'}
+                      </span>
                     </div>
+
+                    <p className="mt-3 text-sm leading-6 text-[var(--text-secondary)]">
+                      {isOverdue(lobby)
+                        ? 'This room has drifted past its scheduled start time and should be the first place you look for cleanup.'
+                        : lobby.status === 'in_progress'
+                          ? 'This room is already live. Use inspect only if someone needs removal or the host loses control.'
+                          : 'This room is still staged correctly and mostly needs monitoring rather than intervention.'}
+                    </p>
                   </div>
 
                   <div className="flex flex-wrap items-center gap-2">

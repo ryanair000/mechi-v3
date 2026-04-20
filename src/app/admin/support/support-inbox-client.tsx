@@ -125,6 +125,32 @@ function latestPreview(thread: SupportThread) {
   return `${prefix}: ${body}`;
 }
 
+function getThreadDecision(thread: SupportThread) {
+  if (thread.status === 'blocked') {
+    return 'Investigate the block reason before the customer is left without a path forward.';
+  }
+
+  if (thread.status === 'waiting_on_human') {
+    return thread.assignee?.username
+      ? 'Send the human follow-up and close the loop.'
+      : 'Claim this thread and send the first human reply.';
+  }
+
+  if (thread.status === 'waiting_on_ai') {
+    return 'Watch the AI handoff and step in if the response misses the customer need.';
+  }
+
+  if (!thread.user) {
+    return 'Confirm who this contact belongs to, then relink if the conversation is account-specific.';
+  }
+
+  if (thread.status === 'resolved') {
+    return 'Historical conversation only unless the customer comes back.';
+  }
+
+  return 'Monitor the conversation and keep ownership clear.';
+}
+
 export default function SupportInboxClient() {
   const { user } = useAuth();
   const authFetch = useAuthFetch();
@@ -140,7 +166,7 @@ export default function SupportInboxClient() {
   const [detailLoading, setDetailLoading] = useState(false);
   const [selectedThreadId, setSelectedThreadId] = useState<string | null>(null);
   const [detail, setDetail] = useState<SupportDetailResponse | null>(null);
-  const [statusFilter, setStatusFilter] = useState<SupportThreadStatus | 'all'>('all');
+  const [statusFilter, setStatusFilter] = useState<SupportThreadStatus | 'all'>('waiting_on_human');
   const [query, setQuery] = useState('');
   const [actioning, setActioning] = useState<string | null>(null);
   const [reply, setReply] = useState('');
@@ -228,6 +254,46 @@ export default function SupportInboxClient() {
     () => threads.find((thread) => thread.id === selectedThreadId) ?? null,
     [selectedThreadId, threads]
   );
+  const orderedThreads = useMemo(
+    () =>
+      [...threads].sort((left, right) => {
+        const priorityRank = { urgent: 0, high: 1, normal: 2, low: 3 } as const;
+        const statusRank = {
+          waiting_on_human: 0,
+          blocked: 1,
+          open: 2,
+          waiting_on_ai: 3,
+          resolved: 4,
+        } as const;
+
+        if (left.status !== right.status) {
+          return (
+            statusRank[left.status as keyof typeof statusRank] -
+            statusRank[right.status as keyof typeof statusRank]
+          );
+        }
+
+        if (left.priority !== right.priority) {
+          return (
+            priorityRank[left.priority as keyof typeof priorityRank] -
+            priorityRank[right.priority as keyof typeof priorityRank]
+          );
+        }
+
+        return new Date(right.last_message_at).getTime() - new Date(left.last_message_at).getTime();
+      }),
+    [threads]
+  );
+  const inboxSummary = useMemo(
+    () => ({
+      nextDecision: orderedThreads[0] ?? null,
+      needsHuman: counts.waiting_on_human ?? 0,
+      urgent: threads.filter((thread) => thread.priority === 'urgent').length,
+      unassigned: threads.filter((thread) => !thread.assignee?.username).length,
+      blocked: counts.blocked ?? 0,
+    }),
+    [counts, orderedThreads, threads]
+  );
 
   const runThreadAction = useCallback(
     async (
@@ -299,22 +365,58 @@ export default function SupportInboxClient() {
             </p>
           </div>
 
-          <div className="grid gap-2 sm:grid-cols-5">
-            {(['open', 'waiting_on_ai', 'waiting_on_human', 'resolved', 'blocked'] as SupportThreadStatus[]).map(
-              (status) => (
-                <div
-                  key={status}
-                  className="rounded-2xl border border-[var(--border-color)] bg-[var(--surface-elevated)] px-4 py-3"
-                >
-                  <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[var(--text-soft)]">
-                    {status.replaceAll('_', ' ')}
-                  </p>
-                  <p className="mt-2 text-2xl font-black text-[var(--text-primary)]">
-                    {counts[status] ?? 0}
-                  </p>
-                </div>
-              )
-            )}
+          <div className="grid gap-2 xl:grid-cols-[minmax(0,1.25fr)_repeat(4,minmax(0,1fr))]">
+            <div className="rounded-2xl border border-[var(--border-color)] bg-[var(--surface-elevated)] px-4 py-3">
+              <p className="section-title">Next decision</p>
+              <p className="mt-2 text-sm font-black text-[var(--text-primary)]">
+                {inboxSummary.nextDecision ? threadIdentity(inboxSummary.nextDecision) : 'Inbox is under control'}
+              </p>
+              <p className="mt-2 text-xs leading-5 text-[var(--text-secondary)]">
+                {inboxSummary.nextDecision
+                  ? getThreadDecision(inboxSummary.nextDecision)
+                  : 'No support thread needs immediate action right now.'}
+              </p>
+            </div>
+
+            <div className="rounded-2xl border border-[var(--border-color)] bg-[var(--surface-elevated)] px-4 py-3">
+              <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[var(--text-soft)]">
+                Needs human
+              </p>
+              <p className="mt-2 text-2xl font-black text-[var(--brand-coral)]">{inboxSummary.needsHuman}</p>
+              <p className="mt-2 text-xs leading-5 text-[var(--text-secondary)]">
+                Conversations waiting on a manual reply.
+              </p>
+            </div>
+
+            <div className="rounded-2xl border border-[var(--border-color)] bg-[var(--surface-elevated)] px-4 py-3">
+              <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[var(--text-soft)]">
+                Urgent
+              </p>
+              <p className="mt-2 text-2xl font-black text-red-400">{inboxSummary.urgent}</p>
+              <p className="mt-2 text-xs leading-5 text-[var(--text-secondary)]">
+                High-risk threads that should not drift.
+              </p>
+            </div>
+
+            <div className="rounded-2xl border border-[var(--border-color)] bg-[var(--surface-elevated)] px-4 py-3">
+              <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[var(--text-soft)]">
+                Unassigned
+              </p>
+              <p className="mt-2 text-2xl font-black text-[#60A5FA]">{inboxSummary.unassigned}</p>
+              <p className="mt-2 text-xs leading-5 text-[var(--text-secondary)]">
+                Threads without clear human ownership.
+              </p>
+            </div>
+
+            <div className="rounded-2xl border border-[var(--border-color)] bg-[var(--surface-elevated)] px-4 py-3">
+              <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[var(--text-soft)]">
+                Blocked
+              </p>
+              <p className="mt-2 text-2xl font-black text-amber-400">{inboxSummary.blocked}</p>
+              <p className="mt-2 text-xs leading-5 text-[var(--text-secondary)]">
+                Threads that need unblock or policy review.
+              </p>
+            </div>
           </div>
         </div>
       </section>
@@ -363,7 +465,7 @@ export default function SupportInboxClient() {
           </div>
 
           <div className="mt-4 space-y-3">
-            {loading ? (
+                {loading ? (
               <>
                 <div className="h-28 shimmer rounded-3xl" />
                 <div className="h-28 shimmer rounded-3xl" />
@@ -374,7 +476,7 @@ export default function SupportInboxClient() {
                 No support threads matched this filter yet.
               </div>
             ) : (
-              threads.map((thread) => (
+                orderedThreads.map((thread) => (
                 <button
                   key={thread.id}
                   type="button"
@@ -404,6 +506,9 @@ export default function SupportInboxClient() {
                     {threadContactLine(thread)}
                     {thread.user?.plan ? ` | ${thread.user.plan}` : ''}
                     {thread.assignee?.username ? ` | assigned to ${thread.assignee.username}` : ' | unassigned'}
+                  </p>
+                  <p className="mt-3 text-sm font-semibold text-[var(--text-primary)]">
+                    {getThreadDecision(thread)}
                   </p>
                   <p className="mt-3 line-clamp-2 text-sm leading-6 text-[var(--text-secondary)]">
                     {latestPreview(thread)}
@@ -457,6 +562,9 @@ export default function SupportInboxClient() {
                     </div>
                     <p className="mt-2 text-sm text-[var(--text-secondary)]">
                       {threadContactLine(detail.thread)}
+                    </p>
+                    <p className="mt-3 text-sm font-semibold text-[var(--text-primary)]">
+                      {getThreadDecision(detail.thread)}
                     </p>
                     <p className="mt-1 text-xs text-[var(--text-soft)]">
                       Last message {formatTimestamp(detail.thread.last_message_at)}

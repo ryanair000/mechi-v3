@@ -2,6 +2,7 @@ import { ImageResponse } from 'next/og';
 import { NextRequest } from 'next/server';
 import { GAMES } from '@/lib/config';
 import { createServiceClient } from '@/lib/supabase';
+import { getTournamentPaymentMetrics, getTournamentPrizeSnapshot } from '@/lib/tournament-metrics';
 import type { GameKey } from '@/types';
 
 export const runtime = 'edge';
@@ -46,12 +47,24 @@ export async function GET(request: NextRequest) {
 
   const { data: players } = await supabase
     .from('tournament_players')
-    .select('tournament_id')
+    .select('payment_status')
     .eq('tournament_id', tournament.id)
     .in('payment_status', ['paid', 'free']);
 
   const game = GAMES[tournament.game as GameKey]?.label ?? tournament.game;
-  const playerCount = (players ?? []).length;
+  const metrics = getTournamentPaymentMetrics(
+    ((players ?? []) as Array<{ payment_status: string | null | undefined }>).map((player) => ({
+      payment_status: player.payment_status,
+    }))
+  );
+  const prize = getTournamentPrizeSnapshot({
+    entryFee: Number(tournament.entry_fee ?? 0),
+    paidPlayerCount: metrics.paidCount,
+    feeRate: Number(tournament.platform_fee_rate ?? 5),
+    storedPrizePool: Number(tournament.prize_pool ?? 0),
+    storedPlatformFee: Number(tournament.platform_fee ?? 0),
+  });
+  const playerCount = metrics.confirmedCount;
 
   return new ImageResponse(
     (
@@ -142,7 +155,17 @@ export async function GET(request: NextRequest) {
           >
             <Metric label="Players" value={`${playerCount}/${tournament.size}`} color="#32E0C4" />
             <Metric label="Entry" value={tournament.entry_fee > 0 ? `KES ${tournament.entry_fee}` : 'Free'} color="#FF6B6B" />
-            <Metric label="Prize" value={tournament.prize_pool > 0 ? `KES ${tournament.prize_pool}` : 'Glory'} color="white" />
+            <Metric
+              label="Prize"
+              value={
+                prize.prizePool > 0
+                  ? `KES ${prize.prizePool.toLocaleString()}`
+                  : tournament.entry_fee > 0
+                    ? 'KES 0'
+                    : 'No cash'
+              }
+              color="white"
+            />
           </div>
         </div>
       </div>

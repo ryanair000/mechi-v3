@@ -230,7 +230,8 @@ export default function TournamentDetailPage() {
     tournament.title,
     game?.label ?? tournament.game,
     tournament.entry_fee,
-    tournament.slots_left
+    tournament.slots_left,
+    tournament.prize_pool
   );
 
   return (
@@ -272,7 +273,17 @@ export default function TournamentDetailPage() {
         <div className="grid gap-3 p-5 sm:grid-cols-4 sm:p-6">
           <StatCard icon={<Users size={15} />} label="Players" value={`${tournament.confirmed_count}/${tournament.size}`} />
           <StatCard icon={<Swords size={15} />} label="Entry" value={tournament.entry_fee > 0 ? `KES ${tournament.entry_fee}` : 'Free'} />
-          <StatCard icon={<Trophy size={15} />} label="Prize" value={tournament.prize_pool > 0 ? `KES ${tournament.prize_pool}` : 'Glory'} />
+          <StatCard
+            icon={<Trophy size={15} />}
+            label="Prize pool"
+            value={
+              tournament.prize_pool > 0
+                ? `KES ${tournament.prize_pool.toLocaleString()}`
+                : tournament.entry_fee > 0
+                  ? 'KES 0'
+                  : 'No cash'
+            }
+          />
           <StatCard icon={<Clock size={15} />} label="Slots left" value={String(tournament.slots_left)} />
         </div>
       </div>

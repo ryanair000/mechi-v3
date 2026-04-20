@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import toast from 'react-hot-toast';
 import { AlertTriangle, Check, Loader2, MessageCircle, Send, Swords, X } from 'lucide-react';
 import { useAuthFetch } from '@/components/AuthProvider';
@@ -80,6 +80,7 @@ const MATCH_ESCALATION_REASON_LABELS: Record<MatchEscalationReason, string> = {
   abuse: 'Abuse',
   other: 'Other',
 };
+const STALE_PENDING_MINUTES = 30;
 
 function formatChatTime(value: string) {
   return new Date(value).toLocaleTimeString('en-KE', {
@@ -111,6 +112,75 @@ function formatRelativeTime(value?: string | null) {
 
   const diffDays = Math.round(diffHours / 24);
   return `${diffDays}d ago`;
+}
+
+function getMatchAgeMinutes(value: string) {
+  return Math.max(0, Math.round((Date.now() - new Date(value).getTime()) / 60000));
+}
+
+function matchStatusClass(status: string) {
+  switch (status) {
+    case 'disputed':
+      return 'bg-amber-500/14 text-amber-400';
+    case 'completed':
+      return 'bg-[var(--surface-elevated)] text-[var(--text-secondary)]';
+    case 'pending':
+      return 'bg-blue-500/14 text-blue-400';
+    default:
+      return 'bg-red-500/14 text-red-400';
+  }
+}
+
+function getMatchPriority(match: MatchRow) {
+  const ageMinutes = getMatchAgeMinutes(match.created_at);
+
+  if ((match.open_escalation_count ?? 0) > 0) {
+    return 0;
+  }
+
+  if (match.status === 'disputed') {
+    return 1;
+  }
+
+  if (match.status === 'pending' && ageMinutes >= STALE_PENDING_MINUTES) {
+    return 2;
+  }
+
+  if (match.status === 'pending') {
+    return 3;
+  }
+
+  if (match.status === 'completed') {
+    return 4;
+  }
+
+  return 5;
+}
+
+function getMatchDecision(match: MatchRow) {
+  const ageMinutes = getMatchAgeMinutes(match.created_at);
+
+  if ((match.open_escalation_count ?? 0) > 0) {
+    return 'Reply to the help request and unblock the players before the match stalls further.';
+  }
+
+  if (match.status === 'disputed') {
+    return 'Review the reported winner and dispute proof, then set the final result.';
+  }
+
+  if (match.status === 'pending' && ageMinutes >= STALE_PENDING_MINUTES) {
+    return 'Check if the match should be nudged forward or cancelled as a stale session.';
+  }
+
+  if (match.status === 'pending') {
+    return 'Monitor until a result lands or a player asks for help.';
+  }
+
+  if (match.status === 'completed') {
+    return 'Historical result only. No intervention is needed unless a new dispute appears.';
+  }
+
+  return 'Watch for player friction and step in if the live session drifts.';
 }
 
 function getChatSenderLabel(message: MatchChatMessage) {
@@ -356,6 +426,38 @@ export default function AdminMatchesPage() {
     },
     [doAction, resolutionNotes]
   );
+  const sortedMatches = useMemo(
+    () =>
+      [...matches].sort((left, right) => {
+        const leftPriority = getMatchPriority(left);
+        const rightPriority = getMatchPriority(right);
+
+        if (leftPriority !== rightPriority) {
+          return leftPriority - rightPriority;
+        }
+
+        return new Date(left.created_at).getTime() - new Date(right.created_at).getTime();
+      }),
+    [matches]
+  );
+  const summaryCards = useMemo(
+    () => {
+      const helpRequests = matches.filter((match) => (match.open_escalation_count ?? 0) > 0).length;
+      const disputed = matches.filter((match) => match.status === 'disputed').length;
+      const stalePending = matches.filter(
+        (match) => match.status === 'pending' && getMatchAgeMinutes(match.created_at) >= STALE_PENDING_MINUTES
+      ).length;
+      const leadMatch = sortedMatches[0] ?? null;
+
+      return {
+        helpRequests,
+        disputed,
+        stalePending,
+        leadMatch,
+      };
+    },
+    [matches, sortedMatches]
+  );
 
   return (
     <div className="space-y-5">
@@ -388,6 +490,52 @@ export default function AdminMatchesPage() {
             ))}
           </div>
         </div>
+
+        <div className="mt-5 grid gap-3 xl:grid-cols-[minmax(0,1.3fr)_repeat(3,minmax(0,1fr))]">
+          <div className="rounded-3xl border border-[var(--border-color)] bg-[var(--surface-elevated)] px-4 py-4">
+            <p className="section-title">Next decision</p>
+            <p className="mt-2 text-base font-black text-[var(--text-primary)]">
+              {summaryCards.leadMatch
+                ? `${summaryCards.leadMatch.player1?.username ?? 'Unknown'} vs ${summaryCards.leadMatch.player2?.username ?? 'Unknown'}`
+                : 'No active intervention needed'}
+            </p>
+            <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">
+              {summaryCards.leadMatch
+                ? getMatchDecision(summaryCards.leadMatch)
+                : 'This lane is clear right now.'}
+            </p>
+          </div>
+
+          <div className="rounded-3xl border border-[var(--border-color)] bg-[var(--surface-elevated)] px-4 py-4">
+            <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[var(--text-soft)]">
+              Help requests
+            </p>
+            <p className="mt-2 text-2xl font-black text-[var(--brand-coral)]">{summaryCards.helpRequests}</p>
+            <p className="mt-2 text-xs leading-5 text-[var(--text-secondary)]">
+              Player escalations waiting on human review.
+            </p>
+          </div>
+
+          <div className="rounded-3xl border border-[var(--border-color)] bg-[var(--surface-elevated)] px-4 py-4">
+            <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[var(--text-soft)]">
+              Disputes
+            </p>
+            <p className="mt-2 text-2xl font-black text-amber-400">{summaryCards.disputed}</p>
+            <p className="mt-2 text-xs leading-5 text-[var(--text-secondary)]">
+              Matches that need a final result decision.
+            </p>
+          </div>
+
+          <div className="rounded-3xl border border-[var(--border-color)] bg-[var(--surface-elevated)] px-4 py-4">
+            <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[var(--text-soft)]">
+              Stale pending
+            </p>
+            <p className="mt-2 text-2xl font-black text-[#60A5FA]">{summaryCards.stalePending}</p>
+            <p className="mt-2 text-xs leading-5 text-[var(--text-secondary)]">
+              Pending matches older than {STALE_PENDING_MINUTES} minutes.
+            </p>
+          </div>
+        </div>
       </div>
 
       {loading ? (
@@ -406,7 +554,7 @@ export default function AdminMatchesPage() {
         </div>
       ) : (
         <div className="space-y-3">
-          {matches.map((match) => {
+          {sortedMatches.map((match) => {
             const gameLabel = GAMES[match.game]?.label ?? match.game;
             const platformLabel = match.platform
               ? (PLATFORMS[match.platform]?.label ?? match.platform)
@@ -427,6 +575,8 @@ export default function AdminMatchesPage() {
                 ? `${match.player1_score}-${match.player2_score}`
                 : null;
             const isExpanded = detailMatchId === match.id;
+            const matchDecision = getMatchDecision(match);
+            const needsAttention = getMatchPriority(match) <= 2;
 
             return (
               <div key={match.id} className="card p-5">
@@ -437,17 +587,7 @@ export default function AdminMatchesPage() {
                         {match.player1?.username ?? 'Unknown'} vs {match.player2?.username ?? 'Unknown'}
                       </p>
                       <span className="brand-chip px-2 py-0.5">{gameLabel}</span>
-                      <span
-                        className={`rounded-full px-2.5 py-1 text-[11px] font-bold ${
-                          match.status === 'disputed'
-                            ? 'bg-amber-500/14 text-amber-400'
-                            : match.status === 'completed'
-                              ? 'bg-[var(--surface-elevated)] text-[var(--text-secondary)]'
-                              : match.status === 'pending'
-                                ? 'bg-blue-500/14 text-blue-400'
-                                : 'bg-red-500/14 text-red-400'
-                        }`}
-                      >
+                      <span className={`rounded-full px-2.5 py-1 text-[11px] font-bold ${matchStatusClass(match.status)}`}>
                         {match.status}
                       </span>
                       {(match.open_escalation_count ?? 0) > 0 ? (
@@ -461,18 +601,36 @@ export default function AdminMatchesPage() {
                       ) : null}
                     </div>
 
-                    <p className="mt-1 text-sm text-[var(--text-secondary)]">
-                      {match.region} | {platformLabel} | Started {new Date(match.created_at).toLocaleString()}
+                    <p className="mt-2 text-sm font-semibold text-[var(--text-primary)]">
+                      {matchDecision}
                     </p>
 
-                    {winnerName ? (
-                      <p className="mt-2 text-sm text-[var(--brand-teal)]">Winner set: {winnerName}</p>
-                    ) : null}
-                    {confirmedScoreline ? (
-                      <p className="mt-1 text-sm text-[var(--text-secondary)]">
-                        Final score: {confirmedScoreline}
-                      </p>
-                    ) : null}
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      <span className="rounded-full border border-[var(--border-color)] bg-[var(--surface-elevated)] px-2.5 py-1 text-[11px] text-[var(--text-secondary)]">
+                        {match.region}
+                      </span>
+                      <span className="rounded-full border border-[var(--border-color)] bg-[var(--surface-elevated)] px-2.5 py-1 text-[11px] text-[var(--text-secondary)]">
+                        {platformLabel}
+                      </span>
+                      <span className="rounded-full border border-[var(--border-color)] bg-[var(--surface-elevated)] px-2.5 py-1 text-[11px] text-[var(--text-secondary)]">
+                        Started {formatRelativeTime(match.created_at)}
+                      </span>
+                      {winnerName ? (
+                        <span className="rounded-full border border-[rgba(50,224,196,0.22)] bg-[rgba(50,224,196,0.08)] px-2.5 py-1 text-[11px] text-[var(--brand-teal)]">
+                          Winner: {winnerName}
+                        </span>
+                      ) : null}
+                      {confirmedScoreline ? (
+                        <span className="rounded-full border border-[var(--border-color)] bg-[var(--surface-elevated)] px-2.5 py-1 text-[11px] text-[var(--text-secondary)]">
+                          Score {confirmedScoreline}
+                        </span>
+                      ) : null}
+                    </div>
+
+                    <p className="mt-3 text-xs text-[var(--text-soft)]">
+                      Opened {new Date(match.created_at).toLocaleString()}
+                      {needsAttention ? ' | Needs moderator attention' : ' | Monitor only'}
+                    </p>
 
                     {match.dispute_screenshot_url ? (
                       <Link

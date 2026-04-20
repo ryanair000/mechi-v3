@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getRequestAccessProfile, hasModeratorAccess } from '@/lib/access';
 import { createServiceClient } from '@/lib/supabase';
+import { getTournamentPaymentMetrics, getTournamentPrizeSnapshot } from '@/lib/tournaments';
 
 type TournamentListItem = {
   id: string;
@@ -74,7 +75,7 @@ export async function GET(request: NextRequest) {
     let query = supabase
       .from('tournaments')
       .select(
-        'id, slug, title, game, platform, region, size, entry_fee, prize_pool, platform_fee, status, payout_status, created_at, started_at, ended_at, organizer:organizer_id(id, username), winner:winner_id(id, username)'
+        'id, slug, title, game, platform, region, size, entry_fee, prize_pool, platform_fee, platform_fee_rate, status, approval_status, approved_at, approved_by, is_featured, payout_status, created_at, started_at, ended_at, organizer:organizer_id(id, username), winner:winner_id(id, username)'
       )
       .order('created_at', { ascending: false })
       .range(offset, offset + limit - 1);
@@ -102,7 +103,7 @@ export async function GET(request: NextRequest) {
     const tournamentIds = tournaments.map((tournament) => tournament.id);
     const { data: players, error: playersError } = await supabase
       .from('tournament_players')
-      .select('tournament_id')
+      .select('tournament_id, payment_status')
       .in('tournament_id', tournamentIds)
       .in('payment_status', ['paid', 'free']);
 
@@ -110,16 +111,30 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to fetch tournaments' }, { status: 500 });
     }
 
-    const playerCounts = (players ?? []).reduce<Record<string, number>>((counts, player) => {
+    const playersByTournament = (players ?? []).reduce<
+      Record<string, Array<{ payment_status: string | null | undefined }>>
+    >((grouped, player) => {
       const tournamentId = player.tournament_id as string | undefined;
-      if (!tournamentId) return counts;
-      counts[tournamentId] = (counts[tournamentId] ?? 0) + 1;
-      return counts;
+      if (!tournamentId) return grouped;
+      grouped[tournamentId] = [
+        ...(grouped[tournamentId] ?? []),
+        { payment_status: (player.payment_status as string | null | undefined) ?? null },
+      ];
+      return grouped;
     }, {});
 
     const enrichedTournaments: TournamentListItem[] = tournaments.map((tournament) => ({
       ...tournament,
-      player_count: playerCounts[tournament.id] ?? 0,
+      player_count: getTournamentPaymentMetrics(playersByTournament[tournament.id] ?? [])
+        .confirmedCount,
+      prize_pool: getTournamentPrizeSnapshot({
+        entryFee: Number(tournament.entry_fee ?? 0),
+        paidPlayerCount: getTournamentPaymentMetrics(playersByTournament[tournament.id] ?? [])
+          .paidCount,
+        feeRate: Number(tournament.platform_fee_rate ?? 5),
+        storedPrizePool: Number(tournament.prize_pool ?? 0),
+        storedPlatformFee: Number(tournament.platform_fee ?? 0),
+      }).prizePool,
     }));
 
     return NextResponse.json({

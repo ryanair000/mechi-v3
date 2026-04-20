@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useCallback, useEffect, useState } from 'react';
-import { Plus, Swords, Trophy, Users } from 'lucide-react';
+import { Plus, Trophy } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useAuthFetch } from '@/components/AuthProvider';
 import { GAMES } from '@/lib/config';
@@ -21,6 +21,53 @@ function getPlayerCount(tournament: TournamentListItem): number {
   return typeof count === 'number' ? count : 0;
 }
 
+function formatTournamentStatus(status: string) {
+  switch (status) {
+    case 'open':
+      return 'Open';
+    case 'full':
+      return 'Full';
+    case 'active':
+      return 'Live';
+    case 'completed':
+      return 'Completed';
+    case 'cancelled':
+      return 'Cancelled';
+    default:
+      return status;
+  }
+}
+
+function getStatusClasses(status: string) {
+  switch (status) {
+    case 'open':
+      return 'bg-[rgba(50,224,196,0.12)] text-[var(--accent-secondary-text)] border-[rgba(50,224,196,0.2)]';
+    case 'active':
+      return 'bg-[rgba(96,165,250,0.14)] text-[#93c5fd] border-[rgba(96,165,250,0.2)]';
+    case 'full':
+      return 'bg-[rgba(255,107,107,0.12)] text-[#ff9a9a] border-[rgba(255,107,107,0.2)]';
+    default:
+      return 'bg-[var(--surface-elevated)] text-[var(--text-secondary)] border-[var(--border-color)]';
+  }
+}
+
+function formatTournamentDate(tournament: TournamentListItem) {
+  const source = tournament.started_at ?? tournament.created_at;
+  if (!source) {
+    return 'TBA';
+  }
+
+  const date = new Date(source);
+  if (Number.isNaN(date.getTime())) {
+    return 'TBA';
+  }
+
+  return new Intl.DateTimeFormat('en-KE', {
+    day: 'numeric',
+    month: 'short',
+  }).format(date);
+}
+
 export default function TournamentsPage() {
   const authFetch = useAuthFetch();
   const [tournaments, setTournaments] = useState<TournamentListItem[]>([]);
@@ -31,12 +78,17 @@ export default function TournamentsPage() {
     setLoading(true);
     try {
       const res = await authFetch(`/api/tournaments?status=${status}`);
-      const data = await res.json();
+      const data = (await res.json()) as {
+        error?: string;
+        tournaments?: TournamentListItem[];
+      };
+
       if (!res.ok) {
         toast.error(data.error ?? 'Could not load tournaments');
         setTournaments([]);
         return;
       }
+
       setTournaments(data.tournaments ?? []);
     } catch {
       toast.error('Could not load tournaments');
@@ -51,33 +103,35 @@ export default function TournamentsPage() {
   }, [fetchTournaments]);
 
   return (
-    <div className="page-container">
-      <div className="card circuit-panel mb-5 p-5 sm:p-6">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <p className="brand-kicker">Bracket Mode</p>
-            <h1 className="mt-3 text-3xl font-black tracking-normal text-[var(--text-primary)]">
-              Tournaments
+    <div className="page-container space-y-5">
+      <section className="card circuit-panel p-5 sm:p-6">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+          <div className="max-w-2xl">
+            <p className="section-title">Tournaments</p>
+            <h1 className="mt-3 text-[1.55rem] font-black leading-[1.05] text-[var(--text-primary)] sm:text-[2rem]">
+              Upcoming competitions
             </h1>
-            <p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--text-secondary)]">
-              Create a bracket, fill the slots, and let Mechi move winners forward after confirmed results.
+            <p className="mt-3 text-sm leading-6 text-[var(--text-secondary)]">
+              Host a bracket, track filled slots, and move players into the right tournament detail when it is time to join.
             </p>
           </div>
+
           <Link href="/tournaments/create" className="btn-primary text-sm">
-            <Plus size={14} /> Create
+            <Plus size={14} />
+            Host tournament
           </Link>
         </div>
-      </div>
+      </section>
 
-      <div className="mb-5 flex gap-2 overflow-x-auto pb-2 no-scrollbar">
+      <div className="flex gap-2 overflow-x-auto pb-2 no-scrollbar">
         {STATUS_FILTERS.map((item) => (
           <button
             key={item}
             onClick={() => setStatus(item)}
-            className={`flex-shrink-0 rounded-xl px-4 py-2 text-xs font-black uppercase tracking-[0.14em] transition-all ${
+            className={`flex-shrink-0 rounded-md border px-3 py-2 text-xs font-semibold uppercase tracking-[0.12em] transition-all ${
               status === item
-                ? 'bg-[var(--brand-coral)] text-[var(--brand-night)]'
-                : 'border border-[var(--border-color)] bg-[var(--surface-elevated)] text-[var(--text-soft)] hover:text-[var(--text-primary)]'
+                ? 'border-[rgba(50,224,196,0.22)] bg-[rgba(50,224,196,0.12)] text-[var(--accent-secondary-text)]'
+                : 'border-[var(--border-color)] bg-[var(--surface-elevated)] text-[var(--text-soft)] hover:bg-[var(--surface)] hover:text-[var(--text-primary)]'
             }`}
           >
             {item}
@@ -86,10 +140,17 @@ export default function TournamentsPage() {
       </div>
 
       {loading ? (
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-          {[1, 2, 3].map((item) => (
-            <div key={item} className="h-44 shimmer" />
-          ))}
+        <div className="card overflow-hidden">
+          <div className="space-y-0">
+            {[1, 2, 3, 4].map((item, index) => (
+              <div
+                key={item}
+                className={`px-4 py-4 ${index < 3 ? 'border-b border-[var(--border-color)]' : ''}`}
+              >
+                <div className="h-16 shimmer rounded-xl" />
+              </div>
+            ))}
+          </div>
         </div>
       ) : tournaments.length === 0 ? (
         <div className="card py-16 text-center">
@@ -97,61 +158,185 @@ export default function TournamentsPage() {
           <p className="font-black text-[var(--text-primary)]">No {status} brackets yet</p>
           <p className="mt-2 text-sm text-[var(--text-soft)]">Start one and bring your scene in.</p>
           <Link href="/tournaments/create" className="btn-primary mt-5 inline-flex">
-            <Plus size={14} /> Create Tournament
+            <Plus size={14} />
+            Create tournament
           </Link>
         </div>
       ) : (
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-          {tournaments.map((tournament) => {
-            const playerCount = getPlayerCount(tournament);
-            const slotsLeft = Math.max(0, tournament.size - playerCount);
-            const game = GAMES[tournament.game as GameKey];
+        <>
+          <div className="hidden overflow-hidden rounded-[var(--radius-panel)] border border-[var(--border-color)] bg-[var(--surface)] lg:block">
+            <div className="grid grid-cols-[minmax(0,1.45fr)_100px_100px_110px_90px] gap-4 border-b border-[var(--border-color)] px-5 py-3 text-[10px] font-bold uppercase tracking-[0.16em] text-[var(--text-soft)]">
+              <span>Tournament</span>
+              <span>Slots</span>
+              <span>Starts</span>
+              <span className="text-right">Prize</span>
+              <span className="text-right">Action</span>
+            </div>
 
-            return (
-              <Link
-                key={tournament.id}
-                href={`/t/${tournament.slug}`}
-                className="card group overflow-hidden p-5 transition-transform hover:-translate-y-0.5"
-              >
-                <div className="mb-4 flex items-start justify-between gap-3">
+            {tournaments.map((tournament, index) => {
+              const playerCount = getPlayerCount(tournament);
+              const progress = Math.min(100, (playerCount / Math.max(1, tournament.size)) * 100);
+              const game = GAMES[tournament.game as GameKey];
+              const actionLabel =
+                tournament.status === 'open' ? 'Join' : tournament.status === 'full' ? 'Watch' : 'View';
+
+              return (
+                <div
+                  key={tournament.id}
+                  className={`grid grid-cols-[minmax(0,1.45fr)_100px_100px_110px_90px] items-center gap-4 px-5 py-4 ${
+                    index < tournaments.length - 1 ? 'border-b border-[var(--border-color)]' : ''
+                  }`}
+                >
                   <div className="min-w-0">
-                    <p className="brand-kicker">{game?.label ?? tournament.game}</p>
-                    <h2 className="mt-3 truncate text-xl font-black tracking-normal text-[var(--text-primary)]">
-                      {tournament.title}
-                    </h2>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <p className="truncate text-sm font-black text-[var(--text-primary)]">
+                        {tournament.title}
+                      </p>
+                      <span
+                        className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.08em] ${getStatusClasses(tournament.status)}`}
+                      >
+                        {formatTournamentStatus(tournament.status)}
+                      </span>
+                      {tournament.is_featured ? (
+                        <span className="brand-chip-coral px-2 py-0.5">Featured</span>
+                      ) : null}
+                    </div>
+                    <div className="mt-2 flex flex-wrap items-center gap-2">
+                      <span className="brand-chip px-2 py-0.5">
+                        {game?.label ?? tournament.game}
+                      </span>
+                      {tournament.entry_fee > 0 ? (
+                        <span className="text-[11px] text-[var(--text-soft)]">
+                          Entry KES {tournament.entry_fee.toLocaleString()}
+                        </span>
+                      ) : (
+                        <span className="text-[11px] text-[var(--text-soft)]">Free entry</span>
+                      )}
+                    </div>
                   </div>
-                  <span className="rounded-full border border-[var(--border-color)] bg-[var(--surface-strong)] px-3 py-1 text-xs font-bold text-[var(--text-secondary)]">
-                    {tournament.status}
-                  </span>
-                </div>
 
-                <div className="grid grid-cols-3 gap-2 text-center">
-                  <div className="rounded-2xl bg-[var(--surface-strong)] p-3">
-                    <Users size={14} className="mx-auto mb-1 text-[var(--brand-teal)]" />
-                    <p className="text-sm font-black text-[var(--text-primary)]">
+                  <div>
+                    <div className="mb-2 h-1.5 w-16 overflow-hidden rounded-full bg-[var(--border-color)]">
+                      <div
+                        className={tournament.status === 'full' ? 'h-full bg-[var(--brand-coral)]' : 'h-full bg-[var(--brand-teal)]'}
+                        style={{ width: `${progress}%` }}
+                      />
+                    </div>
+                    <span className="text-xs text-[var(--text-soft)]">
                       {playerCount}/{tournament.size}
-                    </p>
-                    <p className="text-[10px] uppercase tracking-[0.12em] text-[var(--text-soft)]">slots</p>
+                    </span>
                   </div>
-                  <div className="rounded-2xl bg-[var(--surface-strong)] p-3">
-                    <Swords size={14} className="mx-auto mb-1 text-[var(--brand-coral)]" />
-                    <p className="text-sm font-black text-[var(--text-primary)]">
-                      {tournament.entry_fee > 0 ? `KES ${tournament.entry_fee}` : 'Free'}
-                    </p>
-                    <p className="text-[10px] uppercase tracking-[0.12em] text-[var(--text-soft)]">entry</p>
-                  </div>
-                  <div className="rounded-2xl bg-[var(--surface-strong)] p-3">
-                    <Trophy size={14} className="mx-auto mb-1 text-[var(--brand-coral)]" />
-                    <p className="text-sm font-black text-[var(--text-primary)]">
-                      {slotsLeft}
-                    </p>
-                    <p className="text-[10px] uppercase tracking-[0.12em] text-[var(--text-soft)]">left</p>
+
+                  <span className="text-sm text-[var(--text-secondary)]">
+                    {formatTournamentDate(tournament)}
+                  </span>
+
+                  <span className="text-right text-sm font-black text-[var(--brand-teal)]">
+                    {tournament.prize_pool > 0
+                      ? `KES ${tournament.prize_pool.toLocaleString()}`
+                      : tournament.entry_fee > 0
+                        ? 'KES 0'
+                        : 'No cash'}
+                  </span>
+
+                  <div className="text-right">
+                    <Link
+                      href={`/t/${tournament.slug}`}
+                      className={`inline-flex min-h-8 items-center justify-center rounded-md px-3 py-2 text-xs font-bold ${
+                        tournament.status === 'full'
+                          ? 'border border-[var(--border-color)] bg-[var(--surface-elevated)] text-[var(--text-secondary)]'
+                          : 'border border-[rgba(50,224,196,0.22)] bg-[rgba(50,224,196,0.1)] text-[var(--accent-secondary-text)]'
+                      }`}
+                    >
+                      {actionLabel}
+                    </Link>
                   </div>
                 </div>
-              </Link>
-            );
-          })}
-        </div>
+              );
+            })}
+          </div>
+
+          <div className="grid gap-4 lg:hidden">
+            {tournaments.map((tournament) => {
+              const playerCount = getPlayerCount(tournament);
+              const progress = Math.min(100, (playerCount / Math.max(1, tournament.size)) * 100);
+              const game = GAMES[tournament.game as GameKey];
+
+              return (
+                <div key={tournament.id} className="card p-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <p className="text-sm font-black text-[var(--text-primary)]">
+                          {tournament.title}
+                        </p>
+                        <span
+                          className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.08em] ${getStatusClasses(tournament.status)}`}
+                        >
+                          {formatTournamentStatus(tournament.status)}
+                        </span>
+                      </div>
+                      <p className="mt-2 text-xs text-[var(--text-soft)]">
+                        {game?.label ?? tournament.game}
+                      </p>
+                    </div>
+                    {tournament.is_featured ? (
+                      <span className="brand-chip-coral px-2 py-0.5">Featured</span>
+                    ) : null}
+                  </div>
+
+                  <div className="mt-4 grid gap-3 sm:grid-cols-3">
+                    <div className="rounded-xl border border-[var(--border-color)] bg-[var(--surface-elevated)] p-3">
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--text-soft)]">
+                        Slots
+                      </p>
+                      <p className="mt-2 text-sm font-semibold text-[var(--text-primary)]">
+                        {playerCount}/{tournament.size}
+                      </p>
+                      <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-[var(--border-color)]">
+                        <div
+                          className={tournament.status === 'full' ? 'h-full bg-[var(--brand-coral)]' : 'h-full bg-[var(--brand-teal)]'}
+                          style={{ width: `${progress}%` }}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="rounded-xl border border-[var(--border-color)] bg-[var(--surface-elevated)] p-3">
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--text-soft)]">
+                        Starts
+                      </p>
+                      <p className="mt-2 text-sm font-semibold text-[var(--text-primary)]">
+                        {formatTournamentDate(tournament)}
+                      </p>
+                    </div>
+
+                    <div className="rounded-xl border border-[var(--border-color)] bg-[var(--surface-elevated)] p-3">
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--text-soft)]">
+                        Prize
+                      </p>
+                      <p className="mt-2 text-sm font-semibold text-[var(--brand-teal)]">
+                        {tournament.prize_pool > 0
+                          ? `KES ${tournament.prize_pool.toLocaleString()}`
+                          : tournament.entry_fee > 0
+                            ? 'KES 0'
+                            : 'No cash'}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="mt-4 flex gap-2">
+                    <Link href={`/t/${tournament.slug}`} className="btn-outline flex-1 py-2 text-xs">
+                      View bracket
+                    </Link>
+                    <Link href={`/t/${tournament.slug}`} className="btn-primary flex-1 py-2 text-xs">
+                      {tournament.status === 'open' ? 'Join' : tournament.status === 'full' ? 'Watch' : 'Open'}
+                    </Link>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </>
       )}
     </div>
   );

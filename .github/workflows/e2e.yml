@@ -1,0 +1,309 @@
+name: E2E
+
+on:
+  pull_request:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 2 * * *'
+
+concurrency:
+  group: e2e-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  CI: 'true'
+  E2E_BASE_URL: http://127.0.0.1:3000
+  E2E_ADMIN_BASE_URL: http://admin.localhost:3000
+  E2E_ALLOW_DB_RESET: 'true'
+  E2E_PROVIDER_TRANSCRIPT_DIR: test-results/provider-transcripts
+  NEXT_PUBLIC_APP_URL: http://127.0.0.1:3000
+  NEXT_PUBLIC_ADMIN_URL: http://admin.localhost:3000
+  E2E_SUPABASE_URL: ${{ secrets.E2E_SUPABASE_URL }}
+  NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.E2E_SUPABASE_URL }}
+  E2E_SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.E2E_SUPABASE_SERVICE_ROLE_KEY }}
+  SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.E2E_SUPABASE_SERVICE_ROLE_KEY }}
+  NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+  JWT_SECRET: ${{ secrets.JWT_SECRET }}
+  CRON_SECRET: ${{ secrets.CRON_SECRET }}
+
+jobs:
+  e2e-public-auth:
+    name: e2e-public-auth
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - name: Validate E2E environment
+        shell: bash
+        run: |
+          missing=()
+          for key in E2E_SUPABASE_URL E2E_SUPABASE_SERVICE_ROLE_KEY NEXT_PUBLIC_SUPABASE_ANON_KEY JWT_SECRET CRON_SECRET; do
+            if [ -z "${!key}" ]; then
+              missing+=("$key")
+            fi
+          done
+          if [ "${#missing[@]}" -gt 0 ]; then
+            echo "Missing required secrets: ${missing[*]}"
+            exit 1
+          fi
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:e2e:public-auth
+      - name: Upload artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-public-auth-artifacts
+          path: |
+            playwright-report
+            test-results
+            .e2e/auth
+          if-no-files-found: ignore
+
+  e2e-player-desktop:
+    name: e2e-player-desktop
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - name: Validate E2E environment
+        shell: bash
+        run: |
+          missing=()
+          for key in E2E_SUPABASE_URL E2E_SUPABASE_SERVICE_ROLE_KEY NEXT_PUBLIC_SUPABASE_ANON_KEY JWT_SECRET CRON_SECRET; do
+            if [ -z "${!key}" ]; then
+              missing+=("$key")
+            fi
+          done
+          if [ "${#missing[@]}" -gt 0 ]; then
+            echo "Missing required secrets: ${missing[*]}"
+            exit 1
+          fi
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:e2e:player-desktop
+      - name: Upload artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-player-desktop-artifacts
+          path: |
+            playwright-report
+            test-results
+            .e2e/auth
+          if-no-files-found: ignore
+
+  e2e-player-mobile:
+    name: e2e-player-mobile
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - name: Validate E2E environment
+        shell: bash
+        run: |
+          missing=()
+          for key in E2E_SUPABASE_URL E2E_SUPABASE_SERVICE_ROLE_KEY NEXT_PUBLIC_SUPABASE_ANON_KEY JWT_SECRET CRON_SECRET; do
+            if [ -z "${!key}" ]; then
+              missing+=("$key")
+            fi
+          done
+          if [ "${#missing[@]}" -gt 0 ]; then
+            echo "Missing required secrets: ${missing[*]}"
+            exit 1
+          fi
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:e2e:player-mobile
+      - name: Upload artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-player-mobile-artifacts
+          path: |
+            playwright-report
+            test-results
+            .e2e/auth
+          if-no-files-found: ignore
+
+  e2e-provider-mock:
+    name: e2e-provider-mock
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - name: Validate E2E environment
+        shell: bash
+        run: |
+          missing=()
+          for key in E2E_SUPABASE_URL E2E_SUPABASE_SERVICE_ROLE_KEY NEXT_PUBLIC_SUPABASE_ANON_KEY JWT_SECRET CRON_SECRET; do
+            if [ -z "${!key}" ]; then
+              missing+=("$key")
+            fi
+          done
+          if [ "${#missing[@]}" -gt 0 ]; then
+            echo "Missing required secrets: ${missing[*]}"
+            exit 1
+          fi
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:e2e:provider-mock
+      - name: Upload artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-provider-mock-artifacts
+          path: |
+            playwright-report
+            test-results
+            .e2e/auth
+          if-no-files-found: ignore
+
+  e2e-admin:
+    name: e2e-admin
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    continue-on-error: ${{ github.event_name == 'pull_request' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - name: Validate E2E environment
+        shell: bash
+        run: |
+          missing=()
+          for key in E2E_SUPABASE_URL E2E_SUPABASE_SERVICE_ROLE_KEY NEXT_PUBLIC_SUPABASE_ANON_KEY JWT_SECRET CRON_SECRET; do
+            if [ -z "${!key}" ]; then
+              missing+=("$key")
+            fi
+          done
+          if [ "${#missing[@]}" -gt 0 ]; then
+            echo "Missing required secrets: ${missing[*]}"
+            exit 1
+          fi
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:e2e:admin
+      - name: Upload artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-admin-artifacts
+          path: |
+            playwright-report
+            test-results
+            .e2e/auth
+          if-no-files-found: ignore
+
+  e2e-cross-browser-smoke:
+    name: e2e-cross-browser-smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    continue-on-error: ${{ github.event_name == 'pull_request' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - name: Validate E2E environment
+        shell: bash
+        run: |
+          missing=()
+          for key in E2E_SUPABASE_URL E2E_SUPABASE_SERVICE_ROLE_KEY NEXT_PUBLIC_SUPABASE_ANON_KEY JWT_SECRET CRON_SECRET; do
+            if [ -z "${!key}" ]; then
+              missing+=("$key")
+            fi
+          done
+          if [ "${#missing[@]}" -gt 0 ]; then
+            echo "Missing required secrets: ${missing[*]}"
+            exit 1
+          fi
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium firefox webkit
+      - run: npm run test:e2e:cross-browser
+      - name: Upload artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-cross-browser-smoke-artifacts
+          path: |
+            playwright-report
+            test-results
+            .e2e/auth
+          if-no-files-found: ignore
+
+  e2e-provider-sandbox:
+    name: e2e-provider-sandbox
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    env:
+      RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+      RESEND_FROM_EMAIL: ${{ secrets.RESEND_FROM_EMAIL }}
+      PAYSTACK_SECRET_KEY: ${{ secrets.PAYSTACK_SECRET_KEY }}
+      MECHI_PAYSTACK_WEBHOOK_SECRET: ${{ secrets.MECHI_PAYSTACK_WEBHOOK_SECRET }}
+      CLOUDINARY_CLOUD_NAME: ${{ secrets.CLOUDINARY_CLOUD_NAME }}
+      CLOUDINARY_API_KEY: ${{ secrets.CLOUDINARY_API_KEY }}
+      CLOUDINARY_API_SECRET: ${{ secrets.CLOUDINARY_API_SECRET }}
+      WHATSAPP_TOKEN: ${{ secrets.WHATSAPP_TOKEN }}
+      WHATSAPP_PHONE_NUMBER_ID: ${{ secrets.WHATSAPP_PHONE_NUMBER_ID }}
+      WHATSAPP_WEBHOOK_VERIFY_TOKEN: ${{ secrets.WHATSAPP_WEBHOOK_VERIFY_TOKEN }}
+      INSTAGRAM_APP_SECRET: ${{ secrets.INSTAGRAM_APP_SECRET }}
+      INSTAGRAM_VERIFY_TOKEN: ${{ secrets.INSTAGRAM_VERIFY_TOKEN }}
+      INSTAGRAM_PAGE_ACCESS_TOKEN: ${{ secrets.INSTAGRAM_PAGE_ACCESS_TOKEN }}
+      INSTAGRAM_ACCESS_TOKEN: ${{ secrets.INSTAGRAM_ACCESS_TOKEN }}
+      INSTAGRAM_ACCOUNT_ID: ${{ secrets.INSTAGRAM_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - name: Validate E2E and provider environment
+        shell: bash
+        run: |
+          missing=()
+          for key in E2E_SUPABASE_URL E2E_SUPABASE_SERVICE_ROLE_KEY NEXT_PUBLIC_SUPABASE_ANON_KEY JWT_SECRET CRON_SECRET RESEND_API_KEY PAYSTACK_SECRET_KEY CLOUDINARY_CLOUD_NAME CLOUDINARY_API_KEY CLOUDINARY_API_SECRET WHATSAPP_TOKEN WHATSAPP_PHONE_NUMBER_ID INSTAGRAM_APP_SECRET INSTAGRAM_VERIFY_TOKEN INSTAGRAM_PAGE_ACCESS_TOKEN; do
+            if [ -z "${!key}" ]; then
+              missing+=("$key")
+            fi
+          done
+          if [ "${#missing[@]}" -gt 0 ]; then
+            echo "Missing required secrets: ${missing[*]}"
+            exit 1
+          fi
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:e2e:provider-sandbox
+      - name: Upload artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-provider-sandbox-artifacts
+          path: |
+            playwright-report
+            test-results
+            .e2e/auth
+          if-no-files-found: ignore

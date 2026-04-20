@@ -265,51 +265,6 @@ export default async function AdminOverviewPage() {
     },
   ];
 
-  const primaryActions = [
-    {
-      href: '/admin/rewards',
-      title: 'Reward protection',
-      detail: `${overview.openRewardReviews.toLocaleString()} suspicious reward items waiting on moderator action.`,
-      icon: Shield,
-    },
-    {
-      href: '/admin/queue',
-      title: 'Queue control',
-      detail: `${overview.waitingQueue.toLocaleString()} players waiting across ranked matchmaking.`,
-      icon: Clock3,
-    },
-    {
-      href: '/admin/lobbies',
-      title: 'Lobby cleanup',
-      detail: `${(overview.openLobbies + overview.fullLobbies + overview.liveLobbies).toLocaleString()} total rooms across open, full, and live states.`,
-      icon: DoorOpen,
-    },
-    {
-      href: '/admin/matches',
-      title: 'Match review',
-      detail: `${overview.disputedMatches.toLocaleString()} disputes and ${overview.activeMatches.toLocaleString()} pending matches in the lane.`,
-      icon: Swords,
-    },
-    {
-      href: '/admin/tournaments',
-      title: 'Tournament ops',
-      detail: `${overview.activeTournaments.toLocaleString()} active brackets and ${overview.pendingPayouts.toLocaleString()} finance follow-ups.`,
-      icon: Trophy,
-    },
-    {
-      href: '/admin/users',
-      title: 'Player accounts',
-      detail: `${overview.totalUsers.toLocaleString()} total players and ${overview.bannedUsers.toLocaleString()} suspended accounts.`,
-      icon: Users,
-    },
-    {
-      href: '/admin/support',
-      title: 'Support inbox',
-      detail: 'Review WhatsApp escalations and human handoffs in one place.',
-      icon: Headset,
-    },
-  ];
-
   const snapshotCards = [
     {
       label: 'New players this week',
@@ -333,228 +288,365 @@ export default async function AdminOverviewPage() {
     },
   ];
 
+  const totalRooms = overview.openLobbies + overview.fullLobbies + overview.liveLobbies;
+  const activeAttentionCount = attentionCards.filter((card) => card.value > 0).length;
+  const attentionRows =
+    activeAttentionCount > 0
+      ? attentionCards.filter((card) => card.value > 0)
+      : attentionCards.slice(0, 3);
+  const heroTone = activeAttentionCount > 0 ? 'surface-action' : 'surface-live';
+  const nextDecisionCard = attentionRows[0];
+  const monitoringRows = [
+    {
+      href: '/admin/support',
+      title: 'Support handoffs',
+      value: overview.role === 'admin' ? 'Human lane' : 'Moderator lane',
+      detail: 'Keep human follow-through separate from the live-ops lanes so conversations do not get lost in the noise.',
+      icon: Headset,
+    },
+    {
+      href: '/admin/users',
+      title: 'Account watch',
+      value: `${overview.bannedUsers.toLocaleString()} suspended`,
+      detail: `${overview.totalUsers.toLocaleString()} total players and ${overview.newUsers7d.toLocaleString()} new signups this week.`,
+      icon: Users,
+    },
+    {
+      href: '/admin/tournaments',
+      title: 'Tournament watch',
+      value: `${overview.activeTournaments.toLocaleString()} live`,
+      detail: `${overview.pendingPayouts.toLocaleString()} payouts pending and ${overview.totalTournaments.toLocaleString()} tournament records overall.`,
+      icon: Trophy,
+    },
+  ];
+  const secondaryTools = overview.role === 'admin'
+    ? [
+        {
+          href: '/admin/logs',
+          title: 'Audit trail',
+          detail: 'Trace staff decisions without taking up prime dashboard space.',
+        },
+        {
+          href: '/admin/whatsapp',
+          title: 'WhatsApp tests',
+          detail: 'Preview business-message delivery and templates.',
+        },
+        {
+          href: '/admin/instagram',
+          title: 'Instagram tests',
+          detail: 'Validate the DM lane from the tools area.',
+        },
+      ]
+    : [];
+
   return (
-    <div className="space-y-6">
-      <section className="card p-5 lg:p-6">
-        <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
-          <div className="max-w-3xl">
-            <p className="brand-kicker">Admin control room</p>
-            <h1 className="mt-3 text-3xl font-black tracking-tight text-[var(--text-primary)] sm:text-[3rem]">
-              Keep the platform calm, clear, and easy to operate.
-            </h1>
-            <p className="mt-3 text-sm leading-7 text-[var(--text-secondary)] sm:text-base">
-              Start with what needs intervention, jump straight into the operational lane you need,
-              then use the activity feed to verify what changed.
+    <div className="space-y-5">
+      <section className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_240px]">
+        <div className={`card circuit-panel p-5 sm:p-6 ${heroTone}`}>
+          <div className="flex flex-wrap gap-2">
+            <span className="brand-chip px-3 py-1">Admin dashboard</span>
+            <span className="brand-chip-coral px-3 py-1">{overview.role}</span>
+          </div>
+
+          <h1 className="mt-4 text-[1.7rem] font-black leading-[1.06] text-[var(--text-primary)] sm:text-[2rem]">
+            Run the Mechi control room from one cleaner surface.
+          </h1>
+          <p className="mt-3 max-w-[38rem] text-sm leading-7 text-[var(--text-secondary)]">
+            Start from the few lanes that can hurt players right now, make a call, then drill into the
+            full evidence only when you need it.
+          </p>
+
+          <div className="mt-4 flex flex-wrap gap-2">
+            <Link href={nextDecisionCard.href} className="btn-primary">
+              Open {nextDecisionCard.title}
+            </Link>
+            <Link href="/admin/queue" className="btn-outline">
+              Queue control
+            </Link>
+            <Link href="/admin/support" className="btn-outline">
+              Support inbox
+            </Link>
+          </div>
+
+          <div className="mt-5 border-t border-[var(--border-color)] pt-4">
+            <div className="grid gap-3 sm:grid-cols-3">
+              <div className="admin-kpi-card px-4 py-3">
+                <p className="section-title">Open lanes</p>
+                <p className="mt-2 text-lg font-black text-[var(--text-primary)]">
+                  {activeAttentionCount.toLocaleString()}
+                </p>
+                <p className="mt-1 text-xs text-[var(--text-soft)]">
+                  {activeAttentionCount > 0
+                    ? 'Interventions waiting right now'
+                    : 'Nothing urgent is backed up'}
+                </p>
+              </div>
+              <div className="admin-kpi-card px-4 py-3">
+                <p className="section-title">Live rooms</p>
+                <p className="mt-2 text-lg font-black text-[var(--text-primary)]">
+                  {totalRooms.toLocaleString()}
+                </p>
+                <p className="mt-1 text-xs text-[var(--text-soft)]">
+                  Open, full, and live lobbies combined
+                </p>
+              </div>
+              <div className="admin-kpi-card px-4 py-3">
+                <p className="section-title">Prize paid</p>
+                <p className="mt-2 text-lg font-black text-[var(--text-primary)]">
+                  {`KSh ${overview.totalPrizeDistributed.toLocaleString()}`}
+                </p>
+                <p className="mt-1 text-xs text-[var(--text-soft)]">
+                  Completed tournament payout total
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex flex-col gap-3">
+          <div className="card p-4">
+            <p className="text-[9px] font-bold uppercase tracking-[0.14em] text-[var(--text-soft)]">
+              Ops pulse
+            </p>
+            <p className="mt-2 text-[2rem] font-black leading-none text-[var(--brand-coral)]">
+              {activeAttentionCount}
+            </p>
+            <p className="mt-2 text-xs leading-6 text-[var(--text-secondary)]">
+              {activeAttentionCount > 0
+                ? `${activeAttentionCount} lane${activeAttentionCount === 1 ? '' : 's'} still need human follow-through.`
+                : 'No urgent interventions are waiting right now.'}
             </p>
           </div>
 
-          <div className="grid gap-3 sm:grid-cols-3">
-            <div className="rounded-[var(--radius-card)] border border-[var(--border-color)] bg-[var(--surface-elevated)] px-4 py-3">
-              <p className="section-title">Queue pulse</p>
-              <p className="mt-2 text-lg font-black text-[var(--text-primary)]">
-                {formatWaitLabel(overview.longestQueueWaitMinutes)}
-              </p>
-            </div>
-            <div className="rounded-[var(--radius-card)] border border-[var(--border-color)] bg-[var(--surface-elevated)] px-4 py-3">
-              <p className="section-title">Live rooms</p>
-              <p className="mt-2 text-lg font-black text-[var(--text-primary)]">
-                {(overview.openLobbies + overview.fullLobbies + overview.liveLobbies).toLocaleString()}
-              </p>
-            </div>
-            <div className="rounded-[var(--radius-card)] border border-[var(--border-color)] bg-[var(--surface-elevated)] px-4 py-3">
-              <p className="section-title">Access</p>
-              <p className="mt-2 text-lg font-black text-[var(--text-primary)]">
-                {overview.role}
-              </p>
-            </div>
+          <div className="card p-4">
+            <p className="text-[9px] font-bold uppercase tracking-[0.14em] text-[var(--text-soft)]">
+              Next decision
+            </p>
+            <p className="mt-2 text-lg font-black leading-6 text-[var(--text-primary)]">
+              {nextDecisionCard.title}
+            </p>
+            <p className="mt-2 text-xs leading-6 text-[var(--text-secondary)]">
+              {nextDecisionCard.detail}
+            </p>
+            <Link href={nextDecisionCard.href} className="brand-link mt-3 inline-flex items-center gap-1 text-xs font-semibold">
+              Open lane
+              <ArrowRight size={13} />
+            </Link>
           </div>
         </div>
       </section>
 
-      <section className="space-y-3">
-        <div className="flex items-center justify-between gap-3">
-          <div>
-            <p className="section-title">Needs attention</p>
-            <p className="mt-1 text-sm text-[var(--text-secondary)]">
-              Start with the lanes most likely to create player friction.
-            </p>
+      <section className="subtle-stat-strip sm:grid-cols-2 xl:grid-cols-4">
+        {snapshotCards.map(({ label, value, detail }) => (
+          <div key={label} className="subtle-stat-item">
+            <p className="subtle-stat-value">{value}</p>
+            <p className="subtle-stat-label">{label}</p>
+            <p className="mt-1 text-xs text-[var(--text-secondary)]">{detail}</p>
           </div>
-          <AlertTriangle size={18} className="text-[var(--brand-coral)]" />
-        </div>
-
-        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-          {attentionCards.map(({ href, title, value, detail, icon: Icon }) => {
-            const isActive = value > 0;
-
-            return (
-              <Link
-                key={href}
-                href={href}
-                className={`rounded-[var(--radius-card)] border p-4 transition-colors ${
-                  isActive
-                    ? 'border-[rgba(255,107,107,0.22)] bg-[rgba(255,107,107,0.08)] hover:bg-[rgba(255,107,107,0.12)]'
-                    : 'border-[var(--border-color)] bg-[var(--surface)] hover:bg-[var(--surface-elevated)]'
-                }`}
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <p className="section-title">{title}</p>
-                    <p className="mt-3 text-3xl font-black text-[var(--text-primary)]">
-                      {value.toLocaleString()}
-                    </p>
-                  </div>
-                  <div
-                    className={`flex h-11 w-11 items-center justify-center rounded-[var(--radius-panel)] ${
-                      isActive
-                        ? 'bg-[rgba(255,107,107,0.14)] text-[var(--brand-coral)]'
-                        : 'bg-[rgba(50,224,196,0.14)] text-[var(--brand-teal)]'
-                    }`}
-                  >
-                    <Icon size={18} />
-                  </div>
-                </div>
-                <p className="mt-3 text-sm leading-6 text-[var(--text-secondary)]">{detail}</p>
-                <span className="brand-link mt-4 inline-flex items-center gap-1 text-sm font-semibold">
-                  Open lane
-                  <ArrowRight size={13} />
-                </span>
-              </Link>
-            );
-          })}
-        </div>
+        ))}
       </section>
 
-      <section className="grid gap-4 xl:grid-cols-[1.02fr_0.98fr]">
-        <div className="card p-5">
-          <div className="flex items-center justify-between gap-3">
-            <div>
-              <p className="section-title">Primary lanes</p>
-              <p className="mt-1 text-sm text-[var(--text-secondary)]">
-                The areas most admins will jump between during live operations.
-              </p>
+      <section className="grid gap-5 xl:grid-cols-[minmax(0,1.02fr)_minmax(320px,0.98fr)]">
+        <div className="space-y-5">
+          <div className="card p-5">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <p className="section-title">Needs attention</p>
+                <p className="mt-2 text-sm text-[var(--text-secondary)]">
+                  Start with the lanes most likely to create player friction.
+                </p>
+              </div>
+              <span className="brand-chip-coral px-3 py-1">
+                {activeAttentionCount.toLocaleString()} open
+              </span>
             </div>
-            <Shield size={18} className="text-[var(--brand-teal)]" />
-          </div>
 
-          <div className="mt-5 grid gap-3 sm:grid-cols-2">
-            {primaryActions.map(({ href, title, detail, icon: Icon }) => (
-              <Link
-                key={href}
-                href={href}
-                className="rounded-[var(--radius-card)] border border-[var(--border-color)] bg-[var(--surface-elevated)] p-4 transition-colors hover:bg-[var(--surface)]"
-              >
-                <div className="flex items-start gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-[var(--radius-panel)] bg-[rgba(50,224,196,0.14)] text-[var(--brand-teal)]">
-                    <Icon size={17} />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-base font-black text-[var(--text-primary)]">{title}</p>
-                    <p className="mt-1 text-sm leading-6 text-[var(--text-secondary)]">{detail}</p>
-                  </div>
-                </div>
-              </Link>
-            ))}
-          </div>
-
-          {overview.role === 'admin' ? (
-            <div className="mt-5 flex flex-wrap gap-2">
-              <Link href="/admin/whatsapp" className="brand-link text-sm font-semibold">
-                WhatsApp tools
-              </Link>
-              <Link href="/admin/logs" className="brand-link text-sm font-semibold">
-                Audit log
-              </Link>
-            </div>
-          ) : null}
-        </div>
-
-        <div className="card p-5">
-          <div className="flex items-center justify-between gap-3">
-            <div>
-              <p className="section-title">Recent admin activity</p>
-              <p className="mt-1 text-sm text-[var(--text-secondary)]">
-                Quick confirmation of the latest staff actions across the platform.
-              </p>
-            </div>
-            <ScrollText size={18} className="text-[var(--brand-teal)]" />
-          </div>
-
-          {overview.role !== 'admin' ? (
-            <div className="mt-5 rounded-[var(--radius-card)] border border-[var(--border-color)] bg-[var(--surface-elevated)] p-4">
-              <p className="text-base font-semibold text-[var(--text-primary)]">
-                Full audit visibility is admin-only.
-              </p>
-              <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">
-                Queue, lobby, match, tournament, and support tools remain available from the lanes on
-                the left.
-              </p>
-            </div>
-          ) : overview.recentLogs.length === 0 ? (
-            <div className="mt-5 rounded-[var(--radius-card)] border border-[var(--border-color)] bg-[var(--surface-elevated)] p-4 text-sm text-[var(--text-secondary)]">
-              No admin actions logged yet.
-            </div>
-          ) : (
-            <div className="mt-5 space-y-3">
-              {overview.recentLogs.map((log) => {
-                const details = log.details ?? {};
-                const subject =
-                  typeof details.username === 'string'
-                    ? details.username
-                    : typeof details.title === 'string'
-                      ? details.title
-                      : typeof details.roomCode === 'string'
-                        ? details.roomCode
-                        : null;
+            <div className="mt-4 divide-y divide-[var(--border-color)]">
+              {attentionRows.map(({ href, title, value, detail, icon: Icon }) => {
+                const isActive = value > 0;
 
                 return (
-                  <div
-                    key={log.id}
-                    className="rounded-[var(--radius-card)] border border-[var(--border-color)] bg-[var(--surface-elevated)] px-4 py-3"
+                  <Link
+                    key={href}
+                    href={href}
+                    className="flex flex-col gap-4 px-0 py-4 first:pt-0 last:pb-0 sm:flex-row sm:items-start sm:justify-between"
                   >
-                    <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-                      <div className="min-w-0">
-                        <p className="text-sm font-black text-[var(--text-primary)]">
-                          {formatActionLabel(log.action)}
-                        </p>
-                        <p className="mt-1 text-sm leading-6 text-[var(--text-secondary)]">
-                          {(log.admin?.username ?? 'Unknown admin')} acted on {log.target_type}
-                          {subject ? `: ${subject}` : log.target_id ? `: ${log.target_id.slice(0, 8)}...` : ''}.
+                    <div className="flex min-w-0 items-start gap-3">
+                      <div
+                        className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-md border ${
+                          isActive
+                            ? 'border-[rgba(255,107,107,0.2)] bg-[rgba(255,107,107,0.12)] text-[var(--brand-coral)]'
+                            : 'border-[rgba(50,224,196,0.18)] bg-[rgba(50,224,196,0.08)] text-[var(--accent-secondary-text)]'
+                        }`}
+                      >
+                        <Icon size={16} />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <p className="text-sm font-black text-[var(--text-primary)]">{title}</p>
+                          <span className={isActive ? 'brand-chip-coral px-2 py-0.5' : 'brand-chip px-2 py-0.5'}>
+                            {value.toLocaleString()}
+                          </span>
+                        </div>
+                        <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">
+                          {detail}
                         </p>
                       </div>
-                      <span className="text-xs text-[var(--text-soft)]">
-                        {new Date(log.created_at).toLocaleString()}
-                      </span>
                     </div>
-                  </div>
+
+                    <span className="inline-flex items-center gap-1 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--accent-secondary-text)]">
+                      Open lane
+                      <ArrowRight size={13} />
+                    </span>
+                  </Link>
                 );
               })}
             </div>
-          )}
-        </div>
-      </section>
-
-      <section className="card p-5">
-        <div className="flex items-center justify-between gap-3">
-          <div>
-            <p className="section-title">Platform snapshot</p>
-            <p className="mt-1 text-sm text-[var(--text-secondary)]">
-              A compact read on player growth, live competition, and finance state.
-            </p>
           </div>
-          <Users size={18} className="text-[var(--brand-teal)]" />
+
+          <div className="card p-5">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <p className="section-title">Recent admin activity</p>
+                <p className="mt-2 text-sm text-[var(--text-secondary)]">
+                  Quick confirmation of the latest staff actions across the platform.
+                </p>
+              </div>
+              <ScrollText size={18} className="text-[var(--accent-secondary-text)]" />
+            </div>
+
+            {overview.role !== 'admin' ? (
+              <div className="mt-4 rounded-[0.6rem] border border-[var(--border-color)] bg-[var(--surface-elevated)] p-4">
+                <p className="text-base font-semibold text-[var(--text-primary)]">
+                  Full audit visibility is admin-only.
+                </p>
+                <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">
+                  Queue, lobby, match, tournament, and support tools remain available from the control lanes.
+                </p>
+              </div>
+            ) : overview.recentLogs.length === 0 ? (
+              <div className="mt-4 rounded-[0.6rem] border border-[var(--border-color)] bg-[var(--surface-elevated)] p-4 text-sm text-[var(--text-secondary)]">
+                No admin actions logged yet.
+              </div>
+            ) : (
+              <div className="mt-4 space-y-3">
+                {overview.recentLogs.map((log) => {
+                  const details = log.details ?? {};
+                  const subject =
+                    typeof details.username === 'string'
+                      ? details.username
+                      : typeof details.title === 'string'
+                        ? details.title
+                        : typeof details.roomCode === 'string'
+                          ? details.roomCode
+                          : null;
+
+                  return (
+                    <div
+                      key={log.id}
+                      className="rounded-[0.6rem] border border-[var(--border-color)] bg-[var(--surface-elevated)] px-4 py-3"
+                    >
+                      <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                        <div className="min-w-0">
+                          <p className="text-sm font-black text-[var(--text-primary)]">
+                            {formatActionLabel(log.action)}
+                          </p>
+                          <p className="mt-1 text-sm leading-6 text-[var(--text-secondary)]">
+                            {(log.admin?.username ?? 'Unknown admin')} acted on {log.target_type}
+                            {subject
+                              ? `: ${subject}`
+                              : log.target_id
+                                ? `: ${log.target_id.slice(0, 8)}...`
+                                : ''}
+                            .
+                          </p>
+                        </div>
+                        <span className="text-xs text-[var(--text-soft)]">
+                          {new Date(log.created_at).toLocaleString()}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
         </div>
 
-        <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-          {snapshotCards.map(({ label, value, detail }) => (
-            <div
-              key={label}
-              className="rounded-2xl border border-[var(--border-color)] bg-[var(--surface-elevated)] p-4"
-            >
-              <p className="section-title">{label}</p>
-              <p className="mt-3 text-2xl font-black text-[var(--text-primary)]">{value}</p>
-              <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">{detail}</p>
+        <div className="space-y-5">
+          <div className="subtle-card p-5">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <p className="section-title">Watch lanes</p>
+                <p className="mt-2 text-sm text-[var(--text-secondary)]">
+                  Keep these quieter operating lanes visible without letting them crowd the urgent queue.
+                </p>
+              </div>
+              <AlertTriangle size={18} className="text-[var(--brand-coral)]" />
             </div>
-          ))}
+
+            <div className="mt-4 grid gap-3">
+              {monitoringRows.map(({ href, title, detail, value, icon: Icon }) => (
+                <Link
+                  key={href}
+                  href={href}
+                  className="rounded-[0.6rem] border border-[var(--border-color)] bg-[var(--surface-elevated)] p-4 transition-colors hover:bg-[var(--surface)]"
+                >
+                  <div className="flex items-start gap-3">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md border border-[rgba(50,224,196,0.18)] bg-[rgba(50,224,196,0.08)] text-[var(--accent-secondary-text)]">
+                      <Icon size={16} />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center justify-between gap-2">
+                        <p className="text-sm font-black text-[var(--text-primary)]">{title}</p>
+                        <span className="brand-chip px-2 py-0.5">{value}</span>
+                      </div>
+                      <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">
+                        {detail}
+                      </p>
+                    </div>
+                  </div>
+                </Link>
+              ))}
+            </div>
+
+          </div>
+
+          <div className="card p-5">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <p className="section-title">Secondary tools</p>
+                <p className="mt-2 text-sm text-[var(--text-secondary)]">
+                  Keep system checks available without letting them compete with decision lanes.
+                </p>
+              </div>
+              <ScrollText size={18} className="text-[var(--accent-secondary-text)]" />
+            </div>
+
+            {secondaryTools.length === 0 ? (
+              <div className="mt-4 rounded-[0.6rem] border border-[var(--border-color)] bg-[var(--surface-elevated)] p-4 text-sm leading-6 text-[var(--text-secondary)]">
+                Audit tools remain admin-only. Moderators stay in the live decision lanes above.
+              </div>
+            ) : (
+              <div className="mt-4 grid gap-3">
+                {secondaryTools.map((tool) => (
+                  <Link
+                    key={tool.href}
+                    href={tool.href}
+                    className="rounded-[0.6rem] border border-[var(--border-color)] bg-[var(--surface-elevated)] p-4 transition-colors hover:bg-[var(--surface)]"
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="text-sm font-black text-[var(--text-primary)]">{tool.title}</p>
+                      <ArrowRight size={13} className="text-[var(--text-soft)]" />
+                    </div>
+                    <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">
+                      {tool.detail}
+                    </p>
+                  </Link>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       </section>
     </div>

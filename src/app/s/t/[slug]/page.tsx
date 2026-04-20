@@ -5,6 +5,7 @@ import { BrandLogo } from '@/components/BrandLogo';
 import { GAMES, PLATFORMS } from '@/lib/config';
 import { getLoginPath, getRegisterPath } from '@/lib/navigation';
 import { createServiceClient } from '@/lib/supabase';
+import { getTournamentPaymentMetrics, getTournamentPrizeSnapshot } from '@/lib/tournament-metrics';
 import type { GameKey, PlatformKey } from '@/types';
 
 type Props = {
@@ -23,13 +24,27 @@ async function getTournament(slug: string) {
 
   const { data: players } = await supabase
     .from('tournament_players')
-    .select('tournament_id')
+    .select('payment_status')
     .eq('tournament_id', tournament.id)
     .in('payment_status', ['paid', 'free']);
 
+  const metrics = getTournamentPaymentMetrics(
+    ((players ?? []) as Array<{ payment_status: string | null | undefined }>).map((player) => ({
+      payment_status: player.payment_status,
+    }))
+  );
+  const prize = getTournamentPrizeSnapshot({
+    entryFee: Number(tournament.entry_fee ?? 0),
+    paidPlayerCount: metrics.paidCount,
+    feeRate: Number(tournament.platform_fee_rate ?? 5),
+    storedPrizePool: Number(tournament.prize_pool ?? 0),
+    storedPlatformFee: Number(tournament.platform_fee ?? 0),
+  });
+
   return {
     ...tournament,
-    player_count: (players ?? []).length,
+    player_count: metrics.confirmedCount,
+    prize_pool: prize.prizePool,
   };
 }
 
@@ -97,9 +112,19 @@ export default async function PublicTournamentPage({ params }: Props) {
             {game?.label ?? tournament.game} tournament. Join the bracket, play clean, and let the results move the winner forward.
           </p>
 
-          <div className="mt-8 grid gap-3 sm:grid-cols-3">
+          <div className="mt-8 grid gap-3 sm:grid-cols-4">
             <Info label="Slots" value={`${playerCount}/${tournament.size}`} />
             <Info label="Entry" value={tournament.entry_fee > 0 ? `KES ${tournament.entry_fee}` : 'Free'} />
+            <Info
+              label="Prize pool"
+              value={
+                tournament.prize_pool > 0
+                  ? `KES ${tournament.prize_pool.toLocaleString()}`
+                  : tournament.entry_fee > 0
+                    ? 'KES 0'
+                    : 'No cash'
+              }
+            />
             <Info label="Platform" value={platform ? PLATFORMS[platform]?.label ?? platform : 'Any'} />
           </div>
 

@@ -1,14 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireActiveAccessProfile } from '@/lib/access';
+import { uploadImageDataUri } from '@/lib/cloudinary';
 import { createMatchChatMessage } from '@/lib/match-chat';
 import { createServiceClient } from '@/lib/supabase';
-import { v2 as cloudinary } from 'cloudinary';
-
-cloudinary.config({
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-  api_key: process.env.CLOUDINARY_API_KEY,
-  api_secret: process.env.CLOUDINARY_API_SECRET,
-});
 
 export async function POST(
   request: NextRequest,
@@ -62,9 +56,10 @@ export async function POST(
     const dataUri = `data:${file.type};base64,${base64}`;
 
     // Upload to Cloudinary
-    const uploadResult = await cloudinary.uploader.upload(dataUri, {
+    const uploadResult = await uploadImageDataUri({
+      dataUri,
       folder: 'mechi/disputes',
-      public_id: `match_${id}_${Date.now()}`,
+      publicId: `match_${id}_${Date.now()}`,
       transformation: [{ quality: 'auto', fetch_format: 'auto' }],
     });
 

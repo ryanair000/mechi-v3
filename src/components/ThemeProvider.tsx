@@ -5,58 +5,27 @@ import {
   useContext,
   useEffect,
   useState,
-  useSyncExternalStore,
 } from 'react';
-
-type Theme = 'light' | 'dark' | 'system';
+import { applyThemeToDocument, DEFAULT_THEME, resolveTheme, STORAGE_KEY, type Theme } from '@/lib/theme';
 
 interface ThemeContextValue {
   theme: Theme;
-  resolvedTheme: 'light' | 'dark';
+  resolvedTheme: Theme;
   setTheme: (theme: Theme) => void;
 }
 
 const ThemeContext = createContext<ThemeContextValue>({
-  theme: 'dark',
-  resolvedTheme: 'dark',
+  theme: DEFAULT_THEME,
+  resolvedTheme: DEFAULT_THEME,
   setTheme: () => {},
 });
 
-const STORAGE_KEY = 'mechi-theme';
-const DARK_MEDIA_QUERY = '(prefers-color-scheme: dark)';
-
 function getStoredTheme(): Theme {
   if (typeof window === 'undefined') {
-    return 'dark';
+    return DEFAULT_THEME;
   }
 
-  const storedTheme = localStorage.getItem(STORAGE_KEY);
-  return storedTheme === 'light' || storedTheme === 'dark' ? storedTheme : 'dark';
-}
-
-function getSystemTheme(): 'light' | 'dark' {
-  if (typeof window === 'undefined') {
-    return 'dark';
-  }
-
-  return window.matchMedia(DARK_MEDIA_QUERY).matches ? 'dark' : 'light';
-}
-
-function subscribeToSystemTheme(onStoreChange: () => void) {
-  if (typeof window === 'undefined') {
-    return () => {};
-  }
-
-  const mediaQuery = window.matchMedia(DARK_MEDIA_QUERY);
-  mediaQuery.addEventListener('change', onStoreChange);
-  return () => mediaQuery.removeEventListener('change', onStoreChange);
-}
-
-function applyThemeToDocument(theme: 'light' | 'dark') {
-  const root = document.documentElement;
-  root.classList.toggle('dark', theme === 'dark');
-  root.dataset.theme = theme;
-  root.style.colorScheme = theme;
+  return resolveTheme(localStorage.getItem(STORAGE_KEY));
 }
 
 export function useTheme() {
@@ -65,12 +34,7 @@ export function useTheme() {
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [theme, setThemeState] = useState<Theme>(() => getStoredTheme());
-  const systemTheme = useSyncExternalStore<'light' | 'dark'>(
-    subscribeToSystemTheme,
-    getSystemTheme,
-    () => 'dark'
-  );
-  const resolvedTheme: 'light' | 'dark' = theme === 'system' ? systemTheme : theme;
+  const resolvedTheme = theme;
 
   useEffect(() => {
     applyThemeToDocument(resolvedTheme);

@@ -3,16 +3,7 @@
 import Link from 'next/link';
 import { useCallback, useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
-import {
-  ArrowUpRight,
-  Copy,
-  Globe2,
-  RefreshCw,
-  Share2,
-  Sparkles,
-  Swords,
-  UserPlus,
-} from 'lucide-react';
+import { ArrowUpRight, Copy, Globe2, RefreshCw, UserPlus } from 'lucide-react';
 import { useAuth, useAuthFetch } from '@/components/AuthProvider';
 import { InviteMenu } from '@/components/InviteMenu';
 import { ShareMenu } from '@/components/ShareMenu';
@@ -31,7 +22,6 @@ import {
 type ShareProfile = Record<string, unknown> & {
   invite_code?: string | null;
   level?: number;
-  selected_games?: string[];
 };
 
 const DAILY_SHARE_REWARD_POINTS = 25;
@@ -122,6 +112,11 @@ export default function SharePage() {
     [recordShareAction]
   );
 
+  const scrollToSection = useCallback((sectionId: string) => {
+    const section = document.getElementById(sectionId);
+    section?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, []);
+
   const username = user?.username ?? '';
   const shareSource =
     profile ?? ((user as unknown as ShareProfile | undefined) ?? ({} as ShareProfile));
@@ -140,23 +135,49 @@ export default function SharePage() {
       : user?.invite_code ?? null;
   const profileUrl = username ? getProfileShareUrl(username) : '';
   const profilePath = username ? getProfileSharePath(username) : '';
-  const profileShareCopy = username
-    ? profileShareText(username, strongestRank.label, level)
-    : 'Show off your Mechi profile and bring the next match to you.';
   const inviteUrl = inviteCode ? getInviteUrl(inviteCode) : '';
   const invitePath = inviteCode ? getInvitePath(inviteCode) : '';
+  const profileShareCopy = username
+    ? profileShareText(username, strongestRank.label, level)
+    : 'Set a username to unlock your public Mechi profile.';
+
+  const metaItems = [
+    `Rank ${strongestRank.label}`,
+    `Lv. ${level}`,
+    totalMatches > 0
+      ? `Record ${shareStats.totalWins}-${shareStats.totalLosses}`
+      : 'No tracked matches yet',
+  ];
+
+  const statusCards = [
+    {
+      icon: UserPlus,
+      eyebrow: 'Invite ready',
+      value: inviteUrl ? 'Ready' : 'Needs a code',
+      copy: inviteUrl
+        ? 'Your quick invite link is live and ready to send.'
+        : 'Refresh or check back when your invite code is available.',
+      detail: inviteCode ? `Code ${inviteCode}` : 'Invite code unavailable',
+    },
+    {
+      icon: Globe2,
+      eyebrow: 'Public profile',
+      value: profileUrl ? 'Ready' : 'Needs a username',
+      copy: profileUrl
+        ? 'Your public card is live and easy to share.'
+        : 'Pick a username in Profile to unlock your public page.',
+      detail: profilePath || 'Public profile unavailable',
+    },
+  ];
 
   if (loading) {
     return (
       <div className="page-container">
         <div className="space-y-5">
           <div className="h-56 shimmer rounded-[1.6rem]" />
-          <div className="grid gap-5 xl:grid-cols-[minmax(0,1.02fr)_minmax(0,0.98fr)]">
+          <div className="grid gap-5 xl:grid-cols-2">
             <div className="h-80 shimmer rounded-[1.6rem]" />
-            <div className="space-y-5">
-              <div className="h-56 shimmer rounded-[1.6rem]" />
-              <div className="h-48 shimmer rounded-[1.6rem]" />
-            </div>
+            <div className="h-80 shimmer rounded-[1.6rem]" />
           </div>
         </div>
       </div>
@@ -166,47 +187,46 @@ export default function SharePage() {
   return (
     <div className="page-container">
       <section className="card circuit-panel overflow-hidden p-5 sm:p-6">
-        <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
-          <div className="max-w-2xl">
-            <p className="section-title">Share</p>
-            <h1 className="mt-3 text-[1.5rem] font-black leading-[1.05] text-[var(--text-primary)] sm:text-[2rem]">
-              Put your public card and invite link to work without the rewards noise.
-            </h1>
-            <p className="mt-3 max-w-2xl text-sm leading-6 text-[var(--text-secondary)]">
-              Share your profile when you want opponents to size you up quickly, and pass your invite
-              link around when you want more players landing in Mechi. Rewards now live on their own
-              dedicated page.
-            </p>
-          </div>
+        <div className="flex items-center justify-between gap-3">
+          <p className="section-title">Share</p>
+          <button
+            type="button"
+            onClick={() => void loadPageData({ silent: true })}
+            disabled={refreshing}
+            className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--text-soft)] transition-colors hover:text-[var(--text-primary)] disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            <RefreshCw size={12} className={refreshing ? 'animate-spin' : undefined} />
+            {refreshing ? 'Refreshing' : 'Refresh'}
+          </button>
+        </div>
 
-          <div className="flex flex-wrap gap-3">
-            <button
-              type="button"
-              onClick={() => void loadPageData({ silent: true })}
-              disabled={refreshing}
-              className="btn-ghost"
-            >
-              <RefreshCw size={14} className={refreshing ? 'animate-spin' : undefined} />
-              {refreshing ? 'Refreshing...' : 'Refresh'}
-            </button>
-            <Link href="/profile" className="btn-ghost">
-              Edit profile
-            </Link>
-            <Link href="/rewards" className="btn-primary">
-              Open rewards
-            </Link>
-            {username ? (
-              <ShareMenu
-                text={profileShareCopy}
-                url={profileUrl}
-                title="My Mechi Profile"
-                imageUrl={getProfileOgImageUrl(username)}
-                imageFilename={`mechi-profile-${username}.png`}
-                variant="primary"
-                onShared={recordShareAction}
-              />
-            ) : null}
-          </div>
+        <div className="mt-3 max-w-2xl">
+          <h1 className="text-[1.5rem] font-black leading-[1.05] text-[var(--text-primary)] sm:text-[2rem]">
+            Invite friends fast.
+          </h1>
+          <p className="mt-3 text-sm leading-6 text-[var(--text-secondary)]">
+            Use one link to bring people into Mechi, and one public profile to show them who they
+            are playing.
+          </p>
+        </div>
+
+        <div className="mt-5 flex flex-col gap-3 sm:flex-row">
+          <button
+            type="button"
+            onClick={() => scrollToSection('share-invite-card')}
+            className="btn-primary justify-center"
+          >
+            <UserPlus size={14} />
+            Invite friends
+          </button>
+          <button
+            type="button"
+            onClick={() => scrollToSection('share-profile-card')}
+            className="btn-outline justify-center"
+          >
+            <Globe2 size={14} />
+            Share profile
+          </button>
         </div>
 
         {loadError ? (
@@ -224,242 +244,186 @@ export default function SharePage() {
           </div>
         ) : null}
 
-        <div className="mt-6 grid gap-3 md:grid-cols-4">
-          {[
-            {
-              icon: Sparkles,
-              title: 'Strongest rank',
-              value: strongestRank.label,
-              copy: `Best rating ${shareStats.bestRating}`,
-            },
-            {
-              icon: Swords,
-              title: 'Tracked matches',
-              value: totalMatches.toLocaleString(),
-              copy:
-                totalMatches > 0
-                  ? `${shareStats.totalWins}-${shareStats.totalLosses} current record.`
-                  : 'No tracked matches yet.',
-            },
-            {
-              icon: Globe2,
-              title: 'Public profile',
-              value: profileUrl ? 'Ready' : 'Missing',
-              copy: profileUrl
-                ? 'Your public challenge card is ready to send.'
-                : 'Set a username to unlock your public page.',
-            },
-            {
-              icon: UserPlus,
-              title: 'Invite mode',
-              value: inviteCode ? 'Ready' : 'Missing',
-              copy: inviteCode
-                ? 'Your direct invite link is ready to share.'
-                : 'Invite code unavailable right now.',
-            },
-          ].map((item) => (
+        <div className="mt-6 grid gap-3 md:grid-cols-2">
+          {statusCards.map((item) => (
             <div
-              key={item.title}
-              className="rounded-[1.05rem] border border-[var(--border-color)] bg-[var(--surface-strong)] p-4"
+              key={item.eyebrow}
+              className="rounded-[1.15rem] border border-[var(--border-color)] bg-[var(--surface-strong)] p-4"
             >
               <div className="flex items-start gap-3">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-[rgba(255,107,107,0.14)] text-[var(--brand-coral)]">
-                  <item.icon size={16} />
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[rgba(255,107,107,0.14)] text-[var(--brand-coral)]">
+                  <item.icon size={17} />
                 </div>
-                <div>
+                <div className="min-w-0">
                   <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--text-soft)]">
-                    {item.title}
+                    {item.eyebrow}
                   </p>
-                  <p className="mt-2 text-2xl font-black text-[var(--text-primary)]">
-                    {item.value}
-                  </p>
-                  <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">
-                    {item.copy}
-                  </p>
+                  <p className="mt-2 text-xl font-black text-[var(--text-primary)]">{item.value}</p>
+                  <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">{item.copy}</p>
+                  <p className="mt-2 truncate text-xs text-[var(--text-soft)]">{item.detail}</p>
                 </div>
               </div>
             </div>
           ))}
         </div>
+
+        <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-[var(--text-soft)]">
+          {metaItems.map((item) => (
+            <span key={item}>{item}</span>
+          ))}
+          <Link
+            href="/profile"
+            className="font-semibold text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)]"
+          >
+            Edit profile
+          </Link>
+        </div>
       </section>
 
-      <section className="mt-5 grid gap-5 xl:grid-cols-[minmax(0,1.02fr)_minmax(0,0.98fr)]">
-        <div className="space-y-5">
-          <div className="card p-5">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div>
-                <p className="section-title">Profile Share</p>
-                <h2 className="mt-2 text-xl font-black text-[var(--text-primary)]">
-                  Your public challenge card
-                </h2>
-              </div>
-              {username ? (
-                <ShareMenu
-                  text={profileShareCopy}
-                  url={profileUrl}
-                  title="My Mechi Profile"
-                  imageUrl={getProfileOgImageUrl(username)}
-                  imageFilename={`mechi-profile-${username}.png`}
-                  variant="ghost"
-                  onShared={recordShareAction}
-                />
-              ) : null}
+      <section className="mt-5 grid gap-5 xl:grid-cols-2">
+        <div id="share-invite-card" className="card p-5">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <p className="section-title">Invite Friends</p>
+              <h2 className="mt-2 text-xl font-black text-[var(--text-primary)]">
+                Send one link and keep it moving
+              </h2>
             </div>
-
-            <div className="mt-4 rounded-[1.25rem] border border-[var(--border-color)] bg-[var(--surface-elevated)] p-5">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--text-soft)]">
-                What people will read
-              </p>
-              <p className="mt-3 text-lg font-black leading-8 text-[var(--text-primary)]">
-                {profileShareCopy}
-              </p>
-              <div className="mt-4 grid gap-3 md:grid-cols-3">
-                <div className="rounded-2xl border border-[var(--border-color)] bg-[var(--surface)] p-4">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--text-soft)]">
-                    Strongest rank
-                  </p>
-                  <p className="mt-2 text-base font-black text-[var(--text-primary)]">
-                    {strongestRank.label}
-                  </p>
-                </div>
-                <div className="rounded-2xl border border-[var(--border-color)] bg-[var(--surface)] p-4">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--text-soft)]">
-                    Level
-                  </p>
-                  <p className="mt-2 text-base font-black text-[var(--text-primary)]">Lv. {level}</p>
-                </div>
-                <div className="rounded-2xl border border-[var(--border-color)] bg-[var(--surface)] p-4">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--text-soft)]">
-                    Record
-                  </p>
-                  <p className="mt-2 text-base font-black text-[var(--text-primary)]">
-                    {shareStats.totalWins}-{shareStats.totalLosses}
-                  </p>
-                  <p className="mt-1 text-xs text-[var(--text-soft)]">
-                    {totalMatches > 0 ? `${totalMatches} tracked matches` : 'No tracked matches yet'}
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            <div className="mt-4 space-y-3">
-              <div className="rounded-[1.15rem] border border-[var(--border-color)] bg-[var(--surface-elevated)] p-4">
-                <p className="text-sm font-black text-[var(--text-primary)]">Public profile</p>
-                <p className="mt-2 break-all text-sm leading-6 text-[var(--text-secondary)]">
-                  {profileUrl || 'Profile link unavailable right now.'}
-                </p>
-                <div className="mt-4 flex flex-wrap gap-3">
-                  <button
-                    type="button"
-                    onClick={() => void handleCopy(profileUrl, 'Profile link copied', 'profile_link_copy')}
-                    disabled={!profileUrl}
-                    className="btn-ghost"
-                  >
-                    <Copy size={14} />
-                    Copy link
-                  </button>
-                  {profilePath ? (
-                    <Link href={profilePath} className="btn-primary">
-                      Open public page
-                      <ArrowUpRight size={14} />
-                    </Link>
-                  ) : null}
-                </div>
-              </div>
-
-              <div className="rounded-[1.15rem] border border-[var(--border-color)] bg-[var(--surface-elevated)] p-4">
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  <div>
-                    <p className="text-sm font-black text-[var(--text-primary)]">Invite link</p>
-                    <p className="mt-2 break-all text-sm leading-6 text-[var(--text-secondary)]">
-                      {inviteUrl || 'Invite link unavailable right now.'}
-                    </p>
-                  </div>
-                  {inviteCode && username ? (
-                    <InviteMenu inviteCode={inviteCode} username={username} onShared={recordShareAction} />
-                  ) : (
-                    <span className="brand-chip-coral px-3 py-1">Invite unavailable</span>
-                  )}
-                </div>
-
-                <div className="mt-4 flex flex-wrap gap-3">
-                  <button
-                    type="button"
-                    onClick={() => void handleCopy(inviteUrl, 'Invite link copied', 'invite_link_copy')}
-                    disabled={!inviteUrl}
-                    className="btn-ghost"
-                  >
-                    <Copy size={14} />
-                    Copy invite
-                  </button>
-                  {invitePath ? (
-                    <Link href={invitePath} className="btn-ghost">
-                      Open invite page
-                      <ArrowUpRight size={14} />
-                    </Link>
-                  ) : null}
-                </div>
-              </div>
-            </div>
+            {inviteCode && username ? (
+              <InviteMenu inviteCode={inviteCode} username={username} variant="primary" onShared={recordShareAction} />
+            ) : (
+              <span className="rounded-full border border-[var(--border-color)] px-3 py-1 text-xs font-semibold uppercase tracking-[0.12em] text-[var(--text-soft)]">
+                Unavailable
+              </span>
+            )}
           </div>
 
-          <div className="card p-5">
-            <p className="section-title">Next Page</p>
-            <h2 className="mt-2 text-xl font-black text-[var(--text-primary)]">
-              Rewards moved out cleanly
-            </h2>
-            <p className="mt-3 text-sm leading-6 text-[var(--text-secondary)]">
-              Track RP, ChezaHub linking, redemption codes, and the reward ledger on the dedicated rewards
-              page. This share page stays focused on profile and invite distribution.
+          <p className="mt-3 text-sm leading-6 text-[var(--text-secondary)]">
+            Use this when the goal is getting a new player into Mechi fast.
+          </p>
+
+          <div className="mt-4 rounded-[1.2rem] border border-[var(--border-color)] bg-[var(--surface-elevated)] p-4">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--text-soft)]">
+              Invite link
             </p>
+            <p className="mt-2 break-all text-sm leading-6 text-[var(--text-secondary)]">
+              {inviteUrl || 'Invite link unavailable right now.'}
+            </p>
+            <p className="mt-3 text-xs text-[var(--text-soft)]">
+              {inviteCode ? `Invite code: ${inviteCode}` : 'Refresh later if your code is still loading.'}
+            </p>
+          </div>
 
-            <div className="mt-4 flex flex-wrap gap-3">
-              <Link href="/rewards" className="btn-primary">
-                <Share2 size={14} />
-                Open rewards
+          <div className="mt-4 flex flex-wrap gap-3">
+            <button
+              type="button"
+              onClick={() => void handleCopy(inviteUrl, 'Invite link copied', 'invite_link_copy')}
+              disabled={!inviteUrl}
+              className="btn-ghost"
+            >
+              <Copy size={14} />
+              Copy invite
+            </button>
+            {invitePath ? (
+              <Link href={invitePath} className="btn-ghost">
+                Open invite page
+                <ArrowUpRight size={14} />
               </Link>
-              <Link href="/profile/settings" className="btn-ghost">
-                Improve profile
-              </Link>
-            </div>
+            ) : null}
           </div>
         </div>
 
-        <div className="space-y-5">
-          <div className="card p-5">
-            <p className="section-title">Best Uses</p>
-            <h2 className="mt-2 text-xl font-black text-[var(--text-primary)]">
-              Share with intent
-            </h2>
-            <div className="mt-4 space-y-3 text-sm leading-6 text-[var(--text-secondary)]">
-              <p>
-                Drop your public profile when you want someone to size up your rank, games, and recent
-                record before challenging you.
-              </p>
-              <p>
-                Use the invite link in WhatsApp groups when the goal is getting more players into Mechi
-                and more opponents into your next run.
-              </p>
-              <p>
-                Every verified share action can still count toward your daily rewards. Use the rewards page
-                when you want to track the RP side of that activity.
-              </p>
+        <div id="share-profile-card" className="card p-5">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <p className="section-title">Public Profile</p>
+              <h2 className="mt-2 text-xl font-black text-[var(--text-primary)]">
+                Let people size you up fast
+              </h2>
             </div>
+            {profileUrl && username ? (
+              <ShareMenu
+                text={profileShareCopy}
+                url={profileUrl}
+                title="My Mechi Profile"
+                imageUrl={getProfileOgImageUrl(username)}
+                imageFilename={`mechi-profile-${username}.png`}
+                variant="primary"
+                onShared={recordShareAction}
+              />
+            ) : (
+              <span className="rounded-full border border-[var(--border-color)] px-3 py-1 text-xs font-semibold uppercase tracking-[0.12em] text-[var(--text-soft)]">
+                Need username
+              </span>
+            )}
+          </div>
 
-            <div className="mt-4 flex flex-wrap gap-3">
-              <Link href="/profile/settings" className="btn-primary">
-                Improve profile
-              </Link>
-              <Link href="/leaderboard" className="btn-ghost">
-                Find opponents
-              </Link>
-              <Link href="/rewards" className="btn-ghost">
-                Open rewards
-              </Link>
+          <p className="mt-3 text-sm leading-6 text-[var(--text-secondary)]">
+            Use your public card when you want people to see your level, rank, and match record at a
+            glance.
+          </p>
+
+          <div className="mt-4 rounded-[1.2rem] border border-[var(--border-color)] bg-[var(--surface-elevated)] p-4">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--text-soft)]">
+              Profile preview
+            </p>
+            <p className="mt-3 text-base font-black leading-7 text-[var(--text-primary)]">
+              {profileShareCopy}
+            </p>
+            <div className="mt-4 flex flex-wrap gap-2 text-xs text-[var(--text-soft)]">
+              <span className="rounded-full border border-[var(--border-color)] px-3 py-1">
+                {strongestRank.label}
+              </span>
+              <span className="rounded-full border border-[var(--border-color)] px-3 py-1">
+                Lv. {level}
+              </span>
+              <span className="rounded-full border border-[var(--border-color)] px-3 py-1">
+                {totalMatches > 0
+                  ? `${shareStats.totalWins}-${shareStats.totalLosses} record`
+                  : 'No record yet'}
+              </span>
             </div>
+          </div>
+
+          <div className="mt-4 rounded-[1.2rem] border border-[var(--border-color)] bg-[var(--surface-elevated)] p-4">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--text-soft)]">
+              Public link
+            </p>
+            <p className="mt-2 break-all text-sm leading-6 text-[var(--text-secondary)]">
+              {profileUrl || 'Public profile link unavailable right now.'}
+            </p>
+          </div>
+
+          <div className="mt-4 flex flex-wrap gap-3">
+            <button
+              type="button"
+              onClick={() => void handleCopy(profileUrl, 'Profile link copied', 'profile_link_copy')}
+              disabled={!profileUrl}
+              className="btn-ghost"
+            >
+              <Copy size={14} />
+              Copy profile link
+            </button>
+            {profilePath ? (
+              <Link href={profilePath} className="btn-ghost">
+                Open public page
+                <ArrowUpRight size={14} />
+              </Link>
+            ) : null}
           </div>
         </div>
       </section>
+
+      <p className="mt-5 text-xs leading-6 text-[var(--text-soft)]">
+        Verified shares can still earn RP once per day.{' '}
+        <Link
+          href="/rewards"
+          className="font-semibold text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)]"
+        >
+          Track that on Rewards
+        </Link>
+        .
+      </p>
     </div>
   );
 }

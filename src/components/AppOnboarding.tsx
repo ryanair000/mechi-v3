@@ -1,11 +1,15 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { BellRing, Gamepad2, Swords, Trophy, X } from 'lucide-react';
 
 const ONBOARDING_STORAGE_KEY = 'mechi_onboarding_seen_v1';
 const ONBOARDING_OPEN_EVENT = 'mechi:open-onboarding';
+
+function shouldAutoOpenOnPath(pathname: string) {
+  return pathname === '/dashboard' || pathname.startsWith('/dashboard/');
+}
 
 const STEPS = [
   {
@@ -40,13 +44,8 @@ export function openAppOnboarding() {
 
 export function AppOnboarding() {
   const router = useRouter();
-  const [open, setOpen] = useState(() => {
-    if (typeof window === 'undefined') {
-      return false;
-    }
-
-    return window.localStorage.getItem(ONBOARDING_STORAGE_KEY) !== 'true';
-  });
+  const pathname = usePathname();
+  const [open, setOpen] = useState(false);
 
   useEffect(() => {
     const handleOpen = () => setOpen(true);
@@ -56,6 +55,19 @@ export function AppOnboarding() {
       window.removeEventListener(ONBOARDING_OPEN_EVENT, handleOpen);
     };
   }, []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return;
+    }
+
+    if (window.localStorage.getItem(ONBOARDING_STORAGE_KEY) === 'true') {
+      return;
+    }
+
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setOpen(shouldAutoOpenOnPath(pathname));
+  }, [pathname]);
 
   const closeOnboarding = () => {
     window.localStorage.setItem(ONBOARDING_STORAGE_KEY, 'true');

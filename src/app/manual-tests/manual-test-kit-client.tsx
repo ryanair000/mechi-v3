@@ -14,21 +14,20 @@ import {
 
 type ProgressState = Record<string, boolean>;
 const PROGRESS_EVENT_NAME = 'mechi:manual-test-kit-progress';
+const EMPTY_PROGRESS_STATE: ProgressState = {};
 
-function readStoredProgress(): ProgressState {
-  if (typeof window === 'undefined') {
-    return {};
+let cachedProgressRaw: string | null = null;
+let cachedProgressSnapshot: ProgressState = EMPTY_PROGRESS_STATE;
+
+function normalizeStoredProgress(rawValue: string | null): ProgressState {
+  if (!rawValue) {
+    return EMPTY_PROGRESS_STATE;
   }
 
   try {
-    const rawValue = window.localStorage.getItem(MANUAL_TEST_STORAGE_KEY);
-    if (!rawValue) {
-      return {};
-    }
-
     const parsed = JSON.parse(rawValue) as unknown;
     if (!parsed || typeof parsed !== 'object') {
-      return {};
+      return EMPTY_PROGRESS_STATE;
     }
 
     const nextState: ProgressState = {};
@@ -39,10 +38,25 @@ function readStoredProgress(): ProgressState {
       }
     }
 
-    return nextState;
+    return Object.keys(nextState).length > 0 ? nextState : EMPTY_PROGRESS_STATE;
   } catch {
-    return {};
+    return EMPTY_PROGRESS_STATE;
   }
+}
+
+function readStoredProgress(): ProgressState {
+  if (typeof window === 'undefined') {
+    return EMPTY_PROGRESS_STATE;
+  }
+
+  const rawValue = window.localStorage.getItem(MANUAL_TEST_STORAGE_KEY);
+  if (rawValue === cachedProgressRaw) {
+    return cachedProgressSnapshot;
+  }
+
+  cachedProgressRaw = rawValue;
+  cachedProgressSnapshot = normalizeStoredProgress(rawValue);
+  return cachedProgressSnapshot;
 }
 
 function writeStoredProgress(nextState: ProgressState) {
@@ -50,7 +64,10 @@ function writeStoredProgress(nextState: ProgressState) {
     return;
   }
 
-  window.localStorage.setItem(MANUAL_TEST_STORAGE_KEY, JSON.stringify(nextState));
+  const nextRaw = JSON.stringify(nextState);
+  cachedProgressRaw = nextRaw;
+  cachedProgressSnapshot = Object.keys(nextState).length > 0 ? { ...nextState } : EMPTY_PROGRESS_STATE;
+  window.localStorage.setItem(MANUAL_TEST_STORAGE_KEY, nextRaw);
   window.dispatchEvent(new Event(PROGRESS_EVENT_NAME));
 }
 
@@ -71,7 +88,7 @@ function subscribeToStoredProgress(onStoreChange: () => void) {
 }
 
 function getServerProgressSnapshot(): ProgressState {
-  return {};
+  return EMPTY_PROGRESS_STATE;
 }
 
 function matchesQuery(fields: string[], query: string) {

@@ -34,9 +34,9 @@ export function SignupPage({
   const showSideCopy = Boolean(sideTitle || sideDescription || sidePoints.length);
 
   return (
-    <div className="page-base flex min-h-screen w-full items-center justify-center bg-gradient-to-br from-slate-900 via-blue-900 to-slate-800 p-4">
-      <div className="w-full transition-transform duration-200 md:origin-center md:scale-50">
-        <div className="flex min-h-[calc(100svh-2rem)] w-full flex-col overflow-hidden rounded-3xl bg-white shadow-2xl md:flex-row">
+    <div className="page-base flex min-h-screen w-full items-center justify-center bg-gradient-to-br from-slate-900 via-blue-900 to-slate-800 p-4 md:h-screen md:min-h-0 md:overflow-hidden">
+      <div className="w-full transition-transform duration-200 md:origin-center md:scale-[0.65]">
+        <div className="flex min-h-[calc(100svh-2rem)] w-full flex-col overflow-hidden rounded-3xl bg-white shadow-2xl md:h-[calc(100svh-2rem)] md:min-h-0 md:flex-row">
           <div className="relative hidden flex-1 overflow-hidden md:block">
             <div className="absolute left-6 top-6 z-10">
               <button
@@ -94,7 +94,7 @@ export function SignupPage({
             </div>
           </div>
 
-          <div className="flex flex-1 flex-col justify-center overflow-y-auto p-8">
+          <div className="flex flex-1 flex-col justify-center overflow-y-auto p-8 md:overflow-hidden">
             <div className="mx-auto w-full max-w-xl">
               {mainTitle || mainSubtitle ? (
                 <div className="mb-8">

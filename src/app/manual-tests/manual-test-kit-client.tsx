@@ -1,13 +1,11 @@
 'use client';
 
 import { useDeferredValue, useState, useSyncExternalStore } from 'react';
-import { CheckCircle2, ExternalLink, RefreshCcw, Search, ShieldCheck, Users } from 'lucide-react';
+import { CheckCircle2, ChevronDown, ExternalLink, RefreshCcw, Search } from 'lucide-react';
 import {
   MANUAL_TEST_STORAGE_KEY,
   manualTestAccounts,
   manualTestHosts,
-  manualTestRunOrder,
-  manualTestTotalChecks,
   type ManualTestItem,
   type ManualTestSection,
 } from './manual-test-kit';
@@ -115,31 +113,6 @@ function itemMatchesQuery(item: ManualTestItem, query: string) {
   );
 }
 
-function StatCard({
-  label,
-  value,
-  accent = false,
-}: {
-  label: string;
-  value: string;
-  accent?: boolean;
-}) {
-  return (
-    <div className="rounded-[var(--radius-card)] border border-[var(--border-color)] bg-[var(--surface-soft)] px-4 py-4">
-      <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--text-soft)]">
-        {label}
-      </p>
-      <p
-        className={`mt-2 text-2xl font-black ${
-          accent ? 'text-[var(--accent-secondary-text)]' : 'text-[var(--text-primary)]'
-        }`}
-      >
-        {value}
-      </p>
-    </div>
-  );
-}
-
 function SectionActionButton({
   label,
   onClick,
@@ -160,116 +133,157 @@ function SectionActionButton({
     <button
       type="button"
       onClick={onClick}
-      className={`inline-flex items-center justify-center rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors hover:text-[var(--text-primary)] ${toneClass}`}
+      className={`inline-flex min-h-10 items-center justify-center rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors hover:text-[var(--text-primary)] ${toneClass}`}
     >
       {label}
     </button>
   );
 }
 
-function ManualTestItemCard({
+function QuickStat({
+  label,
+  value,
+  accent = false,
+}: {
+  label: string;
+  value: string;
+  accent?: boolean;
+}) {
+  return (
+    <div className="rounded-full border border-[var(--border-color)] bg-[var(--surface-strong)] px-3 py-1.5 text-sm">
+      <span className="text-[var(--text-soft)]">{label}</span>{' '}
+      <span className={accent ? 'font-semibold text-[var(--accent-secondary-text)]' : 'font-semibold text-[var(--text-primary)]'}>
+        {value}
+      </span>
+    </div>
+  );
+}
+
+function ManualTestItemRow({
   item,
   checked,
   onToggle,
+  forceExpanded,
 }: {
   item: ManualTestItem;
   checked: boolean;
   onToggle: (id: string) => void;
+  forceExpanded: boolean;
 }) {
+  const hasExtraDetails = item.passIf.length > 0 || Boolean(item.watchFor?.length);
+
   return (
     <li
-      className={`rounded-[var(--radius-card)] border p-4 sm:p-5 ${
-        checked
-          ? 'border-[rgba(50,224,196,0.3)] bg-[rgba(50,224,196,0.08)]'
-          : 'border-[var(--border-color)] bg-[var(--surface-soft)]'
+      className={`px-4 py-4 transition-colors sm:px-5 sm:py-5 ${
+        checked ? 'bg-[rgba(50,224,196,0.08)]' : 'bg-transparent'
       }`}
     >
-      <div className="flex flex-col gap-4">
-        <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
-          <div className="min-w-0 flex-1">
-            <div className="flex items-start gap-3">
-              <input
-                type="checkbox"
-                checked={checked}
-                onChange={() => onToggle(item.id)}
-                aria-label={`Mark ${item.title} as complete`}
-                className="mt-1 h-5 w-5 shrink-0 rounded border-[var(--border-color)] accent-[var(--accent-secondary-text)]"
-              />
+      <div className="flex items-start gap-3">
+        <input
+          type="checkbox"
+          checked={checked}
+          onChange={() => onToggle(item.id)}
+          aria-label={`Mark ${item.title} as complete`}
+          className="mt-1 h-5 w-5 shrink-0 rounded border-[var(--border-color)] accent-[var(--accent-secondary-text)]"
+        />
 
-              <div className="min-w-0">
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="brand-chip px-2 py-0.5">{item.id}</span>
-                  <span className="rounded-full border border-[var(--border-color)] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--text-soft)]">
-                    {item.account}
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="brand-chip px-2 py-0.5">{item.id}</span>
+                <span className="rounded-full border border-[var(--border-color)] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--text-soft)]">
+                  {item.account}
+                </span>
+                {item.timing ? <span className="brand-chip-coral px-2 py-0.5">{item.timing}</span> : null}
+                {checked ? (
+                  <span className="inline-flex items-center gap-1 rounded-full border border-[rgba(50,224,196,0.22)] bg-[rgba(50,224,196,0.14)] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--accent-secondary-text)]">
+                    <CheckCircle2 size={12} />
+                    Done
                   </span>
-                  {item.timing ? <span className="brand-chip-coral px-2 py-0.5">{item.timing}</span> : null}
-                </div>
-
-                <h3 className="mt-3 text-base font-black leading-6 text-[var(--text-primary)]">
-                  {item.title}
-                </h3>
+                ) : null}
               </div>
+
+              <h3 className="mt-2 text-base font-black leading-6 text-[var(--text-primary)]">{item.title}</h3>
             </div>
+
+            {item.links.length ? (
+              <div className="flex flex-wrap gap-2 lg:max-w-[20rem] lg:justify-end">
+                {item.links.map((link) => (
+                  <a
+                    key={`${item.id}-${link.href}-${link.label}`}
+                    href={link.href}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-1.5 rounded-full border border-[var(--border-color)] bg-[var(--surface-strong)] px-3 py-1.5 text-xs font-semibold text-[var(--text-secondary)] transition-colors hover:border-[rgba(50,224,196,0.22)] hover:text-[var(--text-primary)]"
+                  >
+                    {link.label}
+                    <ExternalLink size={12} />
+                  </a>
+                ))}
+              </div>
+            ) : null}
           </div>
 
-          <div className="flex flex-wrap gap-2 xl:max-w-[20rem] xl:justify-end">
-            {item.links.map((link) => (
-              <a
-                key={`${item.id}-${link.href}-${link.label}`}
-                href={link.href}
-                target="_blank"
-                rel="noreferrer"
-                className="inline-flex items-center gap-1.5 rounded-full border border-[var(--border-color)] bg-[var(--surface-strong)] px-3 py-1.5 text-xs font-semibold text-[var(--text-secondary)] transition-colors hover:border-[rgba(50,224,196,0.22)] hover:text-[var(--text-primary)]"
-              >
-                {link.label}
-                <ExternalLink size={12} />
-              </a>
+          <ol className="mt-3 space-y-2">
+            {item.instructions.map((step, index) => (
+              <li key={`${item.id}-step-${index}`} className="flex items-start gap-3 text-sm leading-6 text-[var(--text-secondary)]">
+                <span className="mt-0.5 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[var(--accent-secondary-soft)] text-[11px] font-bold text-[var(--accent-secondary-text)]">
+                  {index + 1}
+                </span>
+                <span>{step}</span>
+              </li>
             ))}
-          </div>
+          </ol>
+
+          {hasExtraDetails ? (
+            <details
+              className="group mt-3 overflow-hidden rounded-[var(--radius-control)] border border-[var(--border-color)] bg-[var(--surface-soft)]"
+              open={forceExpanded ? true : undefined}
+            >
+              <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-3 py-2.5 text-sm font-semibold text-[var(--text-secondary)]">
+                <span>Show success notes</span>
+                <ChevronDown size={16} className="shrink-0 transition-transform group-open:rotate-180" />
+              </summary>
+
+              <div className="border-t border-[var(--border-color)] px-3 py-3">
+                {item.passIf.length ? (
+                  <div>
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--text-soft)]">
+                      Done when
+                    </p>
+                    <ul className="mt-2 space-y-2">
+                      {item.passIf.map((outcome) => (
+                        <li
+                          key={`${item.id}-pass-${outcome}`}
+                          className="flex items-start gap-3 text-sm leading-6 text-[var(--text-secondary)]"
+                        >
+                          <CheckCircle2 size={16} className="mt-1 shrink-0 text-[var(--accent-secondary-text)]" />
+                          <span>{outcome}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ) : null}
+
+                {item.watchFor?.length ? (
+                  <div className={item.passIf.length ? 'mt-4' : ''}>
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--brand-coral)]">
+                      Watch out
+                    </p>
+                    <ul className="mt-2 space-y-2">
+                      {item.watchFor.map((note) => (
+                        <li key={`${item.id}-watch-${note}`} className="text-sm leading-6 text-[var(--text-secondary)]">
+                          {note}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ) : null}
+              </div>
+            </details>
+          ) : null}
         </div>
-
-        <div className="grid gap-3 lg:grid-cols-2">
-          <div className="subtle-card p-4">
-            <p className="section-title !mb-0">Do this</p>
-            <ol className="mt-3 space-y-2">
-              {item.instructions.map((step, index) => (
-                <li key={`${item.id}-step-${index}`} className="flex items-start gap-3 text-sm leading-6 text-[var(--text-secondary)]">
-                  <span className="mt-0.5 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[var(--accent-secondary-soft)] text-[11px] font-bold text-[var(--accent-secondary-text)]">
-                    {index + 1}
-                  </span>
-                  <span>{step}</span>
-                </li>
-              ))}
-            </ol>
-          </div>
-
-          <div className="subtle-card p-4">
-            <p className="section-title !mb-0">Pass if</p>
-            <ul className="mt-3 space-y-2">
-              {item.passIf.map((outcome) => (
-                <li key={`${item.id}-pass-${outcome}`} className="flex items-start gap-3 text-sm leading-6 text-[var(--text-secondary)]">
-                  <CheckCircle2 size={16} className="mt-1 shrink-0 text-[var(--accent-secondary-text)]" />
-                  <span>{outcome}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
-        </div>
-
-        {item.watchFor?.length ? (
-          <div className="rounded-[var(--radius-control)] border border-[rgba(255,107,107,0.24)] bg-[rgba(255,107,107,0.08)] px-4 py-3">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--brand-coral)]">
-              Watch for
-            </p>
-            <ul className="mt-2 space-y-2">
-              {item.watchFor.map((note) => (
-                <li key={`${item.id}-watch-${note}`} className="text-sm leading-6 text-[var(--text-secondary)]">
-                  {note}
-                </li>
-              ))}
-            </ul>
-          </div>
-        ) : null}
       </div>
     </li>
   );
@@ -282,6 +296,15 @@ export default function ManualTestKitClient({
 }) {
   const [search, setSearch] = useState('');
   const [showRemainingOnly, setShowRemainingOnly] = useState(false);
+  const [openSections, setOpenSections] = useState<Record<string, boolean>>(() => {
+    if (!sections[0]) {
+      return {};
+    }
+
+    return {
+      [sections[0].id]: true,
+    };
+  });
   const deferredSearch = useDeferredValue(search);
   const checkedItems = useSyncExternalStore<ProgressState>(
     subscribeToStoredProgress,
@@ -294,8 +317,8 @@ export default function ManualTestKitClient({
   const completedCount = allItems.filter((item) => checkedItems[item.id]).length;
   const remainingCount = totalCount - completedCount;
   const progressPercent = totalCount === 0 ? 0 : Math.round((completedCount / totalCount) * 100);
-  const runLastCount = allItems.filter((item) => item.timing).length;
   const normalizedQuery = deferredSearch.trim().toLowerCase();
+  const hasSearch = normalizedQuery.length > 0;
 
   const filteredSections = sections
     .map((section) => {
@@ -365,50 +388,47 @@ export default function ManualTestKitClient({
   return (
     <div className="page-base">
       <section className="landing-shell py-8 sm:py-10 lg:py-12">
-        <div className="mx-auto max-w-6xl space-y-4 sm:space-y-6">
-          <div className="card circuit-panel overflow-hidden p-6 sm:p-7">
+        <div className="mx-auto max-w-6xl space-y-4 sm:space-y-5">
+          <div className="card p-5 sm:p-6 lg:p-7">
             <div className="flex flex-col gap-6 xl:flex-row xl:items-end xl:justify-between">
               <div className="max-w-3xl">
-                <p className="section-title">Manual QA</p>
-                <h1 className="mt-3 text-[2.2rem] font-black leading-[0.98] text-[var(--text-primary)] sm:text-[3.4rem]">
-                  Mechi Test Kit
+                <p className="section-title">Simple manual checklist</p>
+                <h1 className="mt-2 text-[2rem] font-black leading-[1.02] text-[var(--text-primary)] sm:text-[3rem]">
+                  Mechi manual test checklist
                 </h1>
-                <p className="mt-4 max-w-2xl text-sm leading-7 text-[var(--text-secondary)] sm:text-base">
-                  Tick each check as you go, keep product surfaces in separate tabs, and use this page
-                  as the full manual pass for Mechi. Progress is saved locally in this browser so you
-                  can leave and resume without losing your place.
+                <p className="mt-3 max-w-2xl text-sm leading-7 text-[var(--text-secondary)] sm:text-base">
+                  Open the page you need, do the short steps, and tick the box when it looks right.
+                  Extra QA notes are still here, but they stay tucked away until you need them.
                 </p>
 
-                <div className="mt-5 flex flex-wrap gap-2">
-                  {manualTestHosts.map((host) => (
-                    <a
-                      key={host.href}
-                      href={host.href}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="inline-flex items-center gap-1.5 rounded-full border border-[var(--border-color)] bg-[var(--surface-strong)] px-3 py-1.5 text-xs font-semibold text-[var(--text-secondary)] transition-colors hover:border-[rgba(50,224,196,0.22)] hover:text-[var(--text-primary)]"
-                    >
-                      {host.label}
-                      <ExternalLink size={12} />
-                    </a>
-                  ))}
-                </div>
+                <ol className="mt-5 grid gap-2 text-sm text-[var(--text-secondary)] sm:grid-cols-3">
+                  <li className="rounded-[var(--radius-control)] border border-[var(--border-color)] bg-[var(--surface-soft)] px-3 py-3">
+                    Keep this checklist open in one tab.
+                  </li>
+                  <li className="rounded-[var(--radius-control)] border border-[var(--border-color)] bg-[var(--surface-soft)] px-3 py-3">
+                    Use separate browser sessions for multi-player tests.
+                  </li>
+                  <li className="rounded-[var(--radius-control)] border border-[var(--border-color)] bg-[var(--surface-soft)] px-3 py-3">
+                    Save email, payment, and admin cleanup checks for the end.
+                  </li>
+                </ol>
               </div>
 
-              <div className="w-full max-w-md rounded-[var(--radius-card)] border border-[var(--border-color)] bg-[rgba(255,255,255,0.72)] p-5 shadow-[var(--shadow-soft)]">
-                <div className="flex items-center justify-between gap-3">
+              <div className="w-full max-w-md rounded-[var(--radius-card)] border border-[var(--border-color)] bg-[var(--surface-soft)] p-5">
+                <div className="flex items-start justify-between gap-4">
                   <div>
                     <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--text-soft)]">
                       Progress
                     </p>
-                    <p className="mt-2 text-4xl font-black text-[var(--text-primary)]">
-                      {progressPercent}%
+                    <p className="mt-2 text-3xl font-black text-[var(--text-primary)]">
+                      {completedCount}/{totalCount}
                     </p>
+                    <p className="mt-1 text-sm text-[var(--text-secondary)]">{remainingCount} left to check</p>
                   </div>
 
-                  <div className="rounded-full border border-[rgba(50,224,196,0.22)] bg-[rgba(50,224,196,0.14)] px-3 py-1 text-xs font-semibold text-[var(--accent-secondary-text)]">
-                    {completedCount} of {totalCount} done
-                  </div>
+                  <span className="rounded-full border border-[rgba(50,224,196,0.22)] bg-[rgba(50,224,196,0.14)] px-3 py-1 text-xs font-semibold text-[var(--accent-secondary-text)]">
+                    {progressPercent}% done
+                  </span>
                 </div>
 
                 <div className="mt-4 h-2.5 overflow-hidden rounded-full bg-[rgba(11,17,33,0.08)]">
@@ -419,83 +439,66 @@ export default function ManualTestKitClient({
                 </div>
 
                 <p className="mt-3 text-sm leading-6 text-[var(--text-secondary)]">
-                  Saved progress is stored in this browser only.
+                  Saved progress stays in this browser only.
                 </p>
               </div>
             </div>
 
-            <div className="mt-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-              <StatCard label="Total checks" value={String(manualTestTotalChecks)} />
-              <StatCard label="Completed" value={String(completedCount)} accent />
-              <StatCard label="Remaining" value={String(remainingCount)} />
-              <StatCard label="Run last checks" value={String(runLastCount)} />
+            <div className="mt-5 flex flex-wrap gap-2">
+              <QuickStat label="Tasks" value={String(totalCount)} />
+              <QuickStat label="Done" value={String(completedCount)} accent />
+              <QuickStat label="Left" value={String(remainingCount)} />
+              <QuickStat label="Sections" value={String(sections.length)} />
             </div>
-          </div>
 
-          <div className="grid gap-4 lg:grid-cols-2">
-            <div className="card p-5 sm:p-6">
-              <div className="flex items-center gap-2 text-[var(--accent-secondary-text)]">
-                <ShieldCheck size={16} />
-                <p className="section-title !mb-0">Suggested run order</p>
-              </div>
-
-              <p className="mt-3 text-sm leading-6 text-[var(--text-secondary)]">
-                Run the product from top to bottom so layout issues, auth issues, and plan gates are
-                caught before you spend time on deeper ops and money flows.
+            <div className="mt-5">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--text-soft)]">
+                Open these hosts
               </p>
-
-              <ol className="mt-4 space-y-2.5">
-                {manualTestRunOrder.map((step, index) => (
-                  <li
-                    key={step}
-                    className="flex items-start gap-3 rounded-[var(--radius-control)] border border-[var(--border-color)] bg-[var(--surface-soft)] px-3 py-3 text-sm text-[var(--text-secondary)]"
+              <div className="mt-2 flex flex-wrap gap-2">
+                {manualTestHosts.map((host) => (
+                  <a
+                    key={`${host.label}-${host.href}`}
+                    href={host.href}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-1.5 rounded-full border border-[var(--border-color)] bg-[var(--surface-strong)] px-3 py-1.5 text-xs font-semibold text-[var(--text-secondary)] transition-colors hover:border-[rgba(50,224,196,0.22)] hover:text-[var(--text-primary)]"
                   >
-                    <span className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[var(--accent-secondary-soft)] text-[11px] font-bold text-[var(--accent-secondary-text)]">
-                      {index + 1}
-                    </span>
-                    <span>{step}</span>
-                  </li>
+                    {host.label}
+                    <ExternalLink size={12} />
+                  </a>
                 ))}
-              </ol>
+              </div>
             </div>
 
-            <div className="card p-5 sm:p-6">
-              <div className="flex items-center gap-2 text-[var(--accent-secondary-text)]">
-                <Users size={16} />
-                <p className="section-title !mb-0">Account kit</p>
-              </div>
-
-              <p className="mt-3 text-sm leading-6 text-[var(--text-secondary)]">
-                Keep these test identities ready so you can move through player, dispute, entitlement,
-                and admin-only paths without stopping to create new sessions midway through the run.
+            <div className="mt-5">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--text-soft)]">
+                Account kit
               </p>
-
-              <div className="mt-4 flex flex-wrap gap-2">
+              <div className="mt-2 flex flex-wrap gap-2">
                 {manualTestAccounts.map((account) => (
                   <span key={account} className="brand-chip px-3 py-1">
                     {account}
                   </span>
                 ))}
               </div>
-
-              <p className="mt-5 text-xs leading-5 text-[var(--text-soft)]">
-                Use separate profiles or incognito windows for multi-player checks. Save email, payment,
-                partner, and communications checks for the end of the run when possible.
-              </p>
             </div>
           </div>
 
           <div className="card p-5 sm:p-6">
-            <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_auto_auto] xl:items-end">
+            <div className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_auto_auto] xl:items-end">
               <label className="block">
-                <span className="label">Find a test</span>
+                <span className="label">Find a task</span>
                 <div className="relative">
-                  <Search size={15} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-soft)]" />
+                  <Search
+                    size={15}
+                    className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-soft)]"
+                  />
                   <input
                     type="search"
                     value={search}
                     onChange={(event) => setSearch(event.target.value)}
-                    placeholder="Search by route, feature, account, or instruction"
+                    placeholder="Search by route, account, or keyword"
                     className="input pl-10"
                   />
                 </div>
@@ -510,7 +513,7 @@ export default function ManualTestKitClient({
                     : 'border-[var(--border-color)] bg-[var(--surface-strong)] text-[var(--text-secondary)]'
                 }`}
               >
-                {showRemainingOnly ? 'Showing remaining only' : 'Show remaining only'}
+                {showRemainingOnly ? 'Showing only unfinished tasks' : 'Hide finished tasks'}
               </button>
 
               <button
@@ -519,18 +522,15 @@ export default function ManualTestKitClient({
                 className="inline-flex min-h-11 items-center justify-center gap-2 rounded-[var(--radius-control)] border border-[rgba(255,107,107,0.24)] bg-[rgba(255,107,107,0.08)] px-4 py-2 text-sm font-semibold text-[var(--brand-coral)] transition-colors hover:bg-[rgba(255,107,107,0.12)]"
               >
                 <RefreshCcw size={14} />
-                Reset saved progress
+                Clear progress
               </button>
             </div>
 
-            <div className="mt-4 flex flex-wrap gap-2">
-              <span className="rounded-full border border-[var(--border-color)] px-3 py-1 text-xs font-semibold text-[var(--text-secondary)]">
-                {visibleCount} visible checks
+            <div className="mt-4 flex flex-wrap items-center gap-2 text-sm text-[var(--text-secondary)]">
+              <span>
+                Showing {visibleCount} of {totalCount} tasks.
               </span>
-              <span className="rounded-full border border-[var(--border-color)] px-3 py-1 text-xs font-semibold text-[var(--text-secondary)]">
-                {sections.length} sections
-              </span>
-              {search ? (
+              {hasSearch ? (
                 <button
                   type="button"
                   onClick={() => setSearch('')}
@@ -561,9 +561,9 @@ export default function ManualTestKitClient({
 
           {filteredSections.length === 0 ? (
             <div className="card p-8 text-center sm:p-10">
-              <p className="text-lg font-black text-[var(--text-primary)]">No checks match the current filter.</p>
+              <p className="text-lg font-black text-[var(--text-primary)]">No tasks match the current filter.</p>
               <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">
-                Clear the search or turn off the remaining-only filter to see the full kit again.
+                Clear the search or show finished tasks again to bring the full checklist back.
               </p>
             </div>
           ) : null}
@@ -571,57 +571,84 @@ export default function ManualTestKitClient({
           {filteredSections.map((section) => {
             const sectionCompletedCount = section.items.filter((item) => checkedItems[item.id]).length;
             const sectionIsComplete = sectionCompletedCount === section.items.length;
+            const visibleLabel =
+              section.visibleItems.length === section.items.length
+                ? `${sectionCompletedCount}/${section.items.length} done`
+                : `${sectionCompletedCount}/${section.items.length} done • ${section.visibleItems.length} shown`;
+            const isSectionOpen = hasSearch ? true : Boolean(openSections[section.id]);
 
             return (
-              <section
+              <details
                 key={section.id}
                 id={section.id}
-                className={`card scroll-mt-24 overflow-hidden ${
+                className={`card group scroll-mt-24 overflow-hidden ${
                   sectionIsComplete ? 'border-[rgba(50,224,196,0.28)]' : ''
                 }`}
+                open={isSectionOpen}
+                onToggle={(event) => {
+                  if (hasSearch) {
+                    return;
+                  }
+
+                  const isOpen = event.currentTarget.open;
+                  setOpenSections((current) => ({
+                    ...current,
+                    [section.id]: isOpen,
+                  }));
+                }}
               >
-                <div className="px-5 py-5 sm:px-6">
-                  <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
-                    <div className="max-w-3xl">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <p className="section-title !mb-0">{section.title}</p>
-                        {sectionIsComplete ? (
-                          <span className="inline-flex items-center gap-1 rounded-full border border-[rgba(50,224,196,0.26)] bg-[rgba(50,224,196,0.14)] px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--accent-secondary-text)]">
-                            <CheckCircle2 size={12} />
-                            Complete
-                          </span>
-                        ) : null}
-                      </div>
-
-                      <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">
-                        {section.description}
-                      </p>
-                      <p className="mt-2 text-xs leading-5 text-[var(--text-soft)]">{section.goal}</p>
-                    </div>
-
-                    <div className="flex flex-wrap gap-2">
+                <summary className="flex cursor-pointer list-none items-start justify-between gap-4 px-5 py-5 sm:px-6">
+                  <div className="max-w-3xl">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <p className="section-title !mb-0">{section.title}</p>
                       <span className="rounded-full border border-[var(--border-color)] px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.12em] text-[var(--text-soft)]">
-                        {sectionCompletedCount}/{section.items.length} done
+                        {visibleLabel}
                       </span>
-                      <SectionActionButton label="Check section" tone="accent" onClick={() => setSectionState(section, true)} />
-                      <SectionActionButton label="Reset section" tone="danger" onClick={() => setSectionState(section, false)} />
+                      {sectionIsComplete ? (
+                        <span className="inline-flex items-center gap-1 rounded-full border border-[rgba(50,224,196,0.26)] bg-[rgba(50,224,196,0.14)] px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--accent-secondary-text)]">
+                          <CheckCircle2 size={12} />
+                          Complete
+                        </span>
+                      ) : null}
                     </div>
-                  </div>
-                </div>
 
-                <div className="border-t border-[var(--border-color)] px-5 py-5 sm:px-6">
-                  <ol className="space-y-3">
+                    <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">{section.description}</p>
+                    <p className="mt-2 text-xs leading-5 text-[var(--text-soft)]">Done when: {section.goal}</p>
+                  </div>
+
+                  <span className="inline-flex shrink-0 items-center gap-2 rounded-full border border-[var(--border-color)] bg-[var(--surface-soft)] px-3 py-1.5 text-xs font-semibold text-[var(--text-secondary)]">
+                    <span className="hidden sm:inline">Open section</span>
+                    <ChevronDown size={14} className="transition-transform group-open:rotate-180" />
+                  </span>
+                </summary>
+
+                <div className="border-t border-[var(--border-color)]">
+                  <div className="flex flex-wrap gap-2 px-5 py-4 sm:px-6">
+                    <SectionActionButton
+                      label="Check all in section"
+                      tone="accent"
+                      onClick={() => setSectionState(section, true)}
+                    />
+                    <SectionActionButton
+                      label="Reset section"
+                      tone="danger"
+                      onClick={() => setSectionState(section, false)}
+                    />
+                  </div>
+
+                  <ol className="divide-y divide-[var(--border-color)] border-t border-[var(--border-color)]">
                     {section.visibleItems.map((item) => (
-                      <ManualTestItemCard
+                      <ManualTestItemRow
                         key={item.id}
                         item={item}
                         checked={Boolean(checkedItems[item.id])}
                         onToggle={toggleItem}
+                        forceExpanded={hasSearch}
                       />
                     ))}
                   </ol>
                 </div>
-              </section>
+              </details>
             );
           })}
         </div>

@@ -129,10 +129,6 @@ const Gallery4 = ({
                       <div className="mb-5 line-clamp-2 text-sm leading-6 text-white/95 drop-shadow-[0_2px_10px_rgba(0,0,0,0.95)] md:mb-6">
                         {item.description}
                       </div>
-                      <div className="flex items-center text-sm font-medium text-white drop-shadow-[0_2px_10px_rgba(0,0,0,0.95)]">
-                        Read more{" "}
-                        <ArrowRight className="ml-1.5 size-4 transition-transform group-hover:translate-x-1" />
-                      </div>
                     </div>
                   </div>
                 </Link>

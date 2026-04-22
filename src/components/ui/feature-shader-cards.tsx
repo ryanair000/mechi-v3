@@ -186,12 +186,6 @@ export default function FeaturesCards() {
 
                   <p className="flex-grow text-sm font-medium leading-[1.45] text-gray-100">{feature.description}</p>
 
-                  <div className="mt-3 flex items-center text-xs font-bold text-gray-200">
-                    <span className="mr-2">Inside Mechi</span>
-                    <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                    </svg>
-                  </div>
                 </div>
               </div>
             )

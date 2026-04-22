@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { Suspense, useEffect, useState, useRef, useCallback } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import toast from 'react-hot-toast';
@@ -10,6 +11,46 @@ import { BrandLogo } from '@/components/BrandLogo';
 import { PlatformLogo } from '@/components/PlatformLogo';
 import { GAMES, PLATFORMS, getCanonicalGameKey } from '@/lib/config';
 import type { GameKey, PlatformKey } from '@/types';
+
+function QueueGamePicker() {
+  const { user } = useAuth();
+  const router = useRouter();
+  const userGames = (user?.selected_games ?? []) as GameKey[];
+  const ranked1v1Games = userGames.filter((g) => GAMES[g]?.mode === '1v1');
+  const gamesToShow =
+    ranked1v1Games.length > 0
+      ? ranked1v1Games
+      : (Object.keys(GAMES).filter((g) => GAMES[g as GameKey]?.mode === '1v1') as GameKey[]);
+
+  return (
+    <div className="page-container flex min-h-[80vh] items-center justify-center">
+      <div className="card w-full max-w-md p-6 text-center sm:p-7">
+        <h1 className="text-2xl font-black text-[var(--text-primary)]">Join the Queue</h1>
+        <p className="mt-2 text-sm text-[var(--text-secondary)]">Pick a game to start matchmaking.</p>
+        <div className="mt-6 grid gap-3">
+          {gamesToShow.map((g) => (
+            <button
+              key={g}
+              type="button"
+              className="btn-primary w-full"
+              onClick={() => router.push(`/queue?game=${g}`)}
+            >
+              {GAMES[g].label}
+            </button>
+          ))}
+        </div>
+        {ranked1v1Games.length === 0 && (
+          <p className="mt-4 text-xs text-[var(--text-soft)]">
+            No ranked games set up yet.
+            <Link href="/profile/settings" className="brand-link ml-1">
+              Add games in settings.
+            </Link>
+          </p>
+        )}
+      </div>
+    </div>
+  );
+}
 
 function QueueContent() {
   const router = useRouter();
@@ -91,7 +132,6 @@ function QueueContent() {
 
   useEffect(() => {
     if (!game || !GAMES[game]) {
-      router.push('/dashboard');
       return;
     }
 
@@ -166,7 +206,9 @@ function QueueContent() {
   const formatTime = (seconds: number) =>
     `${Math.floor(seconds / 60)}:${(seconds % 60).toString().padStart(2, '0')}`;
 
-  if (!game) return null;
+  if (!game || !GAMES[game]) {
+    return <QueueGamePicker />;
+  }
   const gameConfig = GAMES[game];
   const queuePlatforms = platform
     ? gameConfig.platforms.filter((item) => item === platform)

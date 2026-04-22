@@ -25,6 +25,7 @@
 
 # production
 /build
+/output/import-user-credentials-*.csv
 
 # misc
 .DS_Store

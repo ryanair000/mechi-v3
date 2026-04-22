@@ -93,9 +93,9 @@ export function InviteMenu({
                 <code className="truncate text-sm font-semibold text-white">{inviteCode}</code>
                 <button
                   type="button"
-                  onClick={() => void handleCopy(inviteCode, 'Invite code copied')}
+                  onClick={() => void handleCopy(inviteUrl, 'Invite link copied')}
                   className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-white/[0.08] text-white/70 transition-colors hover:bg-white/[0.05]"
-                  aria-label="Copy invite code"
+                  aria-label="Copy invite link"
                 >
                   <Copy size={14} />
                 </button>

@@ -244,6 +244,7 @@ export default function MatchPage() {
   const channelRef = useRef<{ send: (payload: unknown) => Promise<unknown> } | null>(null);
   const previousStatusRef = useRef<MatchData['status'] | null>(null);
   const suppressNextStatusToastRef = useRef<MatchData['status'] | null>(null);
+  const userHasEditedScoresRef = useRef(false);
 
   const fetchMatch = useCallback(async () => {
     const res = await authFetch(`/api/matches/${matchId}`, { cache: 'no-store' });
@@ -437,6 +438,10 @@ export default function MatchPage() {
 
   useEffect(() => {
     if (!match || !user) {
+      return;
+    }
+
+    if (userHasEditedScoresRef.current) {
       return;
     }
 
@@ -636,6 +641,8 @@ export default function MatchPage() {
         toast.error(data.error ?? 'Failed to report');
         return;
       }
+
+      userHasEditedScoresRef.current = false;
 
       if (selectedQuickComment && channelRef.current) {
         void channelRef.current.send({
@@ -1366,12 +1373,13 @@ export default function MatchPage() {
                       <input
                         inputMode="numeric"
                         value={reportScores.player1}
-                        onChange={(event) =>
+                        onChange={(event) => {
+                          userHasEditedScoresRef.current = true;
                           setReportScores((current) => ({
                             ...current,
                             player1: event.target.value.replace(/[^0-9]/g, ''),
-                          }))
-                        }
+                          }));
+                        }}
                         className="input"
                         placeholder="0"
                       />
@@ -1384,12 +1392,13 @@ export default function MatchPage() {
                       <input
                         inputMode="numeric"
                         value={reportScores.player2}
-                        onChange={(event) =>
+                        onChange={(event) => {
+                          userHasEditedScoresRef.current = true;
                           setReportScores((current) => ({
                             ...current,
                             player2: event.target.value.replace(/[^0-9]/g, ''),
-                          }))
-                        }
+                          }));
+                        }}
                         className="input"
                         placeholder="0"
                       />

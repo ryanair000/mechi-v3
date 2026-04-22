@@ -199,7 +199,9 @@ export async function GET(
         fallbackToDefaults
           ? String(a.username ?? '').localeCompare(String(b.username ?? ''))
           : getPlayerMetrics(b).rating - getPlayerMetrics(a).rating
-    ).slice(0, 50);
+    )
+      // Cap at 50 — leaderboard intentionally shows top 50 players only
+      .slice(0, 50);
 
     const tournamentWinsById = new Map<string, number>();
     const playerIds = topPlayers

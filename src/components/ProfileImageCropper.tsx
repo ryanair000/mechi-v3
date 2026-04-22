@@ -1,9 +1,21 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Loader2 } from 'lucide-react';
 
 type MediaKind = 'avatar' | 'cover';
+
+type ImageDimensions = {
+  height: number;
+  width: number;
+};
+
+type DragState = {
+  startClientX: number;
+  startClientY: number;
+  startOffsetX: number;
+  startOffsetY: number;
+};
 
 interface ProfileImageCropperProps {
   kind: MediaKind;
@@ -22,6 +34,25 @@ const OUTPUT_SIZE = {
   cover: { width: 1800, height: 900 },
 } as const;
 
+function clamp(value: number, min: number, max: number) {
+  return Math.min(max, Math.max(min, value));
+}
+
+function getDisplayedImageDimensions(
+  imageWidth: number,
+  imageHeight: number,
+  previewWidth: number,
+  previewHeight: number,
+  scale: number
+) {
+  const baseScale = Math.max(previewWidth / imageWidth, previewHeight / imageHeight);
+
+  return {
+    height: imageHeight * baseScale * scale,
+    width: imageWidth * baseScale * scale,
+  };
+}
+
 export function ProfileImageCropper({
   kind,
   file,
@@ -33,17 +64,107 @@ export function ProfileImageCropper({
   const [offsetX, setOffsetX] = useState(0);
   const [offsetY, setOffsetY] = useState(0);
   const [saving, setSaving] = useState(false);
+  const [imageDimensions, setImageDimensions] = useState<ImageDimensions | null>(null);
+  const [dragging, setDragging] = useState(false);
+  const dragStateRef = useRef<DragState | null>(null);
 
   useEffect(() => {
     const url = URL.createObjectURL(file);
     setPreviewUrl(url);
+    setScale(1);
+    setOffsetX(0);
+    setOffsetY(0);
+    setImageDimensions(null);
+    dragStateRef.current = null;
+    setDragging(false);
 
     return () => {
       URL.revokeObjectURL(url);
     };
-  }, [file]);
+  }, [file, kind]);
+
+  useEffect(() => {
+    if (!previewUrl) {
+      return;
+    }
+
+    let cancelled = false;
+    const image = new window.Image();
+    image.src = previewUrl;
+
+    image.onload = () => {
+      if (cancelled) {
+        return;
+      }
+
+      setImageDimensions({
+        height: image.naturalHeight || image.height,
+        width: image.naturalWidth || image.width,
+      });
+    };
+
+    image.onerror = () => {
+      if (!cancelled) {
+        setImageDimensions(null);
+      }
+    };
+
+    return () => {
+      cancelled = true;
+    };
+  }, [previewUrl]);
 
   const preview = PREVIEW_SIZE[kind];
+  const displayedImageDimensions = imageDimensions
+    ? getDisplayedImageDimensions(imageDimensions.width, imageDimensions.height, preview.width, preview.height, scale)
+    : { height: preview.height * scale, width: preview.width * scale };
+  const maxOffsetX = Math.max(0, (displayedImageDimensions.width - preview.width) / 2);
+  const maxOffsetY = Math.max(0, (displayedImageDimensions.height - preview.height) / 2);
+
+  useEffect(() => {
+    setOffsetX((current) => clamp(current, -maxOffsetX, maxOffsetX));
+    setOffsetY((current) => clamp(current, -maxOffsetY, maxOffsetY));
+  }, [maxOffsetX, maxOffsetY]);
+
+  const clampOffsets = (nextOffsetX: number, nextOffsetY: number) => ({
+    offsetX: clamp(nextOffsetX, -maxOffsetX, maxOffsetX),
+    offsetY: clamp(nextOffsetY, -maxOffsetY, maxOffsetY),
+  });
+
+  const startDrag = (clientX: number, clientY: number) => {
+    dragStateRef.current = {
+      startClientX: clientX,
+      startClientY: clientY,
+      startOffsetX: offsetX,
+      startOffsetY: offsetY,
+    };
+    setDragging(true);
+  };
+
+  const updateDrag = (clientX: number, clientY: number) => {
+    const dragState = dragStateRef.current;
+
+    if (!dragState) {
+      return;
+    }
+
+    const nextOffsets = clampOffsets(
+      dragState.startOffsetX + (clientX - dragState.startClientX),
+      dragState.startOffsetY + (clientY - dragState.startClientY)
+    );
+
+    setOffsetX(nextOffsets.offsetX);
+    setOffsetY(nextOffsets.offsetY);
+  };
+
+  const endDrag = () => {
+    if (!dragStateRef.current) {
+      return;
+    }
+
+    dragStateRef.current = null;
+    setDragging(false);
+  };
 
   const handleConfirm = async () => {
     if (!previewUrl) {
@@ -70,9 +191,15 @@ export function ProfileImageCropper({
         throw new Error('Canvas is not available');
       }
 
-      const baseScale = Math.max(preview.width / image.width, preview.height / image.height);
-      const scaledWidth = image.width * baseScale * scale;
-      const scaledHeight = image.height * baseScale * scale;
+      const sourceWidth = image.naturalWidth || image.width;
+      const sourceHeight = image.naturalHeight || image.height;
+      const { width: scaledWidth, height: scaledHeight } = getDisplayedImageDimensions(
+        sourceWidth,
+        sourceHeight,
+        preview.width,
+        preview.height,
+        scale
+      );
       const previewX = (preview.width - scaledWidth) / 2 + offsetX;
       const previewY = (preview.height - scaledHeight) / 2 + offsetY;
       const scaleX = output.width / preview.width;
@@ -133,18 +260,52 @@ export function ProfileImageCropper({
         <div className="mt-5 rounded-[1.6rem] border border-[var(--border-color)] bg-[var(--surface-elevated)] p-4">
           <div
             className="relative mx-auto overflow-hidden rounded-[1.4rem] border border-[var(--border-color)] bg-[var(--surface)]"
-            style={{ width: preview.width, maxWidth: '100%', height: preview.height }}
+            style={{ width: preview.width, maxWidth: '100%', height: preview.height, touchAction: 'none' }}
+            onMouseDown={(event) => {
+              event.preventDefault();
+              startDrag(event.clientX, event.clientY);
+            }}
+            onMouseMove={(event) => updateDrag(event.clientX, event.clientY)}
+            onMouseUp={endDrag}
+            onMouseLeave={endDrag}
+            onTouchStart={(event) => {
+              const touch = event.touches[0];
+
+              if (!touch) {
+                return;
+              }
+
+              startDrag(touch.clientX, touch.clientY);
+            }}
+            onTouchMove={(event) => {
+              const touch = event.touches[0];
+
+              if (!touch) {
+                return;
+              }
+
+              event.preventDefault();
+              updateDrag(touch.clientX, touch.clientY);
+            }}
+            onTouchEnd={endDrag}
+            onTouchCancel={endDrag}
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={previewUrl}
               alt="Crop preview"
-              className="absolute left-1/2 top-1/2 h-full w-full max-w-none object-cover"
+              className="absolute left-1/2 top-1/2 max-w-none select-none"
+              draggable={false}
               style={{
-                transform: `translate(calc(-50% + ${offsetX}px), calc(-50% + ${offsetY}px)) scale(${scale})`,
+                cursor: dragging ? 'grabbing' : 'grab',
+                height: displayedImageDimensions.height,
+                transform: `translate(calc(-50% + ${offsetX}px), calc(-50% + ${offsetY}px))`,
+                width: displayedImageDimensions.width,
               }}
             />
           </div>
+
+          <p className="mt-3 text-center text-xs text-[var(--text-soft)]">Drag to reposition</p>
 
           <div className="mt-5 grid gap-4 sm:grid-cols-3">
             <label className="block">
@@ -168,11 +329,15 @@ export function ProfileImageCropper({
               </span>
               <input
                 type="range"
-                min={kind === 'avatar' ? '-80' : '-140'}
-                max={kind === 'avatar' ? '80' : '140'}
+                min={-maxOffsetX}
+                max={maxOffsetX}
                 step="1"
                 value={offsetX}
-                onChange={(event) => setOffsetX(Number(event.target.value))}
+                onChange={(event) => {
+                  const nextOffsets = clampOffsets(Number(event.target.value), offsetY);
+                  setOffsetX(nextOffsets.offsetX);
+                  setOffsetY(nextOffsets.offsetY);
+                }}
                 className="w-full"
               />
             </label>
@@ -183,11 +348,15 @@ export function ProfileImageCropper({
               </span>
               <input
                 type="range"
-                min={kind === 'avatar' ? '-80' : '-90'}
-                max={kind === 'avatar' ? '80' : '90'}
+                min={-maxOffsetY}
+                max={maxOffsetY}
                 step="1"
                 value={offsetY}
-                onChange={(event) => setOffsetY(Number(event.target.value))}
+                onChange={(event) => {
+                  const nextOffsets = clampOffsets(offsetX, Number(event.target.value));
+                  setOffsetX(nextOffsets.offsetX);
+                  setOffsetY(nextOffsets.offsetY);
+                }}
                 className="w-full"
               />
             </label>

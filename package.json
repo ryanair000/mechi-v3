@@ -6,6 +6,7 @@
     "dev": "next dev --webpack",
     "build": "next build --webpack",
     "start": "next start",
+    "import:registrations": "node ./scripts/import-registration-feed.mjs",
     "start:e2e": "npm run build && npm run start",
     "lint": "eslint",
     "test:e2e": "node ./e2e/scripts/run-playwright.mjs",

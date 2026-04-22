@@ -34,6 +34,18 @@ const links = [
     title: 'Connect',
     href: '/connect',
   },
+  {
+    title: 'Privacy Policy',
+    href: '/privacy-policy',
+  },
+  {
+    title: 'Terms of Service',
+    href: '/terms-of-service',
+  },
+  {
+    title: 'Data Deletion',
+    href: '/user-data-deletion',
+  },
 ];
 
 export default function FooterSection() {
@@ -57,7 +69,7 @@ export default function FooterSection() {
         </div>
         <div className="my-8 flex flex-wrap justify-center gap-6 text-sm">
           <Link
-            href="#"
+            href="https://www.instagram.com/playmechi"
             target="_blank"
             rel="noopener noreferrer"
             aria-label="Instagram"
@@ -66,7 +78,7 @@ export default function FooterSection() {
             <FaInstagram className="size-6" />
           </Link>
           <Link
-            href="#"
+            href="https://www.facebook.com/playmechi"
             target="_blank"
             rel="noopener noreferrer"
             aria-label="Facebook"
@@ -75,7 +87,7 @@ export default function FooterSection() {
             <FaFacebookF className="size-6" />
           </Link>
           <Link
-            href="#"
+            href="https://www.x.com/playmechi"
             target="_blank"
             rel="noopener noreferrer"
             aria-label="X"
@@ -84,7 +96,7 @@ export default function FooterSection() {
             <FaXTwitter className="size-6" />
           </Link>
           <Link
-            href="#"
+            href="https://www.youtube.com/@playmechi"
             target="_blank"
             rel="noopener noreferrer"
             aria-label="YouTube"
@@ -93,7 +105,7 @@ export default function FooterSection() {
             <FaYoutube className="size-6" />
           </Link>
           <Link
-            href="#"
+            href="https://discord.gg/playmechi"
             target="_blank"
             rel="noopener noreferrer"
             aria-label="Discord"
@@ -102,7 +114,7 @@ export default function FooterSection() {
             <FaDiscord className="size-6" />
           </Link>
           <Link
-            href="#"
+            href="https://www.twitch.tv/playmechi"
             target="_blank"
             rel="noopener noreferrer"
             aria-label="Twitch"

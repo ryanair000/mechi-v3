@@ -1097,6 +1097,18 @@ export default function ProfileSettingsPage() {
             </button>
           </div>
         </div>
+
+        <div className="flex flex-wrap justify-center gap-4 py-4 text-xs text-[var(--text-soft)]">
+          <Link href="/privacy-policy" className="hover:text-[var(--text-secondary)]">
+            Privacy Policy
+          </Link>
+          <Link href="/terms-of-service" className="hover:text-[var(--text-secondary)]">
+            Terms of Service
+          </Link>
+          <Link href="/user-data-deletion" className="hover:text-[var(--text-secondary)]">
+            Data Deletion
+          </Link>
+        </div>
       </div>
     </div>
   );

@@ -52,6 +52,7 @@ const PRIMARY_ITEMS: NavItem[] = [
 ];
 
 const COMPETE_ITEMS: NavItem[] = [
+  { href: '/queue', label: 'Queue', icon: Zap },
   { href: '/tournaments', label: 'Tournaments', icon: Swords },
   { href: '/lobbies', label: 'Lobbies', icon: Users },
   { href: '/challenges', label: 'Challenges', icon: MessageCircle },
@@ -291,30 +292,40 @@ export default function SidebarWithSubmenu({ collapsed, onToggle }: SidebarWithS
       <div className={cn('space-y-2 border-t border-[var(--border-color)] py-3', collapsed ? 'px-3' : 'px-3')}>
         <div className={cn('flex gap-1', collapsed ? 'flex-col items-center' : 'items-center')}>
           <NotificationNavButton className="rounded-md border border-[var(--border-color)] bg-transparent hover:border-[var(--border-strong)] hover:bg-[var(--surface-elevated)]" />
-          <Link
-            href="/profile"
-            className={`inline-flex h-8 w-8 items-center justify-center rounded-md border text-[var(--text-secondary)] transition-colors hover:border-[var(--border-strong)] hover:bg-[var(--surface-elevated)] hover:text-[var(--text-primary)] ${
-              profileActive
-                ? 'border-[rgba(50,224,196,0.22)] bg-[rgba(50,224,196,0.1)] text-[var(--accent-secondary-text)]'
-                : 'border-[var(--border-color)]'
-            }`}
-            aria-label="Profile"
-            title="Profile"
-          >
-            <User size={13} />
-          </Link>
-          <Link
-            href="/profile/settings"
-            className={`inline-flex h-8 w-8 items-center justify-center rounded-md border text-[var(--text-secondary)] transition-colors hover:border-[var(--border-strong)] hover:bg-[var(--surface-elevated)] hover:text-[var(--text-primary)] ${
-              settingsActive
-                ? 'border-[rgba(50,224,196,0.22)] bg-[rgba(50,224,196,0.1)] text-[var(--accent-secondary-text)]'
-                : 'border-[var(--border-color)]'
-            }`}
-            aria-label="Settings"
-            title="Settings"
-          >
-            <Settings size={13} />
-          </Link>
+          <div className="group relative">
+            <Link
+              href="/profile"
+              className={`inline-flex h-8 w-8 items-center justify-center rounded-md border text-[var(--text-secondary)] transition-colors hover:border-[var(--border-strong)] hover:bg-[var(--surface-elevated)] hover:text-[var(--text-primary)] ${
+                profileActive
+                  ? 'border-[rgba(50,224,196,0.22)] bg-[rgba(50,224,196,0.1)] text-[var(--accent-secondary-text)]'
+                  : 'border-[var(--border-color)] bg-[var(--surface-elevated)]'
+              }`}
+              aria-label="Profile"
+              title="Profile"
+            >
+              <User size={14} />
+            </Link>
+            <span className="pointer-events-none absolute -top-8 left-1/2 -translate-x-1/2 rounded-md border border-[var(--border-color)] bg-[var(--surface-strong)] px-2 py-1 text-[10px] font-semibold text-[var(--text-primary)] opacity-0 shadow-lg transition-opacity group-hover:opacity-100">
+              Profile
+            </span>
+          </div>
+          <div className="group relative">
+            <Link
+              href="/profile/settings"
+              className={`inline-flex h-8 w-8 items-center justify-center rounded-md border text-[var(--text-secondary)] transition-colors hover:border-[var(--border-strong)] hover:bg-[var(--surface-elevated)] hover:text-[var(--text-primary)] ${
+                settingsActive
+                  ? 'border-[rgba(50,224,196,0.22)] bg-[rgba(50,224,196,0.1)] text-[var(--accent-secondary-text)]'
+                  : 'border-[var(--border-color)] bg-[var(--surface-elevated)]'
+              }`}
+              aria-label="Settings"
+              title="Settings"
+            >
+              <Settings size={14} />
+            </Link>
+            <span className="pointer-events-none absolute -top-8 left-1/2 -translate-x-1/2 rounded-md border border-[var(--border-color)] bg-[var(--surface-strong)] px-2 py-1 text-[10px] font-semibold text-[var(--text-primary)] opacity-0 shadow-lg transition-opacity group-hover:opacity-100">
+              Settings
+            </span>
+          </div>
           {collapsed ? (
             <button
               onClick={logout}

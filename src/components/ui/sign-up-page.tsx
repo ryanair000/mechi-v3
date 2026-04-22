@@ -38,9 +38,9 @@ export function SignupPage({
     <div className="page-base relative isolate overflow-hidden bg-[radial-gradient(circle_at_top,rgba(50,224,196,0.16),transparent_28%),linear-gradient(135deg,#081120_0%,#102a5c_48%,#09101b_100%)]">
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_85%_15%,rgba(255,107,107,0.18),transparent_18%),radial-gradient(circle_at_15%_80%,rgba(50,224,196,0.12),transparent_22%)]" />
 
-      <div className="relative mx-auto flex min-h-screen w-full max-w-[65rem] items-center px-4 py-5 sm:px-6 lg:px-8 xl:max-w-[69rem]">
-        <div className="grid w-full overflow-hidden rounded-[1.6rem] border border-white/10 bg-[rgba(6,12,22,0.78)] shadow-[0_26px_96px_rgba(2,6,23,0.48)] backdrop-blur-2xl lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
-          <div className="relative hidden min-h-[34rem] overflow-hidden border-r border-white/10 lg:flex">
+      <div className="relative mx-auto flex min-h-screen w-full max-w-full items-center px-4 py-5 sm:px-6 lg:max-w-[52rem] lg:px-8 xl:max-w-[56rem]">
+        <div className="grid w-full overflow-hidden rounded-[1.45rem] border border-white/10 bg-[rgba(6,12,22,0.78)] shadow-[0_24px_84px_rgba(2,6,23,0.46)] backdrop-blur-2xl lg:grid-cols-[minmax(0,0.88fr)_minmax(0,1.12fr)]">
+          <div className="relative hidden min-h-[27.5rem] overflow-hidden border-r border-white/10 lg:flex">
             <Image
               src={imageSrc}
               alt={imageAlt}
@@ -52,7 +52,7 @@ export function SignupPage({
 
             <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(8,17,32,0.2)_0%,rgba(8,17,32,0.5)_38%,rgba(8,17,32,0.92)_100%)]" />
 
-            <div className="relative z-10 flex w-full flex-col justify-between p-6 xl:p-7">
+            <div className="relative z-10 flex w-full flex-col justify-between p-5 xl:p-6">
               <div className="flex items-center justify-between gap-4">
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-[0.34em] text-white/55">
@@ -73,40 +73,40 @@ export function SignupPage({
                 </button>
               </div>
 
-              <div className="max-w-md">
-                <div className="inline-flex items-center rounded-full border border-white/12 bg-white/8 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-white/72">
+              <div className="max-w-[18rem]">
+                <div className="inline-flex items-center rounded-full border border-white/12 bg-white/8 px-2.5 py-1 text-[9px] font-semibold uppercase tracking-[0.14em] text-white/72">
                   Mechi onboarding
                 </div>
 
                 {showSideCopy ? (
                   <>
                     {sideTitle ? (
-                      <h2 className="mt-4 text-[2.7rem] font-semibold leading-tight text-white">
+                      <h2 className="mt-3.5 text-[2.25rem] font-semibold leading-tight text-white">
                         {sideTitle}
                       </h2>
                     ) : null}
                     {sideDescription ? (
-                      <p className="mt-3 max-w-sm text-sm leading-6 text-white/78">
+                      <p className="mt-2.5 max-w-[17rem] text-[13px] leading-5.5 text-white/78">
                         {sideDescription}
                       </p>
                     ) : null}
                   </>
                 ) : (
-                  <h2 className="mt-4 text-[2.7rem] font-semibold leading-tight text-white">
+                  <h2 className="mt-3.5 text-[2.25rem] font-semibold leading-tight text-white">
                     Clean sign-in and account setup for players moving through Mechi.
                   </h2>
                 )}
               </div>
 
               {sidePoints.length ? (
-                <div className="grid gap-2.5">
+                <div className="grid gap-2">
                   {sidePoints.map((point) => (
                     <div
                       key={point}
-                      className="flex items-start gap-2.5 rounded-[1.15rem] border border-white/10 bg-white/8 px-3.5 py-3 backdrop-blur-sm"
+                      className="flex items-start gap-2 rounded-[1rem] border border-white/10 bg-white/8 px-3 py-2.5 backdrop-blur-sm"
                     >
-                      <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 flex-shrink-0 text-[var(--brand-teal)]" />
-                      <p className="text-[13px] font-medium leading-5.5 text-white/92">{point}</p>
+                      <CheckCircle2 className="mt-0.5 h-3 w-3 flex-shrink-0 text-[var(--brand-teal)]" />
+                      <p className="text-[12px] font-medium leading-5 text-white/92">{point}</p>
                     </div>
                   ))}
                 </div>
@@ -114,10 +114,10 @@ export function SignupPage({
             </div>
           </div>
 
-          <div className="relative flex min-h-[100svh] flex-col justify-center lg:min-h-[34rem]">
-            <div className="pointer-events-none absolute inset-x-0 top-0 h-32 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.12),transparent_72%)]" />
+          <div className="relative flex min-h-[100svh] flex-col justify-center lg:min-h-[27.5rem]">
+            <div className="pointer-events-none absolute inset-x-0 top-0 h-28 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.12),transparent_72%)]" />
 
-            <div className="relative mx-auto w-full max-w-[31rem] px-5 py-6 sm:px-7 lg:px-8 lg:py-9">
+            <div className="relative mx-auto w-full max-w-[25rem] px-5 py-6 sm:px-7 lg:px-6 lg:py-7">
               <div className="mb-6 flex items-center justify-between gap-4 lg:hidden">
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-[0.3em] text-white/55">
@@ -157,17 +157,17 @@ export function SignupPage({
               ) : null}
 
               {mainTitle || mainSubtitle ? (
-                <div className="mb-6 sm:mb-7">
+                <div className="mb-5 sm:mb-6">
                   <p className="mb-3 text-xs font-semibold uppercase tracking-[0.3em] text-white/55">
                     mechi.club
                   </p>
                   {mainTitle ? (
-                    <h1 className="mb-2.5 text-[2.3rem] font-semibold leading-tight text-white sm:text-[2rem]">
+                    <h1 className="mb-2 text-[2rem] font-semibold leading-tight text-white sm:text-[1.8rem]">
                       {mainTitle}
                     </h1>
                   ) : null}
                   {mainSubtitle ? (
-                    <p className="max-w-lg text-[0.95rem] leading-6.5 text-slate-300 sm:text-[0.92rem]">
+                    <p className="max-w-md text-[0.9rem] leading-6 text-slate-300 sm:text-[0.88rem]">
                       {mainSubtitle}
                     </p>
                   ) : null}

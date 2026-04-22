@@ -206,7 +206,7 @@ export default function LoginPage({ searchParams }: { searchParams: LoginSearchP
   return (
     <FullScreenSignup
       title="Sign back in."
-      subtitle="Choose phone number, username, or email, then get back to your queues, matches, and progress."
+      subtitle=""
       sideTitle="Back to the climb."
       sideDescription="Your profile, match history, and active setup are still waiting for you."
       sidePoints={[
@@ -216,14 +216,7 @@ export default function LoginPage({ searchParams }: { searchParams: LoginSearchP
       ]}
     >
       <div className="card p-4 sm:p-6">
-        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--text-soft)]">
-          Choose sign-in method
-        </p>
-        <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">
-          You can log in with your phone number, username, or email. Pick one option first.
-        </p>
-
-        <div className="mt-4 grid grid-cols-3 gap-2">
+        <div className="grid grid-cols-3 gap-2">
           {LOGIN_METHODS.map((method) => {
             const active = method.key === loginMethod;
             return (
@@ -243,7 +236,7 @@ export default function LoginPage({ searchParams }: { searchParams: LoginSearchP
           })}
         </div>
 
-        <form onSubmit={handleSubmit} action="/api/auth/login" method="post" className="mt-5 space-y-4">
+        <form onSubmit={handleSubmit} action="/api/auth/login" method="post" className="mt-4 space-y-4">
           <input type="hidden" name="redirect_to" value={nextPath} />
           <input type="hidden" name="login_method" value={loginMethod} />
 
@@ -261,7 +254,6 @@ export default function LoginPage({ searchParams }: { searchParams: LoginSearchP
               spellCheck={false}
               inputMode={loginMethod === 'phone' ? 'tel' : undefined}
             />
-            <p className="mt-2 text-xs text-[var(--text-soft)]">{methodMeta.helper}</p>
           </div>
 
           <div>

@@ -34,7 +34,12 @@ export function SignupPage({
   const showSideCopy = Boolean(sideTitle || sideDescription || sidePoints.length);
 
   return (
-    <div className="page-base flex min-h-screen w-full items-center justify-center bg-gradient-to-br from-slate-900 via-blue-900 to-slate-800 p-4 md:h-screen md:min-h-0 md:overflow-hidden">
+    <div
+      className="page-base flex min-h-screen w-full items-center justify-center overflow-hidden bg-[#0a1b4d] bg-cover bg-center bg-no-repeat p-4 md:h-screen md:min-h-0 md:overflow-hidden"
+      style={{
+        backgroundImage: `linear-gradient(135deg, rgba(7, 16, 42, 0.78) 0%, rgba(27, 54, 133, 0.66) 52%, rgba(10, 22, 54, 0.84) 100%), url('${imageSrc}')`,
+      }}
+    >
       <div className="w-full transition-transform duration-200 md:origin-center md:scale-[0.65]">
         <div className="flex min-h-[calc(100svh-2rem)] w-full flex-col overflow-hidden rounded-3xl bg-white shadow-2xl md:h-[calc(100svh-2rem)] md:min-h-0 md:flex-row">
           <div className="relative hidden flex-1 overflow-hidden md:block">

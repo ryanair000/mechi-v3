@@ -214,6 +214,7 @@ export default function LoginPage({ searchParams }: { searchParams: LoginSearchP
         'Password sign-in plus email magic links',
         'Reset your password from your inbox',
       ]}
+      variant="marketing"
     >
       <div className="card p-4 sm:p-6">
         <div className="grid grid-cols-3 gap-2">

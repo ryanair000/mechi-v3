@@ -3,6 +3,8 @@
 import type { ReactNode } from 'react';
 import { SignupPage } from '@/components/ui/sign-up-page';
 
+type FullScreenSignupVariant = 'default' | 'marketing';
+
 interface FullScreenSignupProps {
   children: ReactNode;
   title: string;
@@ -10,6 +12,7 @@ interface FullScreenSignupProps {
   sideTitle: string;
   sideDescription: string;
   sidePoints?: string[];
+  variant?: FullScreenSignupVariant;
 }
 
 export function FullScreenSignup({
@@ -19,6 +22,7 @@ export function FullScreenSignup({
   sideTitle,
   sideDescription,
   sidePoints = [],
+  variant = 'default',
 }: FullScreenSignupProps) {
   return (
     <SignupPage
@@ -27,6 +31,7 @@ export function FullScreenSignup({
       sideTitle={sideTitle}
       sideDescription={sideDescription}
       sidePoints={sidePoints}
+      variant={variant}
     >
       {children}
     </SignupPage>

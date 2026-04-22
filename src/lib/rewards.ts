@@ -616,7 +616,8 @@ export async function processMatchRewardMilestones(
   }
 
   if (params.winner.newStreak >= 10) {
-    operations.push(
+    trackRewardOperation(
+      'winner_streak_ten_weekly',
       applyRewardEvent(supabase, {
         userId: params.winner.id,
         eventKey: `reward:streak-ten:${params.winner.id}:${weekStamp}`,

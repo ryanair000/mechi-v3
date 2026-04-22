@@ -31,7 +31,7 @@ export async function POST(request: NextRequest) {
     const updates: Promise<unknown>[] = [];
 
     for (const profile of profiles ?? []) {
-      const profileRecord = profile as Record<string, unknown>;
+      const profileRecord = profile as unknown as Record<string, unknown>;
       const update: Record<string, number> = {};
 
       for (const game of TRACKED_RANKED_GAMES) {
@@ -55,10 +55,12 @@ export async function POST(request: NextRequest) {
       if (Object.keys(update).length > 0) {
         decayed++;
         updates.push(
-          supabase
-            .from('profiles')
-            .update(update)
-            .eq('id', profileRecord.id as string)
+          Promise.resolve(
+            supabase
+              .from('profiles')
+              .update(update)
+              .eq('id', profileRecord.id as string)
+          )
         );
       }
     }

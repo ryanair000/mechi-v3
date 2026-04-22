@@ -11,6 +11,7 @@ const PUBLIC_AUTH_REFRESH_SKIP_PREFIXES = [
   '/connect',
   '/manual-tests',
   '/report',
+  '/reports',
   '/pricing',
   '/privacy-policy',
   '/terms-of-service',

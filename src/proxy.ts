@@ -56,6 +56,7 @@ const PUBLIC_PREFIXES = [
   '/connect',
   '/manual-tests',
   '/report',
+  '/reports',
   '/login',
   '/register',
   '/forgot-password',

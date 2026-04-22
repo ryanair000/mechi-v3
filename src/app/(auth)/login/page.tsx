@@ -209,11 +209,6 @@ export default function LoginPage({ searchParams }: { searchParams: LoginSearchP
       subtitle=""
       sideTitle="Back to the climb."
       sideDescription="Your profile, match history, and active setup are still waiting for you."
-      sidePoints={[
-        'Phone, username, or email sign-in',
-        'Password sign-in plus email magic links',
-        'Reset your password from your inbox',
-      ]}
       variant="marketing"
     >
       <div className="card p-4 sm:p-6">

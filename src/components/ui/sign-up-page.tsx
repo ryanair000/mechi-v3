@@ -38,6 +38,7 @@ export function SignupPage({
   const mainSubtitle = subtitle || sideDescription;
   const showSideCopy = Boolean(sideTitle || sideDescription || sidePoints.length);
   const isMarketingVariant = variant === 'marketing';
+  const showMarketingHighlights = isMarketingVariant && sidePoints.length > 0;
 
   return (
     <div
@@ -109,7 +110,7 @@ export function SignupPage({
                     )}
                   </div>
 
-                  {sidePoints.length ? (
+                  {showMarketingHighlights ? (
                     <div className="mt-8 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
                       {sidePoints.map((point) => (
                         <div
@@ -125,11 +126,13 @@ export function SignupPage({
                     </div>
                   ) : null}
 
-                  <div className="mt-auto hidden pt-8 lg:block">
-                    <div className="inline-flex items-center rounded-full border border-[var(--border-color)] bg-[rgba(17,27,46,0.72)] px-4 py-2 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--text-secondary)]">
-                      Cleaner queue flow for East African players
+                  {showMarketingHighlights ? (
+                    <div className="mt-auto hidden pt-8 lg:block">
+                      <div className="inline-flex items-center rounded-full border border-[var(--border-color)] bg-[rgba(17,27,46,0.72)] px-4 py-2 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--text-secondary)]">
+                        Cleaner queue flow for East African players
+                      </div>
                     </div>
-                  </div>
+                  ) : null}
                 </div>
               </div>
 

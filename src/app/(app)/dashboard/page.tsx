@@ -4,14 +4,12 @@ import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
-import { AlertCircle, ChevronRight, CirclePlay, Radar, Swords } from 'lucide-react';
+import { AlertCircle, ChevronRight, CirclePlay, Radar, Swords, Users } from 'lucide-react';
 import { ActionFeedback, type ActionFeedbackState } from '@/components/ActionFeedback';
 import { openAppOnboarding } from '@/components/AppOnboarding';
 import { useAuth, useAuthFetch } from '@/components/AuthProvider';
 import { GameCard } from '@/components/GameCard';
 import { PaywallModal } from '@/components/PaywallModal';
-import { RatingBadge } from '@/components/RatingBadge';
-import { TierMedal } from '@/components/TierMedal';
 import {
   GAMES,
   getConfiguredPlatformForGame,
@@ -348,223 +346,196 @@ export default function DashboardPage() {
 
   if (loading) {
     return (
-      <div className="page-container">
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {[1, 2, 3].map((item) => (
-            <div key={item} className="h-48 shimmer" />
+      <div className="page-container space-y-4">
+        <div className="h-28 shimmer rounded-xl" />
+        <div className="grid grid-cols-3 gap-3">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="h-[5.5rem] shimmer rounded-xl" />
+          ))}
+        </div>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="h-64 shimmer rounded-xl" />
           ))}
         </div>
       </div>
     );
   }
 
+  const panelBase =
+    'rounded-xl border border-[var(--border-color)] bg-[var(--surface-strong)] shadow-[var(--shadow-soft)]';
+
   return (
-    <div className="page-container">
+    <div className="page-container space-y-4">
       {showPaywall ? (
         <PaywallModal reason={paywallReason} onClose={() => setShowPaywall(false)} />
       ) : null}
 
-      <div className="card circuit-panel mb-5 overflow-hidden p-4">
-        <div className="grid gap-4 xl:grid-cols-[minmax(0,1.2fr)_minmax(14.5rem,0.55fr)]">
-          <div
-            className="rounded-[1.35rem] border border-[var(--border-color)] p-4 sm:p-5"
-            style={{
-              background:
-                'linear-gradient(135deg, var(--surface-elevated) 0%, var(--surface) 100%)',
-            }}
-          >
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="brand-chip px-3 py-1">Dashboard</span>
-              {rankedGames.length > 0 ? (
-                <span className="brand-chip-coral px-3 py-1">{bestDivision.label}</span>
-              ) : null}
+      {/* ── Welcome header ────────────────────────────── */}
+      <div className={`${panelBase} relative overflow-hidden`}>
+        <div className="absolute bottom-0 left-0 top-0 w-[3px] bg-[var(--brand-teal)]" />
+        <div className="flex flex-col gap-4 px-5 py-4 pl-6 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-4">
+            <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-lg border border-[rgba(50,224,196,0.24)] bg-[rgba(50,224,196,0.1)] text-lg font-black text-[var(--brand-teal)]">
+              {user?.username?.[0]?.toUpperCase() ?? '?'}
             </div>
-
-            <h1 className="mt-3 text-[1.45rem] font-black leading-[1.06] tracking-normal text-[var(--text-primary)] sm:text-[1.9rem]">
-              Command your climb, {user?.username ?? 'Player'}.
-            </h1>
-            <p className="mt-2 max-w-xl text-sm leading-6 text-[var(--text-secondary)]">
-              Check your live queue energy, level track, and next match from one cleaner home base.
-            </p>
-
-            <div className="mt-4 flex flex-wrap items-center gap-2">
-              <button
-                type="button"
-                onClick={openAppOnboarding}
-                className="btn-outline text-sm"
-              >
-                <CirclePlay size={14} />
-                Quick intro
-              </button>
-              <Link href="/tutorials" className="btn-outline text-sm">
-                Full tutorial
-              </Link>
-              {userGames.length === 0 ? (
-                <Link href="/games" className="btn-primary text-sm">
-                  Finish Game Setup
-                </Link>
-              ) : null}
-            </div>
-
-            <div className="mt-4 max-w-xl rounded-[1.1rem] border border-[var(--border-color)] bg-[var(--surface-strong)] p-4 shadow-[var(--shadow-soft)]">
-              <div className="flex items-center justify-between gap-3 text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--text-soft)]">
-                <span>XP progress</span>
-                <span>{xpProgress.progressInLevel}/{xpProgress.progressNeeded}</span>
+            <div>
+              <div className="flex flex-wrap items-center gap-1.5">
+                <span className="rounded border border-[rgba(50,224,196,0.22)] bg-[rgba(50,224,196,0.1)] px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-[var(--accent-secondary-text)]">
+                  Lv {level}
+                </span>
+                {rankedGames.length > 0 ? (
+                  <span className="rounded border border-[rgba(255,107,107,0.22)] bg-[rgba(255,107,107,0.1)] px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-[var(--brand-coral)]">
+                    {bestDivision.label}
+                  </span>
+                ) : null}
+                <span className="rounded border border-[var(--border-color)] bg-[var(--surface)] px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-[var(--text-soft)]">
+                  {currentPlan.name}
+                </span>
               </div>
-              <div className="mt-3 h-2 overflow-hidden rounded-full bg-[var(--surface)]">
+              <h1 className="mt-1 text-xl font-black leading-tight text-[var(--text-primary)] sm:text-2xl">
+                {user?.username ?? 'Player'}
+              </h1>
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-2.5 sm:min-w-[17rem] sm:items-end">
+            <div className="w-full sm:max-w-[17rem]">
+              <div className="mb-1 flex items-center justify-between text-[10px] font-bold uppercase tracking-widest text-[var(--text-soft)]">
+                <span>XP · Lv {level}</span>
+                <span>{xpProgress.nextLevelXp - xp} to next</span>
+              </div>
+              <div className="h-[5px] overflow-hidden rounded-sm bg-[var(--border-color)]">
                 <div
-                  className="h-full rounded-full transition-all"
+                  className="h-full transition-all"
                   style={{
                     width: `${xpProgress.progressPercent}%`,
                     background: 'linear-gradient(90deg, var(--brand-teal), var(--brand-coral))',
                   }}
                 />
               </div>
-              <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-[var(--text-secondary)]">
-                <span className="brand-chip px-2 py-0.5">Lv. {level}</span>
-                <span className="brand-chip-coral px-2 py-0.5">{mp} MP</span>
-                <span>{xpProgress.nextLevelXp - xp} XP until next level</span>
-              </div>
+              <p className="mt-1 text-[11px] text-[var(--text-soft)]">
+                {xp} XP · {mp} MP
+              </p>
             </div>
-          </div>
-
-          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
-            <div className="card p-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <p className="stat-label">Queue Heat</p>
-                  <p className={`mt-2 text-[1.45rem] font-black ${queueHeat.tone}`}>{queueHeat.label}</p>
-                  <p className="mt-2 text-xs leading-5 text-[var(--text-soft)]">{queueHeat.detail}</p>
-                </div>
-                <div className="border-l border-[var(--border-color)] pl-4">
-                  <p className="stat-label">Players Online</p>
-                  <p className="mt-2 text-[1.7rem] font-black text-[var(--accent-secondary-text)]">{queueTotal}</p>
-                  <p className="mt-2 text-xs leading-5 text-[var(--text-soft)]">
-                    Same-platform players live in your ranked pool
-                  </p>
-                </div>
-              </div>
-            </div>
-            <div className="card p-4">
-              <p className="stat-label">Win Streak</p>
-              <p className="mt-2 text-[1.7rem] font-black text-[var(--brand-coral)]">{streak}</p>
-              <p className="mt-2 text-xs leading-5 text-[var(--text-soft)]">Matches in a row right now</p>
+            <div className="flex items-center gap-2">
+              {userGames.length === 0 ? (
+                <Link href="/games" className="btn-primary text-sm">
+                  Set Up Games
+                </Link>
+              ) : null}
+              <button type="button" onClick={openAppOnboarding} className="btn-outline text-sm">
+                <CirclePlay size={13} />
+                Intro
+              </button>
+              <Link href="/tutorials" className="btn-outline text-sm">
+                Tutorials
+              </Link>
             </div>
           </div>
         </div>
       </div>
 
-      {activeMatch && (
-        <Link href={`/match/${activeMatch.id}`} className="mb-6 block">
-          <div className="card surface-live flex items-center gap-4 p-4 transition-transform hover:-translate-y-0.5">
-            <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-[rgba(50,224,196,0.16)]">
-              <Swords size={18} className="text-[var(--brand-teal)]" />
+      {/* ── Stats strip ───────────────────────────────── */}
+      <div className="grid grid-cols-3 gap-3">
+        {/* Queue Heat */}
+        <div className={`${panelBase} overflow-hidden`}>
+          <div className="h-[3px] bg-[var(--brand-teal)]" />
+          <div className="p-4">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-[var(--text-soft)]">
+              Queue Heat
+            </p>
+            <p className={`mt-1.5 text-xl font-black sm:text-2xl ${queueHeat.tone}`}>
+              {queueHeat.label}
+            </p>
+            <p className="mt-1 hidden text-xs leading-5 text-[var(--text-soft)] sm:block">
+              {queueHeat.detail}
+            </p>
+          </div>
+        </div>
+        {/* Online */}
+        <div className={`${panelBase} overflow-hidden`}>
+          <div className="h-[3px] bg-[var(--border-strong)]" />
+          <div className="p-4">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-[var(--text-soft)]">
+              Online
+            </p>
+            <p className="mt-1.5 text-xl font-black text-[var(--accent-secondary-text)] sm:text-2xl">
+              {queueTotal}
+            </p>
+            <p className="mt-1 hidden text-xs leading-5 text-[var(--text-soft)] sm:block">
+              Players in your lane
+            </p>
+          </div>
+        </div>
+        {/* Streak */}
+        <div className={`${panelBase} overflow-hidden`}>
+          <div className="h-[3px] bg-[var(--brand-coral)]" />
+          <div className="p-4">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-[var(--text-soft)]">
+              Streak
+            </p>
+            {streak > 0 ? (
+              <p className="mt-1.5 text-xl font-black text-[var(--brand-coral)] sm:text-2xl">
+                {streak}
+              </p>
+            ) : (
+              <p className="mt-1.5 text-xl font-black text-[var(--text-soft)] sm:text-2xl">—</p>
+            )}
+            <p className="mt-1 hidden text-xs leading-5 text-[var(--text-soft)] sm:block">
+              Consecutive wins
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* ── Active match banner ───────────────────────── */}
+      {activeMatch ? (
+        <Link href={`/match/${activeMatch.id}`} className="block">
+          <div className="flex items-center gap-4 rounded-xl border border-[rgba(50,224,196,0.28)] bg-[rgba(50,224,196,0.08)] p-4 transition-all hover:border-[rgba(50,224,196,0.44)] hover:bg-[rgba(50,224,196,0.12)]">
+            <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg bg-[rgba(50,224,196,0.18)]">
+              <Swords size={16} className="text-[var(--brand-teal)]" />
             </div>
             <div className="min-w-0 flex-1">
-              <p className="text-sm font-semibold text-[var(--text-primary)]">Active Match</p>
+              <p className="text-sm font-bold text-[var(--text-primary)]">Match in Progress</p>
               <p className="truncate text-xs text-[var(--text-secondary)]">
-                {GAMES[activeMatch.game]?.label} / open the room and finish your report flow
+                {GAMES[activeMatch.game]?.label} — open the room to submit your result.
               </p>
             </div>
-            <ChevronRight size={16} className="flex-shrink-0 text-[var(--text-soft)]" />
+            <ChevronRight size={15} className="flex-shrink-0 text-[var(--brand-teal)]" />
           </div>
         </Link>
-      )}
+      ) : null}
 
-      {userGames.length === 0 && (
-        <div className="card mb-6 flex items-start gap-3 p-4">
-          <AlertCircle size={16} className="mt-0.5 flex-shrink-0 text-[var(--brand-coral)]" />
+      {/* ── No games banner ───────────────────────────── */}
+      {userGames.length === 0 ? (
+        <div className="flex items-start gap-3 rounded-xl border border-[rgba(255,107,107,0.2)] bg-[rgba(255,107,107,0.06)] p-4">
+          <AlertCircle size={15} className="mt-0.5 flex-shrink-0 text-[var(--brand-coral)]" />
           <div>
-            <p className="text-sm font-semibold text-[var(--text-primary)]">No games selected yet</p>
+            <p className="text-sm font-bold text-[var(--text-primary)]">No games selected yet</p>
             <p className="mt-0.5 text-xs text-[var(--text-secondary)]">
-              Head to your profile, lock in your focus title{currentPlan.maxGames > 1 ? 's' : ''}, and Mechi will
-              tailor your ladder from there.
+              Pick your focus title{currentPlan.maxGames > 1 ? 's' : ''} and Mechi will build your
+              ladder from there.
             </p>
-            <Link href="/profile" className="brand-link-coral mt-2 inline-block text-xs font-semibold">
-              Update profile
+            <Link href="/games" className="brand-link-coral mt-2 inline-block text-xs font-bold">
+              Choose games →
             </Link>
           </div>
         </div>
-      )}
+      ) : null}
 
-      {rankedGames.length > 0 && (
-        <section className="mb-8">
-          <div className="mb-4 flex items-center justify-between gap-3">
-            <div>
-              <p className="section-title">Players Online Now</p>
-              <p className="mt-2 text-sm text-[var(--text-secondary)]">
-                Live players in your same-platform ranked lane. Tap a card to open their public profile.
-              </p>
-            </div>
-            <div className="brand-chip w-fit">
-              <Radar size={12} />
-              <span>{onlinePlayers.length} live now</span>
-            </div>
-          </div>
-
-          {onlinePlayers.length > 0 ? (
-            <div className="grid grid-cols-1 gap-3 lg:grid-cols-2 xl:grid-cols-3">
-              {onlinePlayers.map((player) => (
-                <Link
-                  key={`${player.id}-${player.game}`}
-                  href={`/s/${encodeURIComponent(player.username)}`}
-                  className="card group flex items-center gap-3 p-4 transition-all hover:-translate-y-0.5 hover:border-[rgba(50,224,196,0.24)] hover:bg-[var(--surface)]"
-                >
-                  <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-2xl border border-[rgba(50,224,196,0.2)] bg-[rgba(50,224,196,0.1)] text-sm font-black text-[var(--brand-teal)]">
-                    {player.username[0]?.toUpperCase() ?? '?'}
-                  </div>
-
-                  <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <p className="truncate text-sm font-semibold text-[var(--text-primary)]">
-                        {player.username}
-                      </p>
-                      <span className="brand-chip px-1.5 py-0.5 text-[9px]">Lv. {player.level}</span>
-                    </div>
-                    <p className="mt-1 text-xs text-[var(--text-secondary)]">
-                      {GAMES[player.game].label}
-                      {player.platform ? ` / ${player.platform.toUpperCase()}` : ''}
-                      {player.region ? ` / ${player.region}` : ''}
-                    </p>
-                    <p className="mt-1 text-[11px] text-[var(--text-soft)]">
-                      {player.wait_minutes > 0
-                        ? `${player.wait_minutes}m in queue right now`
-                        : 'Just joined the queue'}
-                    </p>
-                  </div>
-
-                  <ChevronRight
-                    size={16}
-                    className="flex-shrink-0 text-[var(--text-soft)] transition-transform group-hover:translate-x-0.5"
-                  />
-                </Link>
-              ))}
-            </div>
-          ) : (
-            <div className="card p-5">
-              <p className="text-sm font-semibold text-[var(--text-primary)]">
-                No same-platform players are live right now
-              </p>
-              <p className="mt-1 text-xs leading-5 text-[var(--text-secondary)]">
-                When players enter your ranked queue lane, they will show up here and you can jump into
-                their public profiles in one tap.
-              </p>
-            </div>
-          )}
-        </section>
-      )}
-
-      {rankedGames.length > 0 && (
-        <section className="mb-8">
-          <div className="mb-4 flex items-center justify-between gap-3">
-            <div>
-              <p className="section-title">Ranked Games</p>
-              <p className="mt-2 text-sm text-[var(--text-secondary)]">
-                Queue ranked play, track your record, and keep moving upward.
-              </p>
-            </div>
-            <Link href="/leaderboard" className="brand-link text-xs font-semibold">
-              View leaderboard
+      {/* ── Ranked Games ──────────────────────────────── */}
+      {rankedGames.length > 0 ? (
+        <section>
+          {/* Section header */}
+          <div className="mb-4 flex items-center gap-3">
+            <div className="h-4 w-[3px] rounded-full bg-[var(--brand-teal)]" />
+            <p className="text-[10px] font-black uppercase tracking-[0.18em] text-[var(--text-primary)]">
+              Ranked Games
+            </p>
+            <div className="h-px flex-1 bg-[var(--border-color)]" />
+            <Link href="/leaderboard" className="brand-link text-xs font-bold whitespace-nowrap">
+              Leaderboard →
             </Link>
           </div>
           {queueFeedback ? (
@@ -572,10 +543,15 @@ export default function DashboardPage() {
               tone={queueFeedback.tone}
               title={queueFeedback.title}
               detail={queueFeedback.detail}
-              className="mb-4"
+              className="mb-4 rounded-xl"
             />
           ) : null}
-          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+          {queuingGame ? (
+            <p className="mb-3 text-xs text-[var(--text-soft)]">
+              Other games are paused while you search for a {GAMES[queuingGame]?.label} match.
+            </p>
+          ) : null}
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {rankedGames.map((game) => (
               <GameCard
                 key={game}
@@ -591,23 +567,95 @@ export default function DashboardPage() {
             ))}
           </div>
         </section>
-      )}
+      ) : null}
 
-      {lobbyGames.length > 0 && (
-        <section className="mb-8">
-          <div className="mb-4 flex items-center justify-between gap-3">
-            <div>
-              <p className="section-title">Lobby Games</p>
-              <p className="mt-2 text-sm text-[var(--text-secondary)]">
-                Squad up when your game needs a room instead of a direct duel.
-              </p>
-            </div>
-            <div className="brand-chip">
-              <Radar size={12} />
-              <span>{lobbyGames.length} active lobby titles</span>
-            </div>
+      {/* ── Players Online ────────────────────────────── */}
+      {rankedGames.length > 0 ? (
+        <section>
+          <div className="mb-4 flex items-center gap-3">
+            <div className="h-4 w-[3px] rounded-full bg-[var(--brand-teal)]" />
+            <p className="text-[10px] font-black uppercase tracking-[0.18em] text-[var(--text-primary)]">
+              Players in Your Queue
+            </p>
+            <div className="h-px flex-1 bg-[var(--border-color)]" />
+            <span className="flex items-center gap-1 rounded border border-[rgba(50,224,196,0.2)] bg-[rgba(50,224,196,0.08)] px-2 py-0.5 text-[10px] font-bold text-[var(--accent-secondary-text)]">
+              <Radar size={10} />
+              {onlinePlayers.length} live
+            </span>
           </div>
-          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+
+          {onlinePlayers.length > 0 ? (
+            <div className="grid grid-cols-1 gap-3 lg:grid-cols-2 xl:grid-cols-3">
+              {onlinePlayers.map((player) => (
+                <Link
+                  key={`${player.id}-${player.game}`}
+                  href={`/s/${encodeURIComponent(player.username)}`}
+                  aria-label={`View ${player.username}'s profile`}
+                  className={`${panelBase} group flex items-center gap-3 p-4 transition-all hover:border-[rgba(50,224,196,0.32)]`}
+                >
+                  <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg border border-[rgba(50,224,196,0.2)] bg-[rgba(50,224,196,0.08)] text-sm font-black text-[var(--brand-teal)]">
+                    {player.username[0]?.toUpperCase() ?? '?'}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <p className="truncate text-sm font-semibold text-[var(--text-primary)]">
+                        {player.username}
+                      </p>
+                      <span className="rounded border border-[rgba(50,224,196,0.18)] bg-[rgba(50,224,196,0.08)] px-1.5 py-0.5 text-[9px] font-bold text-[var(--accent-secondary-text)]">
+                        Lv {player.level}
+                      </span>
+                    </div>
+                    <p className="mt-0.5 text-xs text-[var(--text-secondary)]">
+                      {GAMES[player.game].label}
+                      {player.platform ? ` · ${player.platform.toUpperCase()}` : ''}
+                      {player.region ? ` · ${player.region}` : ''}
+                    </p>
+                    <p className="mt-0.5 text-[11px] text-[var(--text-soft)]">
+                      {player.wait_minutes > 0
+                        ? `${player.wait_minutes}m in queue`
+                        : 'Just joined'}
+                    </p>
+                  </div>
+                  <ChevronRight
+                    size={15}
+                    className="flex-shrink-0 text-[var(--text-soft)] transition-transform group-hover:translate-x-0.5 group-hover:text-[var(--brand-teal)]"
+                  />
+                </Link>
+              ))}
+            </div>
+          ) : (
+            <div className={`${panelBase} flex items-center justify-between gap-4 p-5`}>
+              <div className="min-w-0">
+                <p className="text-sm font-semibold text-[var(--text-primary)]">
+                  No same-platform players are live right now
+                </p>
+                <p className="mt-1 text-xs leading-5 text-[var(--text-secondary)]">
+                  Invite friends to grow the pool and get faster matches.
+                </p>
+              </div>
+              <Link href="/share" className="btn-outline shrink-0 text-xs">
+                Invite
+              </Link>
+            </div>
+          )}
+        </section>
+      ) : null}
+
+      {/* ── Lobby Games ───────────────────────────────── */}
+      {lobbyGames.length > 0 ? (
+        <section>
+          <div className="mb-4 flex items-center gap-3">
+            <div className="h-4 w-[3px] rounded-full bg-[var(--brand-teal)]" />
+            <p className="text-[10px] font-black uppercase tracking-[0.18em] text-[var(--text-primary)]">
+              Lobby Games
+            </p>
+            <div className="h-px flex-1 bg-[var(--border-color)]" />
+            <span className="flex items-center gap-1 rounded border border-[var(--border-color)] bg-[var(--surface)] px-2 py-0.5 text-[10px] font-bold text-[var(--text-soft)]">
+              <Users size={10} />
+              {lobbyGames.length} title{lobbyGames.length !== 1 ? 's' : ''}
+            </span>
+          </div>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {lobbyGames.map((game) => (
               <GameCard
                 key={game}
@@ -618,48 +666,7 @@ export default function DashboardPage() {
             ))}
           </div>
         </section>
-      )}
-
-      {rankedGames.length > 0 && (
-        <section>
-          <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <p className="section-title">Rank Overview</p>
-              <p className="mt-2 text-sm text-[var(--text-secondary)]">
-                Quick read on how each title is moving.
-              </p>
-            </div>
-            <div className="brand-chip-coral w-fit gap-2">
-              <TierMedal rating={bestRating} size="sm" />
-              <span>{bestDivision.label} profile</span>
-            </div>
-          </div>
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {rankedGames.map((game) => {
-              const rating = (profile?.[getGameRatingKey(game)] as number) ?? 1000;
-              const wins = (profile?.[getGameWinsKey(game)] as number) ?? 0;
-              const losses = (profile?.[getGameLossesKey(game)] as number) ?? 0;
-
-              return (
-                <div key={game} className="card flex items-center justify-between px-5 py-4">
-                  <div>
-                    <p className="text-sm font-semibold text-[var(--text-primary)]">
-                      {GAMES[game].label}
-                    </p>
-                    <p className="mt-0.5 text-xs text-[var(--text-soft)]">
-                      {wins}W / {losses}L
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <TierMedal rating={rating} size="sm" showName />
-                    <RatingBadge rating={rating} size="sm" />
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </section>
-      )}
+      ) : null}
     </div>
   );
 }

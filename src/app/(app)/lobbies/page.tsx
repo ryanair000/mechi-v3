@@ -5,10 +5,8 @@ import { Suspense, useCallback, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import toast from 'react-hot-toast';
 import {
-  CalendarClock,
   Globe,
   Lock,
-  MessageCircle,
   Plus,
   Users,
 } from 'lucide-react';
@@ -19,10 +17,6 @@ import {
   supportsLobbyMode,
 } from '@/lib/config';
 import type { GameKey, Lobby, LobbyVisibility } from '@/types';
-
-const WHATSAPP_GROUP_URL =
-  process.env.NEXT_PUBLIC_WHATSAPP_GROUP_URL ??
-  'https://chat.whatsapp.com/GRquLpTxzQ35er85N33Ec7';
 
 function formatLobbySchedule(value?: string | null) {
   if (!value) {
@@ -141,54 +135,26 @@ function LobbiesContent() {
   };
 
   return (
-    <div className="page-container space-y-5">
-      <section className="card circuit-panel p-5 sm:p-6">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-          <div className="max-w-2xl">
-            <p className="section-title">Community Rooms</p>
-            <h1 className="mt-3 text-[1.55rem] font-black leading-[1.05] text-[var(--text-primary)] sm:text-[2rem]">
-              Lobbies
-            </h1>
-            <p className="mt-3 text-sm leading-6 text-[var(--text-secondary)]">
-              Create organized rooms for team titles, join open scrims, or keep private squad plans off the public feed.
-            </p>
-          </div>
-
-          <Link
-            href={gameFilter ? `/lobbies/create?game=${gameFilter}` : '/lobbies/create'}
-            className="btn-primary text-sm"
-          >
-            <Plus size={14} />
-            Create lobby
-          </Link>
+    <div className="page-container">
+      <div className="flex items-center justify-between gap-4 pb-5">
+        <div className="flex items-center gap-3">
+          <h1 className="text-xl font-black text-[var(--text-primary)]">Lobbies</h1>
+          {!loading && lobbies.filter((l) => l.status === 'open').length > 0 && (
+            <span className="brand-chip px-2.5 py-1">
+              {lobbies.filter((l) => l.status === 'open').length} open
+            </span>
+          )}
         </div>
-      </section>
+        <Link
+          href={gameFilter ? `/lobbies/create?game=${gameFilter}` : '/lobbies/create'}
+          className="btn-primary text-sm"
+        >
+          <Plus size={14} />
+          Create lobby
+        </Link>
+      </div>
 
-      {WHATSAPP_GROUP_URL ? (
-        <section className="subtle-card p-4">
-          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-            <div>
-              <p className="text-sm font-semibold text-[var(--text-primary)]">
-                Want faster lobby pings?
-              </p>
-              <p className="mt-1 text-xs leading-6 text-[var(--text-secondary)]">
-                Join the WhatsApp group for open-room drops and squad calls outside the app.
-              </p>
-            </div>
-            <a
-              href={WHATSAPP_GROUP_URL}
-              target="_blank"
-              rel="noreferrer"
-              className="btn-ghost"
-            >
-              <MessageCircle size={14} />
-              Join WhatsApp group
-            </a>
-          </div>
-        </section>
-      ) : null}
-
-      <div className="flex gap-2 overflow-x-auto pb-2 no-scrollbar">
+      <div className="mt-5 flex gap-2 overflow-x-auto pb-2 no-scrollbar">
         <button
           onClick={() => router.push('/lobbies')}
           className={`flex-shrink-0 rounded-md border px-3 py-2 text-xs font-semibold transition-all ${
@@ -351,7 +317,7 @@ function LobbiesContent() {
             })}
           </div>
 
-          <div className="grid gap-4 lg:hidden">
+          <div className="lg:hidden">
             {lobbies.map((lobby) => {
               const game = GAMES[lobby.game];
               const isHost = lobby.host_id === user?.id;
@@ -361,94 +327,38 @@ function LobbiesContent() {
               const visibility = getLobbyVisibility(lobby.visibility);
 
               return (
-                <div key={lobby.id} className="card p-4">
+                <div key={lobby.id} className="flex flex-col gap-2 border-b border-[var(--border-color)] py-4 last:border-0">
                   <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <p className="text-sm font-black text-[var(--text-primary)]">
-                          {lobby.title}
-                        </p>
-                        <span
-                          className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.08em] ${getStatusClasses(lobby.status)}`}
-                        >
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <p className="text-sm font-semibold text-[var(--text-primary)]">{lobby.title}</p>
+                        <span className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase ${getStatusClasses(lobby.status)}`}>
                           {getStatusLabel(lobby.status)}
                         </span>
+                        {isHost && <span className="brand-chip px-2 py-0.5 text-[10px]">Host</span>}
+                        {!isHost && isMember && <span className="brand-chip-coral px-2 py-0.5 text-[10px]">Joined</span>}
                       </div>
-                      <p className="mt-1 text-xs text-[var(--text-soft)]">
-                        {game?.label ?? lobby.game}
-                      </p>
-                    </div>
-                    {isHost ? <span className="brand-chip px-2 py-0.5">Host</span> : null}
-                  </div>
-
-                  <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                    <div className="rounded-xl border border-[var(--border-color)] bg-[var(--surface-elevated)] p-3">
-                      <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--text-soft)]">
-                        Mode / map
-                      </p>
-                      <p className="mt-2 text-sm font-semibold text-[var(--text-primary)]">
-                        {lobby.mode || 'Open room'}
-                      </p>
-                      <p className="mt-1 text-xs text-[var(--text-soft)]">
-                        {lobby.map_name || 'Map not set'}
-                      </p>
-                    </div>
-
-                    <div className="rounded-xl border border-[var(--border-color)] bg-[var(--surface-elevated)] p-3">
-                      <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--text-soft)]">
-                        Players
-                      </p>
-                      <p className="mt-2 flex items-center gap-2 text-sm font-semibold text-[var(--text-primary)]">
-                        <Users size={13} className="text-[var(--accent-secondary-text)]" />
-                        {memberCount}/{lobby.max_players}
-                      </p>
-                      <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-[var(--border-color)]">
-                        <div
-                          className={isFull ? 'h-full bg-[var(--brand-coral)]' : 'h-full bg-[var(--brand-teal)]'}
-                          style={{
-                            width: `${Math.min(100, (memberCount / Math.max(1, lobby.max_players)) * 100)}%`,
-                          }}
-                        />
+                      <div className="mt-1 flex flex-wrap items-center gap-1.5">
+                        <span className="text-[11px] text-[var(--text-soft)]">{game?.label ?? lobby.game}</span>
+                        {lobby.mode && <span className="text-[11px] text-[var(--text-soft)]">· {lobby.mode}</span>}
+                        <span className="inline-flex items-center gap-1 text-[11px] text-[var(--text-soft)]">
+                          <Users size={10} />
+                          {memberCount}/{lobby.max_players}
+                        </span>
+                        <span className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-semibold ${visibility === 'public' ? 'border-[rgba(50,224,196,0.22)] bg-[rgba(50,224,196,0.08)] text-[var(--accent-secondary-text)]' : 'border-[var(--border-color)] bg-[var(--surface-elevated)] text-[var(--text-secondary)]'}`}>
+                          {visibility === 'public' ? <Globe size={10} /> : <Lock size={10} />}
+                          {visibility}
+                        </span>
                       </div>
                     </div>
                   </div>
-
-                  <div className="mt-3 flex flex-wrap items-center gap-2">
-                    <span
-                      className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.08em] ${
-                        visibility === 'public'
-                          ? 'border-[rgba(50,224,196,0.22)] bg-[rgba(50,224,196,0.08)] text-[var(--accent-secondary-text)]'
-                          : 'border-[var(--border-color)] bg-[var(--surface-elevated)] text-[var(--text-secondary)]'
-                      }`}
-                    >
-                      {visibility === 'public' ? <Globe size={11} /> : <Lock size={11} />}
-                      {visibility}
-                    </span>
-                    {!isHost && isMember ? (
-                      <span className="brand-chip-coral px-2 py-0.5">Joined</span>
-                    ) : null}
-                    <span className="inline-flex items-center gap-1 rounded-full border border-[var(--border-color)] bg-[var(--surface-elevated)] px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-secondary)]">
-                      <CalendarClock size={11} />
-                      {formatLobbySchedule(lobby.scheduled_for)}
-                    </span>
-                  </div>
-
-                  <div className="mt-4 flex gap-2">
-                    <button
-                      onClick={() => router.push(`/lobbies/${lobby.id}`)}
-                      className="btn-outline flex-1 py-2 text-xs"
-                    >
-                      View
-                    </button>
-                    {!isMember && !isFull && lobby.status === 'open' ? (
-                      <button
-                        onClick={() => void handleJoin(lobby.id)}
-                        disabled={joiningId === lobby.id}
-                        className="btn-primary flex-1 py-2 text-xs"
-                      >
-                        {joiningId === lobby.id ? 'Joining...' : 'Join'}
+                  <div className="flex gap-2">
+                    <button onClick={() => router.push(`/lobbies/${lobby.id}`)} className="btn-outline flex-1 py-2 text-xs">View</button>
+                    {!isMember && !isFull && lobby.status === 'open' && (
+                      <button onClick={() => void handleJoin(lobby.id)} disabled={joiningId === lobby.id} className="btn-primary flex-1 py-2 text-xs">
+                        {joiningId === lobby.id ? 'Joining…' : 'Join'}
                       </button>
-                    ) : null}
+                    )}
                   </div>
                 </div>
               );

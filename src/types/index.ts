@@ -78,6 +78,8 @@ export interface Game {
   steamAppId?: number;
   hidden?: boolean;
   canonicalGame?: GameKey;
+  customMatch?: boolean;
+  hasLobbyScore?: boolean;
 }
 
 export interface Tier {

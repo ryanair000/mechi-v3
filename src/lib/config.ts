@@ -79,23 +79,27 @@ export const GAMES: Record<GameKey, Game> = {
     platforms: ['mobile'],
     mode: 'lobby',
     maxPlayers: 5,
+    hasLobbyScore: true,
   },
   pubgm: {
     label: 'PUBG Mobile',
     platforms: ['mobile'],
     mode: 'lobby',
     maxPlayers: 4,
+    hasLobbyScore: true,
   },
   cs2: {
     label: 'CS2',
     platforms: ['pc'],
     mode: '1v1',
     steamAppId: 730,
+    customMatch: true,
   },
   valorant: {
     label: 'Valorant',
     platforms: ['pc'],
     mode: '1v1',
+    customMatch: true,
   },
   mariokart: {
     label: 'Mario Kart 8',
@@ -112,6 +116,7 @@ export const GAMES: Record<GameKey, Game> = {
     platforms: ['mobile'],
     mode: 'lobby',
     maxPlayers: 4,
+    hasLobbyScore: true,
   },
   ludo: {
     label: 'Ludo',
@@ -125,6 +130,7 @@ export const GAMES: Record<GameKey, Game> = {
     platforms: ['ps', 'xbox', 'pc', 'nintendo'],
     mode: 'lobby',
     maxPlayers: 4,
+    hasLobbyScore: true,
   },
   rocketleague: {
     label: 'Rocket League',
@@ -134,7 +140,7 @@ export const GAMES: Record<GameKey, Game> = {
   },
 };
 
-const SCORE_REPORTED_GAMES = new Set<GameKey>(['fc26', 'efootball']);
+const SCORE_REPORTED_GAMES = new Set<GameKey>(['fc26', 'efootball', 'nba2k26']);
 
 const GAME_ARTWORK: Partial<Record<GameKey, { header: string; capsule: string }>> = {
   efootball: {
@@ -239,17 +245,19 @@ export const LOBBY_POPULAR_MAPS: Partial<Record<GameKey, readonly string[]>> = {
 };
 
 export const TIERS: Tier[] = [
-  { name: 'Bronze', min: 0, max: 1099, color: 'text-amber-700', bgColor: 'bg-amber-100 dark:bg-amber-900/30' },
-  { name: 'Silver', min: 1100, max: 1299, color: 'text-gray-500', bgColor: 'bg-gray-100 dark:bg-gray-800' },
-  { name: 'Gold', min: 1300, max: 1499, color: 'text-yellow-500', bgColor: 'bg-yellow-50 dark:bg-yellow-900/30' },
-  { name: 'Platinum', min: 1500, max: 1699, color: 'text-cyan-500', bgColor: 'bg-cyan-50 dark:bg-cyan-900/30' },
-  { name: 'Diamond', min: 1700, max: 1899, color: 'text-blue-500', bgColor: 'bg-blue-50 dark:bg-blue-900/30' },
-  { name: 'Legend', min: 1900, max: Infinity, color: 'text-purple-500', bgColor: 'bg-purple-50 dark:bg-purple-900/30' },
+  { name: 'Rookie',      min: 0,    max: 799,  color: 'text-gray-400',   bgColor: 'bg-gray-800' },
+  { name: 'Bronze',      min: 800,  max: 1599, color: 'text-amber-700',  bgColor: 'bg-amber-900/30' },
+  { name: 'Silver',      min: 1600, max: 2399, color: 'text-gray-400',   bgColor: 'bg-gray-800' },
+  { name: 'Gold',        min: 2400, max: 3199, color: 'text-yellow-500', bgColor: 'bg-yellow-900/30' },
+  { name: 'Platinum',    min: 3200, max: 3999, color: 'text-cyan-500',   bgColor: 'bg-cyan-900/30' },
+  { name: 'Diamond',     min: 4000, max: 4999, color: 'text-blue-500',   bgColor: 'bg-blue-900/30' },
+  { name: 'Master',      min: 5000, max: 5999, color: 'text-purple-500', bgColor: 'bg-purple-900/30' },
+  { name: 'Grandmaster', min: 6000, max: Infinity, color: 'text-red-500', bgColor: 'bg-red-900/30' },
 ];
 
 export const REGIONS = LOCATION_LABELS;
 
-export const DEFAULT_RATING = 1000;
+export const DEFAULT_RATING = 500;
 
 export function getLobbyModeOptions(gameKey: GameKey): string[] {
   const canonicalGameKey = getCanonicalGameKey(gameKey);

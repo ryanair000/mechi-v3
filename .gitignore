@@ -47,6 +47,15 @@ start-final*.log
 .codex-prod-*.err
 vercel-live-*.log
 supabase/.temp/
+*.log
+*.err.log
+
+# local test/audit output
+/output/
+
+# design assets (binary artifacts)
+/Mechi\ Design\ System/
+/Mechi\ Design\ System.zip
 
 # env files (can opt-in for committing if needed)
 .env*

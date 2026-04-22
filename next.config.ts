@@ -38,10 +38,14 @@ const localActionOrigins = Array.from(
 );
 
 const distDir = process.env.MECHI_NEXT_DIST_DIR;
+const isProductionBuild = process.env.NODE_ENV === "production";
 
 const nextConfig: NextConfig = {
   ...(distDir ? { distDir } : {}),
   allowedDevOrigins: localDevOrigins,
+  typescript: {
+    tsconfigPath: isProductionBuild ? "tsconfig.build.json" : "tsconfig.json",
+  },
   images: {
     remotePatterns: [
       {

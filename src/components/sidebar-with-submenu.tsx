@@ -6,83 +6,35 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
   ChevronDown,
-  CirclePlay,
-  Coins,
-  Gamepad2,
-  History,
-  LayoutDashboard,
-  Lightbulb,
-  type LucideIcon,
   LogOut,
-  MessageCircle,
   PanelLeftClose,
   PanelLeftOpen,
   Settings,
-  Share2,
-  Swords,
-  Trophy,
   User,
-  Users,
-  Zap,
 } from 'lucide-react';
 import { useAuth } from '@/components/AuthProvider';
 import { BrandLogo } from '@/components/BrandLogo';
 import { NotificationNavButton } from '@/components/NotificationNavButton';
+import {
+  type AppNavItem,
+  SIDEBAR_PRIMARY_ITEMS,
+  SIDEBAR_SECTIONS,
+  type SidebarSectionConfig,
+  type SidebarSectionKey,
+} from '@/lib/app-shell-nav';
 import { getPlan } from '@/lib/plans';
 import { cn } from '@/lib/utils';
 
-type NavItem = {
-  href: string;
-  icon: LucideIcon;
-  label: string;
-};
+function isPathActive(pathname: string, item: AppNavItem) {
+  if (item.matchMode === 'exact') {
+    return pathname === item.href;
+  }
 
-type SidebarSectionKey = 'compete' | 'games' | 'growth';
-
-type SidebarSectionConfig = {
-  icon: LucideIcon;
-  id: SidebarSectionKey;
-  items: NavItem[];
-  title: string;
-};
-
-const PRIMARY_ITEMS: NavItem[] = [
-  { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { href: '/tutorials', label: 'Tutorials', icon: CirclePlay },
-  { href: '/leaderboard', label: 'Leaderboard', icon: Trophy },
-];
-
-const COMPETE_ITEMS: NavItem[] = [
-  { href: '/queue', label: 'Queue', icon: Zap },
-  { href: '/tournaments', label: 'Tournaments', icon: Swords },
-  { href: '/lobbies', label: 'Lobbies', icon: Users },
-  { href: '/challenges', label: 'Challenges', icon: MessageCircle },
-  { href: '/matches', label: 'Match History', icon: History },
-];
-
-const GAME_ITEMS: NavItem[] = [
-  { href: '/games', label: 'Games', icon: Gamepad2 },
-  { href: '/suggest', label: 'Suggest', icon: Lightbulb },
-];
-
-const GROWTH_ITEMS: NavItem[] = [
-  { href: '/share', label: 'Share', icon: Share2 },
-  { href: '/rewards', label: 'Rewards', icon: Coins },
-  { href: '/bounties', label: 'Bounties', icon: Zap },
-];
-
-const COLLAPSIBLE_SECTIONS: SidebarSectionConfig[] = [
-  { id: 'compete', title: 'Compete', icon: Swords, items: COMPETE_ITEMS },
-  { id: 'games', title: 'Games', icon: Gamepad2, items: GAME_ITEMS },
-  { id: 'growth', title: 'Growth', icon: Share2, items: GROWTH_ITEMS },
-];
-
-function isPathActive(pathname: string, href: string) {
-  return pathname === href || (href !== '/dashboard' && pathname.startsWith(href));
+  return pathname === item.href || pathname.startsWith(item.href);
 }
 
-function hasActiveItem(pathname: string, items: NavItem[]) {
-  return items.some((item) => isPathActive(pathname, item.href));
+function hasActiveItem(pathname: string, items: AppNavItem[]) {
+  return items.some((item) => isPathActive(pathname, item));
 }
 
 function getNavItemClass(isActive: boolean, collapsed: boolean) {
@@ -109,7 +61,7 @@ function SidebarNavLink({
   icon: Icon,
   isActive,
   label,
-}: NavItem & {
+}: AppNavItem & {
   collapsed: boolean;
   isActive: boolean;
 }) {
@@ -149,14 +101,12 @@ function SidebarAccordionSection({
   if (collapsed) {
     return (
       <SidebarSection>
-        {items.map(({ href, icon, label }) => (
+        {items.map((item) => (
           <SidebarNavLink
-            key={href}
-            href={href}
-            icon={icon}
-            label={label}
+            key={item.href}
+            {...item}
             collapsed
-            isActive={isPathActive(pathname, href)}
+            isActive={isPathActive(pathname, item)}
           />
         ))}
       </SidebarSection>
@@ -193,14 +143,12 @@ function SidebarAccordionSection({
 
       {open ? (
         <div className="space-y-1 pl-3">
-          {items.map(({ href, icon, label }) => (
+          {items.map((item) => (
             <SidebarNavLink
-              key={href}
-              href={href}
-              icon={icon}
-              label={label}
+              key={item.href}
+              {...item}
               collapsed={false}
-              isActive={isPathActive(pathname, href)}
+              isActive={isPathActive(pathname, item)}
             />
           ))}
         </div>
@@ -224,7 +172,7 @@ export default function SidebarWithSubmenu({ collapsed, onToggle }: SidebarWithS
 
   function toggleSection(sectionKey: SidebarSectionKey) {
     setSectionOverrides((current) => {
-      const section = COLLAPSIBLE_SECTIONS.find((item) => item.id === sectionKey);
+      const section = SIDEBAR_SECTIONS.find((item) => item.id === sectionKey);
       const isOpenByDefault = section ? hasActiveItem(pathname, section.items) : false;
       const isOpen = current[sectionKey] ?? isOpenByDefault;
 
@@ -264,21 +212,23 @@ export default function SidebarWithSubmenu({ collapsed, onToggle }: SidebarWithS
 
       <nav className={cn('flex-1 space-y-1.5 overflow-y-auto py-3', collapsed ? 'px-3' : 'px-2')}>
         <SidebarSection>
-          {PRIMARY_ITEMS.map(({ href, label, icon: Icon }) => {
+          {SIDEBAR_PRIMARY_ITEMS.map(({ href, label, icon: Icon, matchMode, description }) => {
             return (
               <SidebarNavLink
                 key={href}
                 href={href}
                 icon={Icon}
                 label={label}
+                matchMode={matchMode}
+                description={description}
                 collapsed={collapsed}
-                isActive={isPathActive(pathname, href)}
+                isActive={isPathActive(pathname, { href, label, icon: Icon, matchMode, description })}
               />
             );
           })}
         </SidebarSection>
 
-        {COLLAPSIBLE_SECTIONS.map((section) => (
+        {SIDEBAR_SECTIONS.map((section) => (
           <SidebarAccordionSection
             key={section.id}
             {...section}

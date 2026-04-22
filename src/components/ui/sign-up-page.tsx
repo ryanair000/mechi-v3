@@ -12,6 +12,7 @@ interface SignupPageProps {
   children: ReactNode;
   title?: string;
   subtitle?: string;
+  sideEyebrow?: string;
   sideTitle?: string;
   sideDescription?: string;
   sidePoints?: string[];
@@ -19,12 +20,14 @@ interface SignupPageProps {
   imageSrc?: string;
   imageAlt?: string;
   variant?: SignupPageVariant;
+  hideMainHeader?: boolean;
 }
 
 export function SignupPage({
   children,
   title,
   subtitle,
+  sideEyebrow,
   sideTitle,
   sideDescription,
   sidePoints = [],
@@ -32,6 +35,7 @@ export function SignupPage({
   imageSrc = '/mechi-whatsapp-profile.jpg',
   imageAlt = 'Mechi community profile art',
   variant = 'default',
+  hideMainHeader = false,
 }: SignupPageProps) {
   const router = useRouter();
   const mainTitle = title || sideTitle;
@@ -89,7 +93,7 @@ export function SignupPage({
                   </div>
 
                   <div className="mt-10 max-w-2xl lg:mt-14">
-                    <p className="section-title">Quick read</p>
+                    <p className="section-title">{sideEyebrow || 'Quick read'}</p>
                     {showSideCopy ? (
                       <>
                         {sideTitle ? (
@@ -138,7 +142,7 @@ export function SignupPage({
 
               <div className="flex flex-1 flex-col justify-center overflow-y-auto p-2 md:overflow-hidden lg:p-4">
                 <div className="mx-auto w-full max-w-xl">
-                  {mainTitle || mainSubtitle ? (
+                  {!hideMainHeader && (mainTitle || mainSubtitle) ? (
                     <div className="mb-8">
                       <p className="mb-3 text-xs font-semibold uppercase tracking-[0.3em] text-[var(--text-soft)]">
                         mechi.club

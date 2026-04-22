@@ -205,10 +205,12 @@ export default function LoginPage({ searchParams }: { searchParams: LoginSearchP
 
   return (
     <FullScreenSignup
-      title="Sign back in."
+      title=""
       subtitle=""
-      sideTitle="Back to the climb."
+      sideEyebrow="mechi.club"
+      sideTitle="Sign back in."
       sideDescription="Your profile, match history, and active setup are still waiting for you."
+      hideMainHeader
       variant="marketing"
     >
       <div className="card p-4 sm:p-6">

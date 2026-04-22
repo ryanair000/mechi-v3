@@ -78,7 +78,7 @@ export function LandingCountdownSection({
   return (
     <section className="landing-section pt-0">
       <div className="landing-shell">
-        <div className="card !border-transparent overflow-hidden px-6 py-8 sm:px-8 sm:py-10 lg:px-12">
+        <div className="overflow-hidden rounded-[var(--radius-card)] border border-[rgba(50,224,196,0.14)] bg-[rgba(50,224,196,0.04)] px-6 py-10 sm:px-8 sm:py-14 lg:px-12">
           <div className="mx-auto flex max-w-4xl flex-col items-center justify-center text-center">
             <span className="inline-flex items-center gap-2 rounded-full border border-[rgba(50,224,196,0.22)] bg-[var(--accent-secondary-soft)] px-4 py-2 text-sm font-semibold uppercase tracking-[0.14em] text-[var(--accent-secondary-text)]">
               <Puzzle size={14} />

@@ -9,6 +9,7 @@ import {
   CirclePlay,
   Coins,
   Gamepad2,
+  History,
   LayoutDashboard,
   Lightbulb,
   type LucideIcon,
@@ -54,6 +55,7 @@ const COMPETE_ITEMS: NavItem[] = [
   { href: '/tournaments', label: 'Tournaments', icon: Swords },
   { href: '/lobbies', label: 'Lobbies', icon: Users },
   { href: '/challenges', label: 'Challenges', icon: MessageCircle },
+  { href: '/matches', label: 'Match History', icon: History },
 ];
 
 const GAME_ITEMS: NavItem[] = [

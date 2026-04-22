@@ -484,7 +484,7 @@ html[data-theme='dark'] {
   }
 
   .landing-section {
-    @apply border-t py-10 sm:py-12 lg:py-14;
+    @apply border-t py-14 sm:py-16 lg:py-20;
     border-color: var(--border-color);
   }
 

@@ -258,9 +258,22 @@ export default async function LandingPage() {
                   </span>
                 ))}
               </div>
+
+              {/* Mobile-only flat stats — replaces the hidden right panel */}
+              <div className="mt-6 grid grid-cols-2 gap-2 lg:hidden">
+                {HERO_STATS.map((item) => (
+                  <div key={item.label} className="rounded-2xl border border-[var(--border-color)] bg-[var(--surface-soft)] px-3 py-3">
+                    <div className="text-lg font-black text-[var(--text-primary)] sm:text-2xl">{item.value}</div>
+                    <div className="mt-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--text-soft)]">{item.label}</div>
+                    {'note' in item ? (
+                      <div className="mt-0.5 text-[9px] font-semibold uppercase tracking-[0.1em] text-[var(--brand-teal)]">{item.note}</div>
+                    ) : null}
+                  </div>
+                ))}
+              </div>
             </div>
 
-            <div className="rounded-[1.75rem] border border-[var(--border-color)] bg-[rgba(10,18,31,0.22)] p-4 sm:p-5 lg:mt-3">
+            <div className="hidden lg:block rounded-[1.75rem] border border-[var(--border-color)] bg-[rgba(10,18,31,0.22)] p-4 sm:p-5 lg:mt-3">
               <div className="flex flex-col gap-4">
                 <div>
                   <p className="section-title">Quick read</p>
@@ -294,7 +307,7 @@ export default async function LandingPage() {
                   <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--accent-secondary-text)]">
                     Platforms live
                   </p>
-                  <div className="mt-3 flex flex-wrap gap-2">
+                  <div className="mt-3 flex flex-wrap justify-center gap-2">
                     {PLATFORM_CHIPS.map((platform) => (
                       <div
                         key={platform.label}
@@ -367,7 +380,7 @@ export default async function LandingPage() {
                     <div>
                       <h3 className="text-lg font-black text-[var(--text-primary)]">{config.name}</h3>
                       <p className="mt-1 text-3xl font-black text-[var(--text-primary)]">
-                        {config.monthlyKes === 0 ? 'FREE' : `KSH ${config.monthlyKes}`}
+                        {config.monthlyKes === 0 ? 'FREE' : `KES ${config.monthlyKes}`}
                       </p>
                       <p className="mt-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--text-soft)]">
                         {config.monthlyKes === 0 ? 'No payment needed' : 'per month'}
@@ -377,16 +390,17 @@ export default async function LandingPage() {
 
                   <p className="mt-4 text-sm leading-6 text-[var(--text-secondary)]">{plan.description}</p>
 
-                  <div className="mt-5 grid gap-2.5">
+                  <ul className="mt-5 space-y-2">
                     {config.features.slice(0, 4).map((feature) => (
-                      <div
+                      <li
                         key={feature}
-                        className="rounded-xl border border-[var(--border-color)] bg-[var(--surface)] px-3 py-2 text-sm font-medium text-[var(--text-secondary)]"
+                        className="flex items-start gap-2.5 text-sm text-[var(--text-secondary)]"
                       >
+                        <span className="mt-[3px] h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--accent-secondary)]" />
                         {feature}
-                      </div>
+                      </li>
                     ))}
-                  </div>
+                  </ul>
 
                   <div className="mt-6">
                     <Link
@@ -421,11 +435,11 @@ export default async function LandingPage() {
                 No hidden math on the surface. The big tier tells you the league. The Roman numeral tells you how close you are to the next jump.
               </p>
 
-              <div className="mt-5 space-y-3">
+              <div className="mt-5 rounded-2xl border border-[var(--border-color)] bg-[var(--surface-soft)] divide-y divide-[var(--border-color)]">
                 {RANK_GUIDE.map((item) => (
-                  <div key={item.title} className="rounded-2xl border border-[var(--border-color)] bg-[var(--surface-soft)] p-4">
+                  <div key={item.title} className="p-4">
                     <p className="text-sm font-black text-[var(--text-primary)]">{item.title}</p>
-                    <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">{item.copy}</p>
+                    <p className="mt-1.5 text-sm leading-6 text-[var(--text-secondary)]">{item.copy}</p>
                   </div>
                 ))}
               </div>
@@ -471,10 +485,9 @@ export default async function LandingPage() {
 
       <section className="landing-section pt-0">
         <div className="landing-shell">
-          <div className="card circuit-panel p-6 sm:p-7 lg:flex lg:items-center lg:justify-between lg:gap-8">
+          <div className="card circuit-panel p-8 sm:p-10 lg:p-12 lg:flex lg:items-center lg:justify-between lg:gap-8">
             <div className="max-w-2xl">
-              <p className="section-title">Ready to jump in</p>
-              <h2 className="mt-3 text-3xl font-black text-[var(--text-primary)] sm:text-[2.2rem]">
+              <h2 className="text-3xl font-black text-[var(--text-primary)] sm:text-[2.5rem]">
                 Pick your games. Queue up. Start climbing.
               </h2>
               <p className="mt-3 text-sm leading-6 text-[var(--text-secondary)]">

@@ -8,6 +8,11 @@ export const TRACKED_RANKED_GAMES: GameKey[] = [
   'tekken8',
   'sf6',
   'ludo',
+  'rocketleague',
+  'mariokart',
+  'smashbros',
+  'cs2',
+  'valorant',
 ];
 
 export const XP_RULES = {
@@ -50,7 +55,16 @@ export interface PlayerStats {
   totalMatches: number;
   achievementsUnlocked: string[];
   eloAfterWin?: number;
+  tournamentsJoined?: number;
+  tournamentsWon?: number;
 }
+
+export const DECAY_RULES = {
+  startTier: 'Platinum',
+  minRating: 3200,
+  inactiveDays: 21,
+  dailyDecay: 15,
+} as const;
 
 export interface AchievementDef extends GamificationAchievement {
   check: (stats: PlayerStats) => boolean;
@@ -63,22 +77,26 @@ const RANK_DIVISIONS: Array<{
   division: string;
   color: string;
 }> = [
-  { min: 0, max: 999, tier: 'Bronze', division: 'III', color: '#CD7F32' },
-  { min: 1000, max: 1049, tier: 'Bronze', division: 'II', color: '#CD7F32' },
-  { min: 1050, max: 1099, tier: 'Bronze', division: 'I', color: '#CD7F32' },
-  { min: 1100, max: 1149, tier: 'Silver', division: 'III', color: '#C0C0C0' },
-  { min: 1150, max: 1199, tier: 'Silver', division: 'II', color: '#C0C0C0' },
-  { min: 1200, max: 1299, tier: 'Silver', division: 'I', color: '#C0C0C0' },
-  { min: 1300, max: 1349, tier: 'Gold', division: 'III', color: '#FFD700' },
-  { min: 1350, max: 1399, tier: 'Gold', division: 'II', color: '#FFD700' },
-  { min: 1400, max: 1499, tier: 'Gold', division: 'I', color: '#FFD700' },
-  { min: 1500, max: 1549, tier: 'Platinum', division: 'III', color: '#00CED1' },
-  { min: 1550, max: 1599, tier: 'Platinum', division: 'II', color: '#00CED1' },
-  { min: 1600, max: 1699, tier: 'Platinum', division: 'I', color: '#00CED1' },
-  { min: 1700, max: 1749, tier: 'Diamond', division: 'III', color: '#60A5FA' },
-  { min: 1750, max: 1799, tier: 'Diamond', division: 'II', color: '#60A5FA' },
-  { min: 1800, max: 1899, tier: 'Diamond', division: 'I', color: '#60A5FA' },
-  { min: 1900, max: Number.POSITIVE_INFINITY, tier: 'Legend', division: '', color: '#A855F7' },
+  { min: 0,    max: 399,  tier: 'Rookie',      division: 'III', color: '#6B7280' },
+  { min: 400,  max: 599,  tier: 'Rookie',      division: 'II',  color: '#6B7280' },
+  { min: 600,  max: 799,  tier: 'Rookie',      division: 'I',   color: '#6B7280' },
+  { min: 800,  max: 1099, tier: 'Bronze',      division: 'III', color: '#CD7F32' },
+  { min: 1100, max: 1349, tier: 'Bronze',      division: 'II',  color: '#CD7F32' },
+  { min: 1350, max: 1599, tier: 'Bronze',      division: 'I',   color: '#CD7F32' },
+  { min: 1600, max: 1899, tier: 'Silver',      division: 'III', color: '#C0C0C0' },
+  { min: 1900, max: 2149, tier: 'Silver',      division: 'II',  color: '#C0C0C0' },
+  { min: 2150, max: 2399, tier: 'Silver',      division: 'I',   color: '#C0C0C0' },
+  { min: 2400, max: 2699, tier: 'Gold',        division: 'III', color: '#FFD700' },
+  { min: 2700, max: 2949, tier: 'Gold',        division: 'II',  color: '#FFD700' },
+  { min: 2950, max: 3199, tier: 'Gold',        division: 'I',   color: '#FFD700' },
+  { min: 3200, max: 3499, tier: 'Platinum',    division: 'III', color: '#00CED1' },
+  { min: 3500, max: 3749, tier: 'Platinum',    division: 'II',  color: '#00CED1' },
+  { min: 3750, max: 3999, tier: 'Platinum',    division: 'I',   color: '#00CED1' },
+  { min: 4000, max: 4349, tier: 'Diamond',     division: 'III', color: '#60A5FA' },
+  { min: 4350, max: 4649, tier: 'Diamond',     division: 'II',  color: '#60A5FA' },
+  { min: 4650, max: 4999, tier: 'Diamond',     division: 'I',   color: '#60A5FA' },
+  { min: 5000, max: 5999, tier: 'Master',      division: '',    color: '#A855F7' },
+  { min: 6000, max: Number.POSITIVE_INFINITY, tier: 'Grandmaster', division: '', color: '#EF4444' },
 ];
 
 function achievementReward(
@@ -226,7 +244,7 @@ export const ACHIEVEMENTS: AchievementDef[] = [
     '\u{1F948}',
     200,
     150,
-    (stats) => (stats.eloAfterWin ?? 0) >= 1100
+    (stats) => (stats.eloAfterWin ?? 0) >= 1600
   ),
   achievementReward(
     'gold_certified',
@@ -235,7 +253,7 @@ export const ACHIEVEMENTS: AchievementDef[] = [
     '\u{1F947}',
     300,
     200,
-    (stats) => (stats.eloAfterWin ?? 0) >= 1300
+    (stats) => (stats.eloAfterWin ?? 0) >= 2400
   ),
   achievementReward(
     'diamond_certified',
@@ -244,16 +262,79 @@ export const ACHIEVEMENTS: AchievementDef[] = [
     '\u{1F48E}',
     400,
     250,
-    (stats) => (stats.eloAfterWin ?? 0) >= 1700
+    (stats) => (stats.eloAfterWin ?? 0) >= 4000
   ),
   achievementReward(
-    'legend',
-    'Legend',
-    'Reach Legend rank',
-    '\u{1F7E3}',
+    'rookie_out',
+    'Out of Rookie',
+    'Reach Bronze rank',
+    '\u{1F949}',
+    100,
+    75,
+    (stats) => (stats.eloAfterWin ?? 0) >= 800
+  ),
+  achievementReward(
+    'master',
+    'Master',
+    'Reach Master rank',
+    '\u{1F49C}',
     500,
     300,
-    (stats) => (stats.eloAfterWin ?? 0) >= 1900
+    (stats) => (stats.eloAfterWin ?? 0) >= 5000
+  ),
+  achievementReward(
+    'grandmaster',
+    'Grandmaster',
+    'Reach Grandmaster rank',
+    '\u{1F534}',
+    1000,
+    500,
+    (stats) => (stats.eloAfterWin ?? 0) >= 6000
+  ),
+  achievementReward(
+    'rl_ace',
+    'Supersonic Ace',
+    'Win 50 Rocket League matches',
+    '\u{1F680}',
+    300,
+    200,
+    (stats) => (stats.gameWins.rocketleague ?? 0) >= 50
+  ),
+  achievementReward(
+    'mk_podium',
+    'Podium Finish',
+    'Win 50 Mario Kart matches',
+    '\u{1F3CE}\u{FE0F}',
+    300,
+    200,
+    (stats) => (stats.gameWins.mariokart ?? 0) >= 50
+  ),
+  achievementReward(
+    'sb_brawler',
+    'Main Brawler',
+    'Win 50 Super Smash Bros matches',
+    '\u{1F94A}',
+    300,
+    200,
+    (stats) => (stats.gameWins.smashbros ?? 0) >= 50
+  ),
+  achievementReward(
+    'tournament_debut',
+    'Tournament Debut',
+    'Join your first tournament',
+    '\u{1F3C6}',
+    200,
+    150,
+    (stats) => (stats.tournamentsJoined ?? 0) >= 1
+  ),
+  achievementReward(
+    'champion',
+    'Champion',
+    'Win a tournament',
+    '\u{1F451}',
+    500,
+    300,
+    (stats) => (stats.tournamentsWon ?? 0) >= 1
   ),
 ];
 

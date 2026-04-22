@@ -11,7 +11,7 @@ import {
   TRACKED_RANKED_GAMES,
   XP_RULES,
 } from '@/lib/gamification';
-import { processMatchRewardMilestones } from '@/lib/rewards';
+import { maybeAwardRankedTierUp, processMatchRewardMilestones } from '@/lib/rewards';
 import { createServiceClient } from '@/lib/supabase';
 import { sendMatchDisputeEmail, sendResultConfirmedEmail } from '@/lib/email';
 import { notifyMatchDispute, notifyResultConfirmed } from '@/lib/whatsapp';
@@ -912,6 +912,18 @@ export async function POST(
           chezahubUserId: loserProfile.chezahub_user_id ?? null,
         },
       });
+
+      // Award RP if the winner advanced a rank tier
+      const winnerOldTier = getRankDivision(winnerRating).tier;
+      const winnerNewTier = getRankDivision(newRatingWinner).tier;
+      if (winnerNewTier !== winnerOldTier) {
+        maybeAwardRankedTierUp(supabase, {
+          userId: winnerId,
+          previousTier: winnerOldTier,
+          newTier: winnerNewTier,
+          stamp: todayNairobi,
+        }).catch(console.error);
+      }
 
       await createMatchChatMessage({
         matchId: id,

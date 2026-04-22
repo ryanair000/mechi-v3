@@ -19,7 +19,7 @@ export type RewardCatalogItem = {
   id: string;
   title: string;
   description: string;
-  reward_type: RewardCodeType;
+  reward_type: RewardCodeType | 'mechi_perk';
   points_cost: number;
   phase: string;
   active: boolean;
@@ -70,6 +70,14 @@ export type RewardSummary = {
     created_at: string;
   }>;
   active_codes: RewardRedemptionRow[];
+  ways_to_earn: Array<{
+    id: string;
+    title: string;
+    description: string;
+    rp_amount: number;
+    category: string;
+    frequency: string;
+  }>;
 };
 
 export type ChezahubLinkTokenPayload = {
@@ -130,12 +138,23 @@ export const REWARD_RULES = {
   firstMatchOfDay: 30,
   streak3Daily: 75,
   streak5Weekly: 150,
+  streak10Weekly: 400,
   shareActionDaily: 25,
   inviteeStarter: 500,
   inviterMain: 3000,
   linkedFirstPaidOrder: 250,
   qualifiedReferralMinimumKes: 2000,
   maxOrderCoveragePercent: 25,
+  tournament_win: 500,
+  tournament_runner_up: 200,
+  tournament_top_four: 75,
+  first_tournament_join: 100,
+  season_top_ten: 1000,
+  perfect_bo3_sweep: 50,
+  lobby_first_place: 30,
+  lobby_win_streak_3: 100,
+  rankedTierUp: 100,
+  dailyLogin: 10,
 } as const;
 
 export const REWARD_WAYS_TO_EARN = [
@@ -541,6 +560,21 @@ export async function processMatchRewardMilestones(
     );
   }
 
+  if (params.winner.newStreak >= 10) {
+    operations.push(
+      applyRewardEvent(supabase, {
+        userId: params.winner.id,
+        eventKey: `reward:streak-ten:${params.winner.id}:${weekStamp}`,
+        eventType: 'streak_ten_weekly',
+        availableDelta: REWARD_RULES.streak10Weekly,
+        lifetimeDelta: REWARD_RULES.streak10Weekly,
+        source: 'mechi_match',
+        relatedMatchId: params.matchId,
+        metadata: { streak: params.winner.newStreak, week: weekStamp },
+      })
+    );
+  }
+
   if (
     params.winner.totalMatchesBefore === 0 &&
     params.winner.invitedBy &&
@@ -610,6 +644,20 @@ function getRewardEventTitle(eventType: string, availableDelta: number, pendingD
       return delta < 0 ? 'Reward redeemed' : 'Reward adjustment';
     case 'reward_redemption_reversal':
       return 'Reward points restored';
+    case 'streak_ten_weekly':
+      return '10-win streak';
+    case 'ranked_tier_up':
+      return 'Rank tier advanced';
+    case 'daily_login':
+      return 'Daily login bonus';
+    case 'tournament_win':
+      return 'Tournament winner';
+    case 'tournament_runner_up':
+      return 'Tournament runner-up';
+    case 'tournament_top_four':
+      return 'Tournament top 4';
+    case 'lobby_first_place':
+      return 'Lobby first place';
     default:
       return eventType.replace(/_/g, ' ');
   }
@@ -634,7 +682,7 @@ export async function getRewardSummaryForUser(
   const profile = profileRaw as RewardProfileFields;
   await maybeAwardProfileCompletion(supabase, profile);
 
-  const [referralsResult, recentEventsResult, activeCodesResult, refreshedProfileResult] = await Promise.all([
+  const [referralsResult, recentEventsResult, activeCodesResult, refreshedProfileResult, waysToEarnResult] = await Promise.all([
     supabase
       .from('referral_conversions')
       .select('status', { count: 'exact' })
@@ -657,6 +705,7 @@ export async function getRewardSummaryForUser(
       .select('reward_points_available, reward_points_pending, reward_points_lifetime, chezahub_user_id, chezahub_linked_at')
       .eq('id', userId)
       .single(),
+    getWaysToEarnFromDb(supabase).catch(() => REWARD_WAYS_TO_EARN.map(w => ({ ...w, rp_amount: 0, category: 'general', frequency: 'once' }))),
   ]);
 
   const referralRows =
@@ -704,6 +753,7 @@ export async function getRewardSummaryForUser(
       created_at: event.created_at,
     })),
     active_codes: activeCodes,
+    ways_to_earn: Array.isArray(waysToEarnResult) ? waysToEarnResult : [],
   };
 }
 
@@ -1210,4 +1260,89 @@ export function hashRewardBindingValue(value: string | null | undefined) {
 
 export function getRewardDayStamp() {
   return getNairobiDateStamp();
+}
+
+export async function getRewardCatalogFromCache(supabase: SupabaseClient): Promise<RewardCatalogItem[]> {
+  const { data, error } = await supabase
+    .from('reward_catalog_cache')
+    .select('*')
+    .eq('active', true)
+    .order('sort_order', { ascending: true });
+
+  if (error) {
+    throw error;
+  }
+
+  return (data ?? []) as RewardCatalogItem[];
+}
+
+export async function syncChezahubCatalogToCache(
+  supabase: SupabaseClient,
+  items: RewardCatalogItem[]
+): Promise<void> {
+  if (items.length === 0) return;
+
+  const rows = items.map((item) => ({
+    ...item,
+    source: 'chezahub',
+    synced_at: new Date().toISOString(),
+  }));
+
+  const { error } = await supabase
+    .from('reward_catalog_cache')
+    .upsert(rows, { onConflict: 'id' });
+
+  if (error) {
+    throw error;
+  }
+}
+
+export async function getWaysToEarnFromDb(supabase: SupabaseClient) {
+  const { data, error } = await supabase
+    .from('ways_to_earn')
+    .select('id, title, description, rp_amount, category, frequency')
+    .eq('active', true)
+    .order('sort_order', { ascending: true });
+
+  if (error) {
+    throw error;
+  }
+
+  return (data ?? []) as Array<{
+    id: string;
+    title: string;
+    description: string;
+    rp_amount: number;
+    category: string;
+    frequency: string;
+  }>;
+}
+
+export async function maybeAwardDailyLogin(supabase: SupabaseClient, userId: string) {
+  const stamp = getNairobiDateStamp();
+  return applyRewardEvent(supabase, {
+    userId,
+    eventKey: `reward:daily-login:${userId}:${stamp}`,
+    eventType: 'daily_login',
+    availableDelta: REWARD_RULES.dailyLogin,
+    lifetimeDelta: REWARD_RULES.dailyLogin,
+    source: 'mechi_daily',
+    metadata: { stamp },
+  }).catch(() => null);
+}
+
+export async function maybeAwardRankedTierUp(
+  supabase: SupabaseClient,
+  params: { userId: string; previousTier: string; newTier: string; stamp: string }
+) {
+  const { userId, previousTier, newTier, stamp } = params;
+  return applyRewardEvent(supabase, {
+    userId,
+    eventKey: `reward:tier-up:${userId}:${newTier}`,
+    eventType: 'ranked_tier_up',
+    availableDelta: REWARD_RULES.rankedTierUp,
+    lifetimeDelta: REWARD_RULES.rankedTierUp,
+    source: 'mechi_ranked',
+    metadata: { previous_tier: previousTier, new_tier: newTier, stamp },
+  }).catch(() => null);
 }

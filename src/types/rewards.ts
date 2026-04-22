@@ -37,13 +37,21 @@ export interface RewardSummary {
   };
   recent_activity: RewardActivity[];
   active_codes: RewardActiveCode[];
+  ways_to_earn: Array<{
+    id: string;
+    title: string;
+    description: string;
+    rp_amount: number;
+    category: string;
+    frequency: string;
+  }>;
 }
 
 export interface RewardCatalogItem {
   id: string;
   title: string;
   description: string;
-  reward_type: RewardCodeType;
+  reward_type: 'discount_code' | 'reward_claim' | 'mechi_perk';
   points_cost: number;
   phase: string;
   active: boolean;
@@ -52,10 +60,14 @@ export interface RewardCatalogItem {
   max_order_coverage_percent?: number | null;
   sku_name?: string | null;
   margin_class?: string | null;
+  source?: 'chezahub' | 'mechi_native';
 }
 
 export interface RewardWayToEarn {
   id: string;
   title: string;
   description: string;
+  rp_amount: number;
+  category: string;
+  frequency: string;
 }

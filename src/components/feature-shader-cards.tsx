@@ -1,7 +1,7 @@
 'use client';
 
 import type { LucideIcon } from 'lucide-react';
-import { ArrowRight, Gamepad2, ShieldCheck, Swords, Trophy } from 'lucide-react';
+import { Gamepad2, ShieldCheck, Swords, Trophy } from 'lucide-react';
 import { Warp } from '@paper-design/shaders-react';
 
 type FeatureCard = {
@@ -169,7 +169,7 @@ export default function FeatureShaderCards() {
                     </span>
 
                     <div className="rounded-2xl border border-white/14 bg-black/22 p-3 text-white shadow-[0_12px_30px_rgba(0,0,0,0.24)] backdrop-blur-sm transition-transform duration-300 group-hover:-translate-y-1">
-                      <Icon size={24} strokeWidth={2.1} />
+                      <Icon size={24} strokeWidth={2.1} aria-hidden="true" />
                     </div>
                   </div>
 
@@ -186,10 +186,6 @@ export default function FeatureShaderCards() {
                       {feature.description}
                     </p>
 
-                    <div className="mt-6 inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-white/88">
-                      <span>Clean flow</span>
-                      <ArrowRight size={14} />
-                    </div>
                   </div>
                 </div>
               </article>

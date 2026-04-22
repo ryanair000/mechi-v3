@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuthUser, profileToAuthUser } from '@/lib/auth';
+import { maybeAwardDailyLogin } from '@/lib/rewards';
 import { createServiceClient } from '@/lib/supabase';
 import { maybeExpireProfilePlan } from '@/lib/subscription';
 
@@ -45,6 +46,9 @@ export async function GET(request: NextRequest) {
           plan_since: null,
           plan_expires_at: null,
         };
+
+  // Fire-and-forget daily login bonus (idempotent — safe to call on every session load)
+  maybeAwardDailyLogin(supabase, profile.id as string).catch(console.error);
 
   return NextResponse.json({ user: profileToAuthUser(safeProfile) });
 }

@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireActiveAccessProfile } from '@/lib/access';
 import {
   applyRewardEvent,
-  fetchChezahubRewardCatalog,
+  getRewardCatalogFromCache,
   issueChezahubRewardCode,
   voidChezahubRewardCode,
 } from '@/lib/rewards';
@@ -42,11 +42,7 @@ export async function POST(request: NextRequest) {
       chezahub_user_id?: string | null;
     };
 
-    if (!profile.chezahub_user_id) {
-      return NextResponse.json({ error: 'Link your ChezaHub account first' }, { status: 400 });
-    }
-
-    const items = await fetchChezahubRewardCatalog();
+    const items = await getRewardCatalogFromCache(supabase);
     const reward = items.find((item) => item.id === rewardId && item.active);
 
     if (!reward) {
@@ -55,6 +51,97 @@ export async function POST(request: NextRequest) {
 
     if ((profile.reward_points_available ?? 0) < reward.points_cost) {
       return NextResponse.json({ error: 'Not enough reward points' }, { status: 400 });
+    }
+
+    // ── Mechi-native perks (no ChezaHub call) ────────────────────────────────
+    if (reward.reward_type === 'mechi_perk') {
+      // Check for duplicate active mechi perk
+      const { data: existingPerk } = await supabase
+        .from('reward_redemptions')
+        .select('id')
+        .eq('user_id', profile.id)
+        .eq('reward_id', rewardId)
+        .eq('status', 'issued')
+        .maybeSingle();
+
+      if (existingPerk) {
+        return NextResponse.json(
+          { error: 'You already have this perk active' },
+          { status: 409 }
+        );
+      }
+
+      // Deduct RP
+      await applyRewardEvent(supabase, {
+        userId: profile.id,
+        eventKey: `reward:redeem:${redemptionId}`,
+        eventType: 'reward_redemption_spend',
+        availableDelta: -reward.points_cost,
+        source: 'reward_redeem',
+        metadata: { reward_id: reward.id, reward_type: reward.reward_type },
+      });
+
+      // Apply the perk
+      try {
+        if (rewardId.startsWith('mechi_badge_')) {
+          await supabase
+            .from('profile_badges')
+            .upsert({ user_id: profile.id, badge_id: rewardId }, { onConflict: 'user_id,badge_id', ignoreDuplicates: true });
+        } else if (rewardId === 'mechi_pro_7day') {
+          const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+          await supabase
+            .from('profiles')
+            .update({ plan: 'pro', plan_expires_at: expiresAt })
+            .eq('id', profile.id);
+        }
+        // mechi_priority_queue: stored in redemptions row, read at matchmaking time
+      } catch (perkError) {
+        // Reverse the RP deduction on perk apply failure
+        await applyRewardEvent(supabase, {
+          userId: profile.id,
+          eventKey: `reward:redeem-reversal:${redemptionId}`,
+          eventType: 'reward_redemption_reversal',
+          availableDelta: reward.points_cost,
+          source: 'reward_redeem',
+          metadata: { reason: 'perk_apply_failed', reward_id: reward.id },
+        }).catch(() => null);
+        throw perkError;
+      }
+
+      const expiresAt =
+        reward.expires_in_hours
+          ? new Date(Date.now() + reward.expires_in_hours * 60 * 60 * 1000).toISOString()
+          : null;
+
+      await supabase.from('reward_redemptions').insert({
+        id: redemptionId,
+        user_id: profile.id,
+        reward_id: reward.id,
+        reward_type: reward.reward_type,
+        title: reward.title,
+        code: null,
+        points_cost: reward.points_cost,
+        external_issuance_id: null,
+        expires_at: expiresAt,
+        metadata: { phase: reward.phase, source: 'mechi_native' },
+      });
+
+      return NextResponse.json({
+        redemption: {
+          id: redemptionId,
+          reward_id: reward.id,
+          reward_type: reward.reward_type,
+          title: reward.title,
+          code: null,
+          expires_at: expiresAt,
+          points_cost: reward.points_cost,
+        },
+      });
+    }
+
+    // ── ChezaHub rewards (discount codes / reward claims) ─────────────────────
+    if (!profile.chezahub_user_id) {
+      return NextResponse.json({ error: 'Link your ChezaHub account first' }, { status: 400 });
     }
 
     const { data: existingIssued } = await supabase
@@ -78,7 +165,7 @@ export async function POST(request: NextRequest) {
       mechiUserId: profile.id,
       chezahubUserId: profile.chezahub_user_id,
       rewardId: reward.id,
-      rewardType: reward.reward_type,
+      rewardType: reward.reward_type as 'discount_code' | 'reward_claim',
     });
 
     try {
@@ -109,9 +196,7 @@ export async function POST(request: NextRequest) {
       points_cost: reward.points_cost,
       external_issuance_id: issued.issuanceId,
       expires_at: issued.expiresAt,
-      metadata: {
-        phase: reward.phase,
-      },
+      metadata: { phase: reward.phase },
     });
 
     if (insertError) {
@@ -121,10 +206,7 @@ export async function POST(request: NextRequest) {
         eventType: 'reward_redemption_reversal',
         availableDelta: reward.points_cost,
         source: 'reward_redeem',
-        metadata: {
-          reason: 'insert_failed',
-          reward_id: reward.id,
-        },
+        metadata: { reason: 'insert_failed', reward_id: reward.id },
       }).catch(() => null);
       await voidChezahubRewardCode(issued.issuanceId);
       throw insertError;

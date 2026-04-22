@@ -1,4 +1,4 @@
-import { createHash, createHmac, randomUUID, timingSafeEqual } from 'crypto';
+import { createHash, createHmac, randomBytes, randomUUID, timingSafeEqual } from 'crypto';
 import type { NextRequest } from 'next/server';
 import { tryClaimBounty } from '@/lib/bounties';
 import { getNairobiDateStamp } from '@/lib/gamification';
@@ -133,6 +133,25 @@ const DEFAULT_CHEZAHUB_BASE_URL = 'https://chezahub.co.ke';
 const DEFAULT_CHEZAHUB_REDEEM_URL = 'https://redeem.chezahub.co.ke';
 const DEFAULT_LINK_TOKEN_TTL_MS = 1000 * 60 * 15;
 
+export const VOUCHER_TIERS = [
+  { id: 'voucher_50', points_cost: 500, value_kes: 50, title: 'KES 50 ChezaHub Credit' },
+  { id: 'voucher_100', points_cost: 1000, value_kes: 100, title: 'KES 100 ChezaHub Credit' },
+  { id: 'voucher_200', points_cost: 2000, value_kes: 200, title: 'KES 200 ChezaHub Credit' },
+  { id: 'voucher_500', points_cost: 5000, value_kes: 500, title: 'KES 500 ChezaHub Credit' },
+] as const;
+
+export type VoucherTier = (typeof VOUCHER_TIERS)[number];
+
+export function generateVoucherCode(): string {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  const bytes = randomBytes(12);
+  let code = '';
+  for (let i = 0; i < 12; i++) {
+    code += chars[bytes[i] % chars.length];
+  }
+  return code;
+}
+
 export const REWARD_RULES = {
   accountLink: 200,
   profileCompletion: 200,
@@ -164,8 +183,8 @@ export const REWARD_RULES = {
 export const REWARD_WAYS_TO_EARN = [
   {
     id: 'account_link',
-    title: 'Link ChezaHub once',
-    description: `+${REWARD_RULES.accountLink} RP when your ChezaHub account is linked.`,
+    title: 'Link your ChezaHub account',
+    description: `+${REWARD_RULES.accountLink} RP when you connect ChezaHub for referral tracking.`,
   },
   {
     id: 'profile_completion',

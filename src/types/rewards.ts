@@ -61,6 +61,7 @@ export interface RewardCatalogItem {
   sku_name?: string | null;
   margin_class?: string | null;
   source?: 'chezahub' | 'mechi_native';
+  value_kes?: number | null;
 }
 
 export interface RewardWayToEarn {

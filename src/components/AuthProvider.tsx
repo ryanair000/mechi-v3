@@ -9,6 +9,8 @@ const AUTH_REFRESH_TIMEOUT_MS = 8000;
 const PUBLIC_AUTH_REFRESH_SKIP_PREFIXES = [
   '/',
   '/connect',
+  '/manual-tests',
+  '/report',
   '/pricing',
   '/privacy-policy',
   '/terms-of-service',

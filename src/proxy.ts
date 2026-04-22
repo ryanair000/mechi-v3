@@ -54,6 +54,8 @@ const ADMIN_HOST_PATH_ALIASES: Record<string, string> = {
 const PUBLIC_PREFIXES = [
   '/',
   '/connect',
+  '/manual-tests',
+  '/report',
   '/login',
   '/register',
   '/forgot-password',
@@ -67,6 +69,7 @@ const PUBLIC_PREFIXES = [
   '/api/invite',
   '/api/og',
   '/api/share',
+  '/api/test-reports',
   '/join/',
   '/s/',
   '/_next',

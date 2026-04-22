@@ -61,7 +61,7 @@ export const manualTestRunOrder = [
   'Player account surfaces',
   'Competitive flows',
   'Lobbies and tournaments',
-  'Rewards and billing',
+  'Bounties, rewards, and billing',
   'Share pages',
   'Admin and ops',
 ] as const;
@@ -230,11 +230,11 @@ export const manualTestSections = [
         title: 'Registration wizard can create a brand-new player account end to end.',
         account: 'Fresh free player',
         instructions: [
-          'Complete the registration wizard with profile basics, game selection, and platform IDs.',
+          'Complete the registration wizard with profile basics, game selection, platform IDs, and the WhatsApp notification preference.',
           'Finish the flow and let the app redirect into the signed-in experience.',
         ],
         passIf: [
-          'The new user lands in the app with the chosen games and profile details visible.',
+          'The new user lands in the app with the chosen games, profile details, and alert preference reflected cleanly.',
           'Validation is understandable and no step in the wizard silently drops the user input.',
         ],
         links: [makeAppLink('/register', 'Register')],
@@ -244,12 +244,12 @@ export const manualTestSections = [
         title: 'Existing login works and the session survives refresh.',
         account: 'Player A',
         instructions: [
-          'Log in with a healthy existing player account and visit dashboard, profile, and one more protected page.',
+          'Log in with a healthy existing player account using at least one of the supported sign-in methods now exposed on the page, then visit dashboard, profile, and one more protected page.',
           'Refresh the browser on a protected page once after login.',
         ],
         passIf: [
           'The user reaches the protected app without redirect loops.',
-          'Refresh does not drop the session or produce a blank loading state.',
+          'Refresh does not drop the session or produce a blank loading state, regardless of the login method used.',
         ],
         links: [
           makeAppLink('/login', 'Login'),
@@ -422,6 +422,23 @@ export const manualTestSections = [
           'Filtering and account context feel plausible for the selected game.',
         ],
         links: [makeAppLink('/leaderboard', 'Leaderboard')],
+      },
+      {
+        id: 'PLAYER-09',
+        title: 'Supported game snapshot uploads work from profile settings and survive refresh.',
+        account: 'Player A',
+        instructions: [
+          'Open profile settings, pick one supported snapshot game such as eFootball, CODM, or PUBG Mobile, and upload an in-game screenshot.',
+          'If a snapshot already exists, replace it once, then refresh the page and confirm the updated image is still attached to the right game card.',
+        ],
+        passIf: [
+          'Snapshot cards accept uploads without broken previews, stuck loading overlays, or wrong-game placement.',
+          'The saved snapshot remains visible after refresh and can be removed or changed cleanly.',
+        ],
+        links: [
+          makeAppLink('/profile/settings', 'Profile settings'),
+          makeAppLink('/profile', 'Profile'),
+        ],
       },
     ],
   },
@@ -712,7 +729,7 @@ export const manualTestSections = [
     id: 'growth-billing',
     title: 'Rewards, Billing, and Retention',
     description:
-      'Cover points, redemption, partner flows, suggestions, upgrade checkout, and tutorial surfaces that shape retention.',
+      'Cover bounties, points, redemption, partner flows, suggestions, upgrade checkout, and tutorial surfaces that shape retention.',
     goal: 'Exit this section knowing the growth and money-adjacent paths feel safe and understandable.',
     items: [
       {
@@ -811,6 +828,23 @@ export const manualTestSections = [
         links: [
           makeAppLink('/tutorials', 'Tutorials'),
           makeAppLink('/games', 'Games'),
+        ],
+      },
+      {
+        id: 'GROW-07',
+        title: 'Bounties page shows live challenges, claimed history, and payout messaging coherently.',
+        account: 'Player A',
+        instructions: [
+          'Open bounties, review the live challenge cards, then expand the claimed history section once.',
+          'Refresh the page and compare the live count, claimed winners, and payout language for any stale or contradictory state.',
+        ],
+        passIf: [
+          'Active bounties load as deliberate challenge cards instead of empty placeholders or broken sections.',
+          'Claimed history expands cleanly, winner states feel plausible, and the payout copy stays consistent across refresh.',
+        ],
+        links: [
+          makeAppLink('/bounties', 'Bounties'),
+          makeAppLink('/rewards', 'Rewards'),
         ],
       },
     ],
@@ -1023,6 +1057,24 @@ export const manualTestSections = [
           makeAdminLink('/admin/whatsapp', 'WhatsApp ops'),
           makeAdminLink('/admin/instagram', 'Instagram ops'),
           makeAdminLink('/admin/logs', 'Logs'),
+        ],
+      },
+      {
+        id: 'ADMIN-09',
+        title: 'Bounties admin supports draft creation, activation, and payout handling.',
+        account: 'Admin',
+        instructions: [
+          'Open admin bounties, create one safe draft, and confirm it appears in the control room with the expected trigger, prize, and week label.',
+          'If the environment already has a controlled bounty, test one lifecycle action such as Go Live, Cancel, or Mark Paid and then refresh the lane.',
+        ],
+        passIf: [
+          'Draft creation returns a visible bounty card with the right metadata instead of a silent failure.',
+          'Lifecycle actions update status cleanly after refresh and do not leave the bounty in a contradictory payout state.',
+        ],
+        watchFor: ['Only send a bounty live when the environment and audience are safe for a real claim attempt.'],
+        links: [
+          makeAdminLink('/admin/bounties', 'Admin bounties'),
+          makeAppLink('/bounties', 'Player bounties'),
         ],
       },
     ],

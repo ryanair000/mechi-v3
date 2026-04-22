@@ -2,6 +2,7 @@
 
 import { useDeferredValue, useState, useSyncExternalStore } from 'react';
 import { CheckCircle2, ExternalLink, RefreshCcw, Search, ShieldCheck, Users } from 'lucide-react';
+import { TestsWorkspaceNav } from '@/components/TestsWorkspaceNav';
 import {
   MANUAL_TEST_STORAGE_KEY,
   manualTestAccounts,
@@ -367,9 +368,11 @@ export default function ManualTestKitClient({
       <section className="landing-shell py-8 sm:py-10 lg:py-12">
         <div className="mx-auto max-w-6xl space-y-4 sm:space-y-6">
           <div className="card circuit-panel overflow-hidden p-6 sm:p-7">
+            <TestsWorkspaceNav current="checklist" />
+
             <div className="flex flex-col gap-6 xl:flex-row xl:items-end xl:justify-between">
               <div className="max-w-3xl">
-                <p className="section-title">Manual QA</p>
+                <p className="section-title mt-6">Manual QA</p>
                 <h1 className="mt-3 text-[2.2rem] font-black leading-[0.98] text-[var(--text-primary)] sm:text-[3.4rem]">
                   Mechi Test Kit
                 </h1>

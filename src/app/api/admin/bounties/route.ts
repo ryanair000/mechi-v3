@@ -8,6 +8,7 @@ import {
   type BountyRow,
   type BountyWinnerAdmin,
 } from '@/lib/bounties';
+import { filterVisibleBounties, shouldHideE2EFixtures } from '@/lib/e2e-fixtures';
 import { createServiceClient } from '@/lib/supabase';
 
 type WinnerRelation = {
@@ -56,12 +57,20 @@ export async function GET(request: NextRequest) {
 
   try {
     const supabase = createServiceClient();
-    const { data, error } = await supabase
+    let bountyQuery = supabase
       .from('bounties')
       .select(
         'id, title, description, trigger_type, trigger_metadata, prize_kes, status, winner_id, claimed_at, paid_at, activated_at, week_label, created_at, updated_at, winner:winner_id(username, avatar_url, phone)'
       )
       .order('created_at', { ascending: false });
+
+    if (shouldHideE2EFixtures()) {
+      bountyQuery = bountyQuery
+        .not('title', 'ilike', '%e2e%')
+        .not('description', 'ilike', '%e2e%');
+    }
+
+    const { data, error } = await bountyQuery;
 
     if (error) {
       console.error('[Admin Bounties GET] Failed to fetch bounties:', error);
@@ -69,7 +78,7 @@ export async function GET(request: NextRequest) {
     }
 
     return NextResponse.json({
-      bounties: ((data ?? []) as BountyQueryRow[]).map(toAdminBounty),
+      bounties: filterVisibleBounties((data ?? []) as BountyQueryRow[]).map(toAdminBounty),
     });
   } catch (error) {
     console.error('[Admin Bounties GET] Error:', error);

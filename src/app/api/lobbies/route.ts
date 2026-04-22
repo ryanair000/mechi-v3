@@ -9,6 +9,7 @@ import {
   getLobbyPopularMaps,
   supportsLobbyMode,
 } from '@/lib/config';
+import { filterVisibleLobbies, shouldHideE2EFixtures } from '@/lib/e2e-fixtures';
 import { notifyGameAudienceAboutLobby } from '@/lib/game-audience';
 import { checkRateLimit, getClientIp, rateLimitResponse } from '@/lib/rateLimit';
 import type { GameKey, LobbyVisibility } from '@/types';
@@ -71,6 +72,12 @@ export async function GET(request: NextRequest) {
       publicQuery = publicQuery.eq('game', canonicalGame);
     }
 
+    if (shouldHideE2EFixtures()) {
+      publicQuery = publicQuery
+        .not('title', 'ilike', '%e2e%')
+        .not('room_code', 'ilike', '%e2e%');
+    }
+
     const [{ data: publicLobbies, error: publicError }, { data: memberships, error: membershipError }] =
       await Promise.all([
         publicQuery,
@@ -108,16 +115,22 @@ export async function GET(request: NextRequest) {
       privateQuery = privateQuery.eq('game', canonicalGame);
     }
 
+    if (shouldHideE2EFixtures()) {
+      privateQuery = privateQuery
+        .not('title', 'ilike', '%e2e%')
+        .not('room_code', 'ilike', '%e2e%');
+    }
+
     const { data: privateLobbies, error: privateError } = await privateQuery;
 
     if (privateError) {
       return NextResponse.json({ error: 'Failed to fetch lobbies' }, { status: 500 });
     }
 
-    const mergedLobbies = [
+    const mergedLobbies = filterVisibleLobbies([
       ...((publicLobbies ?? []) as Array<Record<string, unknown>>),
       ...((privateLobbies ?? []) as Array<Record<string, unknown>>),
-    ];
+    ]);
     const dedupedLobbies = Array.from(new Map(mergedLobbies.map((lobby) => [String(lobby.id), lobby])).values());
     const normalizedLobbies = dedupedLobbies
       .sort(

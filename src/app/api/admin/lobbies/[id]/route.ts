@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getRequestAccessProfile, hasModeratorAccess } from '@/lib/access';
 import { writeAuditLog } from '@/lib/audit';
+import { isE2ELobbyFixture, shouldHideE2EFixtures } from '@/lib/e2e-fixtures';
 import { getClientIp } from '@/lib/rateLimit';
 import { createServiceClient } from '@/lib/supabase';
 import { firstRelation } from '@/lib/tournaments';
@@ -106,19 +107,24 @@ export async function GET(
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 
-  const { id } = await params;
+    const { id } = await params;
 
   try {
     const supabase = createServiceClient();
-    const { data: lobby, error: lobbyError } = await supabase
+    let lobbyQuery = supabase
       .from('lobbies')
       .select(
         'id, host_id, game, visibility, mode, map_name, scheduled_for, title, max_players, room_code, status, created_at, host:host_id(id, username, phone, email, role, is_banned), member_count:lobby_members(count)'
       )
-      .eq('id', id)
-      .single();
+      .eq('id', id);
 
-    if (lobbyError || !lobby) {
+    if (shouldHideE2EFixtures()) {
+      lobbyQuery = lobbyQuery.not('title', 'ilike', '%e2e%').not('room_code', 'ilike', '%e2e%');
+    }
+
+    const { data: lobby, error: lobbyError } = await lobbyQuery.single();
+
+    if (lobbyError || !lobby || isE2ELobbyFixture(lobby)) {
       return NextResponse.json({ error: 'Lobby not found' }, { status: 404 });
     }
 
@@ -162,11 +168,16 @@ export async function PATCH(
       user_id?: string;
     };
     const supabase = createServiceClient();
-    const { data: lobby, error: lobbyError } = await supabase
+    let lobbyQuery = supabase
       .from('lobbies')
       .select('id, title, room_code, host_id, max_players, status, visibility')
-      .eq('id', id)
-      .single();
+      .eq('id', id);
+
+    if (shouldHideE2EFixtures()) {
+      lobbyQuery = lobbyQuery.not('title', 'ilike', '%e2e%').not('room_code', 'ilike', '%e2e%');
+    }
+
+    const { data: lobby, error: lobbyError } = await lobbyQuery.single();
 
     if (lobbyError || !lobby) {
       return NextResponse.json({ error: 'Lobby not found' }, { status: 404 });

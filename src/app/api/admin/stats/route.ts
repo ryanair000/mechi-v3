@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getRequestAccessProfile, hasModeratorAccess } from '@/lib/access';
+import { shouldHideE2EFixtures } from '@/lib/e2e-fixtures';
 import { expireWaitingQueueEntries, getQueueExpiryCutoffIso } from '@/lib/queue';
 import { createServiceClient } from '@/lib/supabase';
 
@@ -14,6 +15,59 @@ export async function GET(request: NextRequest) {
     await expireWaitingQueueEntries(supabase);
     const since7d = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
     const staleQueueThreshold = getQueueExpiryCutoffIso();
+    const hideE2EFixtures = shouldHideE2EFixtures();
+
+    const tournamentCountQuery = (status?: string, payoutStatus?: string) => {
+      let query = supabase.from('tournaments').select('id', { count: 'exact', head: true });
+
+      if (hideE2EFixtures) {
+        query = query.not('title', 'ilike', '%e2e%').not('slug', 'ilike', '%e2e%');
+      }
+
+      if (status) {
+        query = query.eq('status', status);
+      }
+
+      if (payoutStatus) {
+        query = query.eq('payout_status', payoutStatus);
+      }
+
+      return query;
+    };
+
+    const completedTournamentPrizeQuery = () => {
+      let query = supabase.from('tournaments').select('prize_pool').eq('status', 'completed');
+
+      if (hideE2EFixtures) {
+        query = query.not('title', 'ilike', '%e2e%').not('slug', 'ilike', '%e2e%');
+      }
+
+      return query;
+    };
+
+    const lobbyCountQuery = (status: 'open' | 'full' | 'in_progress') => {
+      let query = supabase.from('lobbies').select('id', { count: 'exact', head: true }).eq('status', status);
+
+      if (hideE2EFixtures) {
+        query = query.not('title', 'ilike', '%e2e%').not('room_code', 'ilike', '%e2e%');
+      }
+
+      return query;
+    };
+
+    const overdueLobbiesQuery = () => {
+      let query = supabase
+        .from('lobbies')
+        .select('id', { count: 'exact', head: true })
+        .in('status', ['open', 'full'])
+        .lt('scheduled_for', new Date().toISOString());
+
+      if (hideE2EFixtures) {
+        query = query.not('title', 'ilike', '%e2e%').not('room_code', 'ilike', '%e2e%');
+      }
+
+      return query;
+    };
 
     const [
       { count: totalUsers },
@@ -40,8 +94,8 @@ export async function GET(request: NextRequest) {
       supabase.from('matches').select('id', { count: 'exact', head: true }),
       supabase.from('matches').select('id', { count: 'exact', head: true }).eq('status', 'disputed'),
       supabase.from('matches').select('id', { count: 'exact', head: true }).eq('status', 'pending'),
-      supabase.from('tournaments').select('id', { count: 'exact', head: true }),
-      supabase.from('tournaments').select('id', { count: 'exact', head: true }).eq('status', 'active'),
+      tournamentCountQuery(),
+      tournamentCountQuery('active'),
       supabase.from('queue').select('id', { count: 'exact', head: true }).eq('status', 'waiting'),
       supabase
         .from('queue')
@@ -55,16 +109,12 @@ export async function GET(request: NextRequest) {
         .select('id', { count: 'exact', head: true })
         .eq('status', 'waiting')
         .lt('joined_at', staleQueueThreshold),
-      supabase.from('lobbies').select('id', { count: 'exact', head: true }).eq('status', 'open'),
-      supabase.from('lobbies').select('id', { count: 'exact', head: true }).eq('status', 'full'),
-      supabase.from('lobbies').select('id', { count: 'exact', head: true }).eq('status', 'in_progress'),
-      supabase
-        .from('lobbies')
-        .select('id', { count: 'exact', head: true })
-        .in('status', ['open', 'full'])
-        .lt('scheduled_for', new Date().toISOString()),
-      supabase.from('tournaments').select('id', { count: 'exact', head: true }).eq('payout_status', 'pending'),
-      supabase.from('tournaments').select('prize_pool').eq('status', 'completed'),
+      lobbyCountQuery('open'),
+      lobbyCountQuery('full'),
+      lobbyCountQuery('in_progress'),
+      overdueLobbiesQuery(),
+      tournamentCountQuery(undefined, 'pending'),
+      completedTournamentPrizeQuery(),
     ]);
 
     const totalPrizeDistributed = (prizeResult.data ?? []).reduce(

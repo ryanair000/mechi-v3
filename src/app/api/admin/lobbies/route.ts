@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getRequestAccessProfile, hasModeratorAccess } from '@/lib/access';
 import { createServiceClient } from '@/lib/supabase';
 import { GAMES, getCanonicalGameKey } from '@/lib/config';
+import { filterVisibleLobbies, shouldHideE2EFixtures } from '@/lib/e2e-fixtures';
 import { firstRelation } from '@/lib/tournaments';
 import type { AdminLobbySummary, GameKey, UserRole } from '@/types';
 
@@ -144,12 +145,18 @@ export async function GET(request: NextRequest) {
       query = query.eq('game', getCanonicalGameKey(game as GameKey));
     }
 
+    if (shouldHideE2EFixtures()) {
+      query = query.not('title', 'ilike', '%e2e%').not('room_code', 'ilike', '%e2e%');
+    }
+
     const { data, error, count } = await query;
     if (error) {
       return NextResponse.json({ error: 'Failed to fetch lobbies' }, { status: 500 });
     }
 
-    const summaries = ((data ?? []) as Array<Record<string, unknown>>).map(toLobbySummary);
+    const summaries = filterVisibleLobbies(
+      ((data ?? []) as Array<Record<string, unknown>>).map(toLobbySummary)
+    );
     const filtered = search
       ? summaries.filter((lobby) => {
           const values = [lobby.title, lobby.room_code, lobby.host?.username ?? '', lobby.game, lobby.visibility]

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireActiveAccessProfile } from '@/lib/access';
 import { GAMES, getCanonicalGameKey, isValidGamePlatform } from '@/lib/config';
+import { filterVisibleTournaments, shouldHideE2EFixtures } from '@/lib/e2e-fixtures';
 import { isTournamentSize } from '@/lib/bracket';
 import { notifyGameAudienceAboutTournament } from '@/lib/game-audience';
 import { resolveProfileLocation, validateLocationSelection } from '@/lib/location';
@@ -40,12 +41,18 @@ export async function GET(request: NextRequest) {
       query = query.eq('game', getCanonicalGameKey(game as GameKey));
     }
 
+    if (shouldHideE2EFixtures()) {
+      query = query.not('title', 'ilike', '%e2e%').not('slug', 'ilike', '%e2e%');
+    }
+
     const { data, error } = await query;
     if (error) {
       return NextResponse.json({ error: 'Failed to fetch tournaments' }, { status: 500 });
     }
 
-    const tournaments = (data ?? []) as Array<Record<string, unknown> & { id: string }>;
+    const tournaments = filterVisibleTournaments(
+      (data ?? []) as Array<Record<string, unknown> & { id: string }>
+    );
     if (!tournaments.length) {
       return NextResponse.json({ tournaments: [] });
     }

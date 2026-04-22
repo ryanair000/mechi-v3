@@ -3,6 +3,7 @@ import { getRequestAccessProfile, hasAdminAccess, hasModeratorAccess } from '@/l
 import { writeAuditLog } from '@/lib/audit';
 import { isTournamentSize } from '@/lib/bracket';
 import { GAMES, getCanonicalGameKey, isValidGamePlatform } from '@/lib/config';
+import { isE2ETournamentFixture, shouldHideE2EFixtures } from '@/lib/e2e-fixtures';
 import { getClientIp } from '@/lib/rateLimit';
 import { createServiceClient } from '@/lib/supabase';
 import {
@@ -26,15 +27,20 @@ export async function GET(
 
   try {
     const supabase = createServiceClient();
-    const { data: tournament, error: tournamentError } = await supabase
+    let tournamentQuery = supabase
       .from('tournaments')
       .select(
         'id, slug, title, game, platform, region, size, entry_fee, prize_pool, platform_fee, platform_fee_rate, status, bracket, winner_id, organizer_id, rules, approval_status, approved_at, approved_by, is_featured, payout_status, payout_ref, payout_error, created_at, started_at, ended_at, organizer:organizer_id(id, username, email), winner:winner_id(id, username)'
       )
-      .eq('id', id)
-      .single();
+      .eq('id', id);
 
-    if (tournamentError || !tournament) {
+    if (shouldHideE2EFixtures()) {
+      tournamentQuery = tournamentQuery.not('title', 'ilike', '%e2e%').not('slug', 'ilike', '%e2e%');
+    }
+
+    const { data: tournament, error: tournamentError } = await tournamentQuery.single();
+
+    if (tournamentError || !tournament || isE2ETournamentFixture(tournament)) {
       return NextResponse.json({ error: 'Tournament not found' }, { status: 404 });
     }
 
@@ -131,13 +137,18 @@ export async function PATCH(
     };
     const supabase = createServiceClient();
 
-    const { data: tournament, error: tournamentError } = await supabase
+    let tournamentQuery = supabase
       .from('tournaments')
       .select(
         'id, title, slug, game, platform, region, size, entry_fee, prize_pool, platform_fee, platform_fee_rate, status, winner_id, rules, approval_status, approved_at, approved_by, is_featured'
       )
-      .eq('id', id)
-      .single();
+      .eq('id', id);
+
+    if (shouldHideE2EFixtures()) {
+      tournamentQuery = tournamentQuery.not('title', 'ilike', '%e2e%').not('slug', 'ilike', '%e2e%');
+    }
+
+    const { data: tournament, error: tournamentError } = await tournamentQuery.single();
 
     if (tournamentError || !tournament) {
       return NextResponse.json({ error: 'Tournament not found' }, { status: 404 });

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireActiveAccessProfile } from '@/lib/access';
 import { hasPrimaryAdminAccess } from '@/lib/admin-access';
+import { isE2ETournamentFixture, shouldHideE2EFixtures } from '@/lib/e2e-fixtures';
 import { resolvePlan } from '@/lib/subscription';
 import { createServiceClient } from '@/lib/supabase';
 import {
@@ -65,27 +66,41 @@ export async function GET(
     return access.response;
   }
 
-  const authUser = access.profile;
+    const authUser = access.profile;
 
   try {
     const supabase = createServiceClient();
-    const { data: tournamentBySlug, error } = await supabase
+    let tournamentBySlugQuery = supabase
       .from('tournaments')
       .select(TOURNAMENT_DETAIL_SELECT)
-      .eq('slug', slug)
-      .single();
+      .eq('slug', slug);
 
-    if (error || !tournamentBySlug) {
+    if (shouldHideE2EFixtures()) {
+      tournamentBySlugQuery = tournamentBySlugQuery
+        .not('title', 'ilike', '%e2e%')
+        .not('slug', 'ilike', '%e2e%');
+    }
+
+    const { data: tournamentBySlug, error } = await tournamentBySlugQuery.single();
+
+    if (error || !tournamentBySlug || isE2ETournamentFixture(tournamentBySlug)) {
       return NextResponse.json({ error: 'Tournament not found' }, { status: 404 });
     }
 
     await releaseExpiredTournamentReservations(supabase, tournamentBySlug.id);
 
-    const { data: refreshedTournament } = await supabase
+    let refreshedTournamentQuery = supabase
       .from('tournaments')
       .select(TOURNAMENT_DETAIL_SELECT)
-      .eq('id', tournamentBySlug.id)
-      .single();
+      .eq('id', tournamentBySlug.id);
+
+    if (shouldHideE2EFixtures()) {
+      refreshedTournamentQuery = refreshedTournamentQuery
+        .not('title', 'ilike', '%e2e%')
+        .not('slug', 'ilike', '%e2e%');
+    }
+
+    const { data: refreshedTournament } = await refreshedTournamentQuery.single();
 
     const tournament = (refreshedTournament ?? tournamentBySlug) as typeof tournamentBySlug;
 

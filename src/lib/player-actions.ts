@@ -7,6 +7,11 @@ import {
   normalizeSelectedGameKeys,
   supportsLobbyMode,
 } from '@/lib/config';
+import {
+  filterVisibleLobbies,
+  filterVisibleTournaments,
+  shouldHideE2EFixtures,
+} from '@/lib/e2e-fixtures';
 import { notifyGameAudienceAboutQueue } from '@/lib/game-audience';
 import { resolveProfileLocation, UNSPECIFIED_LOCATION_LABEL } from '@/lib/location';
 import { canStartMatch } from '@/lib/plans';
@@ -584,6 +589,10 @@ export async function listOpenLobbies(params: {
     query = query.in('game', filterGames);
   }
 
+  if (shouldHideE2EFixtures()) {
+    query = query.not('title', 'ilike', '%e2e%').not('room_code', 'ilike', '%e2e%');
+  }
+
   const { data, error } = await query;
   if (error) {
     console.error('[Player Actions] Lobbies list error:', error);
@@ -594,12 +603,12 @@ export async function listOpenLobbies(params: {
     };
   }
 
-  return {
-    status: 'ok',
-    lobbies: ((data ?? []) as LobbyRow[]).map((lobby) => ({
-      id: lobby.id,
-      title: lobby.title,
-      game: lobby.game,
+    return {
+      status: 'ok',
+      lobbies: filterVisibleLobbies((data ?? []) as LobbyRow[]).map((lobby) => ({
+        id: lobby.id,
+        title: lobby.title,
+        game: lobby.game,
       mode: lobby.mode,
       map_name: lobby.map_name ?? null,
       scheduled_for: lobby.scheduled_for ?? null,
@@ -659,6 +668,10 @@ export async function listOpenTournaments(params: {
     query = query.in('game', filterGames);
   }
 
+  if (shouldHideE2EFixtures()) {
+    query = query.not('title', 'ilike', '%e2e%').not('slug', 'ilike', '%e2e%');
+  }
+
   const { data, error } = await query;
   if (error) {
     console.error('[Player Actions] Tournament list error:', error);
@@ -669,7 +682,7 @@ export async function listOpenTournaments(params: {
     };
   }
 
-  const tournaments = ((data ?? []) as TournamentRow[]).slice(0, limit);
+  const tournaments = filterVisibleTournaments(((data ?? []) as TournamentRow[]).slice(0, limit));
   const tournamentIds = tournaments.map((tournament) => tournament.id);
 
   if (tournamentIds.length === 0) {

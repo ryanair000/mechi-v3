@@ -4,6 +4,7 @@ import { notFound, redirect } from 'next/navigation';
 import { ArrowLeft, Clock3, Video } from 'lucide-react';
 import { LiveBadge } from '@/components/LiveBadge';
 import { StreamPlayer } from '@/components/StreamPlayer';
+import { isE2ETournamentFixture, shouldHideE2EFixtures } from '@/lib/e2e-fixtures';
 import { verifyToken } from '@/lib/auth';
 import { createServiceClient } from '@/lib/supabase';
 import { firstRelation } from '@/lib/tournaments';
@@ -43,11 +44,16 @@ export default async function TournamentLivePage({
     redirect('/login');
   }
 
-  const { data: tournamentRaw } = await supabase
+  let tournamentQuery = supabase
     .from('tournaments')
     .select('id, slug, title, status, organizer:organizer_id(id, username)')
-    .eq('slug', slug)
-    .maybeSingle();
+    .eq('slug', slug);
+
+  if (shouldHideE2EFixtures()) {
+    tournamentQuery = tournamentQuery.not('title', 'ilike', '%e2e%').not('slug', 'ilike', '%e2e%');
+  }
+
+  const { data: tournamentRaw } = await tournamentQuery.maybeSingle();
 
   const tournament = tournamentRaw as
     | {
@@ -59,7 +65,7 @@ export default async function TournamentLivePage({
       }
     | null;
 
-  if (!tournament) {
+  if (!tournament || isE2ETournamentFixture(tournament)) {
     notFound();
   }
 

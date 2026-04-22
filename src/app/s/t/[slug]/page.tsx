@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { BrandLogo } from '@/components/BrandLogo';
 import { GAMES, PLATFORMS } from '@/lib/config';
+import { isE2ETournamentFixture, shouldHideE2EFixtures } from '@/lib/e2e-fixtures';
 import { getLoginPath, getRegisterPath } from '@/lib/navigation';
 import { createServiceClient } from '@/lib/supabase';
 import { getTournamentPaymentMetrics, getTournamentPrizeSnapshot } from '@/lib/tournament-metrics';
@@ -14,13 +15,18 @@ type Props = {
 
 async function getTournament(slug: string) {
   const supabase = createServiceClient();
-  const { data: tournament } = await supabase
+  let tournamentQuery = supabase
     .from('tournaments')
     .select('*, organizer:organizer_id(id, username), winner:winner_id(id, username)')
-    .eq('slug', slug)
-    .single();
+    .eq('slug', slug);
 
-  if (!tournament) return null;
+  if (shouldHideE2EFixtures()) {
+    tournamentQuery = tournamentQuery.not('title', 'ilike', '%e2e%').not('slug', 'ilike', '%e2e%');
+  }
+
+  const { data: tournament } = await tournamentQuery.single();
+
+  if (!tournament || isE2ETournamentFixture(tournament)) return null;
 
   const { data: players } = await supabase
     .from('tournament_players')

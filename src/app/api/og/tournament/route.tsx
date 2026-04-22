@@ -1,6 +1,7 @@
 import { ImageResponse } from 'next/og';
 import { NextRequest } from 'next/server';
 import { GAMES } from '@/lib/config';
+import { isE2ETournamentFixture, shouldHideE2EFixtures } from '@/lib/e2e-fixtures';
 import { createServiceClient } from '@/lib/supabase';
 import { getTournamentPaymentMetrics, getTournamentPrizeSnapshot } from '@/lib/tournament-metrics';
 import type { GameKey } from '@/types';
@@ -37,13 +38,18 @@ export async function GET(request: NextRequest) {
   if (!slug) return notFoundCard('Mechi / Tournament not found');
 
   const supabase = createServiceClient();
-  const { data: tournament } = await supabase
+  let tournamentQuery = supabase
     .from('tournaments')
     .select('*')
-    .eq('slug', slug)
-    .single();
+    .eq('slug', slug);
 
-  if (!tournament) return notFoundCard('Mechi / Tournament not found');
+  if (shouldHideE2EFixtures()) {
+    tournamentQuery = tournamentQuery.not('title', 'ilike', '%e2e%').not('slug', 'ilike', '%e2e%');
+  }
+
+  const { data: tournament } = await tournamentQuery.single();
+
+  if (!tournament || isE2ETournamentFixture(tournament)) return notFoundCard('Mechi / Tournament not found');
 
   const { data: players } = await supabase
     .from('tournament_players')

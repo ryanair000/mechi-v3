@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getRequestAccessProfile, hasAdminAccess } from '@/lib/access';
 import type { AdminBounty, BountyRow, BountyWinnerAdmin } from '@/lib/bounties';
+import { isE2EBountyFixture, shouldHideE2EFixtures } from '@/lib/e2e-fixtures';
 import { createServiceClient } from '@/lib/supabase';
 
 type BountyAction = 'activate' | 'cancel' | 'mark_paid';
@@ -61,17 +62,24 @@ export async function PATCH(
     }
 
     const supabase = createServiceClient();
-    const { data: bountyRaw, error: bountyError } = await supabase
+    let bountyQuery = supabase
       .from('bounties')
       .select(
         'id, title, description, trigger_type, trigger_metadata, prize_kes, status, winner_id, claimed_at, paid_at, activated_at, week_label, created_at, updated_at, winner:winner_id(username, avatar_url, phone)'
       )
-      .eq('id', id)
-      .maybeSingle();
+      .eq('id', id);
+
+    if (shouldHideE2EFixtures()) {
+      bountyQuery = bountyQuery
+        .not('title', 'ilike', '%e2e%')
+        .not('description', 'ilike', '%e2e%');
+    }
+
+    const { data: bountyRaw, error: bountyError } = await bountyQuery.maybeSingle();
 
     const bounty = bountyRaw as BountyQueryRow | null;
 
-    if (bountyError || !bounty) {
+    if (bountyError || !bounty || isE2EBountyFixture(bounty)) {
       return NextResponse.json({ error: 'Bounty not found' }, { status: 404 });
     }
 

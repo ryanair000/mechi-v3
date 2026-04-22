@@ -2,6 +2,13 @@ import { NextRequest, NextResponse } from 'next/server';
 import { PRIMARY_ADMIN_PHONE, isPrimaryAdminPhone } from '@/lib/admin-access';
 import { getRequestAccessProfile, hasAdminAccess, hasModeratorAccess } from '@/lib/access';
 import { writeAuditLog, type AuditAction } from '@/lib/audit';
+import {
+  filterVisibleLobbies,
+  filterVisibleTournaments,
+  isE2ELobbyFixture,
+  isE2ETournamentFixture,
+  shouldHideE2EFixtures,
+} from '@/lib/e2e-fixtures';
 import { getClientIp } from '@/lib/rateLimit';
 import { createServiceClient } from '@/lib/supabase';
 import { firstRelation } from '@/lib/tournaments';
@@ -35,6 +42,7 @@ export async function GET(
   }
 
   const { id } = await params;
+  const hideE2EFixtures = shouldHideE2EFixtures();
 
   try {
     const supabase = createServiceClient();
@@ -83,14 +91,22 @@ export async function GET(
         .eq('user_id', id)
         .order('joined_at', { ascending: false })
         .limit(5),
-      supabase
-        .from('lobbies')
-        .select(
-          'id, host_id, game, visibility, mode, map_name, scheduled_for, title, max_players, room_code, status, created_at, member_count:lobby_members(count)'
-        )
-        .eq('host_id', id)
-        .order('created_at', { ascending: false })
-        .limit(5),
+      (() => {
+        let query = supabase
+          .from('lobbies')
+          .select(
+            'id, host_id, game, visibility, mode, map_name, scheduled_for, title, max_players, room_code, status, created_at, member_count:lobby_members(count)'
+          )
+          .eq('host_id', id)
+          .order('created_at', { ascending: false })
+          .limit(5);
+
+        if (hideE2EFixtures) {
+          query = query.not('title', 'ilike', '%e2e%').not('room_code', 'ilike', '%e2e%');
+        }
+
+        return query;
+      })(),
       supabase
         .from('tournament_players')
         .select(
@@ -99,12 +115,20 @@ export async function GET(
         .eq('user_id', id)
         .order('joined_at', { ascending: false })
         .limit(5),
-      supabase
-        .from('tournaments')
-        .select('id, slug, title, game, status, entry_fee, prize_pool, payout_status, created_at')
-        .eq('organizer_id', id)
-        .order('created_at', { ascending: false })
-        .limit(5),
+      (() => {
+        let query = supabase
+          .from('tournaments')
+          .select('id, slug, title, game, status, entry_fee, prize_pool, payout_status, created_at')
+          .eq('organizer_id', id)
+          .order('created_at', { ascending: false })
+          .limit(5);
+
+        if (hideE2EFixtures) {
+          query = query.not('title', 'ilike', '%e2e%').not('slug', 'ilike', '%e2e%');
+        }
+
+        return query;
+      })(),
       supabase
         .from('subscriptions')
         .select('id, plan, billing_cycle, amount_kes, status, paystack_ref, started_at, expires_at, cancelled_at, created_at')
@@ -130,10 +154,12 @@ export async function GET(
       })
       .filter(Boolean);
 
-    const hostedLobbies = ((hostedLobbiesResult.data ?? []) as Array<Record<string, unknown>>).map((row) => ({
-      ...row,
-      member_count: readRelationCount(row.member_count),
-    }));
+    const hostedLobbies = filterVisibleLobbies(
+      ((hostedLobbiesResult.data ?? []) as Array<Record<string, unknown>>).map((row) => ({
+        ...row,
+        member_count: readRelationCount(row.member_count),
+      }))
+    );
 
     const joinedTournaments = ((joinedTournamentsResult.data ?? []) as Array<Record<string, unknown>>)
       .map((row) => {
@@ -151,14 +177,28 @@ export async function GET(
       })
       .filter(Boolean);
 
+    const visibleJoinedLobbies = hideE2EFixtures
+      ? joinedLobbies.filter((entry) => !isE2ELobbyFixture(entry?.lobby as Record<string, unknown>))
+      : joinedLobbies;
+
+    const visibleJoinedTournaments = hideE2EFixtures
+      ? joinedTournaments.filter(
+          (entry) => !isE2ETournamentFixture(entry?.tournament as Record<string, unknown>)
+        )
+      : joinedTournaments;
+
+    const organizedTournaments = filterVisibleTournaments(
+      (organizedTournamentsResult.data ?? []) as Array<Record<string, unknown>>
+    );
+
     return NextResponse.json({
       user: userProfile,
       currentQueueEntry: queueEntryResult.data ?? null,
       recentMatches: matchesResult.data ?? [],
-      joinedLobbies,
+      joinedLobbies: visibleJoinedLobbies,
       hostedLobbies,
-      joinedTournaments,
-      organizedTournaments: organizedTournamentsResult.data ?? [],
+      joinedTournaments: visibleJoinedTournaments,
+      organizedTournaments,
       currentSubscription: subscriptionResult.data ?? null,
     });
   } catch (err) {

@@ -19,8 +19,8 @@ const STEPS = [
     icon: Swords,
   },
   {
-    title: 'Stay in the loop',
-    body: 'Leave the app if you need to. Mechi keeps searching and pings you when a match is ready.',
+    title: 'Track the flow',
+    body: 'Use your dashboard, queue, and notifications to see what is live and what needs your next action.',
     icon: BellRing,
   },
   {
@@ -101,8 +101,8 @@ export function AppOnboarding() {
             Your quickest path from setup to match day.
           </h2>
           <p className="mt-3 text-sm leading-6 text-[var(--text-secondary)]">
-            Keep your grind simple: set your games once, stay reachable, and let Mechi handle the
-            handoff when it is time to play.
+            Keep your grind simple: set your games once, follow the right lane, and let Mechi keep
+            your next action obvious.
           </p>
         </div>
 

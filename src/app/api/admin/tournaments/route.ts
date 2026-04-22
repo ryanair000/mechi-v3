@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getRequestAccessProfile, hasModeratorAccess } from '@/lib/access';
+import { filterVisibleTournaments, shouldHideE2EFixtures } from '@/lib/e2e-fixtures';
 import { createServiceClient } from '@/lib/supabase';
 import { getTournamentPaymentMetrics, getTournamentPrizeSnapshot } from '@/lib/tournaments';
 
@@ -82,12 +83,16 @@ export async function GET(request: NextRequest) {
 
     if (status && status !== 'all') query = query.eq('status', status);
 
+    if (shouldHideE2EFixtures()) {
+      query = query.not('title', 'ilike', '%e2e%').not('slug', 'ilike', '%e2e%');
+    }
+
     const { data, error } = await query;
     if (error) {
       return NextResponse.json({ error: 'Failed to fetch tournaments' }, { status: 500 });
     }
 
-    const tournaments = (data ?? []) as Array<
+    const tournaments = filterVisibleTournaments((data ?? []) as Array<
       Record<string, unknown> & {
         id: string;
         status: string;
@@ -95,7 +100,7 @@ export async function GET(request: NextRequest) {
         started_at?: string | null;
         created_at: string;
       }
-    >;
+    >);
     if (!tournaments.length) {
       return NextResponse.json({ tournaments: [] });
     }

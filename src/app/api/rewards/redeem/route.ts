@@ -1,6 +1,7 @@
 import { randomUUID } from 'crypto';
 import { NextRequest, NextResponse } from 'next/server';
 import { requireActiveAccessProfile } from '@/lib/access';
+import { tryClaimBounty } from '@/lib/bounties';
 import {
   applyRewardEvent,
   fetchChezahubRewardCatalog,
@@ -74,6 +75,15 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const { count: priorRedemptionCount, error: priorRedemptionCountError } = await supabase
+      .from('reward_redemptions')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', profile.id);
+
+    if (priorRedemptionCountError) {
+      throw priorRedemptionCountError;
+    }
+
     const issued = await issueChezahubRewardCode({
       mechiUserId: profile.id,
       chezahubUserId: profile.chezahub_user_id,
@@ -128,6 +138,10 @@ export async function POST(request: NextRequest) {
       }).catch(() => null);
       await voidChezahubRewardCode(issued.issuanceId);
       throw insertError;
+    }
+
+    if ((priorRedemptionCount ?? 0) === 0) {
+      void tryClaimBounty(supabase, profile.id, 'first_voucher_redeem').catch(() => null);
     }
 
     return NextResponse.json({

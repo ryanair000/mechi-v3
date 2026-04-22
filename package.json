@@ -6,6 +6,7 @@
     "dev": "next dev --webpack",
     "build": "next build --webpack",
     "start": "next start",
+    "start:e2e": "npm run build && npm run start",
     "lint": "eslint",
     "test:e2e": "node ./e2e/scripts/run-playwright.mjs",
     "test:e2e:public-auth": "node ./e2e/scripts/run-playwright.mjs --project=desktop-core e2e/specs/public-auth.spec.ts",
@@ -21,6 +22,8 @@
     "test:e2e:install": "playwright install chromium firefox webkit"
   },
   "dependencies": {
+    "@mux/mux-node": "^14.0.1",
+    "@mux/mux-player-react": "^3.11.8",
     "@number-flow/react": "^0.6.0",
     "@paper-design/shaders-react": "^0.0.76",
     "@radix-ui/react-slot": "^1.2.4",

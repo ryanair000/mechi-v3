@@ -29,6 +29,7 @@ export type TournamentStatus = 'open' | 'full' | 'active' | 'completed' | 'cance
 export type TournamentApprovalStatus = 'pending' | 'approved' | 'rejected';
 export type TournamentPaymentStatus = 'pending' | 'paid' | 'free' | 'failed' | 'refunded';
 export type TournamentMatchStatus = 'pending' | 'ready' | 'active' | 'completed' | 'bye';
+export type LiveStreamStatus = 'idle' | 'active' | 'ended';
 export type SubscriptionStatus = 'pending' | 'active' | 'cancelled' | 'expired' | 'failed';
 export type MatchChallengeStatus =
   | 'pending'
@@ -52,6 +53,7 @@ export type NotificationType =
   | 'challenge_accepted'
   | 'challenge_declined'
   | 'challenge_cancelled'
+  | 'bounty_won'
   | 'tournament_joined'
   | 'tournament_player_joined'
   | 'tournament_started'
@@ -113,6 +115,9 @@ export interface Profile {
   invited_by?: string | null;
   avatar_url?: string | null;
   cover_url?: string | null;
+  snapshot_efootball_url?: string | null;
+  snapshot_codm_url?: string | null;
+  snapshot_pubgm_url?: string | null;
   whatsapp_number?: string | null;
   whatsapp_notifications?: boolean;
   country?: CountryKey | null;
@@ -447,6 +452,33 @@ export interface TournamentMatch {
   player2?: Pick<Profile, 'id' | 'username'> | null;
   winner?: Pick<Profile, 'id' | 'username'> | null;
   match?: Pick<Match, 'id' | 'status' | 'player1_score' | 'player2_score'> | null;
+}
+
+export interface LiveStream {
+  id: string;
+  tournament_id: string | null;
+  match_id: string | null;
+  streamer_id: string;
+  mux_stream_id: string;
+  mux_playback_id: string;
+  status: LiveStreamStatus;
+  title: string;
+  viewer_count: number;
+  started_at: string | null;
+  ended_at: string | null;
+  recording_playback_id: string | null;
+  created_at: string;
+  updated_at: string;
+  streamer?: Pick<Profile, 'id' | 'username'> | null;
+}
+
+export interface StreamWatchSession {
+  id: string;
+  stream_id: string;
+  user_id: string;
+  last_heartbeat_at: string;
+  rp_awarded: number;
+  created_at: string;
 }
 
 export interface AuthUser {

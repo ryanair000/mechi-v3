@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireActiveAccessProfile } from '@/lib/access';
 import { uploadImageDataUri } from '@/lib/cloudinary';
+import { isSnapshotMediaKind } from '@/lib/profile-snapshots';
 import { createServiceClient } from '@/lib/supabase';
 
 const MEDIA_CONFIG = {
@@ -16,12 +17,42 @@ const MEDIA_CONFIG = {
     maxSize: 8 * 1024 * 1024,
     transformation: [{ width: 1800, height: 900, crop: 'fill', gravity: 'auto', quality: 'auto', fetch_format: 'auto' }],
   },
+  snapshot_efootball: {
+    field: 'snapshot_efootball_url',
+    folder: 'mechi/profiles/snapshots/efootball',
+    maxSize: 8 * 1024 * 1024,
+    transformation: [
+      { width: 1200, height: 675, crop: 'fill', gravity: 'auto', quality: 'auto', fetch_format: 'auto' },
+    ],
+  },
+  snapshot_codm: {
+    field: 'snapshot_codm_url',
+    folder: 'mechi/profiles/snapshots/codm',
+    maxSize: 8 * 1024 * 1024,
+    transformation: [
+      { width: 1200, height: 900, crop: 'fill', gravity: 'auto', quality: 'auto', fetch_format: 'auto' },
+    ],
+  },
+  snapshot_pubgm: {
+    field: 'snapshot_pubgm_url',
+    folder: 'mechi/profiles/snapshots/pubgm',
+    maxSize: 8 * 1024 * 1024,
+    transformation: [
+      { width: 1200, height: 900, crop: 'fill', gravity: 'auto', quality: 'auto', fetch_format: 'auto' },
+    ],
+  },
 } as const;
 
 type MediaKind = keyof typeof MEDIA_CONFIG;
 
 function isMediaKind(value: string): value is MediaKind {
-  return value === 'avatar' || value === 'cover';
+  return Object.prototype.hasOwnProperty.call(MEDIA_CONFIG, value);
+}
+
+function toSafeProfile(profile: Record<string, unknown>) {
+  const { password_hash, ...safeProfile } = profile;
+  void password_hash;
+  return safeProfile;
 }
 
 export async function POST(request: NextRequest) {
@@ -75,14 +106,48 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (error || !profile) {
-      return NextResponse.json({ error: 'Failed to save profile image' }, { status: 500 });
+      return NextResponse.json({ error: 'Failed to save profile media' }, { status: 500 });
     }
 
-    const { password_hash, ...safeProfile } = profile;
-    void password_hash;
-    return NextResponse.json({ profile: safeProfile, kind: kindValue });
+    return NextResponse.json({ profile: toSafeProfile(profile), kind: kindValue });
   } catch (err) {
     console.error('[Profile Media Upload] Error:', err);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
+}
+
+export async function DELETE(request: NextRequest) {
+  const access = await requireActiveAccessProfile(request);
+  if (access.response) {
+    return access.response;
+  }
+
+  const authUser = access.profile;
+
+  try {
+    const body = (await request.json()) as { kind?: unknown };
+    const kindValue = typeof body.kind === 'string' ? body.kind : '';
+
+    if (!isSnapshotMediaKind(kindValue)) {
+      return NextResponse.json({ error: 'Invalid snapshot type' }, { status: 400 });
+    }
+
+    const mediaConfig = MEDIA_CONFIG[kindValue];
+    const supabase = createServiceClient();
+    const { data: profile, error } = await supabase
+      .from('profiles')
+      .update({ [mediaConfig.field]: null })
+      .eq('id', authUser.id)
+      .select('*')
+      .single();
+
+    if (error || !profile) {
+      return NextResponse.json({ error: 'Failed to remove snapshot' }, { status: 500 });
+    }
+
+    return NextResponse.json({ profile: toSafeProfile(profile), kind: kindValue });
+  } catch (err) {
+    console.error('[Profile Media Delete] Error:', err);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

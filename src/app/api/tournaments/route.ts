@@ -57,7 +57,13 @@ export async function GET(request: NextRequest) {
       .in('tournament_id', tournamentIds)
       .in('payment_status', ['paid', 'free']);
 
-    if (playersError) {
+    const { data: activeStreams, error: activeStreamsError } = await supabase
+      .from('live_streams')
+      .select('id, tournament_id, viewer_count')
+      .in('tournament_id', tournamentIds)
+      .eq('status', 'active');
+
+    if (playersError || activeStreamsError) {
       return NextResponse.json({ error: 'Failed to fetch tournaments' }, { status: 500 });
     }
 
@@ -70,6 +76,21 @@ export async function GET(request: NextRequest) {
         ...(grouped[tournamentId] ?? []),
         { payment_status: (player.payment_status as string | null | undefined) ?? null },
       ];
+      return grouped;
+    }, {});
+
+    const activeStreamByTournament = (activeStreams ?? []).reduce<
+      Record<string, { id: string; viewer_count: number }>
+    >((grouped, stream) => {
+      const tournamentId = stream.tournament_id as string | undefined;
+      if (!tournamentId || grouped[tournamentId]) {
+        return grouped;
+      }
+
+      grouped[tournamentId] = {
+        id: stream.id as string,
+        viewer_count: Number(stream.viewer_count ?? 0),
+      };
       return grouped;
     }, {});
 
@@ -86,6 +107,7 @@ export async function GET(request: NextRequest) {
           storedPrizePool: Number(tournament.prize_pool ?? 0),
           storedPlatformFee: Number(tournament.platform_fee ?? 0),
         }).prizePool,
+        active_stream: activeStreamByTournament[tournament.id] ?? null,
       })),
     });
   } catch (err) {

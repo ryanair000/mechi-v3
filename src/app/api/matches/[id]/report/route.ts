@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireActiveAccessProfile } from '@/lib/access';
+import { tryClaimBounty } from '@/lib/bounties';
 import { calculateElo } from '@/lib/elo';
 import {
   evaluateAchievements,
@@ -50,6 +51,13 @@ type RpcResult = {
   winner_id: string | null;
   gamification_summary_p1?: GamificationResult | null;
   gamification_summary_p2?: GamificationResult | null;
+};
+
+type LeaderboardResponse = {
+  leaderboard?: Array<{
+    id?: string;
+    rank?: number;
+  }>;
 };
 
 function getNumericValue(profile: ProfileRow, key: string, fallback = 0): number {
@@ -125,6 +133,35 @@ function parseReportedScore(value: unknown): number | null | undefined {
   }
 
   return null;
+}
+
+async function maybeClaimLeaderboardTop3Bounty(params: {
+  requestOrigin: string;
+  supabase: ReturnType<typeof createServiceClient>;
+  winnerId: string;
+  game: GameKey;
+}) {
+  try {
+    const response = await fetch(
+      `${params.requestOrigin}/api/users/leaderboard/${encodeURIComponent(params.game)}`,
+      {
+        cache: 'no-store',
+      }
+    );
+
+    if (!response.ok) {
+      return;
+    }
+
+    const payload = (await response.json().catch(() => null)) as LeaderboardResponse | null;
+    const winnerEntry = (payload?.leaderboard ?? []).find((entry) => entry.id === params.winnerId);
+
+    if (winnerEntry?.rank && winnerEntry.rank <= 3) {
+      void tryClaimBounty(params.supabase, params.winnerId, 'leaderboard_top3').catch(() => null);
+    }
+  } catch (error) {
+    console.error('[Match Report] Failed to evaluate leaderboard_top3 bounty:', error);
+  }
 }
 
 function formatScoreline(player1Score: number, player2Score: number) {
@@ -903,6 +940,7 @@ export async function POST(
           newStreak: winnerNewStreak,
           invitedBy: winnerProfile.invited_by ?? null,
           chezahubUserId: winnerProfile.chezahub_user_id ?? null,
+          previousLifetimeRp: getNumericValue(winnerProfile, 'reward_points_lifetime'),
         },
         loser: {
           id: loserId,
@@ -911,6 +949,13 @@ export async function POST(
           invitedBy: loserProfile.invited_by ?? null,
           chezahubUserId: loserProfile.chezahub_user_id ?? null,
         },
+      });
+
+      await maybeClaimLeaderboardTop3Bounty({
+        requestOrigin: request.nextUrl.origin,
+        supabase,
+        winnerId,
+        game,
       });
 
       await createMatchChatMessage({

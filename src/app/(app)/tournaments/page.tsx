@@ -5,12 +5,17 @@ import { useCallback, useEffect, useState } from 'react';
 import { Plus, Trophy } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useAuthFetch } from '@/components/AuthProvider';
+import { LiveBadge } from '@/components/LiveBadge';
 import { GAMES } from '@/lib/config';
 import type { GameKey, Tournament } from '@/types';
 
 type TournamentListItem = Tournament & {
   confirmed_count?: number;
   player_count?: Array<{ count: number }> | number;
+  active_stream?: {
+    id: string;
+    viewer_count: number;
+  } | null;
 };
 
 const STATUS_FILTERS = ['open', 'full', 'active', 'completed'] as const;
@@ -197,6 +202,11 @@ export default function TournamentsPage() {
                       >
                         {formatTournamentStatus(tournament.status)}
                       </span>
+                      {tournament.active_stream ? (
+                        <Link href={`/t/${tournament.slug}/live`}>
+                          <LiveBadge viewerCount={tournament.active_stream.viewer_count} />
+                        </Link>
+                      ) : null}
                       {tournament.is_featured ? (
                         <span className="brand-chip-coral px-2 py-0.5">Featured</span>
                       ) : null}
@@ -275,6 +285,11 @@ export default function TournamentsPage() {
                         >
                           {formatTournamentStatus(tournament.status)}
                         </span>
+                        {tournament.active_stream ? (
+                          <Link href={`/t/${tournament.slug}/live`}>
+                            <LiveBadge viewerCount={tournament.active_stream.viewer_count} />
+                          </Link>
+                        ) : null}
                       </div>
                       <p className="mt-2 text-xs text-[var(--text-soft)]">
                         {game?.label ?? tournament.game}
@@ -328,8 +343,17 @@ export default function TournamentsPage() {
                     <Link href={`/t/${tournament.slug}`} className="btn-outline flex-1 py-2 text-xs">
                       View bracket
                     </Link>
-                    <Link href={`/t/${tournament.slug}`} className="btn-primary flex-1 py-2 text-xs">
-                      {tournament.status === 'open' ? 'Join' : tournament.status === 'full' ? 'Watch' : 'Open'}
+                    <Link
+                      href={tournament.active_stream ? `/t/${tournament.slug}/live` : `/t/${tournament.slug}`}
+                      className="btn-primary flex-1 py-2 text-xs"
+                    >
+                      {tournament.active_stream
+                        ? 'Watch live'
+                        : tournament.status === 'open'
+                          ? 'Join'
+                          : tournament.status === 'full'
+                            ? 'Watch'
+                            : 'Open'}
                     </Link>
                   </div>
                 </div>

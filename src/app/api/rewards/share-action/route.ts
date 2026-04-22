@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireActiveAccessProfile } from '@/lib/access';
+import { tryClaimBounty } from '@/lib/bounties';
 import { REWARD_RULES, applyRewardEvent, getRewardDayStamp } from '@/lib/rewards';
 import { createServiceClient } from '@/lib/supabase';
 
@@ -29,6 +30,10 @@ export async function POST(request: NextRequest) {
         stamp,
       },
     });
+
+    if (result?.inserted) {
+      void tryClaimBounty(supabase, authUser.id, 'share_action').catch(() => null);
+    }
 
     return NextResponse.json({ ok: true, awarded: result?.inserted ?? false });
   } catch (error) {

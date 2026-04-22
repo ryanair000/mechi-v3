@@ -363,7 +363,7 @@ export default function ManualTestKitClient({
   };
 
   return (
-    <div className="page-base">
+    <div className="page-base manual-tests-shell">
       <section className="landing-shell py-8 sm:py-10 lg:py-12">
         <div className="mx-auto max-w-6xl space-y-4 sm:space-y-6">
           <div className="card circuit-panel overflow-hidden p-6 sm:p-7">

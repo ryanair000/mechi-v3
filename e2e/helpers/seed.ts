@@ -94,6 +94,21 @@ export type TournamentInput = {
   joinedUserIds?: string[];
 };
 
+export type LiveStreamInput = {
+  id?: string;
+  tournamentId?: string | null;
+  matchId?: string | null;
+  streamerId: string;
+  muxStreamId?: string;
+  muxPlaybackId?: string;
+  status?: 'idle' | 'active' | 'ended';
+  title: string;
+  viewerCount?: number;
+  startedAt?: string | null;
+  endedAt?: string | null;
+  recordingPlaybackId?: string | null;
+};
+
 export type NotificationInput = {
   id?: string;
   userId: string;
@@ -134,6 +149,27 @@ export type RewardReviewInput = {
   metadata?: Record<string, unknown>;
 };
 
+export type BountyInput = {
+  id?: string;
+  title: string;
+  description: string;
+  triggerType: string;
+  prizeKes: 50 | 100 | 200;
+  status?: 'draft' | 'active' | 'claimed' | 'cancelled';
+  winnerId?: string | null;
+  claimedAt?: string | null;
+  paidAt?: string | null;
+  activatedAt?: string | null;
+  weekLabel: string;
+  triggerMetadata?: Record<string, unknown>;
+  claimAttempts?: Array<{
+    id?: string;
+    userId: string;
+    won?: boolean;
+    attemptedAt?: string;
+  }>;
+};
+
 export type SuggestionInput = {
   id?: string;
   userId: string;
@@ -145,6 +181,8 @@ export type SuggestionInput = {
 
 const RESET_TABLES = [
   'admin_audit_logs',
+  'bounty_claim_attempts',
+  'bounties',
   'reward_review_queue',
   'reward_redemptions',
   'reward_link_sessions',
@@ -159,6 +197,8 @@ const RESET_TABLES = [
   'tournament_matches',
   'tournament_players',
   'tournaments',
+  'stream_watch_sessions',
+  'live_streams',
   'lobby_members',
   'lobbies',
   'support_messages',
@@ -171,6 +211,12 @@ const RESET_TABLES = [
   'subscriptions',
   'profiles',
 ] as const;
+
+const RESET_FILTER_COLUMN_BY_TABLE: Partial<
+  Record<(typeof RESET_TABLES)[number], string>
+> = {
+  match_message_reads: 'match_id',
+};
 
 function assertNoError(error: { message?: string } | null, context: string): void {
   if (error) {
@@ -200,7 +246,8 @@ export function createE2ESupabaseClient(environment: E2EEnvironment): SeedClient
 }
 
 async function deleteAllRows(client: SeedClient, table: (typeof RESET_TABLES)[number]) {
-  const { error } = await client.from(table).delete().not('id', 'is', null);
+  const filterColumn = RESET_FILTER_COLUMN_BY_TABLE[table] ?? 'id';
+  const { error } = await client.from(table).delete().not(filterColumn, 'is', null);
   assertNoError(error, `Failed to reset ${table}`);
 }
 
@@ -446,7 +493,7 @@ export async function createLobby(client: SeedClient, input: LobbyInput): Promis
 export async function createTournament(
   client: SeedClient,
   input: TournamentInput
-): Promise<void> {
+): Promise<string> {
   const tournamentId = input.id ?? randomUUID();
   const { error: tournamentError } = await client.from('tournaments').insert({
     id: tournamentId,
@@ -488,6 +535,34 @@ export async function createTournament(
     );
     assertNoError(playerError, 'Failed to create tournament players');
   }
+
+  return tournamentId;
+}
+
+export async function createLiveStream(
+  client: SeedClient,
+  input: LiveStreamInput
+): Promise<string> {
+  const streamId = input.id ?? randomUUID();
+  const now = new Date().toISOString();
+  const { error } = await client.from('live_streams').insert({
+    id: streamId,
+    tournament_id: input.tournamentId ?? null,
+    match_id: input.matchId ?? null,
+    streamer_id: input.streamerId,
+    mux_stream_id: input.muxStreamId ?? `mux-live-${streamId}`,
+    mux_playback_id: input.muxPlaybackId ?? `playback-${streamId}`,
+    status: input.status ?? 'idle',
+    title: input.title,
+    viewer_count: input.viewerCount ?? 0,
+    started_at: input.startedAt ?? null,
+    ended_at: input.endedAt ?? null,
+    recording_playback_id: input.recordingPlaybackId ?? null,
+    updated_at: now,
+  });
+
+  assertNoError(error, 'Failed to create live stream');
+  return streamId;
 }
 
 export async function createNotification(
@@ -562,6 +637,42 @@ export async function createRewardReviewItem(
   });
 
   assertNoError(error, 'Failed to create reward review item');
+}
+
+export async function createBounty(client: SeedClient, input: BountyInput): Promise<string> {
+  const bountyId = input.id ?? randomUUID();
+  const now = new Date().toISOString();
+  const { error: bountyError } = await client.from('bounties').insert({
+    id: bountyId,
+    title: input.title,
+    description: input.description,
+    trigger_type: input.triggerType,
+    trigger_metadata: input.triggerMetadata ?? {},
+    prize_kes: input.prizeKes,
+    status: input.status ?? 'draft',
+    winner_id: input.winnerId ?? null,
+    claimed_at: input.claimedAt ?? null,
+    paid_at: input.paidAt ?? null,
+    activated_at: input.activatedAt ?? null,
+    week_label: input.weekLabel,
+    updated_at: now,
+  });
+  assertNoError(bountyError, 'Failed to create bounty');
+
+  if ((input.claimAttempts ?? []).length > 0) {
+    const { error: claimAttemptError } = await client.from('bounty_claim_attempts').insert(
+      (input.claimAttempts ?? []).map((attempt) => ({
+        id: attempt.id ?? randomUUID(),
+        bounty_id: bountyId,
+        user_id: attempt.userId,
+        attempted_at: attempt.attemptedAt ?? now,
+        won: attempt.won ?? false,
+      }))
+    );
+    assertNoError(claimAttemptError, 'Failed to create bounty claim attempts');
+  }
+
+  return bountyId;
 }
 
 export async function createSuggestion(client: SeedClient, input: SuggestionInput): Promise<void> {
@@ -648,6 +759,61 @@ async function seedBaselineFixtures(client: SeedClient, environment: E2EEnvironm
     ],
   });
 
+  const liveTournamentId = await createTournament(client, {
+    id: SCENARIO_IDS.liveTournament,
+    organizerId: SEEDED_PERSONAS.playerElite.id,
+    slug: 'e2e-live-cup',
+    title: `E2E Live Cup ${environment.runId}`,
+    game: 'efootball',
+    platform: 'ps',
+    region: 'Nairobi',
+    size: 4,
+    entryFee: 0,
+    prizePool: 0,
+    status: 'active',
+    joinedUserIds: [
+      SEEDED_PERSONAS.playerPro.id,
+      SEEDED_PERSONAS.playerOpponentA.id,
+    ],
+  });
+
+  await createLiveStream(client, {
+    id: SCENARIO_IDS.liveStream,
+    tournamentId: liveTournamentId,
+    streamerId: SEEDED_PERSONAS.playerElite.id,
+    status: 'active',
+    title: `E2E Live Cup Broadcast ${environment.runId}`,
+    viewerCount: 18,
+    startedAt: nowMinusDays(0),
+  });
+
+  const idleTournamentId = await createTournament(client, {
+    id: SCENARIO_IDS.idleTournament,
+    organizerId: SEEDED_PERSONAS.playerElite.id,
+    slug: 'e2e-idle-cup',
+    title: `E2E Idle Cup ${environment.runId}`,
+    game: 'efootball',
+    platform: 'ps',
+    region: 'Nairobi',
+    size: 4,
+    entryFee: 0,
+    prizePool: 0,
+    status: 'active',
+    joinedUserIds: [
+      SEEDED_PERSONAS.playerPro.id,
+      SEEDED_PERSONAS.playerOpponentB.id,
+    ],
+  });
+
+  await createLiveStream(client, {
+    id: SCENARIO_IDS.idleStream,
+    tournamentId: idleTournamentId,
+    streamerId: SEEDED_PERSONAS.playerElite.id,
+    status: 'idle',
+    title: `E2E Idle Cup Broadcast ${environment.runId}`,
+    viewerCount: 0,
+  });
+
   await createNotification(client, {
     id: SCENARIO_IDS.notification,
     userId: SEEDED_PERSONAS.playerFree.id,
@@ -656,6 +822,38 @@ async function seedBaselineFixtures(client: SeedClient, environment: E2EEnvironm
     body: 'Your seeded match result is available.',
     href: `/match/${completedMatchId}`,
     metadata: { runId: environment.runId },
+  });
+
+  await createBounty(client, {
+    id: SCENARIO_IDS.activeBounty,
+    title: `E2E Live Bounty ${environment.runId}`,
+    description: 'Finish the first match of your day before anyone else to claim the cash.',
+    triggerType: 'first_match_of_day',
+    prizeKes: 100,
+    status: 'active',
+    activatedAt: new Date().toISOString(),
+    weekLabel: '2026-W17',
+  });
+
+  await createBounty(client, {
+    id: SCENARIO_IDS.claimedBounty,
+    title: `E2E Claimed Bounty ${environment.runId}`,
+    description: 'Reach the profile-complete milestone first and lock the payout.',
+    triggerType: 'profile_complete',
+    prizeKes: 50,
+    status: 'claimed',
+    winnerId: SEEDED_PERSONAS.playerFree.id,
+    claimedAt: nowMinusDays(1),
+    activatedAt: nowMinusDays(2),
+    weekLabel: '2026-W17',
+    claimAttempts: [
+      {
+        id: SCENARIO_IDS.claimedBountyAttempt,
+        userId: SEEDED_PERSONAS.playerFree.id,
+        won: true,
+        attemptedAt: nowMinusDays(1),
+      },
+    ],
   });
 
   await createSupportThread(client, {

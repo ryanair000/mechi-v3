@@ -3,9 +3,10 @@
 import Link from 'next/link';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
-import { ArrowLeft, CheckCircle2, Clock, Copy, Swords, Trophy, Users } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, Clock, Copy, Swords, Trophy, Users, Video, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { ActionFeedback, type ActionFeedbackState } from '@/components/ActionFeedback';
+import { LiveBadge } from '@/components/LiveBadge';
 import { ShareMenu } from '@/components/ShareMenu';
 import { useAuthFetch } from '@/components/AuthProvider';
 import { getRoundLabel } from '@/lib/bracket';
@@ -15,7 +16,7 @@ import {
   getTournamentShareUrl,
   tournamentShareText,
 } from '@/lib/share';
-import type { GameKey, Tournament, TournamentMatch, TournamentPlayer } from '@/types';
+import type { GameKey, LiveStream, Tournament, TournamentMatch, TournamentPlayer } from '@/types';
 
 type TournamentDetail = Tournament & {
   confirmed_count: number;
@@ -26,6 +27,17 @@ type ViewerState = {
   joined: boolean;
   isOrganizer: boolean;
   paymentStatus: string | null;
+  plan: string;
+  isPrimaryAdmin: boolean;
+  canCreateStream: boolean;
+  canManageStream: boolean;
+};
+
+type TournamentStream = LiveStream & {
+  streamer?: {
+    id: string;
+    username: string;
+  } | null;
 };
 
 type DetailResponse = {
@@ -33,6 +45,14 @@ type DetailResponse = {
   players: TournamentPlayer[];
   matches: TournamentMatch[];
   viewer: ViewerState;
+  stream: TournamentStream | null;
+};
+
+type StreamSetupState = {
+  stream_id: string;
+  rtmp_url: string;
+  stream_key: string;
+  playback_id: string;
 };
 
 export default function TournamentDetailPage() {
@@ -46,6 +66,11 @@ export default function TournamentDetailPage() {
   const [loading, setLoading] = useState(true);
   const [joining, setJoining] = useState(false);
   const [starting, setStarting] = useState(false);
+  const [creatingStream, setCreatingStream] = useState(false);
+  const [stoppingStream, setStoppingStream] = useState(false);
+  const [showStreamModal, setShowStreamModal] = useState(false);
+  const [streamTitle, setStreamTitle] = useState('');
+  const [streamSetup, setStreamSetup] = useState<StreamSetupState | null>(null);
   const [actionFeedback, setActionFeedback] = useState<ActionFeedbackState | null>(null);
 
   const fetchTournament = useCallback(async () => {
@@ -115,6 +140,12 @@ export default function TournamentDetailPage() {
     }
     return Array.from(map.entries()).sort(([a], [b]) => a - b);
   }, [data?.matches]);
+
+  const openStreamModal = () => {
+    setStreamTitle((current) => current || `${data?.tournament.title ?? 'Tournament'} Live`);
+    setStreamSetup(null);
+    setShowStreamModal(true);
+  };
 
   const handleJoin = async () => {
     setJoining(true);
@@ -208,6 +239,62 @@ export default function TournamentDetailPage() {
     }
   };
 
+  const handleCreateStream = async () => {
+    if (!data) return;
+
+    setCreatingStream(true);
+    try {
+      const res = await authFetch('/api/streams/create', {
+        method: 'POST',
+        body: JSON.stringify({
+          tournament_id: data.tournament.id,
+          title: streamTitle.trim(),
+        }),
+      });
+      const payload = (await res.json()) as
+        | ({ error?: string } & StreamSetupState)
+        | { error?: string };
+
+      if (!res.ok || !('stream_id' in payload)) {
+        toast.error(payload.error ?? 'Could not create the live stream');
+        return;
+      }
+
+      setStreamSetup(payload);
+      toast.success('Live stream created. Copy the ingest details into OBS or Larix.');
+      await fetchTournament();
+    } catch {
+      toast.error('Could not create the live stream');
+    } finally {
+      setCreatingStream(false);
+    }
+  };
+
+  const handleStopStream = async () => {
+    if (!data?.stream) return;
+
+    setStoppingStream(true);
+    try {
+      const res = await authFetch(`/api/streams/${data.stream.id}`, {
+        method: 'DELETE',
+      });
+      const payload = (await res.json()) as { error?: string };
+
+      if (!res.ok) {
+        toast.error(payload.error ?? 'Could not stop the stream');
+        return;
+      }
+
+      toast.success('Stream stopped');
+      setStreamSetup(null);
+      await fetchTournament();
+    } catch {
+      toast.error('Could not stop the stream');
+    } finally {
+      setStoppingStream(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="page-container">
@@ -226,6 +313,7 @@ export default function TournamentDetailPage() {
   const { tournament, viewer, players } = data;
   const game = GAMES[tournament.game as GameKey];
   const totalRounds = Math.log2(tournament.size);
+  const hasActiveStream = Boolean(data.stream && data.stream.status !== 'ended');
   const shareText = tournamentShareText(
     tournament.title,
     game?.label ?? tournament.game,
@@ -317,7 +405,89 @@ export default function TournamentDetailPage() {
             {starting ? 'Starting...' : 'Start Tournament'}
           </button>
         )}
+        {!hasActiveStream && viewer.canCreateStream && (
+          <button onClick={openStreamModal} className="btn-ghost flex-1">
+            <Video size={15} />
+            Go Live
+          </button>
+        )}
+        {data.stream && (
+          <Link
+            href={`/t/${tournament.slug}/live`}
+            className={`${data.stream.status === 'active' ? 'btn-primary' : 'btn-ghost'} flex-1 justify-center`}
+          >
+            {data.stream.status === 'ended' ? 'Watch replay' : 'Open live stream'}
+          </Link>
+        )}
+        {hasActiveStream && viewer.canManageStream && (
+          <button
+            onClick={handleStopStream}
+            disabled={stoppingStream}
+            className="btn-danger flex-1"
+          >
+            {stoppingStream ? 'Stopping...' : 'Stop Stream'}
+          </button>
+        )}
       </div>
+
+      {data.stream ? (
+        <section className="card mb-5 p-5">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <div className="flex flex-wrap items-center gap-2">
+                {data.stream.status === 'active' ? (
+                  <LiveBadge viewerCount={data.stream.viewer_count} />
+                ) : data.stream.status === 'idle' ? (
+                  <span className="rounded-full border border-[var(--border-color)] px-3 py-1 text-[10px] font-black uppercase tracking-[0.14em] text-[var(--text-soft)]">
+                    Stream queued
+                  </span>
+                ) : (
+                  <span className="rounded-full border border-[var(--border-color)] px-3 py-1 text-[10px] font-black uppercase tracking-[0.14em] text-[var(--text-soft)]">
+                    Replay ready
+                  </span>
+                )}
+              </div>
+              <h2 className="mt-3 text-lg font-black text-[var(--text-primary)]">
+                {data.stream.title}
+              </h2>
+              <p className="mt-2 text-sm text-[var(--text-secondary)]">
+                Streamer: {data.stream.streamer?.username ?? 'Unknown'}
+              </p>
+            </div>
+            <Link href={`/t/${tournament.slug}/live`} className="btn-ghost text-sm">
+              {data.stream.status === 'ended' ? 'Open replay' : 'Open live page'}
+            </Link>
+          </div>
+        </section>
+      ) : null}
+
+      {streamSetup ? (
+        <section className="card mb-5 p-5">
+          <p className="section-title">Ingest Details</p>
+          <h2 className="mt-3 text-xl font-black text-[var(--text-primary)]">
+            Copy these into OBS or Larix Broadcaster
+          </h2>
+          <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">
+            Keep this panel open while you set up your encoder. The stream key is shown once after
+            creation for security.
+          </p>
+          <div className="mt-4 grid gap-3 sm:grid-cols-2">
+            <CopyValueCard label="RTMPS URL" value={streamSetup.rtmp_url} />
+            <CopyValueCard label="Stream key" value={streamSetup.stream_key} secret />
+          </div>
+        </section>
+      ) : null}
+
+      {showStreamModal ? (
+        <StreamSetupModal
+          title={streamTitle}
+          onTitleChange={setStreamTitle}
+          loading={creatingStream}
+          onClose={() => setShowStreamModal(false)}
+          onSubmit={handleCreateStream}
+          setup={streamSetup}
+        />
+      ) : null}
 
       <div className="grid gap-5 xl:grid-cols-[1fr_320px]">
         <section className="card p-5">
@@ -434,6 +604,119 @@ function PlayerLine({ name, won }: { name: string; won: boolean }) {
         {name}
       </span>
       {won && <Trophy size={13} className="text-[var(--brand-coral)]" />}
+    </div>
+  );
+}
+
+function StreamSetupModal({
+  title,
+  onTitleChange,
+  loading,
+  onClose,
+  onSubmit,
+  setup,
+}: {
+  title: string;
+  onTitleChange: (value: string) => void;
+  loading: boolean;
+  onClose: () => void;
+  onSubmit: () => void;
+  setup: StreamSetupState | null;
+}) {
+  return (
+    <div className="fixed inset-0 z-[90] flex items-end justify-center px-4 pb-4 sm:items-center sm:pb-0">
+      <button
+        type="button"
+        aria-label="Close stream setup modal"
+        className="absolute inset-0 bg-[rgba(11,17,33,0.72)] backdrop-blur-sm"
+        onClick={onClose}
+      />
+
+      <div className="card relative z-[1] w-full max-w-xl p-5 sm:p-6">
+        <button
+          type="button"
+          onClick={onClose}
+          className="icon-button absolute right-4 top-4 h-9 w-9"
+          aria-label="Close"
+        >
+          <X size={15} />
+        </button>
+
+        <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[rgba(50,224,196,0.14)] text-[var(--brand-teal)]">
+          <Video size={18} />
+        </div>
+
+        <h3 className="mt-4 text-xl font-black text-[var(--text-primary)]">Go Live</h3>
+        <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">
+          Create the secure Mux stream for this tournament, then paste the RTMPS URL and stream key
+          into OBS or Larix Broadcaster on mobile.
+        </p>
+
+        <label className="mt-5 block">
+          <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--text-soft)]">
+            Stream title
+          </span>
+          <input
+            value={title}
+            onChange={(event) => onTitleChange(event.target.value)}
+            placeholder="Tournament Finals Live"
+            className="mt-2 w-full rounded-2xl border border-[var(--border-color)] bg-[var(--surface-elevated)] px-4 py-3 text-sm text-[var(--text-primary)] outline-none"
+          />
+        </label>
+
+        {setup ? (
+          <div className="mt-5 grid gap-3 sm:grid-cols-2">
+            <CopyValueCard label="RTMPS URL" value={setup.rtmp_url} />
+            <CopyValueCard label="Stream key" value={setup.stream_key} secret />
+          </div>
+        ) : null}
+
+        <div className="mt-5 grid gap-2 sm:grid-cols-2">
+          <button
+            type="button"
+            onClick={onSubmit}
+            disabled={loading || title.trim().length < 3}
+            className="btn-primary justify-center"
+          >
+            {loading ? 'Creating...' : 'Create stream'}
+          </button>
+          <button type="button" onClick={onClose} className="btn-outline justify-center">
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function CopyValueCard({
+  label,
+  value,
+  secret = false,
+}: {
+  label: string;
+  value: string;
+  secret?: boolean;
+}) {
+  return (
+    <div className="rounded-2xl border border-[var(--border-color)] bg-[var(--surface-elevated)] p-4">
+      <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--text-soft)]">
+        {label}
+      </p>
+      <p className="mt-2 break-all text-sm font-semibold text-[var(--text-primary)]">
+        {value}
+      </p>
+      <button
+        type="button"
+        onClick={() => {
+          navigator.clipboard.writeText(value);
+          toast.success(`${label} copied`);
+        }}
+        className={`mt-3 ${secret ? 'btn-primary' : 'btn-ghost'} w-full justify-center text-sm`}
+      >
+        <Copy size={14} />
+        Copy {label.toLowerCase()}
+      </button>
     </div>
   );
 }

@@ -15,6 +15,7 @@ import {
   Swords,
   Trophy,
   Users,
+  Zap,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -40,6 +41,7 @@ const PRIMARY_ADMIN_NAV: AdminNavItem[] = [
   { href: '/admin/matches', label: 'Matches', icon: Swords },
   { href: '/admin/lobbies', label: 'Lobbies', icon: DoorOpen },
   { href: '/admin/rewards', label: 'Rewards', icon: Shield },
+  { href: '/admin/bounties', label: 'Bounties', icon: Zap },
   { href: '/admin/users', label: 'Users', icon: Users },
   { href: '/admin/support', label: 'Support', icon: Headset },
   { href: '/admin/tournaments', label: 'Tournaments', icon: Trophy },

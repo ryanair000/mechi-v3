@@ -27,10 +27,10 @@ export default defineConfig({
   },
   globalSetup: './e2e/global.setup.ts',
   webServer: {
-    command: 'npm run dev',
+    command: 'npm run start:e2e',
     url: environment.baseURL,
-    reuseExistingServer: !isCI,
-    timeout: 180_000,
+    reuseExistingServer: false,
+    timeout: 300_000,
     env: {
       ...process.env,
       PORT: String(environment.port),

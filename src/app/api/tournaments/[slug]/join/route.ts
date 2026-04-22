@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireActiveAccessProfile } from '@/lib/access';
+import { tryClaimBounty } from '@/lib/bounties';
 import { GAMES, getCanonicalGameKey, normalizeSelectedGameKeys } from '@/lib/config';
 import { createNotifications } from '@/lib/notifications';
 import { createServiceClient } from '@/lib/supabase';
@@ -206,6 +207,7 @@ export async function POST(
 
       await createNotifications(notifications, supabase);
       await maybeMarkTournamentFull(supabase, tournament.id);
+      void tryClaimBounty(supabase, authUser.id, 'tournament_register').catch(() => null);
       return NextResponse.json({ status: 'joined', player });
     }
 

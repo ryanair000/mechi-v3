@@ -34,6 +34,14 @@ import {
 } from '@/lib/location';
 import { getRankDivision, withAlpha } from '@/lib/gamification';
 import { canSelectGames, getPlan } from '@/lib/plans';
+import {
+  getSnapshotDescription,
+  getSnapshotLabel,
+  getSnapshotMediaKind,
+  getSnapshotPreviewClassName,
+  getSnapshotUrlKey,
+  isSnapshotGame,
+} from '@/lib/profile-snapshots';
 import type { CountryKey, GameKey, Plan, PlatformKey } from '@/types';
 
 interface Profile {
@@ -42,6 +50,9 @@ interface Profile {
   region?: string;
   avatar_url?: string | null;
   cover_url?: string | null;
+  snapshot_efootball_url?: string | null;
+  snapshot_codm_url?: string | null;
+  snapshot_pubgm_url?: string | null;
   invite_code?: string;
   platforms?: PlatformKey[];
   game_ids?: Record<string, string>;
@@ -64,10 +75,12 @@ export default function ProfileSettingsPage() {
   const [saving, setSaving] = useState(false);
   const [subscriptionLoading, setSubscriptionLoading] = useState(false);
   const [uploadingMedia, setUploadingMedia] = useState<'avatar' | 'cover' | null>(null);
+  const [uploadingSnapshot, setUploadingSnapshot] = useState<GameKey | null>(null);
   const [pendingMedia, setPendingMedia] = useState<{
     kind: 'avatar' | 'cover';
     file: File;
   } | null>(null);
+  const [pendingSnapshotRemoval, setPendingSnapshotRemoval] = useState<GameKey | null>(null);
   const [showPaywall, setShowPaywall] = useState(false);
 
   const [country, setCountry] = useState<CountryKey | ''>('');
@@ -75,6 +88,28 @@ export default function ProfileSettingsPage() {
   const [platforms, setPlatforms] = useState<PlatformKey[]>([]);
   const [gameIds, setGameIds] = useState<Record<string, string>>({});
   const [selectedGames, setSelectedGames] = useState<GameKey[]>([]);
+
+  const applySnapshotProfileUpdate = useCallback(
+    (game: GameKey, nextProfile: Profile) => {
+      const snapshotUrlKey = getSnapshotUrlKey(game);
+      if (!snapshotUrlKey) {
+        return;
+      }
+
+      setProfile((current) =>
+        current
+          ? {
+              ...current,
+              [snapshotUrlKey]: (nextProfile[snapshotUrlKey] as string | null | undefined) ?? null,
+            }
+          : {
+              ...nextProfile,
+              [snapshotUrlKey]: (nextProfile[snapshotUrlKey] as string | null | undefined) ?? null,
+            }
+      );
+    },
+    []
+  );
 
   const fetchProfile = useCallback(async () => {
     try {
@@ -106,6 +141,10 @@ export default function ProfileSettingsPage() {
   }, [fetchProfile]);
 
   const toggleGame = (game: GameKey) => {
+    if (selectedGames.includes(game) && pendingSnapshotRemoval === game) {
+      setPendingSnapshotRemoval(null);
+    }
+
     setSelectedGames((prev) => {
       if (prev.includes(game)) {
         setGameIds((ids) => {
@@ -205,6 +244,83 @@ export default function ProfileSettingsPage() {
     }
 
     setPendingMedia({ kind, file });
+  };
+
+  const handleSnapshotUpload = async (game: GameKey, file: File | null) => {
+    if (!file) {
+      return;
+    }
+
+    if (!file.type.startsWith('image/')) {
+      toast.error('Pick an image file');
+      return;
+    }
+
+    const kind = getSnapshotMediaKind(game);
+    if (!kind) {
+      return;
+    }
+
+    const formData = new FormData();
+    formData.set('kind', kind);
+    formData.set('file', file);
+
+    setUploadingSnapshot(game);
+    setPendingSnapshotRemoval((current) => (current === game ? null : current));
+    try {
+      const res = await fetch('/api/users/profile/media', {
+        method: 'POST',
+        body: formData,
+        credentials: 'include',
+      });
+      const data = (await res.json()) as { error?: string; profile?: Profile };
+
+      if (!res.ok || !data.profile) {
+        toast.error(data.error ?? 'Failed to upload snapshot');
+        return;
+      }
+
+      applySnapshotProfileUpdate(game, data.profile);
+      toast.success('Snapshot updated');
+    } catch {
+      toast.error('Network error');
+    } finally {
+      setUploadingSnapshot(null);
+    }
+  };
+
+  const handleSnapshotRemove = async (game: GameKey) => {
+    const kind = getSnapshotMediaKind(game);
+    if (!kind) {
+      return;
+    }
+
+    if (pendingSnapshotRemoval !== game) {
+      setPendingSnapshotRemoval(game);
+      return;
+    }
+
+    setUploadingSnapshot(game);
+    try {
+      const res = await authFetch('/api/users/profile/media', {
+        method: 'DELETE',
+        body: JSON.stringify({ kind }),
+      });
+      const data = (await res.json()) as { error?: string; profile?: Profile };
+
+      if (!res.ok || !data.profile) {
+        toast.error(data.error ?? 'Failed to remove snapshot');
+        return;
+      }
+
+      applySnapshotProfileUpdate(game, data.profile);
+      setPendingSnapshotRemoval(null);
+      toast.success('Snapshot removed');
+    } catch {
+      toast.error('Network error');
+    } finally {
+      setUploadingSnapshot(null);
+    }
   };
 
   const handleSave = async () => {
@@ -751,6 +867,12 @@ export default function ProfileSettingsPage() {
                 {selectedGames.map((game) => {
                   const gameConfig = GAMES[game];
                   const selectedPlatform = getConfiguredPlatformForGame(game, gameIds, platforms);
+                  const snapshotUrlKey = getSnapshotUrlKey(game);
+                  const snapshotUrl = snapshotUrlKey
+                    ? ((profile?.[snapshotUrlKey] as string | null | undefined) ?? null)
+                    : null;
+                  const snapshotPreviewClassName = getSnapshotPreviewClassName(game);
+                  const snapshotLoading = uploadingSnapshot === game;
 
                   return (
                     <div key={game} className="rounded-xl border border-[var(--border-color)] bg-[var(--surface-elevated)] p-3">
@@ -789,6 +911,106 @@ export default function ProfileSettingsPage() {
                           {PLATFORMS[gameConfig.platforms[0]]?.label}
                         </div>
                       )}
+
+                      {isSnapshotGame(game) ? (
+                        <div className="mt-4 rounded-[1.35rem] border border-[var(--border-color)] bg-[var(--surface)] p-3">
+                          <div className="mb-3">
+                            <p className="label mb-0">{getSnapshotLabel(game)}</p>
+                            <p className="mt-1 text-xs leading-5 text-[var(--text-soft)]">
+                              {getSnapshotDescription(game)}
+                            </p>
+                          </div>
+
+                          {snapshotUrl ? (
+                            <>
+                              <div
+                                className={`relative overflow-hidden rounded-[1.15rem] border border-[var(--border-color)] bg-[var(--surface-elevated)] ${snapshotPreviewClassName}`}
+                              >
+                                <Image
+                                  src={snapshotUrl}
+                                  alt={`${gameConfig.label} ${getSnapshotLabel(game).toLowerCase()} preview`}
+                                  fill
+                                  sizes="(min-width: 1280px) 520px, (min-width: 768px) 50vw, 100vw"
+                                  className="object-cover"
+                                />
+                                {snapshotLoading ? (
+                                  <div className="absolute inset-0 flex items-center justify-center bg-black/45">
+                                    <Loader2 size={20} className="animate-spin text-white" />
+                                  </div>
+                                ) : null}
+                              </div>
+
+                              <div className="mt-3 flex flex-wrap gap-2">
+                                <label className="btn-ghost cursor-pointer">
+                                  {snapshotLoading ? (
+                                    <>
+                                      <Loader2 size={14} className="animate-spin" />
+                                      Uploading...
+                                    </>
+                                  ) : (
+                                    <>
+                                      <ImagePlus size={14} />
+                                      Change snapshot
+                                    </>
+                                  )}
+                                  <input
+                                    type="file"
+                                    accept="image/*"
+                                    className="sr-only"
+                                    onChange={(event) => {
+                                      const file = event.target.files?.[0] ?? null;
+                                      void handleSnapshotUpload(game, file);
+                                      event.target.value = '';
+                                    }}
+                                    disabled={snapshotLoading}
+                                  />
+                                </label>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    void handleSnapshotRemove(game);
+                                  }}
+                                  disabled={snapshotLoading}
+                                  className="btn-ghost text-[var(--brand-coral)] hover:text-[var(--accent-primary-hover)] disabled:opacity-60"
+                                >
+                                  {pendingSnapshotRemoval === game ? 'Confirm remove?' : 'Remove'}
+                                </button>
+                              </div>
+                            </>
+                          ) : (
+                            <label className="block cursor-pointer">
+                              <div
+                                className={`relative overflow-hidden rounded-[1.15rem] border border-dashed border-[var(--border-color)] bg-[var(--surface-elevated)] ${snapshotPreviewClassName}`}
+                              >
+                                <div className="flex h-full w-full flex-col items-center justify-center gap-2 px-4 py-6 text-center">
+                                  <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[rgba(50,224,196,0.14)] text-[var(--accent-secondary-text)]">
+                                    <ImagePlus size={20} />
+                                  </div>
+                                  <p className="text-sm font-semibold text-[var(--text-primary)]">Upload snapshot</p>
+                                  <p className="text-xs text-[var(--text-soft)]">Tap to add a fresh in-game screenshot</p>
+                                </div>
+
+                                {snapshotLoading ? (
+                                  <div className="absolute inset-0 flex items-center justify-center bg-black/45">
+                                    <Loader2 size={20} className="animate-spin text-white" />
+                                  </div>
+                                ) : null}
+                              </div>
+                              <input
+                                type="file"
+                                accept="image/*"
+                                className="sr-only"
+                                onChange={(event) => {
+                                  const file = event.target.files?.[0] ?? null;
+                                  void handleSnapshotUpload(game, file);
+                                  event.target.value = '';
+                                }}
+                                disabled={snapshotLoading}
+                              />
+                            </label>
+                          )}
+                        </div>
+                      ) : null}
                     </div>
                   );
                 })}

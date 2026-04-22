@@ -978,6 +978,14 @@ html[data-theme='dark'] {
 }
 
 @layer components {
+  .manual-tests-shell {
+    --radius: 0.5rem;
+    --radius-control: 0.55rem;
+    --radius-panel: 0.5rem;
+    --radius-card: 0.5rem;
+    --radius-hero: 0.8rem;
+  }
+
   .marketing-prototype-shell {
     --radius-control: 0.55rem;
     --radius-panel: 0.65rem;

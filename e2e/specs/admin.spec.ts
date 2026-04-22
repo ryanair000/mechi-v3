@@ -15,6 +15,7 @@ test.describe('Admin Workflows', () => {
       '/matches',
       '/tournaments',
       '/rewards',
+      '/bounties',
       '/support',
       '/logs',
     ];

@@ -22,6 +22,7 @@ import {
   Trophy,
   User,
   Users,
+  Zap,
 } from 'lucide-react';
 import { useAuth } from '@/components/AuthProvider';
 import { BrandLogo } from '@/components/BrandLogo';
@@ -64,6 +65,7 @@ const GAME_ITEMS: NavItem[] = [
 const GROWTH_ITEMS: NavItem[] = [
   { href: '/share', label: 'Share', icon: Share2 },
   { href: '/rewards', label: 'Rewards', icon: Coins },
+  { href: '/bounties', label: 'Bounties', icon: Zap },
 ];
 
 const COLLAPSIBLE_SECTIONS: SidebarSectionConfig[] = [

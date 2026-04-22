@@ -18,6 +18,10 @@ test.describe('Player Pages', () => {
     await page.goto('/rewards');
     await expect(page.locator('body')).toContainText(/Available RP/i);
 
+    await page.goto('/bounties');
+    await expect(page.locator('body')).toContainText(/Complete platform actions, win cash/i);
+    await expect(page.locator('body')).toContainText(/E2E Live Bounty/i);
+
     await page.goto('/suggest');
     await expect(page.locator('body')).toContainText(/Rocket League/i);
   });
@@ -49,8 +53,27 @@ test.describe('Player Pages', () => {
 
     await page.goto('/tournaments');
     await expect(page.locator('body')).toContainText(/E2E Open Cup/i);
+    await expect(page.locator('body')).toContainText(/E2E Live Cup/i);
+    await expect(page.locator('body')).toContainText(/LIVE/i);
 
     await page.goto('/t/e2e-open-cup');
     await expect(page.locator('body')).toContainText(/E2E Open Cup/i);
+  });
+
+  test('live tournament pages show active and queued stream states from seeded data @core', async ({
+    page,
+  }) => {
+    await page.goto('/t/e2e-live-cup');
+    await expect(page.locator('body')).toContainText(/E2E Live Cup/i);
+    await expect(page.locator('body')).toContainText(/Open live stream/i);
+    await expect(page.locator('body')).toContainText(/E2E Live Cup Broadcast/i);
+
+    await page.goto('/t/e2e-idle-cup/live');
+    await expect(page.locator('body')).toContainText(/Stream starting soon/i);
+    await expect(page.locator('body')).toContainText(/E2E Idle Cup/i);
+
+    await page.goto('/t/e2e-live-cup/live');
+    await expect(page.locator('body')).toContainText(/E2E Live Cup Broadcast/i);
+    await expect(page.locator('body')).toContainText(/Streamer: e2e-elite-player/i);
   });
 });

@@ -1,4 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { tryClaimBounty } from '@/lib/bounties';
 import { generateBracket, getNextBracketPosition, type TournamentSize } from '@/lib/bracket';
 import { GAMES } from '@/lib/config';
 import {
@@ -383,6 +384,8 @@ export async function advanceTournamentAfterMatch(params: {
       status: 'completed',
     })
     .eq('id', tournamentMatch.id);
+
+  void tryClaimBounty(supabase, winnerId, 'tournament_match_win').catch(() => null);
 
   const totalRounds = Math.log2(tournament.size);
   if (tournamentMatch.round >= totalRounds) {

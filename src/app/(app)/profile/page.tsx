@@ -4,7 +4,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ChevronRight, MapPin, Settings, Swords } from 'lucide-react';
+import { ChevronRight, MapPin, Settings, Swords, X } from 'lucide-react';
 import { useAuth, useAuthFetch } from '@/components/AuthProvider';
 import { GameCover } from '@/components/GameCover';
 import { InviteMenu } from '@/components/InviteMenu';
@@ -30,6 +30,12 @@ import {
 import { resolveProfileLocation } from '@/lib/location';
 import { getPlan } from '@/lib/plans';
 import {
+  getSnapshotAccent,
+  getSnapshotLabel,
+  getSnapshotPreviewClassName,
+  getSnapshotUrlKey,
+} from '@/lib/profile-snapshots';
+import {
   getProfileOgImageUrl,
   getProfileShareUrl,
   profileShareText,
@@ -42,6 +48,9 @@ interface Profile {
   region?: string;
   avatar_url?: string | null;
   cover_url?: string | null;
+  snapshot_efootball_url?: string | null;
+  snapshot_codm_url?: string | null;
+  snapshot_pubgm_url?: string | null;
   invite_code?: string;
   platforms?: PlatformKey[];
   game_ids?: Record<string, string>;
@@ -62,6 +71,7 @@ export default function ProfilePage() {
 
   const [profile, setProfile] = useState<Profile | null>(null);
   const [achievementKeys, setAchievementKeys] = useState<string[]>([]);
+  const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   const fetchProfile = useCallback(async () => {
@@ -100,6 +110,23 @@ export default function ProfilePage() {
 
     void fetchProfile();
   }, [fetchProfile, router]);
+
+  useEffect(() => {
+    if (!lightboxUrl) {
+      return;
+    }
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setLightboxUrl(null);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [lightboxUrl]);
 
   if (loading) {
     return (
@@ -204,9 +231,70 @@ export default function ProfilePage() {
     { label: 'Level', value: `Lv. ${level}`, hint: `${Math.max(0, xpProgress.nextLevelXp - xp)} XP to next level` },
     { label: 'Streak', value: winStreak, hint: `Best run ${maxWinStreak} / ${mp} MP earned` },
   ];
+  const snapshotCards = userGames.reduce<
+    Array<{
+      accent: string;
+      game: GameKey;
+      label: string;
+      previewClassName: 'aspect-video' | 'aspect-[4/3]';
+      url: string;
+    }>
+  >((cards, game) => {
+    const snapshotUrlKey = getSnapshotUrlKey(game);
+    const snapshotUrl = snapshotUrlKey
+      ? ((profile?.[snapshotUrlKey] as string | null | undefined) ?? null)
+      : null;
+
+    if (!snapshotUrl) {
+      return cards;
+    }
+
+    cards.push({
+      accent: getSnapshotAccent(game),
+      game,
+      label: getSnapshotLabel(game),
+      previewClassName: getSnapshotPreviewClassName(game),
+      url: snapshotUrl,
+    });
+
+    return cards;
+  }, []);
 
   return (
     <div className="page-container space-y-5">
+      {lightboxUrl ? (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label="Snapshot preview"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-4"
+          onClick={(event) => {
+            if (event.target === event.currentTarget) {
+              setLightboxUrl(null);
+            }
+          }}
+        >
+          <button
+            type="button"
+            onClick={() => setLightboxUrl(null)}
+            className="absolute right-4 top-4 inline-flex h-11 w-11 items-center justify-center rounded-full border border-white/15 bg-white/10 text-white transition-colors hover:bg-white/16"
+            aria-label="Close snapshot preview"
+          >
+            <X size={18} />
+          </button>
+          <div className="w-full max-w-4xl" onClick={(event) => event.stopPropagation()}>
+            <Image
+              src={lightboxUrl}
+              alt="Snapshot preview"
+              width={1600}
+              height={1200}
+              sizes="100vw"
+              className="h-auto max-h-[90vh] w-full rounded-[1.15rem] object-contain"
+            />
+          </div>
+        </div>
+      ) : null}
+
       <section className="card overflow-hidden">
         <div
           className="relative h-36 sm:h-44 xl:h-52"
@@ -458,6 +546,69 @@ export default function ProfilePage() {
               </div>
             )}
           </div>
+
+          {snapshotCards.length > 0 ? (
+            <div className="subtle-card p-5">
+              <div className="mb-4 flex items-center justify-between gap-3">
+                <div>
+                  <p className="section-title">Snapshots</p>
+                  <p className="mt-2 text-sm text-[var(--text-secondary)]">
+                    View the in-game screens that back up your active titles.
+                  </p>
+                </div>
+                <span className="brand-chip px-2 py-1">{snapshotCards.length} live</span>
+              </div>
+
+              <div className="grid gap-3 lg:grid-cols-2">
+                {snapshotCards.map((snapshot) => (
+                  <div
+                    key={snapshot.game}
+                    className="rounded-2xl border border-[var(--border-color)] bg-[var(--surface-elevated)] p-4"
+                  >
+                    <div className="mb-3 flex items-start justify-between gap-3">
+                      <div className="flex items-center gap-2.5">
+                        <div className="h-10 w-10 overflow-hidden rounded-lg border border-[var(--border-color)] bg-[var(--surface)]">
+                          <GameCover gameKey={snapshot.game} variant="header" className="h-full w-full" />
+                        </div>
+                        <div>
+                          <p className="text-sm font-semibold" style={{ color: snapshot.accent }}>
+                            {GAMES[snapshot.game].label}
+                          </p>
+                          <p className="mt-0.5 text-[11px] text-[var(--text-soft)]">Tap to open the full screenshot</p>
+                        </div>
+                      </div>
+                      <span
+                        className="rounded-full border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em]"
+                        style={{
+                          borderColor: withAlpha(snapshot.accent, '36'),
+                          background: withAlpha(snapshot.accent, '14'),
+                          color: snapshot.accent,
+                        }}
+                      >
+                        {snapshot.label}
+                      </span>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => setLightboxUrl(snapshot.url)}
+                      className={`group relative block w-full cursor-pointer overflow-hidden rounded-[1.15rem] ${snapshot.previewClassName}`}
+                      aria-label={`Open ${GAMES[snapshot.game].label} snapshot`}
+                    >
+                      <Image
+                        src={snapshot.url}
+                        alt={`${GAMES[snapshot.game].label} ${snapshot.label.toLowerCase()}`}
+                        fill
+                        sizes="(min-width: 1280px) 520px, (min-width: 768px) 50vw, 100vw"
+                        className="w-full object-cover transition-transform duration-300 group-hover:scale-[1.02]"
+                      />
+                      <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(11,17,33,0.02),rgba(11,17,33,0.28))]" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : null}
 
           <div className="subtle-card p-5">
             <div className="mb-4 flex items-center justify-between gap-3">

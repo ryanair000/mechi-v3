@@ -64,9 +64,9 @@ export function SignupPage({
             <div className="absolute inset-0 bg-[linear-gradient(rgba(130,149,176,0.035)_1px,transparent_1px),linear-gradient(90deg,rgba(130,149,176,0.035)_1px,transparent_1px)] bg-[size:88px_88px] opacity-70 [mask-image:radial-gradient(circle_at_top,rgba(0,0,0,0.68),transparent_76%)]" />
           </div>
 
-          <div className="relative z-10 w-full max-w-[1180px]">
-            <div className="grid min-h-[calc(100svh-2.5rem)] gap-4 rounded-[2rem] border border-[var(--border-color)] bg-[rgba(7,12,24,0.58)] p-4 shadow-[var(--shadow-strong)] backdrop-blur-2xl lg:grid-cols-[minmax(0,1.06fr)_minmax(360px,0.78fr)] lg:gap-6 lg:p-5">
-              <div className="relative overflow-hidden rounded-[1.6rem] border border-[var(--border-color)] bg-[linear-gradient(135deg,rgba(8,31,41,0.94)_0%,rgba(9,17,31,0.92)_48%,rgba(24,16,34,0.94)_100%)] px-5 py-5 sm:px-8 sm:py-8 lg:px-10 lg:py-10">
+          <div className="relative z-10 w-full max-w-[1180px] lg:origin-center lg:scale-[0.9] lg:transform-gpu">
+            <div className="grid min-h-[calc(100svh-2.5rem)] gap-4 rounded-[var(--radius-card)] border border-[var(--border-color)] bg-[rgba(7,12,24,0.58)] p-4 shadow-[var(--shadow-strong)] backdrop-blur-2xl lg:grid-cols-[minmax(0,1.06fr)_minmax(360px,0.78fr)] lg:gap-6 lg:p-5">
+              <div className="relative overflow-hidden rounded-[var(--radius-card)] border border-[var(--border-color)] bg-[linear-gradient(135deg,rgba(8,31,41,0.94)_0%,rgba(9,17,31,0.92)_48%,rgba(24,16,34,0.94)_100%)] px-5 py-5 sm:px-8 sm:py-8 lg:px-10 lg:py-10">
                 <div className="pointer-events-none absolute inset-0">
                   <div className="absolute inset-y-0 left-[12%] w-px bg-gradient-to-b from-transparent via-[rgba(50,224,196,0.16)] to-transparent" />
                   <div className="absolute left-0 right-0 top-[16%] h-px bg-gradient-to-r from-transparent via-[rgba(130,149,176,0.12)] to-transparent" />

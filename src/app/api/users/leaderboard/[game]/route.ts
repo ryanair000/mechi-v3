@@ -143,7 +143,13 @@ export async function GET(
       }
     }
 
-    const players = dedupePlayers(collectedPlayers);
+    const players = fallbackToDefaults
+      ? dedupePlayers(collectedPlayers)
+      : dedupePlayers(collectedPlayers).filter(
+          (player) =>
+            (((player[winsKey] as number | undefined) ?? 0) +
+              ((player[lossesKey] as number | undefined) ?? 0)) > 0
+        );
     const legacyMetricsById = new Map<string, LeaderboardPlayerRow>();
 
     if (!fallbackToDefaults && game === 'efootball' && players.length > 0) {

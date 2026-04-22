@@ -1,5 +1,6 @@
 import { createHash, createHmac, randomUUID, timingSafeEqual } from 'crypto';
 import type { NextRequest } from 'next/server';
+import { tryClaimBounty } from '@/lib/bounties';
 import { getNairobiDateStamp } from '@/lib/gamification';
 import { createServiceClient } from '@/lib/supabase';
 import type { Profile } from '@/types';
@@ -134,6 +135,9 @@ export const REWARD_RULES = {
   inviteeStarter: 500,
   inviterMain: 3000,
   linkedFirstPaidOrder: 250,
+  watchStream: 5,
+  goLiveBonus: 50,
+  maxWatchRpPerDay: 20,
   qualifiedReferralMinimumKes: 2000,
   maxOrderCoveragePercent: 25,
 } as const;
@@ -396,7 +400,7 @@ export async function maybeAwardProfileCompletion(
     return null;
   }
 
-  return applyRewardEvent(supabase, {
+  const result = await applyRewardEvent(supabase, {
     userId: profile.id,
     eventKey: `reward:profile-complete:${profile.id}`,
     eventType: 'profile_completion',
@@ -407,6 +411,12 @@ export async function maybeAwardProfileCompletion(
       selected_games: Array.isArray(profile.selected_games) ? profile.selected_games.length : 0,
     },
   });
+
+  if (result?.inserted) {
+    void tryClaimBounty(supabase, profile.id, 'profile_complete').catch(() => null);
+  }
+
+  return result;
 }
 
 export async function addRewardReviewQueueItem(
@@ -456,6 +466,10 @@ function getIsoWeekStamp(dayStamp: string) {
   return `${date.getUTCFullYear()}-W${String(weekNo).padStart(2, '0')}`;
 }
 
+function getNairobiDayStartIso(dayStamp: string) {
+  return new Date(`${dayStamp}T00:00:00+03:00`).toISOString();
+}
+
 export async function processMatchRewardMilestones(
   supabase: SupabaseClient,
   params: {
@@ -468,6 +482,7 @@ export async function processMatchRewardMilestones(
       newStreak: number;
       invitedBy: string | null;
       chezahubUserId: string | null;
+      previousLifetimeRp: number;
     };
     loser: {
       id: string;
@@ -479,10 +494,28 @@ export async function processMatchRewardMilestones(
   }
 ) {
   const weekStamp = getIsoWeekStamp(params.matchDate);
-  const operations: Promise<unknown>[] = [];
+  const operations: Array<Promise<{ key: string; inserted: boolean }>> = [];
+  const trackRewardOperation = (
+    key: string,
+    operation: ReturnType<typeof applyRewardEvent>
+  ) => {
+    operations.push(
+      operation
+        .then((result) => ({ key, inserted: Boolean(result?.inserted) }))
+        .catch((error) => {
+          console.error('[Rewards] Failed to apply milestone reward:', {
+            error,
+            key,
+            matchId: params.matchId,
+          });
+          return { key, inserted: false };
+        })
+    );
+  };
 
   if (params.winner.firstMatchToday) {
-    operations.push(
+    trackRewardOperation(
+      'winner_first_match_of_day',
       applyRewardEvent(supabase, {
         userId: params.winner.id,
         eventKey: `reward:first-match-day:${params.winner.id}:${params.matchDate}`,
@@ -497,7 +530,8 @@ export async function processMatchRewardMilestones(
   }
 
   if (params.loser.firstMatchToday) {
-    operations.push(
+    trackRewardOperation(
+      'loser_first_match_of_day',
       applyRewardEvent(supabase, {
         userId: params.loser.id,
         eventKey: `reward:first-match-day:${params.loser.id}:${params.matchDate}`,
@@ -512,7 +546,8 @@ export async function processMatchRewardMilestones(
   }
 
   if (params.winner.newStreak >= 3) {
-    operations.push(
+    trackRewardOperation(
+      'winner_win_streak_3',
       applyRewardEvent(supabase, {
         userId: params.winner.id,
         eventKey: `reward:streak-three:${params.winner.id}:${params.matchDate}`,
@@ -527,7 +562,8 @@ export async function processMatchRewardMilestones(
   }
 
   if (params.winner.newStreak >= 5) {
-    operations.push(
+    trackRewardOperation(
+      'winner_streak_five_weekly',
       applyRewardEvent(supabase, {
         userId: params.winner.id,
         eventKey: `reward:streak-five:${params.winner.id}:${weekStamp}`,
@@ -546,7 +582,8 @@ export async function processMatchRewardMilestones(
     params.winner.invitedBy &&
     params.winner.chezahubUserId
   ) {
-    operations.push(
+    trackRewardOperation(
+      'winner_invitee_starter',
       applyRewardEvent(supabase, {
         userId: params.winner.id,
         eventKey: `reward:invitee-starter:${params.winner.id}`,
@@ -565,7 +602,8 @@ export async function processMatchRewardMilestones(
     params.loser.invitedBy &&
     params.loser.chezahubUserId
   ) {
-    operations.push(
+    trackRewardOperation(
+      'loser_invitee_starter',
       applyRewardEvent(supabase, {
         userId: params.loser.id,
         eventKey: `reward:invitee-starter:${params.loser.id}`,
@@ -579,7 +617,46 @@ export async function processMatchRewardMilestones(
     );
   }
 
-  await Promise.allSettled(operations);
+  const results = await Promise.all(operations);
+
+  if (results.some((result) => result.key === 'winner_first_match_of_day' && result.inserted)) {
+    void tryClaimBounty(supabase, params.winner.id, 'first_match_of_day').catch(() => null);
+  }
+
+  if (results.some((result) => result.key === 'winner_win_streak_3' && result.inserted)) {
+    void tryClaimBounty(supabase, params.winner.id, 'win_streak_3').catch(() => null);
+  }
+
+  if (params.winner.previousLifetimeRp < 1000) {
+    const { data: refreshedWinnerRaw, error: refreshedWinnerError } = await supabase
+      .from('profiles')
+      .select('reward_points_lifetime')
+      .eq('id', params.winner.id)
+      .maybeSingle();
+
+    if (refreshedWinnerError) {
+      console.error('[Rewards] Failed to refresh winner lifetime RP:', refreshedWinnerError);
+    } else {
+      const refreshedWinnerLifetime =
+        (refreshedWinnerRaw?.reward_points_lifetime as number | null | undefined) ?? 0;
+
+      if (refreshedWinnerLifetime >= 1000) {
+        void tryClaimBounty(supabase, params.winner.id, 'rp_milestone_1000').catch(() => null);
+      }
+    }
+  }
+
+  const { count: winnerMatchesToday, error: winnerMatchesTodayError } = await supabase
+    .from('matches')
+    .select('id', { count: 'exact', head: true })
+    .or(`player1_id.eq.${params.winner.id},player2_id.eq.${params.winner.id}`)
+    .gt('created_at', getNairobiDayStartIso(params.matchDate));
+
+  if (winnerMatchesTodayError) {
+    console.error('[Rewards] Failed to count winner matches for today:', winnerMatchesTodayError);
+  } else if ((winnerMatchesToday ?? 0) >= 5) {
+    void tryClaimBounty(supabase, params.winner.id, 'matches_played_5_today').catch(() => null);
+  }
 }
 
 function getRewardEventTitle(eventType: string, availableDelta: number, pendingDelta: number) {
@@ -942,7 +1019,7 @@ export async function handleChezahubOrderEvent(
         const pendingExists = await rewardEventExists(supabase, pendingEventKey);
 
         if (!pendingExists) {
-          await applyRewardEvent(supabase, {
+          const pendingReward = await applyRewardEvent(supabase, {
             userId: inviter.id,
             eventKey: pendingEventKey,
             eventType: 'referral_main_pending',
@@ -956,6 +1033,10 @@ export async function handleChezahubOrderEvent(
               order_total_kes: event.order_total_kes,
             },
           }).catch(() => null);
+
+          if (pendingReward?.inserted) {
+            void tryClaimBounty(supabase, inviter.id, 'referral_converted').catch(() => null);
+          }
         }
       }
 

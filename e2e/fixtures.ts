@@ -28,8 +28,10 @@ import {
   createSuggestion,
   createSupportThread,
   createTournament,
+  createLiveStream,
   type ChallengeInput,
   type LobbyInput,
+  type LiveStreamInput,
   type MatchInput,
   type MatchMessageInput,
   type NotificationInput,
@@ -54,6 +56,7 @@ type SeedHelpers = {
   createChallenge: (input: ChallengeInput) => ReturnType<typeof createChallenge>;
   createLobby: (input: LobbyInput) => ReturnType<typeof createLobby>;
   createTournament: (input: TournamentInput) => ReturnType<typeof createTournament>;
+  createLiveStream: (input: LiveStreamInput) => ReturnType<typeof createLiveStream>;
   createNotification: (input: NotificationInput) => ReturnType<typeof createNotification>;
   createSupportThread: (input: SupportThreadInput) => ReturnType<typeof createSupportThread>;
   createRewardReviewItem: (
@@ -133,6 +136,7 @@ export const test = base.extend<TestFixtures, WorkerFixtures>({
         createChallenge: (input) => createChallenge(client, input),
         createLobby: (input) => createLobby(client, input),
         createTournament: (input) => createTournament(client, input),
+        createLiveStream: (input) => createLiveStream(client, input),
         createNotification: (input) => createNotification(client, input),
         createSupportThread: (input) => createSupportThread(client, input),
         createRewardReviewItem: (input) => createRewardReviewItem(client, input),

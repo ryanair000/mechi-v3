@@ -9,8 +9,12 @@ const eslintConfig = defineConfig([
   globalIgnores([
     // Default ignores of eslint-config-next:
     ".next/**",
+    ".next-*/**",
+    "**/.next/**",
+    "**/.next-*/**",
+    ".vercel/**",
+    "**/.vercel/**",
     ".claude/**",
-    ".next-build*/**",
     ".next-build-verify/**",
     ".next-build-admin/**",
     ".next-build-tournament/**",

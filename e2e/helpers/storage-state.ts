@@ -3,11 +3,15 @@ import path from 'node:path';
 import type { E2EEnvironment } from './env';
 import type { PersonaKey } from './personas';
 
+const ONBOARDING_STORAGE_KEY = 'mechi_onboarding_seen_v1';
+
 type StorageState = {
   cookies: Array<{
     name: string;
     value: string;
-    url: string;
+    domain: string;
+    path: string;
+    expires: number;
     httpOnly: boolean;
     sameSite: 'Lax';
     secure: boolean;
@@ -36,6 +40,10 @@ function buildOriginState(origin: string, user: Record<string, unknown>) {
         name: 'mechi_user',
         value: JSON.stringify(user),
       },
+      {
+        name: ONBOARDING_STORAGE_KEY,
+        value: 'true',
+      },
     ],
   };
 }
@@ -52,15 +60,20 @@ export function buildAuthenticatedStorageState(params: {
   token: string;
   user: Record<string, unknown>;
 }): StorageState {
-  const secureCookie = params.environment.baseURL.startsWith('https://');
-  const cookies = [params.environment.baseURL, params.environment.adminBaseURL].map((url) => ({
-    name: 'auth_token',
-    value: params.token,
-    url,
-    httpOnly: true,
-    sameSite: 'Lax' as const,
-    secure: secureCookie,
-  }));
+  const cookies = [params.environment.baseURL, params.environment.adminBaseURL].map((url) => {
+    const parsedUrl = new URL(url);
+
+    return {
+      name: 'auth_token',
+      value: params.token,
+      domain: parsedUrl.hostname,
+      path: '/',
+      expires: -1,
+      httpOnly: true,
+      sameSite: 'Lax' as const,
+      secure: parsedUrl.protocol === 'https:',
+    };
+  });
 
   return {
     cookies,

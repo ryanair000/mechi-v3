@@ -658,6 +658,54 @@ export const manualTestSections = [
           makeAdminLink('/admin/tournaments', 'Admin tournaments'),
         ],
       },
+      {
+        id: 'GROUP-07',
+        title: 'Elite or admin streaming flow can go live, show LIVE badges, and expose secure viewing.',
+        account: 'Elite player or Admin plus signed-in viewer',
+        timing: 'Run last',
+        instructions: [
+          'Open an active tournament as an Elite organizer, Elite participant, or admin and use the Go Live flow to create the stream.',
+          'Copy the returned RTMPS URL and stream key into OBS or Larix, start streaming, and watch the tournament card, detail page, and /t/[slug]/live page update.',
+          'Open the live page from a second signed-in account and confirm the player loads for authenticated users only.',
+        ],
+        passIf: [
+          'The tournament list and detail surfaces show a LIVE state once Mux marks the stream active.',
+          'Signed-in viewers can watch the stream on /t/[slug]/live while signed-out users are redirected to login.',
+          'The streamer can stop the stream cleanly and the page falls back to ended or replay state after webhook processing.',
+        ],
+        watchFor: [
+          'Brief encoder disconnects under the reconnect window should not mark the stream as ended.',
+          'Token generation must stay server-side and no private Mux key should ever appear in network payloads or browser bundles.',
+        ],
+        links: [
+          makeAppLink('/tournaments', 'Tournament list'),
+          makeAppLink('/dashboard', 'Dashboard'),
+        ],
+      },
+      {
+        id: 'GROUP-08',
+        title: 'Mux recording and reward webhook behavior completes after a real live session.',
+        account: 'Elite streamer, signed-in viewer, Admin',
+        timing: 'Run after a successful live session',
+        instructions: [
+          'Keep the stream live for more than ten minutes, send at least one viewer heartbeat by watching from a signed-in account, then stop the stream.',
+          'Wait for Mux to emit the idle and live_stream_completed events, then refresh the streamer and viewer surfaces.',
+          'Check rewards, replay availability, and any operational logs or database traces you use during launch verification.',
+        ],
+        passIf: [
+          'Viewer RP accrues in 10-minute blocks without exceeding the 20 RP daily cap across streams.',
+          'The streamer receives the go-live bonus once for a qualifying session longer than ten minutes.',
+          'The replay becomes available on the live page after the finalized recording webhook arrives.',
+        ],
+        watchFor: [
+          'Do not rely on the disconnected event alone to mark the stream ended.',
+          'Webhook retries must stay idempotent and should not duplicate RP awards or overwrite a finalized replay incorrectly.',
+        ],
+        links: [
+          makeAppLink('/rewards', 'Rewards'),
+          makeAdminLink('/admin/logs', 'Admin logs'),
+        ],
+      },
     ],
   },
   {

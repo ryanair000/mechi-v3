@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { use, useEffect, useMemo, useState } from 'react';
+import { use, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
 import { Eye, EyeOff, Loader2, Mail } from 'lucide-react';
@@ -12,36 +12,73 @@ import { isPrimaryAdminHost } from '@/lib/admin-access';
 import { getRegisterPath, getSafeNextPath, withQuery } from '@/lib/navigation';
 
 type LoginSearchParams = Promise<{ [key: string]: string | string[] | undefined }>;
-type LoginMethod = 'phone' | 'username' | 'email';
+type IdentifierKind = 'phone' | 'username' | 'email';
 
-const LOGIN_METHODS: Array<{
-  key: LoginMethod;
-  label: string;
-  placeholder: string;
-  helper: string;
-}> = [
+const DEFAULT_IDENTIFIER_META = {
+  badge: 'Auto-detect on',
+  placeholder: '0712 345 678, GameKing254, or you@example.com',
+  helper:
+    'Type whichever sign-in detail you remember best. Mechi will work out the right match.',
+  inputMode: undefined,
+  autoComplete: 'username',
+  type: 'text' as const,
+};
+
+const IDENTIFIER_META: Record<
+  IdentifierKind,
   {
-    key: 'phone',
-    label: 'Phone number',
+    badge: string;
+    placeholder: string;
+    helper: string;
+    inputMode?: 'tel' | 'email';
+    autoComplete: string;
+    type: 'text' | 'email';
+  }
+> = {
+  phone: {
+    badge: 'Phone number',
     placeholder: '0712 345 678',
-    helper: 'Use the phone number on your Mechi profile.',
+    helper: 'We will use the phone number already saved on your Mechi profile.',
+    inputMode: 'tel',
+    autoComplete: 'username',
+    type: 'text',
   },
-  {
-    key: 'username',
-    label: 'Username',
+  username: {
+    badge: 'Username',
     placeholder: 'GameKing254',
-    helper: 'Use the username you registered with.',
+    helper: 'Use the username other players see on your profile and match history.',
+    autoComplete: 'username',
+    type: 'text',
   },
-  {
-    key: 'email',
-    label: 'Email',
-    placeholder: 'you@mail.com',
-    helper: 'Use your email with a password or request a magic link.',
+  email: {
+    badge: 'Email',
+    placeholder: 'you@example.com',
+    helper: 'Email works with your password, and it also unlocks magic link sign-in.',
+    inputMode: 'email',
+    autoComplete: 'email',
+    type: 'email',
   },
-];
+};
 
 function isValidEmail(value: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+}
+
+function detectIdentifierKind(value: string): IdentifierKind | null {
+  const trimmedValue = value.trim();
+  if (!trimmedValue) {
+    return null;
+  }
+
+  if (trimmedValue.includes('@')) {
+    return 'email';
+  }
+
+  if (/^[+\d][\d\s\-()]{7,}$/.test(trimmedValue)) {
+    return 'phone';
+  }
+
+  return 'username';
 }
 
 export default function LoginPage({ searchParams }: { searchParams: LoginSearchParams }) {
@@ -64,17 +101,15 @@ export default function LoginPage({ searchParams }: { searchParams: LoginSearchP
   const forgotPasswordHref = withQuery('/forgot-password', {
     next: rawNext ? nextPath : null,
   });
-  const [loginMethod, setLoginMethod] = useState<LoginMethod>('phone');
-  const methodMeta = useMemo(
-    () => LOGIN_METHODS.find((item) => item.key === loginMethod) ?? LOGIN_METHODS[0],
-    [loginMethod]
-  );
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [sendingMagicLink, setSendingMagicLink] = useState(false);
   const [feedback, setFeedback] = useState<ActionFeedbackState | null>(null);
+  const identifierKind = detectIdentifierKind(identifier);
+  const identifierMeta = identifierKind ? IDENTIFIER_META[identifierKind] : DEFAULT_IDENTIFIER_META;
+  const canUseMagicLink = identifierKind === 'email' && isValidEmail(identifier.trim());
 
   useEffect(() => {
     if (!authLoading && user) {
@@ -82,18 +117,15 @@ export default function LoginPage({ searchParams }: { searchParams: LoginSearchP
     }
   }, [authLoading, nextPath, router, user]);
 
-  useEffect(() => {
-    setFeedback(null);
-  }, [loginMethod]);
-
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
     if (!identifier.trim() || !password) {
-      toast.error('Enter your sign-in details and password');
+      toast.error('Enter your sign-in detail and password');
       setFeedback({
         tone: 'error',
         title: 'Your sign-in details are incomplete.',
-        detail: 'Pick a method, enter the matching detail, then add your password.',
+        detail:
+          'Add the phone number, username, or email you remember best, then enter your password.',
       });
       return;
     }
@@ -112,7 +144,7 @@ export default function LoginPage({ searchParams }: { searchParams: LoginSearchP
         body: JSON.stringify({
           identifier: identifier.trim(),
           password,
-          login_method: loginMethod,
+          login_method: 'auto',
           redirect_to: nextPath,
         }),
       });
@@ -155,7 +187,7 @@ export default function LoginPage({ searchParams }: { searchParams: LoginSearchP
       setFeedback({
         tone: 'error',
         title: 'A valid email is required for magic link sign-in.',
-        detail: 'Switch to Email, enter your address, then request the link again.',
+        detail: 'Use your email, then request the link again.',
       });
       return;
     }
@@ -206,73 +238,80 @@ export default function LoginPage({ searchParams }: { searchParams: LoginSearchP
   return (
     <FullScreenSignup
       title="Sign back in."
-      subtitle="Choose phone number, username, or email, then get back to your queues, matches, and progress."
-      sideTitle="Back to the climb."
-      sideDescription="Your profile, match history, and active setup are still waiting for you."
+      subtitle="Use the detail you remember best. Mechi will detect whether it is your phone number, username, or email."
+      sideTitle="Fast route back in."
+      sideDescription="Password sign-in works across every account, and email can also unlock a magic link when you need it."
       sidePoints={[
-        'Phone, username, or email sign-in',
-        'Password sign-in plus email magic links',
-        'Reset your password from your inbox',
+        'One sign-in field for phone, username, or email',
+        'Password sign-in plus optional email magic links',
+        'Reset your password from your inbox in one step',
       ]}
     >
-      <div className="card p-4 sm:p-6">
-        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--text-soft)]">
-          Choose sign-in method
-        </p>
-        <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">
-          You can log in with your phone number, username, or email. Pick one option first.
-        </p>
-
-        <div className="mt-4 grid grid-cols-3 gap-2">
-          {LOGIN_METHODS.map((method) => {
-            const active = method.key === loginMethod;
-            return (
-              <button
-                key={method.key}
-                type="button"
-                onClick={() => setLoginMethod(method.key)}
-                className={`min-h-11 rounded-lg border px-3 py-2 text-sm font-semibold transition-all ${
-                  active
-                    ? 'border-[rgba(50,224,196,0.28)] bg-[rgba(50,224,196,0.14)] text-[var(--accent-secondary-text)]'
-                    : 'border-[var(--border-color)] bg-[var(--surface-elevated)] text-[var(--text-secondary)]'
-                }`}
-              >
-                {method.label}
-              </button>
-            );
-          })}
+      <div className="space-y-5">
+        <div className="subtle-card p-4 sm:p-5">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <p className="section-title !mb-0">One sign-in field</p>
+              <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">
+                Start with the one detail you remember most. You do not need to choose a sign-in
+                method first.
+              </p>
+            </div>
+            <span className="rounded-full border border-[rgba(50,224,196,0.2)] bg-[rgba(50,224,196,0.08)] px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--accent-secondary-text)]">
+              {identifierKind
+                ? `Using ${IDENTIFIER_META[identifierKind].badge}`
+                : DEFAULT_IDENTIFIER_META.badge}
+            </span>
+          </div>
         </div>
 
-        <form onSubmit={handleSubmit} action="/api/auth/login" method="post" className="mt-5 space-y-4">
+        <form onSubmit={handleSubmit} action="/api/auth/login" method="post" className="space-y-4">
           <input type="hidden" name="redirect_to" value={nextPath} />
-          <input type="hidden" name="login_method" value={loginMethod} />
+          <input type="hidden" name="login_method" value="auto" />
 
           <div>
-            <label className="label">{methodMeta.label}</label>
+            <div className="flex items-center justify-between gap-3">
+              <label htmlFor="login-identifier" className="label mb-0">
+                Phone number, username, or email
+              </label>
+              {identifierKind ? (
+                <span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--text-soft)]">
+                  {IDENTIFIER_META[identifierKind].badge}
+                </span>
+              ) : null}
+            </div>
             <input
+              id="login-identifier"
               name="identifier"
-              type={loginMethod === 'email' ? 'email' : loginMethod === 'phone' ? 'tel' : 'text'}
+              type={identifierMeta.type}
               value={identifier}
               onChange={(event) => setIdentifier(event.target.value)}
-              placeholder={methodMeta.placeholder}
-              className="input"
-              autoComplete={loginMethod === 'email' ? 'email' : 'username'}
+              placeholder={identifierMeta.placeholder}
+              className="input mt-2"
+              autoComplete={identifierMeta.autoComplete}
               autoCapitalize="none"
               spellCheck={false}
-              inputMode={loginMethod === 'phone' ? 'tel' : undefined}
+              inputMode={identifierMeta.inputMode}
+              aria-describedby="login-identifier-help"
+              autoFocus
             />
-            <p className="mt-2 text-xs text-[var(--text-soft)]">{methodMeta.helper}</p>
+            <p id="login-identifier-help" className="mt-2 text-xs text-[var(--text-soft)]">
+              {identifierMeta.helper}
+            </p>
           </div>
 
           <div>
             <div className="flex items-center justify-between gap-3">
-              <label className="label mb-0">Password</label>
+              <label htmlFor="login-password" className="label mb-0">
+                Password
+              </label>
               <Link href={forgotPasswordHref} className="brand-link-coral text-xs font-semibold uppercase tracking-[0.12em]">
                 Forgot password?
               </Link>
             </div>
             <div className="relative mt-2">
               <input
+                id="login-password"
                 name="password"
                 type={showPassword ? 'text' : 'password'}
                 value={password}
@@ -305,7 +344,7 @@ export default function LoginPage({ searchParams }: { searchParams: LoginSearchP
             )}
           </button>
 
-          {loginMethod === 'email' ? (
+          {canUseMagicLink ? (
             <button
               type="button"
               onClick={() => void handleMagicLinkRequest()}

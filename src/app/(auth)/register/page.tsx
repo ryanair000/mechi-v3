@@ -40,6 +40,81 @@ type Step = 1 | 2 | 3 | 4;
 const STARTER_TRIAL_GAME_LIMIT = PLANS.pro.maxGames;
 const MIN_PASSWORD_LENGTH = 9;
 type RegisterSearchParams = Promise<{ [key: string]: string | string[] | undefined }>;
+const STEP_LABELS = ['Account', 'Security', 'Games', 'IDs'] as const;
+
+const STEP_META: Record<
+  Step,
+  {
+    title: string;
+    subtitle: string;
+    sideTitle: string;
+    sideDescription: string;
+    sidePoints: string[];
+    progressSummary: string;
+    continueLabel: string;
+  }
+> = {
+  1: {
+    title: 'Create your account.',
+    subtitle:
+      'Start with the details other players will recognise and the contacts you will use to sign in or recover the account.',
+    sideTitle: 'Keep the start simple.',
+    sideDescription:
+      'The first step is only about the essentials so the rest of setup feels lighter.',
+    sidePoints: [
+      'Choose a username players can recognise quickly',
+      'Use the phone number you want for sign-in alerts',
+      'Add an email you can access for recovery and updates',
+    ],
+    progressSummary: 'Set your public identity and recovery contacts first.',
+    continueLabel: 'Continue to security',
+  },
+  2: {
+    title: 'Lock in your location and password.',
+    subtitle:
+      'Tell Mechi where you play from, choose a strong password, and decide if WhatsApp alerts should follow this account.',
+    sideTitle: 'Security without friction.',
+    sideDescription:
+      'This step keeps sign-in safer and helps Mechi place you in the right local lane.',
+    sidePoints: [
+      'Choose your country and region for cleaner local matchmaking',
+      'Use 9 or more characters for a stronger password',
+      'WhatsApp alerts stay optional and can mirror your main phone',
+    ],
+    progressSummary: 'Protect the account and set the right local matchmaking lane.',
+    continueLabel: 'Continue to games',
+  },
+  3: {
+    title: 'Choose the games you want first.',
+    subtitle:
+      'Pick the titles you want Mechi to organise for your starter Pro trial. You can keep it focused and expand later.',
+    sideTitle: 'Start with your main lanes.',
+    sideDescription:
+      'Focused setup is faster to finish and gives you cleaner queues on day one.',
+    sidePoints: [
+      `Pick up to ${STARTER_TRIAL_GAME_LIMIT} games for your starter setup`,
+      'Keep the list to the titles you actually want to queue first',
+      'Every selected game will ask for one matching platform ID next',
+    ],
+    progressSummary: 'Choose up to three games for the first version of your profile.',
+    continueLabel: 'Continue to IDs',
+  },
+  4: {
+    title: 'Add the IDs opponents will need.',
+    subtitle:
+      'Finish the setup by matching each selected game to the platform you use and the handle other players should search for.',
+    sideTitle: 'One clean finish.',
+    sideDescription:
+      'This is the last step before your account goes live and your Pro trial starts.',
+    sidePoints: [
+      'Pick the platform you actually use for each selected game',
+      'Add the exact handle opponents will search for',
+      'Your 1-month Pro trial starts as soon as you create the account',
+    ],
+    progressSummary: 'Match every chosen game to the right platform and player ID.',
+    continueLabel: 'Create Account',
+  },
+};
 
 interface FormData {
   username: string;
@@ -95,6 +170,7 @@ export default function RegisterPage({ searchParams }: { searchParams: RegisterS
         : null;
   const nextPath = getSafeNextPath(rawNext);
   const loginHref = getLoginPath(rawNext ? nextPath : null);
+  const currentStepMeta = STEP_META[step];
 
   useEffect(() => {
     if (!normalizedInviteCode) {
@@ -318,462 +394,582 @@ export default function RegisterPage({ searchParams }: { searchParams: RegisterS
     }
   };
 
-  const STEP_LABELS = ['Basics', 'Details', 'Games', 'Platforms'];
-
   return (
     <FullScreenSignup
-      title=""
-      subtitle=""
-      sideTitle="Join Mechi"
-      sideDescription=""
-      sidePoints={[
-        'Start with a 1-month Pro trial',
-        `Save up to ${STARTER_TRIAL_GAME_LIMIT} main games`,
-        'Add only the IDs those games need',
-      ]}
+      title={currentStepMeta.title}
+      subtitle={currentStepMeta.subtitle}
+      sideTitle={currentStepMeta.sideTitle}
+      sideDescription={currentStepMeta.sideDescription}
+      sidePoints={currentStepMeta.sidePoints}
     >
-      <div className="card p-4 sm:p-6">
-            <div className="mb-5 grid grid-cols-4 gap-1.5 sm:mb-6 sm:gap-2">
-              {([1, 2, 3, 4] as Step[]).map((currentStep) => (
+      <div className="space-y-5">
+        <div className="subtle-card p-4 sm:p-5">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <p className="section-title !mb-0">Step {step} of 4</p>
+              <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">
+                {currentStepMeta.progressSummary}
+              </p>
+            </div>
+            <span className="rounded-full border border-[rgba(50,224,196,0.2)] bg-[rgba(50,224,196,0.08)] px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--accent-secondary-text)]">
+              {Math.round((step / 4) * 100)}% complete
+            </span>
+          </div>
+
+          <div className="mt-4 h-2 overflow-hidden rounded-full bg-[var(--surface-soft)]">
+            <div
+              className="h-full rounded-full bg-[var(--brand-coral)] transition-all duration-300"
+              style={{ width: `${(step / 4) * 100}%` }}
+            />
+          </div>
+
+          <div className="mt-4 grid grid-cols-4 gap-2">
+            {([1, 2, 3, 4] as Step[]).map((currentStep) => {
+              const isActive = step === currentStep;
+              const isComplete = step > currentStep;
+
+              return (
                 <div
                   key={currentStep}
-                  className="rounded-lg border border-[var(--border-color)] bg-[var(--surface-soft)] px-2 py-2 sm:rounded-xl sm:px-3 sm:py-2.5"
+                  className={`rounded-xl border px-3 py-3 transition-all ${
+                    isActive
+                      ? 'border-[rgba(50,224,196,0.24)] bg-[rgba(50,224,196,0.08)]'
+                      : isComplete
+                        ? 'border-[rgba(255,107,107,0.18)] bg-[rgba(255,107,107,0.06)]'
+                        : 'border-[var(--border-color)] bg-[var(--surface-soft)]'
+                  }`}
                 >
                   <div
-                    className={`flex h-6 w-6 items-center justify-center rounded-full text-[11px] font-semibold transition-all sm:h-7 sm:w-7 ${
-                      step >= currentStep
+                    className={`flex h-7 w-7 items-center justify-center rounded-full text-[11px] font-semibold transition-all ${
+                      isActive || isComplete
                         ? 'bg-[var(--brand-coral)] text-[var(--brand-night)]'
                         : 'bg-[rgba(95,109,130,0.12)] text-[var(--text-soft)]'
                     }`}
                   >
-                    {step > currentStep ? <Check size={12} /> : currentStep}
+                    {isComplete ? <Check size={12} /> : `0${currentStep}`}
                   </div>
                   <span
-                    className={`mt-2 block text-[8.5px] font-semibold uppercase leading-tight tracking-[0.08em] transition-colors sm:text-[11px] sm:tracking-[0.12em] ${
-                      step === currentStep
-                        ? 'text-[var(--text-primary)]'
-                        : 'text-[var(--text-soft)]'
+                    className={`mt-2 block text-[10px] font-semibold uppercase tracking-[0.12em] transition-colors sm:text-[11px] ${
+                      isActive ? 'text-[var(--text-primary)]' : 'text-[var(--text-soft)]'
                     }`}
                   >
                     {STEP_LABELS[currentStep - 1]}
                   </span>
                 </div>
-              ))}
+              );
+            })}
+          </div>
+        </div>
+
+        {invitePreview ? (
+          <div className="rounded-xl border border-[rgba(50,224,196,0.2)] bg-[rgba(50,224,196,0.08)] px-4 py-3">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--accent-secondary-text)]">
+              Invite Active
+            </p>
+            <p className="mt-1 text-sm text-[var(--text-primary)]">
+              Invited by <span className="font-semibold">{invitePreview.username}</span>
+            </p>
+          </div>
+        ) : null}
+
+        {step === 1 && (
+          <div className="space-y-5">
+            <div>
+              <label htmlFor="register-username" className="label">
+                Username
+              </label>
+              <input
+                id="register-username"
+                type="text"
+                value={formData.username}
+                onChange={(e) => setFormData({ ...formData, username: e.target.value })}
+                placeholder="GameKing254"
+                className="input"
+                minLength={3}
+                maxLength={30}
+                autoComplete="username"
+                autoCapitalize="none"
+                spellCheck={false}
+                autoFocus
+              />
+              <p className="mt-2 text-xs text-[var(--text-soft)]">
+                This is the name players will notice first in ladders, queues, and match alerts.
+              </p>
             </div>
 
-            {invitePreview ? (
-              <div className="mb-5 rounded-xl border border-[rgba(50,224,196,0.2)] bg-[rgba(50,224,196,0.08)] px-4 py-3">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--accent-secondary-text)]">
-                  Invite Active
-                </p>
-                <p className="mt-1 text-sm text-[var(--text-primary)]">
-                  Invited by <span className="font-semibold">{invitePreview.username}</span>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div>
+                <label htmlFor="register-phone" className="label">
+                  Phone Number
+                </label>
+                <input
+                  id="register-phone"
+                  type="tel"
+                  value={formData.phone}
+                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                  placeholder="0712 345 678"
+                  className="input"
+                  inputMode="tel"
+                  autoComplete="tel"
+                  onBlur={() =>
+                    setFormData((current) => ({
+                      ...current,
+                      phone: normalizePhoneNumber(current.phone, current.country || null),
+                    }))
+                  }
+                />
+                <p className="mt-2 text-xs text-[var(--text-soft)]">
+                  Use the number you want for sign-in and important account alerts.
                 </p>
               </div>
-            ) : null}
 
-            {step === 1 && (
               <div>
-                <p className="section-title">Step 1</p>
-                <div className="mt-4 space-y-4">
-                  <div>
-                    <label className="label">Username</label>
-                    <input
-                      type="text"
-                      value={formData.username}
-                      onChange={(e) => setFormData({ ...formData, username: e.target.value })}
-                      placeholder="GameKing254"
-                      className="input"
-                      minLength={3}
-                      maxLength={30}
-                    />
-                  </div>
-                  <div>
-                    <label className="label">Phone Number</label>
-                    <input
-                      type="tel"
-                      value={formData.phone}
-                      onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                      placeholder="0712 345 678"
-                      className="input"
-                      inputMode="tel"
-                      onBlur={() =>
-                        setFormData((current) => ({
-                          ...current,
-                          phone: normalizePhoneNumber(current.phone, current.country || null),
-                        }))
-                      }
-                    />
-                  </div>
-                  <div>
-                    <label className="label">Email</label>
-                    <input
-                      type="email"
-                      value={formData.email}
-                      onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                      placeholder="you@example.com"
-                      className="input"
-                      required
-                    />
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => step1Valid && setStep(2)}
-                    disabled={!step1Valid}
-                    className="btn-primary mt-2 w-full"
+                <label htmlFor="register-email" className="label">
+                  Email
+                </label>
+                <input
+                  id="register-email"
+                  type="email"
+                  value={formData.email}
+                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  placeholder="you@example.com"
+                  className="input"
+                  required
+                  autoComplete="email"
+                  autoCapitalize="none"
+                  spellCheck={false}
+                />
+                <p className="mt-2 text-xs text-[var(--text-soft)]">
+                  We will use this for receipts, password recovery, and optional email sign-in links.
+                </p>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => step1Valid && setStep(2)}
+              disabled={!step1Valid}
+              className="btn-primary w-full"
+            >
+              {STEP_META[1].continueLabel} <ChevronRight size={14} />
+            </button>
+          </div>
+        )}
+
+        {step === 2 && (
+          <div>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div>
+                <label htmlFor="register-country" className="label">
+                  Country
+                </label>
+                <select
+                  id="register-country"
+                  value={formData.country}
+                  onChange={(e) =>
+                    setFormData((current) => ({
+                      ...current,
+                      country: e.target.value as CountryKey | '',
+                      region: '',
+                    }))
+                  }
+                  className="input"
+                >
+                  <option value="">Select country</option>
+                  {COUNTRY_OPTIONS.map((option) => (
+                    <option key={option.key} value={option.key}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label htmlFor="register-region" className="label">
+                  Region
+                </label>
+                <select
+                  id="register-region"
+                  value={formData.region}
+                  onChange={(e) => setFormData({ ...formData, region: e.target.value })}
+                  className="input"
+                  disabled={!formData.country}
+                >
+                  <option value="">
+                    {formData.country ? 'Select region' : 'Choose country first'}
+                  </option>
+                  {availableRegions.map((region) => (
+                    <option key={region} value={region}>
+                      {region}
+                    </option>
+                  ))}
+                </select>
+                <p className="mt-2 text-xs text-[var(--text-soft)]">
+                  Pick where you mainly play so Mechi can place you in the right local lane.
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-4">
+              <label htmlFor="register-password" className="label">
+                Password
+              </label>
+              <div className="relative">
+                <input
+                  id="register-password"
+                  type={showPassword ? 'text' : 'password'}
+                  value={formData.password}
+                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                  placeholder="Use at least 9 characters"
+                  className="input pr-12"
+                  minLength={MIN_PASSWORD_LENGTH}
+                  autoComplete="new-password"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-1 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-lg text-[var(--text-soft)] transition-colors hover:text-[var(--text-primary)]"
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                >
+                  {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
+              </div>
+              <p
+                className={`mt-2 text-xs ${
+                  formData.password.length > 0 && formData.password.length < MIN_PASSWORD_LENGTH
+                    ? 'text-[var(--brand-coral)]'
+                    : 'text-[var(--text-soft)]'
+                }`}
+              >
+                Use 9 or more characters to keep the account secure.
+              </p>
+            </div>
+
+            <div className="subtle-card mt-4 p-4">
+              <label className="flex cursor-pointer items-start gap-3">
+                <div className="relative mt-0.5 flex-shrink-0">
+                  <input
+                    type="checkbox"
+                    checked={formData.whatsapp_notifications}
+                    onChange={(e) =>
+                      setFormData((current) => ({
+                        ...current,
+                        whatsapp_notifications: e.target.checked,
+                        whatsapp_number: e.target.checked
+                          ? current.whatsapp_number || current.phone
+                          : '',
+                      }))
+                    }
+                    className="sr-only"
+                  />
+                  <div
+                    className={`flex h-6 w-6 items-center justify-center rounded-md border-2 transition-colors ${
+                      formData.whatsapp_notifications
+                        ? 'border-[var(--brand-teal)] bg-[var(--brand-teal)]'
+                        : 'border-[var(--border-strong)] bg-transparent'
+                    }`}
                   >
-                    Next <ChevronRight size={14} />
-                  </button>
+                    {formData.whatsapp_notifications && <Check size={11} className="text-white" />}
+                  </div>
                 </div>
-              </div>
-            )}
+                <div>
+                  <p className="text-sm font-medium text-[var(--text-primary)]">
+                    WhatsApp match alerts
+                  </p>
+                  <p className="mt-0.5 text-xs text-[var(--text-soft)]">
+                    Get notified when a match is found or a result is confirmed.
+                  </p>
+                </div>
+              </label>
 
-            {step === 2 && (
-              <div>
-                <p className="section-title">Step 2</p>
-                <div className="mt-4 space-y-4">
-                  <div>
-                    <label className="label">Country</label>
-                    <select
-                      value={formData.country}
-                      onChange={(e) =>
-                        setFormData((current) => ({
-                          ...current,
-                          country: e.target.value as CountryKey | '',
-                          region: '',
-                        }))
-                      }
-                      className="input"
-                    >
-                      <option value="">Select country</option>
-                      {COUNTRY_OPTIONS.map((option) => (
-                        <option key={option.key} value={option.key}>
-                          {option.label}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="label">Region</label>
-                    <select
-                      value={formData.region}
-                      onChange={(e) => setFormData({ ...formData, region: e.target.value })}
-                      className="input"
-                      disabled={!formData.country}
-                    >
-                      <option value="">
-                        {formData.country ? 'Select region' : 'Choose country first'}
-                      </option>
-                      {availableRegions.map((region) => (
-                        <option key={region} value={region}>
-                          {region}
-                        </option>
-                      ))}
-                    </select>
-                    <p className="mt-2 text-xs text-[var(--text-soft)]">
-                      Pick where you mainly play from so Mechi can place you in the right local lane.
-                    </p>
-                  </div>
-                  <div>
-                    <label className="label">Password</label>
-                    <div className="relative">
-                      <input
-                        type={showPassword ? 'text' : 'password'}
-                        value={formData.password}
-                        onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                        placeholder="More than 8 characters"
-                        className="input pr-12"
-                        minLength={MIN_PASSWORD_LENGTH}
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowPassword(!showPassword)}
-                        className="absolute right-1 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-lg text-[var(--text-soft)] transition-colors hover:text-[var(--text-primary)]"
-                        aria-label={showPassword ? 'Hide password' : 'Show password'}
-                      >
-                        {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-                      </button>
+              {formData.whatsapp_notifications && (
+                <div className="mt-3 border-t border-[var(--border-color)] pt-3">
+                  <label htmlFor="register-whatsapp" className="label">
+                    WhatsApp Number
+                  </label>
+                  <input
+                    id="register-whatsapp"
+                    type="tel"
+                    value={formData.whatsapp_number}
+                    onChange={(e) => setFormData({ ...formData, whatsapp_number: e.target.value })}
+                    placeholder="0712 345 678"
+                    className="input"
+                    inputMode="tel"
+                    autoComplete="tel"
+                  />
+                </div>
+              )}
+            </div>
+
+            <div className="mt-5 flex gap-3">
+              <button type="button" onClick={() => setStep(1)} className="btn-ghost flex-1">
+                <ChevronLeft size={14} /> Back
+              </button>
+              <button
+                type="button"
+                onClick={() => step2Valid && setStep(3)}
+                disabled={!step2Valid}
+                className="btn-primary flex-1"
+              >
+                {STEP_META[2].continueLabel} <ChevronRight size={14} />
+              </button>
+            </div>
+          </div>
+        )}
+
+        {step === 3 && (
+          <div>
+            <div className="subtle-card mb-5 p-4">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <p className="section-title !mb-0">
+                    Pick up to {STARTER_TRIAL_GAME_LIMIT} games
+                  </p>
+                  <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">
+                    Start with the titles you want Mechi to organise first. You can keep the setup
+                    focused now and refine it later.
+                  </p>
+                </div>
+                <span className="rounded-full border border-[var(--border-color)] bg-[var(--surface-strong)] px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--text-secondary)]">
+                  {formData.selected_games.length}/{STARTER_TRIAL_GAME_LIMIT} selected
+                </span>
+              </div>
+            </div>
+
+            <div className="mb-5 grid max-h-none grid-cols-1 gap-2.5 sm:max-h-72 sm:grid-cols-2 sm:overflow-y-auto">
+              {selectableGames.map((gameKey) => {
+                const game = GAMES[gameKey];
+                const isSelected = formData.selected_games.includes(gameKey);
+
+                return (
+                  <button
+                    key={gameKey}
+                    type="button"
+                    onClick={() => toggleGame(gameKey)}
+                    className={`flex min-h-16 items-center gap-3 rounded-lg border p-3 text-left transition-all ${
+                      isSelected
+                        ? 'surface-action'
+                        : 'border-[var(--border-color)] bg-[var(--surface-strong)] hover:bg-[var(--surface)]'
+                    }`}
+                  >
+                    <div className="h-10 w-10 flex-shrink-0 overflow-hidden rounded-lg border border-[var(--border-color)] bg-[var(--surface)]">
+                      <GameCover gameKey={gameKey} variant="header" className="h-full w-full" />
                     </div>
-                    <p
-                      className={`mt-2 text-xs ${
-                        formData.password.length > 0 && formData.password.length < MIN_PASSWORD_LENGTH
-                          ? 'text-[var(--brand-coral)]'
-                          : 'text-[var(--text-soft)]'
+                    <div className="min-w-0 flex-1">
+                      <span
+                        className="block whitespace-normal text-sm font-medium leading-snug text-[var(--text-primary)]"
+                        title={game.label}
+                      >
+                        {game.label}
+                      </span>
+                      <div className="mt-1 flex gap-1">
+                        {game.platforms.map((platform) => (
+                          <PlatformLogo key={platform} platform={platform} size={12} />
+                        ))}
+                      </div>
+                    </div>
+                    <div
+                      className={`flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full border-2 transition-colors ${
+                        isSelected
+                          ? 'border-[var(--brand-coral)] bg-[var(--brand-coral)]'
+                          : 'border-[rgba(95,109,130,0.24)]'
                       }`}
                     >
-                      Password must be more than 8 characters.
-                    </p>
-                  </div>
-                  <div className="rounded-xl border border-[var(--border-color)] bg-[var(--surface-elevated)] p-4">
-                    <label className="flex cursor-pointer items-start gap-3">
-                      <div className="relative mt-0.5 flex-shrink-0">
-                        <input
-                          type="checkbox"
-                          checked={formData.whatsapp_notifications}
-                          onChange={(e) =>
-                            setFormData((current) => ({
-                              ...current,
-                              whatsapp_notifications: e.target.checked,
-                              whatsapp_number: e.target.checked
-                                ? current.whatsapp_number || current.phone
-                                : '',
-                            }))
-                          }
-                          className="sr-only"
-                        />
-                        <div
-                          className={`flex h-6 w-6 items-center justify-center rounded-md border-2 transition-colors ${
-                            formData.whatsapp_notifications
-                              ? 'border-[var(--brand-teal)] bg-[var(--brand-teal)]'
-                              : 'border-[var(--border-strong)] bg-transparent'
-                          }`}
-                        >
-                          {formData.whatsapp_notifications && <Check size={11} className="text-white" />}
-                        </div>
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium text-[var(--text-primary)]">
-                          WhatsApp match alerts
-                        </p>
-                        <p className="mt-0.5 text-xs text-[var(--text-soft)]">
-                          Get notified when a match is found or a result is confirmed.
-                        </p>
-                      </div>
-                    </label>
-
-                    {formData.whatsapp_notifications && (
-                      <div className="mt-3 border-t border-[var(--border-color)] pt-3">
-                        <label className="label">WhatsApp Number</label>
-                        <input
-                          type="tel"
-                          value={formData.whatsapp_number}
-                          onChange={(e) => setFormData({ ...formData, whatsapp_number: e.target.value })}
-                          placeholder="0712 345 678"
-                          className="input"
-                          inputMode="tel"
-                        />
-                      </div>
-                    )}
-                  </div>
-                </div>
-                <div className="mt-5 flex gap-3">
-                  <button type="button" onClick={() => setStep(1)} className="btn-ghost flex-1">
-                    <ChevronLeft size={14} /> Back
+                      {isSelected && <Check size={11} className="text-white" />}
+                    </div>
                   </button>
-                  <button
-                    type="button"
-                    onClick={() => step2Valid && setStep(3)}
-                    disabled={!step2Valid}
-                    className="btn-primary flex-1"
-                  >
-                    Next <ChevronRight size={14} />
-                  </button>
-                </div>
-              </div>
-            )}
+                );
+              })}
+            </div>
 
-            {step === 3 && (
-              <div>
-                <p className="section-title">Step 3</p>
-                <h1 className="mb-1 mt-3 text-[1.9rem] font-black text-[var(--text-primary)]">
-                  Select your games
-                </h1>
-                <p className="mb-5 text-sm leading-6 text-[var(--text-secondary)]">
-                  Pick the games you want Mechi to organize for you during your Pro trial.
-                </p>
-                <div className="mb-5 grid max-h-none grid-cols-1 gap-2.5 sm:max-h-72 sm:grid-cols-2 sm:overflow-y-auto">
-                  {selectableGames.map((gameKey) => {
-                    const game = GAMES[gameKey];
-                    const isSelected = formData.selected_games.includes(gameKey);
+            <div className="flex gap-3">
+              <button type="button" onClick={() => setStep(2)} className="btn-ghost flex-1">
+                <ChevronLeft size={14} /> Back
+              </button>
+              <button
+                type="button"
+                onClick={() => step3Valid && setStep(4)}
+                disabled={!step3Valid}
+                className="btn-primary flex-1"
+              >
+                {STEP_META[3].continueLabel} <ChevronRight size={14} />
+              </button>
+            </div>
+          </div>
+        )}
 
-                    return (
-                      <button
-                        key={gameKey}
-                        type="button"
-                        onClick={() => toggleGame(gameKey)}
-                        className={`flex min-h-16 items-center gap-3 rounded-lg border p-3 text-left transition-all ${
-                          isSelected
-                            ? 'surface-action'
-                            : 'border-[var(--border-color)] bg-[var(--surface-strong)] hover:bg-[var(--surface)]'
-                        }`}
-                      >
-                        <div className="h-10 w-10 flex-shrink-0 overflow-hidden rounded-lg border border-[var(--border-color)] bg-[var(--surface)]">
+        {step === 4 && (
+          <div>
+            <div className="subtle-card mb-5 p-4">
+              <p className="section-title !mb-0">Add one usable ID per game</p>
+              <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">
+                Pick the exact platform you use, then add the handle opponents should search for
+                there.
+              </p>
+            </div>
+
+            <div className="mb-5 space-y-3">
+              {formData.selected_games.map((gameKey) => {
+                const game = GAMES[gameKey];
+                const selectedPlatform = getConfiguredPlatformForGame(
+                  gameKey,
+                  formData.game_ids,
+                  formData.platforms
+                );
+                const selectedGameId = selectedPlatform
+                  ? getGameIdValue(formData.game_ids, gameKey, selectedPlatform)
+                  : '';
+                const isReady = Boolean(selectedPlatform && selectedGameId.trim());
+
+                return (
+                  <div key={gameKey} className="subtle-card p-4">
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                      <div className="flex items-center gap-3">
+                        <div className="h-12 w-12 overflow-hidden rounded-lg border border-[var(--border-color)] bg-[var(--surface)]">
                           <GameCover gameKey={gameKey} variant="header" className="h-full w-full" />
                         </div>
-                        <div className="min-w-0 flex-1">
-                          <span
-                            className="block whitespace-normal text-sm font-medium leading-snug text-[var(--text-primary)]"
-                            title={game.label}
-                          >
+                        <div>
+                          <p className="text-sm font-semibold text-[var(--text-primary)]">
                             {game.label}
-                          </span>
-                          <div className="mt-1 flex gap-1">
-                            {game.platforms.map((platform) => (
-                              <PlatformLogo key={platform} platform={platform} size={12} />
-                            ))}
-                          </div>
+                          </p>
+                          <p className="mt-1 text-xs text-[var(--text-soft)]">
+                            Choose the platform you actually play on.
+                          </p>
                         </div>
-                        <div
-                          className={`flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full border-2 transition-colors ${
-                            isSelected
-                              ? 'border-[var(--brand-coral)] bg-[var(--brand-coral)]'
-                              : 'border-[rgba(95,109,130,0.24)]'
-                          }`}
-                        >
-                          {isSelected && <Check size={11} className="text-white" />}
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
-                <p className="mb-4 text-center text-xs text-[var(--text-soft)]">
-                  {formData.selected_games.length}/{STARTER_TRIAL_GAME_LIMIT} selected on Pro trial
-                </p>
-                <div className="flex gap-3">
-                  <button type="button" onClick={() => setStep(2)} className="btn-ghost flex-1">
-                    <ChevronLeft size={14} /> Back
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => step3Valid && setStep(4)}
-                    disabled={!step3Valid}
-                    className="btn-primary flex-1"
-                  >
-                    Next <ChevronRight size={14} />
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {step === 4 && (
-              <div>
-                <p className="section-title">Step 4</p>
-                <h1 className="mb-1 mt-3 text-[1.9rem] font-black text-[var(--text-primary)]">
-                  Set platform IDs
-                </h1>
-                <p className="mb-5 text-sm leading-6 text-[var(--text-secondary)]">
-                  Choose a platform for each game, then add the IDs opponents will need.
-                </p>
-                <div className="mb-5 space-y-3">
-                  {formData.selected_games.map((gameKey) => {
-                    const game = GAMES[gameKey];
-                    const selectedPlatform = getConfiguredPlatformForGame(
-                      gameKey,
-                      formData.game_ids,
-                      formData.platforms
-                    );
-
-                    return (
-                      <div
-                        key={gameKey}
-                        className="rounded-xl border border-[var(--border-color)] bg-[var(--surface-strong)] p-3"
-                      >
-                        <div className="mb-3 flex items-center gap-2">
-                          <div className="h-10 w-10 overflow-hidden rounded-lg border border-[var(--border-color)] bg-[var(--surface)]">
-                            <GameCover gameKey={gameKey} variant="header" className="h-full w-full" />
-                          </div>
-                          <p className="text-sm font-semibold text-[var(--text-primary)]">{game.label}</p>
-                        </div>
-                        {game.platforms.length > 1 ? (
-                          <div className="flex flex-wrap gap-2">
-                            {game.platforms.map((platform) => {
-                              const isSelected = selectedPlatform === platform;
-
-                              return (
-                                <button
-                                  key={platform}
-                                  type="button"
-                                  onClick={() => selectPlatformForGame(gameKey, platform)}
-                                  className={`inline-flex min-h-11 items-center gap-2 rounded-lg border px-3 py-2 text-xs font-semibold transition-all ${
-                                    isSelected
-                                      ? 'border-[rgba(50,224,196,0.28)] bg-[rgba(50,224,196,0.14)] text-[var(--accent-secondary-text)]'
-                                      : 'border-[var(--border-color)] bg-[var(--surface)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
-                                  }`}
-                                >
-                                  <PlatformLogo platform={platform} size={16} />
-                                  {PLATFORMS[platform]?.label}
-                                </button>
-                              );
-                            })}
-                          </div>
-                        ) : (
-                          <div className="inline-flex min-h-11 items-center gap-2 rounded-lg border border-[var(--border-color)] bg-[var(--surface)] px-3 py-2 text-xs font-semibold text-[var(--text-secondary)]">
-                            <PlatformLogo platform={game.platforms[0]} size={16} />
-                            {PLATFORMS[game.platforms[0]]?.label}
-                          </div>
-                        )}
                       </div>
-                    );
-                  })}
 
-                  {requiredIdFields.length > 0 && (
-                    <div className="grid grid-cols-1 gap-3 border-t border-[var(--border-color)] pt-3 sm:grid-cols-2">
-                      {requiredIdFields.map((field) => (
-                        <div key={field.key}>
-                          <label className="label">{getGameIdLabel(field.game, field.platform)}</label>
-                          <input
-                            type="text"
-                            value={getGameIdValue(formData.game_ids, field.game, field.platform)}
-                            onChange={(e) =>
-                              setFormData({
-                                ...formData,
-                                game_ids: { ...formData.game_ids, [field.key]: e.target.value },
-                              })
-                            }
-                            placeholder={getGameIdPlaceholder(field.game, field.platform)}
-                            className="input"
-                          />
-                        </div>
-                      ))}
+                      <span
+                        className={`rounded-full px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.12em] ${
+                          isReady
+                            ? 'border border-[rgba(50,224,196,0.24)] bg-[rgba(50,224,196,0.1)] text-[var(--accent-secondary-text)]'
+                            : 'border border-[var(--border-color)] bg-[var(--surface-strong)] text-[var(--text-soft)]'
+                        }`}
+                      >
+                        {isReady ? 'Ready' : 'Needs ID'}
+                      </span>
                     </div>
-                  )}
-                </div>
-                {hasMissingGamePlatform || hasMissingRequiredIds ? (
-                  <p className="mb-4 text-center text-xs text-[var(--text-soft)]">
-                    {hasMissingGamePlatform
-                      ? 'Choose a platform for every selected game.'
-                      : 'Add each game ID to create your account.'}
-                  </p>
-                ) : null}
-                {submitFeedback ? (
-                  <ActionFeedback
-                    tone={submitFeedback.tone}
-                    title={submitFeedback.title}
-                    detail={submitFeedback.detail}
-                    className="mb-4"
-                  />
-                ) : null}
-                <div className="flex gap-3">
-                  <button type="button" onClick={() => setStep(3)} className="btn-ghost flex-1">
-                    <ChevronLeft size={14} /> Back
-                  </button>
-                  <button
-                    onClick={handleSubmit}
-                    disabled={loading || !step4Valid}
-                    className="btn-primary flex-1"
-                  >
-                    {loading ? (
-                      <>
-                        <Loader2 size={14} className="animate-spin" />
-                        Creating...
-                      </>
-                    ) : (
-                      'Create Account'
-                    )}
-                  </button>
-                </div>
-              </div>
-            )}
 
-            <p className="mt-6 text-center text-sm text-[var(--text-soft)]">
-              Already have an account?{' '}
-              <Link
-                href={user ? nextPath : loginHref}
-                className="brand-link-coral inline-flex min-h-11 items-center font-semibold"
+                    <div className="mt-4">
+                      {game.platforms.length > 1 ? (
+                        <div className="flex flex-wrap gap-2">
+                          {game.platforms.map((platform) => {
+                            const isSelected = selectedPlatform === platform;
+
+                            return (
+                              <button
+                                key={platform}
+                                type="button"
+                                onClick={() => selectPlatformForGame(gameKey, platform)}
+                                className={`inline-flex min-h-11 items-center gap-2 rounded-lg border px-3 py-2 text-xs font-semibold transition-all ${
+                                  isSelected
+                                    ? 'border-[rgba(50,224,196,0.28)] bg-[rgba(50,224,196,0.14)] text-[var(--accent-secondary-text)]'
+                                    : 'border-[var(--border-color)] bg-[var(--surface)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
+                                }`}
+                              >
+                                <PlatformLogo platform={platform} size={16} />
+                                {PLATFORMS[platform]?.label}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      ) : (
+                        <div className="inline-flex min-h-11 items-center gap-2 rounded-lg border border-[var(--border-color)] bg-[var(--surface)] px-3 py-2 text-xs font-semibold text-[var(--text-secondary)]">
+                          <PlatformLogo platform={game.platforms[0]} size={16} />
+                          {PLATFORMS[game.platforms[0]]?.label}
+                        </div>
+                      )}
+                    </div>
+
+                    {selectedPlatform ? (
+                      <div className="mt-4">
+                        <label htmlFor={`game-id-${gameKey}-${selectedPlatform}`} className="label">
+                          {getGameIdLabel(gameKey, selectedPlatform)}
+                        </label>
+                        <input
+                          id={`game-id-${gameKey}-${selectedPlatform}`}
+                          type="text"
+                          value={selectedGameId}
+                          onChange={(e) =>
+                            setFormData({
+                              ...formData,
+                              game_ids: {
+                                ...formData.game_ids,
+                                [getGameIdKey(gameKey, selectedPlatform)]: e.target.value,
+                              },
+                            })
+                          }
+                          placeholder={getGameIdPlaceholder(gameKey, selectedPlatform)}
+                          className="input"
+                          autoCapitalize="none"
+                          spellCheck={false}
+                        />
+                        <p className="mt-2 text-xs text-[var(--text-soft)]">
+                          This is the handle opponents will use on{' '}
+                          {PLATFORMS[selectedPlatform]?.label}.
+                        </p>
+                      </div>
+                    ) : (
+                      <p className="mt-4 text-xs text-[var(--text-soft)]">
+                        Pick a platform above before you add the player ID.
+                      </p>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+
+            {hasMissingGamePlatform || hasMissingRequiredIds ? (
+              <p className="mb-4 text-center text-xs text-[var(--text-soft)]">
+                {hasMissingGamePlatform
+                  ? 'Choose a platform for every selected game.'
+                  : 'Add each game ID to create your account.'}
+              </p>
+            ) : null}
+            {submitFeedback ? (
+              <ActionFeedback
+                tone={submitFeedback.tone}
+                title={submitFeedback.title}
+                detail={submitFeedback.detail}
+                className="mb-4"
+              />
+            ) : null}
+            <div className="subtle-card mb-4 p-4">
+              <p className="section-title !mb-0">Almost there</p>
+              <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">
+                Your 1-month Pro trial starts immediately after you create the account.
+              </p>
+            </div>
+            <div className="flex gap-3">
+              <button type="button" onClick={() => setStep(3)} className="btn-ghost flex-1">
+                <ChevronLeft size={14} /> Back
+              </button>
+              <button
+                onClick={handleSubmit}
+                disabled={loading || !step4Valid}
+                className="btn-primary flex-1"
               >
-                Sign in
-              </Link>
-            </p>
+                {loading ? (
+                  <>
+                    <Loader2 size={14} className="animate-spin" />
+                    Creating...
+                  </>
+                ) : (
+                  STEP_META[4].continueLabel
+                )}
+              </button>
+            </div>
+          </div>
+        )}
+
+        <p className="text-center text-sm text-[var(--text-soft)]">
+          Already have an account?{' '}
+          <Link
+            href={user ? nextPath : loginHref}
+            className="brand-link-coral inline-flex min-h-11 items-center font-semibold"
+          >
+            Sign in
+          </Link>
+        </p>
       </div>
     </FullScreenSignup>
   );

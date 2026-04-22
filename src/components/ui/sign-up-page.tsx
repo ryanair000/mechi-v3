@@ -3,7 +3,7 @@
 import type { ReactNode } from 'react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, CheckCircle2 } from 'lucide-react';
 
 interface SignupPageProps {
   children: ReactNode;
@@ -32,80 +32,144 @@ export function SignupPage({
   const mainTitle = title || sideTitle;
   const mainSubtitle = subtitle || sideDescription;
   const showSideCopy = Boolean(sideTitle || sideDescription || sidePoints.length);
+  const mobilePoints = sidePoints.slice(0, 2);
 
   return (
-    <div className="page-base flex min-h-screen w-full items-center justify-center bg-gradient-to-br from-slate-900 via-blue-900 to-slate-800 p-4 md:h-screen md:min-h-0 md:overflow-hidden">
-      <div className="w-full transition-transform duration-200 md:origin-center md:scale-[0.65]">
-        <div className="flex min-h-[calc(100svh-2rem)] w-full flex-col overflow-hidden rounded-3xl bg-white shadow-2xl md:h-[calc(100svh-2rem)] md:min-h-0 md:flex-row">
-          <div className="relative hidden flex-1 overflow-hidden md:block">
-            <div className="absolute left-6 top-6 z-10">
-              <button
-                type="button"
-                onClick={() => router.push(backHref)}
-                className="flex h-10 w-10 items-center justify-center rounded-full bg-black/20 backdrop-blur-sm transition-all hover:bg-black/30"
-                aria-label="Back to home"
-              >
-                <ArrowLeft className="h-5 w-5 text-white" />
-              </button>
+    <div className="page-base relative isolate overflow-hidden bg-[radial-gradient(circle_at_top,rgba(50,224,196,0.16),transparent_28%),linear-gradient(135deg,#081120_0%,#102a5c_48%,#09101b_100%)]">
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_85%_15%,rgba(255,107,107,0.18),transparent_18%),radial-gradient(circle_at_15%_80%,rgba(50,224,196,0.12),transparent_22%)]" />
+
+      <div className="relative mx-auto flex min-h-screen w-full max-w-7xl items-center px-4 py-5 sm:px-6 lg:px-8">
+        <div className="grid w-full overflow-hidden rounded-[2rem] border border-white/10 bg-[rgba(6,12,22,0.78)] shadow-[0_32px_120px_rgba(2,6,23,0.52)] backdrop-blur-2xl lg:grid-cols-[minmax(0,0.92fr)_minmax(0,1.08fr)]">
+          <div className="relative hidden min-h-[42rem] overflow-hidden border-r border-white/10 lg:flex">
+            <Image
+              src={imageSrc}
+              alt={imageAlt}
+              fill
+              priority
+              sizes="(min-width: 1024px) 42vw, 100vw"
+              className="object-cover scale-[1.04]"
+            />
+
+            <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(8,17,32,0.2)_0%,rgba(8,17,32,0.5)_38%,rgba(8,17,32,0.92)_100%)]" />
+
+            <div className="relative z-10 flex w-full flex-col justify-between p-8 xl:p-10">
+              <div className="flex items-center justify-between gap-4">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-[0.34em] text-white/55">
+                    mechi.club
+                  </p>
+                  <p className="mt-2 text-sm font-medium text-white/72">
+                    Account setup for players joining Mechi.
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => router.push(backHref)}
+                  className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-white/15 bg-white/8 text-white transition-all hover:bg-white/14"
+                  aria-label="Back to home"
+                >
+                  <ArrowLeft className="h-5 w-5" />
+                </button>
+              </div>
+
+              <div className="max-w-lg">
+                <div className="inline-flex items-center rounded-full border border-white/12 bg-white/8 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-white/72">
+                  Mechi onboarding
+                </div>
+
+                {showSideCopy ? (
+                  <>
+                    {sideTitle ? (
+                      <h2 className="mt-5 text-4xl font-semibold leading-tight text-white">
+                        {sideTitle}
+                      </h2>
+                    ) : null}
+                    {sideDescription ? (
+                      <p className="mt-4 max-w-md text-base leading-7 text-white/78">
+                        {sideDescription}
+                      </p>
+                    ) : null}
+                  </>
+                ) : (
+                  <h2 className="mt-5 text-4xl font-semibold leading-tight text-white">
+                    Clean sign-in and account setup for players moving through Mechi.
+                  </h2>
+                )}
+              </div>
+
+              {sidePoints.length ? (
+                <div className="grid gap-3">
+                  {sidePoints.map((point) => (
+                    <div
+                      key={point}
+                      className="flex items-start gap-3 rounded-2xl border border-white/10 bg-white/8 px-4 py-3.5 backdrop-blur-sm"
+                    >
+                      <CheckCircle2 className="mt-0.5 h-4 w-4 flex-shrink-0 text-[var(--brand-teal)]" />
+                      <p className="text-sm font-medium leading-6 text-white/92">{point}</p>
+                    </div>
+                  ))}
+                </div>
+              ) : null}
             </div>
+          </div>
 
-            <div className="absolute inset-0">
-              <Image
-                src={imageSrc}
-                alt={imageAlt}
-                fill
-                priority
-                sizes="(min-width: 768px) 50vw, 100vw"
-                className="object-cover"
-              />
-            </div>
+          <div className="relative flex min-h-[100svh] flex-col justify-center lg:min-h-[42rem]">
+            <div className="pointer-events-none absolute inset-x-0 top-0 h-40 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.12),transparent_72%)]" />
 
-            <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
+            <div className="relative mx-auto w-full max-w-2xl px-5 py-6 sm:px-8 lg:px-10 lg:py-12">
+              <div className="mb-6 flex items-center justify-between gap-4 lg:hidden">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-[0.3em] text-white/55">
+                    mechi.club
+                  </p>
+                  <p className="mt-2 text-sm text-white/72">Fast player onboarding</p>
+                </div>
 
-            <div className="absolute inset-x-0 bottom-0 z-10 p-8 text-white">
-              <p className="text-xs font-semibold uppercase tracking-[0.3em] text-white/70">
-                mechi.club
-              </p>
+                <button
+                  type="button"
+                  onClick={() => router.push(backHref)}
+                  className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-white/15 bg-white/8 text-white transition-all hover:bg-white/14"
+                  aria-label="Back to home"
+                >
+                  <ArrowLeft className="h-5 w-5" />
+                </button>
+              </div>
 
               {showSideCopy ? (
-                <>
-                  {sideTitle ? <h2 className="mt-3 text-3xl font-bold">{sideTitle}</h2> : null}
+                <div className="mb-6 rounded-[1.5rem] border border-white/10 bg-white/6 p-4 text-white shadow-[0_18px_44px_rgba(2,6,23,0.18)] backdrop-blur-sm lg:hidden">
+                  {sideTitle ? <h2 className="text-2xl font-semibold">{sideTitle}</h2> : null}
                   {sideDescription ? (
-                    <p className="mt-3 max-w-md text-sm leading-6 text-white/85">{sideDescription}</p>
+                    <p className="mt-2 text-sm leading-6 text-white/78">{sideDescription}</p>
                   ) : null}
-                  {sidePoints.length ? (
-                    <div className="mt-5 grid gap-2">
-                      {sidePoints.map((point) => (
-                        <div
-                          key={point}
-                          className="rounded-xl border border-white/15 bg-white/10 px-4 py-3 text-sm font-medium text-white/90 backdrop-blur-sm"
-                        >
-                          {point}
+
+                  {mobilePoints.length ? (
+                    <div className="mt-4 grid gap-2">
+                      {mobilePoints.map((point) => (
+                        <div key={point} className="flex items-start gap-2.5 text-sm text-white/88">
+                          <CheckCircle2 className="mt-0.5 h-4 w-4 flex-shrink-0 text-[var(--brand-teal)]" />
+                          <span>{point}</span>
                         </div>
                       ))}
                     </div>
                   ) : null}
-                </>
-              ) : (
-                <p className="mt-3 max-w-md text-sm leading-6 text-white/85">
-                  Clean sign-in and account setup for players moving through Mechi.
-                </p>
-              )}
-            </div>
-          </div>
+                </div>
+              ) : null}
 
-          <div className="flex flex-1 flex-col justify-center overflow-y-auto p-8 md:overflow-hidden">
-            <div className="mx-auto w-full max-w-xl">
               {mainTitle || mainSubtitle ? (
-                <div className="mb-8">
-                  <p className="mb-3 text-xs font-semibold uppercase tracking-[0.3em] text-slate-500">
+                <div className="mb-7 sm:mb-8">
+                  <p className="mb-3 text-xs font-semibold uppercase tracking-[0.3em] text-white/55">
                     mechi.club
                   </p>
                   {mainTitle ? (
-                    <h1 className="mb-2 text-3xl font-bold text-gray-900">{mainTitle}</h1>
+                    <h1 className="mb-3 text-3xl font-semibold leading-tight text-white sm:text-[2.2rem]">
+                      {mainTitle}
+                    </h1>
                   ) : null}
                   {mainSubtitle ? (
-                    <p className="text-sm leading-6 text-gray-600">{mainSubtitle}</p>
+                    <p className="max-w-xl text-sm leading-7 text-slate-300 sm:text-[0.97rem]">
+                      {mainSubtitle}
+                    </p>
                   ) : null}
                 </div>
               ) : null}

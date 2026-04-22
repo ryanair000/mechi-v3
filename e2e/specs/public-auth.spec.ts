@@ -39,16 +39,16 @@ test.describe('Public and Auth Flows', () => {
     await page.getByLabel('Username').fill(account.username);
     await page.getByLabel('Phone Number').fill(account.phone);
     await page.getByLabel('Email').fill(account.email);
-    await page.getByRole('button', { name: /next/i }).click();
+    await page.getByRole('button', { name: /continue to security/i }).click();
 
     await page.getByLabel('Country').selectOption('kenya');
     await page.getByLabel('Region').selectOption('Nairobi');
     await page.getByLabel('Password').fill(DEFAULT_PASSWORD);
-    await page.getByRole('button', { name: /next/i }).click();
+    await page.getByRole('button', { name: /continue to games/i }).click();
 
     await page.getByRole('button', { name: /eFootball 2026/i }).click();
     await page.getByRole('button', { name: /EA FC 26/i }).click();
-    await page.getByRole('button', { name: /next/i }).click();
+    await page.getByRole('button', { name: /continue to ids/i }).click();
 
     await page.getByLabel('PSN ID').fill(`${account.username.toUpperCase()}_PS`);
     await page.getByRole('button', { name: /create account/i }).click();
@@ -59,7 +59,9 @@ test.describe('Public and Auth Flows', () => {
 
   test('phone login works for a seeded account @core', async ({ page }) => {
     await page.goto('/login');
-    await page.getByLabel('Phone number').fill(SEEDED_PERSONAS.playerPro.phone);
+    await page
+      .getByLabel('Phone number, username, or email')
+      .fill(SEEDED_PERSONAS.playerPro.phone);
     await page.getByLabel('Password').fill(DEFAULT_PASSWORD);
     await page.getByRole('button', { name: /^sign in$/i }).click();
 
@@ -73,8 +75,9 @@ test.describe('Public and Auth Flows', () => {
     providerTranscripts,
   }) => {
     await page.goto('/login');
-    await page.getByRole('button', { name: /email/i }).click();
-    await page.getByLabel('Email').fill(SEEDED_PERSONAS.playerElite.email);
+    await page
+      .getByLabel('Phone number, username, or email')
+      .fill(SEEDED_PERSONAS.playerElite.email);
     await page.getByRole('button', { name: /email me a magic link/i }).click();
     await expect(page.locator('body')).toContainText(/check your email/i);
 

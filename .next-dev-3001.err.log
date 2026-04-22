@@ -1,0 +1,19 @@
+[Error: ENOENT: no such file or directory, stat 'C:\Users\ADMIN\Documents\mechiiii\mechi-v3\.next\dev\cache\webpack\server-development\0.pack.gz'] {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'stat',
+  path: 'C:\\Users\\ADMIN\\Documents\\mechiiii\\mechi-v3\\.next\\dev\\cache\\webpack\\server-development\\0.pack.gz'
+}
+⨯ unhandledRejection: [Error: ENOENT: no such file or directory, stat 'C:\Users\ADMIN\Documents\mechiiii\mechi-v3\.next\dev\cache\webpack\server-development\0.pack.gz'] {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'stat',
+  path: 'C:\\Users\\ADMIN\\Documents\\mechiiii\\mechi-v3\\.next\\dev\\cache\\webpack\\server-development\\0.pack.gz'
+}
+⨯ unhandledRejection:  [Error: ENOENT: no such file or directory, stat 'C:\Users\ADMIN\Documents\mechiiii\mechi-v3\.next\dev\cache\webpack\server-development\0.pack.gz'] {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'stat',
+  path: 'C:\\Users\\ADMIN\\Documents\\mechiiii\\mechi-v3\\.next\\dev\\cache\\webpack\\server-development\\0.pack.gz'
+}
+<w> [webpack.cache.PackFileCacheStrategy] Caching failed for pack: Error: ENOENT: no such file or directory, stat 'C:\Users\ADMIN\Documents\mechiiii\mechi-v3\.next\dev\cache\webpack\server-development\0.pack.gz'

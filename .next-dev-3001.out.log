@@ -1,0 +1,17 @@
+▲ Next.js 16.2.3 (webpack)
+- Local:         http://127.0.0.1:3001
+- Network:       http://127.0.0.1:3001
+- Environments: .env.local
+✓ Ready in 2.4s
+- Experiments (use with caution):
+  · serverActions
+
+○ Compiling proxy ...
+○ Compiling /login ...
+ HEAD /login 200 in 3.0s (next.js: 19ms, proxy.ts: 2.7s, application-code: 274ms)
+○ Compiling /_not-found ...
+ GET /login 404 in 14.6s (next.js: 13.1s, proxy.ts: 72ms, application-code: 1455ms)
+○ Compiling /_error ...
+ GET /login 404 in 37.7s (next.js: 37.2s, proxy.ts: 188ms, application-code: 348ms)
+○ Compiling / ...
+ GET / 200 in 67s (next.js: 37.3s, proxy.ts: 154ms, application-code: 29.1s)

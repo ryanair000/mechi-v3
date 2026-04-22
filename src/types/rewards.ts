@@ -1,4 +1,4 @@
-export type RewardCodeType = 'discount_code' | 'reward_claim';
+export type RewardCodeType = 'discount_code' | 'reward_claim' | 'voucher';
 
 export interface RewardActivity {
   id: string;
@@ -52,6 +52,7 @@ export interface RewardCatalogItem {
   max_order_coverage_percent?: number | null;
   sku_name?: string | null;
   margin_class?: string | null;
+  value_kes?: number | null;
 }
 
 export interface RewardWayToEarn {

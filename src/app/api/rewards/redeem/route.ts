@@ -1,13 +1,10 @@
 import { randomUUID } from 'crypto';
 import { NextRequest, NextResponse } from 'next/server';
 import { requireActiveAccessProfile } from '@/lib/access';
-import {
-  applyRewardEvent,
-  fetchChezahubRewardCatalog,
-  issueChezahubRewardCode,
-  voidChezahubRewardCode,
-} from '@/lib/rewards';
+import { VOUCHER_TIERS, applyRewardEvent, generateVoucherCode } from '@/lib/rewards';
 import { createServiceClient } from '@/lib/supabase';
+
+const VOUCHER_EXPIRY_HOURS = 48;
 
 export async function POST(request: NextRequest) {
   const access = await requireActiveAccessProfile(request);
@@ -25,10 +22,15 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'reward_id is required' }, { status: 400 });
     }
 
+    const tier = VOUCHER_TIERS.find((t) => t.id === rewardId);
+    if (!tier) {
+      return NextResponse.json({ error: 'Reward not available' }, { status: 404 });
+    }
+
     const supabase = createServiceClient();
     const { data: profileRaw, error: profileError } = await supabase
       .from('profiles')
-      .select('id, reward_points_available, chezahub_user_id')
+      .select('id, reward_points_available')
       .eq('id', authUser.id)
       .single();
 
@@ -36,24 +38,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
     }
 
-    const profile = profileRaw as {
-      id: string;
-      reward_points_available?: number | null;
-      chezahub_user_id?: string | null;
-    };
+    const profile = profileRaw as { id: string; reward_points_available?: number | null };
 
-    if (!profile.chezahub_user_id) {
-      return NextResponse.json({ error: 'Link your ChezaHub account first' }, { status: 400 });
-    }
-
-    const items = await fetchChezahubRewardCatalog();
-    const reward = items.find((item) => item.id === rewardId && item.active);
-
-    if (!reward) {
-      return NextResponse.json({ error: 'Reward not available' }, { status: 404 });
-    }
-
-    if ((profile.reward_points_available ?? 0) < reward.points_cost) {
+    if ((profile.reward_points_available ?? 0) < tier.points_cost) {
       return NextResponse.json({ error: 'Not enough reward points' }, { status: 400 });
     }
 
@@ -61,7 +48,7 @@ export async function POST(request: NextRequest) {
       .from('reward_redemptions')
       .select('id')
       .eq('user_id', profile.id)
-      .eq('reward_type', reward.reward_type)
+      .eq('reward_id', tier.id)
       .eq('status', 'issued')
       .gt('expires_at', new Date().toISOString())
       .limit(1)
@@ -69,49 +56,38 @@ export async function POST(request: NextRequest) {
 
     if (existingIssued) {
       return NextResponse.json(
-        { error: 'Use or wait for your existing active code before generating another one' },
+        { error: 'You already have an active voucher for this tier. Use it before generating another.' },
         { status: 409 }
       );
     }
 
-    const issued = await issueChezahubRewardCode({
-      mechiUserId: profile.id,
-      chezahubUserId: profile.chezahub_user_id,
-      rewardId: reward.id,
-      rewardType: reward.reward_type,
-    });
+    const code = generateVoucherCode();
+    const expiresAt = new Date(Date.now() + VOUCHER_EXPIRY_HOURS * 60 * 60 * 1000).toISOString();
 
-    try {
-      await applyRewardEvent(supabase, {
-        userId: profile.id,
-        eventKey: `reward:redeem:${redemptionId}`,
-        eventType: 'reward_redemption_spend',
-        availableDelta: -reward.points_cost,
-        source: 'reward_redeem',
-        metadata: {
-          reward_id: reward.id,
-          reward_type: reward.reward_type,
-          issuance_id: issued.issuanceId,
-        },
-      });
-    } catch (spendError) {
-      await voidChezahubRewardCode(issued.issuanceId);
-      throw spendError;
-    }
+    await applyRewardEvent(supabase, {
+      userId: profile.id,
+      eventKey: `reward:redeem:${redemptionId}`,
+      eventType: 'reward_redemption_spend',
+      availableDelta: -tier.points_cost,
+      source: 'reward_redeem',
+      metadata: {
+        reward_id: tier.id,
+        reward_type: 'voucher',
+        value_kes: tier.value_kes,
+      },
+    });
 
     const { error: insertError } = await supabase.from('reward_redemptions').insert({
       id: redemptionId,
       user_id: profile.id,
-      reward_id: reward.id,
-      reward_type: reward.reward_type,
-      title: reward.title,
-      code: issued.code,
-      points_cost: reward.points_cost,
-      external_issuance_id: issued.issuanceId,
-      expires_at: issued.expiresAt,
-      metadata: {
-        phase: reward.phase,
-      },
+      reward_id: tier.id,
+      reward_type: 'voucher',
+      title: tier.title,
+      code,
+      points_cost: tier.points_cost,
+      external_issuance_id: null,
+      expires_at: expiresAt,
+      metadata: { value_kes: tier.value_kes },
     });
 
     if (insertError) {
@@ -119,26 +95,23 @@ export async function POST(request: NextRequest) {
         userId: profile.id,
         eventKey: `reward:redeem-reversal:${redemptionId}`,
         eventType: 'reward_redemption_reversal',
-        availableDelta: reward.points_cost,
+        availableDelta: tier.points_cost,
         source: 'reward_redeem',
-        metadata: {
-          reason: 'insert_failed',
-          reward_id: reward.id,
-        },
+        metadata: { reason: 'insert_failed', reward_id: tier.id },
       }).catch(() => null);
-      await voidChezahubRewardCode(issued.issuanceId);
       throw insertError;
     }
 
     return NextResponse.json({
       redemption: {
         id: redemptionId,
-        reward_id: reward.id,
-        reward_type: reward.reward_type,
-        title: reward.title,
-        code: issued.code,
-        expires_at: issued.expiresAt,
-        points_cost: reward.points_cost,
+        reward_id: tier.id,
+        reward_type: 'voucher',
+        title: tier.title,
+        code,
+        expires_at: expiresAt,
+        points_cost: tier.points_cost,
+        value_kes: tier.value_kes,
       },
     });
   } catch (error) {

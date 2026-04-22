@@ -63,7 +63,7 @@ const GAME_ITEMS: NavItem[] = [
 
 const GROWTH_ITEMS: NavItem[] = [
   { href: '/share', label: 'Share', icon: Share2 },
-  { href: '/rewards', label: 'Rewards', icon: Coins },
+  { href: '/rewards', label: 'Redeem', icon: Coins },
 ];
 
 const COLLAPSIBLE_SECTIONS: SidebarSectionConfig[] = [

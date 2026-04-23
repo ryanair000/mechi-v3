@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { BellRing, Gamepad2, Swords, Trophy, X } from 'lucide-react';
+import { Gamepad2, LayoutDashboard, Swords, Trophy, X } from 'lucide-react';
 
 const ONBOARDING_STORAGE_KEY = 'mechi_onboarding_seen_v1';
 const ONBOARDING_OPEN_EVENT = 'mechi:open-onboarding';
@@ -15,13 +15,13 @@ const STEPS = [
   },
   {
     title: 'Start the action',
-    body: 'Queue for ranked matches, send a direct challenge, or jump into lobbies and tournaments.',
+    body: 'Send a direct challenge, or jump into lobbies and tournaments when you are ready to play.',
     icon: Swords,
   },
   {
     title: 'Track the flow',
-    body: 'Use your dashboard, queue, and feed to see what is live and what needs your next action.',
-    icon: BellRing,
+    body: 'Use dashboard, match history, and rewards to keep the next action visible.',
+    icon: LayoutDashboard,
   },
   {
     title: 'Lock the result',
@@ -65,11 +65,6 @@ export function AppOnboarding() {
   const openGames = () => {
     closeOnboarding();
     router.push('/games');
-  };
-
-  const openTutorials = () => {
-    closeOnboarding();
-    router.push('/tutorials');
   };
 
   if (!open) {
@@ -133,15 +128,10 @@ export function AppOnboarding() {
         </div>
 
         <div className="mt-6 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-          <p className="text-xs text-[var(--text-soft)]">
-            Reopen this from Dashboard any time, or open the full tutorials page.
-          </p>
+          <p className="text-xs text-[var(--text-soft)]">Reopen this from Dashboard any time.</p>
           <div className="flex flex-col gap-2 sm:flex-row">
             <button type="button" onClick={closeOnboarding} className="btn-outline justify-center">
               Got it
-            </button>
-            <button type="button" onClick={openTutorials} className="btn-outline justify-center">
-              Full guide
             </button>
             <button type="button" onClick={openGames} className="btn-primary justify-center">
               <Gamepad2 size={14} />

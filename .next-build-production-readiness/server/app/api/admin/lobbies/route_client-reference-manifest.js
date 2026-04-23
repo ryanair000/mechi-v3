@@ -1,1 +1,0 @@
-globalThis.__RSC_MANIFEST=(globalThis.__RSC_MANIFEST||{});globalThis.__RSC_MANIFEST["/api/admin/lobbies/route"]={"moduleLoading":{"prefix":"/_next/"},"ssrModuleMapping":{},"edgeSSRModuleMapping":{},"clientModules":{},"entryCSSFiles":{"D:\\Lokimax\\mechi-v3\\src\\app\\api\\admin\\lobbies\\route":[]},"rscModuleMapping":{},"edgeRscModuleMapping":{}};

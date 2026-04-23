@@ -21,7 +21,6 @@ const PROTECTED_PREFIXES = [
   '/share',
   '/rewards',
   '/suggest',
-  '/tutorials',
   '/api/queue',
   '/api/challenges',
   '/api/matches',
@@ -33,9 +32,9 @@ const PROTECTED_PREFIXES = [
   '/api/tournaments',
   '/api/rewards',
 ];
+const HIDDEN_PREFIXES = ['/feed', '/notifications', '/queue', '/streams'];
 
 const ADMIN_PREFIXES = ['/admin', '/api/admin'];
-const CONNECT_HOSTS = new Set(['connect.mechi.club']);
 const TESTS_HOSTS = new Set(['tests.mechi.club']);
 const LOCAL_APP_HOSTS = new Set(['localhost', '127.0.0.1']);
 const CANONICAL_ADMIN_HOST = 'mechi.lokimax.top';
@@ -54,7 +53,6 @@ const ADMIN_HOST_PATH_ALIASES: Record<string, string> = {
 
 const PUBLIC_PREFIXES = [
   '/',
-  '/connect',
   '/manual-tests',
   '/report',
   '/reports',
@@ -105,6 +103,10 @@ function isAdminRoute(pathname: string) {
 
 function isProtectedRoute(pathname: string) {
   return PROTECTED_PREFIXES.some((prefix) => pathname.startsWith(prefix));
+}
+
+function isHiddenRoute(pathname: string) {
+  return HIDDEN_PREFIXES.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`));
 }
 
 function isDashboardRoute(pathname: string) {
@@ -291,12 +293,6 @@ export async function proxy(request: NextRequest) {
   const adminHost = ADMIN_HOSTS.has(host);
   const sharedLocalHost = adminHost && host === APP_HOST;
 
-  if (CONNECT_HOSTS.has(host) && pathname === '/') {
-    const connectUrl = request.nextUrl.clone();
-    connectUrl.pathname = '/connect';
-    return NextResponse.rewrite(connectUrl);
-  }
-
   if (TESTS_HOSTS.has(host) && pathname === '/') {
     const testsUrl = request.nextUrl.clone();
     testsUrl.pathname = '/manual-tests';
@@ -313,8 +309,19 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(dashboardUrl);
   }
 
+  if (pathname === '/tutorials' || pathname.startsWith('/tutorials/')) {
+    return redirectToAppHost('/dashboard', request);
+  }
+
   const adminHostAlias = adminHost && !sharedLocalHost ? getAdminHostAlias(pathname) : null;
   const effectivePathname = adminHostAlias ?? pathname;
+
+  if (isHiddenRoute(effectivePathname)) {
+    const hiddenRouteRedirect = request.nextUrl.clone();
+    hiddenRouteRedirect.pathname = '/dashboard';
+    hiddenRouteRedirect.search = '';
+    return NextResponse.redirect(hiddenRouteRedirect);
+  }
 
   if (adminHost && !pathname.startsWith('/api/')) {
     const keepOnAdminHost =

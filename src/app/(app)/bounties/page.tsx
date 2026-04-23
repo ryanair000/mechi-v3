@@ -107,12 +107,6 @@ export default function BountiesPage() {
         <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
           <div className="max-w-2xl">
             <p className="section-title">Bounties</p>
-            <h1 className="mt-3 text-[1.8rem] font-black leading-[1.02] text-[var(--text-primary)] sm:text-[2.3rem]">
-              Complete platform actions, win cash
-            </h1>
-            <p className="mt-3 max-w-xl text-sm leading-7 text-[var(--text-secondary)]">
-              First player to complete the challenge wins. Prizes paid via M-Pesa within 24 hours.
-            </p>
           </div>
 
           <button

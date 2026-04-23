@@ -15,10 +15,6 @@ const links = [
     href: '/#how-it-works',
   },
   {
-    title: 'Games',
-    href: '/#supported',
-  },
-  {
     title: 'Pricing',
     href: '/pricing',
   },
@@ -31,20 +27,12 @@ const links = [
     href: '/tournaments',
   },
   {
-    title: 'Connect',
-    href: '/connect',
-  },
-  {
     title: 'Privacy Policy',
     href: '/privacy-policy',
   },
   {
     title: 'Terms of Service',
     href: '/terms-of-service',
-  },
-  {
-    title: 'Data Deletion',
-    href: '/user-data-deletion',
   },
 ];
 

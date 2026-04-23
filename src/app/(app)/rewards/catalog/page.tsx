@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useCallback, useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
-import { ArrowLeft, ArrowUpRight, CheckCircle2, Copy, RefreshCw } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, Copy, RefreshCw } from 'lucide-react';
 import { useAuthFetch } from '@/components/AuthProvider';
 import type { RewardActiveCode, RewardCatalogItem, RewardSummary } from '@/types/rewards';
 
@@ -18,15 +18,19 @@ function SectionLabel({ label, count }: { label: string; count: number }) {
   );
 }
 
+function sanitizeRewardLabel(value: string) {
+  return value.replace(/chezahub/gi, '').replace(/\s{2,}/g, ' ').trim();
+}
+
 function WalletStatus({ ready, available }: { ready: boolean; available: number }) {
   return (
     <div className="mb-6 flex items-center justify-between gap-4 rounded-2xl border border-[var(--border-color)] bg-[var(--surface-soft)] px-4 py-3">
       <div className="space-y-1">
         <p className="text-sm font-semibold text-[var(--text-primary)]">
-          {ready ? 'ChezaHub wallet ready' : 'ChezaHub wallet auto-created on redeem'}
+          {ready ? 'Redeemables ready on Mechi' : 'Redeemables activate on first redeem'}
         </p>
         <p className="text-[11px] text-[var(--text-soft)]">
-          Partner rewards are redeemed here on Mechi, then fulfilled inside ChezaHub My Orders.
+          Redeemables are claimed and tracked on Mechi, and fulfillment updates stay in your rewards activity.
         </p>
       </div>
       <span className="text-sm font-black text-[var(--text-primary)]">
@@ -42,14 +46,14 @@ function formatStatus(redemption: RewardActiveCode) {
   }
 
   if (redemption.partner_status) {
-    return redemption.partner_status.replace(/_/g, ' ');
+    return sanitizeRewardLabel(redemption.partner_status.replace(/_/g, ' '));
   }
 
   if (redemption.status === 'claimed') {
-    return 'Ready on ChezaHub';
+    return 'Redeemed';
   }
 
-  return 'Processing on ChezaHub';
+  return 'Processing';
 }
 
 function RecentRedemptions({
@@ -72,7 +76,9 @@ function RecentRedemptions({
           >
             <div className="min-w-0 flex-1">
               <div className="flex flex-wrap items-center gap-2">
-                <p className="text-sm font-semibold text-[var(--text-primary)]">{redemption.title}</p>
+                <p className="text-sm font-semibold text-[var(--text-primary)]">
+                  {sanitizeRewardLabel(redemption.title)}
+                </p>
                 <span className="brand-chip px-2 py-0.5 text-[10px] capitalize">
                   {formatStatus(redemption)}
                 </span>
@@ -80,8 +86,7 @@ function RecentRedemptions({
               <p className="mt-1 text-[11px] text-[var(--text-soft)]">
                 {redemption.source === 'mechi_native'
                   ? 'This perk is active on your Mechi account.'
-                  : redemption.access_hint ||
-                    'Open ChezaHub My Orders to check fulfillment and view the delivered code.'}
+                  : 'Fulfillment updates and any codes will appear here in Mechi.'}
               </p>
             </div>
 
@@ -100,16 +105,11 @@ function RecentRedemptions({
                     <Copy size={13} />
                   </button>
                 </>
-              ) : redemption.partner_order_url ? (
-                <a
-                  href={redemption.partner_order_url}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="btn-primary min-h-8 px-3 py-1.5 text-xs"
-                >
-                  Open My Orders
-                  <ArrowUpRight size={13} />
-                </a>
+              ) : redemption.source !== 'mechi_native' ? (
+                <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-[var(--text-soft)]">
+                  <CheckCircle2 size={12} />
+                  Tracked on Mechi
+                </span>
               ) : (
                 <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-400">
                   <CheckCircle2 size={12} />
@@ -137,18 +137,19 @@ function CatalogRow({
 }) {
   const disabled = redeeming || !canAfford;
   const partnerReward = item.source !== 'mechi_native';
-  const chezahubOrdersUrl = `${process.env.NEXT_PUBLIC_CHEZAHUB_BASE_URL || 'https://chezahub.co.ke'}/orders`;
 
   return (
     <div className="flex flex-col gap-3 border-b border-[var(--border-color)] py-4 last:border-0 sm:flex-row sm:items-center sm:gap-4">
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-1.5">
-          <p className="text-sm font-semibold text-[var(--text-primary)]">{item.title}</p>
+          <p className="text-sm font-semibold text-[var(--text-primary)]">
+            {sanitizeRewardLabel(item.title)}
+          </p>
           <span className="brand-chip px-2 py-0.5 text-[10px]">
             {item.points_cost.toLocaleString()} RP
           </span>
           {partnerReward ? (
-            <span className="brand-chip px-2 py-0.5 text-[10px]">ChezaHub partner</span>
+            <span className="brand-chip px-2 py-0.5 text-[10px]">Redeemable</span>
           ) : (
             <span className="brand-chip-coral px-2 py-0.5 text-[10px]">Mechi perk</span>
           )}
@@ -167,18 +168,6 @@ function CatalogRow({
         >
           {redeeming ? 'Redeeming...' : !canAfford ? 'Not enough RP' : 'Redeem'}
         </button>
-
-        {partnerReward && (
-          <a
-            href={chezahubOrdersUrl}
-            target="_blank"
-            rel="noreferrer"
-            className="icon-button h-8 w-8"
-            aria-label="Open ChezaHub My Orders"
-          >
-            <ArrowUpRight size={13} />
-          </a>
-        )}
       </div>
     </div>
   );
@@ -304,13 +293,15 @@ export default function RewardCatalogPage() {
           return;
         }
 
+        const rewardTitle = sanitizeRewardLabel(data.redemption.title);
+
         if (data.redemption.code) {
           await navigator.clipboard.writeText(data.redemption.code).catch(() => null);
-          toast.success(`${data.redemption.title} - code copied.`);
-        } else if (data.redemption.partner_order_url) {
-          toast.success(`${data.redemption.title} redeemed. Check ChezaHub My Orders for fulfillment.`);
+          toast.success(`${rewardTitle} - code copied.`);
+        } else if (data.redemption.access_hint) {
+          toast.success(`${rewardTitle} redeemed. Track it in Mechi rewards.`);
         } else {
-          toast.success(`${data.redemption.title} applied.`);
+          toast.success(`${rewardTitle} applied.`);
         }
 
         void load({ silent: true });
@@ -334,7 +325,7 @@ export default function RewardCatalogPage() {
           <Link href="/rewards" className="icon-button h-9 w-9" aria-label="Back to rewards">
             <ArrowLeft size={14} />
           </Link>
-          <h1 className="text-xl font-black text-[var(--text-primary)]">Redeem RP</h1>
+          <h1 className="text-xl font-black text-[var(--text-primary)]">Redeemables</h1>
         </div>
         <button
           type="button"
@@ -387,7 +378,7 @@ export default function RewardCatalogPage() {
           <div className="space-y-8">
             {partnerItems.length > 0 && (
               <div>
-                <SectionLabel label="ChezaHub partner rewards" count={partnerItems.length} />
+                <SectionLabel label="Redeemables" count={partnerItems.length} />
                 <div className="border-t border-[var(--border-color)]">
                   {partnerItems.map((item) => (
                     <CatalogRow
@@ -421,7 +412,7 @@ export default function RewardCatalogPage() {
 
             {catalog.length === 0 && !loading && (
               <div className="py-14 text-center">
-                <p className="text-sm text-[var(--text-soft)]">No rewards available right now.</p>
+                <p className="text-sm text-[var(--text-soft)]">No redeemables available right now.</p>
               </div>
             )}
           </div>

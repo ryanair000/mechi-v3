@@ -19,7 +19,7 @@ test.describe('Player Pages', () => {
     await expect(page.locator('body')).toContainText(/Available RP/i);
 
     await page.goto('/bounties');
-    await expect(page.locator('body')).toContainText(/Complete platform actions, win cash/i);
+    await expect(page.locator('body')).toContainText(/Bounties/i);
     await expect(page.locator('body')).toContainText(/E2E Live Bounty/i);
 
     await page.goto('/suggest');

@@ -3,7 +3,7 @@ import { connection } from 'next/server';
 import { ArrowRight } from 'lucide-react';
 import { BrandLogo } from '@/components/BrandLogo';
 import FooterSection from '@/components/footer';
-import FeatureShaderCards from '@/components/feature-shader-cards';
+import FeatureShaderCards from '@/components/ui/feature-shader-cards';
 import { HomeFloatingHeader } from '@/components/HomeFloatingHeader';
 import { LandingCountdownSection } from '@/components/LandingCountdownSection';
 import { PlatformLogo } from '@/components/PlatformLogo';

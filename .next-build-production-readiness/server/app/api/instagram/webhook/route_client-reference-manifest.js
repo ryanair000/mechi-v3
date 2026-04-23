@@ -1,1 +1,0 @@
-globalThis.__RSC_MANIFEST=(globalThis.__RSC_MANIFEST||{});globalThis.__RSC_MANIFEST["/api/instagram/webhook/route"]={"moduleLoading":{"prefix":"/_next/"},"ssrModuleMapping":{},"edgeSSRModuleMapping":{},"clientModules":{},"entryCSSFiles":{"D:\\Lokimax\\mechi-v3\\src\\app\\api\\instagram\\webhook\\route":[]},"rscModuleMapping":{},"edgeRscModuleMapping":{}};

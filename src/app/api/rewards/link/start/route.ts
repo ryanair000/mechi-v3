@@ -9,8 +9,7 @@ export async function POST(request: NextRequest) {
 
   return NextResponse.json(
     {
-      error:
-        'ChezaHub wallet linking has been retired. Eligible partner rewards create or attach your wallet automatically when you redeem.',
+      error: 'Direct wallet linking has been retired. Redeemables are handled automatically inside Mechi.',
     },
     { status: 410 }
   );

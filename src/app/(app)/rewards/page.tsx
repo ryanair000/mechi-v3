@@ -234,7 +234,7 @@ export default function RewardsPage() {
             <RefreshCw size={14} className={refreshing ? 'animate-spin' : undefined} />
           </button>
           <Link href="/rewards/catalog" className="btn-ghost text-sm">
-            Redeem RP <ArrowRight size={13} />
+            Open redeemables <ArrowRight size={13} />
           </Link>
         </div>
       </div>
@@ -260,8 +260,8 @@ export default function RewardsPage() {
 
           <div className="mb-6 rounded-2xl border border-[var(--accent-secondary)]/20 bg-[var(--accent-secondary)]/5 px-4 py-3">
             <p className="text-sm text-[var(--text-secondary)]">
-              Mechi owns the redemption step now. Partner items are fulfilled on ChezaHub and appear in
-              ChezaHub My Orders when they are ready.
+              Mechi owns the redemption flow now. Rewards and redeemables stay visible here, and
+              fulfillment updates surface inside your Mechi activity.
             </p>
           </div>
 

@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Puzzle } from 'lucide-react';
 import AnimatedNumberCountdown from '@/components/ui/countdown-number';
 
 type CountdownSnapshot = {
@@ -78,45 +77,35 @@ export function LandingCountdownSection({
   return (
     <section className="landing-section pt-0">
       <div className="landing-shell">
-        <div className="overflow-hidden rounded-[var(--radius-card)] border border-[rgba(50,224,196,0.14)] bg-[rgba(50,224,196,0.04)] px-6 py-10 sm:px-8 sm:py-14 lg:px-12">
-          <div className="mx-auto flex max-w-4xl flex-col items-center justify-center text-center">
-            <span className="inline-flex items-center gap-2 rounded-full border border-[rgba(50,224,196,0.22)] bg-[var(--accent-secondary-soft)] px-4 py-2 text-sm font-semibold uppercase tracking-[0.14em] text-[var(--accent-secondary-text)]">
-              <Puzzle size={14} />
-              Beta V3 countdown
-            </span>
+        <div className="mx-auto flex max-w-4xl flex-col items-center justify-center px-2 text-center">
+          <h2 className="max-w-3xl text-3xl font-black leading-[1.08] text-[var(--text-primary)] sm:text-[3.4rem]">
+            {snapshot.expired ? 'Beta V3 registration is closed.' : 'Time left to join Beta V3'}
+          </h2>
+          <p className="mt-4 max-w-2xl text-base leading-8 text-[var(--text-secondary)]">
+            {sectionCopy}
+          </p>
 
-            <p className="mt-6 text-sm font-semibold uppercase tracking-[0.18em] text-[var(--accent-secondary-text)]">
-              Registration pulse
-            </p>
-            <h2 className="mt-3 max-w-3xl text-3xl font-black leading-[1.08] text-[var(--text-primary)] sm:text-[3.4rem]">
-              {snapshot.expired ? 'Beta V3 registration is closed.' : 'Time left to join Beta V3'}
-            </h2>
-            <p className="mt-4 max-w-2xl text-base leading-8 text-[var(--text-secondary)]">
-              {sectionCopy}
-            </p>
+          <AnimatedNumberCountdown
+            endDate={new Date(closesAt)}
+            className="my-8 flex-wrap gap-3 sm:my-10 sm:gap-4 md:flex-nowrap"
+          />
 
-            <AnimatedNumberCountdown
-              endDate={new Date(closesAt)}
-              className="my-8 flex-wrap gap-3 sm:my-10 sm:gap-4 md:flex-nowrap"
-            />
-
-            <div className="flex flex-wrap items-center justify-center gap-3">
-              {metaItems.map((item) => (
-                <span
-                  key={item}
-                  className="rounded-full border border-[var(--border-color)] bg-[var(--surface-strong)] px-4 py-2 text-sm font-semibold text-[var(--text-secondary)]"
-                >
-                  {item}
-                </span>
-              ))}
-            </div>
-
-            <p className="mt-6 max-w-2xl text-sm leading-7 text-[var(--text-soft)]">
-              {snapshot.expired
-                ? 'This countdown reached zero at the official close of the registration window.'
-                : 'Once this timer reaches zero, this beta registration window closes.'}
-            </p>
+          <div className="flex flex-wrap items-center justify-center gap-3">
+            {metaItems.map((item) => (
+              <span
+                key={item}
+                className="rounded-full border border-[var(--border-color)] bg-[var(--surface-strong)] px-4 py-2 text-sm font-semibold text-[var(--text-secondary)]"
+              >
+                {item}
+              </span>
+            ))}
           </div>
+
+          <p className="mt-6 max-w-2xl text-sm leading-7 text-[var(--text-soft)]">
+            {snapshot.expired
+              ? 'This countdown reached zero at the official close of the registration window.'
+              : 'Once this timer reaches zero, this beta registration window closes.'}
+          </p>
         </div>
       </div>
     </section>

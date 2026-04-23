@@ -21,7 +21,7 @@ type TournamentListItem = Tournament & {
   } | null;
 };
 
-const STATUS_FILTERS = ['open', 'full', 'active', 'completed'] as const;
+const STATUS_FILTERS = ['all', 'open', 'active', 'completed'] as const;
 
 function getPlayerCount(tournament: TournamentListItem): number {
   const count = tournament.player_count;
@@ -47,7 +47,26 @@ function formatTournamentStatus(status: string) {
 }
 
 function formatTournamentFilterLabel(status: (typeof STATUS_FILTERS)[number]) {
-  return status === 'full' ? 'ongoing' : status;
+  switch (status) {
+    case 'all':
+      return 'All';
+    case 'open':
+      return 'Open';
+    case 'active':
+      return 'Active';
+    case 'completed':
+      return 'Completed';
+    default:
+      return status;
+  }
+}
+
+function getEmptyStateTitle(status: (typeof STATUS_FILTERS)[number]) {
+  if (status === 'all') {
+    return 'No brackets yet';
+  }
+
+  return `No ${formatTournamentFilterLabel(status).toLowerCase()} brackets yet`;
 }
 
 function getStatusClasses(status: string) {
@@ -74,7 +93,7 @@ export default function TournamentsPage() {
   const { user } = useAuth();
   const authFetch = useAuthFetch();
   const [tournaments, setTournaments] = useState<TournamentListItem[]>([]);
-  const [status, setStatus] = useState<(typeof STATUS_FILTERS)[number]>('open');
+  const [status, setStatus] = useState<(typeof STATUS_FILTERS)[number]>('all');
   const [loading, setLoading] = useState(true);
   const canHostTournaments = resolvePlan(user?.plan, user?.plan_expires_at) !== 'free';
   const hostHref = canHostTournaments ? '/tournaments/create' : '/pricing';
@@ -162,7 +181,7 @@ export default function TournamentsPage() {
         <div className="card py-16 text-center">
           <Trophy size={36} className="mx-auto mb-4 text-[var(--text-soft)] opacity-50" />
           <p className="font-black text-[var(--text-primary)]">
-            No {formatTournamentFilterLabel(status)} brackets yet
+            {getEmptyStateTitle(status)}
           </p>
           <p className="mt-2 text-sm text-[var(--text-soft)]">Start one and bring your scene in.</p>
           <Link href={hostHref} className="btn-primary mt-5 inline-flex">

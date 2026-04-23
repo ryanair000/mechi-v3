@@ -1,6 +1,5 @@
 import { ADMIN_URL, APP_URL } from '@/lib/urls';
 
-const CONNECT_URL = 'https://connect.mechi.club';
 export const TESTS_URL = 'https://tests.mechi.club';
 export const MANUAL_TEST_STORAGE_KEY = 'mechi_manual_test_kit_v2';
 
@@ -43,7 +42,6 @@ function makeAdminLink(pathname: string, label: string): ManualTestLink {
 export const manualTestHosts = [
   makeAbsoluteLink(TESTS_URL, 'tests.mechi.club'),
   makeAbsoluteLink(APP_URL, 'mechi.club'),
-  makeAbsoluteLink(CONNECT_URL, 'connect.mechi.club'),
   makeAbsoluteLink(ADMIN_URL, 'mechi.lokimax.top'),
 ] as const;
 
@@ -79,7 +77,7 @@ export const manualTestSections = [
         title: 'Prepare the account pack and host tabs before touching live flows.',
         account: 'QA lead',
         instructions: [
-          'Keep tests.mechi.club open as your checklist, then open mechi.club, connect.mechi.club, and mechi.lokimax.top in separate tabs.',
+          'Keep tests.mechi.club open as your checklist, then open mechi.club and mechi.lokimax.top in separate tabs.',
           'Sign in or prepare one fresh free player, one second player, one Pro or Elite player, one banned account, and one admin account in separate browser sessions.',
         ],
         passIf: [
@@ -90,7 +88,6 @@ export const manualTestSections = [
         links: [
           makeAbsoluteLink(TESTS_URL, 'Checklist home'),
           makeAppLink('/', 'Main app'),
-          makeAbsoluteLink(CONNECT_URL, 'Connect host'),
           makeAdminLink('/admin', 'Admin host'),
         ],
       },
@@ -99,7 +96,7 @@ export const manualTestSections = [
         title: 'Run a fast desktop smoke on the public entry points.',
         account: 'Anon',
         instructions: [
-          'Open landing, pricing, and connect on a wide desktop viewport and scroll each page from top to bottom once.',
+          'Open landing, pricing, and the legal pages on a wide desktop viewport and scroll each page from top to bottom once.',
           'Click the primary CTA on each surface and confirm back and forward navigation still feel normal.',
         ],
         passIf: [
@@ -110,7 +107,8 @@ export const manualTestSections = [
         links: [
           makeAppLink('/', 'Landing'),
           makeAppLink('/pricing', 'Pricing'),
-          makeAbsoluteLink(CONNECT_URL, 'Connect'),
+          makeAppLink('/privacy-policy', 'Privacy'),
+          makeAppLink('/terms-of-service', 'Terms'),
         ],
       },
       {
@@ -174,20 +172,6 @@ export const manualTestSections = [
           makeAppLink('/pricing', 'Pricing'),
           makeAppLink('/login', 'Login'),
         ],
-      },
-      {
-        id: 'PUB-03',
-        title: 'Connect host loads as a distinct public surface.',
-        account: 'Anon',
-        instructions: [
-          'Open connect.mechi.club directly and refresh the page once.',
-          'Interact with any visible CTA or external action on the page.',
-        ],
-        passIf: [
-          'The page loads real content on the connect host and does not collapse into the main app.',
-          'Any external or internal CTA behaves predictably and stays readable on refresh.',
-        ],
-        links: [makeAbsoluteLink(CONNECT_URL, 'Connect host')],
       },
       {
         id: 'PUB-04',
@@ -729,7 +713,7 @@ export const manualTestSections = [
     id: 'growth-billing',
     title: 'Rewards, Billing, and Retention',
     description:
-      'Cover bounties, points, redemption, partner flows, suggestions, upgrade checkout, and tutorial surfaces that shape retention.',
+      'Cover bounties, points, redemption, partner flows, suggestions, and upgrade checkout paths that shape retention.',
     goal: 'Exit this section knowing the growth and money-adjacent paths feel safe and understandable.',
     items: [
       {
@@ -748,16 +732,16 @@ export const manualTestSections = [
       },
       {
         id: 'GROW-02',
-        title: 'Partner reward redemption hands off to ChezaHub My Orders cleanly.',
+        title: 'Redeemables stay inside Mechi after redemption.',
         account: 'Player A',
         timing: 'Run last',
         instructions: [
           'Redeem a safe partner reward from the Mechi rewards catalog with a test-ready account.',
-          'Use the returned My Orders action and verify the user reaches the intended ChezaHub orders surface.',
+          'Refresh rewards after redeeming and confirm the status stays visible without sending the player to an external orders page.',
         ],
         passIf: [
           'The reward redeems on Mechi without a manual account-link step.',
-          'The ChezaHub handoff opens the correct orders surface and the redemption state is reflected on Mechi.',
+          'The redemption state and fulfillment progress are reflected on Mechi without an external handoff.',
         ],
         watchFor: ['Use a sandbox or low-risk partner reward when one is available.'],
         links: [makeAppLink('/rewards', 'Rewards actions')],
@@ -811,23 +795,6 @@ export const manualTestSections = [
           makeAppLink('/dashboard', 'Dashboard'),
           makeAppLink('/profile/settings', 'Profile settings'),
           makeAppLink('/tournaments/create', 'Tournament create'),
-        ],
-      },
-      {
-        id: 'GROW-06',
-        title: 'Tutorials page remains readable and helpful on desktop and mobile.',
-        account: 'Player A',
-        instructions: [
-          'Open tutorials on desktop and mobile widths and move through the grouped cards or links.',
-          'Use at least one CTA from tutorials into a real gameplay page.',
-        ],
-        passIf: [
-          'The page is easy to scan, without collapsed copy or awkward card overflow.',
-          'Tutorial CTAs move the player into the right next action.',
-        ],
-        links: [
-          makeAppLink('/tutorials', 'Tutorials'),
-          makeAppLink('/games', 'Games'),
         ],
       },
       {
@@ -912,17 +879,16 @@ export const manualTestSections = [
         title: 'Cross-host routing keeps users on the intended host.',
         account: 'Anon and Admin',
         instructions: [
-          'Move between tests, main app, connect, and admin using fresh tabs plus direct URL entry.',
+          'Move between tests, the main app, and admin using fresh tabs plus direct URL entry.',
           'Verify one player route, one admin route, and one public route on their intended hosts.',
         ],
         passIf: [
-          'Main app routes stay on mechi.club, connect stays on connect.mechi.club, and admin stays on mechi.lokimax.top.',
+          'Main app routes stay on mechi.club and admin stays on mechi.lokimax.top.',
           'No host redirects the user into the wrong product surface unexpectedly.',
         ],
         links: [
           makeAbsoluteLink(TESTS_URL, 'Tests host'),
           makeAppLink('/dashboard', 'App dashboard'),
-          makeAbsoluteLink(CONNECT_URL, 'Connect'),
           makeAdminLink('/admin', 'Admin'),
         ],
       },

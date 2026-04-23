@@ -2,31 +2,9 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import { useCallback, useEffect, useState, useTransition } from 'react';
-import {
-  ArrowUpRight,
-  Copy,
-  ExternalLink,
-  Link2,
-  MessageCircle,
-  Search,
-  Share2,
-  Sparkles,
-  Users,
-} from 'lucide-react';
-import toast from 'react-hot-toast';
-import { useAuth, useAuthFetch } from '@/components/AuthProvider';
+import { useEffect, useState, useTransition } from 'react';
+import { ArrowUpRight, Search, Sparkles, Users } from 'lucide-react';
 import { getRankDivision } from '@/lib/gamification';
-import {
-  canNativeShare,
-  copyLink,
-  getInviteUrl,
-  getProfileShareUrl,
-  inviteShareText,
-  nativeShare,
-  shareToWhatsApp,
-} from '@/lib/share';
-import type { RewardSummary } from '@/types/rewards';
 
 type PublicProfileLookup = {
   username: string;
@@ -37,11 +15,6 @@ type PublicProfileLookup = {
   totalWins: number;
   totalLosses: number;
   gamesCount: number;
-};
-
-type RewardSummaryResponse = {
-  error?: string;
-  summary?: RewardSummary;
 };
 
 type PublicProfileLookupResponse = {
@@ -55,29 +28,7 @@ function normalizeUsername(value: string | null | undefined) {
     .replace(/^@+/, '');
 }
 
-function MetricCell({
-  label,
-  value,
-  note,
-}: {
-  label: string;
-  value: string;
-  note: string;
-}) {
-  return (
-    <div className="bg-[var(--surface-elevated)] px-4 py-4">
-      <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--text-soft)]">
-        {label}
-      </p>
-      <p className="mt-2 text-xl font-black text-[var(--text-primary)]">{value}</p>
-      <p className="mt-1 text-xs text-[var(--text-secondary)]">{note}</p>
-    </div>
-  );
-}
-
 export function SharePageClient() {
-  const { user } = useAuth();
-  const authFetch = useAuthFetch();
   const pathname = usePathname();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -85,57 +36,13 @@ export function SharePageClient() {
 
   const submittedUsername = normalizeUsername(searchParams.get('username'));
   const [searchValue, setSearchValue] = useState(submittedUsername);
-  const [summary, setSummary] = useState<RewardSummary | null>(null);
-  const [summaryLoading, setSummaryLoading] = useState(true);
-  const [summaryError, setSummaryError] = useState<string | null>(null);
   const [lookup, setLookup] = useState<PublicProfileLookup | null>(null);
   const [lookupLoading, setLookupLoading] = useState(false);
   const [lookupError, setLookupError] = useState<string | null>(null);
 
-  const inviteCode = user?.invite_code ?? '';
-  const inviteUrl = inviteCode ? getInviteUrl(inviteCode) : '';
-  const profileUrl = user?.username ? getProfileShareUrl(user.username) : '';
-  const shareText = inviteShareText(user?.username ?? 'A Mechi player');
-  const shareReward =
-    summary?.ways_to_earn.find((item) => item.id === 'share_page_action')?.rp_amount ?? 25;
-  const affiliateReward = summary?.affiliate.rp_per_signup ?? 300;
-  const nativeShareAvailable = canNativeShare();
-
   useEffect(() => {
     setSearchValue(submittedUsername);
   }, [submittedUsername]);
-
-  const loadSummary = useCallback(
-    async ({ silent = false }: { silent?: boolean } = {}) => {
-      if (!silent) {
-        setSummaryLoading(true);
-      }
-      setSummaryError(null);
-
-      try {
-        const response = await authFetch('/api/rewards/summary');
-        const data = (await response.json().catch(() => ({}))) as RewardSummaryResponse;
-
-        if (!response.ok || !data.summary) {
-          setSummaryError(data.error ?? 'Could not load share stats.');
-          return;
-        }
-
-        setSummary(data.summary);
-      } catch {
-        setSummaryError('Could not load share stats.');
-      } finally {
-        if (!silent) {
-          setSummaryLoading(false);
-        }
-      }
-    },
-    [authFetch]
-  );
-
-  useEffect(() => {
-    void loadSummary();
-  }, [loadSummary]);
 
   useEffect(() => {
     let cancelled = false;
@@ -187,26 +94,6 @@ export function SharePageClient() {
     };
   }, [submittedUsername]);
 
-  const recordShareAction = useCallback(
-    async (action: string) => {
-      try {
-        const response = await authFetch('/api/rewards/share-action', {
-          method: 'POST',
-          body: JSON.stringify({ action }),
-        });
-        const data = (await response.json().catch(() => ({}))) as { awarded?: boolean };
-
-        if (response.ok && data.awarded) {
-          void loadSummary({ silent: true });
-          toast.success(`+${shareReward} RP added`);
-        }
-      } catch {
-        // Keep share actions resilient even if reward tracking fails.
-      }
-    },
-    [authFetch, loadSummary, shareReward]
-  );
-
   const handleLookupSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const nextUsername = normalizeUsername(searchValue);
@@ -231,242 +118,22 @@ export function SharePageClient() {
     });
   };
 
-  const handleCopyInviteLink = async () => {
-    if (!inviteUrl) {
-      toast.error('Invite link is not ready yet.');
-      return;
-    }
-
-    const copied = await copyLink(inviteUrl);
-    if (!copied) {
-      toast.error('Could not copy the invite link.');
-      return;
-    }
-
-    toast.success('Invite link copied');
-    await recordShareAction('invite_copy');
-  };
-
-  const handleCopyInviteCode = async () => {
-    if (!inviteCode) {
-      toast.error('Invite code is not ready yet.');
-      return;
-    }
-
-    const copied = await copyLink(inviteCode);
-    if (!copied) {
-      toast.error('Could not copy the invite code.');
-      return;
-    }
-
-    toast.success('Invite code copied');
-    await recordShareAction('invite_code_copy');
-  };
-
-  const handleInviteWhatsApp = () => {
-    if (!inviteUrl) {
-      toast.error('Invite link is not ready yet.');
-      return;
-    }
-
-    shareToWhatsApp(shareText, inviteUrl);
-    void recordShareAction('invite_whatsapp');
-  };
-
-  const handleInviteNativeShare = async () => {
-    if (!inviteUrl) {
-      toast.error('Invite link is not ready yet.');
-      return;
-    }
-
-    const shared = await nativeShare({
-      title: `${user?.username ?? 'Mechi'} invite`,
-      text: shareText,
-      url: inviteUrl,
-    });
-
-    if (shared) {
-      await recordShareAction('invite_native');
-    }
-  };
-
-  const handleCopyProfileLink = async () => {
-    if (!profileUrl) {
-      toast.error('Profile link is not ready yet.');
-      return;
-    }
-
-    const copied = await copyLink(profileUrl);
-    if (!copied) {
-      toast.error('Could not copy the profile link.');
-      return;
-    }
-
-    toast.success('Profile link copied');
-    await recordShareAction('profile_copy');
-  };
-
   const lookupRank = lookup ? getRankDivision(lookup.bestRating) : null;
   const lookupMatches = lookup ? lookup.totalWins + lookup.totalLosses : 0;
 
   return (
     <div className="page-container max-w-[58rem] space-y-7">
       <div className="space-y-3">
-        <p className="section-title">Share</p>
-        <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-          <div className="max-w-3xl">
-            <h1 className="text-[1.8rem] font-black leading-[1.02] text-[var(--text-primary)] sm:text-[2.55rem]">
-              Your link, your affiliate code, one clean place to share.
-            </h1>
-            <p className="mt-3 max-w-2xl text-sm leading-6 text-[var(--text-secondary)]">
-              Invite new players, earn RP the moment your code gets used, and keep player lookup in
-              reach when you want to verify someone&apos;s public card fast.
-            </p>
-          </div>
-
-          {summary ? (
-            <span className="brand-chip w-fit px-3 py-1.5">
-              {summary.balances.available.toLocaleString()} RP available
-            </span>
-          ) : null}
+        <p className="section-title">Friends</p>
+        <div className="max-w-3xl">
+          <h1 className="text-[1.8rem] font-black leading-[1.02] text-[var(--text-primary)] sm:text-[2.55rem]">
+            Search friends and open public cards fast.
+          </h1>
+          <p className="mt-3 max-w-2xl text-sm leading-6 text-[var(--text-secondary)]">
+            Use an exact username to verify a profile before you queue, challenge, or share it.
+          </p>
         </div>
       </div>
-
-      <section className="card overflow-hidden p-5 sm:p-6">
-        <div className="flex flex-col gap-6">
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="brand-chip px-3 py-1">Affiliate</span>
-            <span className="rounded-full border border-[var(--border-color)] bg-[var(--surface-elevated)] px-3 py-1 text-xs font-semibold text-[var(--text-secondary)]">
-              Invite code <span className="ml-1 font-black text-[var(--text-primary)]">{inviteCode || '--'}</span>
-            </span>
-            <span className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--text-soft)]">
-              Earn +{affiliateReward} RP per signup
-            </span>
-          </div>
-
-          <div className="max-w-3xl">
-            <h2 className="text-[1.45rem] font-black leading-tight text-[var(--text-primary)] sm:text-[1.75rem]">
-              When someone finishes signup with your code, the affiliate RP lands immediately.
-            </h2>
-            <p className="mt-3 text-sm leading-6 text-[var(--text-secondary)]">
-              Share your invite link when you want a brand-new player to join Mechi. Share your
-              public profile when someone already has an account and just needs your card.
-            </p>
-          </div>
-
-          <div className="space-y-5">
-            <div className="space-y-3 border-t border-[var(--border-color)] pt-4">
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <div>
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--text-soft)]">
-                    Invite link
-                  </p>
-                  <p className="mt-1 text-sm text-[var(--text-secondary)]">
-                    Best for new players. Their signup counts against your affiliate total.
-                  </p>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  <button type="button" onClick={() => void handleCopyInviteLink()} className="btn-primary">
-                    <Copy size={14} />
-                    Copy link
-                  </button>
-                  <button type="button" onClick={handleInviteWhatsApp} className="btn-ghost">
-                    <MessageCircle size={14} />
-                    WhatsApp
-                  </button>
-                  {nativeShareAvailable ? (
-                    <button type="button" onClick={() => void handleInviteNativeShare()} className="btn-ghost">
-                      <Share2 size={14} />
-                      Share
-                    </button>
-                  ) : null}
-                  <button type="button" onClick={() => void handleCopyInviteCode()} className="btn-ghost">
-                    <Link2 size={14} />
-                    Copy code
-                  </button>
-                </div>
-              </div>
-              <p className="break-all text-sm font-medium text-[var(--text-primary)]">
-                {inviteUrl || 'Your invite link is syncing.'}
-              </p>
-            </div>
-
-            <div className="space-y-3 border-t border-[var(--border-color)] pt-4">
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <div>
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--text-soft)]">
-                    Public profile
-                  </p>
-                  <p className="mt-1 text-sm text-[var(--text-secondary)]">
-                    Best for players who already know you and just need your Mechi card.
-                  </p>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  <button type="button" onClick={() => void handleCopyProfileLink()} className="btn-ghost">
-                    <Copy size={14} />
-                    Copy profile
-                  </button>
-                  {profileUrl ? (
-                    <Link href={profileUrl} target="_blank" className="btn-ghost">
-                      <ExternalLink size={14} />
-                      Open card
-                    </Link>
-                  ) : null}
-                </div>
-              </div>
-              <p className="break-all text-sm font-medium text-[var(--text-primary)]">
-                {profileUrl || 'Your public profile link is syncing.'}
-              </p>
-            </div>
-          </div>
-
-          <div className="grid gap-px overflow-hidden rounded-[1.65rem] border border-[var(--border-color)] bg-[var(--border-color)] sm:grid-cols-4">
-            <MetricCell
-              label="Affiliate signups"
-              value={
-                summaryLoading
-                  ? '...'
-                  : String(summary?.affiliate.signups ?? 0)
-              }
-              note="Invite-code signups credited to you"
-            />
-            <MetricCell
-              label="Affiliate RP"
-              value={
-                summaryLoading
-                  ? '...'
-                  : `${(summary?.affiliate.rp_earned ?? 0).toLocaleString()}`
-              }
-              note="Total RP from invite-code use"
-            />
-            <MetricCell
-              label="Qualified orders"
-              value={
-                summaryLoading
-                  ? '...'
-                  : String(summary?.affiliate.qualified ?? 0)
-              }
-              note="Invitees who later hit partner thresholds"
-            />
-            <MetricCell
-              label="Completed orders"
-              value={
-                summaryLoading
-                  ? '...'
-                  : String(summary?.affiliate.completed ?? 0)
-              }
-              note="Qualified referrals fully completed"
-            />
-          </div>
-
-          <div className="flex flex-wrap items-center gap-3 text-xs text-[var(--text-soft)]">
-            <span>Verified share actions can still grant +{shareReward} RP once per day.</span>
-            {summaryError ? (
-              <span className="text-[var(--brand-coral)]">{summaryError}</span>
-            ) : null}
-          </div>
-        </div>
-      </section>
 
       <section className="space-y-4">
         <div className="max-w-2xl">
@@ -597,10 +264,10 @@ export function SharePageClient() {
               <Users size={16} />
             </div>
             <div>
-              <p className="text-sm font-black text-[var(--text-primary)]">Keep lookup secondary</p>
+              <p className="text-sm font-black text-[var(--text-primary)]">Search for a friend</p>
               <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">
-                The main job here is sharing your own links. Player lookup stays lighter so you can
-                still jump to someone&apos;s public card without turning this page into a directory.
+                Enter an exact username to jump straight to a public card, or open the leaderboard
+                if you want to browse first.
               </p>
             </div>
           </div>

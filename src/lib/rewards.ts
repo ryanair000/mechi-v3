@@ -166,10 +166,10 @@ const DEFAULT_CHEZAHUB_REDEEM_URL = 'https://redeem.chezahub.co.ke';
 const DEFAULT_LINK_TOKEN_TTL_MS = 1000 * 60 * 15;
 
 export const VOUCHER_TIERS = [
-  { id: 'voucher_50', points_cost: 500, value_kes: 50, title: 'KES 50 ChezaHub Credit' },
-  { id: 'voucher_100', points_cost: 1000, value_kes: 100, title: 'KES 100 ChezaHub Credit' },
-  { id: 'voucher_200', points_cost: 2000, value_kes: 200, title: 'KES 200 ChezaHub Credit' },
-  { id: 'voucher_500', points_cost: 5000, value_kes: 500, title: 'KES 500 ChezaHub Credit' },
+  { id: 'voucher_50', points_cost: 500, value_kes: 50, title: 'KES 50 Reward Credit' },
+  { id: 'voucher_100', points_cost: 1000, value_kes: 100, title: 'KES 100 Reward Credit' },
+  { id: 'voucher_200', points_cost: 2000, value_kes: 200, title: 'KES 200 Reward Credit' },
+  { id: 'voucher_500', points_cost: 5000, value_kes: 500, title: 'KES 500 Reward Credit' },
 ] as const;
 
 export type VoucherTier = (typeof VOUCHER_TIERS)[number];
@@ -252,7 +252,7 @@ export const REWARD_WAYS_TO_EARN = [
   {
     id: 'referral_main',
     title: 'Refer a buyer who completes a first order',
-    description: `+${REWARD_RULES.inviterMain} RP after your invitee completes a paid ChezaHub order of at least KES ${REWARD_RULES.qualifiedReferralMinimumKes.toLocaleString()}.`,
+    description: `+${REWARD_RULES.inviterMain} RP after your invitee completes a paid redeemable order of at least KES ${REWARD_RULES.qualifiedReferralMinimumKes.toLocaleString()}.`,
   },
 ] as const;
 
@@ -617,22 +617,27 @@ function normalizeRewardRedemptionMetadata(row: RewardRedemptionRow): RewardRede
     row.metadata && typeof row.metadata === 'object'
       ? (row.metadata as Record<string, unknown>)
       : {};
+  const source =
+    typeof metadata.source === 'string'
+      ? metadata.source
+      : row.reward_type === 'mechi_perk'
+        ? 'mechi_native'
+        : 'chezahub';
 
   return {
     ...row,
-    partner_order_url:
-      typeof metadata.partner_order_url === 'string' ? metadata.partner_order_url : null,
+    partner_order_url: null,
     partner_status:
       typeof metadata.partner_status === 'string' ? metadata.partner_status : null,
     delivery_channel:
       typeof metadata.delivery_channel === 'string' ? metadata.delivery_channel : null,
-    access_hint: typeof metadata.access_hint === 'string' ? metadata.access_hint : null,
-    source:
-      typeof metadata.source === 'string'
-        ? metadata.source
-        : row.reward_type === 'mechi_perk'
-          ? 'mechi_native'
-          : 'chezahub',
+    access_hint:
+      source === 'mechi_native'
+        ? typeof metadata.access_hint === 'string'
+          ? metadata.access_hint
+          : null
+        : 'Fulfillment updates will appear here in Mechi rewards.',
+    source,
   };
 }
 
@@ -844,7 +849,7 @@ function getRewardEventTitle(eventType: string, availableDelta: number, pendingD
 
   switch (eventType) {
     case 'account_link':
-      return 'ChezaHub wallet ready';
+      return 'Rewards profile ready';
     case 'profile_completion':
       return 'Profile completed';
     case 'match_first_of_day':
@@ -864,7 +869,7 @@ function getRewardEventTitle(eventType: string, availableDelta: number, pendingD
     case 'referral_main_vested':
       return 'Referral reward vested';
     case 'chezahub_first_paid_order':
-      return 'First ChezaHub order';
+      return 'First redeemable order';
     case 'reward_redemption_spend':
       return delta < 0 ? 'Reward redeemed' : 'Reward adjustment';
     case 'reward_redemption_reversal':

@@ -4,12 +4,17 @@ import {
   consumeAuthActionToken,
   getAuthActionToken,
   getAuthActionTokenState,
+  normalizeEmailAddress,
 } from '@/lib/auth-actions';
 import { applyAuthCookie, createSessionForProfile, hashPassword } from '@/lib/auth';
 import { checkRateLimit, getClientIp, rateLimitResponse } from '@/lib/rateLimit';
 import { createServiceClient } from '@/lib/supabase';
 
 const MIN_PASSWORD_LENGTH = 9;
+
+function isValidEmail(value: string) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+}
 
 function getTokenErrorResponse(status: 'invalid' | 'expired') {
   return NextResponse.json(
@@ -32,18 +37,25 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
+    const intent = String(body.intent ?? 'reset').trim();
     const token = String(body.token ?? '').trim();
+    const username = String(body.username ?? '').trim();
+    const email = normalizeEmailAddress(body.email);
     const password = String(body.password ?? '');
 
     if (!token) {
       return getTokenErrorResponse('invalid');
     }
 
-    if (password.length < MIN_PASSWORD_LENGTH) {
+    if (!username || !isValidEmail(email)) {
       return NextResponse.json(
-        { error: 'Password must be more than 8 characters' },
+        { error: 'Enter the username and email connected to this Mechi account.' },
         { status: 400 }
       );
+    }
+
+    if (intent !== 'verify' && intent !== 'reset') {
+      return NextResponse.json({ error: 'Invalid reset request.' }, { status: 400 });
     }
 
     const tokenRow = await getAuthActionToken(token);
@@ -76,6 +88,31 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { error: `Account suspended: ${currentProfile.ban_reason ?? 'Contact support.'}` },
         { status: 403 }
+      );
+    }
+
+    const matchesEmail = normalizeEmailAddress(currentProfile.email) === email;
+    const matchesUsername =
+      String(currentProfile.username ?? '').trim().toLowerCase() === username.toLowerCase();
+
+    if (!matchesEmail || !matchesUsername) {
+      return NextResponse.json(
+        { error: 'That username and email do not match this reset link.' },
+        { status: 400 }
+      );
+    }
+
+    if (intent === 'verify') {
+      return NextResponse.json({
+        success: true,
+        message: 'Identity confirmed. You can set a new password now.',
+      });
+    }
+
+    if (password.length < MIN_PASSWORD_LENGTH) {
+      return NextResponse.json(
+        { error: 'Password must be more than 8 characters' },
+        { status: 400 }
       );
     }
 

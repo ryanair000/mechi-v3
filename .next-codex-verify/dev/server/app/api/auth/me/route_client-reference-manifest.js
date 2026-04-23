@@ -1,0 +1,1 @@
+globalThis.__RSC_MANIFEST=(globalThis.__RSC_MANIFEST||{});globalThis.__RSC_MANIFEST["/api/auth/me/route"]={"moduleLoading":{"prefix":"/_next/"},"ssrModuleMapping":{},"edgeSSRModuleMapping":{},"clientModules":{},"entryCSSFiles":{"C:\\Users\\ADMIN\\Documents\\mechiiii\\mechi-v3\\src\\app\\api\\auth\\me\\route":[]},"rscModuleMapping":{},"edgeRscModuleMapping":{}};

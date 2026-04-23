@@ -11,6 +11,10 @@ import {
 } from '@/lib/rewards';
 import { createServiceClient } from '@/lib/supabase';
 
+function buildMechiFulfillmentHint() {
+  return 'Fulfillment updates will appear here in Mechi rewards.';
+}
+
 export async function POST(request: NextRequest) {
   const access = await requireActiveAccessProfile(request);
   if (access.response) {
@@ -148,13 +152,12 @@ export async function POST(request: NextRequest) {
     }
 
     let chezahubUserId = profile.chezahub_user_id ?? null;
-    let accessHint: string | null = null;
     let ordersUrl: string | null = null;
 
     if (!chezahubUserId) {
       if (!profile.email?.trim()) {
         return NextResponse.json(
-          { error: 'Add an email address to your profile before redeeming partner rewards' },
+          { error: 'Add an email address to your profile before redeeming this redeemable' },
           { status: 400 }
         );
       }
@@ -167,7 +170,6 @@ export async function POST(request: NextRequest) {
       });
 
       chezahubUserId = ensuredCustomer.chezahubUserId;
-      accessHint = ensuredCustomer.accessHint;
       ordersUrl = ensuredCustomer.ordersUrl;
 
       const { error: profileSyncError } = await supabase
@@ -194,7 +196,7 @@ export async function POST(request: NextRequest) {
 
     if (existingIssued) {
       return NextResponse.json(
-        { error: 'Finish or cancel your current partner redemption before starting another one' },
+        { error: 'Finish or cancel your current redeemable before starting another one' },
         { status: 409 }
       );
     }
@@ -217,6 +219,7 @@ export async function POST(request: NextRequest) {
       customerName: profile.username?.trim() || authUser.username || 'Mechi player',
       customerPhone: profile.phone ?? null,
     });
+    const mechiFulfillmentHint = buildMechiFulfillmentHint();
 
     try {
       await applyRewardEvent(supabase, {
@@ -255,7 +258,7 @@ export async function POST(request: NextRequest) {
         partner_order_url: issued.orderUrl ?? ordersUrl,
         partner_status: issued.status,
         delivery_channel: issued.deliveryChannel,
-        access_hint: issued.accessHint ?? accessHint,
+        access_hint: mechiFulfillmentHint,
       },
     });
 
@@ -285,10 +288,10 @@ export async function POST(request: NextRequest) {
         code: null,
         expires_at: null,
         points_cost: reward.points_cost,
-        partner_order_url: issued.orderUrl ?? ordersUrl,
+        partner_order_url: null,
         partner_status: issued.status,
         delivery_channel: issued.deliveryChannel,
-        access_hint: issued.accessHint ?? accessHint,
+        access_hint: mechiFulfillmentHint,
       },
     });
   } catch (error) {

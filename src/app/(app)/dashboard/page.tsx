@@ -10,7 +10,6 @@ import { openAppOnboarding } from '@/components/AppOnboarding';
 import { useAuth, useAuthFetch } from '@/components/AuthProvider';
 import { GameCard } from '@/components/GameCard';
 import { PaywallModal } from '@/components/PaywallModal';
-import { DASHBOARD_FEATURE_ITEMS } from '@/lib/app-shell-nav';
 import {
   GAMES,
   getConfiguredPlatformForGame,
@@ -491,46 +490,6 @@ export default function DashboardPage() {
       </div>
 
       {/* ── Active match banner ───────────────────────── */}
-      <section>
-        <div className="mb-4 flex items-center gap-3">
-          <div className="h-4 w-[3px] rounded-full bg-[var(--brand-teal)]" />
-          <p className="text-[10px] font-black uppercase tracking-[0.18em] text-[var(--text-primary)]">
-            Feature Hub
-          </p>
-          <div className="h-px flex-1 bg-[var(--border-color)]" />
-        </div>
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          {DASHBOARD_FEATURE_ITEMS.map((item) => {
-            const Icon = item.icon;
-
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={`${panelBase} group flex min-h-[10rem] flex-col justify-between overflow-hidden p-4 transition-all hover:border-[rgba(50,224,196,0.28)] hover:bg-[var(--surface-elevated)]`}
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-[rgba(50,224,196,0.18)] bg-[rgba(50,224,196,0.08)] text-[var(--accent-secondary-text)]">
-                    <Icon size={18} />
-                  </div>
-                  <ChevronRight
-                    size={16}
-                    className="text-[var(--text-soft)] transition-transform group-hover:translate-x-0.5 group-hover:text-[var(--brand-teal)]"
-                  />
-                </div>
-
-                <div className="mt-6">
-                  <p className="text-base font-black text-[var(--text-primary)]">{item.label}</p>
-                  <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">
-                    {item.description}
-                  </p>
-                </div>
-              </Link>
-            );
-          })}
-        </div>
-      </section>
-
       {activeMatch ? (
         <Link href={`/match/${activeMatch.id}`} className="block">
           <div className="flex items-center gap-4 rounded-xl border border-[rgba(50,224,196,0.28)] bg-[rgba(50,224,196,0.08)] p-4 transition-all hover:border-[rgba(50,224,196,0.44)] hover:bg-[rgba(50,224,196,0.12)]">

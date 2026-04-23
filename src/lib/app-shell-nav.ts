@@ -153,9 +153,3 @@ export const SIDEBAR_SECTIONS: SidebarSectionConfig[] = [
   },
 ];
 
-export const DASHBOARD_FEATURE_ITEMS: AppNavItem[] = [
-  TUTORIALS_NAV_ITEM,
-  FRIENDS_NAV_ITEM,
-  TOURNAMENTS_NAV_ITEM,
-  REDEEM_NAV_ITEM,
-];

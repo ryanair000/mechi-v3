@@ -67,11 +67,6 @@ export function AppOnboarding() {
     router.push('/games');
   };
 
-  const openTutorials = () => {
-    closeOnboarding();
-    router.push('/tutorials');
-  };
-
   if (!open) {
     return null;
   }
@@ -133,15 +128,10 @@ export function AppOnboarding() {
         </div>
 
         <div className="mt-6 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-          <p className="text-xs text-[var(--text-soft)]">
-            Reopen this from Dashboard any time, or open the full tutorials page.
-          </p>
+          <p className="text-xs text-[var(--text-soft)]">Reopen this from Dashboard any time.</p>
           <div className="flex flex-col gap-2 sm:flex-row">
             <button type="button" onClick={closeOnboarding} className="btn-outline justify-center">
               Got it
-            </button>
-            <button type="button" onClick={openTutorials} className="btn-outline justify-center">
-              Full guide
             </button>
             <button type="button" onClick={openGames} className="btn-primary justify-center">
               <Gamepad2 size={14} />

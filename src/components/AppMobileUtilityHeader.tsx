@@ -48,7 +48,6 @@ const HEADER_CONFIGS: Array<{
       backLabel: 'Back to games',
     },
   },
-  { matches: (pathname) => pathname.startsWith('/tutorials'), config: { eyebrow: 'Learn', title: 'Tutorials' } },
   { matches: (pathname) => pathname.startsWith('/challenges'), config: { eyebrow: 'Compete', title: 'Challenges' } },
   { matches: (pathname) => pathname.startsWith('/share'), config: { eyebrow: 'Growth', title: 'Share' } },
   { matches: (pathname) => pathname.startsWith('/rewards'), config: { eyebrow: 'Growth', title: 'Rewards' } },

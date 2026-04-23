@@ -428,9 +428,6 @@ export default function DashboardPage() {
                 <CirclePlay size={13} />
                 Intro
               </button>
-              <Link href="/tutorials" className="btn-outline text-sm">
-                Tutorials
-              </Link>
             </div>
           </div>
         </div>

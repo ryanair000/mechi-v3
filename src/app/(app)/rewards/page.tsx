@@ -4,10 +4,10 @@ import Link from 'next/link';
 import { useCallback, useEffect, useState } from 'react';
 import { ArrowRight, ChevronDown, RefreshCw } from 'lucide-react';
 import { useAuthFetch } from '@/components/AuthProvider';
-import type { RewardSummary, RewardWayToEarn } from '@/types/rewards';
+import type { RewardRedemptionRequest, RewardSummary, RewardWayToEarn } from '@/types/rewards';
 
-function formatTime(iso: string) {
-  return new Date(iso).toLocaleString('en-KE', {
+function formatDateTime(value: string) {
+  return new Date(value).toLocaleString('en-KE', {
     day: 'numeric',
     month: 'short',
     hour: 'numeric',
@@ -15,26 +15,80 @@ function formatTime(iso: string) {
   });
 }
 
-function BalanceRow({
-  balances,
-}: {
-  balances: { available: number; pending: number; lifetime: number };
-}) {
+function formatKes(value: number) {
+  return new Intl.NumberFormat('en-KE', {
+    minimumFractionDigits: Number.isInteger(value) ? 0 : 1,
+    maximumFractionDigits: 1,
+  }).format(value);
+}
+
+function formatRedemptionStatus(status: RewardRedemptionRequest['status']) {
+  switch (status) {
+    case 'processing':
+      return 'Processing';
+    case 'completed':
+      return 'Completed';
+    case 'rejected':
+      return 'Rejected';
+    case 'pending':
+    default:
+      return 'Pending';
+  }
+}
+
+function getStatusTone(status: RewardRedemptionRequest['status']) {
+  switch (status) {
+    case 'completed':
+      return 'bg-emerald-500/12 text-emerald-300';
+    case 'rejected':
+      return 'bg-red-500/12 text-red-300';
+    case 'processing':
+      return 'bg-blue-500/12 text-blue-300';
+    case 'pending':
+    default:
+      return 'bg-amber-500/12 text-amber-300';
+  }
+}
+
+function WalletOverview({ summary }: { summary: RewardSummary }) {
   return (
-    <div className="mb-6 flex divide-x divide-[var(--border-color)] rounded-2xl border border-[var(--border-color)] bg-[var(--surface-soft)]">
+    <div className="grid gap-3 md:grid-cols-[1.4fr_1fr_1fr_1fr]">
+      <div className="rounded-3xl border border-[var(--accent-secondary)]/20 bg-[var(--accent-secondary)]/8 p-5">
+        <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-[var(--text-soft)]">
+          Mechi wallet
+        </p>
+        <p className="mt-3 text-3xl font-black text-[var(--text-primary)]">
+          KSh {formatKes(summary.wallet.available_kes)}
+        </p>
+        <p className="mt-2 text-sm text-[var(--text-secondary)]">{summary.wallet.rate_label}</p>
+      </div>
+
       {[
-        { label: 'Available', value: balances.available, note: 'Ready to redeem' },
-        { label: 'Pending', value: balances.pending, note: 'Awaiting vesting' },
-        { label: 'Lifetime', value: balances.lifetime, note: 'Total earned' },
+        {
+          label: 'Available points',
+          value: summary.balances.points_available.toLocaleString(),
+          note: 'Ready to redeem',
+        },
+        {
+          label: 'Pending points',
+          value: summary.balances.pending.toLocaleString(),
+          note: 'Waiting to clear',
+        },
+        {
+          label: 'Lifetime points',
+          value: summary.balances.lifetime.toLocaleString(),
+          note: 'Total earned',
+        },
       ].map((item) => (
-        <div key={item.label} className="flex-1 px-4 py-4 text-center">
-          <p className="text-2xl font-black text-[var(--text-primary)]">
-            {item.value.toLocaleString()}
-          </p>
-          <p className="mt-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--text-soft)]">
+        <div
+          key={item.label}
+          className="rounded-3xl border border-[var(--border-color)] bg-[var(--surface-soft)] p-5"
+        >
+          <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-[var(--text-soft)]">
             {item.label}
           </p>
-          <p className="mt-1 text-[11px] text-[var(--text-soft)]">{item.note}</p>
+          <p className="mt-3 text-3xl font-black text-[var(--text-primary)]">{item.value}</p>
+          <p className="mt-2 text-sm text-[var(--text-secondary)]">{item.note}</p>
         </div>
       ))}
     </div>
@@ -51,107 +105,162 @@ function WaysToEarn({
   onToggle: () => void;
 }) {
   return (
-    <div className="mb-6">
-      <button type="button" onClick={onToggle} className="flex w-full items-center justify-between py-2">
-        <span className="text-xs font-semibold text-[var(--text-soft)]">Ways to earn RP</span>
+    <section className="rounded-3xl border border-[var(--border-color)] bg-[var(--surface-soft)] p-5">
+      <button type="button" onClick={onToggle} className="flex w-full items-center justify-between gap-3">
+        <div>
+          <p className="text-lg font-black text-[var(--text-primary)]">Ways to earn</p>
+          <p className="mt-1 text-sm text-[var(--text-secondary)]">
+            Keep stacking points from matches, referrals, and daily activity.
+          </p>
+        </div>
         <ChevronDown
-          size={14}
-          className={`text-[var(--text-soft)] transition-transform ${expanded ? 'rotate-180' : ''}`}
+          size={16}
+          className={`shrink-0 text-[var(--text-soft)] transition-transform ${expanded ? 'rotate-180' : ''}`}
         />
       </button>
-      {expanded && (
-        <div className="mt-1 border-t border-[var(--border-color)]">
-          {items.map((item, index) => (
+
+      {expanded ? (
+        <div className="mt-5 grid gap-3 md:grid-cols-2">
+          {items.map((item) => (
             <div
               key={item.id}
-              className={`flex items-start justify-between gap-4 py-3 ${
-                index < items.length - 1 ? 'border-b border-[var(--border-color)]' : ''
-              }`}
+              className="rounded-2xl border border-[var(--border-color)] bg-[var(--surface)] p-4"
             >
-              <div className="min-w-0 flex-1">
-                <p className="text-sm font-semibold text-[var(--text-primary)]">{item.title}</p>
-                <p className="mt-0.5 text-xs text-[var(--text-soft)]">{item.description}</p>
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-sm font-bold text-[var(--text-primary)]">{item.title}</p>
+                  <p className="mt-2 text-xs leading-6 text-[var(--text-secondary)]">
+                    {item.description}
+                  </p>
+                </div>
+                <span className="brand-chip shrink-0 px-2.5 py-1 text-[10px]">
+                  +{item.rp_amount} RP
+                </span>
               </div>
-              <span className="brand-chip shrink-0 px-2 py-0.5 text-[10px]">
-                +{item.rp_amount} RP
-              </span>
+            </div>
+          ))}
+        </div>
+      ) : null}
+    </section>
+  );
+}
+
+function RedemptionHistory({ items }: { items: RewardSummary['recent_redemptions'] }) {
+  return (
+    <section className="rounded-3xl border border-[var(--border-color)] bg-[var(--surface-soft)] p-5">
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <p className="text-lg font-black text-[var(--text-primary)]">Recent redemptions</p>
+          <p className="mt-1 text-sm text-[var(--text-secondary)]">
+            Every request stays inside Mechi until the team fulfills it.
+          </p>
+        </div>
+        <Link href="/rewards/redeem" className="btn-ghost text-sm">
+          Redeem now <ArrowRight size={13} />
+        </Link>
+      </div>
+
+      {items.length === 0 ? (
+        <div className="mt-5 rounded-2xl border border-dashed border-[var(--border-color)] bg-[var(--surface)] px-4 py-6 text-sm text-[var(--text-secondary)]">
+          No redemptions yet. Pick a reward on the redeem page and we will queue it for fulfillment.
+        </div>
+      ) : (
+        <div className="mt-5 space-y-3">
+          {items.map((item) => (
+            <div
+              key={item.id}
+              className="rounded-2xl border border-[var(--border-color)] bg-[var(--surface)] p-4"
+            >
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                <div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <p className="text-sm font-bold uppercase tracking-[0.05em] text-[var(--text-primary)]">
+                      {item.game}
+                    </p>
+                    <span className={`rounded-full px-2.5 py-1 text-[11px] font-bold ${getStatusTone(item.status)}`}>
+                      {formatRedemptionStatus(item.status)}
+                    </span>
+                  </div>
+                  <p className="mt-2 text-lg font-black text-[var(--text-primary)]">
+                    {item.reward_amount_label}
+                  </p>
+                  <p className="mt-1 text-xs text-[var(--text-secondary)]">
+                    KSh {formatKes(item.cost_kes)} • {item.cost_points.toLocaleString()} points •
+                    {' '}M-Pesa {item.mpesa_number}
+                  </p>
+                </div>
+                <p className="text-xs text-[var(--text-soft)]">{formatDateTime(item.submitted_at)}</p>
+              </div>
+              {item.admin_note ? (
+                <p className="mt-3 text-xs text-[var(--text-secondary)]">{item.admin_note}</p>
+              ) : null}
             </div>
           ))}
         </div>
       )}
-    </div>
+    </section>
   );
 }
 
-function ActivityLog({ events }: { events: RewardSummary['recent_activity'] }) {
-  if (events.length === 0) {
-    return (
-      <div className="py-10 text-center">
-        <p className="text-sm text-[var(--text-soft)]">No reward activity yet.</p>
-        <Link
-          href="/rewards/catalog"
-          className="mt-3 inline-flex items-center gap-1.5 text-sm font-semibold text-[var(--accent-secondary-text)] hover:text-[var(--text-primary)]"
-        >
-          Browse the catalog <ArrowRight size={13} />
-        </Link>
-      </div>
-    );
-  }
-
+function ActivityLog({ items }: { items: RewardSummary['recent_activity'] }) {
   return (
-    <div>
-      <div className="mb-1 flex items-center gap-2">
-        <span className="text-xs font-semibold text-[var(--text-soft)]">Recent activity</span>
+    <section className="rounded-3xl border border-[var(--border-color)] bg-[var(--surface-soft)] p-5">
+      <div>
+        <p className="text-lg font-black text-[var(--text-primary)]">Recent activity</p>
+        <p className="mt-1 text-sm text-[var(--text-secondary)]">
+          Point gains and reversals land here as they happen.
+        </p>
       </div>
-      <div className="border-t border-[var(--border-color)]">
-        {events.map((event) => (
-          <div
-            key={event.id}
-            className="flex items-center justify-between gap-4 border-b border-[var(--border-color)] py-3 last:border-0"
-          >
-            <div className="min-w-0 flex-1">
-              <p className="text-sm font-semibold text-[var(--text-primary)]">{event.title}</p>
-              <p className="mt-0.5 text-[11px] text-[var(--text-soft)]">{formatTime(event.created_at)}</p>
-            </div>
-            <div className="text-right">
-              {event.available_delta !== 0 && (
+
+      {items.length === 0 ? (
+        <div className="mt-5 rounded-2xl border border-dashed border-[var(--border-color)] bg-[var(--surface)] px-4 py-6 text-sm text-[var(--text-secondary)]">
+          No wallet activity yet.
+        </div>
+      ) : (
+        <div className="mt-5 space-y-3">
+          {items.map((item) => (
+            <div
+              key={item.id}
+              className="flex items-center justify-between gap-4 rounded-2xl border border-[var(--border-color)] bg-[var(--surface)] p-4"
+            >
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-bold text-[var(--text-primary)]">{item.title}</p>
+                <p className="mt-1 text-xs text-[var(--text-soft)]">{formatDateTime(item.created_at)}</p>
+              </div>
+              <div className="text-right">
                 <p
                   className={`text-sm font-black ${
-                    event.available_delta > 0 ? 'text-[var(--accent-secondary-text)]' : 'text-red-400'
+                    item.available_delta > 0
+                      ? 'text-emerald-300'
+                      : item.available_delta < 0
+                        ? 'text-red-300'
+                        : 'text-[var(--text-primary)]'
                   }`}
                 >
-                  {event.available_delta > 0 ? '+' : ''}
-                  {event.available_delta.toLocaleString()}
+                  {item.available_delta > 0 ? '+' : ''}
+                  {item.available_delta.toLocaleString()}
                 </p>
-              )}
-              {event.pending_delta !== 0 && (
-                <p className="text-[11px] text-[var(--text-soft)]">
-                  {event.pending_delta > 0 ? '+' : ''}
-                  {event.pending_delta.toLocaleString()} pending
-                </p>
-              )}
+                {item.pending_delta !== 0 ? (
+                  <p className="mt-1 text-[11px] text-[var(--text-secondary)]">
+                    {item.pending_delta > 0 ? '+' : ''}
+                    {item.pending_delta.toLocaleString()} pending
+                  </p>
+                ) : null}
+              </div>
             </div>
-          </div>
-        ))}
-      </div>
-    </div>
+          ))}
+        </div>
+      )}
+    </section>
   );
 }
 
 function Skeleton() {
   return (
     <div className="space-y-4 pt-2">
-      <div className="h-24 w-full rounded-2xl shimmer" />
-      <div className="h-4 w-32 rounded shimmer" />
-      {[0, 1, 2, 3].map((n) => (
-        <div key={n} className="flex items-center gap-3 border-b border-[var(--border-color)] py-3 last:border-0">
-          <div className="flex-1 space-y-2">
-            <div className="h-3.5 w-44 rounded shimmer" />
-            <div className="h-3 w-24 rounded shimmer" />
-          </div>
-          <div className="h-4 w-12 rounded shimmer" />
-        </div>
-      ))}
+      <div className="h-36 w-full rounded-3xl shimmer" />
+      <div className="h-48 w-full rounded-3xl shimmer" />
+      <div className="h-72 w-full rounded-3xl shimmer" />
     </div>
   );
 }
@@ -159,44 +268,32 @@ function Skeleton() {
 export default function RewardsPage() {
   const authFetch = useAuthFetch();
   const [summary, setSummary] = useState<RewardSummary | null>(null);
-  const [waysToEarn, setWaysToEarn] = useState<RewardWayToEarn[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [loadError, setLoadError] = useState<string | null>(null);
-  const [earnExpanded, setEarnExpanded] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [waysExpanded, setWaysExpanded] = useState(true);
 
-  const loadPageData = useCallback(
+  const loadSummary = useCallback(
     async ({ silent = false }: { silent?: boolean } = {}) => {
       if (silent) {
         setRefreshing(true);
       } else {
         setLoading(true);
       }
-      setLoadError(null);
+      setError(null);
 
       try {
         const response = await authFetch('/api/rewards/summary');
-        const data = (await response.json()) as {
-          error?: string;
-          summary?: RewardSummary;
-          ways_to_earn?: RewardWayToEarn[];
-        };
+        const data = (await response.json()) as { error?: string; summary?: RewardSummary };
 
         if (!response.ok || !data.summary) {
-          setLoadError(data.error ?? 'Could not load rewards.');
+          setError(data.error ?? 'Could not load rewards.');
           return;
         }
 
-        const merged: RewardSummary = {
-          ...data.summary,
-          ways_to_earn: data.ways_to_earn ?? data.summary.ways_to_earn ?? [],
-        };
-
-        setSummary(merged);
-        setWaysToEarn((data.ways_to_earn ?? data.summary.ways_to_earn ?? []) as RewardWayToEarn[]);
-        setEarnExpanded(merged.balances.lifetime === 0);
+        setSummary(data.summary);
       } catch {
-        setLoadError('Could not load rewards.');
+        setError('Could not load rewards.');
       } finally {
         if (silent) {
           setRefreshing(false);
@@ -209,71 +306,57 @@ export default function RewardsPage() {
   );
 
   useEffect(() => {
-    void loadPageData();
-  }, [loadPageData]);
+    void loadSummary();
+  }, [loadSummary]);
 
   return (
-    <div className="page-container max-w-[52rem]">
-      <div className="flex items-center justify-between gap-4 pb-5">
-        <div className="flex items-center gap-3">
-          <h1 className="text-xl font-black text-[var(--text-primary)]">Rewards</h1>
-          {!loading && (summary?.balances.available ?? 0) > 0 && (
-            <span className="brand-chip px-2.5 py-1">
-              {summary!.balances.available.toLocaleString()} RP
-            </span>
-          )}
+    <div className="page-container max-w-[58rem] space-y-5">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <p className="brand-kicker">Rewards wallet</p>
+          <h1 className="mt-3 text-3xl font-black tracking-tight text-[var(--text-primary)]">
+            Points in, wallet value out.
+          </h1>
+          <p className="mt-3 max-w-2xl text-sm leading-7 text-[var(--text-secondary)]">
+            Earn reward points across Mechi, then spend them on CODM, PUBG UC, and eFootball rewards
+            without leaving the app.
+          </p>
         </div>
+
         <div className="flex items-center gap-2">
           <button
             type="button"
-            onClick={() => void loadPageData({ silent: true })}
+            onClick={() => void loadSummary({ silent: true })}
             disabled={loading || refreshing}
-            className="icon-button h-9 w-9"
-            aria-label="Refresh"
+            className="icon-button h-10 w-10"
+            aria-label="Refresh rewards"
           >
-            <RefreshCw size={14} className={refreshing ? 'animate-spin' : undefined} />
+            <RefreshCw size={15} className={refreshing ? 'animate-spin' : undefined} />
           </button>
-          <Link href="/rewards/catalog" className="btn-ghost text-sm">
-            Open redeemables <ArrowRight size={13} />
+          <Link href="/rewards/redeem" className="btn-primary text-sm">
+            Open redeem page <ArrowRight size={13} />
           </Link>
         </div>
       </div>
 
-      {loadError && (
-        <div className="mb-4 flex items-center justify-between gap-3 rounded-2xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-400">
-          <span>{loadError}</span>
-          <button
-            type="button"
-            onClick={() => void loadPageData()}
-            className="shrink-0 text-xs font-semibold underline underline-offset-2"
-          >
-            Retry
-          </button>
+      {error ? (
+        <div className="rounded-2xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-300">
+          {error}
         </div>
-      )}
+      ) : null}
 
       {loading ? (
         <Skeleton />
       ) : summary ? (
         <>
-          <BalanceRow balances={summary.balances} />
-
-          <div className="mb-6 rounded-2xl border border-[var(--accent-secondary)]/20 bg-[var(--accent-secondary)]/5 px-4 py-3">
-            <p className="text-sm text-[var(--text-secondary)]">
-              Mechi owns the redemption flow now. Rewards and redeemables stay visible here, and
-              fulfillment updates surface inside your Mechi activity.
-            </p>
-          </div>
-
-          {waysToEarn.length > 0 && (
-            <WaysToEarn
-              items={waysToEarn}
-              expanded={earnExpanded}
-              onToggle={() => setEarnExpanded((value) => !value)}
-            />
-          )}
-
-          <ActivityLog events={summary.recent_activity} />
+          <WalletOverview summary={summary} />
+          <RedemptionHistory items={summary.recent_redemptions} />
+          <WaysToEarn
+            items={summary.ways_to_earn}
+            expanded={waysExpanded}
+            onToggle={() => setWaysExpanded((value) => !value)}
+          />
+          <ActivityLog items={summary.recent_activity} />
         </>
       ) : null}
     </div>

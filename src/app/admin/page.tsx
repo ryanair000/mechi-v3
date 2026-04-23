@@ -22,7 +22,7 @@ interface AdminOverviewData {
   totalUsers: number;
   bannedUsers: number;
   newUsers7d: number;
-  openRewardReviews: number;
+  openRewardRequests: number;
   totalMatches: number;
   disputedMatches: number;
   activeMatches: number;
@@ -46,7 +46,7 @@ function buildEmptyOverview(role = 'moderator'): AdminOverviewData {
     totalUsers: 0,
     bannedUsers: 0,
     newUsers7d: 0,
-    openRewardReviews: 0,
+    openRewardRequests: 0,
     totalMatches: 0,
     disputedMatches: 0,
     activeMatches: 0,
@@ -171,7 +171,7 @@ async function getOverviewData(): Promise<AdminOverviewData> {
     { count: totalUsers },
     { count: bannedUsers },
     { count: newUsers7d },
-    { count: openRewardReviews },
+    { count: openRewardRequests },
     { count: totalMatches },
     { count: disputedMatches },
     { count: activeMatches },
@@ -191,7 +191,10 @@ async function getOverviewData(): Promise<AdminOverviewData> {
     supabase.from('profiles').select('id', { count: 'exact', head: true }),
     supabase.from('profiles').select('id', { count: 'exact', head: true }).eq('is_banned', true),
     supabase.from('profiles').select('id', { count: 'exact', head: true }).gte('created_at', since7d),
-    supabase.from('reward_review_queue').select('id', { count: 'exact', head: true }).in('status', ['open', 'reviewing']),
+    supabase
+      .from('reward_redemption_requests')
+      .select('id', { count: 'exact', head: true })
+      .in('status', ['pending', 'processing']),
     supabase.from('matches').select('id', { count: 'exact', head: true }),
     supabase.from('matches').select('id', { count: 'exact', head: true }).eq('status', 'disputed'),
     supabase.from('matches').select('id', { count: 'exact', head: true }).eq('status', 'pending'),
@@ -239,7 +242,7 @@ async function getOverviewData(): Promise<AdminOverviewData> {
     totalUsers: totalUsers ?? 0,
     bannedUsers: bannedUsers ?? 0,
     newUsers7d: newUsers7d ?? 0,
-    openRewardReviews: openRewardReviews ?? 0,
+    openRewardRequests: openRewardRequests ?? 0,
     totalMatches: totalMatches ?? 0,
     disputedMatches: disputedMatches ?? 0,
     activeMatches: activeMatches ?? 0,
@@ -265,12 +268,12 @@ export default async function AdminOverviewPage() {
   const attentionCards = [
     {
       href: '/admin/rewards',
-      title: 'Reward reviews',
-      value: overview.openRewardReviews,
+      title: 'Reward queue',
+      value: overview.openRewardRequests,
       detail:
-        overview.openRewardReviews > 0
-          ? 'Suspicious referral or redemption events need a moderator look before points leakage grows.'
-          : 'No suspicious reward items are waiting for manual review right now.',
+        overview.openRewardRequests > 0
+          ? 'Player redemption requests are waiting for fulfillment or status updates.'
+          : 'No player reward redemptions are waiting in the queue right now.',
       icon: Shield,
     },
     {

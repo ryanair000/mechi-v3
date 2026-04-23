@@ -1,3 +1,6 @@
+import type { RewardGameKey, RewardRedemptionStatus } from './rewards';
+export type { RewardGameKey, RewardRedemptionStatus } from './rewards';
+
 export type PlatformKey = 'ps' | 'xbox' | 'nintendo' | 'mobile' | 'pc';
 export type CountryKey = 'kenya' | 'tanzania' | 'uganda' | 'rwanda' | 'ethiopia';
 export type LobbyVisibility = 'public' | 'private';
@@ -62,7 +65,10 @@ export type NotificationType =
   | 'match_chat_message'
   | 'match_reported'
   | 'match_completed'
-  | 'match_disputed';
+  | 'match_disputed'
+  | 'reward_redemption_submitted'
+  | 'reward_redemption_completed'
+  | 'reward_redemption_rejected';
 
 export interface Platform {
   label: string;
@@ -594,32 +600,31 @@ export interface AdminQueueEntry {
   } | null;
 }
 
-export type RewardReviewStatus = 'open' | 'reviewing' | 'resolved' | 'dismissed';
-
-export interface AdminRewardReviewItem {
+export interface AdminRewardRedemptionItem {
   id: string;
-  user_id: string | null;
-  reason: string;
-  status: RewardReviewStatus;
-  dedupe_key?: string | null;
-  resolution_note?: string | null;
-  created_at: string;
-  reviewed_at?: string | null;
-  resolved_at?: string | null;
-  metadata?: Record<string, unknown> | null;
+  user_id: string;
+  catalog_id: string;
+  game: RewardGameKey;
+  reward_amount_label: string;
+  cost_kes: number;
+  cost_points: number;
+  mpesa_number: string;
+  status: RewardRedemptionStatus;
+  submitted_at: string;
+  processing_at?: string | null;
+  completed_at?: string | null;
+  rejected_at?: string | null;
+  admin_note?: string | null;
   user?: {
     id: string;
     username: string;
     phone: string | null;
     email: string | null;
-    invite_code?: string | null;
-    invited_by?: string | null;
-    chezahub_user_id?: string | null;
     reward_points_available?: number;
     reward_points_pending?: number;
     reward_points_lifetime?: number;
   } | null;
-  reviewer?: {
+  processor?: {
     id: string;
     username: string;
   } | null;

@@ -1,4 +1,5 @@
-export type RewardCodeType = 'discount_code' | 'reward_claim';
+export type RewardGameKey = 'codm' | 'pubgm' | 'efootball';
+export type RewardRedemptionStatus = 'pending' | 'processing' | 'completed' | 'rejected';
 
 export interface RewardActivity {
   id: string;
@@ -9,77 +10,6 @@ export interface RewardActivity {
   created_at: string;
 }
 
-export interface RewardActiveCode {
-  id: string;
-  reward_id: string;
-  reward_type: RewardCodeType | 'mechi_perk';
-  title: string;
-  code: string | null;
-  points_cost: number;
-  expires_at: string | null;
-  status: 'issued' | 'claimed' | 'void' | 'reversed' | 'expired';
-  external_issuance_id?: string | null;
-  chezahub_order_id?: string | null;
-  partner_order_url?: string | null;
-  partner_status?: string | null;
-  delivery_channel?: string | null;
-  access_hint?: string | null;
-  source?: 'chezahub' | 'mechi_native';
-}
-
-export interface RewardSummary {
-  linked: boolean;
-  chezahub_user_id: string | null;
-  chezahub_linked_at: string | null;
-  balances: {
-    available: number;
-    pending: number;
-    lifetime: number;
-  };
-  referrals: {
-    invited: number;
-    pending: number;
-    qualified: number;
-    completed: number;
-    flagged: number;
-  };
-  affiliate: {
-    signups: number;
-    rp_earned: number;
-    rp_per_signup: number;
-    qualified: number;
-    completed: number;
-  };
-  recent_activity: RewardActivity[];
-  active_codes: RewardActiveCode[];
-  ways_to_earn: Array<{
-    id: string;
-    title: string;
-    description: string;
-    rp_amount: number;
-    category: string;
-    frequency: string;
-  }>;
-}
-
-export interface RewardCatalogItem {
-  id: string;
-  title: string;
-  description: string;
-  reward_type: 'discount_code' | 'reward_claim' | 'mechi_perk';
-  points_cost: number;
-  phase: string;
-  active: boolean;
-  expires_in_hours?: number | null;
-  discount_amount_kes?: number | null;
-  max_order_coverage_percent?: number | null;
-  sku_name?: string | null;
-  margin_class?: string | null;
-  source?: 'chezahub' | 'mechi_native';
-  value_kes?: number | null;
-  sort_order?: number;
-}
-
 export interface RewardWayToEarn {
   id: string;
   title: string;
@@ -87,4 +17,46 @@ export interface RewardWayToEarn {
   rp_amount: number;
   category: string;
   frequency: string;
+}
+
+export interface RewardCatalogItem {
+  id: string;
+  game: RewardGameKey;
+  title: string;
+  reward_amount_label: string;
+  cost_kes: number;
+  cost_points: number;
+  active: boolean;
+  sort_order?: number | null;
+}
+
+export interface RewardRedemptionRequest {
+  id: string;
+  catalog_id: string;
+  game: RewardGameKey;
+  reward_amount_label: string;
+  cost_kes: number;
+  cost_points: number;
+  mpesa_number: string;
+  status: RewardRedemptionStatus;
+  submitted_at: string;
+  processing_at?: string | null;
+  completed_at?: string | null;
+  rejected_at?: string | null;
+  admin_note?: string | null;
+}
+
+export interface RewardSummary {
+  balances: {
+    points_available: number;
+    pending: number;
+    lifetime: number;
+  };
+  wallet: {
+    available_kes: number;
+    rate_label: string;
+  };
+  recent_activity: RewardActivity[];
+  recent_redemptions: RewardRedemptionRequest[];
+  ways_to_earn: RewardWayToEarn[];
 }

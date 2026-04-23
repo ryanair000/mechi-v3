@@ -16,7 +16,8 @@ test.describe('Player Pages', () => {
     await expect(page.locator('body')).toContainText(/Baseline match complete/i);
 
     await page.goto('/rewards');
-    await expect(page.locator('body')).toContainText(/Available RP/i);
+    await expect(page.locator('body')).toContainText(/Available points/i);
+    await expect(page.locator('body')).toContainText(/Mechi wallet/i);
 
     await page.goto('/bounties');
     await expect(page.locator('body')).toContainText(/Bounties/i);
@@ -24,6 +25,25 @@ test.describe('Player Pages', () => {
 
     await page.goto('/suggest');
     await expect(page.locator('body')).toContainText(/Rocket League/i);
+  });
+
+  test('rewards redeem page loads native catalog and can queue a redemption @core', async ({
+    page,
+  }) => {
+    await page.goto('/rewards/redeem');
+    await expect(page.locator('body')).toContainText(/CODM Rewards/i);
+    await expect(page.locator('body')).toContainText(/PUBG UC Rewards/i);
+    await expect(page.locator('body')).toContainText(/eFootball Coins Rewards/i);
+    await expect(page.locator('body')).toContainText(/M-Pesa number/i);
+
+    await page.getByRole('button', { name: /^Redeem$/i }).first().click();
+
+    const mpesaInput = page.getByPlaceholder('0700 000 000');
+    await expect(mpesaInput).toHaveValue(/.+/);
+    await page.getByRole('button', { name: /Redeem 30 CP/i }).click();
+
+    await expect(page.locator('body')).toContainText(/Pending/i);
+    await expect(page.locator('body')).toContainText(/30 CP/i);
   });
 
   test('queue join and leave works for an authenticated player @core', async ({

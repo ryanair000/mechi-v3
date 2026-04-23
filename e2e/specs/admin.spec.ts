@@ -28,6 +28,10 @@ test.describe('Admin Workflows', () => {
 
     await page.goto(adminUrl('/'));
     await expect(page.locator('body')).toContainText(/Recent admin activity/i);
+
+    await page.goto(adminUrl('/rewards'));
+    await expect(page.locator('body')).toContainText(/Reward fulfillment queue/i);
+    await expect(page.locator('body')).toContainText(/60 UC/i);
   });
 
   test('admin communications pages load on the admin host @admin', async ({

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireActiveAccessProfile } from '@/lib/access';
-import { getRewardSummaryForUser } from '@/lib/rewards';
+import { getRewardWalletSummary } from '@/lib/rewards-wallet';
 import { createServiceClient } from '@/lib/supabase';
 
 export async function GET(request: NextRequest) {
@@ -13,8 +13,8 @@ export async function GET(request: NextRequest) {
 
   try {
     const supabase = createServiceClient();
-    const summary = await getRewardSummaryForUser(supabase, authUser.id);
-    return NextResponse.json({ summary, ways_to_earn: summary.ways_to_earn });
+    const summary = await getRewardWalletSummary(supabase, authUser.id);
+    return NextResponse.json({ summary });
   } catch (error) {
     console.error('[Rewards Summary] Error:', error);
     return NextResponse.json({ error: 'Failed to load rewards summary' }, { status: 500 });

@@ -1,24 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getRequestAccessProfile, hasModeratorAccess } from '@/lib/access';
 import { createServiceClient } from '@/lib/supabase';
-import type { AdminRewardReviewItem, RewardReviewStatus } from '@/types';
+import type { AdminRewardRedemptionItem, RewardRedemptionStatus } from '@/types';
 
-type ReviewStatusFilter = RewardReviewStatus | 'all';
+type StatusFilter = RewardRedemptionStatus | 'all';
 
-type RewardReviewUserRelation = {
+type RewardUserRelation = {
   id: string;
   username: string;
   phone: string | null;
   email: string | null;
-  invite_code?: string | null;
-  invited_by?: string | null;
-  chezahub_user_id?: string | null;
   reward_points_available?: number | null;
   reward_points_pending?: number | null;
   reward_points_lifetime?: number | null;
 };
 
-type RewardReviewAdminRelation = {
+type RewardProcessorRelation = {
   id: string;
   username: string;
 };
@@ -38,59 +35,52 @@ function safeSearch(value: string | null) {
     .toLowerCase();
 }
 
-function parseStatus(value: string | null): ReviewStatusFilter {
-  if (
-    value === 'open' ||
-    value === 'reviewing' ||
-    value === 'resolved' ||
-    value === 'dismissed'
-  ) {
+function parseStatus(value: string | null): StatusFilter {
+  if (value === 'pending' || value === 'processing' || value === 'completed' || value === 'rejected') {
     return value;
   }
 
   return 'all';
 }
 
-function toReviewItem(row: Record<string, unknown>): AdminRewardReviewItem {
+function toItem(row: Record<string, unknown>): AdminRewardRedemptionItem {
   const user = firstRelation(
-    row.user as RewardReviewUserRelation | RewardReviewUserRelation[] | null | undefined
+    row.user as RewardUserRelation | RewardUserRelation[] | null | undefined
   );
-  const reviewer = firstRelation(
-    row.reviewer as RewardReviewAdminRelation | RewardReviewAdminRelation[] | null | undefined
+  const processor = firstRelation(
+    row.processor as RewardProcessorRelation | RewardProcessorRelation[] | null | undefined
   );
 
   return {
     id: row.id as string,
-    user_id: (row.user_id as string | null | undefined) ?? null,
-    reason: row.reason as string,
-    status: row.status as RewardReviewStatus,
-    dedupe_key: (row.dedupe_key as string | null | undefined) ?? null,
-    resolution_note: (row.resolution_note as string | null | undefined) ?? null,
-    created_at: row.created_at as string,
-    reviewed_at: (row.reviewed_at as string | null | undefined) ?? null,
-    resolved_at: (row.resolved_at as string | null | undefined) ?? null,
-    metadata:
-      row.metadata && typeof row.metadata === 'object' && !Array.isArray(row.metadata)
-        ? (row.metadata as Record<string, unknown>)
-        : null,
+    user_id: row.user_id as string,
+    catalog_id: row.catalog_id as string,
+    game: row.game as AdminRewardRedemptionItem['game'],
+    reward_amount_label: row.reward_amount_label as string,
+    cost_kes: Number(row.cost_kes) || 0,
+    cost_points: Number(row.cost_points) || 0,
+    mpesa_number: row.mpesa_number as string,
+    status: row.status as RewardRedemptionStatus,
+    submitted_at: row.submitted_at as string,
+    processing_at: (row.processing_at as string | null | undefined) ?? null,
+    completed_at: (row.completed_at as string | null | undefined) ?? null,
+    rejected_at: (row.rejected_at as string | null | undefined) ?? null,
+    admin_note: (row.admin_note as string | null | undefined) ?? null,
     user: user
       ? {
           id: user.id,
           username: user.username,
           phone: user.phone ?? null,
           email: user.email ?? null,
-          invite_code: user.invite_code ?? null,
-          invited_by: user.invited_by ?? null,
-          chezahub_user_id: user.chezahub_user_id ?? null,
-          reward_points_available: user.reward_points_available ?? 0,
-          reward_points_pending: user.reward_points_pending ?? 0,
-          reward_points_lifetime: user.reward_points_lifetime ?? 0,
+          reward_points_available: Number(user.reward_points_available) || 0,
+          reward_points_pending: Number(user.reward_points_pending) || 0,
+          reward_points_lifetime: Number(user.reward_points_lifetime) || 0,
         }
       : null,
-    reviewer: reviewer
+    processor: processor
       ? {
-          id: reviewer.id,
-          username: reviewer.username,
+          id: processor.id,
+          username: processor.username,
         }
       : null,
   };
@@ -105,7 +95,6 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = request.nextUrl;
     const status = parseStatus(searchParams.get('status'));
-    const reason = String(searchParams.get('reason') ?? '').trim();
     const search = safeSearch(searchParams.get('q'));
     const limit = Math.min(Math.max(Number(searchParams.get('limit') ?? '40'), 1), 100);
     const offset = Math.max(Number(searchParams.get('offset') ?? '0'), 0);
@@ -113,19 +102,15 @@ export async function GET(request: NextRequest) {
     const supabase = createServiceClient();
 
     let query = supabase
-      .from('reward_review_queue')
+      .from('reward_redemption_requests')
       .select(
-        'id, user_id, reason, status, dedupe_key, resolution_note, created_at, reviewed_at, resolved_at, metadata, user:user_id(id, username, phone, email, invite_code, invited_by, chezahub_user_id, reward_points_available, reward_points_pending, reward_points_lifetime), reviewer:reviewed_by(id, username)',
+        'id, user_id, catalog_id, game, reward_amount_label, cost_kes, cost_points, mpesa_number, status, submitted_at, processing_at, completed_at, rejected_at, admin_note, user:user_id(id, username, phone, email, reward_points_available, reward_points_pending, reward_points_lifetime), processor:processed_by(id, username)',
         { count: 'exact' }
       )
-      .order('created_at', { ascending: false });
+      .order('submitted_at', { ascending: false });
 
     if (status !== 'all') {
       query = query.eq('status', status);
-    }
-
-    if (reason) {
-      query = query.eq('reason', reason);
     }
 
     if (!search) {
@@ -136,59 +121,58 @@ export async function GET(request: NextRequest) {
 
     const { data, error, count } = await query;
     if (error) {
-      console.error('[Admin Rewards GET] Failed to fetch review queue:', error);
-      return NextResponse.json({ error: 'Failed to fetch reward review items' }, { status: 500 });
+      console.error('[Admin Rewards GET] Failed to fetch redemption queue:', error);
+      return NextResponse.json({ error: 'Failed to fetch reward redemptions' }, { status: 500 });
     }
 
-    const rows = (data ?? []) as Array<Record<string, unknown>>;
-    const items = rows.map(toReviewItem);
+    const items = ((data ?? []) as Array<Record<string, unknown>>).map(toItem);
     const filteredItems = search
-      ? items.filter((item) => {
-          const metadataText = item.metadata ? JSON.stringify(item.metadata).toLowerCase() : '';
-          const values = [
-            item.reason,
-            item.status,
+      ? items.filter((item) =>
+          [
             item.user?.username ?? '',
             item.user?.email ?? '',
             item.user?.phone ?? '',
-            metadataText,
+            item.game,
+            item.reward_amount_label,
+            item.mpesa_number,
+            item.status,
+            item.admin_note ?? '',
           ]
             .join(' ')
-            .toLowerCase();
-
-          return values.includes(search);
-        })
+            .toLowerCase()
+            .includes(search)
+        )
       : items;
 
     const pagedItems = search ? filteredItems.slice(offset, offset + limit) : filteredItems;
 
-    const [openCount, reviewingCount, resolvedCount, dismissedCount] = await Promise.all([
+    const [pendingCount, processingCount, completedCount, rejectedCount] = await Promise.all([
       supabase
-        .from('reward_review_queue')
+        .from('reward_redemption_requests')
         .select('id', { count: 'exact', head: true })
-        .eq('status', 'open'),
+        .eq('status', 'pending'),
       supabase
-        .from('reward_review_queue')
+        .from('reward_redemption_requests')
         .select('id', { count: 'exact', head: true })
-        .eq('status', 'reviewing'),
+        .eq('status', 'processing'),
       supabase
-        .from('reward_review_queue')
+        .from('reward_redemption_requests')
         .select('id', { count: 'exact', head: true })
-        .eq('status', 'resolved'),
+        .eq('status', 'completed'),
       supabase
-        .from('reward_review_queue')
+        .from('reward_redemption_requests')
         .select('id', { count: 'exact', head: true })
-        .eq('status', 'dismissed'),
+        .eq('status', 'rejected'),
     ]);
 
     return NextResponse.json({
       items: pagedItems,
       total: search ? filteredItems.length : count ?? filteredItems.length,
       counts: {
-        open: openCount.count ?? 0,
-        reviewing: reviewingCount.count ?? 0,
-        resolved: resolvedCount.count ?? 0,
-        dismissed: dismissedCount.count ?? 0,
+        pending: pendingCount.count ?? 0,
+        processing: processingCount.count ?? 0,
+        completed: completedCount.count ?? 0,
+        rejected: rejectedCount.count ?? 0,
       },
     });
   } catch (error) {

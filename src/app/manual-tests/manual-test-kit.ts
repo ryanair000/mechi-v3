@@ -718,33 +718,33 @@ export const manualTestSections = [
     items: [
       {
         id: 'GROW-01',
-        title: 'Rewards page loads balances, catalog, and recent activity together.',
+        title: 'Rewards page loads the wallet, recent redemptions, and recent activity together.',
         account: 'Player A',
         instructions: [
-          'Open rewards and scan summary balances, ways to earn, catalog items, and recent activity.',
+          'Open rewards and scan wallet value, points balances, ways to earn, recent redemptions, and recent activity.',
           'Refresh after one action if any reward-related action is available on the page.',
         ],
         passIf: [
           'The page renders as one coherent rewards surface rather than partial fragments.',
-          'Balances, catalog items, and activity do not visibly contradict each other.',
+          'Wallet value, balances, redemption history, and activity do not visibly contradict each other.',
         ],
         links: [makeAppLink('/rewards', 'Rewards')],
       },
       {
         id: 'GROW-02',
-        title: 'Redeemables stay inside Mechi after redemption.',
+        title: 'Redeem requests stay inside Mechi after submission.',
         account: 'Player A',
         timing: 'Run last',
         instructions: [
-          'Redeem a safe partner reward from the Mechi rewards catalog with a test-ready account.',
-          'Refresh rewards after redeeming and confirm the status stays visible without sending the player to an external orders page.',
+          'Open the redeem page, choose one low-risk reward package, and submit it with a valid M-Pesa number.',
+          'Refresh rewards after redeeming and confirm the request status stays visible without sending the player outside Mechi.',
         ],
         passIf: [
-          'The reward redeems on Mechi without a manual account-link step.',
-          'The redemption state and fulfillment progress are reflected on Mechi without an external handoff.',
+          'The redeem flow completes on Mechi without any account-link or partner handoff.',
+          'The redemption request and fulfillment progress remain visible on Mechi after refresh.',
         ],
-        watchFor: ['Use a sandbox or low-risk partner reward when one is available.'],
-        links: [makeAppLink('/rewards', 'Rewards actions')],
+        watchFor: ['Use a safe low-value reward package when running this check on a live-like environment.'],
+        links: [makeAppLink('/rewards/redeem', 'Redeem rewards')],
       },
       {
         id: 'GROW-03',
@@ -979,15 +979,15 @@ export const manualTestSections = [
       },
       {
         id: 'ADMIN-06',
-        title: 'Rewards review lane supports investigation and resolution actions.',
+        title: 'Rewards fulfillment lane supports processing and rejection actions.',
         account: 'Admin',
         instructions: [
-          'Open admin rewards, use the available filters, and inspect at least one review item.',
-          'Perform one safe approve, reject, or note action if your test path allows it.',
+          'Open admin rewards, use the available filters, and inspect at least one redemption request.',
+          'Perform one safe processing, complete, reject, or note action if your test path allows it.',
         ],
         passIf: [
-          'Review items expose enough context to make a decision.',
-          'Resolution actions refresh the record cleanly without leaving a mismatched status.',
+          'Queue items expose enough player, reward, and M-Pesa context to make a decision.',
+          'Queue actions refresh the record cleanly without leaving a mismatched status.',
         ],
         links: [makeAdminLink('/admin/rewards', 'Admin rewards')],
       },

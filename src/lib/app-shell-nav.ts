@@ -99,11 +99,11 @@ const REWARDS_NAV_ITEM: AppNavItem = {
 };
 
 const REDEEM_NAV_ITEM: AppNavItem = {
-  href: '/rewards/catalog',
+  href: '/rewards/redeem',
   label: 'Redeem',
   icon: Gift,
   matchMode: 'prefix',
-  description: 'Turn RP into Mechi perks and partner rewards fulfilled on ChezaHub.',
+  description: 'Turn reward points into Mechi wallet value and redeem fixed game rewards inside the app.',
 };
 
 const BOUNTIES_NAV_ITEM: AppNavItem = {

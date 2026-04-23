@@ -3,137 +3,97 @@
 import { useCallback, useDeferredValue, useEffect, useMemo, useState } from 'react';
 import toast from 'react-hot-toast';
 import {
-  AlertTriangle,
   CheckCircle2,
-  Eye,
+  Clock3,
   Loader2,
   RefreshCw,
   Search,
   Shield,
-  ShieldAlert,
   XCircle,
 } from 'lucide-react';
 import { useAuthFetch } from '@/components/AuthProvider';
-import type { AdminRewardReviewItem, RewardReviewStatus } from '@/types';
+import type { AdminRewardRedemptionItem, RewardRedemptionStatus } from '@/types';
 
-type ReviewCounts = Record<RewardReviewStatus, number>;
+type QueueCounts = Record<RewardRedemptionStatus, number>;
+type QueueAction = 'start_processing' | 'complete' | 'reject';
 
-const STATUS_OPTIONS: Array<{ value: RewardReviewStatus | 'all'; label: string }> = [
-  { value: 'open', label: 'Open' },
-  { value: 'reviewing', label: 'Reviewing' },
-  { value: 'resolved', label: 'Resolved' },
-  { value: 'dismissed', label: 'Dismissed' },
+const STATUS_OPTIONS: Array<{ value: RewardRedemptionStatus | 'all'; label: string }> = [
+  { value: 'pending', label: 'Pending' },
+  { value: 'processing', label: 'Processing' },
+  { value: 'completed', label: 'Completed' },
+  { value: 'rejected', label: 'Rejected' },
   { value: 'all', label: 'All status' },
 ];
 
-const REASON_LABELS: Record<string, { label: string; tone: string; helper: string }> = {
-  matching_contact_details: {
-    label: 'Matching contact details',
-    tone: 'bg-red-500/14 text-red-400',
-    helper: 'Invitee checkout details match the inviter and likely indicate self-referral.',
-  },
-  chezahub_abuse_review: {
-    label: 'ChezaHub abuse review',
-    tone: 'bg-amber-500/14 text-amber-300',
-    helper: 'ChezaHub flagged the linked order for manual abuse review before payout or fulfillment.',
-  },
-  repeat_reward_reversals: {
-    label: 'Repeat reward reversals',
-    tone: 'bg-orange-500/14 text-orange-300',
-    helper: 'This account has multiple reward reversals in the active monitoring window.',
-  },
-  chezahub_link_conflict: {
-    label: 'ChezaHub link conflict',
-    tone: 'bg-blue-500/14 text-blue-300',
-    helper: 'A different ChezaHub account tried to link to a profile that was already bound.',
-  },
-};
-
 function formatDateTime(value: string | null | undefined) {
-  if (!value) return 'Not available';
+  if (!value) return 'Not set';
   return new Date(value).toLocaleString();
 }
 
-function formatReasonLabel(reason: string) {
-  return REASON_LABELS[reason]?.label ?? reason.replace(/_/g, ' ');
+function formatKes(value: number) {
+  return new Intl.NumberFormat('en-KE', {
+    minimumFractionDigits: Number.isInteger(value) ? 0 : 1,
+    maximumFractionDigits: 1,
+  }).format(value);
 }
 
-function getReasonTone(reason: string) {
-  return REASON_LABELS[reason]?.tone ?? 'bg-[var(--surface-elevated)] text-[var(--text-secondary)]';
-}
-
-function getStatusTone(status: RewardReviewStatus) {
+function formatStatus(status: RewardRedemptionStatus) {
   switch (status) {
-    case 'open':
-      return 'bg-red-500/14 text-red-400';
-    case 'reviewing':
-      return 'bg-blue-500/14 text-blue-300';
-    case 'resolved':
-      return 'bg-[rgba(50,224,196,0.14)] text-[var(--brand-teal)]';
-    case 'dismissed':
+    case 'processing':
+      return 'Processing';
+    case 'completed':
+      return 'Completed';
+    case 'rejected':
+      return 'Rejected';
+    case 'pending':
     default:
-      return 'bg-[var(--surface-elevated)] text-[var(--text-secondary)]';
+      return 'Pending';
   }
 }
 
-function formatMetadataValue(value: unknown) {
-  if (value === null || typeof value === 'undefined') return 'Not set';
-  if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
-    return String(value);
+function statusTone(status: RewardRedemptionStatus) {
+  switch (status) {
+    case 'completed':
+      return 'bg-emerald-500/12 text-emerald-300';
+    case 'rejected':
+      return 'bg-red-500/12 text-red-300';
+    case 'processing':
+      return 'bg-blue-500/12 text-blue-300';
+    case 'pending':
+    default:
+      return 'bg-amber-500/12 text-amber-300';
   }
-
-  return JSON.stringify(value);
 }
 
-function extractMetadataFacts(metadata: Record<string, unknown> | null | undefined) {
-  if (!metadata) return [];
-
-  const preferredOrder = [
-    'order_id',
-    'reward_code',
-    'reward_issuance_id',
-    'customer_email',
-    'customer_phone',
-    'existing_chezahub_user_id',
-    'attempted_chezahub_user_id',
-    'inviter_user_id',
-    'recent_reversal_count',
-    'window_days',
-    'order_total_kes',
-  ];
-
-  const preferredFacts = preferredOrder
-    .filter((key) => Object.prototype.hasOwnProperty.call(metadata, key))
-    .map((key) => ({
-      key,
-      value: metadata[key],
-    }));
-
-  const extraFacts = Object.entries(metadata)
-    .filter(([key]) => !preferredOrder.includes(key))
-    .map(([key, value]) => ({ key, value }));
-
-  return [...preferredFacts, ...extraFacts].filter((item) => item.value !== null && typeof item.value !== 'undefined');
+function gameLabel(game: AdminRewardRedemptionItem['game']) {
+  switch (game) {
+    case 'codm':
+      return 'CODM';
+    case 'pubgm':
+      return 'PUBG Mobile';
+    case 'efootball':
+    default:
+      return 'eFootball';
+  }
 }
 
 export default function AdminRewardsPage() {
   const authFetch = useAuthFetch();
-  const [items, setItems] = useState<AdminRewardReviewItem[]>([]);
-  const [counts, setCounts] = useState<ReviewCounts>({
-    open: 0,
-    reviewing: 0,
-    resolved: 0,
-    dismissed: 0,
+  const [items, setItems] = useState<AdminRewardRedemptionItem[]>([]);
+  const [counts, setCounts] = useState<QueueCounts>({
+    pending: 0,
+    processing: 0,
+    completed: 0,
+    rejected: 0,
   });
-  const [total, setTotal] = useState(0);
   const [query, setQuery] = useState('');
   const deferredQuery = useDeferredValue(query);
-  const [statusFilter, setStatusFilter] = useState<(typeof STATUS_OPTIONS)[number]['value']>('open');
-  const [reasonFilter, setReasonFilter] = useState('all');
+  const [statusFilter, setStatusFilter] = useState<(typeof STATUS_OPTIONS)[number]['value']>('pending');
+  const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [actingOn, setActingOn] = useState<string | null>(null);
-  const [notes, setNotes] = useState<Record<string, string>>({});
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
+  const [notes, setNotes] = useState<Record<string, string>>({});
 
   const fetchItems = useCallback(async () => {
     setLoading(true);
@@ -141,75 +101,88 @@ export default function AdminRewardsPage() {
       const params = new URLSearchParams({ limit: '40' });
       if (deferredQuery.trim()) params.set('q', deferredQuery.trim());
       if (statusFilter !== 'all') params.set('status', statusFilter);
-      if (reasonFilter !== 'all') params.set('reason', reasonFilter);
 
-      const res = await authFetch(`/api/admin/rewards?${params.toString()}`);
-      const data = await res.json();
+      const response = await authFetch(`/api/admin/rewards?${params.toString()}`);
+      const data = await response.json();
 
-      if (!res.ok) {
-        toast.error(data.error ?? 'Failed to load reward reviews');
+      if (!response.ok) {
+        toast.error(data.error ?? 'Failed to load reward queue');
         setItems([]);
         return;
       }
 
-        const nextItems = (data.items ?? []) as AdminRewardReviewItem[];
-        setItems(nextItems);
-        setCounts({
-          open: Number(data.counts?.open ?? 0),
-          reviewing: Number(data.counts?.reviewing ?? 0),
-          resolved: Number(data.counts?.resolved ?? 0),
-          dismissed: Number(data.counts?.dismissed ?? 0),
-        });
-        setTotal(Number(data.total ?? 0));
-        setSelectedItemId((current) => {
-          if (current && nextItems.some((item) => item.id === current)) {
-            return current;
-          }
+      const nextItems = (data.items ?? []) as AdminRewardRedemptionItem[];
+      setItems(nextItems);
+      setCounts({
+        pending: Number(data.counts?.pending ?? 0),
+        processing: Number(data.counts?.processing ?? 0),
+        completed: Number(data.counts?.completed ?? 0),
+        rejected: Number(data.counts?.rejected ?? 0),
+      });
+      setTotal(Number(data.total ?? 0));
+      setSelectedItemId((current) => {
+        if (current && nextItems.some((item) => item.id === current)) {
+          return current;
+        }
 
-          return nextItems[0]?.id ?? null;
-        });
-      } catch {
-        toast.error('Network error while loading reward reviews');
-        setItems([]);
-      } finally {
-        setLoading(false);
+        return nextItems[0]?.id ?? null;
+      });
+    } catch {
+      toast.error('Network error while loading reward queue');
+      setItems([]);
+    } finally {
+      setLoading(false);
     }
-  }, [authFetch, deferredQuery, reasonFilter, statusFilter]);
+  }, [authFetch, deferredQuery, statusFilter]);
 
   useEffect(() => {
     void fetchItems();
   }, [fetchItems]);
 
+  const selectedItem = useMemo(
+    () => items.find((item) => item.id === selectedItemId) ?? items[0] ?? null,
+    [items, selectedItemId]
+  );
+
+  const summaryCards = useMemo(
+    () => [
+      { label: 'Pending', value: counts.pending, icon: Clock3, accent: '#FBBF24' },
+      { label: 'Processing', value: counts.processing, icon: Shield, accent: '#60A5FA' },
+      { label: 'Completed', value: counts.completed, icon: CheckCircle2, accent: '#6EE7B7' },
+      { label: 'Rejected', value: counts.rejected, icon: XCircle, accent: '#FCA5A5' },
+    ],
+    [counts]
+  );
+
   const handleAction = useCallback(
-    async (item: AdminRewardReviewItem, action: 'start_review' | 'resolve' | 'dismiss' | 'reopen') => {
+    async (item: AdminRewardRedemptionItem, action: QueueAction) => {
       setActingOn(item.id);
       try {
-        const res = await authFetch(`/api/admin/rewards/${item.id}`, {
+        const response = await authFetch(`/api/admin/rewards/${item.id}`, {
           method: 'PATCH',
           body: JSON.stringify({
             action,
-            note: notes[item.id] ?? item.resolution_note ?? '',
+            note: notes[item.id] ?? item.admin_note ?? '',
           }),
         });
-        const data = await res.json();
+        const data = await response.json();
 
-        if (!res.ok) {
-          toast.error(data.error ?? 'Failed to update review item');
+        if (!response.ok) {
+          toast.error(data.error ?? 'Failed to update reward request');
           return;
         }
 
         toast.success(
-          action === 'start_review'
-            ? 'Marked as reviewing'
-            : action === 'resolve'
-              ? 'Review resolved'
-              : action === 'dismiss'
-                ? 'Review dismissed'
-                : 'Review reopened'
+          action === 'start_processing'
+            ? 'Request moved to processing'
+            : action === 'complete'
+              ? 'Request marked completed'
+              : 'Request rejected and points restored'
         );
+
         await fetchItems();
       } catch {
-        toast.error('Network error');
+        toast.error('Network error while updating reward request');
       } finally {
         setActingOn(null);
       }
@@ -217,32 +190,18 @@ export default function AdminRewardsPage() {
     [authFetch, fetchItems, notes]
   );
 
-  const summaryCards = useMemo(
-    () => [
-      { label: 'Open', value: counts.open, icon: ShieldAlert, accent: 'var(--brand-coral)' },
-      { label: 'Reviewing', value: counts.reviewing, icon: Eye, accent: '#60A5FA' },
-      { label: 'Resolved', value: counts.resolved, icon: CheckCircle2, accent: 'var(--brand-teal)' },
-      { label: 'Dismissed', value: counts.dismissed, icon: XCircle, accent: 'var(--text-soft)' },
-    ],
-    [counts]
-  );
-  const selectedItem = useMemo(
-    () => items.find((item) => item.id === selectedItemId) ?? items[0] ?? null,
-    [items, selectedItemId]
-  );
-
   return (
     <div className="space-y-5">
       <div className="card p-5">
         <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
           <div>
-            <p className="brand-kicker">Reward review queue</p>
+            <p className="brand-kicker">Reward fulfillment queue</p>
             <h1 className="mt-3 text-3xl font-black tracking-tight text-[var(--text-primary)]">
-              Investigate suspicious reward activity before it becomes a loss.
+              Process Mechi wallet redemptions from one queue.
             </h1>
             <p className="mt-3 max-w-3xl text-sm leading-7 text-[var(--text-secondary)]">
-              This lane brings together referral self-match signals, ChezaHub abuse-review callbacks,
-              repeated reversals, and account-link conflicts so moderators can intervene early.
+              Players now redeem inside Mechi. This queue is where moderators move requests into
+              processing, mark them complete, or reject them and automatically return the points.
             </p>
           </div>
 
@@ -269,7 +228,7 @@ export default function AdminRewardsPage() {
       </div>
 
       <div className="card p-5">
-        <div className="grid gap-3 xl:grid-cols-[minmax(0,1.4fr)_220px_220px_auto]">
+        <div className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_220px_auto]">
           <label className="relative block">
             <Search
               size={15}
@@ -279,7 +238,7 @@ export default function AdminRewardsPage() {
               value={query}
               onChange={(event) => setQuery(event.target.value)}
               className="input pl-10"
-              placeholder="Search username, phone, email, order id, reward code, or reason"
+              placeholder="Search username, email, phone, M-Pesa number, or game"
             />
           </label>
 
@@ -295,19 +254,6 @@ export default function AdminRewardsPage() {
             ))}
           </select>
 
-          <select
-            value={reasonFilter}
-            onChange={(event) => setReasonFilter(event.target.value)}
-            className="input"
-          >
-            <option value="all">All reasons</option>
-            {Object.entries(REASON_LABELS).map(([value, meta]) => (
-              <option key={value} value={value}>
-                {meta.label}
-              </option>
-            ))}
-          </select>
-
           <div className="flex justify-end gap-2">
             <button type="button" onClick={() => void fetchItems()} className="btn-ghost whitespace-nowrap">
               <RefreshCw size={14} />
@@ -317,9 +263,9 @@ export default function AdminRewardsPage() {
         </div>
 
         <div className="mt-4 flex flex-wrap items-center gap-2 text-xs text-[var(--text-secondary)]">
-          <span className="brand-chip px-2.5 py-1">{total.toLocaleString()} matching review items</span>
+          <span className="brand-chip px-2.5 py-1">{total.toLocaleString()} matching requests</span>
           <span className="rounded-full border border-[var(--border-color)] bg-[var(--surface-elevated)] px-2.5 py-1">
-            {counts.open.toLocaleString()} still need first-touch review
+            {counts.pending.toLocaleString()} waiting for first touch
           </span>
         </div>
       </div>
@@ -327,25 +273,25 @@ export default function AdminRewardsPage() {
       {loading ? (
         <div className="space-y-3">
           {[1, 2, 3].map((item) => (
-            <div key={item} className="h-40 shimmer rounded-3xl" />
+            <div key={item} className="h-40 rounded-3xl shimmer" />
           ))}
         </div>
       ) : items.length === 0 ? (
         <div className="card p-10 text-center">
           <Shield size={22} className="mx-auto text-[var(--text-soft)]" />
-          <p className="mt-4 text-lg font-bold text-[var(--text-primary)]">No reward reviews match this filter.</p>
+          <p className="mt-4 text-lg font-bold text-[var(--text-primary)]">No reward requests match this filter.</p>
           <p className="mt-2 text-sm text-[var(--text-secondary)]">
-            The queue is clear for the current search and status combination.
+            The current queue is clear for the selected search and status combination.
           </p>
         </div>
       ) : (
-        <section className="grid gap-5 xl:grid-cols-[minmax(0,0.92fr)_minmax(340px,0.78fr)]">
+        <section className="grid gap-5 xl:grid-cols-[minmax(0,0.92fr)_minmax(360px,0.78fr)]">
           <div className="card p-4">
             <div className="flex items-center justify-between gap-3 border-b border-[var(--border-color)] pb-4">
               <div>
-                <p className="section-title">Suspicious items</p>
+                <p className="section-title">Queued requests</p>
                 <p className="mt-1 text-sm text-[var(--text-secondary)]">
-                  Triage the queue first, then open one review item into a focused evidence panel.
+                  Open a request to see the player, the target reward, and the M-Pesa number on file.
                 </p>
               </div>
               <span className="brand-chip">{items.length} loaded</span>
@@ -353,7 +299,6 @@ export default function AdminRewardsPage() {
 
             <div className="mt-4 space-y-2">
               {items.map((item) => {
-                const facts = extractMetadataFacts(item.metadata).slice(0, 3);
                 const isSelected = item.id === selectedItem?.id;
 
                 return (
@@ -369,41 +314,32 @@ export default function AdminRewardsPage() {
                   >
                     <div className="flex flex-wrap items-center gap-2">
                       <p className="text-sm font-black text-[var(--text-primary)]">
-                        {item.user?.username ?? 'Unlinked review item'}
+                        {item.user?.username ?? 'Unknown player'}
                       </p>
-                      <span className={`rounded-full px-2.5 py-1 text-[11px] font-bold ${getReasonTone(item.reason)}`}>
-                        {formatReasonLabel(item.reason)}
-                      </span>
-                      <span className={`rounded-full px-2.5 py-1 text-[11px] font-bold ${getStatusTone(item.status)}`}>
-                        {item.status}
+                      <span className={`rounded-full px-2.5 py-1 text-[11px] font-bold ${statusTone(item.status)}`}>
+                        {formatStatus(item.status)}
                       </span>
                     </div>
 
-                    <p className="mt-2 line-clamp-2 text-sm leading-6 text-[var(--text-secondary)]">
-                      {REASON_LABELS[item.reason]?.helper ??
-                        'This item needs a moderator to review the reward or referral signal.'}
+                    <p className="mt-2 text-sm text-[var(--text-secondary)]">
+                      {gameLabel(item.game)} • {item.reward_amount_label}
                     </p>
 
-                    <div className="mt-3 flex flex-wrap gap-2">
-                      {facts.length > 0 ? (
-                        facts.map((fact) => (
-                          <span
-                            key={`${item.id}-${fact.key}`}
-                            className="rounded-full border border-[var(--border-color)] bg-[var(--surface)] px-2.5 py-1 text-[11px] text-[var(--text-secondary)]"
-                          >
-                            {fact.key.replace(/_/g, ' ')}: {formatMetadataValue(fact.value)}
-                          </span>
-                        ))
-                      ) : (
-                        <span className="rounded-full border border-[var(--border-color)] bg-[var(--surface)] px-2.5 py-1 text-[11px] text-[var(--text-secondary)]">
-                          No metadata facts attached
-                        </span>
-                      )}
+                    <div className="mt-3 flex flex-wrap gap-2 text-[11px] text-[var(--text-secondary)]">
+                      <span className="rounded-full border border-[var(--border-color)] bg-[var(--surface)] px-2.5 py-1">
+                        KSh {formatKes(item.cost_kes)}
+                      </span>
+                      <span className="rounded-full border border-[var(--border-color)] bg-[var(--surface)] px-2.5 py-1">
+                        {item.cost_points.toLocaleString()} points
+                      </span>
+                      <span className="rounded-full border border-[var(--border-color)] bg-[var(--surface)] px-2.5 py-1">
+                        {item.mpesa_number}
+                      </span>
                     </div>
 
                     <p className="mt-3 text-xs text-[var(--text-soft)]">
-                      Created {formatDateTime(item.created_at)}
-                      {item.reviewer?.username ? ` | Last touched by ${item.reviewer.username}` : ' | Unclaimed'}
+                      Submitted {formatDateTime(item.submitted_at)}
+                      {item.processor?.username ? ` • Last handled by ${item.processor.username}` : ''}
                     </p>
                   </button>
                 );
@@ -413,168 +349,115 @@ export default function AdminRewardsPage() {
 
           <div className="card self-start p-5 xl:sticky xl:top-6">
             {selectedItem ? (
-              (() => {
-                const facts = extractMetadataFacts(selectedItem.metadata);
-                const noteValue = notes[selectedItem.id] ?? selectedItem.resolution_note ?? '';
-                const reasonMeta = REASON_LABELS[selectedItem.reason];
+              <div className="space-y-5">
+                <div className="border-b border-[var(--border-color)] pb-5">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <h2 className="text-2xl font-black tracking-tight text-[var(--text-primary)]">
+                      {selectedItem.user?.username ?? 'Unknown player'}
+                    </h2>
+                    <span className={`rounded-full px-2.5 py-1 text-[11px] font-bold ${statusTone(selectedItem.status)}`}>
+                      {formatStatus(selectedItem.status)}
+                    </span>
+                  </div>
+                  <p className="mt-3 text-sm leading-7 text-[var(--text-secondary)]">
+                    {gameLabel(selectedItem.game)} • {selectedItem.reward_amount_label} • KSh {formatKes(selectedItem.cost_kes)} • {selectedItem.cost_points.toLocaleString()} points
+                  </p>
+                </div>
 
-                return (
-                  <div className="space-y-5">
-                    <div className="border-b border-[var(--border-color)] pb-5">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <h2 className="text-2xl font-black tracking-tight text-[var(--text-primary)]">
-                          {selectedItem.user?.username ?? 'Unlinked review item'}
-                        </h2>
-                        <span
-                          className={`rounded-full px-2.5 py-1 text-[11px] font-bold ${getReasonTone(selectedItem.reason)}`}
-                        >
-                          {formatReasonLabel(selectedItem.reason)}
-                        </span>
-                        <span
-                          className={`rounded-full px-2.5 py-1 text-[11px] font-bold ${getStatusTone(selectedItem.status)}`}
-                        >
-                          {selectedItem.status}
-                        </span>
-                      </div>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div className="rounded-2xl border border-[var(--border-color)] bg-[var(--surface-elevated)] px-4 py-3">
+                    <p className="section-title">Player</p>
+                    <p className="mt-2 text-sm font-bold text-[var(--text-primary)]">
+                      {selectedItem.user?.email ?? 'No email'}
+                    </p>
+                    <p className="mt-1 text-xs text-[var(--text-secondary)]">
+                      {selectedItem.user?.phone ?? 'No phone'}
+                    </p>
+                  </div>
+                  <div className="rounded-2xl border border-[var(--border-color)] bg-[var(--surface-elevated)] px-4 py-3">
+                    <p className="section-title">M-Pesa number</p>
+                    <p className="mt-2 text-sm font-bold text-[var(--text-primary)]">
+                      {selectedItem.mpesa_number}
+                    </p>
+                    <p className="mt-1 text-xs text-[var(--text-secondary)]">
+                      Used only for this redemption request.
+                    </p>
+                  </div>
+                  <div className="rounded-2xl border border-[var(--border-color)] bg-[var(--surface-elevated)] px-4 py-3">
+                    <p className="section-title">Reward points</p>
+                    <p className="mt-2 text-sm font-bold text-[var(--text-primary)]">
+                      {(selectedItem.user?.reward_points_available ?? 0).toLocaleString()} available
+                    </p>
+                    <p className="mt-1 text-xs text-[var(--text-secondary)]">
+                      {(selectedItem.user?.reward_points_pending ?? 0).toLocaleString()} pending • {(selectedItem.user?.reward_points_lifetime ?? 0).toLocaleString()} lifetime
+                    </p>
+                  </div>
+                  <div className="rounded-2xl border border-[var(--border-color)] bg-[var(--surface-elevated)] px-4 py-3">
+                    <p className="section-title">Queue trail</p>
+                    <p className="mt-2 text-sm font-bold text-[var(--text-primary)]">
+                      Submitted {formatDateTime(selectedItem.submitted_at)}
+                    </p>
+                    <p className="mt-1 text-xs text-[var(--text-secondary)]">
+                      Processing {formatDateTime(selectedItem.processing_at)} • Completed {formatDateTime(selectedItem.completed_at)}
+                    </p>
+                    <p className="mt-1 text-xs text-[var(--text-secondary)]">
+                      Rejected {formatDateTime(selectedItem.rejected_at)}
+                    </p>
+                  </div>
+                </div>
 
-                      <p className="mt-3 text-sm leading-7 text-[var(--text-secondary)]">
-                        {reasonMeta?.helper ??
-                          'This item needs a moderator to review the reward or referral signal.'}
-                      </p>
-                    </div>
+                <div className="rounded-2xl border border-[var(--border-color)] bg-[var(--surface-elevated)] p-4">
+                  <p className="section-title">Moderator note</p>
+                  <textarea
+                    value={notes[selectedItem.id] ?? selectedItem.admin_note ?? ''}
+                    onChange={(event) =>
+                      setNotes((current) => ({
+                        ...current,
+                        [selectedItem.id]: event.target.value,
+                      }))
+                    }
+                    className="input mt-3 min-h-32 resize-y"
+                    placeholder="Leave a short note for the player or the rest of the ops team"
+                  />
 
-                    <div className="grid gap-3 sm:grid-cols-2">
-                      <div className="rounded-2xl border border-[var(--border-color)] bg-[var(--surface-elevated)] px-4 py-3">
-                        <p className="section-title">Profile</p>
-                        <p className="mt-2 text-sm font-bold text-[var(--text-primary)]">
-                          {selectedItem.user?.email ?? 'No email'}
-                        </p>
-                        <p className="mt-1 text-xs text-[var(--text-secondary)]">
-                          {selectedItem.user?.phone ?? 'No phone'}
-                        </p>
-                      </div>
-                      <div className="rounded-2xl border border-[var(--border-color)] bg-[var(--surface-elevated)] px-4 py-3">
-                        <p className="section-title">Reward points</p>
-                        <p className="mt-2 text-sm font-bold text-[var(--text-primary)]">
-                          {(selectedItem.user?.reward_points_available ?? 0).toLocaleString()} available
-                        </p>
-                        <p className="mt-1 text-xs text-[var(--text-secondary)]">
-                          {(selectedItem.user?.reward_points_pending ?? 0).toLocaleString()} pending | {(selectedItem.user?.reward_points_lifetime ?? 0).toLocaleString()} lifetime
-                        </p>
-                      </div>
-                      <div className="rounded-2xl border border-[var(--border-color)] bg-[var(--surface-elevated)] px-4 py-3">
-                        <p className="section-title">ChezaHub link</p>
-                        <p className="mt-2 text-sm font-bold text-[var(--text-primary)]">
-                          {selectedItem.user?.chezahub_user_id ? 'Linked' : 'Not linked'}
-                        </p>
-                        <p className="mt-1 truncate text-xs text-[var(--text-secondary)]">
-                          {selectedItem.user?.chezahub_user_id ?? selectedItem.dedupe_key ?? 'No binding id'}
-                        </p>
-                      </div>
-                      <div className="rounded-2xl border border-[var(--border-color)] bg-[var(--surface-elevated)] px-4 py-3">
-                        <p className="section-title">Review trail</p>
-                        <p className="mt-2 text-sm font-bold text-[var(--text-primary)]">
-                          Created {formatDateTime(selectedItem.created_at)}
-                        </p>
-                        <p className="mt-1 text-xs text-[var(--text-secondary)]">
-                          {selectedItem.reviewer?.username
-                            ? `Last touched by ${selectedItem.reviewer.username} on ${formatDateTime(selectedItem.reviewed_at)}`
-                            : 'No moderator has claimed this item yet'}
-                        </p>
-                      </div>
-                    </div>
-
-                    {facts.length > 0 ? (
-                      <div className="rounded-2xl border border-[var(--border-color)] bg-[var(--surface-elevated)] p-4">
-                        <p className="section-title">Evidence snapshot</p>
-                        <div className="mt-3 grid gap-2 sm:grid-cols-2">
-                          {facts.map((fact) => (
-                            <div
-                              key={`${selectedItem.id}-${fact.key}`}
-                              className="rounded-xl border border-[var(--border-color)] px-3 py-2"
-                            >
-                              <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-[var(--text-soft)]">
-                                {fact.key.replace(/_/g, ' ')}
-                              </p>
-                              <p className="mt-1 break-all text-sm text-[var(--text-primary)]">
-                                {formatMetadataValue(fact.value)}
-                              </p>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    {selectedItem.status === 'pending' ? (
+                      <button
+                        type="button"
+                        onClick={() => void handleAction(selectedItem, 'start_processing')}
+                        disabled={actingOn === selectedItem.id}
+                        className="btn-ghost"
+                      >
+                        {actingOn === selectedItem.id ? <Loader2 size={14} className="animate-spin" /> : <Clock3 size={14} />}
+                        Start processing
+                      </button>
                     ) : null}
 
-                    <div className="rounded-2xl border border-[var(--border-color)] bg-[var(--surface-elevated)] p-4">
-                      <p className="section-title">Moderator note</p>
-                      <textarea
-                        value={noteValue}
-                        onChange={(event) =>
-                          setNotes((current) => ({
-                            ...current,
-                            [selectedItem.id]: event.target.value,
-                          }))
-                        }
-                        className="input mt-3 min-h-32 resize-y"
-                        placeholder="Add a short note before resolving or dismissing this item"
-                      />
-
-                      <div className="mt-4 flex flex-wrap gap-2">
-                        {selectedItem.status === 'open' ? (
-                          <button
-                            type="button"
-                            onClick={() => void handleAction(selectedItem, 'start_review')}
-                            disabled={actingOn === selectedItem.id}
-                            className="btn-ghost"
-                          >
-                            {actingOn === selectedItem.id ? <Loader2 size={14} className="animate-spin" /> : <Eye size={14} />}
-                            Start review
-                          </button>
-                        ) : null}
-
-                        {(selectedItem.status === 'open' || selectedItem.status === 'reviewing') ? (
-                          <>
-                            <button
-                              type="button"
-                              onClick={() => void handleAction(selectedItem, 'resolve')}
-                              disabled={actingOn === selectedItem.id}
-                              className="btn-primary"
-                            >
-                              {actingOn === selectedItem.id ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle2 size={14} />}
-                              Resolve
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => void handleAction(selectedItem, 'dismiss')}
-                              disabled={actingOn === selectedItem.id}
-                              className="btn-ghost"
-                            >
-                              {actingOn === selectedItem.id ? <Loader2 size={14} className="animate-spin" /> : <AlertTriangle size={14} />}
-                              Dismiss
-                            </button>
-                          </>
-                        ) : (
-                          <button
-                            type="button"
-                            onClick={() => void handleAction(selectedItem, 'reopen')}
-                            disabled={actingOn === selectedItem.id}
-                            className="btn-ghost"
-                          >
-                            {actingOn === selectedItem.id ? <Loader2 size={14} className="animate-spin" /> : <RefreshCw size={14} />}
-                            Reopen
-                          </button>
-                        )}
-                      </div>
-
-                      {selectedItem.resolved_at ? (
-                        <p className="mt-3 text-xs text-[var(--text-secondary)]">
-                          Resolution recorded on {formatDateTime(selectedItem.resolved_at)}.
-                        </p>
-                      ) : null}
-                    </div>
+                    {(selectedItem.status === 'pending' || selectedItem.status === 'processing') ? (
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => void handleAction(selectedItem, 'complete')}
+                          disabled={actingOn === selectedItem.id}
+                          className="btn-primary"
+                        >
+                          {actingOn === selectedItem.id ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle2 size={14} />}
+                          Complete
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => void handleAction(selectedItem, 'reject')}
+                          disabled={actingOn === selectedItem.id}
+                          className="btn-ghost"
+                        >
+                          {actingOn === selectedItem.id ? <Loader2 size={14} className="animate-spin" /> : <XCircle size={14} />}
+                          Reject
+                        </button>
+                      </>
+                    ) : null}
                   </div>
-                );
-              })()
+                </div>
+              </div>
             ) : null}
           </div>
         </section>

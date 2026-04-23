@@ -23,7 +23,6 @@ type SeedPersona = {
   rewardPointsAvailable?: number;
   rewardPointsPending?: number;
   rewardPointsLifetime?: number;
-  chezahubUserId?: string;
 };
 
 export type SeededPersonaKey =
@@ -67,6 +66,9 @@ export const SEEDED_PERSONAS: Record<SeededPersonaKey, SeedPersona> = {
     xp: 120,
     level: 2,
     mp: 35,
+    rewardPointsAvailable: 4200,
+    rewardPointsPending: 40,
+    rewardPointsLifetime: 4700,
   },
   playerPro: {
     id: '22222222-2222-4222-8222-222222222222',
@@ -206,7 +208,6 @@ export const SEEDED_PERSONAS: Record<SeededPersonaKey, SeedPersona> = {
     rewardPointsAvailable: 540,
     rewardPointsPending: 80,
     rewardPointsLifetime: 1120,
-    chezahubUserId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
   },
   supportContact: {
     id: 'aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee',

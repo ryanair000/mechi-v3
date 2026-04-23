@@ -143,12 +143,35 @@ export type SupportThreadInput = {
   }>;
 };
 
-export type RewardReviewInput = {
+export type RewardEventInput = {
   id?: string;
-  userId?: string | null;
-  reason: string;
-  status?: 'open' | 'reviewing' | 'resolved' | 'dismissed';
+  userId: string;
+  eventKey: string;
+  eventType: string;
+  availableDelta?: number;
+  pendingDelta?: number;
+  lifetimeDelta?: number;
+  source?: string | null;
   metadata?: Record<string, unknown>;
+  createdAt?: string;
+};
+
+export type RewardRedemptionRequestInput = {
+  id?: string;
+  userId: string;
+  catalogId: string;
+  game: 'codm' | 'pubgm' | 'efootball';
+  rewardAmountLabel: string;
+  costKes: number;
+  costPoints: number;
+  mpesaNumber: string;
+  status?: 'pending' | 'processing' | 'completed' | 'rejected';
+  submittedAt?: string;
+  processingAt?: string | null;
+  completedAt?: string | null;
+  rejectedAt?: string | null;
+  adminNote?: string | null;
+  processedBy?: string | null;
 };
 
 export type BountyInput = {
@@ -185,7 +208,7 @@ const RESET_TABLES = [
   'admin_audit_logs',
   'bounty_claim_attempts',
   'bounties',
-  'reward_review_queue',
+  'reward_redemption_requests',
   'reward_redemptions',
   'reward_link_sessions',
   'referral_conversions',
@@ -323,8 +346,6 @@ function buildProfileInsert(
     reward_points_available: persona.rewardPointsAvailable ?? 0,
     reward_points_pending: persona.rewardPointsPending ?? 0,
     reward_points_lifetime: persona.rewardPointsLifetime ?? 0,
-    chezahub_user_id: persona.chezahubUserId ?? null,
-    chezahub_linked_at: persona.chezahubUserId ? nowMinusDays(2) : null,
   };
 }
 
@@ -355,8 +376,6 @@ function buildAuthUser(persona: SeededPersona) {
     reward_points_available: persona.rewardPointsAvailable ?? 0,
     reward_points_pending: persona.rewardPointsPending ?? 0,
     reward_points_lifetime: persona.rewardPointsLifetime ?? 0,
-    chezahub_user_id: persona.chezahubUserId ?? null,
-    chezahub_linked_at: persona.chezahubUserId ? nowMinusDays(2) : null,
     plan: persona.plan,
     plan_since: persona.plan === 'free' ? null : nowMinusDays(5),
     plan_expires_at: persona.plan === 'free' ? null : nowPlusDays(25),
@@ -629,19 +648,51 @@ export async function createSupportThread(
   }
 }
 
-export async function createRewardReviewItem(
+export async function createRewardEvent(
   client: SeedClient,
-  input: RewardReviewInput
+  input: RewardEventInput
 ): Promise<void> {
-  const { error } = await client.from('reward_review_queue').insert({
+  const { error } = await client.from('reward_events').insert({
     id: input.id ?? randomUUID(),
-    user_id: input.userId ?? null,
-    reason: input.reason,
-    status: input.status ?? 'open',
+    user_id: input.userId,
+    event_key: input.eventKey,
+    event_type: input.eventType,
+    source: input.source ?? 'e2e_seed',
+    available_delta: input.availableDelta ?? 0,
+    pending_delta: input.pendingDelta ?? 0,
+    lifetime_delta: input.lifetimeDelta ?? 0,
     metadata: input.metadata ?? {},
+    created_at: input.createdAt ?? new Date().toISOString(),
   });
 
-  assertNoError(error, 'Failed to create reward review item');
+  assertNoError(error, 'Failed to create reward event');
+}
+
+export async function createRewardRedemptionRequest(
+  client: SeedClient,
+  input: RewardRedemptionRequestInput
+): Promise<void> {
+  const submittedAt = input.submittedAt ?? new Date().toISOString();
+  const { error } = await client.from('reward_redemption_requests').insert({
+    id: input.id ?? randomUUID(),
+    user_id: input.userId,
+    catalog_id: input.catalogId,
+    game: input.game,
+    reward_amount_label: input.rewardAmountLabel,
+    cost_kes: input.costKes,
+    cost_points: input.costPoints,
+    mpesa_number: input.mpesaNumber,
+    status: input.status ?? 'pending',
+    submitted_at: submittedAt,
+    processing_at: input.processingAt ?? null,
+    completed_at: input.completedAt ?? null,
+    rejected_at: input.rejectedAt ?? null,
+    admin_note: input.adminNote ?? null,
+    processed_by: input.processedBy ?? null,
+    updated_at: submittedAt,
+  });
+
+  assertNoError(error, 'Failed to create reward redemption request');
 }
 
 export async function createBounty(client: SeedClient, input: BountyInput): Promise<string> {
@@ -889,11 +940,51 @@ async function seedBaselineFixtures(client: SeedClient, environment: E2EEnvironm
     ],
   });
 
-  await createRewardReviewItem(client, {
+  await createRewardEvent(client, {
+    userId: SEEDED_PERSONAS.playerFree.id,
+    eventKey: `reward:daily-login:${environment.runId}:${SEEDED_PERSONAS.playerFree.id}`,
+    eventType: 'daily_login',
+    availableDelta: 10,
+    lifetimeDelta: 10,
+    createdAt: nowMinusDays(1),
+    metadata: { runId: environment.runId },
+  });
+
+  await createRewardEvent(client, {
+    userId: SEEDED_PERSONAS.playerFree.id,
+    eventKey: `reward:redemption-spend:${environment.runId}:${SEEDED_PERSONAS.playerFree.id}`,
+    eventType: 'reward_redemption_spend',
+    availableDelta: -700,
+    createdAt: nowMinusDays(1),
+    metadata: { runId: environment.runId, reward_id: 'codm_30_cp' },
+  });
+
+  await createRewardRedemptionRequest(client, {
     id: SCENARIO_IDS.rewardReview,
     userId: SEEDED_PERSONAS.rewardLinkedUser.id,
-    reason: 'chezahub_sync_pending',
-    metadata: { runId: environment.runId, source: 'e2e-baseline' },
+    catalogId: 'pubgm_60_uc',
+    game: 'pubgm',
+    rewardAmountLabel: '60 UC',
+    costKes: 120,
+    costPoints: 1200,
+    mpesaNumber: '254711111009',
+    status: 'pending',
+  });
+
+  await createRewardRedemptionRequest(client, {
+    userId: SEEDED_PERSONAS.playerFree.id,
+    catalogId: 'codm_30_cp',
+    game: 'codm',
+    rewardAmountLabel: '30 CP',
+    costKes: 70,
+    costPoints: 700,
+    mpesaNumber: '254711111001',
+    status: 'completed',
+    submittedAt: nowMinusDays(1),
+    processingAt: nowMinusDays(1),
+    completedAt: nowMinusDays(1),
+    adminNote: 'E2E baseline completion',
+    processedBy: SEEDED_PERSONAS.admin.id,
   });
 
   await createSuggestion(client, {

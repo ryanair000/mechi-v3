@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { use, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
-import { Eye, EyeOff, Loader2, Mail } from 'lucide-react';
+import { Eye, EyeOff, KeyRound, Loader2, Mail } from 'lucide-react';
 import { ActionFeedback, type ActionFeedbackState } from '@/components/ActionFeedback';
 import { useAuth } from '@/components/AuthProvider';
 import { FullScreenSignup } from '@/components/ui/full-screen-signup';
@@ -73,6 +73,11 @@ export default function LoginPage({ searchParams }: { searchParams: LoginSearchP
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [claimingPassword, setClaimingPassword] = useState(false);
+  const [claimUsername, setClaimUsername] = useState('');
+  const [claimEmail, setClaimEmail] = useState('');
+  const [claimPassword, setClaimPassword] = useState('');
+  const [showClaimPassword, setShowClaimPassword] = useState(false);
   const [sendingMagicLink, setSendingMagicLink] = useState(false);
   const [feedback, setFeedback] = useState<ActionFeedbackState | null>(null);
 
@@ -119,10 +124,14 @@ export default function LoginPage({ searchParams }: { searchParams: LoginSearchP
       const data = await res.json();
 
       if (!res.ok) {
+        const failureDetail = data.error
+          ? `${data.error} If this is an older Mechi profile, use the button below to set a new password.`
+          : 'Please double-check your details and try again. If this is an older Mechi profile, use the button below to set a new password.';
+
         setFeedback({
           tone: 'error',
           title: 'Sign-in failed.',
-          detail: data.error ?? 'Please double-check your details and try again.',
+          detail: failureDetail,
         });
         toast.error(data.error ?? 'Login failed');
         return;
@@ -200,6 +209,89 @@ export default function LoginPage({ searchParams }: { searchParams: LoginSearchP
       toast.error('Network error.');
     } finally {
       setSendingMagicLink(false);
+    }
+  };
+
+  const handlePasswordClaimRequest = async () => {
+    if (!claimUsername.trim() || !claimEmail.trim() || !claimPassword) {
+      toast.error('Enter username, email, and the new password');
+      setFeedback({
+        tone: 'error',
+        title: 'Your existing-player details are incomplete.',
+        detail: 'Add the username, the email on that profile, and the password you want to start using.',
+      });
+      return;
+    }
+
+    if (!isValidEmail(claimEmail.trim())) {
+      toast.error('Enter a valid email address first');
+      setFeedback({
+        tone: 'error',
+        title: 'A valid email is required for this overwrite flow.',
+        detail: 'Use the email stored on the player profile you want to recover.',
+      });
+      return;
+    }
+
+    if (claimPassword.length < 9) {
+      toast.error('Password must be more than 8 characters.');
+      setFeedback({
+        tone: 'error',
+        title: 'Choose a stronger password.',
+        detail: 'Your new Mechi password must be more than 8 characters.',
+      });
+      return;
+    }
+
+    setClaimingPassword(true);
+    setFeedback({
+      tone: 'loading',
+      title: 'Updating your password...',
+      detail: 'Matching the player profile and saving the password you entered now.',
+    });
+
+    try {
+      const res = await fetch('/api/auth/password/claim', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          username: claimUsername.trim(),
+          email: claimEmail.trim(),
+          password: claimPassword,
+          redirect_to: nextPath,
+        }),
+      });
+      const data = await res.json();
+
+      if (!res.ok) {
+        setFeedback({
+          tone: 'error',
+          title: 'Could not update the password.',
+          detail: data.error ?? 'Please try again in a moment.',
+        });
+        toast.error(data.error ?? 'Could not update the password');
+        return;
+      }
+
+      login(data.token, data.user);
+      setFeedback({
+        tone: 'success',
+        title: 'Password updated.',
+        detail: data.message ?? 'You are signed in now with the new password.',
+      });
+      toast.success(data.message ?? 'Password updated. You are signed in now.');
+      window.location.assign(
+        typeof data.redirect_to === 'string' ? data.redirect_to : nextPath
+      );
+    } catch {
+      setFeedback({
+        tone: 'error',
+        title: 'We could not update the password.',
+        detail: 'Please check your connection and try again.',
+      });
+      toast.error('Network error.');
+    } finally {
+      setClaimingPassword(false);
     }
   };
 
@@ -316,6 +408,88 @@ export default function LoginPage({ searchParams }: { searchParams: LoginSearchP
             </button>
           ) : null}
         </form>
+
+        <div className="mt-6 rounded-2xl border border-[var(--border-color)] bg-[var(--surface-elevated)] p-4 sm:p-5">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--text-soft)]">
+            Existing player
+          </p>
+          <p className="mt-2 text-sm text-[var(--text-secondary)]">
+            Match your username and email, then the password you enter here becomes your new Mechi password immediately.
+          </p>
+
+          <div className="mt-4 space-y-4">
+            <div>
+              <label className="label">Username</label>
+              <input
+                type="text"
+                value={claimUsername}
+                onChange={(event) => setClaimUsername(event.target.value)}
+                placeholder="GameKing254"
+                className="input"
+                autoCapitalize="none"
+                spellCheck={false}
+              />
+            </div>
+
+            <div>
+              <label className="label">Email</label>
+              <input
+                type="email"
+                value={claimEmail}
+                onChange={(event) => setClaimEmail(event.target.value)}
+                placeholder="you@mail.com"
+                className="input"
+                autoComplete="email"
+                autoCapitalize="none"
+                spellCheck={false}
+              />
+            </div>
+
+            <div>
+              <label className="label">New password</label>
+              <div className="relative mt-2">
+                <input
+                  type={showClaimPassword ? 'text' : 'password'}
+                  value={claimPassword}
+                  onChange={(event) => setClaimPassword(event.target.value)}
+                  placeholder="Enter the password you want to use"
+                  className="input pr-12"
+                  autoComplete="new-password"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowClaimPassword((current) => !current)}
+                  className="absolute right-1 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-lg text-[var(--text-soft)] hover:text-[var(--text-primary)]"
+                  aria-label={showClaimPassword ? 'Hide new password' : 'Show new password'}
+                >
+                  {showClaimPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
+              </div>
+              <p className="mt-2 text-xs text-[var(--text-soft)]">
+                More than 8 characters.
+              </p>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => void handlePasswordClaimRequest()}
+              disabled={claimingPassword || submitting || sendingMagicLink}
+              className="btn-ghost w-full"
+            >
+              {claimingPassword ? (
+                <>
+                  <Loader2 size={14} className="animate-spin" />
+                  Updating password...
+                </>
+              ) : (
+                <>
+                  <KeyRound size={14} />
+                  Set this as my password
+                </>
+              )}
+            </button>
+          </div>
+        </div>
 
         <p className="mt-6 text-center text-sm text-[var(--text-secondary)]">
           New to Mechi?{' '}

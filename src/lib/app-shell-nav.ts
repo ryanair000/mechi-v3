@@ -6,7 +6,6 @@ import {
   Gift,
   History,
   LayoutDashboard,
-  Lightbulb,
   type LucideIcon,
   MessageCircle,
   Swords,
@@ -20,6 +19,7 @@ import {
 export type NavItemMatchMode = 'exact' | 'prefix';
 
 export type AppNavItem = {
+  activeHrefs?: string[];
   description?: string;
   href: string;
   icon: LucideIcon;
@@ -44,11 +44,12 @@ const DASHBOARD_NAV_ITEM: AppNavItem = {
 };
 
 const FEED_NAV_ITEM: AppNavItem = {
-  href: '/notifications',
+  activeHrefs: ['/notifications'],
+  href: '/feed',
   label: 'Feed',
   icon: BellRing,
   matchMode: 'prefix',
-  description: 'Challenges, bracket movement, and match alerts in one activity lane.',
+  description: 'Twitter-style activity lane for direct challenges, match review, and bracket movement.',
 };
 
 const TUTORIALS_NAV_ITEM: AppNavItem = {
@@ -109,16 +110,10 @@ const MATCHES_NAV_ITEM: AppNavItem = {
 };
 
 const GAMES_NAV_ITEM: AppNavItem = {
+  activeHrefs: ['/suggest'],
   href: '/games',
   label: 'Games',
   icon: Gamepad2,
-  matchMode: 'prefix',
-};
-
-const SUGGEST_NAV_ITEM: AppNavItem = {
-  href: '/suggest',
-  label: 'Suggest',
-  icon: Lightbulb,
   matchMode: 'prefix',
 };
 
@@ -127,7 +122,7 @@ const FRIENDS_NAV_ITEM: AppNavItem = {
   label: 'Friends',
   icon: UserPlus,
   matchMode: 'exact',
-  description: 'Invite players and grow your match pool faster.',
+  description: 'Search players by username and jump straight to their public card.',
 };
 
 const REWARDS_NAV_ITEM: AppNavItem = {
@@ -142,7 +137,7 @@ const REDEEM_NAV_ITEM: AppNavItem = {
   label: 'Redeem',
   icon: Gift,
   matchMode: 'prefix',
-  description: 'Turn RP into codes, perks, and partner rewards.',
+  description: 'Turn RP into Mechi perks and partner rewards fulfilled on ChezaHub.',
 };
 
 const BOUNTIES_NAV_ITEM: AppNavItem = {
@@ -177,7 +172,7 @@ export const SIDEBAR_SECTIONS: SidebarSectionConfig[] = [
     id: 'games',
     title: 'Games',
     icon: Gamepad2,
-    items: [GAMES_NAV_ITEM, SUGGEST_NAV_ITEM],
+    items: [GAMES_NAV_ITEM],
   },
   {
     id: 'growth',

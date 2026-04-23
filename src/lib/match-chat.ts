@@ -1,4 +1,9 @@
 import { GAMES, PLATFORMS, getCanonicalGameKey } from '@/lib/config';
+import {
+  getEfootballMatchRoomAssignment,
+  getMatchRoomSideLabel,
+  usesEfootballRoomCodeFlow,
+} from '@/lib/match-room';
 import { createNotification } from '@/lib/notifications';
 import { createServiceClient } from '@/lib/supabase';
 import type {
@@ -46,14 +51,24 @@ function getSupabase() {
 }
 
 function buildMatchChatSeedMessage(match: MatchAccessRow) {
-  const game = GAMES[getCanonicalGameKey(match.game)]?.label ?? 'Match';
+  const gameKey = getCanonicalGameKey(match.game);
+  const game = GAMES[gameKey]?.label ?? 'Match';
   const platform = match.platform ? PLATFORMS[match.platform]?.label ?? null : null;
+  const intro = platform ? `${game} is live on ${platform}.` : `${game} is live.`;
 
-  if (platform) {
-    return `${game} is live on ${platform}. Use this chat to share room code, invite timing, and setup details before kickoff.`;
+  if (usesEfootballRoomCodeFlow(gameKey)) {
+    const assignment = getEfootballMatchRoomAssignment(
+      match.id,
+      match.player1_id,
+      match.player2_id
+    );
+
+    return `${intro} ${getMatchRoomSideLabel(
+      assignment.roomCreatorSide
+    )} creates the match room and shares the invite code here before kickoff.`;
   }
 
-  return `${game} is live. Use this chat to share room code, invite timing, and setup details before kickoff.`;
+  return `${intro} Use this chat to share room code, invite timing, and setup details before kickoff.`;
 }
 
 function normalizeMessageBody(body: string) {

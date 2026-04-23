@@ -38,6 +38,10 @@ function QueueGamePicker() {
               {GAMES[g].label}
             </button>
           ))}
+          <Link href="/queue/active" className="btn-outline w-full">
+            <Users size={14} />
+            View Active Players
+          </Link>
         </div>
         {ranked1v1Games.length === 0 && (
           <p className="mt-4 text-xs text-[var(--text-soft)]">

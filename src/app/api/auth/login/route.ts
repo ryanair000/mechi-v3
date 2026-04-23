@@ -1,8 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createServiceClient } from '@/lib/supabase';
 import { applyAuthCookie, createSessionForProfile, verifyPassword } from '@/lib/auth';
+import {
+  getCandidateProfiles as getProfilesByIdentifier,
+  parseLoginMethod,
+  type LoginMethod,
+} from '@/lib/auth-identifiers';
 import { getSafeNextPath } from '@/lib/navigation';
-import { getPhoneLookupVariants, normalizePhoneNumber } from '@/lib/phone';
 import { checkRateLimit, getClientIp, rateLimitResponse } from '@/lib/rateLimit';
 import type { CountryKey, Plan, UserRole } from '@/types';
 
@@ -36,8 +39,6 @@ interface AuthenticatedProfile {
   plan_expires_at?: string | null;
 }
 
-type LoginMethod = 'auto' | 'email' | 'phone' | 'username';
-
 type AuthFailure = {
   error: string;
   status: 400 | 401 | 403;
@@ -46,22 +47,6 @@ type AuthFailure = {
 type AuthSuccess = {
   profile: AuthenticatedProfile;
 };
-
-function detectIdentifierType(identifier: string): Exclude<LoginMethod, 'auto'> {
-  if (identifier.includes('@')) {
-    return 'email';
-  }
-
-  if (/^[+\d][\d\s\-()]{7,}$/.test(identifier)) {
-    return 'phone';
-  }
-
-  return 'username';
-}
-
-function parseLoginMethod(value: unknown): LoginMethod {
-  return value === 'email' || value === 'phone' || value === 'username' ? value : 'auto';
-}
 
 function getRequestOrigin(request: NextRequest) {
   const forwardedHost = request.headers.get('x-forwarded-host') ?? request.headers.get('host');
@@ -76,45 +61,9 @@ function getRequestOrigin(request: NextRequest) {
 }
 
 async function getCandidateProfiles(identifier: string, loginMethod: LoginMethod) {
-  const supabase = createServiceClient();
-  const trimmedIdentifier = identifier.trim();
-  const method = loginMethod === 'auto' ? detectIdentifierType(trimmedIdentifier) : loginMethod;
-
-  if (method === 'email') {
-    const result = await supabase
-      .from('profiles')
-      .select('*')
-      .ilike('email', trimmedIdentifier.toLowerCase())
-      .limit(1);
-
-    return {
-      profiles: (result.data as AuthenticatedProfile[] | null) ?? [],
-      error: result.error,
-    };
-  }
-
-  if (method === 'phone') {
-    const phoneVariants = getPhoneLookupVariants(normalizePhoneNumber(trimmedIdentifier));
-    const result = await supabase
-      .from('profiles')
-      .select('*')
-      .in('phone', phoneVariants)
-      .limit(10);
-
-    return {
-      profiles: (result.data as AuthenticatedProfile[] | null) ?? [],
-      error: result.error,
-    };
-  }
-
-  const result = await supabase
-    .from('profiles')
-    .select('*')
-    .ilike('username', trimmedIdentifier)
-    .limit(1);
-
+  const result = await getProfilesByIdentifier(identifier, loginMethod);
   return {
-    profiles: (result.data as AuthenticatedProfile[] | null) ?? [],
+    profiles: result.profiles as AuthenticatedProfile[],
     error: result.error,
   };
 }
@@ -134,6 +83,10 @@ async function authenticateUser(
   }
 
   for (const profile of profiles) {
+    if (!profile.password_hash) {
+      continue;
+    }
+
     const isValid = await verifyPassword(password, profile.password_hash);
     if (!isValid) {
       continue;

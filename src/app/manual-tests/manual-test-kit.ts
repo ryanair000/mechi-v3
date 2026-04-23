@@ -748,18 +748,18 @@ export const manualTestSections = [
       },
       {
         id: 'GROW-02',
-        title: 'ChezaHub linking and redemption flow return to Mechi correctly.',
+        title: 'Partner reward redemption hands off to ChezaHub My Orders cleanly.',
         account: 'Player A',
         timing: 'Run last',
         instructions: [
-          'Start the ChezaHub linking or claim flow from rewards using a safe test path.',
-          'Complete the round-trip and verify the user lands back on the intended Mechi state.',
+          'Redeem a safe partner reward from the Mechi rewards catalog with a test-ready account.',
+          'Use the returned My Orders action and verify the user reaches the intended ChezaHub orders surface.',
         ],
         passIf: [
-          'The partner handoff returns to Mechi without a broken callback.',
-          'Any successful link or redeem state is reflected on the rewards surface.',
+          'The reward redeems on Mechi without a manual account-link step.',
+          'The ChezaHub handoff opens the correct orders surface and the redemption state is reflected on Mechi.',
         ],
-        watchFor: ['Use a sandbox or low-risk partner account when one is available.'],
+        watchFor: ['Use a sandbox or low-risk partner reward when one is available.'],
         links: [makeAppLink('/rewards', 'Rewards actions')],
       },
       {

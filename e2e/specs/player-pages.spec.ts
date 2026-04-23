@@ -60,6 +60,46 @@ test.describe('Player Pages', () => {
     await expect(page.locator('body')).toContainText(/E2E Open Cup/i);
   });
 
+  test('challenge finder shows eligible games, filters by username, and refreshes sent challenges @core', async ({
+    page,
+  }) => {
+    await page.goto('/challenges');
+
+    await page.getByRole('button', { name: /find opponent/i }).click();
+    const dialog = page.getByRole('dialog', { name: /find opponent/i });
+
+    await expect(dialog).toBeVisible();
+    await expect(dialog.getByRole('button', { name: /efootball 2026/i })).toBeVisible();
+    await expect(dialog.getByRole('button', { name: /ea fc 26/i })).toBeVisible();
+    await expect(dialog.getByRole('button', { name: /call of duty: mobile/i })).toHaveCount(0);
+
+    const usernameSearch = dialog.getByLabel(/search by username/i);
+    await usernameSearch.fill('@opponent-a');
+    await expect(dialog).toContainText(/e2e-opponent-a/i);
+
+    const opponentRow = dialog.locator('div.rounded-2xl').filter({ hasText: 'e2e-opponent-a' }).first();
+    await opponentRow.getByRole('button', { name: /^challenge$/i }).click();
+
+    await expect(dialog).toBeHidden();
+    await expect(page.locator('body')).toContainText(/e2e-opponent-a/i);
+    await expect(page.locator('body')).toContainText(/waiting on/i);
+
+    const sentRow = page.locator('div').filter({ hasText: 'e2e-opponent-a' }).last();
+    await sentRow.getByRole('button', { name: /cancel/i }).click();
+    await expect(page.locator('body')).not.toContainText(/waiting on e2e-opponent-a/i);
+  });
+
+  test('friends and public profile surfaces show last seen copy @core', async ({ page }) => {
+    await page.goto('/share?username=e2e-free-player');
+    await expect(page.locator('body')).toContainText(/last seen/i);
+
+    await page.goto('/s/e2e-free-player');
+    await expect(page.locator('body')).toContainText(/last seen/i);
+
+    await page.goto('/share?username=e2e-support-contact');
+    await expect(page.locator('body')).toContainText(/no matches yet/i);
+  });
+
   test('live tournament pages show active and queued stream states from seeded data @core', async ({
     page,
   }) => {

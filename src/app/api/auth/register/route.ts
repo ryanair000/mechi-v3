@@ -16,6 +16,7 @@ import { findInviterByCode, generateUniqueInviteCode, normalizeInviteCode } from
 import { guessCountryFromRegion, validateLocationSelection } from '@/lib/location';
 import { getPhoneLookupVariants, isValidPhoneNumber, normalizePhoneNumber } from '@/lib/phone';
 import { canSelectGames } from '@/lib/plans';
+import { awardAffiliateInviteSignup, ensureChezahubCustomer } from '@/lib/rewards';
 import { checkRateLimit, getClientIp, rateLimitResponse } from '@/lib/rateLimit';
 import { sendNewRegistrationTelegramNotification } from '@/lib/telegram';
 import type { GameKey, PlatformKey } from '@/types';
@@ -321,6 +322,18 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    if (inviter?.id) {
+      try {
+        await awardAffiliateInviteSignup(supabase, {
+          inviterUserId: inviter.id,
+          inviteeUserId: String(profile.id),
+          inviteCode: normalizedInviteCode,
+        });
+      } catch (affiliateError) {
+        console.warn('[Register] Affiliate invite reward error:', affiliateError);
+      }
+    }
+
     // Send welcome email async
     sendWelcomeEmail({ to: trimmedEmail, username }).catch(console.error);
     sendNewRegistrationTelegramNotification({
@@ -334,6 +347,33 @@ export async function POST(request: NextRequest) {
     }).catch((error) => {
       console.error('[Telegram] Registration notification error:', error);
     });
+
+    if (!profile.chezahub_user_id) {
+      try {
+        const ensuredCustomer = await ensureChezahubCustomer({
+          mechiUserId: String(profile.id),
+          username,
+          email: trimmedEmail,
+          phone: normalizedPhone,
+        });
+        const linkedAt = new Date().toISOString();
+
+        await supabase
+          .from('profiles')
+          .update({
+            chezahub_user_id: ensuredCustomer.chezahubUserId,
+            chezahub_linked_at: linkedAt,
+          })
+          .eq('id', profile.id);
+
+        Object.assign(profile, {
+          chezahub_user_id: ensuredCustomer.chezahubUserId,
+          chezahub_linked_at: linkedAt,
+        });
+      } catch (chezahubError) {
+        console.warn('[Register] ChezaHub auto-provision failed:', chezahubError);
+      }
+    }
 
     const { token, user } = createSessionForProfile(profile as unknown as Record<string, unknown>);
     const response = NextResponse.json({ token, user });

@@ -4,9 +4,12 @@ import Link from 'next/link';
 import { useCallback, useEffect, useState } from 'react';
 import { Plus, Trophy } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { useAuthFetch } from '@/components/AuthProvider';
+import { useAuth, useAuthFetch } from '@/components/AuthProvider';
 import { LiveBadge } from '@/components/LiveBadge';
 import { GAMES } from '@/lib/config';
+import { resolvePlan } from '@/lib/plans';
+import { getTournamentPrizePoolLabel } from '@/lib/tournament-metrics';
+import { formatTournamentDateTime } from '@/lib/tournament-schedule';
 import type { GameKey, Tournament } from '@/types';
 
 type TournamentListItem = Tournament & {
@@ -31,7 +34,7 @@ function formatTournamentStatus(status: string) {
     case 'open':
       return 'Open';
     case 'full':
-      return 'Full';
+      return 'Ongoing';
     case 'active':
       return 'Live';
     case 'completed':
@@ -41,6 +44,10 @@ function formatTournamentStatus(status: string) {
     default:
       return status;
   }
+}
+
+function formatTournamentFilterLabel(status: (typeof STATUS_FILTERS)[number]) {
+  return status === 'full' ? 'ongoing' : status;
 }
 
 function getStatusClasses(status: string) {
@@ -57,27 +64,21 @@ function getStatusClasses(status: string) {
 }
 
 function formatTournamentDate(tournament: TournamentListItem) {
-  const source = tournament.started_at ?? tournament.created_at;
-  if (!source) {
-    return 'TBA';
-  }
-
-  const date = new Date(source);
-  if (Number.isNaN(date.getTime())) {
-    return 'TBA';
-  }
-
-  return new Intl.DateTimeFormat('en-KE', {
-    day: 'numeric',
-    month: 'short',
-  }).format(date);
+  return formatTournamentDateTime(
+    tournament.scheduled_for ?? tournament.started_at ?? tournament.created_at,
+    'TBA'
+  );
 }
 
 export default function TournamentsPage() {
+  const { user } = useAuth();
   const authFetch = useAuthFetch();
   const [tournaments, setTournaments] = useState<TournamentListItem[]>([]);
   const [status, setStatus] = useState<(typeof STATUS_FILTERS)[number]>('open');
   const [loading, setLoading] = useState(true);
+  const canHostTournaments = resolvePlan(user?.plan, user?.plan_expires_at) !== 'free';
+  const hostHref = canHostTournaments ? '/tournaments/create' : '/pricing';
+  const hostLabel = canHostTournaments ? 'Host tournament' : 'Upgrade to host';
 
   const fetchTournaments = useCallback(async () => {
     setLoading(true);
@@ -121,9 +122,9 @@ export default function TournamentsPage() {
             </p>
           </div>
 
-          <Link href="/tournaments/create" className="btn-primary text-sm">
+          <Link href={hostHref} className="btn-primary text-sm">
             <Plus size={14} />
-            Host tournament
+            {hostLabel}
           </Link>
         </div>
       </section>
@@ -139,7 +140,7 @@ export default function TournamentsPage() {
                 : 'border-[var(--border-color)] bg-[var(--surface-elevated)] text-[var(--text-soft)] hover:bg-[var(--surface)] hover:text-[var(--text-primary)]'
             }`}
           >
-            {item}
+            {formatTournamentFilterLabel(item)}
           </button>
         ))}
       </div>
@@ -160,17 +161,19 @@ export default function TournamentsPage() {
       ) : tournaments.length === 0 ? (
         <div className="card py-16 text-center">
           <Trophy size={36} className="mx-auto mb-4 text-[var(--text-soft)] opacity-50" />
-          <p className="font-black text-[var(--text-primary)]">No {status} brackets yet</p>
+          <p className="font-black text-[var(--text-primary)]">
+            No {formatTournamentFilterLabel(status)} brackets yet
+          </p>
           <p className="mt-2 text-sm text-[var(--text-soft)]">Start one and bring your scene in.</p>
-          <Link href="/tournaments/create" className="btn-primary mt-5 inline-flex">
+          <Link href={hostHref} className="btn-primary mt-5 inline-flex">
             <Plus size={14} />
-            Create tournament
+            {canHostTournaments ? 'Create tournament' : 'Upgrade to host'}
           </Link>
         </div>
       ) : (
         <>
           <div className="hidden overflow-hidden rounded-[var(--radius-panel)] border border-[var(--border-color)] bg-[var(--surface)] lg:block">
-            <div className="grid grid-cols-[minmax(0,1.45fr)_100px_100px_110px_90px] gap-4 border-b border-[var(--border-color)] px-5 py-3 text-[10px] font-bold uppercase tracking-[0.16em] text-[var(--text-soft)]">
+            <div className="grid grid-cols-[minmax(0,1.3fr)_100px_150px_110px_90px] gap-4 border-b border-[var(--border-color)] px-5 py-3 text-[10px] font-bold uppercase tracking-[0.16em] text-[var(--text-soft)]">
               <span>Tournament</span>
               <span>Slots</span>
               <span>Starts</span>
@@ -188,7 +191,7 @@ export default function TournamentsPage() {
               return (
                 <div
                   key={tournament.id}
-                  className={`grid grid-cols-[minmax(0,1.45fr)_100px_100px_110px_90px] items-center gap-4 px-5 py-4 ${
+                  className={`grid grid-cols-[minmax(0,1.3fr)_100px_150px_110px_90px] items-center gap-4 px-5 py-4 ${
                     index < tournaments.length - 1 ? 'border-b border-[var(--border-color)]' : ''
                   }`}
                 >
@@ -242,11 +245,11 @@ export default function TournamentsPage() {
                   </span>
 
                   <span className="text-right text-sm font-black text-[var(--brand-teal)]">
-                    {tournament.prize_pool > 0
-                      ? `KES ${tournament.prize_pool.toLocaleString()}`
-                      : tournament.entry_fee > 0
-                        ? 'KES 0'
-                        : 'No cash'}
+                    {getTournamentPrizePoolLabel({
+                      prizePool: tournament.prize_pool,
+                      entryFee: tournament.entry_fee,
+                      prizePoolMode: tournament.prize_pool_mode,
+                    })}
                   </span>
 
                   <div className="text-right">
@@ -330,11 +333,11 @@ export default function TournamentsPage() {
                         Prize
                       </p>
                       <p className="mt-2 text-sm font-semibold text-[var(--brand-teal)]">
-                        {tournament.prize_pool > 0
-                          ? `KES ${tournament.prize_pool.toLocaleString()}`
-                          : tournament.entry_fee > 0
-                            ? 'KES 0'
-                            : 'No cash'}
+                        {getTournamentPrizePoolLabel({
+                          prizePool: tournament.prize_pool,
+                          entryFee: tournament.entry_fee,
+                          prizePoolMode: tournament.prize_pool_mode,
+                        })}
                       </p>
                     </div>
                   </div>

@@ -580,8 +580,8 @@ export default function ProfileSettingsPage() {
               {currentPlan.id === 'free'
                 ? 'Free keeps one saved game and a lighter ranked allowance.'
                 : currentPlan.id === 'pro'
-                  ? 'Pro unlocks unlimited ranked matches and up to three selected games.'
-                  : 'Elite keeps the full stack live with fee-free tournaments and early access perks.'}
+                  ? 'Pro unlocks unlimited ranked matches, up to three selected games, and tournament hosting.'
+                  : 'Elite keeps the full stack live with three fee-free tournaments each month and early access perks.'}
             </p>
           </div>
 

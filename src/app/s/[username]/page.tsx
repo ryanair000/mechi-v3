@@ -4,15 +4,9 @@ import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { ChallengePlayerButton } from '@/components/ChallengePlayerButton';
 import { GAMES, getConfiguredPlatformForGame, normalizeSelectedGameKeys } from '@/lib/config';
-import { isMissingColumnError } from '@/lib/db-compat';
 import { getRankDivision } from '@/lib/gamification';
-import { resolveProfileLocation } from '@/lib/location';
-import {
-  PUBLIC_PROFILE_SHARE_SELECT,
-  PUBLIC_PROFILE_SHARE_SELECT_WITH_COUNTRY,
-  getProfileShareStats,
-} from '@/lib/share';
-import { createServiceClient } from '@/lib/supabase';
+import { formatLastSeen } from '@/lib/last-seen';
+import { getPublicProfileData } from '@/lib/public-profile';
 import type { GameKey, PlatformKey } from '@/types';
 
 interface Props {
@@ -32,45 +26,9 @@ function getTierColor(tier: string): string {
   return '#CD7F32';
 }
 
-async function getProfileData(username: string) {
-  const supabase = createServiceClient();
-  let result = await supabase
-    .from('profiles')
-    .select(PUBLIC_PROFILE_SHARE_SELECT_WITH_COUNTRY)
-    .ilike('username', username)
-    .single();
-
-  if (result.error && isMissingColumnError(result.error, 'profiles.country')) {
-    result = await supabase
-      .from('profiles')
-      .select(PUBLIC_PROFILE_SHARE_SELECT)
-      .ilike('username', username)
-      .single();
-  }
-
-  const profile = result.data;
-
-  if (!profile) return null;
-
-  const { bestRating, totalWins, totalLosses } = getProfileShareStats(
-    profile as Record<string, unknown>
-  );
-  const location = resolveProfileLocation(profile as Record<string, unknown>);
-
-  return {
-    ...profile,
-    country: location.country,
-    region: location.region,
-    location_label: location.label,
-    bestRating,
-    totalWins,
-    totalLosses,
-  };
-}
-
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { username } = await params;
-  const profile = await getProfileData(username);
+  const profile = await getPublicProfileData(username);
 
   if (!profile) return { title: 'Player Not Found | Mechi' };
 
@@ -109,7 +67,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function ShareProfilePage({ params }: Props) {
   const { username } = await params;
-  const profile = await getProfileData(username);
+  const profile = await getPublicProfileData(username);
 
   if (!profile) redirect('/');
 
@@ -118,7 +76,7 @@ export default async function ShareProfilePage({ params }: Props) {
   const level = typeof profile.level === 'number' ? profile.level : 1;
   const totalMatches = profile.totalWins + profile.totalLosses;
   const winRate = totalMatches > 0 ? Math.round((profile.totalWins / totalMatches) * 100) : 0;
-  const selectedGames = normalizeSelectedGameKeys((profile.selected_games as string[]) ?? []);
+  const selectedGames = normalizeSelectedGameKeys(profile.games);
   const profilePlatforms = ((profile.platforms as PlatformKey[] | null | undefined) ?? []);
   const platformCount = profilePlatforms.length;
   const primaryChallengeGame =
@@ -135,6 +93,7 @@ export default async function ShareProfilePage({ params }: Props) {
   const avatarUrl = typeof profile.avatar_url === 'string' ? profile.avatar_url : null;
   const coverUrl = typeof profile.cover_url === 'string' ? profile.cover_url : null;
   const usernameInitial = profile.username[0]?.toUpperCase() ?? '?';
+  const lastSeenLabel = formatLastSeen(profile.last_match_date);
 
   return (
     <div className="min-h-screen bg-[linear-gradient(180deg,#070b14,#0b1121_45%,#11182a)] text-white">
@@ -217,6 +176,9 @@ export default async function ShareProfilePage({ params }: Props) {
                     </span>
                     <span className="rounded-full border border-white/[0.08] bg-white/[0.04] px-3 py-1 text-xs font-medium text-white/72">
                       {platformCount} platform{platformCount === 1 ? '' : 's'} linked
+                    </span>
+                    <span className="rounded-full border border-white/[0.08] bg-white/[0.04] px-3 py-1 text-xs font-medium text-white/72">
+                      {lastSeenLabel}
                     </span>
                   </div>
                 </div>

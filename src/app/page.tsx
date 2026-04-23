@@ -64,7 +64,7 @@ const PRICING_PLANS = [
     key: 'pro',
     kicker: 'MOST POPULAR',
     description:
-      'KES 299/month after the 1-month trial. Unlimited ranked play, 3 saved games, direct challenges, and free-entry tournament hosting.',
+      'KES 299/month after the 1-month trial. Unlimited ranked play, 3 saved games, tournament hosting, and a deeper grind lane.',
     href: '/pricing',
     cta: 'SEE PRO',
     featured: true,
@@ -73,7 +73,7 @@ const PRICING_PLANS = [
     key: 'elite',
     kicker: 'ALL ACCESS',
     description:
-      'KES 999/month for players who want the full stack: zero tournament fee, a gold badge, early access, and streaming feature access.',
+      'KES 999/month for players who want the full stack: tournament hosting, auto or specified prize pools, 3 fee-free tournaments each month, and streaming access.',
     href: '/pricing',
     cta: 'SEE ELITE',
     featured: false,

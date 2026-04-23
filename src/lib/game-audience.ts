@@ -270,6 +270,7 @@ export async function notifyGameAudienceAboutTournament(params: {
   entryFee: number;
   size: number;
   region: string;
+  scheduledFor?: string | null;
   excludeUserIds?: string[];
 }): Promise<void> {
   const canonicalGame = getCanonicalGameKey(params.game);
@@ -303,6 +304,7 @@ export async function notifyGameAudienceAboutTournament(params: {
         entryFee: params.entryFee,
         size: params.size,
         region: params.region,
+        scheduledFor: params.scheduledFor ?? null,
         tournamentUrl: `${APP_URL}/t/${params.slug}`,
       })
     )

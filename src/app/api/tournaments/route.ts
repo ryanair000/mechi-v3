@@ -5,15 +5,19 @@ import { filterVisibleTournaments, shouldHideE2EFixtures } from '@/lib/e2e-fixtu
 import { isTournamentSize } from '@/lib/bracket';
 import { notifyGameAudienceAboutTournament } from '@/lib/game-audience';
 import { resolveProfileLocation, validateLocationSelection } from '@/lib/location';
-import { getPlan } from '@/lib/plans';
 import { checkRateLimit, getClientIp, rateLimitResponse } from '@/lib/rateLimit';
 import { makeSlug } from '@/lib/slug';
 import { maybeExpireProfilePlan } from '@/lib/subscription';
 import { createServiceClient } from '@/lib/supabase';
 import {
+  getTournamentHostingAccess,
+  getTournamentHostingMonthWindow,
+} from '@/lib/tournament-hosting';
+import {
   getPlatformForTournament,
   getTournamentPaymentMetrics,
   getTournamentPrizeSnapshot,
+  resolveTournamentPrizePoolMode,
 } from '@/lib/tournaments';
 import type { GameKey, PlatformKey } from '@/types';
 
@@ -102,20 +106,23 @@ export async function GET(request: NextRequest) {
     }, {});
 
     return NextResponse.json({
-      tournaments: tournaments.map((tournament) => ({
-        ...tournament,
-        player_count: getTournamentPaymentMetrics(playersByTournament[tournament.id] ?? [])
-          .confirmedCount,
-        prize_pool: getTournamentPrizeSnapshot({
-          entryFee: Number(tournament.entry_fee ?? 0),
-          paidPlayerCount: getTournamentPaymentMetrics(playersByTournament[tournament.id] ?? [])
-            .paidCount,
-          feeRate: Number(tournament.platform_fee_rate ?? 5),
-          storedPrizePool: Number(tournament.prize_pool ?? 0),
-          storedPlatformFee: Number(tournament.platform_fee ?? 0),
-        }).prizePool,
-        active_stream: activeStreamByTournament[tournament.id] ?? null,
-      })),
+      tournaments: tournaments.map((tournament) => {
+        const paymentMetrics = getTournamentPaymentMetrics(playersByTournament[tournament.id] ?? []);
+
+        return {
+          ...tournament,
+          player_count: paymentMetrics.confirmedCount,
+          prize_pool: getTournamentPrizeSnapshot({
+            entryFee: Number(tournament.entry_fee ?? 0),
+            paidPlayerCount: paymentMetrics.paidCount,
+            feeRate: Number(tournament.platform_fee_rate ?? 5),
+            prizePoolMode: tournament.prize_pool_mode as string | null | undefined,
+            storedPrizePool: Number(tournament.prize_pool ?? 0),
+            storedPlatformFee: Number(tournament.platform_fee ?? 0),
+          }).prizePool,
+          active_stream: activeStreamByTournament[tournament.id] ?? null,
+        };
+      }),
     });
   } catch (err) {
     console.error('[Tournaments GET] Error:', err);
@@ -140,7 +147,12 @@ export async function POST(request: NextRequest) {
     const entryFee = Math.max(0, Math.round(Number(body.entry_fee ?? 0)));
     const requestedCountry = body.country;
     const requestedRegion = body.region;
+    const normalizedSchedule = String(body.scheduled_for ?? '').trim();
     const rules = String(body.rules ?? '').trim();
+    const prizePoolModeInput =
+      typeof body.prize_pool_mode === 'string' ? body.prize_pool_mode.trim() : 'auto';
+    const prizePoolMode = resolveTournamentPrizePoolMode(prizePoolModeInput);
+    const requestedPrizePool = Math.max(0, Math.round(Number(body.prize_pool ?? 0)));
 
     if (title.length < 3) {
       return NextResponse.json({ error: 'Tournament title is too short' }, { status: 400 });
@@ -152,17 +164,30 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Pick a supported 1v1 game' }, { status: 400 });
     }
 
-    const createRateLimit = checkRateLimit(
-      `tournament-create:${authUser.id}:${game}:${getClientIp(request)}`,
-      2,
-      60 * 60 * 1000
-    );
-    if (!createRateLimit.allowed) {
-      return rateLimitResponse(createRateLimit.retryAfterSeconds);
-    }
-
     if (!isTournamentSize(size)) {
       return NextResponse.json({ error: 'Tournament size must be 4, 8, or 16' }, { status: 400 });
+    }
+
+    if (!normalizedSchedule) {
+      return NextResponse.json(
+        { error: 'Tournament date and time are required' },
+        { status: 400 }
+      );
+    }
+
+    const scheduledAt = new Date(normalizedSchedule);
+    if (Number.isNaN(scheduledAt.getTime())) {
+      return NextResponse.json(
+        { error: 'Pick a valid tournament date and time' },
+        { status: 400 }
+      );
+    }
+
+    if (scheduledAt.getTime() <= Date.now()) {
+      return NextResponse.json(
+        { error: 'Tournament date and time must be in the future' },
+        { status: 400 }
+      );
     }
 
     const platform = getPlatformForTournament(game, requestedPlatform);
@@ -203,16 +228,60 @@ export async function POST(request: NextRequest) {
     }
 
     const organizerPlan = await maybeExpireProfilePlan(organizerProfile, supabase);
-    const organizerPlanConfig = getPlan(organizerPlan);
+    let hostedThisMonth = 0;
 
-    if (entryFee === 0 && organizerPlan === 'free') {
+    if (organizerPlan === 'elite') {
+      const { startIso, endIso } = getTournamentHostingMonthWindow();
+      const { count, error: monthlyCountError } = await supabase
+        .from('tournaments')
+        .select('id', { head: true, count: 'exact' })
+        .eq('organizer_id', authUser.id)
+        .gte('created_at', startIso)
+        .lt('created_at', endIso);
+
+      if (monthlyCountError) {
+        return NextResponse.json(
+          { error: 'Could not check your tournament hosting allowance' },
+          { status: 500 }
+        );
+      }
+
+      hostedThisMonth = count ?? 0;
+    }
+
+    const hostingAccess = getTournamentHostingAccess(organizerPlan, hostedThisMonth);
+
+    if (!hostingAccess.canHost) {
       return NextResponse.json(
         {
-          error: 'Free-entry tournaments are for Pro and Elite players.',
+          error: 'Tournament hosting requires Pro or Elite.',
           upgrade_url: '/pricing',
           required_plan: 'pro',
         },
         { status: 403 }
+      );
+    }
+
+    const createRateLimit = checkRateLimit(
+      `tournament-create:${authUser.id}:${game}:${getClientIp(request)}`,
+      2,
+      60 * 60 * 1000
+    );
+    if (!createRateLimit.allowed) {
+      return rateLimitResponse(createRateLimit.retryAfterSeconds);
+    }
+
+    if (!['auto', 'specified'].includes(prizePoolModeInput)) {
+      return NextResponse.json(
+        { error: 'Choose whether the prize pool is auto or specified.' },
+        { status: 400 }
+      );
+    }
+
+    if (prizePoolMode === 'specified' && requestedPrizePool <= 0) {
+      return NextResponse.json(
+        { error: 'Enter a specified prize pool amount above KES 0.' },
+        { status: 400 }
       );
     }
 
@@ -226,8 +295,12 @@ export async function POST(request: NextRequest) {
         region: location.label,
         size,
         entry_fee: entryFee,
-        platform_fee_rate: organizerPlanConfig.tournamentFeePercent,
+        prize_pool_mode: prizePoolMode,
+        prize_pool: prizePoolMode === 'specified' ? requestedPrizePool : 0,
+        platform_fee: 0,
+        platform_fee_rate: hostingAccess.platformFeePercent,
         rules: rules || null,
+        scheduled_for: scheduledAt.toISOString(),
         approval_status: 'pending',
         is_featured: false,
         organizer_id: authUser.id,
@@ -257,6 +330,7 @@ export async function POST(request: NextRequest) {
         entryFee,
         size,
         region: location.label,
+        scheduledFor: scheduledAt.toISOString(),
         excludeUserIds: [authUser.id],
       });
     } catch (broadcastError) {

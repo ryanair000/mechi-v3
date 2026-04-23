@@ -25,12 +25,20 @@ import {
 import { getPlan } from '@/lib/plans';
 import { cn } from '@/lib/utils';
 
-function isPathActive(pathname: string, item: AppNavItem) {
-  if (item.matchMode === 'exact') {
-    return pathname === item.href;
+function matchesNavHref(pathname: string, href: string, matchMode: AppNavItem['matchMode']) {
+  if (matchMode === 'exact') {
+    return pathname === href;
   }
 
-  return pathname === item.href || pathname.startsWith(item.href);
+  return pathname === href || pathname.startsWith(href);
+}
+
+function isPathActive(pathname: string, item: AppNavItem) {
+  if (matchesNavHref(pathname, item.href, item.matchMode)) {
+    return true;
+  }
+
+  return item.activeHrefs?.some((href) => matchesNavHref(pathname, href, 'prefix')) ?? false;
 }
 
 function hasActiveItem(pathname: string, items: AppNavItem[]) {
@@ -212,17 +220,13 @@ export default function SidebarWithSubmenu({ collapsed, onToggle }: SidebarWithS
 
       <nav className={cn('flex-1 space-y-1.5 overflow-y-auto py-3', collapsed ? 'px-3' : 'px-2')}>
         <SidebarSection>
-          {SIDEBAR_PRIMARY_ITEMS.map(({ href, label, icon: Icon, matchMode, description }) => {
+          {SIDEBAR_PRIMARY_ITEMS.map((item) => {
             return (
               <SidebarNavLink
-                key={href}
-                href={href}
-                icon={Icon}
-                label={label}
-                matchMode={matchMode}
-                description={description}
+                key={item.href}
+                {...item}
                 collapsed={collapsed}
-                isActive={isPathActive(pathname, { href, label, icon: Icon, matchMode, description })}
+                isActive={isPathActive(pathname, item)}
               />
             );
           })}

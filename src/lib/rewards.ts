@@ -29,12 +29,15 @@ export type RewardCatalogItem = {
   max_order_coverage_percent?: number | null;
   sku_name?: string | null;
   margin_class?: string | null;
+  source?: 'chezahub' | 'mechi_native' | string | null;
+  value_kes?: number | null;
+  sort_order?: number | null;
 };
 
 export type RewardRedemptionRow = {
   id: string;
   reward_id: string;
-  reward_type: RewardCodeType;
+  reward_type: RewardCodeType | 'mechi_perk';
   title: string;
   code: string | null;
   points_cost: number;
@@ -45,6 +48,11 @@ export type RewardRedemptionRow = {
   metadata: Record<string, unknown> | null;
   created_at: string;
   updated_at: string;
+  partner_order_url?: string | null;
+  partner_status?: string | null;
+  delivery_channel?: string | null;
+  access_hint?: string | null;
+  source?: 'chezahub' | 'mechi_native' | string | null;
 };
 
 export type RewardSummary = {
@@ -58,9 +66,17 @@ export type RewardSummary = {
   };
   referrals: {
     invited: number;
+    pending: number;
     qualified: number;
     completed: number;
     flagged: number;
+  };
+  affiliate: {
+    signups: number;
+    rp_earned: number;
+    rp_per_signup: number;
+    qualified: number;
+    completed: number;
   };
   recent_activity: Array<{
     id: string;
@@ -79,6 +95,22 @@ export type RewardSummary = {
     category: string;
     frequency: string;
   }>;
+};
+
+type EnsureChezahubCustomerResult = {
+  chezahubUserId: string;
+  ordersUrl: string | null;
+  accessHint: string | null;
+};
+
+type IssueChezahubRewardOrderResult = {
+  issuanceId: string;
+  orderId: string;
+  orderUrl: string | null;
+  status: string | null;
+  title: string;
+  deliveryChannel: string | null;
+  accessHint: string | null;
 };
 
 export type ChezahubLinkTokenPayload = {
@@ -160,6 +192,7 @@ export const REWARD_RULES = {
   streak5Weekly: 150,
   streak10Weekly: 400,
   shareActionDaily: 25,
+  affiliateInviteUsed: 300,
   inviteeStarter: 500,
   inviterMain: 3000,
   linkedFirstPaidOrder: 250,
@@ -181,11 +214,6 @@ export const REWARD_RULES = {
 } as const;
 
 export const REWARD_WAYS_TO_EARN = [
-  {
-    id: 'account_link',
-    title: 'Link your ChezaHub account',
-    description: `+${REWARD_RULES.accountLink} RP when you connect ChezaHub for referral tracking.`,
-  },
   {
     id: 'profile_completion',
     title: 'Complete your profile',
@@ -212,9 +240,14 @@ export const REWARD_WAYS_TO_EARN = [
     description: `+${REWARD_RULES.shareActionDaily} RP once per day for a verified share action.`,
   },
   {
+    id: 'affiliate_invite_used',
+    title: 'Get a signup through your invite code',
+    description: `+${REWARD_RULES.affiliateInviteUsed} RP every time a new player finishes signup with your invite code.`,
+  },
+  {
     id: 'invitee_starter',
     title: 'Be an invited player and play your first match',
-    description: `+${REWARD_RULES.inviteeStarter} RP after you link ChezaHub and finish your first Mechi match.`,
+    description: `+${REWARD_RULES.inviteeStarter} RP after you finish your first Mechi match as an invited player.`,
   },
   {
     id: 'referral_main',
@@ -457,6 +490,77 @@ export async function maybeAwardProfileCompletion(
   return result;
 }
 
+export async function awardAffiliateInviteSignup(
+  supabase: SupabaseClient,
+  params: {
+    inviterUserId: string;
+    inviteeUserId: string;
+    inviteCode?: string | null;
+  }
+) {
+  if (
+    !params.inviterUserId ||
+    !params.inviteeUserId ||
+    params.inviterUserId === params.inviteeUserId
+  ) {
+    return null;
+  }
+
+  const { data: existingConversion } = await supabase
+    .from('referral_conversions')
+    .select('inviter_user_id')
+    .eq('invitee_user_id', params.inviteeUserId)
+    .maybeSingle();
+
+  if (
+    existingConversion?.inviter_user_id &&
+    existingConversion.inviter_user_id !== params.inviterUserId
+  ) {
+    return null;
+  }
+
+  if (!existingConversion?.inviter_user_id) {
+    const { error: conversionError } = await supabase.from('referral_conversions').upsert(
+      {
+        inviter_user_id: params.inviterUserId,
+        invitee_user_id: params.inviteeUserId,
+        status: 'pending',
+        metadata: {
+          invite_code: params.inviteCode ?? null,
+          source: 'signup',
+        },
+      },
+      {
+        onConflict: 'invitee_user_id',
+        ignoreDuplicates: true,
+      }
+    );
+
+    if (conversionError) {
+      throw conversionError;
+    }
+  }
+
+  const result = await applyRewardEvent(supabase, {
+    userId: params.inviterUserId,
+    eventKey: `reward:affiliate-invite-used:${params.inviterUserId}:${params.inviteeUserId}`,
+    eventType: 'affiliate_invite_used',
+    availableDelta: REWARD_RULES.affiliateInviteUsed,
+    lifetimeDelta: REWARD_RULES.affiliateInviteUsed,
+    source: 'invite_signup',
+    relatedUserId: params.inviteeUserId,
+    metadata: {
+      invite_code: params.inviteCode ?? null,
+    },
+  });
+
+  if (result?.inserted) {
+    void tryClaimBounty(supabase, params.inviterUserId, 'referral_converted').catch(() => null);
+  }
+
+  return result;
+}
+
 export async function addRewardReviewQueueItem(
   supabase: SupabaseClient,
   params: {
@@ -506,6 +610,30 @@ function getIsoWeekStamp(dayStamp: string) {
 
 function getNairobiDayStartIso(dayStamp: string) {
   return new Date(`${dayStamp}T00:00:00+03:00`).toISOString();
+}
+
+function normalizeRewardRedemptionMetadata(row: RewardRedemptionRow): RewardRedemptionRow {
+  const metadata =
+    row.metadata && typeof row.metadata === 'object'
+      ? (row.metadata as Record<string, unknown>)
+      : {};
+
+  return {
+    ...row,
+    partner_order_url:
+      typeof metadata.partner_order_url === 'string' ? metadata.partner_order_url : null,
+    partner_status:
+      typeof metadata.partner_status === 'string' ? metadata.partner_status : null,
+    delivery_channel:
+      typeof metadata.delivery_channel === 'string' ? metadata.delivery_channel : null,
+    access_hint: typeof metadata.access_hint === 'string' ? metadata.access_hint : null,
+    source:
+      typeof metadata.source === 'string'
+        ? metadata.source
+        : row.reward_type === 'mechi_perk'
+          ? 'mechi_native'
+          : 'chezahub',
+  };
 }
 
 export async function processMatchRewardMilestones(
@@ -633,8 +761,7 @@ export async function processMatchRewardMilestones(
 
   if (
     params.winner.totalMatchesBefore === 0 &&
-    params.winner.invitedBy &&
-    params.winner.chezahubUserId
+    params.winner.invitedBy
   ) {
     trackRewardOperation(
       'winner_invitee_starter',
@@ -653,8 +780,7 @@ export async function processMatchRewardMilestones(
 
   if (
     params.loser.totalMatchesBefore === 0 &&
-    params.loser.invitedBy &&
-    params.loser.chezahubUserId
+    params.loser.invitedBy
   ) {
     trackRewardOperation(
       'loser_invitee_starter',
@@ -718,7 +844,7 @@ function getRewardEventTitle(eventType: string, availableDelta: number, pendingD
 
   switch (eventType) {
     case 'account_link':
-      return 'ChezaHub linked';
+      return 'ChezaHub wallet ready';
     case 'profile_completion':
       return 'Profile completed';
     case 'match_first_of_day':
@@ -729,6 +855,8 @@ function getRewardEventTitle(eventType: string, availableDelta: number, pendingD
       return '5-win streak';
     case 'share_page_action':
       return 'Share page action';
+    case 'affiliate_invite_used':
+      return 'Affiliate signup bonus';
     case 'invitee_starter':
       return 'Invitee starter bonus';
     case 'referral_main_pending':
@@ -779,11 +907,23 @@ export async function getRewardSummaryForUser(
   const profile = profileRaw as RewardProfileFields;
   await maybeAwardProfileCompletion(supabase, profile);
 
-  const [referralsResult, recentEventsResult, activeCodesResult, refreshedProfileResult, waysToEarnResult] = await Promise.all([
+  const [
+    referralsResult,
+    affiliateEventsResult,
+    recentEventsResult,
+    activeCodesResult,
+    refreshedProfileResult,
+    waysToEarnResult,
+  ] = await Promise.all([
     supabase
       .from('referral_conversions')
       .select('status', { count: 'exact' })
       .eq('inviter_user_id', userId),
+    supabase
+      .from('reward_events')
+      .select('available_delta')
+      .eq('user_id', userId)
+      .eq('event_type', 'affiliate_invite_used'),
     supabase
       .from('reward_events')
       .select('id, event_type, available_delta, pending_delta, created_at')
@@ -807,6 +947,10 @@ export async function getRewardSummaryForUser(
 
   const referralRows =
     ((referralsResult.data as Array<{ status: string }> | null) ?? []).filter(Boolean);
+  const affiliateEvents =
+    ((affiliateEventsResult.data as Array<{ available_delta: number }> | null) ?? []).filter(
+      Boolean
+    );
   const recentRows =
     ((recentEventsResult.data as Array<{
       id: string;
@@ -816,7 +960,9 @@ export async function getRewardSummaryForUser(
       created_at: string;
     }> | null) ?? []);
   const activeCodes =
-    ((activeCodesResult.data as RewardRedemptionRow[] | null) ?? []);
+    (((activeCodesResult.data as RewardRedemptionRow[] | null) ?? []).map(
+      normalizeRewardRedemptionMetadata
+    ));
   const refreshedProfile =
     (refreshedProfileResult.data as {
       reward_points_available?: number | null;
@@ -837,9 +983,20 @@ export async function getRewardSummaryForUser(
     },
     referrals: {
       invited: referralRows.length,
+      pending: referralRows.filter((row) => row.status === 'pending').length,
       qualified: referralRows.filter((row) => row.status === 'qualified').length,
       completed: referralRows.filter((row) => row.status === 'completed').length,
       flagged: referralRows.filter((row) => row.status === 'flagged').length,
+    },
+    affiliate: {
+      signups: affiliateEvents.length,
+      rp_earned: affiliateEvents.reduce(
+        (total, row) => total + (Number(row.available_delta) || 0),
+        0
+      ),
+      rp_per_signup: REWARD_RULES.affiliateInviteUsed,
+      qualified: referralRows.filter((row) => row.status === 'qualified').length,
+      completed: referralRows.filter((row) => row.status === 'completed').length,
     },
     recent_activity: recentRows.map((event) => ({
       id: event.id,
@@ -875,6 +1032,120 @@ export async function fetchChezahubRewardCatalog() {
   }
 
   return data?.items ?? [];
+}
+
+export async function ensureChezahubCustomer(params: {
+  mechiUserId: string;
+  username: string;
+  email: string;
+  phone?: string | null;
+}): Promise<EnsureChezahubCustomerResult> {
+  const payload = {
+    mechi_user_id: params.mechiUserId,
+    username: params.username,
+    email: params.email,
+    phone: params.phone ?? null,
+  };
+
+  const response = await fetch(`${getChezahubBaseUrl()}/api/mechi/rewards/ensure-customer`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...createSignedActionHeaders(payload),
+    },
+    body: JSON.stringify(payload),
+    cache: 'no-store',
+  });
+
+  const data = (await response.json().catch(() => null)) as
+    | {
+        error?: string;
+        chezahub_user_id?: string;
+        orders_url?: string | null;
+        access_hint?: string | null;
+      }
+    | null;
+
+  if (!response.ok || !data?.chezahub_user_id) {
+    throw new Error(data?.error || 'Failed to ensure ChezaHub customer');
+  }
+
+  return {
+    chezahubUserId: data.chezahub_user_id,
+    ordersUrl: data.orders_url ?? null,
+    accessHint: data.access_hint ?? null,
+  };
+}
+
+export async function issueChezahubRewardOrder(params: {
+  mechiUserId: string;
+  chezahubUserId: string;
+  rewardId: string;
+  rewardType: RewardCodeType;
+  customerEmail: string;
+  customerName: string;
+  customerPhone?: string | null;
+}): Promise<IssueChezahubRewardOrderResult> {
+  const payload = {
+    mechi_user_id: params.mechiUserId,
+    chezahub_user_id: params.chezahubUserId,
+    reward_id: params.rewardId,
+    reward_type: params.rewardType,
+    customer_email: params.customerEmail,
+    customer_name: params.customerName,
+    customer_phone: params.customerPhone ?? null,
+  };
+
+  const response = await fetch(`${getChezahubBaseUrl()}/api/mechi/rewards/issue`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...createSignedActionHeaders(payload),
+    },
+    body: JSON.stringify(payload),
+    cache: 'no-store',
+  });
+
+  const data = (await response.json().catch(() => null)) as
+    | {
+        error?: string;
+        issuance_id?: string;
+        order_id?: string;
+        order_url?: string | null;
+        status?: string | null;
+        title?: string;
+        delivery_channel?: string | null;
+        access_hint?: string | null;
+      }
+    | null;
+
+  if (!response.ok || !data?.issuance_id) {
+    throw new Error(data?.error || 'Failed to create ChezaHub reward order');
+  }
+
+  return {
+    issuanceId: data.issuance_id,
+    orderId: data.order_id ?? data.issuance_id,
+    orderUrl: data.order_url ?? null,
+    status: data.status ?? null,
+    title: data.title ?? '',
+    deliveryChannel: data.delivery_channel ?? null,
+    accessHint: data.access_hint ?? null,
+  };
+}
+
+export async function voidChezahubRewardOrder(issuanceId: string) {
+  const payload = { issuance_id: issuanceId };
+
+  await fetch(`${getChezahubBaseUrl()}/api/mechi/rewards/void`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...createSignedActionHeaders(payload),
+    },
+    body: JSON.stringify(payload),
+    cache: 'no-store',
+  }).catch(() => null);
 }
 
 export async function issueChezahubRewardCode(params: {

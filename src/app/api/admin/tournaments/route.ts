@@ -76,7 +76,7 @@ export async function GET(request: NextRequest) {
     let query = supabase
       .from('tournaments')
       .select(
-        'id, slug, title, game, platform, region, size, entry_fee, prize_pool, platform_fee, platform_fee_rate, status, approval_status, approved_at, approved_by, is_featured, payout_status, created_at, started_at, ended_at, organizer:organizer_id(id, username), winner:winner_id(id, username)'
+        'id, slug, title, game, platform, region, size, entry_fee, prize_pool_mode, prize_pool, platform_fee, platform_fee_rate, status, approval_status, approved_at, approved_by, is_featured, payout_status, created_at, started_at, ended_at, organizer:organizer_id(id, username), winner:winner_id(id, username)'
       )
       .order('created_at', { ascending: false })
       .range(offset, offset + limit - 1);
@@ -137,6 +137,7 @@ export async function GET(request: NextRequest) {
         paidPlayerCount: getTournamentPaymentMetrics(playersByTournament[tournament.id] ?? [])
           .paidCount,
         feeRate: Number(tournament.platform_fee_rate ?? 5),
+        prizePoolMode: tournament.prize_pool_mode as string | null | undefined,
         storedPrizePool: Number(tournament.prize_pool ?? 0),
         storedPlatformFee: Number(tournament.platform_fee ?? 0),
       }).prizePool,

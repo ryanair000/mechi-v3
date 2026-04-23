@@ -330,6 +330,8 @@ CREATE TABLE IF NOT EXISTS tournaments (
   region text NOT NULL DEFAULT 'Other',
   size integer NOT NULL CHECK (size IN (4, 8, 16)),
   entry_fee integer NOT NULL DEFAULT 0 CHECK (entry_fee >= 0),
+  prize_pool_mode text NOT NULL DEFAULT 'auto'
+    CHECK (prize_pool_mode IN ('auto', 'specified')),
   prize_pool integer NOT NULL DEFAULT 0 CHECK (prize_pool >= 0),
   platform_fee integer NOT NULL DEFAULT 0 CHECK (platform_fee >= 0),
   platform_fee_rate integer NOT NULL DEFAULT 5 CHECK (platform_fee_rate >= 0 AND platform_fee_rate <= 100),
@@ -341,6 +343,7 @@ CREATE TABLE IF NOT EXISTS tournaments (
   payout_status text NOT NULL DEFAULT 'none' CHECK (payout_status IN ('none', 'pending', 'paid', 'failed')),
   payout_ref text,
   payout_error text,
+  scheduled_for timestamptz,
   created_at timestamptz NOT NULL DEFAULT timezone('utc', now()),
   started_at timestamptz,
   ended_at timestamptz
@@ -376,6 +379,7 @@ ALTER TABLE matches
   ADD COLUMN IF NOT EXISTS tournament_id uuid REFERENCES tournaments(id) ON DELETE SET NULL;
 
 CREATE INDEX IF NOT EXISTS idx_tournaments_status_created_at ON tournaments(status, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_tournaments_status_scheduled_for ON tournaments(status, scheduled_for ASC);
 CREATE INDEX IF NOT EXISTS idx_tournaments_game_status ON tournaments(game, status);
 CREATE INDEX IF NOT EXISTS idx_tournaments_organizer_id ON tournaments(organizer_id);
 CREATE INDEX IF NOT EXISTS idx_tournament_players_tournament_id ON tournament_players(tournament_id);

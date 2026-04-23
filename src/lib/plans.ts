@@ -60,8 +60,9 @@ export const PLANS: Record<Plan, PlanConfig> = {
       '1-month Pro trial for new players',
       'Unlimited ranked matches',
       'Up to 3 selected games',
+      'Tournament hosting on Mechi',
+      '5% tournament platform fee',
       '1-on-1 direct challenges',
-      'Free-entry tournament hosting',
       '100-match history window',
       'Pro profile badge',
     ],
@@ -82,9 +83,10 @@ export const PLANS: Record<Plan, PlanConfig> = {
     earlyAccess: true,
     features: [
       'Everything in Pro',
+      '3 fee-free tournaments each month',
+      'Auto or specified prize pools',
       'Priority matchmaking',
       'Gold Elite badge',
-      'Zero tournament platform fee',
       'No tournament registration charge',
       'Unlimited history',
       'CSV export access',
@@ -96,6 +98,14 @@ export const PLANS: Record<Plan, PlanConfig> = {
 
 export function getPlan(plan: string | null | undefined): PlanConfig {
   return PLANS[(plan as Plan) ?? 'free'] ?? PLANS.free;
+}
+
+export function resolvePlan(plan: string | null | undefined, expiresAt?: string | null): Plan {
+  const candidate = (plan as Plan | null | undefined) ?? 'free';
+  if (candidate !== 'free' && expiresAt && new Date(expiresAt).getTime() < Date.now()) {
+    return 'free';
+  }
+  return PLANS[candidate] ? candidate : 'free';
 }
 
 export function canStartMatch(plan: Plan, usedToday: number): boolean {

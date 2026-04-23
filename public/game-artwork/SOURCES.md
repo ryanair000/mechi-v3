@@ -1,6 +1,8 @@
 # Game Artwork Sources
 
-Local WebP artwork in this folder was cropped from public official storefront/media assets where available, then served from `/game-artwork/*` so the app does not hotlink runtime images.
+Most local artwork in this folder was cropped from public official storefront/media assets where available, then served from `/game-artwork/*` so the app does not hotlink runtime images.
+
+`efootball-header-photo.png` is locally generated custom tournament hero art for Mechi and is not sourced from an official storefront asset.
 
 | Game | Source |
 | --- | --- |

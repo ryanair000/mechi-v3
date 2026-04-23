@@ -39,13 +39,22 @@ const HEADER_CONFIGS: Array<{
   { matches: (pathname) => pathname.startsWith('/tournaments'), config: { eyebrow: 'Compete', title: 'Tournaments' } },
   { matches: (pathname) => pathname.startsWith('/lobbies'), config: { eyebrow: 'Compete', title: 'Lobbies' } },
   { matches: (pathname) => pathname.startsWith('/games'), config: { eyebrow: 'Library', title: 'Games' } },
-  { matches: (pathname) => pathname.startsWith('/suggest'), config: { eyebrow: 'Library', title: 'Suggest a game' } },
+  {
+    matches: (pathname) => pathname.startsWith('/suggest'),
+    config: {
+      eyebrow: 'Games',
+      title: 'Suggest a game',
+      backHref: '/games',
+      backLabel: 'Back to games',
+    },
+  },
   { matches: (pathname) => pathname.startsWith('/tutorials'), config: { eyebrow: 'Learn', title: 'Tutorials' } },
   { matches: (pathname) => pathname.startsWith('/challenges'), config: { eyebrow: 'Compete', title: 'Challenges' } },
   { matches: (pathname) => pathname.startsWith('/share'), config: { eyebrow: 'Growth', title: 'Share' } },
   { matches: (pathname) => pathname.startsWith('/rewards'), config: { eyebrow: 'Growth', title: 'Rewards' } },
   { matches: (pathname) => pathname.startsWith('/profile'), config: { eyebrow: 'Player', title: 'Profile' } },
-  { matches: (pathname) => pathname.startsWith('/notifications'), config: { eyebrow: 'Inbox', title: 'Notifications' } },
+  { matches: (pathname) => pathname.startsWith('/feed'), config: { eyebrow: 'Inbox', title: 'Feed' } },
+  { matches: (pathname) => pathname.startsWith('/notifications'), config: { eyebrow: 'Inbox', title: 'Feed' } },
 ];
 
 function getFallbackTitle(pathname: string) {

@@ -11,8 +11,9 @@ import {
 import {
   CONFIRMED_PAYMENT_STATUSES,
   getTournamentPaymentMetrics,
-  getTournamentPrize,
+  getTournamentPrizeSnapshot,
 } from '@/lib/tournament-metrics';
+import { formatTournamentDateTime, parseTournamentSchedule } from '@/lib/tournament-schedule';
 import {
   sendTournamentFullEmail,
   sendTournamentMatchReadyEmail,
@@ -34,6 +35,7 @@ export {
   getTournamentPrize,
   getTournamentPrizeSnapshot,
   isActiveTournamentPlayerStatus,
+  resolveTournamentPrizePoolMode,
 } from '@/lib/tournament-metrics';
 
 const TOURNAMENT_PAYMENT_HOLD_MINUTES = 15;
@@ -254,6 +256,20 @@ export async function startTournament(params: {
     return { success: false, error: 'Tournament must be full before it starts' };
   }
 
+  const scheduledAt = parseTournamentSchedule(tournament.scheduled_for);
+  if (scheduledAt && Date.now() < scheduledAt.getTime()) {
+    return {
+      success: false,
+      error: `Tournament is scheduled for ${formatTournamentDateTime(scheduledAt, 'later', {
+        day: 'numeric',
+        month: 'short',
+        hour: 'numeric',
+        minute: '2-digit',
+        timeZone: 'Africa/Nairobi',
+      })}`,
+    };
+  }
+
   const { data: playersRaw, error: playersError } = await supabase
     .from('tournament_players')
     .select('*, user:user_id(id, username, email, phone)')
@@ -279,11 +295,14 @@ export async function startTournament(params: {
   }
 
   const { paidCount } = getTournamentPaymentMetrics(players);
-  const { prizePool, platformFee } = getTournamentPrize(
-    tournament.entry_fee,
-    paidCount,
-    tournament.platform_fee_rate
-  );
+  const { prizePool, platformFee } = getTournamentPrizeSnapshot({
+    entryFee: tournament.entry_fee,
+    paidPlayerCount: paidCount,
+    feeRate: tournament.platform_fee_rate,
+    prizePoolMode: tournament.prize_pool_mode,
+    storedPrizePool: tournament.prize_pool,
+    storedPlatformFee: tournament.platform_fee,
+  });
 
   const { error: updateError } = await supabase
     .from('tournaments')

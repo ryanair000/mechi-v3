@@ -89,8 +89,10 @@ export type TournamentInput = {
   region: string;
   size: 4 | 8 | 16;
   entryFee?: number;
+  prizePoolMode?: 'auto' | 'specified';
   prizePool?: number;
   status?: 'open' | 'full' | 'active' | 'completed' | 'cancelled';
+  scheduledFor?: string | null;
   joinedUserIds?: string[];
 };
 
@@ -504,6 +506,8 @@ export async function createTournament(
     region: input.region,
     size: input.size,
     entry_fee: input.entryFee ?? 0,
+    prize_pool_mode:
+      input.prizePoolMode ?? ((input.prizePool ?? 0) > 0 ? 'specified' : 'auto'),
     prize_pool: input.prizePool ?? 0,
     platform_fee: 0,
     platform_fee_rate: 0,
@@ -514,6 +518,7 @@ export async function createTournament(
     approved_by: SEEDED_PERSONAS.admin.id,
     is_featured: true,
     payout_status: 'none',
+    scheduled_for: input.scheduledFor ?? null,
   });
   assertNoError(tournamentError, 'Failed to create tournament');
 
@@ -702,6 +707,7 @@ export async function createSuggestion(client: SeedClient, input: SuggestionInpu
 }
 
 async function seedBaselineFixtures(client: SeedClient, environment: E2EEnvironment) {
+  const baselineLastMatchDate = nowMinusDays(1).slice(0, 10);
   const completedMatchId = await createMatch(client, {
     id: SCENARIO_IDS.completedMatch,
     player1Id: SEEDED_PERSONAS.playerFree.id,
@@ -715,6 +721,12 @@ async function seedBaselineFixtures(client: SeedClient, environment: E2EEnvironm
     player2Score: 1,
     completedAt: nowMinusDays(1),
   });
+
+  const { error: lastMatchDateError } = await client
+    .from('profiles')
+    .update({ last_match_date: baselineLastMatchDate })
+    .in('id', [SEEDED_PERSONAS.playerFree.id, SEEDED_PERSONAS.playerOpponentA.id]);
+  assertNoError(lastMatchDateError, 'Failed to seed profile last_match_date values');
 
   await createMatchChatMessage(client, {
     matchId: completedMatchId,

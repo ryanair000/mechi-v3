@@ -16,8 +16,9 @@ export async function GET(request: NextRequest) {
   try {
     const supabase = createServiceClient();
     let items = await getRewardCatalogFromCache(supabase);
+    const missingPartnerCatalog = !items.some((item) => item.source === 'chezahub');
 
-    if (items.length === 0) {
+    if (items.length === 0 || missingPartnerCatalog) {
       try {
         const fresh = await fetchChezahubRewardCatalog();
         if (fresh.length > 0) {

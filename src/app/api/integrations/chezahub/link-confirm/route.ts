@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import {
-  REWARD_RULES,
   addRewardReviewQueueItem,
-  applyRewardEvent,
   hasValidSignedAction,
   hashRewardBindingValue,
   verifyChezahubLinkToken,
@@ -144,23 +142,12 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Failed to link account' }, { status: 500 });
   }
 
-  await applyRewardEvent(supabase, {
-    userId: profile.id,
-    eventKey: `reward:account-link:${profile.id}`,
-    eventType: 'account_link',
-    availableDelta: REWARD_RULES.accountLink,
-    lifetimeDelta: REWARD_RULES.accountLink,
-    source: 'chezahub_link',
-    metadata: {
-      chezahub_user_id: chezahubUserId,
-    },
-  }).catch(() => null);
-
   return NextResponse.json({
     ok: true,
     linked: true,
     mechi_user_id: profile.id,
     chezahub_user_id: chezahubUserId,
     return_url: tokenPayload.return_url,
+    legacy_flow: true,
   });
 }

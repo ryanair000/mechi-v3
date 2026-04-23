@@ -671,11 +671,11 @@ export default function DashboardPage() {
                   No same-platform players are live right now
                 </p>
                 <p className="mt-1 text-xs leading-5 text-[var(--text-secondary)]">
-                  Invite friends to grow the pool and get faster matches.
+                  Search friends by username and jump straight to their public profile.
                 </p>
               </div>
               <Link href="/share" className="btn-outline shrink-0 text-xs">
-                Invite
+                Search friends
               </Link>
             </div>
           )}

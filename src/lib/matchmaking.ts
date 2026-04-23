@@ -265,7 +265,9 @@ export async function runMatchmaking(supabase: SupabaseClient): Promise<number> 
           username: p1Profile.username as string,
           opponentUsername: p2Profile.username as string,
           game: gameLabel,
+          gameKey: entryGame,
           platform: p2Platform ?? 'Unknown',
+          platformKey: p2Platform ?? null,
           opponentPlatformId: p2PlatformId,
           matchId: match.id,
         }).catch(console.error);
@@ -287,7 +289,9 @@ export async function runMatchmaking(supabase: SupabaseClient): Promise<number> 
           username: p2Profile.username as string,
           opponentUsername: p1Profile.username as string,
           game: gameLabel,
+          gameKey: entryGame,
           platform: p1Platform ?? 'Unknown',
+          platformKey: p1Platform ?? null,
           opponentPlatformId: p1PlatformId,
           matchId: match.id,
         }).catch(console.error);

@@ -443,13 +443,13 @@ export default function ProfilePage() {
           <div>
             <p className="section-title">Growth</p>
             <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">
-              Keep sharing and rewards on their own dedicated pages so each flow stays easier to scan on
-              mobile and desktop.
+              Keep friends lookup and rewards on their own dedicated pages so each flow stays easier to
+              scan on mobile and desktop.
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
             <Link href="/share" className="btn-ghost">
-              Open share
+              Open friends
             </Link>
             <Link href="/rewards" className="btn-primary">
               Open rewards

@@ -1,3 +1,5 @@
+import type { TournamentPrizePoolMode } from '@/types';
+
 export const CONFIRMED_PAYMENT_STATUSES = ['paid', 'free'] as const;
 export const ACTIVE_TOURNAMENT_PLAYER_STATUSES = ['pending', ...CONFIRMED_PAYMENT_STATUSES] as const;
 
@@ -48,10 +50,45 @@ export function getTournamentPrize(entryFee: number, paidPlayerCount: number, fe
   };
 }
 
+export function resolveTournamentPrizePoolMode(
+  value: string | null | undefined
+): TournamentPrizePoolMode {
+  return value === 'specified' ? 'specified' : 'auto';
+}
+
+export function getTournamentPrizePoolLabel(params: {
+  prizePool: number | null | undefined;
+  entryFee: number | null | undefined;
+  prizePoolMode?: TournamentPrizePoolMode | string | null;
+  autoLabel?: string;
+  emptyLabel?: string;
+}) {
+  const {
+    prizePool,
+    entryFee,
+    prizePoolMode = 'auto',
+    autoLabel = 'Auto from entries',
+    emptyLabel = 'No cash',
+  } = params;
+  const safePrizePool = Math.max(0, Number(prizePool ?? 0));
+  const safeEntryFee = Math.max(0, Number(entryFee ?? 0));
+
+  if (safePrizePool > 0) {
+    return `KES ${safePrizePool.toLocaleString()}`;
+  }
+
+  if (resolveTournamentPrizePoolMode(prizePoolMode) === 'auto' && safeEntryFee > 0) {
+    return autoLabel;
+  }
+
+  return emptyLabel;
+}
+
 export function getTournamentPrizeSnapshot(params: {
   entryFee: number;
   paidPlayerCount: number;
   feeRate?: number | null;
+  prizePoolMode?: TournamentPrizePoolMode | string | null;
   storedPrizePool?: number | null;
   storedPlatformFee?: number | null;
 }) {
@@ -59,12 +96,22 @@ export function getTournamentPrizeSnapshot(params: {
     entryFee,
     paidPlayerCount,
     feeRate = 5,
+    prizePoolMode = 'auto',
     storedPrizePool = 0,
     storedPlatformFee = 0,
   } = params;
   const safeStoredPrizePool = Math.max(0, Number(storedPrizePool ?? 0));
   const safeStoredPlatformFee = Math.max(0, Number(storedPlatformFee ?? 0));
   const safeFeeRate = Number(feeRate ?? 5);
+  const resolvedPrizePoolMode = resolveTournamentPrizePoolMode(prizePoolMode);
+
+  if (resolvedPrizePoolMode === 'specified') {
+    return {
+      gross: safeStoredPrizePool + safeStoredPlatformFee,
+      platformFee: safeStoredPlatformFee,
+      prizePool: safeStoredPrizePool,
+    };
+  }
 
   if (entryFee <= 0) {
     return {

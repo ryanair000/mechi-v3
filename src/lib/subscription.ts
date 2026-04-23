@@ -9,12 +9,14 @@ import { makePaymentReference } from '@/lib/slug';
 import {
   type BillingCycle,
   type Plan,
-  PLANS,
   canSelectGames,
   getPlan,
   getPlanPrice,
+  resolvePlan,
 } from '@/lib/plans';
 import { sendSubscriptionConfirmEmail } from '@/lib/email';
+
+export { resolvePlan } from '@/lib/plans';
 
 const APP_TIMEZONE = 'Africa/Nairobi';
 
@@ -78,14 +80,6 @@ function addBillingDuration(start: Date, billingCycle: BillingCycle) {
     expiresAt.setMonth(expiresAt.getMonth() + 1);
   }
   return expiresAt;
-}
-
-export function resolvePlan(plan: string | null | undefined, expiresAt?: string | null): Plan {
-  const candidate = (plan as Plan | null | undefined) ?? 'free';
-  if (candidate !== 'free' && expiresAt && new Date(expiresAt).getTime() < Date.now()) {
-    return 'free';
-  }
-  return PLANS[candidate] ? candidate : 'free';
 }
 
 export function canUseSelectedGames(plan: string | null | undefined, count: number) {

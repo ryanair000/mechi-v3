@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import toast from 'react-hot-toast';
-import { Check, Gamepad2, Loader2, Save, Trash2 } from 'lucide-react';
+import { Check, Gamepad2, Lightbulb, Loader2, Save, Trash2 } from 'lucide-react';
 import { useAuth, useAuthFetch } from '@/components/AuthProvider';
 import { GameCover } from '@/components/GameCover';
 import { PlatformLogo } from '@/components/PlatformLogo';
@@ -319,6 +319,26 @@ export default function GamesPage() {
                     </button>
                   );
                 })}
+
+                <Link
+                  href="/suggest"
+                  className="group flex min-h-16 items-center gap-3 rounded-[var(--radius-panel)] border border-dashed border-[rgba(50,224,196,0.24)] bg-[rgba(50,224,196,0.08)] p-3 text-left transition-all hover:bg-[rgba(50,224,196,0.14)]"
+                >
+                  <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-[var(--radius-control)] border border-[rgba(50,224,196,0.22)] bg-[rgba(50,224,196,0.14)]">
+                    <Lightbulb
+                      size={18}
+                      className="text-[var(--accent-secondary-text)] transition-transform group-hover:scale-110"
+                    />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <span className="block text-sm font-semibold leading-snug text-[var(--text-primary)]">
+                      Suggest a game
+                    </span>
+                    <span className="mt-1 block text-xs leading-5 text-[var(--text-secondary)]">
+                      Missing a title? Tell us what Mechi should add next.
+                    </span>
+                  </div>
+                </Link>
               </div>
             </div>
 

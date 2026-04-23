@@ -34,6 +34,10 @@ test.describe('Competition Flows', () => {
     const { context, page } = await openPersonaPage('playerPro');
     await page.goto(`/match/${acceptedPayload.match_id}`);
     await expect(page.locator('body')).toContainText(SEEDED_PERSONAS.playerOpponentA.username);
+    await expect(page.locator('body')).toContainText(/Match room setup/i);
+    await expect(page.locator('body')).toContainText(/Invite code owner/i);
+    await expect(page.locator('body')).toContainText(/PSN ID/i);
+    await expect(page.locator('body')).toContainText(SEEDED_PERSONAS.playerOpponentA.gameIds.ps);
 
     const chatResponse = await challengerApi.post(
       `/api/matches/${acceptedPayload.match_id}/chat`,
@@ -122,5 +126,40 @@ test.describe('Competition Flows', () => {
     await context.close();
     await playerApi.dispose();
     await opponentApi.dispose();
+  });
+
+  test('challenge player discovery API enforces auth and filters duplicate opponents @core', async ({
+    request,
+    playwright,
+    appUrl,
+  }) => {
+    const unauthenticatedResponse = await request.get(appUrl('/api/challenges/players?game=efootball'));
+    expect(unauthenticatedResponse.status()).toBe(401);
+
+    const playerApi = await createApiContextAs(playwright, appUrl(), 'playerFree');
+
+    const unconfiguredGameResponse = await playerApi.get('/api/challenges/players?game=tekken8');
+    expect(unconfiguredGameResponse.status()).toBe(400);
+
+    const efootballResponse = await playerApi.get('/api/challenges/players?game=efootball&q=@opponent-a');
+    expect(efootballResponse.ok()).toBeTruthy();
+    const efootballPayload = (await efootballResponse.json()) as {
+      players?: Array<{ id: string; username: string }>;
+    };
+    expect(efootballPayload.players?.some((player) => player.id === SEEDED_PERSONAS.playerFree.id)).toBeFalsy();
+    expect(
+      efootballPayload.players?.some((player) => player.username === SEEDED_PERSONAS.playerOpponentA.username)
+    ).toBeTruthy();
+
+    const fc26Response = await playerApi.get('/api/challenges/players?game=fc26');
+    expect(fc26Response.ok()).toBeTruthy();
+    const fc26Payload = (await fc26Response.json()) as {
+      players?: Array<{ username: string }>;
+    };
+    expect(
+      fc26Payload.players?.some((player) => player.username === SEEDED_PERSONAS.playerOpponentB.username)
+    ).toBeFalsy();
+
+    await playerApi.dispose();
   });
 });

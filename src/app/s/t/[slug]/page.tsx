@@ -2,11 +2,16 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { BrandLogo } from '@/components/BrandLogo';
+import { GameCover } from '@/components/GameCover';
 import { GAMES, PLATFORMS } from '@/lib/config';
 import { isE2ETournamentFixture, shouldHideE2EFixtures } from '@/lib/e2e-fixtures';
 import { getLoginPath, getRegisterPath } from '@/lib/navigation';
 import { createServiceClient } from '@/lib/supabase';
-import { getTournamentPaymentMetrics, getTournamentPrizeSnapshot } from '@/lib/tournament-metrics';
+import {
+  getTournamentPaymentMetrics,
+  getTournamentPrizePoolLabel,
+  getTournamentPrizeSnapshot,
+} from '@/lib/tournament-metrics';
 import type { GameKey, PlatformKey } from '@/types';
 
 type Props = {
@@ -43,6 +48,7 @@ async function getTournament(slug: string) {
     entryFee: Number(tournament.entry_fee ?? 0),
     paidPlayerCount: metrics.paidCount,
     feeRate: Number(tournament.platform_fee_rate ?? 5),
+    prizePoolMode: tournament.prize_pool_mode as string | null | undefined,
     storedPrizePool: Number(tournament.prize_pool ?? 0),
     storedPlatformFee: Number(tournament.platform_fee ?? 0),
   });
@@ -107,10 +113,26 @@ export default async function PublicTournamentPage({ params }: Props) {
 
       <main className="landing-shell flex flex-1 items-center justify-center py-16">
         <div className="card circuit-panel w-full max-w-xl p-8 text-center sm:p-10">
-          <p className="brand-kicker justify-center">Mechi Bracket</p>
-          <div className="mx-auto my-6 flex h-20 w-20 items-center justify-center rounded-3xl bg-[rgba(255,107,107,0.14)] text-3xl font-black text-[var(--brand-coral)]">
-            T
+          <div className="relative mb-6 aspect-[16/9] overflow-hidden rounded-[1.75rem] border border-white/10">
+            <GameCover
+              gameKey={tournament.game as GameKey}
+              className="h-full w-full"
+              overlay
+              priority
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-gray-950/84 via-gray-950/16 to-transparent" />
+            <div className="absolute inset-x-0 bottom-0 p-5 text-left">
+              <p className="brand-kicker text-white/80">{game?.label ?? tournament.game}</p>
+              <p className="mt-2 text-2xl font-black tracking-normal text-white">
+                {tournament.title}
+              </p>
+              <p className="mt-2 text-xs font-semibold text-white/78">
+                {platform ? PLATFORMS[platform]?.label ?? platform : 'Any platform'} / {tournament.region}
+              </p>
+            </div>
           </div>
+
+          <p className="brand-kicker justify-center">Mechi Bracket</p>
           <h1 className="text-4xl font-black tracking-normal text-[var(--text-primary)]">
             {tournament.title}
           </h1>
@@ -123,13 +145,11 @@ export default async function PublicTournamentPage({ params }: Props) {
             <Info label="Entry" value={tournament.entry_fee > 0 ? `KES ${tournament.entry_fee}` : 'Free'} />
             <Info
               label="Prize pool"
-              value={
-                tournament.prize_pool > 0
-                  ? `KES ${tournament.prize_pool.toLocaleString()}`
-                  : tournament.entry_fee > 0
-                    ? 'KES 0'
-                    : 'No cash'
-              }
+              value={getTournamentPrizePoolLabel({
+                prizePool: tournament.prize_pool,
+                entryFee: tournament.entry_fee,
+                prizePoolMode: tournament.prize_pool_mode,
+              })}
             />
             <Info label="Platform" value={platform ? PLATFORMS[platform]?.label ?? platform : 'Any'} />
           </div>

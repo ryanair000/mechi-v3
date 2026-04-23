@@ -16,6 +16,7 @@ interface ChallengePlayerButtonProps {
   label?: string;
   className?: string;
   disabled?: boolean;
+  onSuccess?: () => void | Promise<void>;
 }
 
 export function ChallengePlayerButton({
@@ -26,6 +27,7 @@ export function ChallengePlayerButton({
   label = 'Challenge',
   className = 'btn-outline',
   disabled = false,
+  onSuccess,
 }: ChallengePlayerButtonProps) {
   const router = useRouter();
   const pathname = usePathname();
@@ -64,6 +66,11 @@ export function ChallengePlayerButton({
 
       toast.success(`Challenge sent to ${opponentUsername}`);
       emitNotificationRefresh();
+      try {
+        await onSuccess?.();
+      } catch (error) {
+        console.error('[ChallengePlayerButton] Post-success callback failed:', error);
+      }
     } catch {
       toast.error('Network error');
     } finally {

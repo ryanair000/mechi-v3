@@ -1,14 +1,19 @@
 'use client';
 
-import Link from 'next/link';
 import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
 import { ArrowRight, Clock3, RefreshCw, X } from 'lucide-react';
 import { useAuthFetch } from '@/components/AuthProvider';
 import { emitNotificationRefresh } from '@/components/NotificationNavButton';
-import { GAMES, PLATFORMS } from '@/lib/config';
-import type { MatchChallenge, PlatformKey } from '@/types';
+import { OpponentFinderModal } from '@/components/OpponentFinderModal';
+import {
+  GAMES,
+  PLATFORMS,
+  getConfiguredPlatformForGame,
+  normalizeSelectedGameKeys,
+} from '@/lib/config';
+import type { GameKey, MatchChallenge, PlatformKey } from '@/types';
 
 function formatTime(iso: string) {
   return new Date(iso).toLocaleString('en-KE', {
@@ -172,14 +177,21 @@ export default function ChallengesPage() {
   const authFetch = useAuthFetch();
   const [inbound, setInbound] = useState<MatchChallenge[]>([]);
   const [outbound, setOutbound] = useState<MatchChallenge[]>([]);
+  const [availableGames, setAvailableGames] = useState<GameKey[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [gamesLoading, setGamesLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [actionId, setActionId] = useState<string | null>(null);
+  const [finderOpen, setFinderOpen] = useState(false);
 
   const loadChallenges = useCallback(
     async ({ silent = false }: { silent?: boolean } = {}) => {
-      silent ? setRefreshing(true) : setLoading(true);
+      if (silent) {
+        setRefreshing(true);
+      } else {
+        setLoading(true);
+      }
       setLoadError(null);
       try {
         const res = await authFetch('/api/challenges');
@@ -194,13 +206,58 @@ export default function ChallengesPage() {
       } catch {
         setLoadError('Could not load challenges.');
       } finally {
-        silent ? setRefreshing(false) : setLoading(false);
+        if (silent) {
+          setRefreshing(false);
+        } else {
+          setLoading(false);
+        }
       }
     },
     [authFetch]
   );
 
-  useEffect(() => { void loadChallenges(); }, [loadChallenges]);
+  const loadAvailableGames = useCallback(async () => {
+    setGamesLoading(true);
+    try {
+      const response = await authFetch('/api/users/profile');
+      const payload = (await response.json()) as {
+        profile?: {
+          selected_games?: string[];
+          platforms?: PlatformKey[];
+          game_ids?: Record<string, string>;
+        };
+      };
+
+      if (!response.ok || !payload.profile) {
+        setAvailableGames([]);
+        return;
+      }
+
+      const selectedGames = normalizeSelectedGameKeys(payload.profile.selected_games ?? []).filter(
+        (game) => GAMES[game]?.mode === '1v1'
+      );
+      const configuredGames = selectedGames.filter((game) =>
+        Boolean(
+          getConfiguredPlatformForGame(
+            game,
+            payload.profile?.game_ids ?? {},
+            payload.profile?.platforms ?? []
+          )
+        )
+      );
+
+      setAvailableGames(configuredGames);
+    } catch {
+      setAvailableGames([]);
+    } finally {
+      setGamesLoading(false);
+    }
+  }, [authFetch]);
+
+  useEffect(() => {
+    void loadChallenges();
+    void loadAvailableGames();
+  }, [loadAvailableGames, loadChallenges]);
 
   const handleAction = async (challengeId: string, action: 'accept' | 'decline' | 'cancel') => {
     setActionId(`${challengeId}:${action}`);
@@ -229,6 +286,15 @@ export default function ChallengesPage() {
 
   return (
     <div className="page-container max-w-2xl">
+      <OpponentFinderModal
+        open={finderOpen}
+        availableGames={availableGames}
+        onClose={() => setFinderOpen(false)}
+        onChallengeSent={async () => {
+          await loadChallenges({ silent: true });
+        }}
+      />
+
       {/* Header */}
       <div className="flex items-center justify-between gap-4 pb-6">
         <div className="flex items-center gap-3">
@@ -247,10 +313,15 @@ export default function ChallengesPage() {
           >
             <RefreshCw size={14} className={refreshing ? 'animate-spin' : undefined} />
           </button>
-          <Link href="/leaderboard" className="btn-ghost text-sm">
+          <button
+            type="button"
+            onClick={() => setFinderOpen(true)}
+            disabled={gamesLoading}
+            className="btn-ghost text-sm disabled:cursor-not-allowed disabled:opacity-45"
+          >
             Find opponent
             <ArrowRight size={13} />
-          </Link>
+          </button>
         </div>
       </div>
 
@@ -274,13 +345,15 @@ export default function ChallengesPage() {
       ) : isEmpty ? (
         <div className="py-12 text-center">
           <p className="text-sm text-[var(--text-soft)]">No pending challenges.</p>
-          <Link
-            href="/leaderboard"
+          <button
+            type="button"
+            onClick={() => setFinderOpen(true)}
+            disabled={gamesLoading}
             className="mt-3 inline-flex items-center gap-1.5 text-sm font-semibold text-[var(--accent-secondary-text)] hover:text-[var(--text-primary)]"
           >
             Find someone to challenge
             <ArrowRight size={13} />
-          </Link>
+          </button>
         </div>
       ) : (
         <div className="space-y-6">

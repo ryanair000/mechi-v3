@@ -16,6 +16,7 @@ const PROTECTED_PREFIXES = [
   '/lobbies',
   '/leaderboard',
   '/challenges',
+  '/feed',
   '/notifications',
   '/share',
   '/rewards',
@@ -289,12 +290,6 @@ export async function proxy(request: NextRequest) {
   const host = getRequestHost(request);
   const adminHost = ADMIN_HOSTS.has(host);
   const sharedLocalHost = adminHost && host === APP_HOST;
-
-  if (pathname === '/share' && request.nextUrl.searchParams.get('chezahub_link') === 'success') {
-    const redirectUrl = new URL('/rewards', adminHost ? APP_URL : request.url);
-    redirectUrl.search = request.nextUrl.search;
-    return NextResponse.redirect(redirectUrl);
-  }
 
   if (CONNECT_HOSTS.has(host) && pathname === '/') {
     const connectUrl = request.nextUrl.clone();

@@ -68,7 +68,7 @@ export function PaywallModal({ reason, featureName, onClose }: PaywallModalProps
                     <p className="text-sm font-black text-[var(--text-primary)]">{plan.name}</p>
                     <p className="mt-1 text-xs text-[var(--text-soft)]">
                       {planKey === 'elite'
-                        ? 'Unlimited matches / zero tournament fee / streaming access'
+                        ? 'Unlimited matches / tournament hosting / streaming access'
                         : 'Unlimited matches / 3 games / direct challenges'}
                     </p>
                   </div>

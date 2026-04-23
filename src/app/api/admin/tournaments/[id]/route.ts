@@ -30,7 +30,7 @@ export async function GET(
     let tournamentQuery = supabase
       .from('tournaments')
       .select(
-        'id, slug, title, game, platform, region, size, entry_fee, prize_pool, platform_fee, platform_fee_rate, status, bracket, winner_id, organizer_id, rules, approval_status, approved_at, approved_by, is_featured, payout_status, payout_ref, payout_error, created_at, started_at, ended_at, organizer:organizer_id(id, username, email), winner:winner_id(id, username)'
+        'id, slug, title, game, platform, region, size, entry_fee, prize_pool_mode, prize_pool, platform_fee, platform_fee_rate, status, bracket, winner_id, organizer_id, rules, approval_status, approved_at, approved_by, is_featured, payout_status, payout_ref, payout_error, created_at, started_at, ended_at, organizer:organizer_id(id, username, email), winner:winner_id(id, username)'
       )
       .eq('id', id);
 
@@ -86,6 +86,7 @@ export async function GET(
       entryFee: Number(tournament.entry_fee ?? 0),
       paidPlayerCount: paymentBreakdown.paid ?? 0,
       feeRate: Number(tournament.platform_fee_rate ?? 5),
+      prizePoolMode: tournament.prize_pool_mode as string | null | undefined,
       storedPrizePool: Number(tournament.prize_pool ?? 0),
       storedPlatformFee: Number(tournament.platform_fee ?? 0),
     });
@@ -140,7 +141,7 @@ export async function PATCH(
     let tournamentQuery = supabase
       .from('tournaments')
       .select(
-        'id, title, slug, game, platform, region, size, entry_fee, prize_pool, platform_fee, platform_fee_rate, status, winner_id, rules, approval_status, approved_at, approved_by, is_featured'
+        'id, title, slug, game, platform, region, size, entry_fee, prize_pool_mode, prize_pool, platform_fee, platform_fee_rate, status, winner_id, rules, approval_status, approved_at, approved_by, is_featured'
       )
       .eq('id', id);
 
@@ -356,7 +357,7 @@ export async function PATCH(
         updatePayload.platform = platform;
         updatePayload.size = size;
         updatePayload.entry_fee = entryFee;
-        if (entryFee <= 0) {
+        if (entryFee <= 0 && tournament.prize_pool_mode !== 'specified') {
           updatePayload.prize_pool = 0;
           updatePayload.platform_fee = 0;
         }

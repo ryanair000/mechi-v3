@@ -1,9 +1,12 @@
 import { Resend } from 'resend';
 import { DEFAULT_RATING } from '@/lib/config';
 import { getRankDivision } from '@/lib/gamification';
+import { shouldHideOpponentPlatformIds, usesEfootballRoomCodeFlow } from '@/lib/match-room';
 import { isMockProviderMode, shouldCaptureProviderTranscripts } from '@/lib/provider-mode';
 import { captureProviderTranscript } from '@/lib/provider-transcript';
+import { formatTournamentDateTime, getTournamentCheckInDate } from '@/lib/tournament-schedule';
 import { APP_URL } from '@/lib/urls';
+import type { GameKey, PlatformKey } from '@/types';
 
 let resendClient: Resend | null | undefined;
 const FROM_ADDRESS = process.env.RESEND_FROM_EMAIL ?? 'noreply@mechi.club';
@@ -249,10 +252,28 @@ export async function sendMatchFoundEmail(params: {
   username: string;
   opponentUsername: string;
   game: string;
+  gameKey?: GameKey;
   platform: string;
+  platformKey?: PlatformKey | null;
   opponentPlatformId: string;
   matchId: string;
 }): Promise<void> {
+  const usesRoomCodeFlow = params.gameKey ? usesEfootballRoomCodeFlow(params.gameKey) : false;
+  const hideOpponentPlatformId =
+    params.gameKey && params.platformKey
+      ? shouldHideOpponentPlatformIds(params.gameKey, params.platformKey)
+      : false;
+  const opponentIdBlock = hideOpponentPlatformId
+    ? ''
+    : `
+      <div class="info-row">
+        <span class="info-label">Opponent ID</span>
+        <span class="info-value">${params.opponentPlatformId}</span>
+      </div>
+    `;
+  const coordinationCopy = usesRoomCodeFlow
+    ? '<p>eFootball matches start in a private room. Open the match page to see who should create the room and share the invite code.</p>'
+    : '<p>Use the match page to coordinate, report the result, and keep the ladder moving.</p>';
   const content = `
     <h2>Match found</h2>
     <p>Your next Mechi match is ready. Open the match room, connect with your opponent, and finish cleanly so both profiles stay accurate.</p>
@@ -269,12 +290,9 @@ export async function sendMatchFoundEmail(params: {
         <span class="info-label">Platform</span>
         <span class="info-value">${params.platform}</span>
       </div>
-      <div class="info-row">
-        <span class="info-label">Opponent ID</span>
-        <span class="info-value">${params.opponentPlatformId}</span>
-      </div>
+      ${opponentIdBlock}
     </div>
-    <p>Use the match page to coordinate, report the result, and keep the ladder moving.</p>
+    ${coordinationCopy}
     <a href="${APP_URL}/match/${params.matchId}" class="btn">View Match</a>
   `;
 
@@ -529,6 +547,7 @@ export async function sendTournamentBroadcastEmail(params: {
   entryFee: number;
   size: number;
   region: string;
+  scheduledFor?: string | null;
   tournamentUrl: string;
 }): Promise<void> {
   const platformBlock = params.platform
@@ -539,9 +558,37 @@ export async function sendTournamentBroadcastEmail(params: {
       </div>
     `
     : '';
+  const scheduleOptions: Intl.DateTimeFormatOptions = {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+    timeZone: 'Africa/Nairobi',
+  };
+  const scheduleBlock = params.scheduledFor
+    ? `
+      <div class="info-row">
+        <span class="info-label">Starts</span>
+        <span class="info-value">${formatTournamentDateTime(
+          params.scheduledFor,
+          'TBA',
+          scheduleOptions
+        )}</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">Check-in</span>
+        <span class="info-value">${formatTournamentDateTime(
+          getTournamentCheckInDate(params.scheduledFor),
+          '1 hour before kickoff',
+          scheduleOptions
+        )}</span>
+      </div>
+    `
+    : '';
 
   const content = `
-    <h2>New tournament live</h2>
+    <h2>New tournament is open</h2>
     <p>${params.organizerName} just opened ${params.tournamentTitle} on Mechi.</p>
     <div class="info-box">
       <div class="info-row">
@@ -561,6 +608,7 @@ export async function sendTournamentBroadcastEmail(params: {
         <span class="info-label">Location</span>
         <span class="info-value">${params.region}</span>
       </div>
+      ${scheduleBlock}
     </div>
     <p>Open the bracket page to join before the slots fill up.</p>
     <a href="${params.tournamentUrl}" class="btn">View Tournament</a>

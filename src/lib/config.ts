@@ -144,11 +144,11 @@ const SCORE_REPORTED_GAMES = new Set<GameKey>(['fc26', 'efootball', 'nba2k26']);
 
 const GAME_ARTWORK: Partial<Record<GameKey, { header: string; capsule: string }>> = {
   efootball: {
-    header: '/game-artwork/efootball-header.webp',
+    header: '/game-artwork/efootball-header-photo.png',
     capsule: '/game-artwork/efootball-capsule.webp',
   },
   efootball_mobile: {
-    header: '/game-artwork/efootball-header.webp',
+    header: '/game-artwork/efootball-header-photo.png',
     capsule: '/game-artwork/efootball-capsule.webp',
   },
   fc26: {

@@ -20,7 +20,7 @@ const STEPS = [
   },
   {
     title: 'Track the flow',
-    body: 'Use your dashboard, queue, and notifications to see what is live and what needs your next action.',
+    body: 'Use your dashboard, queue, and feed to see what is live and what needs your next action.',
     icon: BellRing,
   },
   {

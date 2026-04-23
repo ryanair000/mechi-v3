@@ -3,9 +3,21 @@
 import Link from 'next/link';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
-import { ArrowLeft, CheckCircle2, Clock, Copy, Swords, Trophy, Users, Video, X } from 'lucide-react';
+import {
+  ArrowLeft,
+  CalendarClock,
+  CheckCircle2,
+  Clock,
+  Copy,
+  Swords,
+  Trophy,
+  Users,
+  Video,
+  X,
+} from 'lucide-react';
 import toast from 'react-hot-toast';
 import { ActionFeedback, type ActionFeedbackState } from '@/components/ActionFeedback';
+import { GameCover } from '@/components/GameCover';
 import { LiveBadge } from '@/components/LiveBadge';
 import { ShareMenu } from '@/components/ShareMenu';
 import { useAuthFetch } from '@/components/AuthProvider';
@@ -16,6 +28,12 @@ import {
   getTournamentShareUrl,
   tournamentShareText,
 } from '@/lib/share';
+import { getTournamentPrizePoolLabel } from '@/lib/tournament-metrics';
+import {
+  formatTournamentDateTime,
+  getTournamentCheckInDate,
+  parseTournamentSchedule,
+} from '@/lib/tournament-schedule';
 import type { GameKey, LiveStream, Tournament, TournamentMatch, TournamentPlayer } from '@/types';
 
 type TournamentDetail = Tournament & {
@@ -54,6 +72,23 @@ type StreamSetupState = {
   stream_key: string;
   playback_id: string;
 };
+
+function formatTournamentStatusLabel(status: string) {
+  switch (status) {
+    case 'open':
+      return 'Open';
+    case 'full':
+      return 'Ongoing';
+    case 'active':
+      return 'Live';
+    case 'completed':
+      return 'Completed';
+    case 'cancelled':
+      return 'Cancelled';
+    default:
+      return status;
+  }
+}
 
 export default function TournamentDetailPage() {
   const params = useParams();
@@ -314,6 +349,15 @@ export default function TournamentDetailPage() {
   const game = GAMES[tournament.game as GameKey];
   const totalRounds = Math.log2(tournament.size);
   const hasActiveStream = Boolean(data.stream && data.stream.status !== 'ended');
+  const scheduledKickoff = tournament.scheduled_for ?? tournament.started_at;
+  const scheduledKickoffDate = parseTournamentSchedule(tournament.scheduled_for);
+  const canStartTournament =
+    !scheduledKickoffDate || scheduledKickoffDate.getTime() <= Date.now();
+  const scheduleLabel = formatTournamentDateTime(scheduledKickoff, 'To be confirmed');
+  const checkInLabel = formatTournamentDateTime(
+    getTournamentCheckInDate(scheduledKickoff),
+    '1 hour before kickoff'
+  );
   const shareText = tournamentShareText(
     tournament.title,
     game?.label ?? tournament.game,
@@ -329,15 +373,43 @@ export default function TournamentDetailPage() {
       </button>
 
       <div className="card circuit-panel mb-5 overflow-hidden">
+        <div className="relative h-52 sm:h-64 lg:h-72">
+          <GameCover
+            gameKey={tournament.game as GameKey}
+            className="h-full w-full"
+            overlay
+            priority
+          />
+          <div className="absolute inset-0 bg-gradient-to-r from-gray-950/72 via-gray-950/28 to-transparent" />
+          <div className="absolute inset-x-0 bottom-0 flex flex-wrap items-end justify-between gap-3 p-5 sm:p-6">
+            <div className="max-w-3xl">
+              <p className="brand-kicker text-white/80">{game?.label ?? tournament.game}</p>
+              <h1 className="mt-3 text-3xl font-black tracking-normal text-white sm:text-4xl">
+                {tournament.title}
+              </h1>
+            </div>
+            <div className="flex flex-wrap gap-2 text-xs font-bold text-white/86">
+              <span className="rounded-full border border-white/16 bg-black/28 px-3 py-1">
+                {PLATFORMS[tournament.platform ?? 'ps']?.label ?? tournament.platform}
+              </span>
+              <span className="rounded-full border border-white/16 bg-black/28 px-3 py-1">
+                {tournament.region}
+              </span>
+            </div>
+          </div>
+        </div>
+
         <div className="border-b border-[var(--border-color)] p-5 sm:p-6">
           <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
             <div>
-              <p className="brand-kicker">{game?.label ?? tournament.game}</p>
-              <h1 className="mt-3 max-w-3xl text-3xl font-black tracking-normal text-[var(--text-primary)] sm:text-4xl">
-                {tournament.title}
-              </h1>
+              <p className="section-title">Bracket Overview</p>
+              <p className="mt-3 max-w-3xl text-sm leading-6 text-[var(--text-secondary)] sm:text-base">
+                Join the bracket, check the slot pressure, and share the tournament with one clean hero image up top.
+              </p>
               <div className="mt-4 flex flex-wrap gap-2 text-xs font-bold text-[var(--text-secondary)]">
-                <span className="brand-chip px-3 py-1">{tournament.status}</span>
+                <span className="brand-chip px-3 py-1">
+                  {formatTournamentStatusLabel(tournament.status)}
+                </span>
                 <span className="rounded-full border border-[var(--border-color)] px-3 py-1">
                   {PLATFORMS[tournament.platform ?? 'ps']?.label ?? tournament.platform}
                 </span>
@@ -364,13 +436,11 @@ export default function TournamentDetailPage() {
           <StatCard
             icon={<Trophy size={15} />}
             label="Prize pool"
-            value={
-              tournament.prize_pool > 0
-                ? `KES ${tournament.prize_pool.toLocaleString()}`
-                : tournament.entry_fee > 0
-                  ? 'KES 0'
-                  : 'No cash'
-            }
+            value={getTournamentPrizePoolLabel({
+              prizePool: tournament.prize_pool,
+              entryFee: tournament.entry_fee,
+              prizePoolMode: tournament.prize_pool_mode,
+            })}
           />
           <StatCard icon={<Clock size={15} />} label="Slots left" value={String(tournament.slots_left)} />
         </div>
@@ -401,8 +471,16 @@ export default function TournamentDetailPage() {
           </div>
         )}
         {viewer.isOrganizer && tournament.status === 'full' && (
-          <button onClick={handleStart} disabled={starting} className="btn-primary flex-1">
-            {starting ? 'Starting...' : 'Start Tournament'}
+          <button
+            onClick={handleStart}
+            disabled={starting || !canStartTournament}
+            className="btn-primary flex-1 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {starting
+              ? 'Starting...'
+              : canStartTournament
+                ? 'Start Tournament'
+                : 'Scheduled start locked'}
           </button>
         )}
         {!hasActiveStream && viewer.canCreateStream && (
@@ -429,6 +507,11 @@ export default function TournamentDetailPage() {
           </button>
         )}
       </div>
+      {viewer.isOrganizer && tournament.status === 'full' && !canStartTournament ? (
+        <p className="mb-5 text-xs leading-6 text-[var(--text-soft)]">
+          Kickoff is set for {scheduleLabel}. Check-in opens {checkInLabel}.
+        </p>
+      ) : null}
 
       {data.stream ? (
         <section className="card mb-5 p-5">
@@ -540,6 +623,22 @@ export default function TournamentDetailPage() {
 
         <aside className="space-y-5">
           <section className="card p-5">
+            <p className="section-title">Schedule</p>
+            <div className="mt-4 space-y-3">
+              <ScheduleRow
+                icon={<CalendarClock size={14} />}
+                label="Kickoff"
+                value={scheduleLabel}
+              />
+              <ScheduleRow
+                icon={<Clock size={14} />}
+                label="Check-in opens"
+                value={checkInLabel}
+              />
+            </div>
+          </section>
+
+          <section className="card p-5">
             <p className="section-title">Players</p>
             <div className="mt-4 space-y-2">
               {players.map((player, index) => (
@@ -593,6 +692,28 @@ function StatCard({ icon, label, value }: { icon: React.ReactNode; label: string
       <div className="mb-2 text-[var(--brand-teal)]">{icon}</div>
       <p className="text-lg font-black text-[var(--text-primary)]">{value}</p>
       <p className="text-[10px] font-black uppercase tracking-[0.14em] text-[var(--text-soft)]">{label}</p>
+    </div>
+  );
+}
+
+function ScheduleRow({
+  icon,
+  label,
+  value,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  value: string;
+}) {
+  return (
+    <div className="rounded-2xl border border-[var(--border-color)] bg-[var(--surface-strong)] p-4">
+      <div className="flex items-center gap-2 text-[var(--brand-teal)]">
+        {icon}
+        <p className="text-[10px] font-black uppercase tracking-[0.14em] text-[var(--text-soft)]">
+          {label}
+        </p>
+      </div>
+      <p className="mt-2 text-sm font-semibold text-[var(--text-primary)]">{value}</p>
     </div>
   );
 }

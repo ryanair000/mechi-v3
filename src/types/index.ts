@@ -29,6 +29,7 @@ export type TournamentStatus = 'open' | 'full' | 'active' | 'completed' | 'cance
 export type TournamentApprovalStatus = 'pending' | 'approved' | 'rejected';
 export type TournamentPaymentStatus = 'pending' | 'paid' | 'free' | 'failed' | 'refunded';
 export type TournamentMatchStatus = 'pending' | 'ready' | 'active' | 'completed' | 'bye';
+export type TournamentPrizePoolMode = 'auto' | 'specified';
 export type LiveStreamStatus = 'idle' | 'active' | 'ended';
 export type SubscriptionStatus = 'pending' | 'active' | 'cancelled' | 'expired' | 'failed';
 export type MatchChallengeStatus =
@@ -307,6 +308,19 @@ export interface MatchChallenge {
   opponent?: Pick<Profile, 'id' | 'username' | 'avatar_url' | 'plan'> | null;
 }
 
+export interface ChallengeDiscoveryPlayer {
+  id: string;
+  username: string;
+  avatar_url?: string | null;
+  level: number;
+  region: string | null;
+  platform: PlatformKey;
+  rating: number;
+  division: string;
+  matchesPlayed: number;
+  last_match_date?: string | null;
+}
+
 export interface Notification {
   id: string;
   user_id: string;
@@ -404,6 +418,7 @@ export interface Tournament {
   region: string;
   size: 4 | 8 | 16;
   entry_fee: number;
+  prize_pool_mode: TournamentPrizePoolMode;
   prize_pool: number;
   platform_fee: number;
   platform_fee_rate: number;
@@ -419,6 +434,7 @@ export interface Tournament {
   payout_status?: 'none' | 'pending' | 'paid' | 'failed';
   payout_ref?: string | null;
   payout_error?: string | null;
+  scheduled_for?: string | null;
   created_at: string;
   started_at: string | null;
   ended_at: string | null;

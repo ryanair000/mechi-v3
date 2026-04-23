@@ -18,8 +18,9 @@ const COMPARISON_ROWS = [
   { label: 'Matches per day', free: '5', pro: 'Unlimited', elite: 'Unlimited' },
   { label: 'Games selectable', free: '1', pro: '3', elite: '3' },
   { label: 'Direct 1-on-1 challenges', free: 'Yes', pro: 'Yes', elite: 'Yes' },
-  { label: 'Free-entry tournament hosting', free: 'No', pro: 'Yes', elite: 'Yes' },
-  { label: 'Tournament platform fee', free: '5%', pro: '5%', elite: '0%' },
+  { label: 'Tournament hosting', free: 'No', pro: 'Yes', elite: 'Yes' },
+  { label: 'Prize pool controls', free: 'No', pro: 'Auto or specified', elite: 'Auto or specified' },
+  { label: 'Tournament platform fee', free: 'n/a', pro: '5%', elite: '0% on first 3 / month' },
   { label: 'Match history', free: '10', pro: '100', elite: 'Unlimited' },
   { label: 'Early access', free: 'No', pro: 'No', elite: 'Yes' },
   { label: 'Streaming features', free: 'No', pro: 'No', elite: 'Yes' },
@@ -126,10 +127,10 @@ function PricingPageContent() {
 
     const description =
       planKey === 'free'
-        ? 'Jump into ranked matches, direct challenges, and free-entry tournaments without paying first.'
+        ? 'Jump into ranked matches, direct challenges, and open tournament joins without paying first.'
         : planKey === 'pro'
-          ? 'Unlock unlimited ranked runs, more game slots, and hosting tools for your next grind.'
-          : 'Own the premium lane with zero tournament platform fees, early access, and streaming perks.';
+          ? 'Unlock unlimited ranked runs, more game slots, tournament hosting, and a deeper match-history lane for your next grind.'
+          : 'Own the premium lane with three fee-free tournaments each month, early access, and streaming perks.';
 
     return {
       id: planKey,
@@ -226,7 +227,7 @@ function PricingPageContent() {
                   Start free. Upgrade only when your Mechi climb needs more.
                 </h1>
                 <p className="mt-4 max-w-2xl text-sm leading-7 text-[var(--text-secondary)] sm:text-base">
-                  New players start with a 1-month Pro trial. After that, keep it free, move to Pro at KES 299 for unlimited ranked runs and direct challenges, or go Elite at KES 999 for zero tournament fees, early access, and streaming perks.
+                  New players start with a 1-month Pro trial. After that, keep it free, move to Pro at KES 299 for unlimited ranked runs, direct challenges, and tournament hosting with a 5% platform fee, or go Elite at KES 999 for three fee-free tournaments every month, early access, and streaming perks.
                 </p>
               </div>
 
@@ -267,7 +268,7 @@ function PricingPageContent() {
 
         <PricingSection
           title="Pick the plan that fits your Mechi season"
-          description="Free gets you in the arena. Pro opens up unlimited ranked volume and hosting tools. Elite removes platform fees and adds the premium lane."
+          description="Free gets you in the arena. Pro opens up unlimited ranked volume plus tournament hosting. Elite adds prize-pool control, fee-free monthly brackets, and the premium lane."
           plans={pricingCards}
         />
 
@@ -347,7 +348,7 @@ function PricingPageContent() {
               },
               {
                 q: 'What does Elite unlock?',
-                a: 'Elite keeps everything in Pro, then adds zero tournament fee, early access to updates, a gold badge, and streaming-feature access.',
+                a: 'Elite keeps everything in Pro, then adds tournament hosting with auto or specified prize pools, three fee-free tournaments each month, early access, a gold badge, and streaming-feature access.',
               },
             ].map((item) => (
               <div key={item.q} className="card p-5">

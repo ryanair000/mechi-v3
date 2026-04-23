@@ -3,7 +3,11 @@ import { NextRequest } from 'next/server';
 import { GAMES } from '@/lib/config';
 import { isE2ETournamentFixture, shouldHideE2EFixtures } from '@/lib/e2e-fixtures';
 import { createServiceClient } from '@/lib/supabase';
-import { getTournamentPaymentMetrics, getTournamentPrizeSnapshot } from '@/lib/tournament-metrics';
+import {
+  getTournamentPaymentMetrics,
+  getTournamentPrizePoolLabel,
+  getTournamentPrizeSnapshot,
+} from '@/lib/tournament-metrics';
 import type { GameKey } from '@/types';
 
 export const runtime = 'edge';
@@ -67,6 +71,7 @@ export async function GET(request: NextRequest) {
     entryFee: Number(tournament.entry_fee ?? 0),
     paidPlayerCount: metrics.paidCount,
     feeRate: Number(tournament.platform_fee_rate ?? 5),
+    prizePoolMode: tournament.prize_pool_mode as string | null | undefined,
     storedPrizePool: Number(tournament.prize_pool ?? 0),
     storedPlatformFee: Number(tournament.platform_fee ?? 0),
   });
@@ -163,13 +168,11 @@ export async function GET(request: NextRequest) {
             <Metric label="Entry" value={tournament.entry_fee > 0 ? `KES ${tournament.entry_fee}` : 'Free'} color="#FF6B6B" />
             <Metric
               label="Prize"
-              value={
-                prize.prizePool > 0
-                  ? `KES ${prize.prizePool.toLocaleString()}`
-                  : tournament.entry_fee > 0
-                    ? 'KES 0'
-                    : 'No cash'
-              }
+              value={getTournamentPrizePoolLabel({
+                prizePool: prize.prizePool,
+                entryFee: Number(tournament.entry_fee ?? 0),
+                prizePoolMode: tournament.prize_pool_mode as string | null | undefined,
+              })}
               color="white"
             />
           </div>

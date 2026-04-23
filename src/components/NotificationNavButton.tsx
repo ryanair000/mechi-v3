@@ -17,7 +17,7 @@ export function NotificationNavButton({ className = '' }: NotificationNavButtonP
   const { user } = useAuth();
   const authFetch = useAuthFetch();
   const [unreadCount, setUnreadCount] = useState(0);
-  const isActive = pathname.startsWith('/notifications');
+  const isActive = pathname.startsWith('/feed') || pathname.startsWith('/notifications');
   const displayedUnreadCount = user && !isActive ? unreadCount : 0;
 
   useEffect(() => {
@@ -64,14 +64,14 @@ export function NotificationNavButton({ className = '' }: NotificationNavButtonP
 
   return (
     <Link
-      href="/notifications"
+      href="/feed"
       className={`relative inline-flex h-8 w-8 items-center justify-center rounded-md border text-[var(--text-secondary)] transition-colors hover:border-[var(--border-strong)] hover:bg-[var(--surface-elevated)] hover:text-[var(--text-primary)] ${
         isActive
           ? 'border-[rgba(50,224,196,0.22)] bg-[rgba(50,224,196,0.1)] text-[var(--accent-secondary-text)]'
           : 'border-[var(--border-color)]'
       } ${className}`}
-      aria-label="Notifications"
-      title="Notifications"
+      aria-label="Feed"
+      title="Feed"
     >
       <Bell size={13} />
       {displayedUnreadCount > 0 ? (

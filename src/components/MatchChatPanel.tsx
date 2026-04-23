@@ -17,6 +17,7 @@ type MatchChatPanelProps = {
   onInputChange: (value: string) => void;
   onQuickReply: (value: string) => void;
   onSend: () => void;
+  showComposer?: boolean;
 };
 
 function formatChatTime(value: string) {
@@ -126,6 +127,7 @@ export function MatchChatPanel({
   onInputChange,
   onQuickReply,
   onSend,
+  showComposer = true,
 }: MatchChatPanelProps) {
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const [expanded, setExpanded] = useState(false);
@@ -204,7 +206,7 @@ export function MatchChatPanel({
       </div>
 
       {expanded ? (
-        <div className="mt-3 rounded-[1.15rem] border border-[var(--border-color)] bg-[var(--surface-strong)]">
+        <div className="mt-3 rounded-[var(--radius-panel)] border border-[var(--border-color)] bg-[var(--surface-strong)]">
           <div className="max-h-[12rem] min-h-[7rem] space-y-3 overflow-y-auto p-4 no-scrollbar">
             {loading ? (
               <div className="flex h-full min-h-[7rem] items-center justify-center">
@@ -303,9 +305,9 @@ export function MatchChatPanel({
             <div ref={messagesEndRef} />
           </div>
 
-          <div className="border-t border-[var(--border-color)] p-3 sm:p-4">
-            {canReply ? (
-              <>
+          {canReply ? (
+            showComposer ? (
+              <div className="border-t border-[var(--border-color)] p-3 sm:p-4">
                 <div className="mb-2 flex flex-wrap gap-2">
                   {quickReplies.map((reply) => (
                     <button
@@ -339,9 +341,11 @@ export function MatchChatPanel({
                     Send
                   </button>
                 </div>
-              </>
-            ) : (
-              <div className="flex items-start gap-3 rounded-[1rem] border border-[var(--border-color)] bg-[var(--surface)] p-3.5">
+              </div>
+            ) : null
+          ) : (
+            <div className="border-t border-[var(--border-color)] p-3 sm:p-4">
+              <div className="flex items-start gap-3 rounded-[var(--radius-panel)] border border-[var(--border-color)] bg-[var(--surface)] p-3.5">
                 <Lock size={16} className="mt-0.5 shrink-0 text-[var(--text-soft)]" />
                 <div>
                   <p className="text-sm font-semibold text-[var(--text-primary)]">
@@ -353,8 +357,8 @@ export function MatchChatPanel({
                   </p>
                 </div>
               </div>
-            )}
-          </div>
+            </div>
+          )}
         </div>
       ) : null}
     </div>

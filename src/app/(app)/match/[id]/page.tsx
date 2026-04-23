@@ -31,8 +31,6 @@ import {
 } from '@/lib/config';
 import {
   getEfootballMatchRoomAssignment,
-  getMatchRoomSideForUser,
-  getMatchRoomSideLabel,
   shouldHideOpponentPlatformIds,
   usesEfootballRoomCodeFlow,
 } from '@/lib/match-room';
@@ -765,41 +763,8 @@ export default function MatchPage() {
   const roomAssignment = usesRoomCodeFlow
     ? getEfootballMatchRoomAssignment(match.id, match.player1_id, match.player2_id)
     : null;
-  const myRoomSide = roomAssignment ? getMatchRoomSideForUser(user.id, roomAssignment) : null;
-  const opponentRoomSide = roomAssignment
-    ? getMatchRoomSideForUser(opponent.id, roomAssignment)
-    : null;
-  const myRoomSideLabel = myRoomSide ? getMatchRoomSideLabel(myRoomSide) : null;
-  const opponentRoomSideLabel = opponentRoomSide
-    ? getMatchRoomSideLabel(opponentRoomSide)
-    : null;
-  const roomCreatorSideLabel = roomAssignment
-    ? getMatchRoomSideLabel(roomAssignment.roomCreatorSide)
-    : null;
-  const homePlayerLabel = roomAssignment
-    ? roomAssignment.homeUserId === user.id
-      ? 'You'
-      : opponent.username
-    : null;
-  const awayPlayerLabel = roomAssignment
-    ? roomAssignment.awayUserId === user.id
-      ? 'You'
-      : opponent.username
-    : null;
-  const roomCreatorLabel = roomAssignment
-    ? roomAssignment.roomCreatorUserId === user.id
-      ? 'You'
-      : opponent.username
-    : null;
   const roomCreatorIsMe = roomAssignment?.roomCreatorUserId === user.id;
-  const roomSetupHeading = roomCreatorIsMe
-    ? 'Create the room and send the invite code'
-    : `Wait for ${opponent.username} to send the invite code`;
-  const roomSetupCopy = roomAssignment
-    ? roomCreatorIsMe
-      ? `You are the ${myRoomSideLabel?.toLowerCase()} for this match. Create the eFootball room, then paste the invite code in chat so ${opponent.username} can join.`
-      : `${opponent.username} is the ${opponentRoomSideLabel?.toLowerCase()} for this match and should create the eFootball room. Join using the invite code they share in chat.`
-    : null;
+  const showMatchRoomCodeField = usesRoomCodeFlow && roomCreatorIsMe && match.status === 'pending';
   const gamificationResult = isPlayer1
     ? match.gamification_summary_p1 ?? null
     : match.gamification_summary_p2 ?? null;
@@ -916,56 +881,38 @@ export default function MatchPage() {
           </div>
         </div>
 
-        {usesRoomCodeFlow && roomAssignment ? (
-          <div className="card mb-4 p-5">
-            <h3 className="mb-3 text-sm font-semibold text-[var(--text-primary)]">
-              Match room setup
-            </h3>
-            <p className="text-sm leading-6 text-[var(--text-secondary)]">
-              eFootball matches start with a private room code. The room creator flips per match, so
-              check the roles below before kickoff.
-            </p>
-
-            <div className="mt-4 grid gap-3 sm:grid-cols-3">
-              <div className="rounded-[1rem] border border-[var(--border-color)] bg-[var(--surface-strong)] px-4 py-3">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--text-soft)]">
-                  Home player
-                </p>
-                <p className="mt-1 text-sm font-semibold text-[var(--text-primary)]">
-                  {homePlayerLabel}
-                </p>
-              </div>
-              <div className="rounded-[1rem] border border-[var(--border-color)] bg-[var(--surface-strong)] px-4 py-3">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--text-soft)]">
-                  Away player
-                </p>
-                <p className="mt-1 text-sm font-semibold text-[var(--text-primary)]">
-                  {awayPlayerLabel}
-                </p>
-              </div>
-              <div className="rounded-[1rem] border border-[var(--border-color)] bg-[var(--surface-strong)] px-4 py-3">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--text-soft)]">
-                  Invite code owner
-                </p>
-                <p className="mt-1 text-sm font-semibold text-[var(--text-primary)]">
-                  {roomCreatorSideLabel}
-                </p>
-                <p className="mt-1 text-xs text-[var(--text-soft)]">{roomCreatorLabel}</p>
-              </div>
+        {showMatchRoomCodeField ? (
+          <form
+            className="card mb-4 p-5"
+            onSubmit={(event) => {
+              event.preventDefault();
+              void handleSendChat();
+            }}
+          >
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
+              <label className="block flex-1">
+                <span className="mb-1.5 block text-xs font-semibold text-[var(--text-primary)]">
+                  Match Room Code
+                </span>
+                <input
+                  value={chatInput}
+                  onChange={(event) => setChatInput(event.target.value)}
+                  placeholder="Match Room Code"
+                  className="input"
+                  maxLength={280}
+                  autoCorrect="off"
+                  spellCheck={false}
+                />
+              </label>
+              <button
+                type="submit"
+                disabled={sendingChat || !chatInput.trim()}
+                className="btn-primary min-w-[8.5rem] justify-center disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {sendingChat ? 'Sending...' : 'Send'}
+              </button>
             </div>
-
-            <div className="mt-4 rounded-[1rem] border border-[rgba(50,224,196,0.18)] bg-[rgba(50,224,196,0.08)] px-4 py-3">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--accent-secondary-text)]">
-                Room code
-              </p>
-              <p className="mt-1 text-sm font-semibold text-[var(--text-primary)]">
-                {roomSetupHeading}
-              </p>
-              <p className="mt-1 text-sm leading-6 text-[var(--text-secondary)]">
-                {roomSetupCopy}
-              </p>
-            </div>
-          </div>
+          </form>
         ) : null}
 
         <div className="card mb-4 p-5">
@@ -1055,6 +1002,7 @@ export default function MatchPage() {
           onInputChange={setChatInput}
           onQuickReply={(value) => void handleSendChat(value, 'quick_reply')}
           onSend={() => void handleSendChat()}
+          showComposer={!showMatchRoomCodeField}
         />
 
         {match.status === 'pending' && (
@@ -1072,7 +1020,7 @@ export default function MatchPage() {
               />
             ) : null}
             {!hasMyReport && (
-              <div className="mb-4 rounded-2xl border border-[var(--border-color)] bg-[var(--surface-elevated)] p-3.5">
+              <div className="mb-4 rounded-[var(--radius-panel)] border border-[var(--border-color)] bg-[var(--surface-elevated)] p-3.5">
                 <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--text-soft)]">
                   Quick comment
                 </p>
@@ -1106,7 +1054,7 @@ export default function MatchPage() {
               </div>
             )}
             {hasMyReport ? (
-              <div className="surface-live mb-3 rounded-xl p-3">
+              <div className="surface-live mb-3 rounded-[var(--radius-panel)] p-3">
                 <p className="text-sm font-medium text-[var(--accent-secondary-text)]">
                   You reported:{' '}
                   <strong>{myReportLabel}</strong>
@@ -1129,7 +1077,7 @@ export default function MatchPage() {
               </div>
             ) : usesScoreReport ? (
               <div className="space-y-4">
-                <div className="rounded-2xl border border-[var(--border-color)] bg-[var(--surface-elevated)] p-4">
+                <div className="rounded-[var(--radius-panel)] border border-[var(--border-color)] bg-[var(--surface-elevated)] p-4">
                   <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--text-soft)]">
                     Final score
                   </p>
@@ -1208,7 +1156,7 @@ export default function MatchPage() {
               </div>
             )}
             {receivedQuickComment && (
-              <div className="mt-3 rounded-xl border border-[var(--border-color)] bg-[var(--surface-elevated)] px-3 py-2.5">
+              <div className="mt-3 rounded-[var(--radius-panel)] border border-[var(--border-color)] bg-[var(--surface-elevated)] px-3 py-2.5">
                 <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--text-soft)]">
                   Opponent note
                 </p>
@@ -1218,7 +1166,7 @@ export default function MatchPage() {
               </div>
             )}
             {usesScoreReport && opponentReportedScoreline && !hasMyReport ? (
-              <div className="mt-3 rounded-xl border border-[var(--border-color)] bg-[var(--surface-elevated)] px-3 py-2.5">
+              <div className="mt-3 rounded-[var(--radius-panel)] border border-[var(--border-color)] bg-[var(--surface-elevated)] px-3 py-2.5">
                 <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--text-soft)]">
                   Opponent score
                 </p>
@@ -1252,7 +1200,7 @@ export default function MatchPage() {
             ) : null}
             {match.dispute_screenshot_url ? (
               <div className="mb-4">
-                <div className="relative aspect-video overflow-hidden rounded-xl border border-[var(--border-color)]">
+                <div className="relative aspect-video overflow-hidden rounded-[var(--radius-panel)] border border-[var(--border-color)]">
                   <Image
                     src={match.dispute_screenshot_url}
                     alt="Dispute screenshot"
@@ -1266,7 +1214,7 @@ export default function MatchPage() {
               </div>
             ) : (
               <div
-                className="mb-3 cursor-pointer rounded-xl border-2 border-dashed border-[var(--border-color)] p-6 text-center transition-colors hover:border-[rgba(255,107,107,0.28)]"
+                className="mb-3 cursor-pointer rounded-[var(--radius-panel)] border-2 border-dashed border-[var(--border-color)] p-6 text-center transition-colors hover:border-[rgba(255,107,107,0.28)]"
                 onClick={() => fileInputRef.current?.click()}
               >
                 <ImageIcon size={24} className="mx-auto mb-2 text-[var(--text-soft)]" />

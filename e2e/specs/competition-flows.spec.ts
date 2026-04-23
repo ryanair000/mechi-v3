@@ -34,8 +34,8 @@ test.describe('Competition Flows', () => {
     const { context, page } = await openPersonaPage('playerPro');
     await page.goto(`/match/${acceptedPayload.match_id}`);
     await expect(page.locator('body')).toContainText(SEEDED_PERSONAS.playerOpponentA.username);
-    await expect(page.locator('body')).toContainText(/Match room setup/i);
-    await expect(page.locator('body')).toContainText(/Invite code owner/i);
+    await expect(page.locator('body')).not.toContainText(/Match room setup/i);
+    await expect(page.locator('body')).not.toContainText(/Invite code owner/i);
     await expect(page.locator('body')).toContainText(/PSN ID/i);
     await expect(page.locator('body')).toContainText(SEEDED_PERSONAS.playerOpponentA.gameIds.ps);
 

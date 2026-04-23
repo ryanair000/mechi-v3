@@ -1,5 +1,4 @@
 import {
-  CirclePlay,
   Coins,
   Gamepad2,
   Gift,
@@ -39,13 +38,6 @@ const DASHBOARD_NAV_ITEM: AppNavItem = {
   label: 'Dashboard',
   icon: LayoutDashboard,
   matchMode: 'exact',
-};
-
-const TUTORIALS_NAV_ITEM: AppNavItem = {
-  href: '/tutorials',
-  label: 'Tutorials',
-  icon: CirclePlay,
-  matchMode: 'prefix',
 };
 
 const LEADERBOARD_NAV_ITEM: AppNavItem = {
@@ -123,7 +115,6 @@ const BOUNTIES_NAV_ITEM: AppNavItem = {
 
 export const SIDEBAR_PRIMARY_ITEMS: AppNavItem[] = [
   DASHBOARD_NAV_ITEM,
-  TUTORIALS_NAV_ITEM,
   LEADERBOARD_NAV_ITEM,
 ];
 

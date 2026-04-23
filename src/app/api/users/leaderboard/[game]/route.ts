@@ -50,9 +50,12 @@ function resolveLeaderboardMetrics(
     return { rating, wins, losses };
   }
 
-  const legacyRating = (legacyMetrics.rating_efootball_mobile as number | undefined) ?? DEFAULT_RATING;
-  const legacyWins = (legacyMetrics.wins_efootball_mobile as number | undefined) ?? 0;
-  const legacyLosses = (legacyMetrics.losses_efootball_mobile as number | undefined) ?? 0;
+  const legacyRating =
+    (legacyMetrics.rating_efootball_mobile as number | undefined) ?? DEFAULT_RATING;
+  const legacyWins =
+    (legacyMetrics.wins_efootball_mobile as number | undefined) ?? 0;
+  const legacyLosses =
+    (legacyMetrics.losses_efootball_mobile as number | undefined) ?? 0;
   const hasLegacyHistory =
     legacyRating !== DEFAULT_RATING || legacyWins > 0 || legacyLosses > 0;
 
@@ -82,6 +85,7 @@ export async function GET(
     const metricSelect = [
       'id',
       'username',
+      'region',
       'selected_games',
       'platforms',
       'game_ids',
@@ -90,7 +94,8 @@ export async function GET(
       winsKey,
       lossesKey,
     ].join(', ');
-    const fallbackSelect = 'id, username, selected_games, platforms, game_ids, level';
+    const fallbackSelect =
+      'id, username, region, selected_games, platforms, game_ids, level';
 
     let fallbackToDefaults = false;
     const collectedPlayers: LeaderboardPlayerRow[] = [];
@@ -194,13 +199,27 @@ export async function GET(
             legacyMetricsById.get(String(player.id ?? ''))
           );
 
-    const topPlayers = players.sort(
-      (a, b) =>
-        fallbackToDefaults
-          ? String(a.username ?? '').localeCompare(String(b.username ?? ''))
-          : getPlayerMetrics(b).rating - getPlayerMetrics(a).rating
-    )
-      // Cap at 50 — leaderboard intentionally shows top 50 players only
+    const topPlayers = players
+      .sort((a, b) => {
+        if (fallbackToDefaults) {
+          return String(a.username ?? '').localeCompare(String(b.username ?? ''));
+        }
+
+        const metricsA = getPlayerMetrics(a);
+        const metricsB = getPlayerMetrics(b);
+        const ratingDelta = metricsB.rating - metricsA.rating;
+        if (ratingDelta !== 0) {
+          return ratingDelta;
+        }
+
+        const matchDelta =
+          metricsB.wins + metricsB.losses - (metricsA.wins + metricsA.losses);
+        if (matchDelta !== 0) {
+          return matchDelta;
+        }
+
+        return String(a.username ?? '').localeCompare(String(b.username ?? ''));
+      })
       .slice(0, 50);
 
     const tournamentWinsById = new Map<string, number>();
@@ -237,6 +256,7 @@ export async function GET(
         rank: index + 1,
         id: p.id,
         username: p.username,
+        region: typeof p.region === 'string' ? p.region : null,
         platforms: (p.platforms as unknown[] | undefined) ?? [],
         game_ids: (p.game_ids as Record<string, string> | undefined) ?? {},
         rating: metrics.rating,

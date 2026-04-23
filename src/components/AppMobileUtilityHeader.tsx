@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { ChevronLeft } from 'lucide-react';
+import { NotificationNavButton } from '@/components/NotificationNavButton';
 
 type HeaderConfig = {
   eyebrow: string;
@@ -47,8 +48,9 @@ const HEADER_CONFIGS: Array<{
       backLabel: 'Back to games',
     },
   },
+  { matches: (pathname) => pathname.startsWith('/tutorials'), config: { eyebrow: 'Learn', title: 'Tutorials' } },
   { matches: (pathname) => pathname.startsWith('/challenges'), config: { eyebrow: 'Compete', title: 'Challenges' } },
-  { matches: (pathname) => pathname.startsWith('/share'), config: { eyebrow: 'Growth', title: 'Friends' } },
+  { matches: (pathname) => pathname.startsWith('/share'), config: { eyebrow: 'Growth', title: 'Share' } },
   { matches: (pathname) => pathname.startsWith('/rewards'), config: { eyebrow: 'Growth', title: 'Rewards' } },
   { matches: (pathname) => pathname.startsWith('/profile'), config: { eyebrow: 'Player', title: 'Profile' } },
 ];
@@ -76,7 +78,7 @@ export function AppMobileUtilityHeader() {
 
   return (
     <header className="app-utility-header lg:hidden">
-      <div className="px-4 py-3.5">
+      <div className="flex items-start justify-between gap-3 px-4 py-3.5">
         <div className="min-w-0">
           {config.backHref ? (
             <Link
@@ -89,6 +91,9 @@ export function AppMobileUtilityHeader() {
           ) : null}
           <p className="app-page-eyebrow">{config.eyebrow}</p>
           <h1 className="truncate text-lg font-bold text-[var(--text-primary)]">{config.title}</h1>
+        </div>
+        <div className="flex items-center gap-2">
+          <NotificationNavButton />
         </div>
       </div>
     </header>

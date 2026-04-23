@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/components/AuthProvider';
 import { BrandLogo } from '@/components/BrandLogo';
+import { NotificationNavButton } from '@/components/NotificationNavButton';
 import {
   type AppNavItem,
   SIDEBAR_PRIMARY_ITEMS,
@@ -246,6 +247,7 @@ export default function SidebarWithSubmenu({ collapsed, onToggle }: SidebarWithS
 
       <div className={cn('space-y-2 border-t border-[var(--border-color)] py-3', collapsed ? 'px-3' : 'px-3')}>
         <div className={cn('flex gap-1', collapsed ? 'flex-col items-center' : 'items-center')}>
+          <NotificationNavButton className="rounded-md border border-[var(--border-color)] bg-transparent hover:border-[var(--border-strong)] hover:bg-[var(--surface-elevated)]" />
           <div className="group relative">
             <Link
               href="/profile"

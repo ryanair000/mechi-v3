@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation';
 import { useAuth } from './AuthProvider';
 import { LogOut } from 'lucide-react';
 import { BrandLogo } from '@/components/BrandLogo';
+import { NotificationNavButton } from '@/components/NotificationNavButton';
 
 export function Navbar() {
   const pathname = usePathname();
@@ -17,7 +18,8 @@ export function Navbar() {
           <BrandLogo size="md" showIcon={false} />
         </Link>
 
-        <div className="flex items-center">
+        <div className="flex items-center gap-2">
+          <NotificationNavButton className="h-10 w-10" />
           {user && (
             <button
               onClick={logout}

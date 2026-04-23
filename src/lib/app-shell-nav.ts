@@ -46,7 +46,6 @@ const TUTORIALS_NAV_ITEM: AppNavItem = {
   label: 'Tutorials',
   icon: CirclePlay,
   matchMode: 'prefix',
-  description: 'Learn the core Mechi flows without digging through the whole app shell.',
 };
 
 const LEADERBOARD_NAV_ITEM: AppNavItem = {
@@ -61,7 +60,6 @@ const TOURNAMENTS_NAV_ITEM: AppNavItem = {
   label: 'Tournaments',
   icon: Swords,
   matchMode: 'prefix',
-  description: 'Follow active brackets, join events, and keep tournament movement in view.',
 };
 
 const LOBBIES_NAV_ITEM: AppNavItem = {
@@ -76,7 +74,6 @@ const CHALLENGES_NAV_ITEM: AppNavItem = {
   label: 'Challenges',
   icon: MessageCircle,
   matchMode: 'prefix',
-  description: 'Call out a specific player and keep direct match setups organized.',
 };
 
 const MATCHES_NAV_ITEM: AppNavItem = {
@@ -107,7 +104,6 @@ const REWARDS_NAV_ITEM: AppNavItem = {
   label: 'Rewards',
   icon: Coins,
   matchMode: 'exact',
-  description: 'Track RP, progression, and what your recent activity unlocked.',
 };
 
 const REDEEM_NAV_ITEM: AppNavItem = {
@@ -115,7 +111,7 @@ const REDEEM_NAV_ITEM: AppNavItem = {
   label: 'Redeem',
   icon: Gift,
   matchMode: 'prefix',
-  description: 'Turn RP into Mechi perks and redeemables without leaving Mechi.',
+  description: 'Turn RP into Mechi perks and partner rewards fulfilled on ChezaHub.',
 };
 
 const BOUNTIES_NAV_ITEM: AppNavItem = {
@@ -159,7 +155,7 @@ export const SIDEBAR_SECTIONS: SidebarSectionConfig[] = [
 
 export const DASHBOARD_FEATURE_ITEMS: AppNavItem[] = [
   TUTORIALS_NAV_ITEM,
-  CHALLENGES_NAV_ITEM,
+  FRIENDS_NAV_ITEM,
   TOURNAMENTS_NAV_ITEM,
   REDEEM_NAV_ITEM,
 ];

@@ -394,7 +394,7 @@ export default function DashboardPage() {
                 </span>
               </div>
               <h1 className="mt-1 text-xl font-black leading-tight text-[var(--text-primary)] sm:text-2xl">
-                {user?.username ?? 'Player'}
+                Welcome {user?.username ?? 'Player'}! Start Ranking Up!
               </h1>
             </div>
           </div>

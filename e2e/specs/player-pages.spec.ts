@@ -31,9 +31,9 @@ test.describe('Player Pages', () => {
     page,
   }) => {
     await page.goto('/rewards/redeem');
-    await expect(page.locator('body')).toContainText(/CODM Rewards/i);
-    await expect(page.locator('body')).toContainText(/PUBG UC Rewards/i);
-    await expect(page.locator('body')).toContainText(/eFootball Coins Rewards/i);
+    await expect(page.locator('body')).toContainText(/CODM Redeemables/i);
+    await expect(page.locator('body')).toContainText(/PUBG UC Redeemables/i);
+    await expect(page.locator('body')).toContainText(/eFootball Coins Redeemables/i);
     await expect(page.locator('body')).toContainText(/M-Pesa number/i);
 
     await page.getByRole('button', { name: /^Redeem$/i }).first().click();

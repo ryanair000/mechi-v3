@@ -169,7 +169,7 @@ export default function AdminQueuePage() {
 
   return (
     <div className="space-y-5">
-      <div className="card p-5">
+      <section className="space-y-4">
         <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
           <div>
             <p className="brand-kicker">Admin queue</p>
@@ -190,7 +190,7 @@ export default function AdminQueuePage() {
             ].map((item) => (
               <div
                 key={item.label}
-                className="rounded-2xl border border-[var(--border-color)] bg-[var(--surface-elevated)] px-4 py-3"
+                className="card bg-[var(--surface-elevated)] px-4 py-3"
               >
                 <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[var(--text-soft)]">
                   {item.label}
@@ -202,7 +202,7 @@ export default function AdminQueuePage() {
             ))}
           </div>
         </div>
-      </div>
+      </section>
 
       <div className="card p-5">
         <div className="grid gap-3 xl:grid-cols-[minmax(0,1.4fr)_180px_180px_180px_180px_auto]">

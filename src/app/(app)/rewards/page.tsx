@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useCallback, useEffect, useState } from 'react';
 import { ArrowRight, ChevronDown, RefreshCw } from 'lucide-react';
 import { useAuthFetch } from '@/components/AuthProvider';
-import type { RewardRedemptionRequest, RewardSummary, RewardWayToEarn } from '@/types/rewards';
+import type { RewardSummary, RewardWayToEarn } from '@/types/rewards';
 
 function formatDateTime(value: string) {
   return new Date(value).toLocaleString('en-KE', {
@@ -22,38 +22,10 @@ function formatKes(value: number) {
   }).format(value);
 }
 
-function formatRedemptionStatus(status: RewardRedemptionRequest['status']) {
-  switch (status) {
-    case 'processing':
-      return 'Processing';
-    case 'completed':
-      return 'Completed';
-    case 'rejected':
-      return 'Rejected';
-    case 'pending':
-    default:
-      return 'Pending';
-  }
-}
-
-function getStatusTone(status: RewardRedemptionRequest['status']) {
-  switch (status) {
-    case 'completed':
-      return 'bg-emerald-500/12 text-emerald-300';
-    case 'rejected':
-      return 'bg-red-500/12 text-red-300';
-    case 'processing':
-      return 'bg-blue-500/12 text-blue-300';
-    case 'pending':
-    default:
-      return 'bg-amber-500/12 text-amber-300';
-  }
-}
-
 function WalletOverview({ summary }: { summary: RewardSummary }) {
   return (
     <div className="grid gap-3 md:grid-cols-[1.4fr_1fr_1fr_1fr]">
-      <div className="rounded-3xl border border-[var(--accent-secondary)]/20 bg-[var(--accent-secondary)]/8 p-5">
+      <div className="card border-[var(--accent-secondary)]/20 bg-[var(--accent-secondary)]/8 p-5">
         <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-[var(--text-soft)]">
           Mechi wallet
         </p>
@@ -80,10 +52,7 @@ function WalletOverview({ summary }: { summary: RewardSummary }) {
           note: 'Total earned',
         },
       ].map((item) => (
-        <div
-          key={item.label}
-          className="rounded-3xl border border-[var(--border-color)] bg-[var(--surface-soft)] p-5"
-        >
+        <div key={item.label} className="card p-5">
           <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-[var(--text-soft)]">
             {item.label}
           </p>
@@ -105,7 +74,7 @@ function WaysToEarn({
   onToggle: () => void;
 }) {
   return (
-    <section className="rounded-3xl border border-[var(--border-color)] bg-[var(--surface-soft)] p-5">
+    <section className="space-y-5">
       <button type="button" onClick={onToggle} className="flex w-full items-center justify-between gap-3">
         <div>
           <p className="text-lg font-black text-[var(--text-primary)]">Ways to earn</p>
@@ -120,12 +89,9 @@ function WaysToEarn({
       </button>
 
       {expanded ? (
-        <div className="mt-5 grid gap-3 md:grid-cols-2">
+        <div className="grid gap-3 md:grid-cols-2">
           {items.map((item) => (
-            <div
-              key={item.id}
-              className="rounded-2xl border border-[var(--border-color)] bg-[var(--surface)] p-4"
-            >
+            <div key={item.id} className="card p-4">
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <p className="text-sm font-bold text-[var(--text-primary)]">{item.title}</p>
@@ -145,66 +111,9 @@ function WaysToEarn({
   );
 }
 
-function RedemptionHistory({ items }: { items: RewardSummary['recent_redemptions'] }) {
-  return (
-    <section className="rounded-3xl border border-[var(--border-color)] bg-[var(--surface-soft)] p-5">
-      <div className="flex items-center justify-between gap-3">
-        <div>
-          <p className="text-lg font-black text-[var(--text-primary)]">Recent redemptions</p>
-          <p className="mt-1 text-sm text-[var(--text-secondary)]">
-            Every request stays inside Mechi until the team fulfills it.
-          </p>
-        </div>
-        <Link href="/rewards/redeem" className="btn-ghost text-sm">
-          Redeem now <ArrowRight size={13} />
-        </Link>
-      </div>
-
-      {items.length === 0 ? (
-        <div className="mt-5 rounded-2xl border border-dashed border-[var(--border-color)] bg-[var(--surface)] px-4 py-6 text-sm text-[var(--text-secondary)]">
-          No redemptions yet. Pick a reward on the redeem page and we will queue it for fulfillment.
-        </div>
-      ) : (
-        <div className="mt-5 space-y-3">
-          {items.map((item) => (
-            <div
-              key={item.id}
-              className="rounded-2xl border border-[var(--border-color)] bg-[var(--surface)] p-4"
-            >
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                <div>
-                  <div className="flex flex-wrap items-center gap-2">
-                    <p className="text-sm font-bold uppercase tracking-[0.05em] text-[var(--text-primary)]">
-                      {item.game}
-                    </p>
-                    <span className={`rounded-full px-2.5 py-1 text-[11px] font-bold ${getStatusTone(item.status)}`}>
-                      {formatRedemptionStatus(item.status)}
-                    </span>
-                  </div>
-                  <p className="mt-2 text-lg font-black text-[var(--text-primary)]">
-                    {item.reward_amount_label}
-                  </p>
-                  <p className="mt-1 text-xs text-[var(--text-secondary)]">
-                    KSh {formatKes(item.cost_kes)} • {item.cost_points.toLocaleString()} points •
-                    {' '}M-Pesa {item.mpesa_number}
-                  </p>
-                </div>
-                <p className="text-xs text-[var(--text-soft)]">{formatDateTime(item.submitted_at)}</p>
-              </div>
-              {item.admin_note ? (
-                <p className="mt-3 text-xs text-[var(--text-secondary)]">{item.admin_note}</p>
-              ) : null}
-            </div>
-          ))}
-        </div>
-      )}
-    </section>
-  );
-}
-
 function ActivityLog({ items }: { items: RewardSummary['recent_activity'] }) {
   return (
-    <section className="rounded-3xl border border-[var(--border-color)] bg-[var(--surface-soft)] p-5">
+    <section className="card p-5">
       <div>
         <p className="text-lg font-black text-[var(--text-primary)]">Recent activity</p>
         <p className="mt-1 text-sm text-[var(--text-secondary)]">
@@ -219,10 +128,7 @@ function ActivityLog({ items }: { items: RewardSummary['recent_activity'] }) {
       ) : (
         <div className="mt-5 space-y-3">
           {items.map((item) => (
-            <div
-              key={item.id}
-              className="flex items-center justify-between gap-4 rounded-2xl border border-[var(--border-color)] bg-[var(--surface)] p-4"
-            >
+            <div key={item.id} className="card flex items-center justify-between gap-4 p-4">
               <div className="min-w-0 flex-1">
                 <p className="text-sm font-bold text-[var(--text-primary)]">{item.title}</p>
                 <p className="mt-1 text-xs text-[var(--text-soft)]">{formatDateTime(item.created_at)}</p>
@@ -318,8 +224,8 @@ export default function RewardsPage() {
             Points in, wallet value out.
           </h1>
           <p className="mt-3 max-w-2xl text-sm leading-7 text-[var(--text-secondary)]">
-            Earn reward points across Mechi, then spend them on CODM, PUBG UC, and eFootball rewards
-            without leaving the app.
+            Earn reward points across Mechi, then spend them on CODM, PUBG UC, and eFootball Coins
+            redeemables without leaving the app.
           </p>
         </div>
 
@@ -334,7 +240,7 @@ export default function RewardsPage() {
             <RefreshCw size={15} className={refreshing ? 'animate-spin' : undefined} />
           </button>
           <Link href="/rewards/redeem" className="btn-primary text-sm">
-            Open redeem page <ArrowRight size={13} />
+            Open redeemables <ArrowRight size={13} />
           </Link>
         </div>
       </div>
@@ -350,7 +256,6 @@ export default function RewardsPage() {
       ) : summary ? (
         <>
           <WalletOverview summary={summary} />
-          <RedemptionHistory items={summary.recent_redemptions} />
           <WaysToEarn
             items={summary.ways_to_earn}
             expanded={waysExpanded}

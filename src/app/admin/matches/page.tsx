@@ -461,7 +461,7 @@ export default function AdminMatchesPage() {
 
   return (
     <div className="space-y-5">
-      <div className="card p-5">
+      <section className="space-y-4">
         <p className="brand-kicker">Admin matches</p>
         <div className="mt-3 flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
           <div>
@@ -492,7 +492,7 @@ export default function AdminMatchesPage() {
         </div>
 
         <div className="mt-5 grid gap-3 xl:grid-cols-[minmax(0,1.3fr)_repeat(3,minmax(0,1fr))]">
-          <div className="rounded-3xl border border-[var(--border-color)] bg-[var(--surface-elevated)] px-4 py-4">
+          <div className="card bg-[var(--surface-elevated)] px-4 py-4">
             <p className="section-title">Next decision</p>
             <p className="mt-2 text-base font-black text-[var(--text-primary)]">
               {summaryCards.leadMatch
@@ -506,7 +506,7 @@ export default function AdminMatchesPage() {
             </p>
           </div>
 
-          <div className="rounded-3xl border border-[var(--border-color)] bg-[var(--surface-elevated)] px-4 py-4">
+          <div className="card bg-[var(--surface-elevated)] px-4 py-4">
             <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[var(--text-soft)]">
               Help requests
             </p>
@@ -516,7 +516,7 @@ export default function AdminMatchesPage() {
             </p>
           </div>
 
-          <div className="rounded-3xl border border-[var(--border-color)] bg-[var(--surface-elevated)] px-4 py-4">
+          <div className="card bg-[var(--surface-elevated)] px-4 py-4">
             <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[var(--text-soft)]">
               Disputes
             </p>
@@ -526,7 +526,7 @@ export default function AdminMatchesPage() {
             </p>
           </div>
 
-          <div className="rounded-3xl border border-[var(--border-color)] bg-[var(--surface-elevated)] px-4 py-4">
+          <div className="card bg-[var(--surface-elevated)] px-4 py-4">
             <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[var(--text-soft)]">
               Stale pending
             </p>
@@ -536,7 +536,7 @@ export default function AdminMatchesPage() {
             </p>
           </div>
         </div>
-      </div>
+      </section>
 
       {loading ? (
         <div className="space-y-3">

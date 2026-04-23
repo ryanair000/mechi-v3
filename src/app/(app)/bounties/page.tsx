@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import toast from 'react-hot-toast';
-import { ChevronDown, ChevronUp, Loader2, RefreshCw, Trophy, Wallet, Zap } from 'lucide-react';
+import { ChevronDown, ChevronUp, Loader2, RefreshCw } from 'lucide-react';
 import { useAuthFetch } from '@/components/AuthProvider';
 import { BOUNTY_TRIGGER_META, type EnrichedBounty } from '@/lib/bounties';
 
@@ -103,65 +103,26 @@ export default function BountiesPage() {
 
   return (
     <div className="page-container space-y-5">
-      <section className="card circuit-panel overflow-hidden p-5 sm:p-6">
-        <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
-          <div className="max-w-2xl">
-            <p className="section-title">Bounties</p>
-          </div>
-
-          <button
-            type="button"
-            onClick={() => void loadBounties({ silent: true })}
-            className="btn-ghost whitespace-nowrap"
-            disabled={refreshing}
-          >
-            {refreshing ? <Loader2 size={15} className="animate-spin" /> : <RefreshCw size={15} />}
-            Refresh
-          </button>
+      <section className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+        <div className="max-w-3xl">
+          <p className="section-title">Bounties</p>
+          <h1 className="mt-2 text-4xl font-black tracking-tight text-[var(--text-primary)] sm:text-5xl">
+            Bounties
+          </h1>
+          <p className="mt-3 max-w-2xl text-base leading-7 text-[var(--text-secondary)] sm:text-lg">
+            Tap in early, stack the bag, and do not sleep on the next live challenge.
+          </p>
         </div>
 
-        <div className="mt-6 grid gap-4 sm:grid-cols-3">
-          {[
-            {
-              label: 'Live now',
-              value: activeBounties.length,
-              icon: Zap,
-              tone: 'rgba(50,224,196,0.16)',
-            },
-            {
-              label: 'Recently claimed',
-              value: claimedBounties.length,
-              icon: Trophy,
-              tone: 'rgba(255,107,107,0.16)',
-            },
-            {
-              label: 'Fast payout',
-              value: '24h',
-              icon: Wallet,
-              tone: 'rgba(246,196,83,0.16)',
-            },
-          ].map((item) => (
-            <div
-              key={item.label}
-              className="rounded-[1.4rem] border border-[var(--border-color)] bg-[var(--surface-strong)] p-4"
-            >
-              <div className="flex items-center gap-3">
-                <div
-                  className="flex h-11 w-11 items-center justify-center rounded-2xl"
-                  style={{ backgroundColor: item.tone }}
-                >
-                  <item.icon size={18} className="text-[var(--text-primary)]" />
-                </div>
-                <div>
-                  <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-[var(--text-soft)]">
-                    {item.label}
-                  </p>
-                  <p className="mt-1 text-2xl font-black text-[var(--text-primary)]">{item.value}</p>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
+        <button
+          type="button"
+          onClick={() => void loadBounties({ silent: true })}
+          className="btn-ghost whitespace-nowrap"
+          disabled={refreshing}
+        >
+          {refreshing ? <Loader2 size={15} className="animate-spin" /> : <RefreshCw size={15} />}
+          Refresh
+        </button>
       </section>
 
       <section className="space-y-4">

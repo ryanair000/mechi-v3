@@ -318,37 +318,36 @@ export default async function AdminOverviewPage() {
     },
   ];
 
-  const snapshotCards = [
-    {
-      label: 'New players this week',
-      value: overview.newUsers7d.toLocaleString(),
-      detail: `${overview.totalUsers.toLocaleString()} total player accounts`,
-    },
-    {
-      label: 'Matches tracked',
-      value: overview.totalMatches.toLocaleString(),
-      detail: `${overview.activeMatches.toLocaleString()} still live or waiting on completion`,
-    },
-    {
-      label: 'Active tournaments',
-      value: overview.activeTournaments.toLocaleString(),
-      detail: `${overview.totalTournaments.toLocaleString()} tournament records overall`,
-    },
-    {
-      label: 'Prize paid out',
-      value: `KSh ${overview.totalPrizeDistributed.toLocaleString()}`,
-      detail: `${overview.bannedUsers.toLocaleString()} accounts currently suspended`,
-    },
-  ];
-
   const totalRooms = overview.openLobbies + overview.fullLobbies + overview.liveLobbies;
   const activeAttentionCount = attentionCards.filter((card) => card.value > 0).length;
   const attentionRows =
     activeAttentionCount > 0
       ? attentionCards.filter((card) => card.value > 0)
       : attentionCards.slice(0, 3);
-  const heroTone = activeAttentionCount > 0 ? 'surface-action' : 'surface-live';
   const nextDecisionCard = attentionRows[0];
+  const topMetricCards = [
+    {
+      label: 'Open lanes',
+      value: activeAttentionCount.toLocaleString(),
+      detail:
+        activeAttentionCount > 0 ? 'Interventions waiting right now' : 'Nothing urgent is backed up',
+    },
+    {
+      label: 'Live rooms',
+      value: totalRooms.toLocaleString(),
+      detail: 'Open, full, and live lobbies combined',
+    },
+    {
+      label: 'Players',
+      value: overview.totalUsers.toLocaleString(),
+      detail: `${overview.newUsers7d.toLocaleString()} new this week • ${overview.bannedUsers.toLocaleString()} suspended`,
+    },
+    {
+      label: 'Prize paid',
+      value: `KSh ${overview.totalPrizeDistributed.toLocaleString()}`,
+      detail: `${overview.pendingPayouts.toLocaleString()} payouts still pending`,
+    },
+  ];
   const monitoringRows = [
     {
       href: '/admin/support',
@@ -394,22 +393,24 @@ export default async function AdminOverviewPage() {
 
   return (
     <div className="space-y-5">
-      <section className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_240px]">
-        <div className={`card circuit-panel p-5 sm:p-6 ${heroTone}`}>
-          <div className="flex flex-wrap gap-2">
-            <span className="brand-chip px-3 py-1">Admin dashboard</span>
-            <span className="brand-chip-coral px-3 py-1">{overview.role}</span>
+      <section className="space-y-4">
+        <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
+          <div className="max-w-[42rem]">
+            <div className="flex flex-wrap gap-2">
+              <span className="brand-chip px-3 py-1">Admin dashboard</span>
+              <span className="brand-chip-coral px-3 py-1">{overview.role}</span>
+            </div>
+
+            <h1 className="mt-4 text-[1.7rem] font-black leading-[1.06] text-[var(--text-primary)] sm:text-[2rem]">
+              Run the Mechi control room with less noise.
+            </h1>
+            <p className="mt-3 text-sm leading-7 text-[var(--text-secondary)]">
+              Start with the few lanes that can hurt players right now, make the call, then drill into
+              deeper evidence only when you need it.
+            </p>
           </div>
 
-          <h1 className="mt-4 text-[1.7rem] font-black leading-[1.06] text-[var(--text-primary)] sm:text-[2rem]">
-            Run the Mechi control room from one cleaner surface.
-          </h1>
-          <p className="mt-3 max-w-[38rem] text-sm leading-7 text-[var(--text-secondary)]">
-            Start from the few lanes that can hurt players right now, make a call, then drill into the
-            full evidence only when you need it.
-          </p>
-
-          <div className="mt-4 flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-2">
             <Link href={nextDecisionCard.href} className="btn-primary">
               Open {nextDecisionCard.title}
             </Link>
@@ -420,83 +421,17 @@ export default async function AdminOverviewPage() {
               Support inbox
             </Link>
           </div>
+        </div>
 
-          <div className="mt-5 border-t border-[var(--border-color)] pt-4">
-            <div className="grid gap-3 sm:grid-cols-3">
-              <div className="admin-kpi-card px-4 py-3">
-                <p className="section-title">Open lanes</p>
-                <p className="mt-2 text-lg font-black text-[var(--text-primary)]">
-                  {activeAttentionCount.toLocaleString()}
-                </p>
-                <p className="mt-1 text-xs text-[var(--text-soft)]">
-                  {activeAttentionCount > 0
-                    ? 'Interventions waiting right now'
-                    : 'Nothing urgent is backed up'}
-                </p>
-              </div>
-              <div className="admin-kpi-card px-4 py-3">
-                <p className="section-title">Live rooms</p>
-                <p className="mt-2 text-lg font-black text-[var(--text-primary)]">
-                  {totalRooms.toLocaleString()}
-                </p>
-                <p className="mt-1 text-xs text-[var(--text-soft)]">
-                  Open, full, and live lobbies combined
-                </p>
-              </div>
-              <div className="admin-kpi-card px-4 py-3">
-                <p className="section-title">Prize paid</p>
-                <p className="mt-2 text-lg font-black text-[var(--text-primary)]">
-                  {`KSh ${overview.totalPrizeDistributed.toLocaleString()}`}
-                </p>
-                <p className="mt-1 text-xs text-[var(--text-soft)]">
-                  Completed tournament payout total
-                </p>
-              </div>
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          {topMetricCards.map(({ label, value, detail }) => (
+            <div key={label} className="card bg-[var(--surface-elevated)] px-4 py-3">
+              <p className="section-title">{label}</p>
+              <p className="mt-2 text-lg font-black text-[var(--text-primary)]">{value}</p>
+              <p className="mt-1 text-xs text-[var(--text-soft)]">{detail}</p>
             </div>
-          </div>
+          ))}
         </div>
-
-        <div className="flex flex-col gap-3">
-          <div className="card p-4">
-            <p className="text-[9px] font-bold uppercase tracking-[0.14em] text-[var(--text-soft)]">
-              Ops pulse
-            </p>
-            <p className="mt-2 text-[2rem] font-black leading-none text-[var(--brand-coral)]">
-              {activeAttentionCount}
-            </p>
-            <p className="mt-2 text-xs leading-6 text-[var(--text-secondary)]">
-              {activeAttentionCount > 0
-                ? `${activeAttentionCount} lane${activeAttentionCount === 1 ? '' : 's'} still need human follow-through.`
-                : 'No urgent interventions are waiting right now.'}
-            </p>
-          </div>
-
-          <div className="card p-4">
-            <p className="text-[9px] font-bold uppercase tracking-[0.14em] text-[var(--text-soft)]">
-              Next decision
-            </p>
-            <p className="mt-2 text-lg font-black leading-6 text-[var(--text-primary)]">
-              {nextDecisionCard.title}
-            </p>
-            <p className="mt-2 text-xs leading-6 text-[var(--text-secondary)]">
-              {nextDecisionCard.detail}
-            </p>
-            <Link href={nextDecisionCard.href} className="brand-link mt-3 inline-flex items-center gap-1 text-xs font-semibold">
-              Open lane
-              <ArrowRight size={13} />
-            </Link>
-          </div>
-        </div>
-      </section>
-
-      <section className="subtle-stat-strip sm:grid-cols-2 xl:grid-cols-4">
-        {snapshotCards.map(({ label, value, detail }) => (
-          <div key={label} className="subtle-stat-item">
-            <p className="subtle-stat-value">{value}</p>
-            <p className="subtle-stat-label">{label}</p>
-            <p className="mt-1 text-xs text-[var(--text-secondary)]">{detail}</p>
-          </div>
-        ))}
       </section>
 
       <section className="grid gap-5 xl:grid-cols-[minmax(0,1.02fr)_minmax(320px,0.98fr)]">
@@ -627,7 +562,24 @@ export default async function AdminOverviewPage() {
         </div>
 
         <div className="space-y-5">
-          <div className="subtle-card p-5">
+          <div className="card p-5">
+            <p className="section-title">Next decision</p>
+            <p className="mt-2 text-lg font-black leading-6 text-[var(--text-primary)]">
+              {nextDecisionCard.title}
+            </p>
+            <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">
+              {nextDecisionCard.detail}
+            </p>
+            <Link
+              href={nextDecisionCard.href}
+              className="brand-link mt-3 inline-flex items-center gap-1 text-xs font-semibold"
+            >
+              Open lane
+              <ArrowRight size={13} />
+            </Link>
+          </div>
+
+          <div className="card p-5">
             <div className="flex items-center justify-between gap-3">
               <div>
                 <p className="section-title">Watch lanes</p>
@@ -660,9 +612,8 @@ export default async function AdminOverviewPage() {
                     </div>
                   </div>
                 </Link>
-              ))}
-            </div>
-
+                ))}
+              </div>
           </div>
 
           <div className="card p-5">

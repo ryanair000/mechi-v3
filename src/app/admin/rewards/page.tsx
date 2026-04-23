@@ -70,10 +70,10 @@ function gameLabel(game: AdminRewardRedemptionItem['game']) {
     case 'codm':
       return 'CODM';
     case 'pubgm':
-      return 'PUBG Mobile';
+      return 'PUBG UC';
     case 'efootball':
     default:
-      return 'eFootball';
+      return 'eFootball Coins';
   }
 }
 
@@ -192,7 +192,7 @@ export default function AdminRewardsPage() {
 
   return (
     <div className="space-y-5">
-      <div className="card p-5">
+      <section className="space-y-4">
         <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
           <div>
             <p className="brand-kicker">Reward fulfillment queue</p>
@@ -211,7 +211,7 @@ export default function AdminRewardsPage() {
               return (
                 <div
                   key={item.label}
-                  className="rounded-2xl border border-[var(--border-color)] bg-[var(--surface-elevated)] px-4 py-3"
+                  className="card bg-[var(--surface-elevated)] px-4 py-3"
                 >
                   <div className="flex items-center gap-2 text-[var(--text-soft)]">
                     <Icon size={14} />
@@ -225,7 +225,7 @@ export default function AdminRewardsPage() {
             })}
           </div>
         </div>
-      </div>
+      </section>
 
       <div className="card p-5">
         <div className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_220px_auto]">
@@ -291,7 +291,7 @@ export default function AdminRewardsPage() {
               <div>
                 <p className="section-title">Queued requests</p>
                 <p className="mt-1 text-sm text-[var(--text-secondary)]">
-                  Open a request to see the player, the target reward, and the M-Pesa number on file.
+                  Open a request to see the player, the target redeemable, and the M-Pesa number on file.
                 </p>
               </div>
               <span className="brand-chip">{items.length} loaded</span>

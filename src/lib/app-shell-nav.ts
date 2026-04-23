@@ -93,7 +93,7 @@ const FRIENDS_NAV_ITEM: AppNavItem = {
 
 const REWARDS_NAV_ITEM: AppNavItem = {
   href: '/rewards',
-  label: 'Rewards',
+  label: 'Earn points',
   icon: Coins,
   matchMode: 'exact',
 };

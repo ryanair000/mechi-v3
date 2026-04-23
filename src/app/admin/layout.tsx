@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation';
 import { cookies } from 'next/headers';
-import { Shield, Siren, Wrench } from 'lucide-react';
+import { Shield } from 'lucide-react';
 import { hasPrimaryAdminAccess } from '@/lib/admin-access';
 import { verifyToken } from '@/lib/auth';
 import { AdminNavigation } from '@/components/AdminNavigation';
@@ -50,29 +50,18 @@ export default async function AdminLayout({ children }: { children: React.ReactN
             <Shield size={13} />
             Control room
           </div>
-          <div className="mb-5 rounded-[0.55rem] border border-[var(--border-color)] bg-white/[0.03] px-3 py-3">
-            <div className="flex items-center gap-2 text-[var(--accent-secondary-text)]">
-              <Siren size={14} />
-              <p className="text-xs font-bold uppercase tracking-[0.14em]">Live ops + risk</p>
-            </div>
-            <p className="mt-2 text-xs leading-6 text-[var(--text-secondary)]">
-              Start with urgent intervention lanes, then drill into tools only when you need deeper proof
-              or system checks.
-            </p>
-          </div>
 
           <nav className="space-y-1">
             <AdminNavigation role={profile.role} />
           </nav>
 
-          <div className="admin-sidebar-card mt-auto p-3">
-            <div className="flex items-center gap-2 text-[var(--text-soft)]">
-              <Wrench size={13} />
-              <p className="text-[10px] font-semibold uppercase tracking-[0.18em]">Access</p>
-            </div>
+          <div className="mt-auto border-t border-[var(--border-color)] px-2 pt-4">
+            <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[var(--text-soft)]">
+              Access
+            </p>
             <p className="mt-2 text-sm font-black text-[var(--text-primary)]">{profile.role}</p>
-            <p className="mt-2 text-xs leading-6 text-[var(--text-secondary)]">
-              Messaging tests and the audit trail stay available in the lower-weight tools area.
+            <p className="mt-1 text-xs leading-6 text-[var(--text-secondary)]">
+              Back to the player app any time.
             </p>
             <a href={appDashboardUrl} className="btn-ghost mt-3 w-full justify-center">
               Back to app
@@ -91,14 +80,9 @@ export default async function AdminLayout({ children }: { children: React.ReactN
           </div>
 
           <div className="border-t border-[var(--border-color)] px-4 pb-3 pt-3 sm:px-6">
-            <div className="rounded-[0.55rem] border border-[var(--border-color)] bg-[rgba(255,255,255,0.02)] p-3">
-              <div className="mb-2 text-[10px] font-bold uppercase tracking-[0.18em] text-[var(--text-soft)]">
-                Decision lanes
-              </div>
-              <nav aria-label="Admin sections">
-                <AdminNavigation role={profile.role} variant="mobile" />
-              </nav>
-            </div>
+            <nav aria-label="Admin sections">
+              <AdminNavigation role={profile.role} variant="mobile" />
+            </nav>
           </div>
         </header>
 

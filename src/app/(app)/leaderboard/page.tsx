@@ -122,6 +122,16 @@ export default function LeaderboardPage() {
         </h1>
       </div>
 
+      <div className="card bg-[var(--surface-soft)] p-4 sm:p-5">
+        <p className="section-title">How ranking works</p>
+        <p className="mt-2 max-w-3xl text-sm leading-7 text-[var(--text-secondary)] sm:text-[15px]">
+          Everyone starts at <span className="font-semibold text-[var(--text-primary)]">1000</span>.
+          A win gives <span className="font-semibold text-[var(--brand-teal)]">+16</span>, a loss costs
+          <span className="font-semibold text-[var(--brand-coral)]"> -16</span>, and a draw gives
+          <span className="font-semibold text-[var(--accent-secondary-text)]"> +8</span>.
+        </p>
+      </div>
+
       <div className="card p-3 sm:p-4">
         <div className="mb-3">
           <p className="section-title">Pick a game</p>
@@ -200,7 +210,7 @@ export default function LeaderboardPage() {
                   <th className="px-3 py-3 font-semibold">Rating</th>
                   <th className="px-3 py-3 font-semibold">Tier</th>
                   <th className="px-3 py-3 font-semibold">Matches</th>
-                  <th className="px-3 py-3 font-semibold">W-L</th>
+                  <th className="px-3 py-3 font-semibold">W-L-D</th>
                   <th className="px-3 py-3 font-semibold">Win rate</th>
                   <th className="px-3 py-3 font-semibold">Tournaments</th>
                 </tr>
@@ -227,7 +237,7 @@ export default function LeaderboardPage() {
                       <td className="px-3 py-3 text-[var(--text-secondary)]">{entry.division}</td>
                       <td className="px-3 py-3 text-[var(--text-secondary)]">{entry.matchesPlayed}</td>
                       <td className="px-3 py-3 text-[var(--text-secondary)]">
-                        {entry.wins}-{entry.losses}
+                        {entry.wins}-{entry.losses}-0
                       </td>
                       <td className="px-3 py-3 text-[var(--text-secondary)]">{winRate}%</td>
                       <td className="px-3 py-3 text-[var(--text-secondary)]">{entry.tournamentsWon}</td>

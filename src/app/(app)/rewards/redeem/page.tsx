@@ -13,6 +13,8 @@ type CatalogResponse = {
   profile_phone?: string | null;
 };
 
+const GAME_ORDER = ['codm', 'pubgm', 'efootball'] as const;
+
 function formatKes(value: number) {
   return new Intl.NumberFormat('en-KE', {
     minimumFractionDigits: Number.isInteger(value) ? 0 : 1,
@@ -57,23 +59,88 @@ function statusTone(status: RewardRedemptionRequest['status']) {
   }
 }
 
+function gameSectionLabel(game: RewardCatalogItem['game']) {
+  switch (game) {
+    case 'codm':
+      return 'CODM Redeemables';
+    case 'pubgm':
+      return 'PUBG UC Redeemables';
+    case 'efootball':
+    default:
+      return 'eFootball Coins Redeemables';
+  }
+}
+
 function gameLabel(game: RewardCatalogItem['game']) {
   switch (game) {
     case 'codm':
-      return 'CODM Rewards';
+      return 'CODM';
     case 'pubgm':
-      return 'PUBG UC Rewards';
+      return 'PUBG UC';
     case 'efootball':
     default:
-      return 'eFootball Coins Rewards';
+      return 'eFootball Coins';
   }
+}
+
+function gameTileCaption(game: RewardCatalogItem['game']) {
+  switch (game) {
+    case 'codm':
+      return 'CP packs';
+    case 'pubgm':
+      return 'UC packs';
+    case 'efootball':
+    default:
+      return 'Coin bundles';
+  }
+}
+
+function GameTile({
+  game,
+  active,
+  count,
+  onClick,
+}: {
+  game: RewardCatalogItem['game'];
+  active: boolean;
+  count: number;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`card-hover flex aspect-square min-h-[10.5rem] flex-col p-5 text-left transition-all ${
+        active
+          ? 'border-[rgba(50,224,196,0.28)] bg-[rgba(50,224,196,0.1)] shadow-[var(--surface-highlight),0_24px_50px_rgba(5,12,24,0.32)]'
+          : 'bg-[var(--surface-soft)] hover:-translate-y-0.5'
+      }`}
+      aria-pressed={active}
+    >
+      <div className="space-y-1.5">
+        <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-[var(--text-soft)]">
+          Game
+        </p>
+        <p className="text-2xl font-black tracking-tight text-[var(--text-primary)]">
+          {gameLabel(game)}
+        </p>
+        <p className="text-sm font-medium text-[var(--text-secondary)]">{gameTileCaption(game)}</p>
+      </div>
+      <div className="mt-auto">
+        <p className="text-xs font-bold uppercase tracking-[0.14em] text-[var(--accent-secondary)]">
+          {count} redeemables
+        </p>
+      </div>
+    </button>
+  );
 }
 
 function RecentRequests({ items }: { items: RewardSummary['recent_redemptions'] }) {
   if (items.length === 0) {
     return (
-      <div className="rounded-3xl border border-dashed border-[var(--border-color)] bg-[var(--surface-soft)] px-4 py-6 text-sm text-[var(--text-secondary)]">
-        No reward requests yet. Select a package below, enter an M-Pesa number, and we will queue it for fulfillment.
+      <div className="card border-dashed bg-[var(--surface-soft)] px-4 py-6 text-sm text-[var(--text-secondary)]">
+        No redeemables requested yet. Select one below, enter an M-Pesa number, and Mechi
+        will queue it for fulfillment.
       </div>
     );
   }
@@ -83,13 +150,13 @@ function RecentRequests({ items }: { items: RewardSummary['recent_redemptions'] 
       {items.slice(0, 4).map((item) => (
         <div
           key={item.id}
-          className="rounded-2xl border border-[var(--border-color)] bg-[var(--surface-soft)] p-4"
+          className="card bg-[var(--surface-soft)] p-4"
         >
           <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
             <div>
               <div className="flex flex-wrap items-center gap-2">
                 <p className="text-sm font-bold uppercase tracking-[0.05em] text-[var(--text-primary)]">
-                  {item.game}
+                  {gameLabel(item.game)}
                 </p>
                 <span className={`rounded-full px-2.5 py-1 text-[11px] font-bold ${statusTone(item.status)}`}>
                   {formatStatus(item.status)}
@@ -124,10 +191,10 @@ function RewardRow({
 
   return (
     <div
-      className={`rounded-2xl border p-4 transition-colors ${
+      className={`card p-4 transition-colors ${
         selected
           ? 'border-[rgba(50,224,196,0.28)] bg-[rgba(50,224,196,0.08)]'
-          : 'border-[var(--border-color)] bg-[var(--surface-soft)]'
+          : 'bg-[var(--surface-soft)]'
       }`}
     >
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -160,9 +227,9 @@ function RewardRow({
 function Skeleton() {
   return (
     <div className="space-y-4 pt-2">
-      <div className="h-24 w-full rounded-3xl shimmer" />
-      <div className="h-72 w-full rounded-3xl shimmer" />
-      <div className="h-64 w-full rounded-3xl shimmer" />
+      <div className="h-24 w-full rounded-xl shimmer" />
+      <div className="h-72 w-full rounded-xl shimmer" />
+      <div className="h-64 w-full rounded-xl shimmer" />
     </div>
   );
 }
@@ -174,6 +241,7 @@ export default function RewardsRedeemPage() {
   const [profilePhone, setProfilePhone] = useState<string>('');
   const [selectedItem, setSelectedItem] = useState<RewardCatalogItem | null>(null);
   const [mpesaNumber, setMpesaNumber] = useState('');
+  const [activeGame, setActiveGame] = useState<(typeof GAME_ORDER)[number]>('codm');
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -239,14 +307,28 @@ export default function RewardsRedeemPage() {
       efootball: catalog.filter((item) => item.game === 'efootball'),
     };
   }, [catalog]);
+  const activeCatalog = groupedCatalog[activeGame];
+
+  useEffect(() => {
+    const fallbackGame = GAME_ORDER.find((game) => groupedCatalog[game].length > 0) ?? 'codm';
+    if (groupedCatalog[activeGame].length === 0 && activeGame !== fallbackGame) {
+      setActiveGame(fallbackGame);
+    }
+  }, [activeGame, groupedCatalog]);
 
   const handleSelect = useCallback(
     (item: RewardCatalogItem) => {
+      setActiveGame(item.game);
       setSelectedItem(item);
       setMpesaNumber((current) => current || profilePhone);
     },
     [profilePhone]
   );
+
+  const handleGameChange = useCallback((game: (typeof GAME_ORDER)[number]) => {
+    setActiveGame(game);
+    setSelectedItem((current) => (current?.game === game ? current : null));
+  }, []);
 
   const handleRedeem = useCallback(async () => {
     if (!selectedItem) {
@@ -294,12 +376,13 @@ export default function RewardsRedeemPage() {
             <ArrowLeft size={15} />
           </Link>
           <div>
-            <p className="brand-kicker">Redeem rewards</p>
+            <p className="brand-kicker">Redeemables</p>
             <h1 className="mt-3 text-3xl font-black tracking-tight text-[var(--text-primary)]">
-              Spend points on game rewards.
+              Spend points on redeemables.
             </h1>
             <p className="mt-3 max-w-2xl text-sm leading-7 text-[var(--text-secondary)]">
-              Select a package, confirm the M-Pesa number, and Mechi will queue the request for manual fulfillment.
+              Choose a CODM, PUBG UC, or eFootball Coins redeemable, confirm the M-Pesa number,
+              and Mechi will queue the request for manual fulfillment.
             </p>
           </div>
         </div>
@@ -316,7 +399,7 @@ export default function RewardsRedeemPage() {
       </div>
 
       {error ? (
-        <div className="rounded-2xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-300">
+        <div className="card border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-300">
           {error}
         </div>
       ) : null}
@@ -326,16 +409,15 @@ export default function RewardsRedeemPage() {
       ) : (
         <>
           <div className="grid gap-3 md:grid-cols-[1.3fr_1fr_1fr]">
-            <div className="rounded-3xl border border-[var(--accent-secondary)]/20 bg-[var(--accent-secondary)]/8 p-5">
+            <div className="card border-[var(--accent-secondary)]/20 bg-[var(--accent-secondary)]/8 p-5">
               <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-[var(--text-soft)]">
                 Available wallet value
               </p>
               <p className="mt-3 text-3xl font-black text-[var(--text-primary)]">
                 KSh {formatKes(summary?.wallet.available_kes ?? 0)}
               </p>
-              <p className="mt-2 text-sm text-[var(--text-secondary)]">{summary?.wallet.rate_label}</p>
             </div>
-            <div className="rounded-3xl border border-[var(--border-color)] bg-[var(--surface-soft)] p-5">
+            <div className="card bg-[var(--surface-soft)] p-5">
               <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-[var(--text-soft)]">
                 Available points
               </p>
@@ -343,7 +425,7 @@ export default function RewardsRedeemPage() {
                 {availablePoints.toLocaleString()}
               </p>
             </div>
-            <div className="rounded-3xl border border-[var(--border-color)] bg-[var(--surface-soft)] p-5">
+            <div className="card bg-[var(--surface-soft)] p-5">
               <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-[var(--text-soft)]">
                 Profile phone
               </p>
@@ -353,7 +435,7 @@ export default function RewardsRedeemPage() {
             </div>
           </div>
 
-          <section className="rounded-3xl border border-[var(--border-color)] bg-[var(--surface-soft)] p-5">
+          <section className="card bg-[var(--surface-soft)] p-5">
             <div>
               <p className="text-lg font-black text-[var(--text-primary)]">Recent requests</p>
               <p className="mt-1 text-sm text-[var(--text-secondary)]">
@@ -367,20 +449,31 @@ export default function RewardsRedeemPage() {
 
           <section className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_360px]">
             <div className="space-y-5">
-              {(['codm', 'pubgm', 'efootball'] as const).map((game) => (
-                <div
-                  key={game}
-                  className="rounded-3xl border border-[var(--border-color)] bg-[var(--surface)] p-5"
-                >
-                  <div>
-                    <p className="text-lg font-black text-[var(--text-primary)]">{gameLabel(game)}</p>
-                    <p className="mt-1 text-sm text-[var(--text-secondary)]">
-                      Fixed Mechi reward packages priced directly from your points wallet.
-                    </p>
-                  </div>
+              <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
+                {GAME_ORDER.map((game) => (
+                  <GameTile
+                    key={game}
+                    game={game}
+                    active={activeGame === game}
+                    count={groupedCatalog[game].length}
+                    onClick={() => handleGameChange(game)}
+                  />
+                ))}
+              </div>
 
-                  <div className="mt-5 space-y-3">
-                    {groupedCatalog[game].map((item) => (
+              <div className="space-y-3">
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+                  <p className="text-lg font-black text-[var(--text-primary)]">
+                    {gameSectionLabel(activeGame)}
+                  </p>
+                  <p className="text-xs font-bold uppercase tracking-[0.16em] text-[var(--text-soft)]">
+                    {activeCatalog.length} options
+                  </p>
+                </div>
+
+                {activeCatalog.length > 0 ? (
+                  <div className="space-y-3">
+                    {activeCatalog.map((item) => (
                       <RewardRow
                         key={item.id}
                         item={item}
@@ -390,21 +483,25 @@ export default function RewardsRedeemPage() {
                       />
                     ))}
                   </div>
-                </div>
-              ))}
+                ) : (
+                  <div className="card border-dashed px-4 py-6 text-sm text-[var(--text-secondary)]">
+                    No redeemables are live for this game yet.
+                  </div>
+                )}
+              </div>
             </div>
 
-            <div className="rounded-3xl border border-[var(--border-color)] bg-[var(--surface-soft)] p-5 xl:sticky xl:top-6">
+            <div className="card bg-[var(--surface-soft)] p-5 xl:sticky xl:top-6">
               <div>
-                <p className="text-lg font-black text-[var(--text-primary)]">Confirm redemption</p>
+                <p className="text-lg font-black text-[var(--text-primary)]">Confirm redeemable</p>
                 <p className="mt-1 text-sm text-[var(--text-secondary)]">
-                  Enter the M-Pesa number to use for this reward request.
+                  Enter the M-Pesa number to use for this redeemable request.
                 </p>
               </div>
 
               {selectedItem ? (
                 <div className="mt-5 space-y-4">
-                  <div className="rounded-2xl border border-[var(--border-color)] bg-[var(--surface)] p-4">
+                  <div className="card p-4">
                     <div className="flex items-center gap-2 text-emerald-300">
                       <CheckCircle2 size={14} />
                       <p className="text-sm font-bold">{selectedItem.title}</p>
@@ -430,8 +527,9 @@ export default function RewardsRedeemPage() {
                     />
                   </label>
 
-                  <div className="rounded-2xl border border-[var(--border-color)] bg-[var(--surface)] px-4 py-3 text-xs text-[var(--text-secondary)]">
-                    We deduct points immediately and show the request on your rewards history while the team processes it.
+                  <div className="card px-4 py-3 text-xs text-[var(--text-secondary)]">
+                    We deduct points immediately and show the request on your redemption history
+                    while the team processes it.
                   </div>
 
                   <button
@@ -444,8 +542,8 @@ export default function RewardsRedeemPage() {
                   </button>
                 </div>
               ) : (
-                <div className="mt-5 rounded-2xl border border-dashed border-[var(--border-color)] bg-[var(--surface)] px-4 py-8 text-center text-sm text-[var(--text-secondary)]">
-                  Select a reward package from the list to continue.
+                <div className="card mt-5 border-dashed px-4 py-8 text-center text-sm text-[var(--text-secondary)]">
+                  Select a redeemable from the list to continue.
                 </div>
               )}
             </div>

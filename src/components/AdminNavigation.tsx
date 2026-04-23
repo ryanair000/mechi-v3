@@ -127,10 +127,10 @@ export function AdminNavigation({
   }
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-4">
       {visibleSections.map((section) => (
-        <div key={section.label} className="space-y-2">
-          <div className="px-2 text-[10px] font-bold uppercase tracking-[0.18em] text-[var(--text-soft)]">
+        <div key={section.label} className="space-y-1.5">
+          <div className="px-2 text-[9px] font-bold uppercase tracking-[0.18em] text-[var(--text-soft)]">
             {section.label}
           </div>
           <div className="space-y-1">
@@ -142,19 +142,19 @@ export function AdminNavigation({
                   key={href}
                   href={href}
                   aria-current={isActive ? 'page' : undefined}
-                  className={`group flex items-center gap-3 rounded-md border px-3 py-2.5 text-sm font-semibold transition-all ${
+                  className={`group flex items-center gap-2.5 rounded-md border px-2.5 py-2 text-[13px] font-semibold transition-all ${
                     isActive
                       ? 'border-[rgba(50,224,196,0.16)] bg-[rgba(50,224,196,0.08)] text-[var(--text-primary)]'
                       : section.secondary
                         ? 'border-transparent text-[var(--text-soft)] hover:border-[var(--border-color)] hover:bg-white/[0.02] hover:text-white'
                         : 'border-transparent text-white/72 hover:border-[var(--border-color)] hover:bg-white/[0.03] hover:text-white'
                   }`}
-                >
-                  <span
-                    className={`flex h-8 w-8 items-center justify-center rounded-md border transition-colors ${
-                      isActive
-                        ? 'border-[rgba(50,224,196,0.18)] bg-[rgba(50,224,196,0.12)] text-[var(--accent-secondary-text)]'
-                        : section.secondary
+                  >
+                    <span
+                      className={`flex h-7 w-7 items-center justify-center rounded-md border transition-colors ${
+                        isActive
+                          ? 'border-[rgba(50,224,196,0.18)] bg-[rgba(50,224,196,0.12)] text-[var(--accent-secondary-text)]'
+                          : section.secondary
                           ? 'border-[var(--border-color)] bg-transparent text-[var(--text-soft)] group-hover:text-white/85'
                           : 'border-[var(--border-color)] bg-white/[0.03] text-white/60 group-hover:text-white/85'
                     }`}

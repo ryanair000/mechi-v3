@@ -50,7 +50,7 @@ const HEADER_CONFIGS: Array<{
   },
   { matches: (pathname) => pathname.startsWith('/challenges'), config: { eyebrow: 'Compete', title: 'Challenges' } },
   { matches: (pathname) => pathname.startsWith('/share'), config: { eyebrow: 'Growth', title: 'Share' } },
-  { matches: (pathname) => pathname.startsWith('/rewards'), config: { eyebrow: 'Growth', title: 'Rewards' } },
+  { matches: (pathname) => pathname.startsWith('/rewards'), config: { eyebrow: 'Growth', title: 'Earn points' } },
   { matches: (pathname) => pathname.startsWith('/profile'), config: { eyebrow: 'Player', title: 'Profile' } },
 ];
 

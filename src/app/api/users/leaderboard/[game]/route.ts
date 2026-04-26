@@ -13,6 +13,11 @@ import { getRankDivision } from '@/lib/gamification';
 import type { GameKey } from '@/types';
 
 type LeaderboardPlayerRow = Record<string, unknown>;
+type DrawMatchRow = {
+  id?: string | null;
+  player1_id?: string | null;
+  player2_id?: string | null;
+};
 
 function getLeaderboardLookupGames(game: GameKey): GameKey[] {
   const canonicalGame = getCanonicalGameKey(game);
@@ -62,6 +67,72 @@ function resolveLeaderboardMetrics(
   return hasLegacyHistory
     ? { rating: legacyRating, wins: legacyWins, losses: legacyLosses }
     : { rating, wins, losses };
+}
+
+function addDrawRowsToCounts(
+  rows: DrawMatchRow[] | null | undefined,
+  drawCounts: Map<string, number>,
+  playerIds: Set<string>,
+  seenMatchIds: Set<string>
+) {
+  for (const row of rows ?? []) {
+    const matchId = String(row.id ?? '');
+    if (!matchId || seenMatchIds.has(matchId)) continue;
+    seenMatchIds.add(matchId);
+
+    const player1Id = String(row.player1_id ?? '');
+    const player2Id = String(row.player2_id ?? '');
+
+    if (playerIds.has(player1Id)) {
+      drawCounts.set(player1Id, (drawCounts.get(player1Id) ?? 0) + 1);
+    }
+
+    if (playerIds.has(player2Id)) {
+      drawCounts.set(player2Id, (drawCounts.get(player2Id) ?? 0) + 1);
+    }
+  }
+}
+
+async function getDrawCounts(
+  supabase: ReturnType<typeof createServiceClient>,
+  playerIds: string[],
+  games: GameKey[]
+) {
+  const drawCounts = new Map<string, number>();
+
+  if (playerIds.length === 0 || games.length === 0) {
+    return drawCounts;
+  }
+
+  const drawSelect = 'id, player1_id, player2_id';
+  const [player1DrawsResult, player2DrawsResult] = await Promise.all([
+    supabase
+      .from('matches')
+      .select(drawSelect)
+      .eq('status', 'completed')
+      .is('winner_id', null)
+      .in('game', games)
+      .in('player1_id', playerIds),
+    supabase
+      .from('matches')
+      .select(drawSelect)
+      .eq('status', 'completed')
+      .is('winner_id', null)
+      .in('game', games)
+      .in('player2_id', playerIds),
+  ]);
+
+  if (player1DrawsResult.error || player2DrawsResult.error) {
+    console.error('[Leaderboard] Draw count query error:', player1DrawsResult.error ?? player2DrawsResult.error);
+    return drawCounts;
+  }
+
+  const playerIdSet = new Set(playerIds);
+  const seenMatchIds = new Set<string>();
+  addDrawRowsToCounts(player1DrawsResult.data as DrawMatchRow[] | null, drawCounts, playerIdSet, seenMatchIds);
+  addDrawRowsToCounts(player2DrawsResult.data as DrawMatchRow[] | null, drawCounts, playerIdSet, seenMatchIds);
+
+  return drawCounts;
 }
 
 export async function GET(
@@ -148,22 +219,20 @@ export async function GET(
       }
     }
 
-    const players = fallbackToDefaults
-      ? dedupePlayers(collectedPlayers)
-      : dedupePlayers(collectedPlayers).filter(
-          (player) =>
-            (((player[winsKey] as number | undefined) ?? 0) +
-              ((player[lossesKey] as number | undefined) ?? 0)) > 0
-        );
+    const candidatePlayers = dedupePlayers(collectedPlayers);
+    const candidatePlayerIds = candidatePlayers
+      .map((player) => String(player.id ?? ''))
+      .filter(Boolean);
+    const drawCountsById = await getDrawCounts(supabase, candidatePlayerIds, lookupGames);
     const legacyMetricsById = new Map<string, LeaderboardPlayerRow>();
 
-    if (!fallbackToDefaults && game === 'efootball' && players.length > 0) {
+    if (!fallbackToDefaults && game === 'efootball' && candidatePlayers.length > 0) {
       const legacyMetricsResult = await supabase
         .from('profiles')
         .select('id, rating_efootball_mobile, wins_efootball_mobile, losses_efootball_mobile')
         .in(
           'id',
-          players
+          candidatePlayers
             .map((player) => String(player.id ?? ''))
             .filter(Boolean)
         );
@@ -199,6 +268,14 @@ export async function GET(
             legacyMetricsById.get(String(player.id ?? ''))
           );
 
+    const players = fallbackToDefaults
+      ? candidatePlayers
+      : candidatePlayers.filter((player) => {
+          const metrics = getPlayerMetrics(player);
+          const draws = drawCountsById.get(String(player.id ?? '')) ?? 0;
+          return metrics.wins + metrics.losses + draws > 0;
+        });
+
     const topPlayers = players
       .sort((a, b) => {
         if (fallbackToDefaults) {
@@ -213,7 +290,10 @@ export async function GET(
         }
 
         const matchDelta =
-          metricsB.wins + metricsB.losses - (metricsA.wins + metricsA.losses);
+          metricsB.wins +
+          metricsB.losses +
+          (drawCountsById.get(String(b.id ?? '')) ?? 0) -
+          (metricsA.wins + metricsA.losses + (drawCountsById.get(String(a.id ?? '')) ?? 0));
         if (matchDelta !== 0) {
           return matchDelta;
         }
@@ -251,6 +331,7 @@ export async function GET(
     const leaderboard = topPlayers.map((p, index) => {
       const metrics = getPlayerMetrics(p);
       const playerId = String(p.id ?? '');
+      const draws = drawCountsById.get(playerId) ?? 0;
 
       return {
         rank: index + 1,
@@ -264,7 +345,8 @@ export async function GET(
         level: (p.level as number | undefined) ?? 1,
         wins: metrics.wins,
         losses: metrics.losses,
-        matchesPlayed: metrics.wins + metrics.losses,
+        draws,
+        matchesPlayed: metrics.wins + metrics.losses + draws,
         tournamentsWon: tournamentWinsById.get(playerId) ?? 0,
       };
     });

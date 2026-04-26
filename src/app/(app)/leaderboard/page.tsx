@@ -1,6 +1,5 @@
 'use client';
 
-import Link from 'next/link';
 import { useCallback, useEffect, useState } from 'react';
 import { Crown, Trophy } from 'lucide-react';
 import { useAuth, useAuthFetch } from '@/components/AuthProvider';
@@ -21,8 +20,8 @@ interface LeaderboardEntry {
   level: number;
   wins: number;
   losses: number;
+  draws: number;
   matchesPlayed: number;
-  tournamentsWon: number;
 }
 
 function filterRankedGames(games: readonly string[] = []): GameKey[] {
@@ -31,16 +30,18 @@ function filterRankedGames(games: readonly string[] = []): GameKey[] {
   );
 }
 
-function getWinRate(entry: Pick<LeaderboardEntry, 'wins' | 'losses'>): number {
-  if (entry.wins + entry.losses === 0) {
+function getWinRate(entry: Pick<LeaderboardEntry, 'wins' | 'losses' | 'draws'>): number {
+  const totalMatches = entry.wins + entry.losses + entry.draws;
+
+  if (totalMatches === 0) {
     return 0;
   }
 
-  return Math.round((entry.wins / (entry.wins + entry.losses)) * 100);
+  return Math.round((entry.wins / totalMatches) * 100);
 }
 
-function formatTournamentWins(value: number): string {
-  return `${value} tournament${value === 1 ? '' : 's'} won`;
+function formatRecord(entry: Pick<LeaderboardEntry, 'wins' | 'losses' | 'draws'>): string {
+  return `${entry.wins}W - ${entry.losses}L - ${entry.draws}D`;
 }
 
 export default function LeaderboardPage() {
@@ -119,21 +120,6 @@ export default function LeaderboardPage() {
     void fetchLeaderboard(selectedGame);
   }, [selectedGame, fetchLeaderboard]);
 
-  const tierProgression = [
-    { name: 'Bronze', range: '0-1099', rating: 1000 },
-    { name: 'Silver', range: '1100-1299', rating: 1150 },
-    { name: 'Gold', range: '1300-1499', rating: 1350 },
-    { name: 'Platinum', range: '1500-1699', rating: 1550 },
-    { name: 'Diamond', range: '1700-1899', rating: 1750 },
-    { name: 'Legend', range: '1900+', rating: 1900 },
-  ] as const;
-
-  const tierCounts = entries.reduce<Record<string, number>>((counts, entry) => {
-    const { tier } = getRankDivision(entry.rating);
-    counts[tier] = (counts[tier] ?? 0) + 1;
-    return counts;
-  }, {});
-
   const podiumEntries = entries.slice(0, 3);
   const remainingEntries = entries.slice(3);
 
@@ -141,63 +127,46 @@ export default function LeaderboardPage() {
     <>
       <div className="page-container">
         <div className="card circuit-panel mb-4 p-3 sm:p-4">
-          <div className="flex items-center gap-3">
-            <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-[rgba(255,107,107,0.14)] text-[var(--brand-coral)]">
-              <Trophy size={15} />
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+            <div className="flex items-center gap-3">
+              <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-[rgba(255,107,107,0.14)] text-[var(--brand-coral)]">
+                <Trophy size={15} />
+              </div>
+              <div>
+                <h1 className="text-[1.75rem] font-black tracking-normal text-[var(--text-primary)] sm:text-[2rem]">
+                  Leaderboard
+                </h1>
+                <p className="mt-1 text-[12px] leading-5 text-[var(--text-secondary)] sm:text-[13px]">
+                  Track the ladder, compare match volume, and read live player records.
+                </p>
+              </div>
             </div>
-            <div>
-              <h1 className="text-[1.75rem] font-black tracking-normal text-[var(--text-primary)] sm:text-[2rem]">
-                Leaderboard
-              </h1>
-              <p className="mt-1 text-[12px] leading-5 text-[var(--text-secondary)] sm:text-[13px]">
-                Track the ladder, compare match volume, and see who is winning tournaments.
-              </p>
-            </div>
+
+            {availableGames.length ? (
+              <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar sm:flex-wrap sm:overflow-visible lg:justify-end lg:pb-0">
+                {availableGames.map((game) => {
+                  const isSelected = selectedGame === game;
+
+                  return (
+                    <button
+                      key={game}
+                      onClick={() => setSelectedGame(game)}
+                      className={`flex-shrink-0 whitespace-nowrap rounded-xl border px-3 py-2 text-[12px] font-semibold transition-all sm:text-[13px] ${
+                        isSelected
+                          ? 'border-[rgba(255,107,107,0.28)] bg-[var(--brand-coral)] text-[var(--brand-night)] shadow-[0_10px_24px_rgba(255,107,107,0.2)]'
+                          : 'border-[var(--border-color)] bg-[var(--surface-elevated)] text-[var(--text-secondary)] hover:border-[rgba(50,224,196,0.22)] hover:bg-[var(--surface)] hover:text-[var(--text-primary)]'
+                      }`}
+                      aria-pressed={isSelected}
+                    >
+                      {GAMES[game].label}
+                    </button>
+                  );
+                })}
+              </div>
+            ) : profileLoading ? (
+              <div className="h-10 shimmer lg:w-64" />
+            ) : null}
           </div>
-        </div>
-
-        <div className="card mb-4 p-3 sm:p-4">
-          <div className="mb-3">
-            <p className="section-title">Pick a game</p>
-            <p className="mt-1 text-[12px] text-[var(--text-secondary)] sm:text-[13px]">
-              Only ranked games on your profile show up here.
-            </p>
-          </div>
-
-          {availableGames.length ? (
-            <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar sm:flex-wrap sm:overflow-visible">
-              {availableGames.map((game) => {
-                const isSelected = selectedGame === game;
-
-                return (
-                  <button
-                    key={game}
-                    onClick={() => setSelectedGame(game)}
-                    className={`flex-shrink-0 whitespace-nowrap rounded-xl border px-3 py-2 text-[12px] font-semibold transition-all sm:text-[13px] ${
-                      isSelected
-                        ? 'border-[rgba(255,107,107,0.28)] bg-[var(--brand-coral)] text-[var(--brand-night)] shadow-[0_10px_24px_rgba(255,107,107,0.2)]'
-                        : 'border-[var(--border-color)] bg-[var(--surface-elevated)] text-[var(--text-secondary)] hover:border-[rgba(50,224,196,0.22)] hover:bg-[var(--surface)] hover:text-[var(--text-primary)]'
-                    }`}
-                    aria-pressed={isSelected}
-                  >
-                    {GAMES[game].label}
-                  </button>
-                );
-              })}
-            </div>
-          ) : profileLoading ? (
-            <div className="h-12 shimmer" />
-          ) : (
-            <div className="rounded-xl border border-[var(--border-color)] bg-[var(--surface-elevated)] p-4">
-              <p className="text-sm font-semibold text-[var(--text-primary)]">No ranked games on your profile yet</p>
-              <p className="mt-1 text-xs leading-5 text-[var(--text-secondary)]">
-                Add a competitive title to your profile first, then its leaderboard will show up here.
-              </p>
-              <Link href="/profile" className="brand-link-coral mt-3 inline-block text-xs font-semibold">
-                Update profile
-              </Link>
-            </div>
-          )}
         </div>
 
         {loading || (profileLoading && !selectedGame) ? (
@@ -220,64 +189,11 @@ export default function LeaderboardPage() {
           </div>
         ) : (
           <div className="space-y-5">
-            <div className="card overflow-hidden p-3 sm:p-4">
-              <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-                <div>
-                  <p className="section-title">Rank ladder</p>
-                  <p className="mt-1 max-w-xl text-[12px] leading-5 text-[var(--text-secondary)] sm:text-[13px]">
-                    A tighter view of each rating band from Bronze to Legend.
-                  </p>
-                </div>
-                <div className="brand-chip self-start px-2 py-1 text-[10px] sm:self-auto">
-                  <span>6 tiers live</span>
-                </div>
-              </div>
-
-              <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-6">
-                {tierProgression.map((tier) => {
-                  const division = getRankDivision(tier.rating);
-                  const count = tierCounts[tier.name] ?? 0;
-
-                  return (
-                    <div
-                      key={tier.name}
-                      className="rounded-xl border p-2.5"
-                      style={{
-                        borderColor: withAlpha(division.color, '28'),
-                        backgroundColor: withAlpha(division.color, '0D'),
-                      }}
-                    >
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="flex items-center gap-2">
-                          <TierMedal rating={tier.rating} size="sm" />
-                          <div>
-                            <p className="text-xs font-bold text-[var(--text-primary)]">{tier.name}</p>
-                            <p className="text-[10px] text-[var(--text-secondary)]">{tier.range}</p>
-                          </div>
-                        </div>
-                        {count > 0 ? (
-                          <span
-                            className="inline-flex min-w-6 items-center justify-center rounded-full px-1.5 py-0.5 text-[9px] font-bold"
-                            style={{
-                              color: division.color,
-                              backgroundColor: withAlpha(division.color, '18'),
-                            }}
-                          >
-                            {count}
-                          </span>
-                        ) : null}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-
             <div className="space-y-3">
               <div className="px-1">
                 <p className="section-title">Podium</p>
                 <p className="mt-1 text-[12px] leading-5 text-[var(--text-secondary)] sm:text-[13px]">
-                  Current leaders with position, matches played, and tournaments won.
+                  Current leaders with position, matches played, and live W-L-D.
                 </p>
               </div>
 
@@ -339,7 +255,7 @@ export default function LeaderboardPage() {
                             {entry.username}
                           </p>
                           <p className="mt-1 text-[12px] text-[var(--text-secondary)]">
-                            {entry.matchesPlayed} matches played / {formatTournamentWins(entry.tournamentsWon)}
+                            {entry.matchesPlayed} matches played / {formatRecord(entry)}
                           </p>
                         </div>
 
@@ -357,10 +273,10 @@ export default function LeaderboardPage() {
                         </div>
                         <div className="rounded-xl border border-[var(--border-color)] bg-[var(--surface-elevated)] px-3 py-2.5">
                           <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--text-soft)]">
-                            Tournaments won
+                            W - L - D
                           </p>
-                          <p className="mt-1 text-lg font-black text-[var(--text-primary)]">
-                            {entry.tournamentsWon}
+                          <p className="mt-1 text-base font-black leading-tight text-[var(--text-primary)] sm:text-lg">
+                            {formatRecord(entry)}
                           </p>
                         </div>
                       </div>
@@ -390,14 +306,14 @@ export default function LeaderboardPage() {
                 <div className="px-1">
                   <p className="section-title">Ranked list</p>
                   <p className="mt-1 text-[12px] leading-5 text-[var(--text-secondary)] sm:text-[13px]">
-                    The rest of the ladder with position, match volume, and tournament wins.
+                    The rest of the ladder with position, match volume, and live record.
                   </p>
                 </div>
 
-                <div className="mb-2 hidden gap-3 px-3 py-1.5 text-[10px] font-semibold text-[var(--text-soft)] sm:grid sm:grid-cols-[4.5rem_1fr_6rem_6rem_4rem_4.5rem_4.5rem_5.5rem_7.5rem]">
+                <div className="mb-2 hidden gap-3 px-3 py-1.5 text-[10px] font-semibold text-[var(--text-soft)] sm:grid sm:grid-cols-[4.5rem_1fr_7rem_6rem_4rem_4.5rem_4.5rem_5.5rem_7.5rem]">
                   <div>Position</div>
                   <div>Player</div>
-                  <div className="text-right">Tournaments</div>
+                  <div className="text-right">W - L - D</div>
                   <div className="text-right">Matches</div>
                   <div className="text-right">Lv.</div>
                   <div className="text-right">Wins</div>
@@ -419,7 +335,7 @@ export default function LeaderboardPage() {
                     return (
                       <div
                         key={entry.id}
-                        className={`animate-fade-in-up flex translate-y-1 flex-col gap-3 rounded-xl px-3 py-3 opacity-0 transition-all sm:grid sm:grid-cols-[4.5rem_1fr_6rem_6rem_4rem_4.5rem_4.5rem_5.5rem_7.5rem] sm:items-center sm:gap-3 ${
+                        className={`animate-fade-in-up flex translate-y-1 flex-col gap-3 rounded-xl px-3 py-3 opacity-0 transition-all sm:grid sm:grid-cols-[4.5rem_1fr_7rem_6rem_4rem_4.5rem_4.5rem_5.5rem_7.5rem] sm:items-center sm:gap-3 ${
                           isMe ? 'surface-live' : 'card hover:bg-[var(--surface)]'
                         }`}
                         style={{ animationDelay: `${index * 30}ms` }}
@@ -443,14 +359,13 @@ export default function LeaderboardPage() {
                               {isMe ? <span className="brand-chip px-1.5 py-0.5 text-[9px]">YOU</span> : null}
                             </div>
                             <p className="mt-0.5 text-[11px] text-[var(--text-soft)] sm:hidden">
-                              {entry.matchesPlayed} matches / {formatTournamentWins(entry.tournamentsWon)} / {winRate}%
-                              {' '}WR
+                              {entry.matchesPlayed} matches / {formatRecord(entry)} / {winRate}% WR
                             </p>
                           </div>
                         </div>
 
                         <div className="hidden text-right text-[13px] text-[var(--text-secondary)] sm:block">
-                          {entry.tournamentsWon}
+                          {formatRecord(entry)}
                         </div>
                         <div className="hidden text-right text-[13px] text-[var(--text-secondary)] sm:block">
                           {entry.matchesPlayed}

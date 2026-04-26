@@ -4,6 +4,9 @@
   "private": true,
   "scripts": {
     "dev": "next dev --webpack",
+    "android:dev": "npm --prefix apps/android run start",
+    "android:emulator": "npm --prefix apps/android run android",
+    "android:typecheck": "npm --prefix apps/android run typecheck",
     "build": "next build --webpack",
     "start": "next start",
     "import:registrations": "node ./scripts/import-registration-feed.mjs",

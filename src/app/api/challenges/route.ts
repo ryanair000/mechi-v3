@@ -239,7 +239,7 @@ export async function POST(request: NextRequest) {
     }
 
     const challenge = mapChallengeRelations(challengeRow as Record<string, unknown>);
-    const challengeHref = '/notifications';
+    const challengeHref = '/challenges';
     const challengeUrl = `${APP_URL}${challengeHref}`;
     await createNotifications(
       [

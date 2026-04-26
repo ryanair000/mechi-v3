@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { after, NextRequest, NextResponse } from 'next/server';
 import { createServiceClient } from '@/lib/supabase';
 import { applyAuthCookie, createSessionForProfile, hashPassword } from '@/lib/auth';
 import { sendWelcomeEmail } from '@/lib/email';
@@ -336,16 +336,20 @@ export async function POST(request: NextRequest) {
 
     // Send welcome email async
     sendWelcomeEmail({ to: trimmedEmail, username }).catch(console.error);
-    sendNewRegistrationTelegramNotification({
-      username: profile.username as string,
-      email: trimmedEmail,
-      phone: normalizedPhone,
-      location: location.label,
-      selectedGames,
-      plan: STARTER_TRIAL_PLAN,
-      inviteCode: normalizedInviteCode,
-    }).catch((error) => {
-      console.error('[Telegram] Registration notification error:', error);
+    after(async () => {
+      try {
+        await sendNewRegistrationTelegramNotification({
+          username: profile.username as string,
+          email: trimmedEmail,
+          phone: normalizedPhone,
+          location: location.label,
+          selectedGames,
+          plan: STARTER_TRIAL_PLAN,
+          inviteCode: normalizedInviteCode,
+        });
+      } catch (error) {
+        console.error('[Telegram] Registration notification error:', error);
+      }
     });
 
     if (!profile.chezahub_user_id) {

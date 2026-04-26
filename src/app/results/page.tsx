@@ -3,6 +3,7 @@ import { revalidatePath } from 'next/cache';
 import { cookies } from 'next/headers';
 import Image from 'next/image';
 import { redirect } from 'next/navigation';
+import { after } from 'next/server';
 import {
   AlertTriangle,
   CalendarClock,
@@ -15,6 +16,7 @@ import {
 import { TestsWorkspaceNav } from '@/components/TestsWorkspaceNav';
 import { verifyToken } from '@/lib/auth';
 import { createServiceClient } from '@/lib/supabase';
+import { sendTestIssueResolvedTelegramNotification } from '@/lib/telegram';
 import { TESTS_URL } from '@/app/manual-tests/manual-test-kit';
 
 type ReportStatus = 'new' | 'triaged' | 'in_progress' | 'resolved' | 'closed';
@@ -118,12 +120,19 @@ async function getResultsAccess() {
   const supabase = createServiceClient();
   const { data: profile } = await supabase
     .from('profiles')
-    .select('role, is_banned')
+    .select('id, username, role, is_banned')
     .eq('id', payload.sub)
     .single();
 
   return {
     allowed: Boolean(profile && !profile.is_banned && profile.role === 'admin'),
+    profile: profile
+      ? {
+          id: String(profile.id),
+          username: (profile.username as string | null | undefined) ?? null,
+          role: (profile.role as string | null | undefined) ?? null,
+        }
+      : null,
     supabase,
   };
 }
@@ -154,14 +163,61 @@ async function markReportFixed(formData: FormData) {
   }
 
   const access = await getResultsAccess();
-  if (!access.allowed) {
+  if (!access.allowed || !access.profile) {
     return;
   }
 
-  await access.supabase
+  const { data: reportData, error: loadError } = await access.supabase
+    .from('test_issue_reports')
+    .select('id, page_path, page_url, screenshot_url, status, metadata')
+    .eq('id', reportId)
+    .maybeSingle();
+
+  if (loadError) {
+    console.error('[Test Issue Results] Failed to load report for resolution:', loadError);
+    return;
+  }
+
+  const report = (reportData ?? null) as
+    | Pick<
+        TestIssueReport,
+        'id' | 'page_path' | 'page_url' | 'screenshot_url' | 'status' | 'metadata'
+      >
+    | null;
+
+  if (!report || report.status === 'resolved' || report.status === 'closed') {
+    revalidatePath('/results');
+    return;
+  }
+
+  const { error: updateError } = await access.supabase
     .from('test_issue_reports')
     .update({ status: 'resolved' })
     .eq('id', reportId);
+
+  if (updateError) {
+    console.error('[Test Issue Results] Failed to mark report fixed:', updateError);
+    return;
+  }
+
+  const reporterUsername = getMetadataText(report.metadata, 'reporter_username');
+  const resolvedBy = access.profile.username ? `@${access.profile.username}` : 'Mechi admin';
+
+  after(async () => {
+    try {
+      await sendTestIssueResolvedTelegramNotification({
+        reportId: report.id,
+        pagePath: report.page_path,
+        pageUrl: report.page_url,
+        screenshotUrl: report.screenshot_url,
+        reporterUsername,
+        resolvedBy,
+        resultsUrl: `${TESTS_URL}/results?status=resolved`,
+      });
+    } catch (telegramError) {
+      console.error('[Telegram] Test issue resolved notification error:', telegramError);
+    }
+  });
 
   revalidatePath('/results');
 }

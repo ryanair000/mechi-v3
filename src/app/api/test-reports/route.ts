@@ -1,9 +1,10 @@
 import { randomUUID } from 'node:crypto';
-import { NextRequest, NextResponse } from 'next/server';
+import { after, NextRequest, NextResponse } from 'next/server';
 import { getAuthUser } from '@/lib/auth';
 import { uploadImageDataUri } from '@/lib/cloudinary';
 import { checkRateLimit, getClientIp, rateLimitResponse } from '@/lib/rateLimit';
 import { createServiceClient } from '@/lib/supabase';
+import { sendTestIssueReportTelegramNotification } from '@/lib/telegram';
 
 export const runtime = 'nodejs';
 
@@ -123,6 +124,22 @@ export async function POST(request: NextRequest) {
       console.error('[Test Issue Reports] Failed to insert report:', error);
       return NextResponse.json({ error: 'Could not save the issue report right now.' }, { status: 500 });
     }
+
+    after(async () => {
+      try {
+        await sendTestIssueReportTelegramNotification({
+          reportId: String(report.id),
+          pagePath,
+          pageUrl: pageUrl || null,
+          description,
+          screenshotUrl: uploadResult.secure_url,
+          reporterUsername: linkedProfile?.username ?? null,
+          reporterRole: linkedProfile?.role ?? null,
+        });
+      } catch (telegramError) {
+        console.error('[Telegram] Test issue report notification error:', telegramError);
+      }
+    });
 
     return NextResponse.json(
       {

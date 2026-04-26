@@ -8,6 +8,7 @@ import {
   getRewardCatalogFromCache,
   issueChezahubRewardOrder,
   voidChezahubRewardOrder,
+  withDefaultGameRedeemables,
 } from '@/lib/rewards';
 import { createServiceClient } from '@/lib/supabase';
 
@@ -51,7 +52,7 @@ export async function POST(request: NextRequest) {
       chezahub_user_id?: string | null;
     };
 
-    const items = await getRewardCatalogFromCache(supabase);
+    const items = withDefaultGameRedeemables(await getRewardCatalogFromCache(supabase));
     const reward = items.find((item) => item.id === rewardId && item.active);
 
     if (!reward) {

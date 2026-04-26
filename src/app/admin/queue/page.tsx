@@ -205,72 +205,74 @@ export default function AdminQueuePage() {
       </div>
 
       <div className="card p-5">
-        <div className="grid gap-3 xl:grid-cols-[minmax(0,1.4fr)_180px_180px_180px_180px_auto]">
-          <label className="relative block">
-            <Search
-              size={15}
-              className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-soft)]"
-            />
-            <input
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              className="input pl-10"
-              placeholder="Search player, phone, email, game, or platform"
-            />
-          </label>
+        <div className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_max-content] xl:items-start">
+          <div className="grid min-w-0 gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6">
+            <label className="relative block min-w-0 sm:col-span-2 xl:col-span-3 2xl:col-span-2">
+              <Search
+                size={15}
+                className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-soft)]"
+              />
+              <input
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                className="input pl-10"
+                placeholder="Search player, phone, email, game, or platform"
+              />
+            </label>
 
-          <select
-            value={statusFilter}
-            onChange={(event) => setStatusFilter(event.target.value as typeof statusFilter)}
-            className="input"
-          >
-            {STATUS_OPTIONS.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
+            <select
+              value={statusFilter}
+              onChange={(event) => setStatusFilter(event.target.value as typeof statusFilter)}
+              className="input min-w-0"
+            >
+              {STATUS_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
 
-          <select
-            value={gameFilter}
-            onChange={(event) => setGameFilter(event.target.value as typeof gameFilter)}
-            className="input"
-          >
-            <option value="all">All games</option>
-            {getSelectableGameKeys().map((gameKey) => (
-              <option key={gameKey} value={gameKey}>
-                {GAMES[gameKey].label}
-              </option>
-            ))}
-          </select>
+            <select
+              value={gameFilter}
+              onChange={(event) => setGameFilter(event.target.value as typeof gameFilter)}
+              className="input min-w-0"
+            >
+              <option value="all">All games</option>
+              {getSelectableGameKeys().map((gameKey) => (
+                <option key={gameKey} value={gameKey}>
+                  {GAMES[gameKey].label}
+                </option>
+              ))}
+            </select>
 
-          <select
-            value={platformFilter}
-            onChange={(event) => setPlatformFilter(event.target.value as typeof platformFilter)}
-            className="input"
-          >
-            <option value="all">All platforms</option>
-            {(Object.keys(PLATFORMS) as PlatformKey[]).map((platformKey) => (
-              <option key={platformKey} value={platformKey}>
-                {PLATFORMS[platformKey].label}
-              </option>
-            ))}
-          </select>
+            <select
+              value={platformFilter}
+              onChange={(event) => setPlatformFilter(event.target.value as typeof platformFilter)}
+              className="input min-w-0"
+            >
+              <option value="all">All platforms</option>
+              {(Object.keys(PLATFORMS) as PlatformKey[]).map((platformKey) => (
+                <option key={platformKey} value={platformKey}>
+                  {PLATFORMS[platformKey].label}
+                </option>
+              ))}
+            </select>
 
-          <select
-            value={regionFilter}
-            onChange={(event) => setRegionFilter(event.target.value)}
-            className="input"
-          >
-            <option value="all">All regions</option>
-            {REGIONS.map((region) => (
-              <option key={region} value={region}>
-                {region}
-              </option>
-            ))}
-          </select>
+            <select
+              value={regionFilter}
+              onChange={(event) => setRegionFilter(event.target.value)}
+              className="input min-w-0"
+            >
+              <option value="all">All regions</option>
+              {REGIONS.map((region) => (
+                <option key={region} value={region}>
+                  {region}
+                </option>
+              ))}
+            </select>
+          </div>
 
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-2 xl:min-w-48 xl:flex-col xl:items-stretch">
             <button type="button" onClick={() => void fetchEntries()} className="btn-ghost whitespace-nowrap">
               <RefreshCw size={14} />
               Refresh

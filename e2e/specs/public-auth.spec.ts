@@ -15,7 +15,6 @@ test.describe('Public and Auth Flows', () => {
     const routes = [
       '/',
       '/pricing',
-      '/connect',
       '/privacy-policy',
       '/terms-of-service',
       '/user-data-deletion',

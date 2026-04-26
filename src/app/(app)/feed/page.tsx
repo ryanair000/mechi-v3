@@ -1,5 +1,5 @@
-import { redirect } from 'next/navigation';
+import { ReviewFeedPage } from '@/components/ReviewFeedPage';
 
 export default function FeedPage() {
-  redirect('/dashboard');
+  return <ReviewFeedPage />;
 }

@@ -4,6 +4,7 @@ import {
   fetchChezahubRewardCatalog,
   getRewardCatalogFromCache,
   syncChezahubCatalogToCache,
+  withDefaultGameRedeemables,
 } from '@/lib/rewards';
 import { createServiceClient } from '@/lib/supabase';
 
@@ -30,7 +31,7 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    return NextResponse.json({ items });
+    return NextResponse.json({ items: withDefaultGameRedeemables(items) });
   } catch (error) {
     console.error('[Rewards Catalog] Error:', error);
     return NextResponse.json({ error: 'Failed to load rewards catalog' }, { status: 500 });

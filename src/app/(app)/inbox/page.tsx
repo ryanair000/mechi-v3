@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import toast from 'react-hot-toast';
 import { ArrowUpRight, Inbox, Loader2, Lock, RefreshCw, Send } from 'lucide-react';
 import { useAuth, useAuthFetch } from '@/components/AuthProvider';
@@ -70,7 +70,7 @@ function getSenderLabel(message: MatchChatMessage, currentUserId: string, oppone
 export default function InboxPage() {
   const { user } = useAuth();
   const authFetch = useAuthFetch();
-  const [requestedMatchId, setRequestedMatchId] = useState<string | null>(null);
+  const requestedMatchIdRef = useRef<string | null>(null);
   const [threads, setThreads] = useState<InboxThread[]>([]);
   const [selectedThreadId, setSelectedThreadId] = useState<string | null>(null);
   const [threadsLoading, setThreadsLoading] = useState(true);
@@ -104,9 +104,11 @@ export default function InboxPage() {
         }
 
         const nextThreads = data.threads ?? [];
+        const requestedMatchId = requestedMatchIdRef.current;
         setThreads(nextThreads);
         setSelectedThreadId((current) => {
           if (requestedMatchId && nextThreads.some((thread) => thread.id === requestedMatchId)) {
+            requestedMatchIdRef.current = null;
             return requestedMatchId;
           }
 
@@ -126,7 +128,7 @@ export default function InboxPage() {
         }
       }
     },
-    [authFetch, requestedMatchId]
+    [authFetch]
   );
 
   const loadMessages = useCallback(
@@ -159,7 +161,7 @@ export default function InboxPage() {
   );
 
   useEffect(() => {
-    setRequestedMatchId(new URLSearchParams(window.location.search).get('match'));
+    requestedMatchIdRef.current = new URLSearchParams(window.location.search).get('match');
   }, []);
 
   useEffect(() => {
@@ -308,10 +310,10 @@ export default function InboxPage() {
                       {selectedThread.opponent.username}
                     </p>
                     <p className="mt-0.5 text-xs text-[var(--text-soft)]">
-                      {GAMES[selectedThread.game]?.label ?? selectedThread.game} ·{' '}
+                      {GAMES[selectedThread.game]?.label ?? selectedThread.game} -{' '}
                       {selectedThread.status}
                       {chatState?.latest_message_at
-                        ? ` · ${formatThreadTime(chatState.latest_message_at)}`
+                        ? ` - ${formatThreadTime(chatState.latest_message_at)}`
                         : ''}
                     </p>
                   </div>

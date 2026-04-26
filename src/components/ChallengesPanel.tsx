@@ -36,6 +36,72 @@ function getPlatformLabel(challenge: MatchChallenge) {
   return PLATFORMS[challenge.platform as PlatformKey]?.label ?? challenge.platform;
 }
 
+function ChallengeTable({
+  title,
+  description,
+  emptyCopy,
+  rows,
+  loading,
+}: {
+  title: string;
+  description: string;
+  emptyCopy: string;
+  rows: React.ReactNode;
+  loading: boolean;
+}) {
+  return (
+    <section className="border-t border-[var(--border-color)] pt-5 first:border-t-0 first:pt-0">
+      <div className="flex items-end justify-between gap-3">
+        <div>
+          <h2 className="text-sm font-bold uppercase tracking-[0.12em] text-[var(--text-soft)]">
+            {title}
+          </h2>
+          <p className="mt-2 text-sm text-[var(--text-secondary)]">{description}</p>
+        </div>
+      </div>
+
+      <div className="mt-4 overflow-x-auto">
+        <table className="w-full min-w-[44rem] border-collapse text-left text-sm">
+          <thead>
+            <tr className="border-b border-[var(--border-color)] text-[11px] font-bold uppercase tracking-[0.14em] text-[var(--text-soft)]">
+              <th className="pb-3 pr-4">Player</th>
+              <th className="pb-3 pr-4">Game</th>
+              <th className="pb-3 pr-4">Platform</th>
+              <th className="pb-3 pr-4">Message</th>
+              <th className="pb-3 pr-4">Time</th>
+              <th className="pb-3 text-right">Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            {loading ? (
+              <>
+                <tr className="border-b border-[var(--border-color)]">
+                  <td colSpan={6} className="py-4">
+                    <div className="h-10 shimmer rounded-xl" />
+                  </td>
+                </tr>
+                <tr className="border-b border-[var(--border-color)]">
+                  <td colSpan={6} className="py-4">
+                    <div className="h-10 shimmer rounded-xl" />
+                  </td>
+                </tr>
+              </>
+            ) : rows ? (
+              rows
+            ) : (
+              <tr>
+                <td colSpan={6} className="py-6 text-sm text-[var(--text-secondary)]">
+                  {emptyCopy}
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  );
+}
+
 export function ChallengesPanel({
   inboundChallenges,
   outboundChallenges,
@@ -44,141 +110,110 @@ export function ChallengesPanel({
   onAction,
   emptyCopy = 'No pending direct challenges yet. Use the leaderboard or a public profile to call someone out.',
 }: ChallengesPanelProps) {
+  const hasInbound = inboundChallenges.length > 0;
+  const hasOutbound = outboundChallenges.length > 0;
+
   return (
-    <div className="card p-5">
-      <div className="flex items-center justify-between gap-3">
-        <div>
-          <p className="section-title">Direct Challenges</p>
-          <h2 className="mt-2 text-xl font-black text-[var(--text-primary)]">Incoming challenges</h2>
-        </div>
-        <span className="brand-chip px-3 py-1">
-          {inboundChallenges.length + outboundChallenges.length} live
-        </span>
-      </div>
+    <div className="space-y-6">
+      <ChallengeTable
+        title="Incoming"
+        description="Answer the direct challenges waiting on you."
+        emptyCopy={loading ? '' : emptyCopy}
+        loading={loading}
+        rows={
+          hasInbound
+            ? inboundChallenges.map((challenge) => {
+                const pendingAccept = actionId === `${challenge.id}:accept`;
+                const pendingDecline = actionId === `${challenge.id}:decline`;
+                const challengerName = challenge.challenger?.username ?? 'A player';
 
-      <div className="mt-4 space-y-3">
-        {loading ? (
-          <>
-            <div className="h-24 shimmer" />
-            <div className="h-24 shimmer" />
-          </>
-        ) : inboundChallenges.length === 0 && outboundChallenges.length === 0 ? (
-          <div className="rounded-2xl border border-[var(--border-color)] bg-[var(--surface-elevated)] p-4 text-sm text-[var(--text-secondary)]">
-            {emptyCopy}
-          </div>
-        ) : (
-          <>
-            {inboundChallenges.map((challenge) => {
-              const pendingAccept = actionId === `${challenge.id}:accept`;
-              const pendingDecline = actionId === `${challenge.id}:decline`;
-              const challengerName = challenge.challenger?.username ?? 'A player';
-
-              return (
-                <div
-                  key={challenge.id}
-                  className="rounded-[1.1rem] border border-[var(--border-color)] bg-[var(--surface-elevated)] p-4"
-                >
-                  <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-                    <div className="flex min-w-0 items-start gap-3">
-                      <div className="avatar-shell flex h-10 w-10 shrink-0 items-center justify-center text-sm font-black">
-                        {getInitial(challengerName)}
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <p className="text-sm font-black text-[var(--text-primary)]">
-                          {challengerName} challenged you
+                return (
+                  <tr key={challenge.id} className="border-b border-[var(--border-color)] align-top last:border-b-0">
+                    <td className="py-4 pr-4">
+                      <div className="min-w-0">
+                        <p className="font-semibold text-[var(--text-primary)]">{challengerName}</p>
+                        <p className="mt-1 text-xs text-[var(--text-soft)]">
+                          {getInitial(challengerName)}
                         </p>
-                        <div className="mt-2 flex flex-wrap items-center gap-1.5">
-                          <span className="brand-chip px-2 py-0.5">{getGameLabel(challenge)}</span>
-                          <span className="brand-chip-coral px-2 py-0.5">
-                            {getPlatformLabel(challenge)}
-                          </span>
-                          <span className="text-[11px] text-[var(--text-soft)]">
-                            {formatTimestamp(challenge.created_at)}
-                          </span>
-                        </div>
-                        {challenge.message ? (
-                          <p className="mt-3 rounded-xl border border-[var(--border-color)] bg-[var(--surface)] px-3 py-2 text-sm text-[var(--text-secondary)]">
-                            {challenge.message}
-                          </p>
-                        ) : null}
                       </div>
-                    </div>
+                    </td>
+                    <td className="py-4 pr-4 text-[var(--text-primary)]">{getGameLabel(challenge)}</td>
+                    <td className="py-4 pr-4 text-[var(--text-secondary)]">{getPlatformLabel(challenge)}</td>
+                    <td className="py-4 pr-4 text-[var(--text-secondary)]">
+                      {challenge.message?.trim() ? challenge.message : 'No message'}
+                    </td>
+                    <td className="py-4 pr-4 text-[var(--text-soft)]">{formatTimestamp(challenge.created_at)}</td>
+                    <td className="py-4 text-right">
+                      <div className="flex justify-end gap-2">
+                        <button
+                          type="button"
+                          onClick={() => void onAction(challenge.id, 'accept')}
+                          disabled={pendingAccept || pendingDecline}
+                          className="btn-primary min-h-9 px-3 py-2 text-xs"
+                        >
+                          {pendingAccept ? 'Accepting...' : 'Accept'}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => void onAction(challenge.id, 'decline')}
+                          disabled={pendingAccept || pendingDecline}
+                          className="btn-ghost min-h-9 px-3 py-2 text-xs"
+                        >
+                          {pendingDecline ? 'Declining...' : 'Decline'}
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })
+            : null
+        }
+      />
 
-                    <div className="flex flex-wrap gap-2 lg:justify-end">
+      <ChallengeTable
+        title="Sent"
+        description="Track the calls you already sent and cancel stale ones fast."
+        emptyCopy={loading ? '' : 'No outgoing challenges waiting right now.'}
+        loading={loading && !hasInbound}
+        rows={
+          hasOutbound
+            ? outboundChallenges.map((challenge) => {
+                const pendingCancel = actionId === `${challenge.id}:cancel`;
+                const opponentName = challenge.opponent?.username ?? 'your opponent';
+
+                return (
+                  <tr key={challenge.id} className="border-b border-[var(--border-color)] align-top last:border-b-0">
+                    <td className="py-4 pr-4">
+                      <p className="font-semibold text-[var(--text-primary)]">{opponentName}</p>
+                    </td>
+                    <td className="py-4 pr-4 text-[var(--text-primary)]">{getGameLabel(challenge)}</td>
+                    <td className="py-4 pr-4 text-[var(--text-secondary)]">{getPlatformLabel(challenge)}</td>
+                    <td className="py-4 pr-4 text-[var(--text-secondary)]">
+                      {challenge.message?.trim() ? challenge.message : 'No message'}
+                    </td>
+                    <td className="py-4 pr-4 text-[var(--text-soft)]">
+                      <span className="inline-flex items-center gap-1.5">
+                        <Clock3 size={12} />
+                        Expires {formatTimestamp(challenge.expires_at)}
+                      </span>
+                    </td>
+                    <td className="py-4 text-right">
                       <button
                         type="button"
-                        onClick={() => void onAction(challenge.id, 'accept')}
-                        disabled={pendingAccept || pendingDecline}
-                        className="btn-primary min-h-9 px-3 py-2 text-xs"
+                        onClick={() => void onAction(challenge.id, 'cancel')}
+                        disabled={pendingCancel}
+                        className="btn-ghost min-h-9 px-3 py-2 text-xs"
                       >
-                        {pendingAccept ? 'Accepting...' : 'Accept'}
+                        <X size={14} />
+                        {pendingCancel ? 'Cancelling...' : 'Cancel'}
                       </button>
-                      <button
-                        type="button"
-                        onClick={() => void onAction(challenge.id, 'decline')}
-                        disabled={pendingAccept || pendingDecline}
-                        className="btn-danger min-h-9 px-3 py-2 text-xs"
-                      >
-                        {pendingDecline ? 'Declining...' : 'Decline'}
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-
-            {outboundChallenges.map((challenge) => {
-              const pendingCancel = actionId === `${challenge.id}:cancel`;
-              const opponentName = challenge.opponent?.username ?? 'your opponent';
-
-              return (
-                <div
-                  key={challenge.id}
-                  className="rounded-[1.1rem] border border-[var(--border-color)] bg-[rgba(50,224,196,0.06)] p-4"
-                >
-                  <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-                    <div className="flex min-w-0 items-start gap-3">
-                      <div className="avatar-shell flex h-10 w-10 shrink-0 items-center justify-center text-sm font-black">
-                        {getInitial(opponentName)}
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <p className="text-sm font-black text-[var(--text-primary)]">
-                          Waiting on {opponentName}
-                        </p>
-                        <div className="mt-2 flex flex-wrap items-center gap-1.5">
-                          <span className="brand-chip px-2 py-0.5">{getGameLabel(challenge)}</span>
-                          <span className="brand-chip-coral px-2 py-0.5">
-                            {getPlatformLabel(challenge)}
-                          </span>
-                          <span className="inline-flex items-center gap-1.5 text-[11px] text-[var(--text-soft)]">
-                            <Clock3 size={11} />
-                            Expires {formatTimestamp(challenge.expires_at)}
-                          </span>
-                        </div>
-                        {challenge.message ? (
-                          <p className="mt-3 rounded-xl border border-[var(--border-color)] bg-[var(--surface)] px-3 py-2 text-sm text-[var(--text-secondary)]">
-                            {challenge.message}
-                          </p>
-                        ) : null}
-                      </div>
-                    </div>
-
-                    <button
-                      type="button"
-                      onClick={() => void onAction(challenge.id, 'cancel')}
-                      disabled={pendingCancel}
-                      className="btn-outline min-h-9 px-3 py-2 text-xs"
-                    >
-                      <X size={14} />
-                      {pendingCancel ? 'Cancelling...' : 'Cancel'}
-                    </button>
-                  </div>
-                </div>
-              );
-            })}
-          </>
-        )}
-      </div>
+                    </td>
+                  </tr>
+                );
+              })
+            : null
+        }
+      />
     </div>
   );
 }

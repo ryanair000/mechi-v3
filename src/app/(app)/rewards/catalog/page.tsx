@@ -1,9 +1,10 @@
 'use client';
 
 import Link from 'next/link';
+import type { ReactNode } from 'react';
 import { useCallback, useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
-import { ArrowLeft, CheckCircle2, Copy, RefreshCw } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, ChevronDown, Copy, RefreshCw } from 'lucide-react';
 import { useAuthFetch } from '@/components/AuthProvider';
 import type { RewardActiveCode, RewardCatalogItem, RewardSummary } from '@/types/rewards';
 
@@ -20,6 +21,64 @@ function SectionLabel({ label, count }: { label: string; count: number }) {
 
 function sanitizeRewardLabel(value: string) {
   return value.replace(/chezahub/gi, '').replace(/\s{2,}/g, ' ').trim();
+}
+
+function getRedeemableGroup(item: RewardCatalogItem) {
+  const value = `${item.id} ${item.title} ${item.sku_name ?? ''}`.toLowerCase();
+
+  if (value.includes('codm') || value.includes('_cp_') || value.includes(' cp')) {
+    return 'codm';
+  }
+
+  if (value.includes('pubg') || value.includes('pubgm') || value.includes('_uc_') || value.includes(' uc')) {
+    return 'pubg';
+  }
+
+  if (value.includes('efootball') || value.includes('_coins_') || value.includes(' coins')) {
+    return 'efootball';
+  }
+
+  return 'other';
+}
+
+function CatalogSection({
+  label,
+  count,
+  defaultOpen,
+  children,
+}: {
+  label: string;
+  count: number;
+  defaultOpen: boolean;
+  children: ReactNode;
+}) {
+  const [open, setOpen] = useState(defaultOpen);
+
+  if (count === 0) return null;
+
+  return (
+    <div>
+      <button
+        type="button"
+        onClick={() => setOpen((value) => !value)}
+        className="mb-1 flex w-full items-center justify-between gap-3 text-left"
+        aria-expanded={open}
+      >
+        <span className="flex items-center gap-2">
+          <span className="text-xs font-semibold text-[var(--text-soft)]">{label}</span>
+          <span className="rounded-full border border-[var(--border-color)] bg-[var(--surface-strong)] px-2 py-0.5 text-[10px] font-semibold text-[var(--text-soft)]">
+            {count}
+          </span>
+        </span>
+        <ChevronDown
+          size={14}
+          className={`shrink-0 text-[var(--text-soft)] transition-transform ${open ? '' : '-rotate-90'}`}
+        />
+      </button>
+
+      {open && <div className="border-t border-[var(--border-color)]">{children}</div>}
+    </div>
+  );
 }
 
 function WalletStatus({ ready, available }: { ready: boolean; available: number }) {
@@ -148,6 +207,11 @@ function CatalogRow({
           <span className="brand-chip px-2 py-0.5 text-[10px]">
             {item.points_cost.toLocaleString()} RP
           </span>
+          {typeof item.value_kes === 'number' && (
+            <span className="brand-chip px-2 py-0.5 text-[10px]">
+              ~KSh {item.value_kes.toLocaleString('en-KE')}
+            </span>
+          )}
           {partnerReward ? (
             <span className="brand-chip px-2 py-0.5 text-[10px]">Redeemable</span>
           ) : (
@@ -317,6 +381,10 @@ export default function RewardCatalogPage() {
   const available = summary?.balances.available ?? 0;
   const partnerItems = catalog.filter((item) => item.source !== 'mechi_native');
   const mechiItems = catalog.filter((item) => item.source === 'mechi_native');
+  const codmItems = partnerItems.filter((item) => getRedeemableGroup(item) === 'codm');
+  const pubgItems = partnerItems.filter((item) => getRedeemableGroup(item) === 'pubg');
+  const efootballItems = partnerItems.filter((item) => getRedeemableGroup(item) === 'efootball');
+  const otherRedeemables = partnerItems.filter((item) => getRedeemableGroup(item) === 'other');
 
   return (
     <div className="page-container max-w-[52rem]">
@@ -376,38 +444,66 @@ export default function RewardCatalogPage() {
           />
 
           <div className="space-y-8">
-            {partnerItems.length > 0 && (
-              <div>
-                <SectionLabel label="Redeemables" count={partnerItems.length} />
-                <div className="border-t border-[var(--border-color)]">
-                  {partnerItems.map((item) => (
-                    <CatalogRow
-                      key={item.id}
-                      item={item}
-                      canAfford={available >= item.points_cost}
-                      redeeming={redeemingId === item.id}
-                      onRedeem={() => void handleRedeem(item.id)}
-                    />
-                  ))}
-                </div>
-              </div>
-            )}
+            <CatalogSection label="CODM redeemables" count={codmItems.length} defaultOpen>
+              {codmItems.map((item) => (
+                <CatalogRow
+                  key={item.id}
+                  item={item}
+                  canAfford={available >= item.points_cost}
+                  redeeming={redeemingId === item.id}
+                  onRedeem={() => void handleRedeem(item.id)}
+                />
+              ))}
+            </CatalogSection>
+
+            <CatalogSection label="PUBG UC redeemables" count={pubgItems.length} defaultOpen>
+              {pubgItems.map((item) => (
+                <CatalogRow
+                  key={item.id}
+                  item={item}
+                  canAfford={available >= item.points_cost}
+                  redeeming={redeemingId === item.id}
+                  onRedeem={() => void handleRedeem(item.id)}
+                />
+              ))}
+            </CatalogSection>
+
+            <CatalogSection label="eFootball coins redeemables" count={efootballItems.length} defaultOpen>
+              {efootballItems.map((item) => (
+                <CatalogRow
+                  key={item.id}
+                  item={item}
+                  canAfford={available >= item.points_cost}
+                  redeeming={redeemingId === item.id}
+                  onRedeem={() => void handleRedeem(item.id)}
+                />
+              ))}
+            </CatalogSection>
+
+            <CatalogSection label="Other redeemables" count={otherRedeemables.length} defaultOpen>
+              {otherRedeemables.map((item) => (
+                <CatalogRow
+                  key={item.id}
+                  item={item}
+                  canAfford={available >= item.points_cost}
+                  redeeming={redeemingId === item.id}
+                  onRedeem={() => void handleRedeem(item.id)}
+                />
+              ))}
+            </CatalogSection>
 
             {mechiItems.length > 0 && (
-              <div>
-                <SectionLabel label="Mechi perks" count={mechiItems.length} />
-                <div className="border-t border-[var(--border-color)]">
-                  {mechiItems.map((item) => (
-                    <CatalogRow
-                      key={item.id}
-                      item={item}
-                      canAfford={available >= item.points_cost}
-                      redeeming={redeemingId === item.id}
-                      onRedeem={() => void handleRedeem(item.id)}
-                    />
-                  ))}
-                </div>
-              </div>
+              <CatalogSection label="Mechi perks" count={mechiItems.length} defaultOpen={false}>
+                {mechiItems.map((item) => (
+                  <CatalogRow
+                    key={item.id}
+                    item={item}
+                    canAfford={available >= item.points_cost}
+                    redeeming={redeemingId === item.id}
+                    onRedeem={() => void handleRedeem(item.id)}
+                  />
+                ))}
+              </CatalogSection>
             )}
 
             {catalog.length === 0 && !loading && (

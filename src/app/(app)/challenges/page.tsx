@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation';
 import type { FormEvent } from 'react';
 import { useCallback, useEffect, useState, useTransition } from 'react';
 import toast from 'react-hot-toast';
-import { RefreshCw, Search, Swords } from 'lucide-react';
+import { RefreshCw, Search } from 'lucide-react';
 import { useAuthFetch } from '@/components/AuthProvider';
 import { ChallengesPanel } from '@/components/ChallengesPanel';
 import { emitNotificationRefresh } from '@/components/NotificationNavButton';
@@ -114,32 +114,28 @@ export default function ChallengesPage() {
   );
 
   return (
-    <div className="page-container max-w-[64rem] space-y-5">
-      <section className="card circuit-panel p-5 sm:p-6">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-start gap-3">
-            <div className="avatar-shell flex h-11 w-11 shrink-0 items-center justify-center">
-              <Swords size={20} />
-            </div>
-            <div>
-              <p className="section-title">Challenge page</p>
-              <h1 className="mt-2 text-2xl font-black text-[var(--text-primary)]">
-                Live challenges
-              </h1>
-              <p className="mt-2 max-w-2xl text-sm text-[var(--text-secondary)]">
-                Open this page any time to accept incoming challenges, cancel sent challenges, or
-                look up a player directly.
-              </p>
-            </div>
+    <div className="page-container max-w-[70rem] space-y-6">
+      <section className="border-b border-[var(--border-color)] pb-4">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <p className="text-sm font-bold uppercase tracking-[0.14em] text-[var(--text-soft)]">
+              Direct challenges
+            </p>
+            <h1 className="mt-2 text-2xl font-black text-[var(--text-primary)]">Challenge list</h1>
+            <p className="mt-2 max-w-2xl text-sm text-[var(--text-secondary)]">
+              A simple queue for incoming calls, sent challenges, and quick player lookup.
+            </p>
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
-            <span className="brand-chip px-3 py-1">{liveChallengeCount} live</span>
+            <span className="text-sm font-semibold text-[var(--text-secondary)]">
+              {liveChallengeCount} live
+            </span>
             <button
               type="button"
               onClick={() => void loadChallenges()}
               disabled={loadingChallenges}
-              className="btn-outline min-h-10 px-3 py-2 text-xs"
+              className="btn-ghost min-h-9 px-3 py-2 text-xs"
             >
               <RefreshCw size={14} className={loadingChallenges ? 'animate-spin' : undefined} />
               Refresh
@@ -149,7 +145,7 @@ export default function ChallengesPage() {
       </section>
 
       {challengeError ? (
-        <div className="rounded-2xl border border-red-500/30 bg-red-500/10 p-4 text-sm font-semibold text-red-200">
+        <div className="border-l-2 border-red-500/60 pl-4 text-sm font-semibold text-red-300">
           {challengeError}
         </div>
       ) : null}
@@ -163,13 +159,13 @@ export default function ChallengesPage() {
         emptyCopy="No live direct challenges right now. Search a player below to send one."
       />
 
-      <section className="card p-5">
+      <section className="border-t border-[var(--border-color)] pt-5">
         <form
           onSubmit={handleLookupSubmit}
-          className="flex flex-col gap-3 sm:flex-row sm:items-end"
+          className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end"
         >
-          <label className="block flex-1">
-            <span className="label">Username</span>
+          <label className="block min-w-0">
+            <span className="text-sm font-semibold text-[var(--text-primary)]">Find a player</span>
             <div className="relative">
               <Search
                 size={16}
@@ -192,7 +188,7 @@ export default function ChallengesPage() {
             </div>
           </label>
 
-          <button type="submit" className="btn-primary" disabled={isRouting || !normalizedUsername}>
+          <button type="submit" className="btn-primary min-h-11" disabled={isRouting || !normalizedUsername}>
             <Search size={14} />
             {isRouting ? 'Searching...' : 'Search'}
           </button>

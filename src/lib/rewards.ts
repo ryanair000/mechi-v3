@@ -172,6 +172,84 @@ export const VOUCHER_TIERS = [
   { id: 'voucher_500', points_cost: 5000, value_kes: 500, title: 'KES 500 Reward Credit' },
 ] as const;
 
+const RP_PER_KSH = 10;
+
+function buildGameRedeemable(params: {
+  id: string;
+  title: string;
+  game: string;
+  valueKes: number;
+  sortOrder: number;
+}): RewardCatalogItem {
+  return {
+    id: params.id,
+    title: params.title,
+    description: `${params.game} redeemable. Estimated fulfillment value: KSh ${params.valueKes.toLocaleString('en-KE')}.`,
+    reward_type: 'reward_claim',
+    points_cost: params.valueKes * RP_PER_KSH,
+    phase: 'live',
+    active: true,
+    sku_name: params.title,
+    margin_class: 'game_redeemable',
+    source: 'chezahub',
+    value_kes: params.valueKes,
+    sort_order: params.sortOrder,
+  };
+}
+
+export const GAME_REDEEMABLE_CATALOG: RewardCatalogItem[] = [
+  buildGameRedeemable({ id: 'codm_cp_30', title: 'CODM 30 CP', game: 'CODM CP', valueKes: 70, sortOrder: 100 }),
+  buildGameRedeemable({ id: 'codm_cp_80', title: 'CODM 80 CP', game: 'CODM CP', valueKes: 160, sortOrder: 110 }),
+  buildGameRedeemable({ id: 'codm_cp_420', title: 'CODM 420 CP', game: 'CODM CP', valueKes: 800, sortOrder: 120 }),
+  buildGameRedeemable({ id: 'codm_cp_880', title: 'CODM 880 CP', game: 'CODM CP', valueKes: 1600, sortOrder: 130 }),
+  buildGameRedeemable({ id: 'codm_cp_2400', title: 'CODM 2,400 CP', game: 'CODM CP', valueKes: 3900, sortOrder: 140 }),
+  buildGameRedeemable({ id: 'codm_cp_5000', title: 'CODM 5,000 CP', game: 'CODM CP', valueKes: 7700, sortOrder: 150 }),
+  buildGameRedeemable({ id: 'codm_cp_10800', title: 'CODM 10,800 CP', game: 'CODM CP', valueKes: 15400, sortOrder: 160 }),
+  buildGameRedeemable({ id: 'pubg_uc_60', title: 'PUBG Mobile 60 UC', game: 'PUBG UC', valueKes: 120, sortOrder: 200 }),
+  buildGameRedeemable({ id: 'pubg_uc_325', title: 'PUBG Mobile 325 UC', game: 'PUBG UC', valueKes: 600, sortOrder: 210 }),
+  buildGameRedeemable({ id: 'pubg_uc_660', title: 'PUBG Mobile 660 UC', game: 'PUBG UC', valueKes: 1200, sortOrder: 220 }),
+  buildGameRedeemable({ id: 'pubg_uc_1800', title: 'PUBG Mobile 1,800 UC', game: 'PUBG UC', valueKes: 3000, sortOrder: 230 }),
+  buildGameRedeemable({ id: 'pubg_uc_3850', title: 'PUBG Mobile 3,850 UC', game: 'PUBG UC', valueKes: 6000, sortOrder: 240 }),
+  buildGameRedeemable({ id: 'pubg_uc_8100', title: 'PUBG Mobile 8,100 UC', game: 'PUBG UC', valueKes: 12000, sortOrder: 250 }),
+  buildGameRedeemable({ id: 'efootball_coins_137', title: 'eFootball 137 Coins', game: 'eFootball Coins', valueKes: 150, sortOrder: 300 }),
+  buildGameRedeemable({ id: 'efootball_coins_315', title: 'eFootball 315 Coins', game: 'eFootball Coins', valueKes: 340, sortOrder: 310 }),
+  buildGameRedeemable({ id: 'efootball_coins_578', title: 'eFootball 578 Coins', game: 'eFootball Coins', valueKes: 610, sortOrder: 320 }),
+  buildGameRedeemable({ id: 'efootball_coins_788', title: 'eFootball 788 Coins', game: 'eFootball Coins', valueKes: 830, sortOrder: 330 }),
+  buildGameRedeemable({ id: 'efootball_coins_1092', title: 'eFootball 1,092 Coins', game: 'eFootball Coins', valueKes: 1150, sortOrder: 340 }),
+  buildGameRedeemable({ id: 'efootball_coins_2237', title: 'eFootball 2,237 Coins', game: 'eFootball Coins', valueKes: 2300, sortOrder: 350 }),
+  buildGameRedeemable({ id: 'efootball_coins_3413', title: 'eFootball 3,413 Coins', game: 'eFootball Coins', valueKes: 3400, sortOrder: 360 }),
+  buildGameRedeemable({ id: 'efootball_coins_5985', title: 'eFootball 5,985 Coins', game: 'eFootball Coins', valueKes: 5700, sortOrder: 370 }),
+  buildGameRedeemable({ id: 'efootball_coins_13440', title: 'eFootball 13,440 Coins', game: 'eFootball Coins', valueKes: 12000, sortOrder: 380 }),
+  buildGameRedeemable({ id: 'efootball_coins_32200', title: 'eFootball 32,200 Coins', game: 'eFootball Coins', valueKes: 28000, sortOrder: 390 }),
+];
+
+export function withDefaultGameRedeemables(items: RewardCatalogItem[]): RewardCatalogItem[] {
+  const byId = new Map(items.map((item) => [item.id, item]));
+
+  for (const item of GAME_REDEEMABLE_CATALOG) {
+    const existing = byId.get(item.id);
+    if (existing) {
+      byId.set(item.id, {
+        ...item,
+        ...existing,
+        sku_name: existing.sku_name ?? item.sku_name,
+        margin_class: existing.margin_class ?? item.margin_class,
+        value_kes: existing.value_kes ?? item.value_kes,
+        sort_order: existing.sort_order ?? item.sort_order,
+      });
+    } else {
+      byId.set(item.id, item);
+    }
+  }
+
+  return Array.from(byId.values()).sort((left, right) => {
+    const leftOrder = left.sort_order ?? 0;
+    const rightOrder = right.sort_order ?? 0;
+    if (leftOrder !== rightOrder) return leftOrder - rightOrder;
+    return left.title.localeCompare(right.title);
+  });
+}
+
 export type VoucherTier = (typeof VOUCHER_TIERS)[number];
 
 export function generateVoucherCode(): string {

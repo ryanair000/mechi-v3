@@ -1,8 +1,9 @@
 import { getPhoneLookupVariants } from '@/lib/phone';
-import { ADMIN_HOST } from '@/lib/urls';
+import { ADMIN_HOST, APP_HOST } from '@/lib/urls';
 import type { UserRole } from '@/types';
 
 export const PRIMARY_ADMIN_PHONE = '0708355692';
+const CANONICAL_ADMIN_HOST = 'mechi.lokimax.top';
 
 type AdminIdentity = {
   role?: UserRole | null;
@@ -24,11 +25,18 @@ export function isPrimaryAdminPhone(phone: string | null | undefined): boolean {
 }
 
 export function hasPrimaryAdminAccess(identity: AdminIdentity | null | undefined): boolean {
-  return identity?.role === 'admin' && isPrimaryAdminPhone(identity.phone);
+  return identity?.role === 'admin';
 }
 
 export function isPrimaryAdminHost(host: string | null | undefined): boolean {
-  return normalizeHost(host) === ADMIN_HOST;
+  const normalizedHost = normalizeHost(host);
+  const allowedHosts = new Set([CANONICAL_ADMIN_HOST]);
+
+  if (ADMIN_HOST !== APP_HOST) {
+    allowedHosts.add(ADMIN_HOST);
+  }
+
+  return allowedHosts.has(normalizedHost);
 }
 
 export function getScopedRoleForHost(

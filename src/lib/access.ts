@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { getAuthUser } from '@/lib/auth';
-import { hasPrimaryAdminAccess } from '@/lib/admin-access';
 import { createServiceClient } from '@/lib/supabase';
 import type { UserRole } from '@/types';
 
@@ -80,9 +79,9 @@ export async function requireActiveAccessProfile(
 }
 
 export function hasModeratorAccess(profile: AccessProfile | null): boolean {
-  return hasPrimaryAdminAccess(profile);
+  return profile?.role === 'moderator' || profile?.role === 'admin';
 }
 
 export function hasAdminAccess(profile: AccessProfile | null): boolean {
-  return hasPrimaryAdminAccess(profile);
+  return profile?.role === 'admin';
 }

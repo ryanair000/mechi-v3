@@ -274,13 +274,6 @@ export async function PATCH(
         return NextResponse.json({ error: 'Only admins can promote admins' }, { status: 403 });
       }
 
-      if (body.role === 'admin' && !isPrimaryAdminPhone(target.phone)) {
-        return NextResponse.json(
-          { error: `Only ${PRIMARY_ADMIN_PHONE} can hold admin access` },
-          { status: 400 }
-        );
-      }
-
       if (target.role === 'admin' && isPrimaryAdminPhone(target.phone) && body.role !== 'admin') {
         return NextResponse.json(
           { error: `Keep ${PRIMARY_ADMIN_PHONE} as the admin account` },

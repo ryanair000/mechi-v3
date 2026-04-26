@@ -58,7 +58,7 @@ export async function POST(
         type: 'match_chat_message' as const,
         title: 'Admin replied in your match thread',
         body: message.trim(),
-        href: `/match/${id}`,
+        href: `/inbox?match=${id}`,
         metadata: {
           match_id: id,
           admin_id: admin.id,

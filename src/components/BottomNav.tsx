@@ -2,17 +2,17 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, Shield, Swords, Trophy, User, Users, Zap } from 'lucide-react';
+import { Home, Inbox, Shield, Swords, Trophy, User, Users } from 'lucide-react';
 import { hasPrimaryAdminAccess } from '@/lib/admin-access';
 import { useAuth } from '@/components/AuthProvider';
 import { ADMIN_URL } from '@/lib/urls';
 
 const NAV_ITEMS = [
   { href: '/dashboard', label: 'Home', icon: Home },
+  { href: '/inbox', label: 'Inbox', icon: Inbox },
   { href: '/leaderboard', label: 'Ranks', icon: Trophy },
   { href: '/tournaments', label: 'Brackets', icon: Swords },
   { href: '/lobbies', label: 'Lobbies', icon: Users },
-  { href: '/bounties', label: 'Bounties', icon: Zap },
   { href: '/profile', label: 'Profile', icon: User },
 ];
 

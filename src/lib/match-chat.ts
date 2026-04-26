@@ -439,7 +439,7 @@ export async function createMatchChatMessage(params: {
           type: 'match_chat_message',
           title: `${params.senderUsername ?? 'Your opponent'} sent a match message`,
           body: truncatePreview(normalizedBody),
-          href: `/match/${params.matchId}`,
+          href: `/inbox?match=${params.matchId}`,
           metadata: {
             match_id: params.matchId,
             sender_user_id: params.senderUserId,

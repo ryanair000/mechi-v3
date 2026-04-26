@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'expo-router';
-import { useEffect, useMemo, useState } from 'react';
+import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { ApiError } from '../../src/api/client';
 import { createLobby, getActiveQueue, getCurrentMatch, getLobbies, getProfile, joinLobby, joinQueue } from '../../src/api/mechi';
@@ -25,7 +25,7 @@ import {
   supportsLobbyMode,
 } from '../../src/config/games';
 import { colors, spacing } from '../../src/theme';
-import type { GameKey } from '../../src/types';
+import type { GameKey, Profile } from '../../src/types';
 
 const selectableGames = getSelectableGames();
 
@@ -34,20 +34,43 @@ function defaultScheduleIso() {
   return next.toISOString();
 }
 
+function getInitialGame(profile: Profile | null | undefined): GameKey {
+  return profile?.selected_games?.[0] ?? 'efootball';
+}
+
+function getPlayProfileKey(profile: Profile | null | undefined) {
+  if (!profile) {
+    return 'empty-profile';
+  }
+
+  return [
+    profile.id,
+    profile.selected_games?.join(',') ?? '',
+    profile.platforms?.join(',') ?? '',
+    JSON.stringify(profile.game_ids ?? {}),
+  ].join('|');
+}
+
 export default function PlayTab() {
-  const queryClient = useQueryClient();
   const profileQuery = useQuery({ queryKey: ['profile'], queryFn: getProfile });
   const profile = profileQuery.data?.profile;
-  const [selectedGame, setSelectedGame] = useState<GameKey>('efootball');
+
+  if (profileQuery.isLoading) {
+    return (
+      <Screen scroll={false}>
+        <LoadingState label="Loading play hub" />
+      </Screen>
+    );
+  }
+
+  return <PlayTabContent key={getPlayProfileKey(profile)} profile={profile} />;
+}
+
+function PlayTabContent({ profile }: { profile: Profile | null | undefined }) {
+  const queryClient = useQueryClient();
+  const [selectedGame, setSelectedGame] = useState<GameKey>(() => getInitialGame(profile));
   const [lobbyTitle, setLobbyTitle] = useState('');
   const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    const firstGame = profile?.selected_games?.[0];
-    if (firstGame) {
-      setSelectedGame(firstGame);
-    }
-  }, [profile?.selected_games]);
 
   const game = getGame(selectedGame);
   const queueMode = game.mode === '1v1';
@@ -55,11 +78,13 @@ export default function PlayTab() {
   const configuredPlatform = profile
     ? getConfiguredPlatform(selectedGame, profile.game_ids ?? {}, profile.platforms ?? [])
     : null;
-  const gameOptions = useMemo(() => {
-    const selectedKeys = profile?.selected_games?.length ? profile.selected_games : selectableGames.map((item) => item.key);
-    const uniqueKeys = Array.from(new Set(selectedKeys));
-    return uniqueKeys.map((key) => ({ value: key, label: getGame(key).label }));
-  }, [profile?.selected_games]);
+  const selectedKeys = profile?.selected_games?.length
+    ? profile.selected_games
+    : selectableGames.map((item) => item.key);
+  const gameOptions = Array.from(new Set(selectedKeys)).map((key) => ({
+    value: key,
+    label: getGame(key).label,
+  }));
 
   const activeQueueQuery = useQuery({
     queryKey: ['queue', 'active'],
@@ -125,14 +150,6 @@ export default function PlayTab() {
 
   const queuePlayers = (activeQueueQuery.data?.players ?? []).filter((player) => player.game === selectedGame);
   const currentMatch = currentMatchQuery.data?.match;
-
-  if (profileQuery.isLoading) {
-    return (
-      <Screen scroll={false}>
-        <LoadingState label="Loading play hub" />
-      </Screen>
-    );
-  }
 
   return (
     <Screen title="Play" subtitle="Pick a game, join the queue, or enter a lobby.">

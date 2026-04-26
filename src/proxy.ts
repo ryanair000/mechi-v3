@@ -16,6 +16,7 @@ const PROTECTED_PREFIXES = [
   '/lobbies',
   '/leaderboard',
   '/challenges',
+  '/matches',
   '/feed',
   '/notifications',
   '/share',

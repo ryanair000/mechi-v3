@@ -1,10 +1,12 @@
 import type { Metadata } from 'next';
+import { revalidatePath } from 'next/cache';
 import { cookies } from 'next/headers';
 import Image from 'next/image';
 import { redirect } from 'next/navigation';
 import {
   AlertTriangle,
   CalendarClock,
+  CheckCircle2,
   ExternalLink,
   Image as ImageIcon,
   Inbox,
@@ -141,6 +143,27 @@ async function getReportCount(
 
   const { count } = await countQuery;
   return count ?? 0;
+}
+
+async function markReportFixed(formData: FormData) {
+  'use server';
+
+  const reportId = String(formData.get('report_id') ?? '').trim();
+  if (!reportId) {
+    return;
+  }
+
+  const access = await getResultsAccess();
+  if (!access.allowed) {
+    return;
+  }
+
+  await access.supabase
+    .from('test_issue_reports')
+    .update({ status: 'resolved' })
+    .eq('id', reportId);
+
+  revalidatePath('/results');
 }
 
 function RestrictedResults() {
@@ -396,6 +419,20 @@ export default async function ResultsPage({ searchParams }: ResultsPageProps) {
                         </div>
 
                         <div className="flex flex-wrap gap-2">
+                          {report.status !== 'resolved' && report.status !== 'closed' ? (
+                            <form action={markReportFixed}>
+                              <input type="hidden" name="report_id" value={report.id} />
+                              <button type="submit" className="btn-primary">
+                                <CheckCircle2 size={14} />
+                                Fixed issue
+                              </button>
+                            </form>
+                          ) : (
+                            <span className="inline-flex items-center gap-1.5 rounded-full border border-[rgba(50,224,196,0.24)] bg-[rgba(50,224,196,0.12)] px-3 py-2 text-sm font-semibold text-[var(--accent-secondary-text)]">
+                              <CheckCircle2 size={14} />
+                              Fixed
+                            </span>
+                          )}
                           {report.page_url ? (
                             <a
                               href={report.page_url}

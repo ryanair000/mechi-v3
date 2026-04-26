@@ -3,16 +3,18 @@
 import Link from 'next/link';
 import { useCallback, useEffect, useState } from 'react';
 import { ArrowRight, RefreshCw } from 'lucide-react';
-import { useAuth, useAuthFetch } from '@/components/AuthProvider';
+import { useAuthFetch } from '@/components/AuthProvider';
 import { GAMES } from '@/lib/config';
-import { getRankDivision } from '@/lib/gamification';
 import type { GameKey } from '@/types';
+
+type MatchResult = 'win' | 'loss' | 'draw' | 'cancelled';
 
 interface MatchHistoryEntry {
   id: string;
   game: GameKey;
   opponent_username: string;
   opponent_id: string;
+  result?: MatchResult;
   is_win: boolean;
   rating_change: number;
   completed_at: string;
@@ -29,11 +31,38 @@ function formatTime(iso: string) {
 }
 
 function Initial({ name }: { name: string }) {
+  const safeName = name.trim() || 'Unknown player';
+
   return (
     <span className="avatar-shell flex h-8 w-8 shrink-0 items-center justify-center text-xs font-black">
-      {name.trim().charAt(0).toUpperCase() || '?'}
+      {safeName.charAt(0).toUpperCase()}
     </span>
   );
+}
+
+function getResult(match: MatchHistoryEntry): MatchResult {
+  if (match.result) {
+    return match.result;
+  }
+
+  if (match.status === 'cancelled') {
+    return 'cancelled';
+  }
+
+  return match.is_win ? 'win' : 'loss';
+}
+
+function getResultLabel(result: MatchResult) {
+  if (result === 'win') return 'W';
+  if (result === 'loss') return 'L';
+  if (result === 'draw') return 'D';
+  return 'C';
+}
+
+function getResultClass(result: MatchResult) {
+  if (result === 'win') return 'text-[var(--accent-secondary-text)]';
+  if (result === 'loss') return 'text-red-400';
+  return 'text-[var(--text-soft)]';
 }
 
 function Skeleton() {
@@ -54,7 +83,6 @@ function Skeleton() {
 }
 
 export default function MatchHistoryPage() {
-  const { user } = useAuth();
   const authFetch = useAuthFetch();
   const [matches, setMatches] = useState<MatchHistoryEntry[]>([]);
   const [loading, setLoading] = useState(true);
@@ -62,7 +90,12 @@ export default function MatchHistoryPage() {
   const [loadError, setLoadError] = useState<string | null>(null);
 
   const load = useCallback(async ({ silent = false }: { silent?: boolean } = {}) => {
-    silent ? setRefreshing(true) : setLoading(true);
+    if (silent) {
+      setRefreshing(true);
+    } else {
+      setLoading(true);
+    }
+
     setLoadError(null);
     try {
       const res = await authFetch('/api/matches/history');
@@ -75,7 +108,11 @@ export default function MatchHistoryPage() {
     } catch {
       setLoadError('Could not load match history.');
     } finally {
-      silent ? setRefreshing(false) : setLoading(false);
+      if (silent) {
+        setRefreshing(false);
+      } else {
+        setLoading(false);
+      }
     }
   }, [authFetch]);
 
@@ -124,16 +161,19 @@ export default function MatchHistoryPage() {
         <div className="border-t border-[var(--border-color)]">
           {matches.map((match) => {
             const gameLabel = GAMES[match.game]?.label ?? match.game;
+            const opponentName = match.opponent_username || 'Unknown player';
+            const result = getResult(match);
+
             return (
               <div
                 key={match.id}
                 className="flex items-center gap-3 border-b border-[var(--border-color)] py-3 last:border-0"
               >
-                <Initial name={match.opponent_username} />
+                <Initial name={opponentName} />
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-1.5">
                     <p className="text-sm font-semibold text-[var(--text-primary)]">
-                      {match.opponent_username}
+                      {opponentName}
                     </p>
                     <span className="brand-chip px-2 py-0.5 text-[10px]">{gameLabel}</span>
                   </div>
@@ -142,8 +182,8 @@ export default function MatchHistoryPage() {
                   </p>
                 </div>
                 <div className="text-right">
-                  <p className={`text-sm font-black ${match.is_win ? 'text-[var(--accent-secondary-text)]' : 'text-red-400'}`}>
-                    {match.is_win ? 'W' : 'L'}
+                  <p className={`text-sm font-black ${getResultClass(result)}`}>
+                    {getResultLabel(result)}
                   </p>
                   {match.rating_change !== 0 && (
                     <p className="text-[11px] text-[var(--text-soft)]">

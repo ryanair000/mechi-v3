@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Redirect, useRouter } from 'expo-router';
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Text } from 'react-native';
 import { ApiError } from '../../src/api/client';
 import { getProfile, patchProfile } from '../../src/api/mechi';
@@ -27,7 +27,7 @@ import {
   SectionTitle,
   textStyles,
 } from '../../src/components/ui';
-import type { CountryKey, GameKey, PlatformKey } from '../../src/types';
+import type { CountryKey, GameKey, PlatformKey, Profile } from '../../src/types';
 
 const selectableGames = getSelectableGames();
 const fallbackRegion = COUNTRIES.kenya.regions[0] ?? 'Nairobi';
@@ -36,10 +36,54 @@ const countryOptions = Object.entries(COUNTRIES).map(([value, country]) => ({
   value: value as CountryKey,
 }));
 
+type ProfileFormDefaults = {
+  country: CountryKey;
+  region: string;
+  game: GameKey;
+  platform: PlatformKey;
+  gameId: string;
+  whatsappNumber: string;
+  whatsappNotifications: boolean;
+};
+
+function getProfileFormDefaults(profile: Profile | null | undefined): ProfileFormDefaults {
+  const country = profile?.country ?? 'kenya';
+  const game = profile?.selected_games?.[0] ?? 'efootball';
+  const platform =
+    getConfiguredPlatform(game, profile?.game_ids ?? {}, profile?.platforms ?? []) ??
+    getGame(game).platforms[0] ??
+    'mobile';
+
+  return {
+    country,
+    region: profile?.region || COUNTRIES[country].regions[0] || fallbackRegion,
+    game,
+    platform,
+    gameId: getConfiguredGameId(game, platform, profile?.game_ids ?? {}),
+    whatsappNumber: profile?.whatsapp_number ?? profile?.phone ?? '',
+    whatsappNotifications: profile?.whatsapp_notifications ?? true,
+  };
+}
+
+function getProfileFormKey(profile: Profile | null | undefined) {
+  if (!profile) {
+    return 'empty-profile';
+  }
+
+  return [
+    profile.id,
+    profile.country ?? '',
+    profile.region ?? '',
+    profile.selected_games?.join(',') ?? '',
+    profile.platforms?.join(',') ?? '',
+    JSON.stringify(profile.game_ids ?? {}),
+    profile.whatsapp_number ?? '',
+    String(profile.whatsapp_notifications ?? ''),
+  ].join('|');
+}
+
 export default function ProfileSetupScreen() {
-  const router = useRouter();
-  const queryClient = useQueryClient();
-  const { token, user, refreshUser, initializing } = useAuth();
+  const { token, user, initializing } = useAuth();
   const profileQuery = useQuery({
     queryKey: ['profile'],
     queryFn: getProfile,
@@ -47,32 +91,42 @@ export default function ProfileSetupScreen() {
   });
   const profile = profileQuery.data?.profile ?? user;
 
-  const [country, setCountry] = useState<CountryKey>('kenya');
-  const [region, setRegion] = useState<string>(fallbackRegion);
-  const [game, setGame] = useState<GameKey>('efootball');
-  const [platform, setPlatform] = useState<PlatformKey>('mobile');
-  const [gameId, setGameId] = useState('');
-  const [whatsappNumber, setWhatsappNumber] = useState('');
-  const [whatsappNotifications, setWhatsappNotifications] = useState(true);
+  if (initializing) {
+    return (
+      <Screen scroll={false}>
+        <LoadingState label="Checking session" />
+      </Screen>
+    );
+  }
+
+  if (!token) {
+    return <Redirect href="/(auth)/login" />;
+  }
+
+  if (profileQuery.isLoading && !profile) {
+    return (
+      <Screen scroll={false}>
+        <LoadingState label="Loading profile" />
+      </Screen>
+    );
+  }
+
+  return <ProfileSetupForm key={getProfileFormKey(profile)} profile={profile} />;
+}
+
+function ProfileSetupForm({ profile }: { profile: Profile | null | undefined }) {
+  const router = useRouter();
+  const queryClient = useQueryClient();
+  const { refreshUser } = useAuth();
+  const defaults = getProfileFormDefaults(profile);
+  const [country, setCountry] = useState<CountryKey>(defaults.country);
+  const [region, setRegion] = useState<string>(defaults.region);
+  const [game, setGame] = useState<GameKey>(defaults.game);
+  const [platform, setPlatform] = useState<PlatformKey>(defaults.platform);
+  const [gameId, setGameId] = useState(defaults.gameId);
+  const [whatsappNumber, setWhatsappNumber] = useState(defaults.whatsappNumber);
+  const [whatsappNotifications, setWhatsappNotifications] = useState(defaults.whatsappNotifications);
   const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!profile) return;
-
-    const primaryGame = profile.selected_games?.[0] ?? 'efootball';
-    const nextPlatform =
-      getConfiguredPlatform(primaryGame, profile.game_ids ?? {}, profile.platforms ?? []) ??
-      getGame(primaryGame).platforms[0] ??
-      'mobile';
-
-    setCountry(profile.country ?? 'kenya');
-    setRegion(profile.region || COUNTRIES[profile.country ?? 'kenya'].regions[0] || fallbackRegion);
-    setGame(primaryGame);
-    setPlatform(nextPlatform);
-    setGameId(getConfiguredGameId(primaryGame, nextPlatform, profile.game_ids ?? {}));
-    setWhatsappNumber(profile.whatsapp_number ?? profile.phone ?? '');
-    setWhatsappNotifications(profile.whatsapp_notifications ?? true);
-  }, [profile]);
 
   const gameDefinition = getGame(game);
   const platformOptions = useMemo(
@@ -114,26 +168,6 @@ export default function ProfileSetupScreen() {
       whatsapp_number: whatsappNotifications ? whatsappNumber.trim() : null,
       whatsapp_notifications: whatsappNotifications,
     });
-  }
-
-  if (initializing) {
-    return (
-      <Screen scroll={false}>
-        <LoadingState label="Checking session" />
-      </Screen>
-    );
-  }
-
-  if (!token) {
-    return <Redirect href="/(auth)/login" />;
-  }
-
-  if (profileQuery.isLoading && !profile) {
-    return (
-      <Screen scroll={false}>
-        <LoadingState label="Loading profile" />
-      </Screen>
-    );
   }
 
   return (

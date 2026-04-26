@@ -1,10 +1,11 @@
 import Link from 'next/link';
 
-type TestsWorkspaceTab = 'checklist' | 'report';
+type TestsWorkspaceTab = 'checklist' | 'report' | 'results';
 
 const NAV_ITEMS: Array<{ href: string; key: TestsWorkspaceTab; label: string }> = [
   { href: '/manual-tests', key: 'checklist', label: 'Checklist' },
   { href: '/report', key: 'report', label: 'Issue Report' },
+  { href: '/results', key: 'results', label: 'Results' },
 ];
 
 export function TestsWorkspaceNav({ current }: { current: TestsWorkspaceTab }) {

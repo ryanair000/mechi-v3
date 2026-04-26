@@ -323,9 +323,9 @@ export default function ProfilePage() {
         </div>
 
         <div className="px-4 pb-5 sm:px-6">
-          <div className="-mt-10 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+          <div className="mt-4 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-end">
-              <div className="relative h-20 w-20 shrink-0 sm:h-24 sm:w-24">
+              <div className="relative -mt-10 h-20 w-20 shrink-0 sm:-mt-12 sm:h-24 sm:w-24">
                 <div
                   className="absolute -inset-[5px] rounded-[2rem] opacity-55 blur-[10px]"
                   style={{ background: bestDivision.color }}
@@ -353,7 +353,7 @@ export default function ProfilePage() {
                 </div>
               </div>
 
-              <div className="pb-1">
+              <div className="sm:pb-1">
                 <h1 className="text-2xl font-black leading-tight text-[var(--text-primary)] sm:text-[2.2rem]">
                   {user?.username}
                 </h1>

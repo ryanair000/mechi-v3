@@ -135,9 +135,9 @@ export default async function ShareProfilePage({ params }: Props) {
           </div>
 
           <div className="px-5 pb-8 sm:px-8 sm:pb-10">
-            <div className="-mt-14 flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+            <div className="mt-6 flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
               <div className="flex flex-col gap-4 sm:flex-row sm:items-end">
-                <div className="relative h-24 w-24 overflow-hidden rounded-[1.8rem] border-4 border-[#101728] bg-white/6 shadow-[0_24px_48px_rgba(0,0,0,0.35)] sm:h-28 sm:w-28">
+                <div className="relative -mt-14 h-24 w-24 overflow-hidden rounded-[1.8rem] border-4 border-[#101728] bg-white/6 shadow-[0_24px_48px_rgba(0,0,0,0.35)] sm:-mt-16 sm:h-28 sm:w-28">
                   {avatarUrl ? (
                     <Image
                       src={avatarUrl}
@@ -156,7 +156,7 @@ export default async function ShareProfilePage({ params }: Props) {
                   )}
                 </div>
 
-                <div className="pb-1">
+                <div className="sm:pb-1">
                   <p className="text-xs font-semibold uppercase tracking-[0.28em] text-emerald-300/90">
                     Mechi profile
                   </p>

@@ -7,9 +7,9 @@ import {
   LayoutDashboard,
   type LucideIcon,
   MessageCircle,
+  Share2,
   Swords,
   Trophy,
-  UserPlus,
   Users,
   Zap,
 } from 'lucide-react';
@@ -91,12 +91,12 @@ const GAMES_NAV_ITEM: AppNavItem = {
   matchMode: 'prefix',
 };
 
-const FRIENDS_NAV_ITEM: AppNavItem = {
+const SHARE_NAV_ITEM: AppNavItem = {
   href: '/share',
-  label: 'Friends',
-  icon: UserPlus,
+  label: 'Share',
+  icon: Share2,
   matchMode: 'exact',
-  description: 'Search players by username and jump straight to their public card.',
+  description: 'Open public player cards, recent match links, and invite flows.',
 };
 
 const REWARDS_NAV_ITEM: AppNavItem = {
@@ -149,7 +149,7 @@ export const SIDEBAR_SECTIONS: SidebarSectionConfig[] = [
     id: 'growth',
     title: 'Growth',
     icon: Gift,
-    items: [FRIENDS_NAV_ITEM, REWARDS_NAV_ITEM, REDEEM_NAV_ITEM, BOUNTIES_NAV_ITEM],
+    items: [SHARE_NAV_ITEM, REWARDS_NAV_ITEM, REDEEM_NAV_ITEM, BOUNTIES_NAV_ITEM],
   },
 ];
 

@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { LegalPage } from '@/components/LegalPage';
+import { UserDataDeletionRequestForm } from '@/components/UserDataDeletionRequestForm';
 import { APP_URL } from '@/lib/urls';
 
 const EFFECTIVE_DATE = 'April 19, 2026';
@@ -29,7 +30,7 @@ const sections = [
   {
     title: '1. How to request deletion',
     paragraphs: [
-      'If you want Mechi to delete your account data, send a request to support@mechi.club with the subject line "User Data Deletion Request."',
+      'If you want Mechi to delete your account data, use the deletion request form on this page or email support@mechi.club with the subject line "User Data Deletion Request."',
       'To help us find the correct account quickly, include your Mechi username, the phone number or email linked to the account, and a short note confirming that you want the account and related personal data reviewed for deletion.',
     ],
   },
@@ -83,6 +84,8 @@ export default function UserDataDeletionPage() {
         href: '/privacy-policy',
         label: 'Read Privacy Policy',
       }}
-    />
+    >
+      <UserDataDeletionRequestForm />
+    </LegalPage>
   );
 }

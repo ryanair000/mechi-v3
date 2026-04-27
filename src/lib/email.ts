@@ -11,6 +11,7 @@ import type { GameKey, PlatformKey } from '@/types';
 let resendClient: Resend | null | undefined;
 const FROM_ADDRESS = process.env.RESEND_FROM_EMAIL ?? 'noreply@mechi.club';
 const FROM = `Mechi <${FROM_ADDRESS}>`;
+const SUPPORT_ADDRESS = 'support@mechi.club';
 
 function getResendClient(): Resend | null {
   if (resendClient !== undefined) {
@@ -20,6 +21,14 @@ function getResendClient(): Resend | null {
   const apiKey = process.env.RESEND_API_KEY?.trim();
   resendClient = apiKey ? new Resend(apiKey) : null;
   return resendClient;
+}
+
+export function isTransactionalEmailReady(): boolean {
+  if (isMockProviderMode()) {
+    return true;
+  }
+
+  return Boolean(process.env.RESEND_API_KEY?.trim());
 }
 
 async function sendEmail(payload: Parameters<Resend['emails']['send']>[0]): Promise<void> {
@@ -244,6 +253,117 @@ export async function sendPasswordResetEmail(params: {
     });
   } catch (err) {
     console.error('[Email] Password reset send error:', err);
+  }
+}
+
+export async function sendUserDataDeletionSupportEmail(params: {
+  requestId: string;
+  username: string;
+  email: string | null;
+  phone: string | null;
+  normalizedPhoneHint?: string | null;
+  note?: string | null;
+  submittedAtIso: string;
+  ipAddress: string;
+  userAgent: string;
+}): Promise<void> {
+  const noteBlock = params.note
+    ? `
+      <div class="info-row">
+        <span class="info-label">Extra note</span>
+        <span class="info-value">${params.note}</span>
+      </div>
+    `
+    : '';
+  const normalizedPhoneBlock = params.normalizedPhoneHint
+    ? `
+      <div class="info-row">
+        <span class="info-label">Normalized phone hint</span>
+        <span class="info-value">${params.normalizedPhoneHint}</span>
+      </div>
+    `
+    : '';
+  const content = `
+    <h2>User data deletion request</h2>
+    <p>A new Mechi account deletion request was submitted from the public deletion page.</p>
+    <div class="info-box">
+      <div class="info-row">
+        <span class="info-label">Request ID</span>
+        <span class="info-value">${params.requestId}</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">Username</span>
+        <span class="info-value">${params.username}</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">Email</span>
+        <span class="info-value">${params.email ?? 'Not provided'}</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">Phone</span>
+        <span class="info-value">${params.phone ?? 'Not provided'}</span>
+      </div>
+      ${normalizedPhoneBlock}
+      ${noteBlock}
+      <div class="info-row">
+        <span class="info-label">Submitted at</span>
+        <span class="info-value">${params.submittedAtIso}</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">IP address</span>
+        <span class="info-value">${params.ipAddress}</span>
+      </div>
+    </div>
+    <p>User agent: ${params.userAgent}</p>
+    <p>Review the account, confirm ownership if needed, and continue the deletion workflow from support.</p>
+  `;
+
+  try {
+    await sendEmail({
+      from: FROM,
+      to: SUPPORT_ADDRESS,
+      replyTo: params.email ?? undefined,
+      subject: `User Data Deletion Request ${params.requestId}`,
+      html: baseLayout(`User Data Deletion Request ${params.requestId}`, content),
+    });
+  } catch (err) {
+    console.error('[Email] User data deletion support send error:', err);
+    throw err;
+  }
+}
+
+export async function sendUserDataDeletionConfirmationEmail(params: {
+  requestId: string;
+  to: string;
+  username: string;
+}): Promise<void> {
+  const content = `
+    <h2>Deletion request received</h2>
+    <p>Hey ${params.username}, we received your request to review your Mechi account for deletion.</p>
+    <div class="info-box">
+      <div class="info-row">
+        <span class="info-label">Request ID</span>
+        <span class="info-value">${params.requestId}</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">Support page</span>
+        <span class="info-value">${APP_URL}/user-data-deletion</span>
+      </div>
+    </div>
+    <p>We may reply to verify ownership before the deletion is completed. Some billing, fraud, moderation, or dispute records may still be retained where required.</p>
+    <a href="${APP_URL}/user-data-deletion" class="btn">View deletion page</a>
+  `;
+
+  try {
+    await sendEmail({
+      from: FROM,
+      to: params.to,
+      subject: `We received your Mechi deletion request (${params.requestId})`,
+      html: baseLayout(`We received your Mechi deletion request (${params.requestId})`, content),
+    });
+  } catch (err) {
+    console.error('[Email] User data deletion confirmation send error:', err);
+    throw err;
   }
 }
 

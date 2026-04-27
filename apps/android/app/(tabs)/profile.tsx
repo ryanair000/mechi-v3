@@ -64,6 +64,16 @@ export default function ProfileTab() {
             </View>
           </Card>
 
+          <Card>
+            <SectionTitle title="Privacy & support" />
+            <Text style={textStyles.muted}>
+              Review Mechi policies, contact support, or start an account deletion request from here.
+            </Text>
+            <Link href="/legal" asChild>
+              <Button label="Open account options" icon="shield-checkmark" variant="secondary" />
+            </Link>
+          </Card>
+
           <Button label="Log out" icon="log-out" variant="danger" onPress={handleSignOut} />
         </>
       )}

@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import Link from 'next/link';
 import { ArrowLeft, Mail } from 'lucide-react';
 import FooterSection from '@/components/footer';
@@ -18,6 +19,7 @@ type LegalPageProps = {
     href: string;
     label: string;
   };
+  children?: ReactNode;
 };
 
 export function LegalPage({
@@ -27,6 +29,7 @@ export function LegalPage({
   contactEmail,
   sections,
   secondaryLink,
+  children,
 }: LegalPageProps) {
   return (
     <div className="page-base">
@@ -59,6 +62,8 @@ export function LegalPage({
             </a>
           </div>
         </section>
+
+        {children ? <div className="mt-6">{children}</div> : null}
 
         <div className="mt-6 grid gap-4">
           {sections.map((section) => (

@@ -34,6 +34,12 @@ import { COUNTRY_OPTIONS, getRegionsForCountry } from '@/lib/location';
 import { getLoginPath, getSafeNextPath } from '@/lib/navigation';
 import { normalizePhoneNumber } from '@/lib/phone';
 import { PLANS } from '@/lib/plans';
+import {
+  normalizeUsername,
+  USERNAME_MAX_LENGTH,
+  USERNAME_MIN_LENGTH,
+  validateUsername,
+} from '@/lib/username';
 import type { CountryKey, GameKey, PlatformKey } from '@/types';
 
 type Step = 1 | 2 | 3 | 4;
@@ -61,7 +67,11 @@ export default function RegisterPage({ searchParams }: { searchParams: RegisterS
   const [step, setStep] = useState<Step>(1);
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [checkingUsername, setCheckingUsername] = useState(false);
   const [invitePreview, setInvitePreview] = useState<InvitePreview | null>(null);
+  const [usernameFeedback, setUsernameFeedback] = useState<ActionFeedbackState | null>(null);
+  const [lastCheckedUsername, setLastCheckedUsername] = useState('');
+  const [lastUsernameAvailability, setLastUsernameAvailability] = useState<boolean | null>(null);
   const [submitFeedback, setSubmitFeedback] = useState<ActionFeedbackState | null>(null);
 
   const [formData, setFormData] = useState<FormData>({
@@ -78,6 +88,8 @@ export default function RegisterPage({ searchParams }: { searchParams: RegisterS
     selected_games: [],
   });
   const emailIsValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email.trim());
+  const normalizedUsername = normalizeUsername(formData.username);
+  const usernameValidation = validateUsername(formData.username);
   const rawInviteValue = resolvedSearchParams.invite;
   const rawInviteCode =
     typeof rawInviteValue === 'string'
@@ -134,9 +146,7 @@ export default function RegisterPage({ searchParams }: { searchParams: RegisterS
   }, [normalizedInviteCode]);
 
   const step1Valid =
-    formData.username.trim().length >= 3 &&
-    formData.phone.trim().length >= 9 &&
-    emailIsValid;
+    !usernameValidation.error && formData.phone.trim().length >= 9 && emailIsValid;
   const step2Valid =
     Boolean(formData.country) &&
     formData.region.trim().length > 0 &&
@@ -223,7 +233,83 @@ export default function RegisterPage({ searchParams }: { searchParams: RegisterS
     });
   };
 
+  const handleCheckUsername = async () => {
+    const { username, error } = validateUsername(formData.username);
+    if (error) {
+      setLastCheckedUsername('');
+      setLastUsernameAvailability(null);
+      setUsernameFeedback({
+        tone: 'error',
+        title: error,
+        detail: `Use ${USERNAME_MIN_LENGTH} to ${USERNAME_MAX_LENGTH} characters before checking availability.`,
+      });
+      return;
+    }
+
+    setCheckingUsername(true);
+    setFormData((current) => (current.username === username ? current : { ...current, username }));
+    setUsernameFeedback(null);
+
+    try {
+      const res = await fetch(`/api/auth/register/username?username=${encodeURIComponent(username)}`, {
+        method: 'GET',
+        cache: 'no-store',
+      });
+      const data = await res.json();
+
+      if (!res.ok) {
+        setLastCheckedUsername(username);
+        setLastUsernameAvailability(null);
+        setUsernameFeedback({
+          tone: 'error',
+          title: data.error ?? 'Could not check username right now.',
+          detail:
+            res.status === 429
+              ? 'Please wait a bit, then try the availability check again.'
+              : 'Try again in a moment.',
+        });
+        return;
+      }
+
+      setLastCheckedUsername(data.username ?? username);
+      setLastUsernameAvailability(Boolean(data.available));
+      setUsernameFeedback(
+        data.available
+          ? {
+              tone: 'success',
+              title: 'Username is available.',
+              detail: 'Nice. You can keep it and continue with signup.',
+            }
+          : {
+              tone: 'error',
+              title: 'Username already taken.',
+              detail: 'Try a small variation, then check again before you continue.',
+            }
+      );
+    } catch {
+      setLastCheckedUsername(username);
+      setLastUsernameAvailability(null);
+      setUsernameFeedback({
+        tone: 'error',
+        title: 'Could not check username right now.',
+        detail: 'Please try again in a moment.',
+      });
+    } finally {
+      setCheckingUsername(false);
+    }
+  };
+
   const handleSubmit = async () => {
+    if (lastCheckedUsername === normalizedUsername && lastUsernameAvailability === false) {
+      setSubmitFeedback({
+        tone: 'error',
+        title: 'That username is already taken.',
+        detail: 'Pick another username and check it again before you create your account.',
+      });
+      toast.error('Choose another username');
+      return;
+    }
+
     if (formData.selected_games.length === 0) {
       setSubmitFeedback({
         tone: 'error',
@@ -279,6 +365,7 @@ export default function RegisterPage({ searchParams }: { searchParams: RegisterS
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           ...formData,
+          username: normalizedUsername,
           invite_code: invitePreview?.invite_code ?? null,
           platforms: finalPlatforms,
           phone: normalizePhoneNumber(formData.phone, formData.country || null),
@@ -459,12 +546,52 @@ export default function RegisterPage({ searchParams }: { searchParams: RegisterS
                 <input
                   type="text"
                   value={formData.username}
-                  onChange={(e) => setFormData({ ...formData, username: e.target.value })}
+                  onChange={(e) => {
+                    const nextUsername = e.target.value;
+                    setFormData((current) => ({ ...current, username: nextUsername }));
+                    setUsernameFeedback(null);
+                    setLastCheckedUsername('');
+                    setLastUsernameAvailability(null);
+                  }}
+                  onBlur={() =>
+                    setFormData((current) => ({
+                      ...current,
+                      username: normalizeUsername(current.username),
+                    }))
+                  }
                   placeholder="GameKing254"
                   className="input"
-                  minLength={3}
-                  maxLength={30}
+                  minLength={USERNAME_MIN_LENGTH}
+                  maxLength={USERNAME_MAX_LENGTH}
                 />
+                <button
+                  type="button"
+                  onClick={() => void handleCheckUsername()}
+                  disabled={checkingUsername || Boolean(usernameValidation.error)}
+                  className="btn-ghost mt-3 w-full justify-center sm:w-auto"
+                >
+                  {checkingUsername ? (
+                    <>
+                      <Loader2 size={14} className="animate-spin" />
+                      Checking...
+                    </>
+                  ) : (
+                    'Check availability'
+                  )}
+                </button>
+                {usernameFeedback ? (
+                  <ActionFeedback
+                    tone={usernameFeedback.tone}
+                    title={usernameFeedback.title}
+                    detail={usernameFeedback.detail}
+                    className="mt-3"
+                  />
+                ) : (
+                  <p className="input-hint mt-2">
+                    Use 3 to 30 characters, then check early to make sure this exact handle is still
+                    free.
+                  </p>
+                )}
               </div>
               <div>
                 <label className="label">Phone Number</label>

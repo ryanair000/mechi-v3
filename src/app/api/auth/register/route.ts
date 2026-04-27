@@ -19,6 +19,8 @@ import { canSelectGames } from '@/lib/plans';
 import { awardAffiliateInviteSignup, ensureChezahubCustomer } from '@/lib/rewards';
 import { checkRateLimit, getClientIp, rateLimitResponse } from '@/lib/rateLimit';
 import { sendNewRegistrationTelegramNotification } from '@/lib/telegram';
+import { isUsernameTaken } from '@/lib/username-availability';
+import { validateUsername } from '@/lib/username';
 import type { GameKey, PlatformKey } from '@/types';
 
 const STARTER_TRIAL_PLAN = 'pro';
@@ -107,7 +109,7 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json();
     const {
-      username,
+      username: submittedUsername,
       phone,
       email,
       password,
@@ -120,6 +122,7 @@ export async function POST(request: NextRequest) {
       whatsapp_notifications,
       invite_code,
     } = body;
+    const { username, error: usernameError } = validateUsername(submittedUsername);
     const { games: selectedGames, hasInvalid: hasInvalidSelectedGame } =
       normalizeSelectedGames(selected_games);
     const { platforms: requestedPlatforms, hasInvalid: hasInvalidPlatform } =
@@ -138,8 +141,8 @@ export async function POST(request: NextRequest) {
     });
 
     // Validation
-    if (!username || !phone || !password || !trimmedEmail || !region) {
-      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
+    if (usernameError || !phone || !password || !trimmedEmail || !region) {
+      return NextResponse.json({ error: usernameError ?? 'Missing required fields' }, { status: 400 });
     }
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail)) {
       return NextResponse.json({ error: 'Enter a valid email address' }, { status: 400 });
@@ -202,19 +205,12 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Enter a valid WhatsApp number' }, { status: 400 });
     }
 
-    const supabase = createServiceClient();
-    const phoneVariants = getPhoneLookupVariants(normalizedPhone, location.country);
-
-    // Check username uniqueness
-    const { data: existingUser } = await supabase
-      .from('profiles')
-      .select('id')
-      .eq('username', username)
-      .single();
-
-    if (existingUser) {
+    if (await isUsernameTaken(username)) {
       return NextResponse.json({ error: 'Username already taken' }, { status: 409 });
     }
+
+    const supabase = createServiceClient();
+    const phoneVariants = getPhoneLookupVariants(normalizedPhone, location.country);
 
     // Check phone uniqueness
     const { data: existingPhoneMatches } = await supabase

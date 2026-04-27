@@ -1,32 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
 import {
   appendAuthNotice,
-  consumeAuthActionToken,
-  getAuthActionToken,
-  getAuthActionTokenState,
+  getAuthActionSafeNextPath,
   normalizeEmailAddress,
 } from '@/lib/auth-actions';
 import { applyAuthCookie, createSessionForProfile, hashPassword } from '@/lib/auth';
 import { checkRateLimit, getClientIp, rateLimitResponse } from '@/lib/rateLimit';
 import { createServiceClient } from '@/lib/supabase';
+import { validateUsername } from '@/lib/username';
 
 const MIN_PASSWORD_LENGTH = 9;
 
 function isValidEmail(value: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
-}
-
-function getTokenErrorResponse(status: 'invalid' | 'expired') {
-  return NextResponse.json(
-    {
-      error:
-        status === 'expired'
-          ? 'That reset link expired. Request a fresh one.'
-          : 'That reset link is invalid or already used.',
-      code: status === 'expired' ? 'password_reset_expired' : 'password_reset_invalid',
-    },
-    { status: 400 }
-  );
 }
 
 export async function POST(request: NextRequest) {
@@ -38,18 +24,16 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json();
     const intent = String(body.intent ?? 'reset').trim();
-    const token = String(body.token ?? '').trim();
-    const username = String(body.username ?? '').trim();
+    const { username, error: usernameError } = validateUsername(body.username);
     const email = normalizeEmailAddress(body.email);
     const password = String(body.password ?? '');
 
-    if (!token) {
-      return getTokenErrorResponse('invalid');
-    }
-
-    if (!username || !isValidEmail(email)) {
+    if (usernameError || !isValidEmail(email)) {
       return NextResponse.json(
-        { error: 'Enter the username and email connected to this Mechi account.' },
+        {
+          error:
+            usernameError ?? 'Enter the username and email connected to this Mechi account.',
+        },
         { status: 400 }
       );
     }
@@ -58,47 +42,41 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid reset request.' }, { status: 400 });
     }
 
-    const tokenRow = await getAuthActionToken(token);
-    const tokenState = getAuthActionTokenState(tokenRow);
-
-    if (!tokenRow || tokenRow.purpose !== 'password_reset') {
-      return getTokenErrorResponse('invalid');
-    }
-
-    if (tokenState === 'expired' || tokenState === 'consumed') {
-      return getTokenErrorResponse('expired');
-    }
-
-    if (tokenState !== 'valid') {
-      return getTokenErrorResponse('invalid');
-    }
-
     const supabase = createServiceClient();
-    const { data: currentProfile, error: profileError } = await supabase
+    const { data: profileRows, error: profileError } = await supabase
       .from('profiles')
       .select('*')
-      .eq('id', tokenRow.user_id)
-      .single();
+      .ilike('email', email)
+      .limit(10);
+
+    const currentProfile =
+      ((profileRows ?? []) as Array<{
+        id: string;
+        username?: string | null;
+        email?: string | null;
+        is_banned?: boolean | null;
+        ban_reason?: string | null;
+      }>).find(
+        (profile) =>
+          normalizeEmailAddress(profile.email) === email &&
+          String(profile.username ?? '').trim().toLowerCase() === username.toLowerCase()
+      ) ?? null;
 
     if (profileError || !currentProfile) {
-      return getTokenErrorResponse('invalid');
+      if (profileError) {
+        console.error('[Password Reset] Profile lookup error:', profileError);
+      }
+
+      return NextResponse.json(
+        { error: 'That username and email do not match a Mechi account.' },
+        { status: 400 }
+      );
     }
 
     if (currentProfile.is_banned) {
       return NextResponse.json(
         { error: `Account suspended: ${currentProfile.ban_reason ?? 'Contact support.'}` },
         { status: 403 }
-      );
-    }
-
-    const matchesEmail = normalizeEmailAddress(currentProfile.email) === email;
-    const matchesUsername =
-      String(currentProfile.username ?? '').trim().toLowerCase() === username.toLowerCase();
-
-    if (!matchesEmail || !matchesUsername) {
-      return NextResponse.json(
-        { error: 'That username and email do not match this reset link.' },
-        { status: 400 }
       );
     }
 
@@ -114,11 +92,6 @@ export async function POST(request: NextRequest) {
         { error: 'Password must be more than 8 characters' },
         { status: 400 }
       );
-    }
-
-    const consumed = await consumeAuthActionToken(tokenRow.id);
-    if (!consumed) {
-      return getTokenErrorResponse('expired');
     }
 
     const passwordHash = await hashPassword(password);
@@ -137,7 +110,10 @@ export async function POST(request: NextRequest) {
     const { token: sessionToken, user } = createSessionForProfile(
       updatedProfile as Record<string, unknown>
     );
-    const redirectTo = appendAuthNotice(tokenRow.next_path ?? '/dashboard', 'password_reset_success');
+    const redirectTo = appendAuthNotice(
+      getAuthActionSafeNextPath(String(body.redirect_to ?? '/dashboard')),
+      'password_reset_success'
+    );
     const response = NextResponse.json({ token: sessionToken, user, redirect_to: redirectTo });
     applyAuthCookie(response, sessionToken);
     return response;

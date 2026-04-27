@@ -33,7 +33,12 @@
       "expo-secure-store"
     ],
     "extra": {
-      "apiUrl": "http://10.0.2.2:3000"
-    }
+      "apiUrl": "http://10.0.2.2:3000",
+      "router": {},
+      "eas": {
+        "projectId": "a10d1b1e-45f9-41f5-8408-3d281c00b837"
+      }
+    },
+    "owner": "ryanair001"
   }
 }

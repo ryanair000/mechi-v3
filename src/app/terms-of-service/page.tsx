@@ -52,18 +52,30 @@ const sections = [
     bullets: [
       'Do not cheat, exploit bugs, manipulate rankings, fix matches, submit false reports, or interfere with tournament or queue integrity.',
       'Do not harass, threaten, scam, spam, or post unlawful, abusive, or infringing content.',
+      'Do not use Mechi to create, upload, share, request, promote, or organize content or behavior that sexually exploits, abuses, or endangers children. This includes child sexual abuse material (CSAM), grooming, sextortion, trafficking, or any attempt to exploit a minor.',
       'Do not attempt unauthorized access, reverse engineer restricted systems, scrape the service in prohibited ways, or disrupt the platform through bots, malware, or attacks.',
     ],
   },
   {
-    title: '4. Matches, tournaments, and moderation',
+    title: '4. Child safety and reporting',
+    paragraphs: [
+      'Mechi has zero tolerance for child sexual abuse and exploitation (CSAE). We prohibit users from using the platform to facilitate, normalize, distribute, or engage with CSAM or any conduct that exploits, abuses, or endangers children.',
+      'If Mechi obtains actual knowledge of CSAM or CSAE-related conduct, we may remove content, suspend or terminate accounts, preserve relevant records, and report the matter to law enforcement, child protection organizations, or other competent authorities where required by law.',
+    ],
+    bullets: [
+      'Use the in-app support or reporting pathways to raise safety concerns, suspicious conduct, or content that may put a child at risk.',
+      'For child safety concerns or CSAE-related reports, contact support@mechi.club so the Mechi team can review and escalate the issue.',
+    ],
+  },
+  {
+    title: '5. Matches, tournaments, and moderation',
     paragraphs: [
       'Mechi may provide brackets, lobbies, direct challenges, rankings, and moderation tools, but we may still rely on player reports, tournament rules, and administrator review to resolve disputes.',
       'You agree to submit truthful results, follow posted event rules, cooperate with moderation requests, and accept reasonable integrity or dispute decisions made by Mechi or authorized tournament administrators.',
     ],
   },
   {
-    title: '5. Paid plans, billing, and cancellations',
+    title: '6. Paid plans, billing, and cancellations',
     paragraphs: [
       'Some features require a paid subscription or event payment. Prices, billing cadence, and plan features may be shown inside the product and may change over time.',
     ],
@@ -74,37 +86,37 @@ const sections = [
     ],
   },
   {
-    title: '6. Content and intellectual property',
+    title: '7. Content and intellectual property',
     paragraphs: [
       'Mechi and its branding, software, design, content, and platform features are owned by Mechi or its licensors and are protected by applicable intellectual property laws.',
       'You keep ownership of content you submit, but you give us a non-exclusive license to host, use, reproduce, display, and distribute that content as needed to operate, secure, improve, and promote the service.',
     ],
   },
   {
-    title: '7. Suspension and termination',
+    title: '8. Suspension and termination',
     paragraphs: [
       'We may suspend, restrict, or terminate access to Mechi if we believe you violated these terms, created risk for other users, failed to pay required fees, or used the service in a way that could expose Mechi or the community to harm.',
       'We may also remove content, cancel matches or tournaments, or reverse platform access where necessary to preserve platform integrity or comply with legal obligations.',
     ],
   },
   {
-    title: '8. Disclaimers and limits of liability',
+    title: '9. Disclaimers and limits of liability',
     paragraphs: [
       'Mechi is provided on an "as is" and "as available" basis. To the extent allowed by law, we disclaim warranties of merchantability, fitness for a particular purpose, non-infringement, and uninterrupted availability.',
       'To the extent allowed by law, Mechi and its affiliates, officers, employees, and partners will not be liable for indirect, incidental, special, consequential, exemplary, or punitive damages, or for lost profits, revenue, goodwill, data, or competitive opportunity arising from or related to your use of the service.',
     ],
   },
   {
-    title: '9. Changes to the service or these terms',
+    title: '10. Changes to the service or these terms',
     paragraphs: [
       'We may update, suspend, or discontinue parts of Mechi at any time. We may also revise these Terms of Service from time to time. When changes are material, we may update the effective date above and provide additional notice where appropriate.',
       'Your continued use of Mechi after updated terms take effect means you accept the revised terms.',
     ],
   },
   {
-    title: '10. Contact us',
+    title: '11. Contact us',
     paragraphs: [
-      'Questions about these Terms of Service can be sent to support@mechi.club.',
+      'Questions about these Terms of Service, moderation issues, or child safety concerns can be sent to support@mechi.club.',
     ],
   },
 ] satisfies Parameters<typeof LegalPage>[0]['sections'];

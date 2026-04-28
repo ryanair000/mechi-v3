@@ -1,6 +1,7 @@
 {
   "cli": {
-    "version": ">= 16.0.0"
+    "version": ">= 16.0.0",
+    "appVersionSource": "remote"
   },
   "build": {
     "development": {
@@ -14,12 +15,39 @@
       }
     },
     "production": {
+      "autoIncrement": true,
+      "android": {
+        "buildType": "app-bundle"
+      }
+    },
+    "playInternal": {
+      "autoIncrement": true,
       "android": {
         "buildType": "app-bundle"
       }
     }
   },
   "submit": {
-    "production": {}
+    "playInternal": {
+      "android": {
+        "serviceAccountKeyPath": "./google-play-service-account.json",
+        "track": "internal",
+        "releaseStatus": "completed"
+      }
+    },
+    "closedtesting": {
+      "android": {
+        "serviceAccountKeyPath": "./google-play-service-account.json",
+        "track": "alpha",
+        "releaseStatus": "completed"
+      }
+    },
+    "production": {
+      "android": {
+        "serviceAccountKeyPath": "./google-play-service-account.json",
+        "track": "production",
+        "releaseStatus": "completed"
+      }
+    }
   }
 }

@@ -2,7 +2,8 @@ import Constants from 'expo-constants';
 import { getStoredToken } from '../lib/token-store';
 import type { ApiErrorBody } from '../types';
 
-const DEFAULT_API_URL = 'http://10.0.2.2:3000';
+const EMULATOR_API_URL = 'http://10.0.2.2:3000';
+const PRODUCTION_API_URL = 'https://mechi.club';
 
 type RequestOptions = {
   method?: 'GET' | 'POST' | 'PATCH' | 'DELETE';
@@ -23,16 +24,27 @@ export class ApiError extends Error {
   }
 }
 
-export function getApiBaseUrl(): string {
-  const fromEnv = process.env.EXPO_PUBLIC_MECHI_API_URL;
-  const fromConfig = Constants.expoConfig?.extra?.apiUrl;
-  const raw = typeof fromEnv === 'string' && fromEnv.length > 0
-    ? fromEnv
-    : typeof fromConfig === 'string' && fromConfig.length > 0
-      ? fromConfig
-      : DEFAULT_API_URL;
+function readConfiguredApiUrl(value: unknown): string | null {
+  if (typeof value !== 'string') {
+    return null;
+  }
 
-  return raw.replace(/\/+$/, '');
+  const trimmed = value.trim();
+  return trimmed ? trimmed.replace(/\/+$/, '') : null;
+}
+
+export function getApiBaseUrl(): string {
+  const fromEnv = readConfiguredApiUrl(process.env.EXPO_PUBLIC_MECHI_API_URL);
+  if (fromEnv) {
+    return fromEnv;
+  }
+
+  const fromConfig = readConfiguredApiUrl(Constants.expoConfig?.extra?.apiUrl);
+  if (fromConfig && (__DEV__ || fromConfig !== EMULATOR_API_URL)) {
+    return fromConfig;
+  }
+
+  return __DEV__ ? EMULATOR_API_URL : PRODUCTION_API_URL;
 }
 
 function isFormData(body: unknown): body is FormData {

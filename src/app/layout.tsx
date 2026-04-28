@@ -30,6 +30,7 @@ const openSans = Open_Sans({
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://mechi.club'),
+  manifest: '/manifest.webmanifest',
   title: 'Mechi | Compete. Connect. Rise.',
   description:
     'Mechi helps East African players find proper 1v1s, clean lobbies, and prize-backed tournaments without the WhatsApp chaos.',

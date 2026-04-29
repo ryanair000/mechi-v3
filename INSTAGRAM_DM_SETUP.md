@@ -1,14 +1,14 @@
 # Instagram DM Setup For PlayMechi
 
-This project now includes a webhook bridge at `/api/webhooks/instagram` so Instagram DMs can be forwarded to OpenClaw and the reply can be sent back through Meta.
+This project includes an Instagram DM webhook at `/api/webhooks/instagram` and a compatibility alias at `/api/instagram/webhook`. Both routes feed the Mechi support inbox, then route safe replies through the OpenClaw support bridge.
 
 ## What It Does
 
 1. Meta sends an Instagram DM webhook to `https://your-domain.com/api/webhooks/instagram`
 2. The app validates the webhook signature and extracts the inbound DM
-3. The message is sent to your OpenClaw handler
-4. OpenClaw returns one or more reply messages
-5. The app sends those replies back through Meta's Send API
+3. The message is saved into `support_threads` / `support_messages`
+4. If `INSTAGRAM_AI_AUTO_REPLY_ENABLED=true`, the support inbox asks OpenClaw for a customer-safe reply
+5. The app sends approved AI/manual replies back through Meta's Instagram Messages API
 
 ## Required Environment Variables
 
@@ -16,15 +16,27 @@ Set these in your deployment environment:
 
 ```env
 INSTAGRAM_VERIFY_TOKEN=your-random-verify-token
+INSTAGRAM_WEBHOOK_VERIFY_TOKEN=optional-alias-or-same-token
 INSTAGRAM_APP_SECRET=your-meta-app-secret
-INSTAGRAM_PAGE_ACCESS_TOKEN=your-page-access-token
 INSTAGRAM_GRAPH_API_VERSION=v25.0
 
-OPENCLAW_WEBHOOK_URL=https://your-openclaw-endpoint.example.com/webhooks/instagram
-OPENCLAW_API_KEY=optional-bearer-token
-OPENCLAW_TIMEOUT_MS=15000
+MECHI_INSTAGRAM_ACCESS_TOKEN=your-instagram-user-token
+MECHI_INSTAGRAM_USER_ID=your-instagram-professional-account-id
+MECHI_INSTAGRAM_APP_ID=your-meta-app-id
+MECHI_INSTAGRAM_APP_SECRET=your-meta-app-secret
 
-INSTAGRAM_FALLBACK_REPLY=Optional fallback if OpenClaw is unavailable
+MECHI_OPENCLAW_BRIDGE_URL=https://your-openclaw-host/v1/mechi-support-reply
+MECHI_OPENCLAW_BRIDGE_TOKEN=your-openclaw-bridge-token
+
+INSTAGRAM_AI_AUTO_REPLY_ENABLED=false
+```
+
+Keep `INSTAGRAM_AI_AUTO_REPLY_ENABLED=false` while testing. With that setting, inbound DMs are captured in the support inbox but no automatic public reply is sent.
+
+For local read-only token checks, put fresh credentials in `.env.instagram.local` and run:
+
+```bash
+npm run ops:instagram:check -- --messages
 ```
 
 ## Meta Setup
@@ -83,59 +95,49 @@ Use the account that backs `playmechi`.
 
 For Instagram messaging, Meta documents these permissions:
 
-- `instagram_manage_messages`
-- `instagram_basic`
+- `instagram_business_basic`
+- `instagram_business_manage_messages`
 
-Depending on the exact Meta flow you use, you may also see the Instagram Business variants in the docs.
+Standard access is enough for Instagram professional accounts you own or manage and have added to the Meta app dashboard. Advanced access is needed for accounts you do not own/manage.
 
-## OpenClaw Request Contract
+## OpenClaw Support Bridge Contract
 
-This app sends OpenClaw a JSON payload like:
+The support inbox sends the OpenClaw bridge a JSON payload like:
 
 ```json
 {
-  "channel": "instagram",
-  "sender": {
-    "id": "instagram-user-id"
-  },
-  "recipient": {
-    "id": "playmechi-instagram-id"
-  },
-  "message": {
-    "id": "mid-or-null",
-    "text": "hello",
-    "attachments": [],
-    "timestamp": 1776590000000,
-    "source_field": "messages"
-  },
-  "raw_event": {}
+  "thread_id": "support-thread-id",
+  "phone": "instagram:1784...",
+  "user_summary": null,
+  "conversation": [],
+  "mechi_context": "Mechi support context...",
+  "system_prompt": "Instagram-safe support rules...",
+  "allowed_topics": [],
+  "blocked_topics": []
 }
 ```
 
 ## OpenClaw Response Contract
 
-The bridge accepts any of these response shapes:
+The bridge should return one JSON object:
 
 ```json
-{ "reply": "Single message" }
+{
+  "disposition": "reply",
+  "reply_text": "Short Instagram-safe reply",
+  "confidence": 0.82,
+  "tags": ["pricing"],
+  "escalation_reason": null
+}
 ```
-
-```json
-{ "replies": ["First message", "Second message"] }
-```
-
-```json
-{ "messages": [{ "text": "First message" }, { "text": "Second message" }] }
-```
-
-Plain text responses are also supported.
 
 ## Notes
 
-- Replies are sent through Meta's Send API using the page access token
+- Replies are sent through Meta's Instagram Messages API using the Instagram user token
 - The route ignores echo messages to avoid reply loops
-- Signature validation is enforced when `INSTAGRAM_APP_SECRET` is set
-- If OpenClaw fails, the route can optionally use `INSTAGRAM_FALLBACK_REPLY`
+- Signature validation is enforced with `INSTAGRAM_APP_SECRET` / `MECHI_INSTAGRAM_APP_SECRET`
+- OpenClaw failures move the thread to human follow-up instead of inventing an answer
+- The token pasted in chat during setup should be treated as compromised and rotated before testing
 
 ## Useful Docs
 

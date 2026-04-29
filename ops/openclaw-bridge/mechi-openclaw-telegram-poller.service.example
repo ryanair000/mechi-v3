@@ -1,0 +1,16 @@
+[Unit]
+Description=Mechi OpenClaw Telegram Poller
+After=network.target
+
+[Service]
+Type=simple
+User=ubuntu
+WorkingDirectory=/home/ubuntu/mechi-v3
+Environment=PATH=/home/ubuntu/.npm-global/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+EnvironmentFile=/etc/mechi-openclaw-bridge.env
+ExecStart=/usr/bin/node /home/ubuntu/mechi-v3/ops/openclaw-bridge/telegram-poller.mjs
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

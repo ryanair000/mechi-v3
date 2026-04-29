@@ -13,6 +13,7 @@ import {
 import { requestSupportReply, type SupportBridgeConversationMessage } from '@/lib/openclaw-bridge';
 import { executeWhatsAppPlayerAction } from '@/lib/whatsapp-player-actions';
 import {
+  extractInstagramIncomingMessages,
   formatInstagramDeliveryError,
   sendSupportInstagramMessage,
 } from '@/lib/instagram';
@@ -91,14 +92,7 @@ type WhatsAppWebhookPayload = {
   }>;
 };
 
-type InstagramWebhookPayload = {
-  entry?: Array<{
-    changes?: Array<{
-      field?: string;
-      value?: Record<string, unknown>;
-    }>;
-  }>;
-};
+type InstagramWebhookPayload = unknown;
 
 type NormalizedSupportMessage = {
   id: string;
@@ -151,11 +145,12 @@ function getWhatsAppAppSecret() {
 
 function getInstagramAppSecret() {
   return (
-    process.env.INSTAGRAM_APP_SECRET ??
-    process.env.META_APP_SECRET ??
-    process.env.WHATSAPP_APP_SECRET ??
+    process.env.MECHI_INSTAGRAM_APP_SECRET?.trim() ||
+    process.env.INSTAGRAM_APP_SECRET?.trim() ||
+    process.env.META_APP_SECRET?.trim() ||
+    process.env.WHATSAPP_APP_SECRET?.trim() ||
     ''
-  ).trim();
+  );
 }
 
 function safeTimingEqual(left: string, right: string) {
@@ -199,6 +194,30 @@ function getSupabase() {
   return createServiceClient();
 }
 
+function getInstagramAutoReplyEnabled() {
+  const value = String(process.env.INSTAGRAM_AI_AUTO_REPLY_ENABLED ?? '').trim().toLowerCase();
+  return ['1', 'true', 'yes', 'on'].includes(value);
+}
+
+async function resolveSupportProfilePlan(
+  profile: SupportProfileRow,
+  supabase = getSupabase()
+): Promise<SupportProfileRow> {
+  const resolvedPlan = await maybeExpireProfilePlan(
+    {
+      id: profile.id,
+      plan: profile.plan ?? 'free',
+      plan_expires_at: profile.plan_expires_at ?? null,
+    },
+    supabase
+  );
+
+  return {
+    ...profile,
+    plan: resolvedPlan,
+  } satisfies SupportProfileRow;
+}
+
 function uniqueIds(values: Array<string | null | undefined>) {
   return [...new Set(values.filter((value): value is string => typeof value === 'string' && value.length > 0))];
 }
@@ -213,6 +232,21 @@ function toIsoFromUnix(value: unknown) {
   }
 
   return new Date().toISOString();
+}
+
+function toIsoFromMetaTimestamp(value: unknown) {
+  const numeric =
+    typeof value === 'string' && /^\d+$/.test(value)
+      ? Number(value)
+      : typeof value === 'number' && Number.isFinite(value)
+        ? value
+        : null;
+
+  if (numeric === null) {
+    return new Date().toISOString();
+  }
+
+  return new Date(numeric > 99_999_999_999 ? numeric : numeric * 1000).toISOString();
 }
 
 function clampPriority(a: SupportThreadPriority, b: SupportThreadPriority): SupportThreadPriority {
@@ -412,75 +446,48 @@ function extractNormalizedStatuses(payload: WhatsAppWebhookPayload): NormalizedW
 }
 
 function extractNormalizedInstagramMessages(payload: InstagramWebhookPayload): NormalizedSupportMessage[] {
-  const normalized: NormalizedSupportMessage[] = [];
-
-  for (const entry of payload.entry ?? []) {
-    for (const change of entry.changes ?? []) {
-      if (change.field !== 'messages') {
-        continue;
-      }
-
-      const value = change.value ?? {};
-      const sender = value.sender as { id?: string; username?: string } | undefined;
-      const message = value.message as
-        | {
-            mid?: string;
-            text?: string;
-            is_deleted?: boolean;
-            is_self?: boolean;
-            attachments?: Array<{ type?: string; payload?: { url?: string } }>;
-            reply_to?: Record<string, unknown>;
-          }
-        | undefined;
-
-      const from = typeof sender?.id === 'string' ? sender.id.trim() : '';
-      const id = typeof message?.mid === 'string' ? message.mid.trim() : '';
-
-      if (!from || !id || !message || message.is_deleted || message.is_self) {
-        continue;
-      }
-
-      const textBody = typeof message.text === 'string' ? message.text.trim() : null;
-      const firstAttachment = Array.isArray(message.attachments) ? message.attachments[0] : null;
-      const attachmentType =
-        typeof firstAttachment?.type === 'string' && firstAttachment.type.trim().length > 0
-          ? firstAttachment.type.trim().toLowerCase()
+  return extractInstagramIncomingMessages(payload).map((event) => {
+    const firstAttachment = event.attachments[0] ?? null;
+    const attachmentUrl = firstAttachment?.url?.trim() || null;
+    const body = event.text?.trim() || attachmentUrl;
+    const messageType = event.text?.trim()
+      ? 'text'
+      : firstAttachment?.type?.trim().toLowerCase() || 'unsupported';
+    const rawSender =
+      typeof event.rawEvent.sender === 'object' && event.rawEvent.sender !== null
+        ? (event.rawEvent.sender as { username?: unknown })
+        : typeof event.rawEvent.from === 'object' && event.rawEvent.from !== null
+          ? (event.rawEvent.from as { username?: unknown })
           : null;
-      const attachmentUrl =
-        typeof firstAttachment?.payload?.url === 'string' && firstAttachment.payload.url.trim().length > 0
-          ? firstAttachment.payload.url.trim()
-          : null;
+    const contactName =
+      typeof rawSender?.username === 'string' && rawSender.username.trim().length > 0
+        ? rawSender.username.trim()
+        : null;
+    const fallbackId = crypto
+      .createHash('sha1')
+      .update(
+        [
+          event.senderId,
+          event.recipientId ?? '',
+          event.timestamp ?? '',
+          event.text ?? '',
+          event.attachments.map((attachment) => `${attachment.type}:${attachment.url ?? ''}`).join('|'),
+        ].join(':')
+      )
+      .digest('hex');
 
-      let body = textBody;
-      let messageType = textBody ? 'text' : attachmentType ?? 'unsupported';
-
-      if (!body && attachmentUrl) {
-        body = attachmentUrl;
-      }
-
-      if (!body && message.reply_to) {
-        body = '[Story reply]';
-        messageType = 'reply';
-      }
-
-      normalized.push({
-        id,
-        channel: 'instagram',
-        from,
-        phone: null,
-        messageType,
-        body: body ?? null,
-        timestampIso: toIsoFromUnix(value.timestamp),
-        contactName:
-          typeof sender?.username === 'string' && sender.username.trim().length > 0
-            ? sender.username.trim()
-            : null,
-        raw: value,
-      });
-    }
-  }
-
-  return normalized;
+    return {
+      id: event.messageId ?? `instagram-${fallbackId}`,
+      channel: 'instagram',
+      from: event.senderId,
+      phone: null,
+      messageType,
+      body: body ?? null,
+      timestampIso: toIsoFromMetaTimestamp(event.timestamp),
+      contactName,
+      raw: event.rawEvent,
+    };
+  });
 }
 
 async function findLinkedProfileByPhone(phoneOrWaId: string) {
@@ -497,19 +504,7 @@ async function findLinkedProfileByPhone(phoneOrWaId: string) {
 
   const firstWhatsapp = ((whatsappMatches ?? []) as SupportProfileRow[])[0];
   if (firstWhatsapp) {
-    const resolvedPlan = await maybeExpireProfilePlan(
-      {
-        id: firstWhatsapp.id,
-        plan: firstWhatsapp.plan ?? 'free',
-        plan_expires_at: firstWhatsapp.plan_expires_at ?? null,
-      },
-      supabase
-    );
-
-    return {
-      ...firstWhatsapp,
-      plan: resolvedPlan,
-    } satisfies SupportProfileRow;
+    return resolveSupportProfilePlan(firstWhatsapp, supabase);
   }
 
   const { data: phoneMatches } = await supabase
@@ -525,19 +520,40 @@ async function findLinkedProfileByPhone(phoneOrWaId: string) {
     return null;
   }
 
-  const resolvedPlan = await maybeExpireProfilePlan(
-    {
-      id: firstPhone.id,
-      plan: firstPhone.plan ?? 'free',
-      plan_expires_at: firstPhone.plan_expires_at ?? null,
-    },
-    supabase
-  );
+  return resolveSupportProfilePlan(firstPhone, supabase);
+}
 
-  return {
-    ...firstPhone,
-    plan: resolvedPlan,
-  } satisfies SupportProfileRow;
+async function findLinkedProfileById(userId: string | null | undefined) {
+  if (!userId) {
+    return null;
+  }
+
+  const supabase = getSupabase();
+  const { data } = await supabase
+    .from('profiles')
+    .select(
+      'id, username, phone, whatsapp_number, plan, plan_expires_at, region, selected_games, platforms, role, is_banned'
+    )
+    .eq('id', userId)
+    .maybeSingle();
+
+  return data ? resolveSupportProfilePlan(data as SupportProfileRow, supabase) : null;
+}
+
+async function findLinkedProfileForMessage(
+  message: NormalizedSupportMessage,
+  existingThread: SupportThreadRow | null
+) {
+  const existingLinkedProfile = await findLinkedProfileById(existingThread?.user_id);
+  if (existingLinkedProfile) {
+    return existingLinkedProfile;
+  }
+
+  if (message.channel === 'whatsapp') {
+    return findLinkedProfileByPhone(message.from);
+  }
+
+  return null;
 }
 
 function toSupportUserSummary(profile: SupportProfileRow | null): SupportUserSummary | null {
@@ -869,8 +885,7 @@ async function handleInboundSupportMessage(message: NormalizedSupportMessage) {
   }
 
   const existingThread = await getExistingThread(message.channel, message.from);
-  const linkedProfile =
-    message.channel === 'whatsapp' ? await findLinkedProfileByPhone(message.from) : null;
+  const linkedProfile = await findLinkedProfileForMessage(message, existingThread);
   const userSummary = toSupportUserSummary(linkedProfile);
   const classification = classifySupportMessage({
     body: message.body,
@@ -905,6 +920,24 @@ async function handleInboundSupportMessage(message: NormalizedSupportMessage) {
 
   if (thread.status === 'blocked') {
     return { duplicate: false, escalated: true, reason: 'blocked_thread' };
+  }
+
+  if (message.channel === 'instagram' && !getInstagramAutoReplyEnabled()) {
+    const humanStatus =
+      classification.reason === 'banned_account' ? 'blocked' : 'waiting_on_human';
+    const escalationReason =
+      classification.reason === 'ai_safe'
+        ? 'instagram_auto_reply_disabled'
+        : classification.reason;
+
+    await updateThread(thread.id, {
+      status: humanStatus,
+      priority: clampPriority(thread.priority, classification.priority),
+      escalation_reason: escalationReason,
+      last_message_at: message.timestampIso,
+    });
+
+    return { duplicate: false, escalated: true, reason: escalationReason };
   }
 
   if (classification.route === 'human') {
@@ -943,10 +976,13 @@ async function handleInboundSupportMessage(message: NormalizedSupportMessage) {
     last_message_at: message.timestampIso,
   });
 
-  const actionResult = await executeWhatsAppPlayerAction({
-    body: message.body,
-    user: userSummary,
-  });
+  const actionResult =
+    message.channel === 'whatsapp'
+      ? await executeWhatsAppPlayerAction({
+          body: message.body,
+          user: userSummary,
+        })
+      : { handled: false as const };
 
   if (actionResult.handled) {
     await sendOutboundSupportMessage({
@@ -970,8 +1006,8 @@ async function handleInboundSupportMessage(message: NormalizedSupportMessage) {
       phone: thread.phone ?? `${thread.channel}:${thread.wa_id}`,
       user_summary: userSummary,
       conversation,
-      mechi_context: buildMechiSupportContext(userSummary),
-      system_prompt: buildSupportSystemPrompt(),
+      mechi_context: buildMechiSupportContext(userSummary, message.channel),
+      system_prompt: buildSupportSystemPrompt(message.channel),
       allowed_topics: SUPPORT_ALLOWED_TOPICS,
       blocked_topics: SUPPORT_BLOCKED_TOPICS,
     });

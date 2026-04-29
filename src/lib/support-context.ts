@@ -152,16 +152,24 @@ function summarizeGames(mode: '1v1' | 'lobby') {
     .join(', ');
 }
 
-export function buildSupportSystemPrompt() {
+type SupportContextChannel = 'whatsapp' | 'instagram';
+
+export function buildSupportSystemPrompt(channel: SupportContextChannel = 'whatsapp') {
+  const channelLabel = channel === 'instagram' ? 'Instagram DM' : 'WhatsApp';
+  const channelActionLine =
+    channel === 'whatsapp'
+      ? 'Mechi can safely handle dashboard summary, start queue, leave queue, list lobbies, and list tournaments on WhatsApp when the number is linked.'
+      : 'On Instagram, answer product questions from the supplied Mechi context; if the user needs account-specific actions, payment help, payouts, disputes, or moderation decisions, escalate.';
+
   return [
-    'You are the Mechi WhatsApp support assistant.',
+    `You are the Mechi ${channelLabel} support assistant.`,
     'Reply in a warm, short, confident tone that feels helpful and current, but do not use slang overload.',
-    'Format replies for WhatsApp so they are easy to scan on mobile.',
+    `Format replies for ${channelLabel} so they are easy to scan on mobile.`,
     'Start with the direct answer first.',
     'Use short paragraphs and only a small bullet list when it genuinely helps.',
-    'Use plain WhatsApp-friendly emphasis like *bold* sparingly for labels, not for every line.',
+    'Use plain mobile-friendly emphasis sparingly for labels, not for every line.',
     'Do not use markdown tables, hashtags, or long walls of text.',
-    'Mechi can safely handle dashboard summary, start queue, leave queue, list lobbies, and list tournaments on WhatsApp when the number is linked.',
+    channelActionLine,
     'You are not allowed to process money, refunds, payouts, subscription cancellations, bans, disputes, or account-changing actions.',
     'If the user needs anything operational, risky, or policy-sensitive, return disposition "escalate".',
     'If the user is asking an informational question and the answer is supported by the supplied Mechi context, return disposition "reply".',
@@ -169,16 +177,25 @@ export function buildSupportSystemPrompt() {
     'Do not invent product policy, prices, or features that are not in the supplied Mechi context.',
     'Output valid JSON only with keys: disposition, reply_text, confidence, tags, escalation_reason.',
     'Confidence must be a number between 0 and 1.',
-    'Keep reply_text under 500 characters and include an Mechi link when it genuinely helps.',
+    'Keep reply_text under 500 characters and include a Mechi link when it genuinely helps.',
   ].join('\n');
 }
 
-export function buildMechiSupportContext(user?: SupportUserSummary | null) {
+export function buildMechiSupportContext(
+  user?: SupportUserSummary | null,
+  channel: SupportContextChannel = 'whatsapp'
+) {
   const oneOnOneGames = summarizeGames('1v1');
   const lobbyGames = summarizeGames('lobby');
   const userLine = user
     ? `Known player context: ${user.username} is on the ${user.plan} plan, region ${user.region ?? 'unknown'}, selected games ${user.selected_games.length ? user.selected_games.map((game) => GAMES[game]?.label ?? game).join(', ') : 'none yet'}, and platforms ${user.platforms.length ? user.platforms.join(', ') : 'none set'}.`
-    : 'Known player context: this phone number is not linked to a Mechi user yet.';
+    : channel === 'instagram'
+      ? 'Known player context: this Instagram sender is not linked to a verified Mechi user in this request.'
+      : 'Known player context: this phone number is not linked to a Mechi user yet.';
+  const channelCapabilityLine =
+    channel === 'whatsapp'
+      ? '- WhatsApp can show a linked player dashboard summary, start or leave ranked queue, list open lobbies, and list open tournaments.'
+      : '- Instagram can answer Mechi product questions from this context; account-specific actions should be escalated unless a verified linked profile is supplied.';
 
   return [
     `App: Mechi. Main site: ${APP_URL}. Pricing page: ${APP_URL}/pricing. Dashboard: ${APP_URL}/dashboard.`,
@@ -190,7 +207,7 @@ export function buildMechiSupportContext(user?: SupportUserSummary | null) {
     '- Pro and Elite organizers can run auto prize pools from paid entries or set a specified prize pool up front.',
     '- FC26 and eFootball score reporting use scorelines. Matching score reports can confirm either a win or a draw. Mismatched reports go to dispute review.',
     '- WhatsApp alerts are optional backup notifications when a player has them enabled in profile.',
-    '- WhatsApp can show a linked player dashboard summary, start or leave ranked queue, list open lobbies, and list open tournaments.',
+    channelCapabilityLine,
     `Supported 1v1 games: ${oneOnOneGames}.`,
     `Supported lobby games: ${lobbyGames}.`,
     userLine,

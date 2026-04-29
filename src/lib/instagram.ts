@@ -1,21 +1,36 @@
 import { createHmac, timingSafeEqual } from 'node:crypto';
 import { isMockProviderMode, shouldCaptureProviderTranscripts } from '@/lib/provider-mode';
 import { captureProviderTranscript } from '@/lib/provider-transcript';
+import {
+  SUPPORT_ALLOWED_TOPICS,
+  SUPPORT_BLOCKED_TOPICS,
+  buildMechiSupportContext,
+} from '@/lib/support-context';
 
-const INSTAGRAM_GRAPH_API_VERSION = process.env.INSTAGRAM_GRAPH_API_VERSION ?? 'v25.0';
+const INSTAGRAM_GRAPH_API_VERSION =
+  process.env.MECHI_INSTAGRAM_API_VERSION?.trim() ||
+  process.env.INSTAGRAM_GRAPH_API_VERSION?.trim() ||
+  'v25.0';
 const INSTAGRAM_VERIFY_TOKEN = process.env.INSTAGRAM_VERIFY_TOKEN ?? '';
-const INSTAGRAM_APP_SECRET = process.env.INSTAGRAM_APP_SECRET ?? '';
+const INSTAGRAM_APP_SECRET =
+  process.env.MECHI_INSTAGRAM_APP_SECRET?.trim() ||
+  process.env.INSTAGRAM_APP_SECRET?.trim() ||
+  '';
 const INSTAGRAM_PAGE_ACCESS_TOKEN = process.env.INSTAGRAM_PAGE_ACCESS_TOKEN ?? '';
 const OPENCLAW_WEBHOOK_URL = process.env.OPENCLAW_WEBHOOK_URL ?? '';
 const OPENCLAW_API_KEY = process.env.OPENCLAW_API_KEY ?? '';
 const OPENCLAW_TIMEOUT_MS = Number(process.env.OPENCLAW_TIMEOUT_MS ?? 15000);
 const INSTAGRAM_FALLBACK_REPLY = process.env.INSTAGRAM_FALLBACK_REPLY?.trim() ?? '';
 const INSTAGRAM_ACCESS_TOKEN =
-  process.env.INSTAGRAM_ACCESS_TOKEN ?? process.env.INSTAGRAM_TOKEN ?? '';
+  process.env.MECHI_INSTAGRAM_ACCESS_TOKEN?.trim() ||
+  process.env.INSTAGRAM_ACCESS_TOKEN?.trim() ||
+  process.env.INSTAGRAM_TOKEN?.trim() ||
+  '';
 const INSTAGRAM_ACCOUNT_ID =
-  process.env.INSTAGRAM_BUSINESS_ACCOUNT_ID ??
-  process.env.INSTAGRAM_ACCOUNT_ID ??
-  process.env.INSTAGRAM_IG_ID ??
+  process.env.MECHI_INSTAGRAM_USER_ID?.trim() ||
+  process.env.INSTAGRAM_BUSINESS_ACCOUNT_ID?.trim() ||
+  process.env.INSTAGRAM_ACCOUNT_ID?.trim() ||
+  process.env.INSTAGRAM_IG_ID?.trim() ||
   '';
 const INSTAGRAM_ENABLED = Boolean(INSTAGRAM_ACCESS_TOKEN && INSTAGRAM_ACCOUNT_ID);
 
@@ -421,6 +436,10 @@ export async function fetchOpenClawReply(
       headers,
       body: JSON.stringify({
         channel: 'instagram',
+        allowed_topics: SUPPORT_ALLOWED_TOPICS,
+        blocked_topics: SUPPORT_BLOCKED_TOPICS,
+        mechi_context: buildMechiSupportContext(null, 'instagram'),
+        user_summary: null,
         sender: {
           id: event.senderId,
         },

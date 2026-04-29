@@ -7,7 +7,11 @@ import {
 export const runtime = 'nodejs';
 
 function getVerifyToken() {
-  return (process.env.INSTAGRAM_WEBHOOK_VERIFY_TOKEN ?? '').trim();
+  return (
+    process.env.INSTAGRAM_WEBHOOK_VERIFY_TOKEN?.trim() ||
+    process.env.INSTAGRAM_VERIFY_TOKEN?.trim() ||
+    ''
+  );
 }
 
 export async function GET(request: NextRequest) {

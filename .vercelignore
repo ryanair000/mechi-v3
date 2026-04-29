@@ -20,6 +20,14 @@ start-final*.log
 vercel-live-*.log
 supabase/.temp
 .claude
+.codex-deploy-*
+.e2e
+.playwright-cli
+.next-codex-*
+.env.prod*
+.env.vercel*
+playwright-report
+test-results
 .next-build-production-readiness
 output
 Mechi Design System

@@ -1,6 +1,8 @@
 # Dedicated OpenClaw For Mechi
 
-This repo includes a dedicated bridge plus versioned support and community workspaces so a new OpenClaw host can be isolated to Mechi only.
+This repo includes a dedicated bridge plus versioned support and community workspaces so the EC2 OpenClaw host stays isolated to Mechi only.
+
+Production rule: Mechi uses only the EC2 OpenClaw runtime. Local Windows or laptop gateways are for diagnostics only and must not be treated as live production.
 
 ## What runs on the Mechi OpenClaw host
 
@@ -16,13 +18,13 @@ This repo includes a dedicated bridge plus versioned support and community works
 
 ## App envs to point at the dedicated host
 
-Set these on the Mechi deployment after the bridge is reachable:
+Set these on the Mechi deployment:
 
 ```env
-MECHI_OPENCLAW_BRIDGE_URL=https://your-bridge-host/v1/mechi-support-reply
+MECHI_OPENCLAW_BRIDGE_URL=https://smm-api.lokimax.top/v1/mechi-support-reply
 MECHI_OPENCLAW_BRIDGE_TOKEN=replace-with-the-bridge-token
 
-OPENCLAW_WEBHOOK_URL=https://your-bridge-host/webhooks/instagram
+OPENCLAW_WEBHOOK_URL=https://smm-api.lokimax.top/webhooks/instagram
 OPENCLAW_API_KEY=replace-with-the-bridge-token
 OPENCLAW_TIMEOUT_MS=60000
 ```
@@ -51,9 +53,9 @@ That lets the operator control Mechi through OpenClaw while keeping support and 
 The instance is designed to keep the bridge on `127.0.0.1:8788` internally and expose it through Nginx on port `80`.
 
 - Nginx config template: `ops/openclaw-bridge/mechi-openclaw.nginx.conf`
-- Health check: `http://your-bridge-host/healthz`
-- Support route: `http://your-bridge-host/v1/mechi-support-reply`
-- Instagram route: `http://your-bridge-host/webhooks/instagram`
+- Health check: `https://smm-api.lokimax.top/healthz`
+- Support route: `https://smm-api.lokimax.top/v1/mechi-support-reply`
+- Instagram route: `https://smm-api.lokimax.top/webhooks/instagram`
 
 ## AWS ingress requirement
 
@@ -103,3 +105,25 @@ Required posture:
 - if the helper cannot run, the agent should say it needs a live check through `control`; it should not send the Boss to the public tournaments page as the primary answer
 
 After changing native WhatsApp routing or prompts, restart the OpenClaw process that owns the WhatsApp session. Local repo changes alone will not alter already-running WhatsApp replies.
+
+## EC2-only restart rule
+
+Restart the gateway on EC2 only. Do not start a Windows/local OpenClaw gateway for Mechi production.
+
+Expected EC2 restart flow:
+
+```bash
+cd /home/ubuntu/mechi-v3
+git pull --ff-only
+npm install --omit=dev
+sudo systemctl restart openclaw-gateway
+sudo systemctl restart mechi-openclaw-bridge
+sudo systemctl status openclaw-gateway --no-pager
+sudo systemctl status mechi-openclaw-bridge --no-pager
+```
+
+If the service names differ on the host, list them with:
+
+```bash
+systemctl list-units --type=service | grep -Ei 'openclaw|mechi'
+```

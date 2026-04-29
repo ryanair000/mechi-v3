@@ -8,7 +8,9 @@ It exposes:
 - `POST /webhooks/instagram`
 - `GET /healthz`
 
-In production on the EC2 host, Nginx is expected to proxy public port `80` to this local bridge service.
+In production on the EC2 host, Nginx fronts `https://smm-api.lokimax.top` and proxies to this local bridge service.
+
+Production rule: Mechi uses only the EC2 OpenClaw runtime. Do not start a local Windows/laptop OpenClaw gateway for production WhatsApp, Telegram, Instagram, or support traffic.
 
 Both POST routes require `Authorization: Bearer <MECHI_OPENCLAW_BRIDGE_TOKEN>`.
 
@@ -82,11 +84,11 @@ This keeps operator access powerful while keeping customer-facing support and co
 
 ## Nginx front door
 
-Use `ops/openclaw-bridge/mechi-openclaw.nginx.conf` on the host to expose:
+Use `ops/openclaw-bridge/mechi-openclaw.nginx.conf` on the EC2 host to expose:
 
-- `http://your-host/healthz`
-- `http://your-host/v1/mechi-support-reply`
-- `http://your-host/webhooks/instagram`
+- `https://smm-api.lokimax.top/healthz`
+- `https://smm-api.lokimax.top/v1/mechi-support-reply`
+- `https://smm-api.lokimax.top/webhooks/instagram`
 
 The bundled config sets longer proxy timeouts so Mechi support and Instagram replies can wait on OpenClaw runs without Nginx returning `504 Gateway Time-out`.
 
@@ -122,3 +124,21 @@ Native OpenClaw WhatsApp sessions are not the same as the Mechi app WhatsApp Clo
 - customer support DMs should stay on the support inbox/player-action path
 - live tournament availability should be answered through `npm run ops:tournaments -- --json --summary-only`
 - a deployed/restarted OpenClaw WhatsApp process is required before prompt or routing changes show up in WhatsApp Web
+
+## EC2 restart
+
+Pull and restart only on EC2:
+
+```bash
+cd /home/ubuntu/mechi-v3
+git pull --ff-only
+npm install --omit=dev
+sudo systemctl restart openclaw-gateway
+sudo systemctl restart mechi-openclaw-bridge
+```
+
+If the service names differ, discover them with:
+
+```bash
+systemctl list-units --type=service | grep -Ei 'openclaw|mechi'
+```

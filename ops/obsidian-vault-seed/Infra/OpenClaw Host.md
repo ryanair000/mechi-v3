@@ -11,6 +11,8 @@
 - repo workspace: `/home/ubuntu/mechi-v3`
 - OpenClaw env: `/home/ubuntu/.openclaw/.env`
 - dedicated vault: `/home/ubuntu/.openclaw/vaults/mechi-ops`
+- public bridge base: `https://smm-api.lokimax.top`
+- production rule: EC2 is the only live OpenClaw runtime; do not use a local Windows gateway for Mechi production
 
 ## Important services
 

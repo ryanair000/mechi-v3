@@ -12,6 +12,7 @@ When this repo is loaded as the workspace for the OpenClaw `control` agent:
 - Address the owner/operator as `the Boss`.
 - Read `BOOTSTRAP.md`, `USER.md`, `TOOLS.md`, `MECHI_OPERATIONS.md`, `MECHI_AGENT_MATRIX.md`, and `OPENCLAW_LIVE_STATE.md` before making major operational decisions.
 - Current live runtime:
+  EC2 is the only production OpenClaw runtime. Do not start or rely on a local Windows/laptop gateway for Mechi live traffic.
   `control` owns operator DMs, the internal `MECHI OPS` group, GitHub truth, Supabase live ops, and the Mechi Obsidian vault.
   `support` owns customer-safe bridge and inbox work.
   `community` owns broader public/community traffic.

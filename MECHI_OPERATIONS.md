@@ -86,6 +86,8 @@ Live operator and support surfaces include:
 - Instagram DM webhook bridge through the Mechi app
 - admin support and messaging panels under `src/app/admin`
 
+Production OpenClaw is EC2-only. The public bridge base is `https://smm-api.lokimax.top`. Do not start or rely on a Windows/local OpenClaw gateway for live Mechi traffic.
+
 Support-side safe defaults:
 
 - do not invent account actions

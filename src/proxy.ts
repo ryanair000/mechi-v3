@@ -21,6 +21,7 @@ const PROTECTED_PREFIXES = [
   '/matches',
   '/notifications',
   '/share',
+  '/socials',
   '/rewards',
   '/streams',
   '/suggest',

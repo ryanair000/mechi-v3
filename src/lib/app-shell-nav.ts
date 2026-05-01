@@ -1,4 +1,5 @@
 import {
+  AtSign,
   Coins,
   Crosshair,
   Gamepad2,
@@ -71,6 +72,13 @@ const TOURNAMENTS_NAV_ITEM: AppNavItem = {
   matchMode: 'prefix',
 };
 
+const SOCIALS_NAV_ITEM: AppNavItem = {
+  href: '/socials',
+  label: 'Socials',
+  icon: AtSign,
+  matchMode: 'prefix',
+};
+
 const LOBBIES_NAV_ITEM: AppNavItem = {
   href: '/lobbies',
   label: 'Lobbies',
@@ -136,6 +144,7 @@ export const SIDEBAR_PRIMARY_ITEMS: AppNavItem[] = [
   LEADERBOARD_NAV_ITEM,
   STREAM_NAV_ITEM,
   TOURNAMENTS_NAV_ITEM,
+  SOCIALS_NAV_ITEM,
 ];
 
 export const SIDEBAR_SECTIONS: SidebarSectionConfig[] = [

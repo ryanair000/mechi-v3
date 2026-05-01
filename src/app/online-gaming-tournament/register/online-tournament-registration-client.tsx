@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import toast from 'react-hot-toast';
-import { CheckCircle2, Loader2, Trophy, Users } from 'lucide-react';
+import { CheckCircle2, ExternalLink, Loader2, MessageCircle, Trophy, Users } from 'lucide-react';
 import { useAuth, useAuthFetch } from '@/components/AuthProvider';
 import { HomeFloatingHeader } from '@/components/HomeFloatingHeader';
 import { Button } from '@/components/ui/button';
@@ -231,8 +231,7 @@ export function OnlineTournamentRegistrationClient() {
         await loadSummary();
       }
 
-      toast.success(`${selectedGameConfig.label} registration saved`);
-      router.push(`/tournaments?registered=${selectedGame}#playmechi-${selectedGame}`);
+      toast.success(`${selectedGameConfig.label} slot saved. Join the WhatsApp group below.`);
     } catch {
       toast.error('Network error while saving registration');
     } finally {
@@ -311,6 +310,17 @@ export function OnlineTournamentRegistrationClient() {
                           Status: {currentRegistration.eligibility_status}. You can update your tag or
                           social proof before registration closes.
                         </p>
+                        <Button asChild size="sm" className="mt-3">
+                          <a
+                            href={selectedGameConfig.whatsappGroupUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                          >
+                            <MessageCircle className="h-4 w-4" />
+                            Join {selectedGameConfig.shortLabel} WhatsApp group
+                            <ExternalLink className="h-3.5 w-3.5" />
+                          </a>
+                        </Button>
                       </div>
                     </div>
                   </div>

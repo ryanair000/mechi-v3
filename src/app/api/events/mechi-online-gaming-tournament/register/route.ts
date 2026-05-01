@@ -359,6 +359,7 @@ export async function POST(request: NextRequest) {
           thirdPrize: gameConfig.thirdPrize,
           eligibilityStatus: nextEligibilityStatus,
           registrationUrl: `${APP_URL}${ONLINE_TOURNAMENT_REGISTRATION_PATH}`,
+          whatsappGroupUrl: gameConfig.whatsappGroupUrl,
         });
       });
     }

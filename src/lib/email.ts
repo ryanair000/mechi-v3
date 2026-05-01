@@ -927,6 +927,7 @@ export async function sendOnlineTournamentRegistrationEmail(params: {
   thirdPrize: string;
   eligibilityStatus: string;
   registrationUrl: string;
+  whatsappGroupUrl: string;
 }): Promise<void> {
   const username = escapeHtml(params.username);
   const eventTitle = escapeHtml(params.eventTitle);
@@ -980,8 +981,9 @@ export async function sendOnlineTournamentRegistrationEmail(params: {
         </td>
       </tr>
     </table>
-    <p>We will use your Mechi profile and registered game tag to coordinate the event. Be online before the room opens.</p>
-    <a href="${escapeUrl(params.registrationUrl)}" class="btn">View Registration</a>
+    <p>We will use your Mechi profile and registered game tag to coordinate the event. Join your game WhatsApp group for room details, fixtures, and match-day updates.</p>
+    <a href="${escapeUrl(params.whatsappGroupUrl)}" class="btn">Join WhatsApp Group</a>
+    <p><a href="${escapeUrl(params.registrationUrl)}" class="secondary-link">View registration</a></p>
   `;
 
   try {

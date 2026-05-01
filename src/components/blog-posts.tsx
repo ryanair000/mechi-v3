@@ -80,6 +80,8 @@ export const Component = ({
           } = post;
           
           const isPrimary = index === 0;
+          const starSize = isPrimary ? 16 : 14;
+          const arrowSize = isPrimary ? 32 : 28;
 
           return (
             <Link
@@ -103,37 +105,43 @@ export const Component = ({
               <div className="absolute inset-0 -z-0 h-[130%] w-full bg-gradient-to-t from-black/80 to-transparent transition-all duration-500 group-hover:h-full" />
               
               <article className="relative z-0 flex items-end">
-                <div className="flex flex-1 flex-col gap-2.5">
-                  <h2 className="text-2xl font-semibold md:text-3xl">
+                <div className={cn("flex flex-1 flex-col", isPrimary ? "gap-2.5" : "gap-2")}>
+                  <h2 className={cn("font-semibold", isPrimary ? "text-2xl md:text-3xl" : "text-xl md:text-2xl")}>
                     {postTitle}
                   </h2>
                   {postDescription ? (
-                    <p className="max-w-xl text-sm font-medium leading-6 text-white/80 md:text-base">
+                    <p className={cn(
+                      "max-w-xl font-medium text-white/80",
+                      isPrimary ? "text-sm leading-6 md:text-base" : "text-xs leading-5 md:text-sm"
+                    )}>
                       {postDescription}
                     </p>
                   ) : null}
-                  <div className="flex flex-col gap-2.5">
-                    <span className="w-fit rounded-md bg-white/40 px-2 py-px text-sm capitalize text-white backdrop-blur-md">{category}</span>
+                  <div className={cn("flex flex-col", isPrimary ? "gap-2.5" : "gap-2")}>
+                    <span className={cn(
+                      "w-fit rounded-md bg-white/40 px-2 py-px capitalize text-white backdrop-blur-md",
+                      isPrimary ? "text-sm" : "text-xs"
+                    )}>{category}</span>
                     {views !== undefined ? (
                       <div className="flex items-center gap-2">
                         <div className="flex items-center gap-0.5">
                           {Array.from({ length: 5 }).map((_, idx) => (
                             <Star
-                              width={16}
-                              height={16}
+                              width={starSize}
+                              height={starSize}
                               key={idx}
                               stroke={idx < rating ? "#ffa534" : "#B9B8B8aa"}
                               fill={idx < rating ? "#ffa534" : "#B9B8B8aa"}
                             />
                           ))}
                         </div>
-                        <span className="text-base font-thin">
+                        <span className={cn("font-thin", isPrimary ? "text-base" : "text-sm")}>
                           ({views} Views)
                         </span>
                       </div>
                     ) : null}
                     {readTime && (
-                      <div className="text-lg font-semibold">
+                      <div className={cn("font-semibold", isPrimary ? "text-lg" : "text-base")}>
                         {readTime} min read
                       </div>
                     )}
@@ -142,8 +150,8 @@ export const Component = ({
                 <MoveRight
                   className="transition-all duration-300 group-hover:translate-x-2"
                   color="white"
-                  width={32}
-                  height={32}
+                  width={arrowSize}
+                  height={arrowSize}
                   strokeWidth={1.25}
                 />
               </article>

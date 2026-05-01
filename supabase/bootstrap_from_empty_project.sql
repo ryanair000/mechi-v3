@@ -425,6 +425,8 @@ CREATE INDEX IF NOT EXISTS idx_online_tournament_registrations_user_event
 CREATE INDEX IF NOT EXISTS idx_online_tournament_registrations_eligibility
   ON online_tournament_registrations(event_slug, eligibility_status);
 
+ALTER TABLE online_tournament_registrations ENABLE ROW LEVEL SECURITY;
+
 GRANT ALL ON online_tournament_registrations TO service_role;
 REVOKE ALL ON online_tournament_registrations FROM anon, authenticated;
 

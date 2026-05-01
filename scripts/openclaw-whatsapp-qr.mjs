@@ -68,18 +68,54 @@ async function appendLog(message) {
   await fs.appendFile(logFile, `${new Date().toISOString()} ${message}\n`);
 }
 
+async function resolveLoginModuleUrl(openclawDistDir) {
+  const candidates = [
+    path.join(openclawDistDir, "extensions", "whatsapp", "login-qr-api.js"),
+    path.join(openclawDistDir, "extensions", "whatsapp", "login-qr-runtime.js"),
+    path.join(openclawDistDir, "login-qr-CgfxntEO.js"),
+  ];
+
+  const whatsappExtensionDir = path.join(openclawDistDir, "extensions", "whatsapp");
+  try {
+    const entries = await fs.readdir(whatsappExtensionDir);
+    for (const entry of entries) {
+      if (/^login-qr-.*\.js$/i.test(entry)) {
+        candidates.push(path.join(whatsappExtensionDir, entry));
+      }
+    }
+  } catch {}
+
+  for (const candidate of candidates) {
+    if (!candidate || !existsSync(candidate)) {
+      continue;
+    }
+
+    try {
+      const moduleUrl = pathToFileURL(candidate).href;
+      const loginMod = await import(moduleUrl);
+      if (
+        typeof loginMod.startWebLoginWithQr === "function" &&
+        typeof loginMod.waitForWebLogin === "function"
+      ) {
+        return { loginMod, modulePath: candidate };
+      }
+    } catch {}
+  }
+
+  throw new Error(`Could not find a compatible OpenClaw WhatsApp QR module in ${openclawDistDir}.`);
+}
+
 async function main() {
   await fs.mkdir(outDir, { recursive: true });
   await fs.writeFile(logFile, "");
 
   const openclawDistDir = resolveOpenClawDistDir();
-  const loginModuleUrl = pathToFileURL(path.join(openclawDistDir, "login-qr-CgfxntEO.js")).href;
 
   await appendLog(`using openclaw dist ${openclawDistDir}`);
   console.log("Starting native OpenClaw WhatsApp QR flow...");
 
-  const loginMod = await import(loginModuleUrl);
-  await appendLog("imported login module");
+  const { loginMod, modulePath } = await resolveLoginModuleUrl(openclawDistDir);
+  await appendLog(`imported login module ${modulePath}`);
 
   const result = await loginMod.startWebLoginWithQr({
     timeoutMs: qrTimeoutMs,

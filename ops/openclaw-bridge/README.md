@@ -111,8 +111,10 @@ Recommended route for the current Mechi/Chezahub mailboxes:
 
 - `info@mechi.club` -> OpenClaw `support`
 - `support@mechi.club` -> OpenClaw `support`
+- `enquiries@mechi.club` -> OpenClaw `support`
 - `info@chezahub.co.ke` -> OpenClaw `support`
 - `support@chezahub.co.ke` -> OpenClaw `support`
+- `enquiries@chezahub.co.ke` -> OpenClaw `support`
 
 Deploy the pipe script outside `public_html`, for example:
 
@@ -125,13 +127,15 @@ chmod 600 /home/vawxwkah/openclaw-mail-pipe.config.php
 
 Then edit `/home/vawxwkah/openclaw-mail-pipe.config.php` on cPanel and put the live `MECHI_OPENCLAW_BRIDGE_TOKEN` value there. Do not commit that token.
 
-Create one cPanel pipe forwarder per mailbox:
+Create the actual mailbox in cPanel Email Accounts first, then create one cPanel pipe forwarder per mailbox:
 
 ```text
 |/usr/local/bin/php -q /home/vawxwkah/openclaw-mail-pipe.php info@mechi.club
 |/usr/local/bin/php -q /home/vawxwkah/openclaw-mail-pipe.php support@mechi.club
+|/usr/local/bin/php -q /home/vawxwkah/openclaw-mail-pipe.php enquiries@mechi.club
 |/usr/local/bin/php -q /home/vawxwkah/openclaw-mail-pipe.php info@chezahub.co.ke
 |/usr/local/bin/php -q /home/vawxwkah/openclaw-mail-pipe.php support@chezahub.co.ke
+|/usr/local/bin/php -q /home/vawxwkah/openclaw-mail-pipe.php enquiries@chezahub.co.ke
 ```
 
 The email webhook generates a bot response through the customer-safe `support` agent. It does not send outbound email by itself, which avoids accidental auto-replies, loops, refunds, payouts, account mutations, or privacy/legal responses without a human-controlled sender path.

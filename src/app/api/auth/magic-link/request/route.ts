@@ -7,7 +7,7 @@ import {
   normalizeEmailAddress,
 } from '@/lib/auth-actions';
 import { sendMagicLinkEmail } from '@/lib/email';
-import { checkRateLimit, getClientIp, rateLimitResponse } from '@/lib/rateLimit';
+import { checkPersistentRateLimit, getClientIp, rateLimitResponse } from '@/lib/rateLimit';
 import { createServiceClient } from '@/lib/supabase';
 
 const GENERIC_SUCCESS_MESSAGE = 'If that email exists, a sign-in link is on the way.';
@@ -18,7 +18,11 @@ function isValidEmail(value: string) {
 
 export async function POST(request: NextRequest) {
   try {
-    const rateLimit = checkRateLimit(`magic-link:${getClientIp(request)}`, 5, 15 * 60 * 1000);
+    const rateLimit = await checkPersistentRateLimit(
+      `magic-link:${getClientIp(request)}`,
+      5,
+      15 * 60 * 1000
+    );
     if (!rateLimit.allowed) {
       return rateLimitResponse(rateLimit.retryAfterSeconds);
     }
@@ -29,6 +33,15 @@ export async function POST(request: NextRequest) {
 
     if (!isValidEmail(email)) {
       return NextResponse.json({ error: 'Enter a valid email address' }, { status: 400 });
+    }
+
+    const emailRateLimit = await checkPersistentRateLimit(
+      `magic-link-email:${email}`,
+      3,
+      60 * 60 * 1000
+    );
+    if (!emailRateLimit.allowed) {
+      return NextResponse.json({ success: true, message: GENERIC_SUCCESS_MESSAGE });
     }
 
     const supabase = createServiceClient();

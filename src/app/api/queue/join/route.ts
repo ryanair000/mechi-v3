@@ -15,7 +15,7 @@ import { resolveProfileLocation, UNSPECIFIED_LOCATION_LABEL } from '@/lib/locati
 import { canStartMatch } from '@/lib/plans';
 import { runMatchmaking } from '@/lib/matchmaking';
 import { expireWaitingQueueEntries } from '@/lib/queue';
-import { checkRateLimit, getClientIp, rateLimitResponse } from '@/lib/rateLimit';
+import { checkPersistentRateLimit, getClientIp, rateLimitResponse } from '@/lib/rateLimit';
 import { getTodayMatchCount, maybeExpireProfilePlan } from '@/lib/subscription';
 import type { GameKey, PlatformKey } from '@/types';
 
@@ -37,7 +37,7 @@ export async function POST(request: NextRequest) {
 
     const game = getCanonicalGameKey(requestedGame as GameKey);
 
-    const joinRateLimit = checkRateLimit(
+    const joinRateLimit = await checkPersistentRateLimit(
       `queue-join:${authUser.id}:${game}:${getClientIp(request)}`,
       4,
       15 * 60 * 1000

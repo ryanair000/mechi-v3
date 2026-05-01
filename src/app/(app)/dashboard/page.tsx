@@ -1,4 +1,5 @@
 import { Component as BlogPosts } from '@/components/blog-posts';
+import { getOnlineTournamentArenaHref } from '@/lib/online-tournament-ops';
 
 const dashboardPosts = [
   {
@@ -7,7 +8,7 @@ const dashboardPosts = [
     category: 'upcoming tournament',
     description: 'PUBG Mobile, CODM, and eFootball go live across three nights at 8:00 PM EAT.',
     imageUrl: '/game-artwork/pubgm-header.svg',
-    href: '/tournaments#playmechi-pubgm',
+    href: getOnlineTournamentArenaHref('pubgm'),
   },
   {
     id: 2,

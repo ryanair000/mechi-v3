@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { Suspense } from 'react';
 import { OnlineTournamentRegistrationClient } from '@/app/online-gaming-tournament/register/online-tournament-registration-client';
 import { ONLINE_TOURNAMENT_TITLE } from '@/lib/online-tournament';
 
@@ -9,5 +10,9 @@ export const metadata: Metadata = {
 };
 
 export default function PlayMechiRegisterPage() {
-  return <OnlineTournamentRegistrationClient />;
+  return (
+    <Suspense fallback={<div className="page-container py-8">Loading registration...</div>}>
+      <OnlineTournamentRegistrationClient />
+    </Suspense>
+  );
 }

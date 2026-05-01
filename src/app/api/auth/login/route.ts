@@ -6,7 +6,7 @@ import {
   type LoginMethod,
 } from '@/lib/auth-identifiers';
 import { getSafeNextPath } from '@/lib/navigation';
-import { checkRateLimit, getClientIp, rateLimitResponse } from '@/lib/rateLimit';
+import { checkPersistentRateLimit, getClientIp, rateLimitResponse } from '@/lib/rateLimit';
 import type { CountryKey, Plan, UserRole } from '@/types';
 
 interface AuthenticatedProfile {
@@ -107,7 +107,11 @@ async function authenticateUser(
 
 export async function POST(request: NextRequest) {
   try {
-    const rateLimit = checkRateLimit(`login:${getClientIp(request)}`, 10, 15 * 60 * 1000);
+    const rateLimit = await checkPersistentRateLimit(
+      `login:${getClientIp(request)}`,
+      10,
+      15 * 60 * 1000
+    );
     if (!rateLimit.allowed) {
       return rateLimitResponse(rateLimit.retryAfterSeconds);
     }

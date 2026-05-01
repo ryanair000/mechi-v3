@@ -67,6 +67,14 @@ function formatTelegramLink(label: string, href: string): string {
   return `<a href="${escapeTelegramHtml(href)}">${escapeTelegramHtml(label)}</a>`;
 }
 
+function formatStatusLabel(value: string): string {
+  return value
+    .split(/[_-]+/g)
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(' ');
+}
+
 function formatTelegramActor(
   fallbackLabel: string,
   options: {
@@ -206,6 +214,65 @@ export async function sendNewRegistrationTelegramNotification(params: {
 
   await sendTelegramMessage(message, {
     operation: 'new-registration',
+    threadKey: 'registration',
+  });
+}
+
+export async function sendOnlineTournamentRegistrationTelegramNotification(params: {
+  eventTitle: string;
+  username: string;
+  gameLabel: string;
+  inGameUsername: string;
+  email?: string | null;
+  phone?: string | null;
+  whatsappNumber?: string | null;
+  instagramUsername?: string | null;
+  youtubeName?: string | null;
+  followedInstagram: boolean;
+  subscribedYoutube: boolean;
+  eligibilityStatus: string;
+  registered: number;
+  slots: number;
+  spotsLeft: number;
+  registrationId?: string | null;
+}): Promise<void> {
+  const adminUrl = `${ADMIN_URL}/admin/online-tournament`;
+  const message = [
+    '<b>New PlayMechi tournament registration</b>',
+    '',
+    formatField('Event', params.eventTitle),
+    formatField('Player', params.username),
+    formatField('Game', params.gameLabel),
+    formatField('Game tag', params.inGameUsername),
+    formatField('Email', params.email),
+    formatField('Phone', params.phone),
+    formatField('WhatsApp', params.whatsappNumber),
+    formatField(
+      'Socials',
+      [
+        params.instagramUsername?.trim() ? `IG @${params.instagramUsername.trim()}` : null,
+        params.youtubeName?.trim() ? `YT ${params.youtubeName.trim()}` : null,
+      ]
+        .filter(Boolean)
+        .join(' | ')
+    ),
+    formatField(
+      'Follow/sub',
+      `${params.followedInstagram ? 'IG yes' : 'IG no'} / ${
+        params.subscribedYoutube ? 'YT yes' : 'YT no'
+      }`
+    ),
+    formatField('Eligibility', formatStatusLabel(params.eligibilityStatus)),
+    formatField('Slots', `${params.registered}/${params.slots} registered, ${params.spotsLeft} left`),
+    params.registrationId ? formatField('Registration', params.registrationId.slice(0, 8)) : null,
+    '',
+    formatTelegramLink('Open tournament admin', adminUrl),
+  ]
+    .filter((line): line is string => Boolean(line))
+    .join('\n');
+
+  await sendTelegramMessage(message, {
+    operation: 'online-tournament-registration',
     threadKey: 'registration',
   });
 }

@@ -1,7 +1,8 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { after, NextRequest, NextResponse } from 'next/server';
 import { requireActiveAccessProfile } from '@/lib/access';
 import { tryClaimBounty } from '@/lib/bounties';
 import { GAMES, getCanonicalGameKey, normalizeSelectedGameKeys } from '@/lib/config';
+import { sendTournamentRegistrationConfirmedEmail } from '@/lib/email';
 import { createNotifications } from '@/lib/notifications';
 import { createServiceClient } from '@/lib/supabase';
 import {
@@ -207,6 +208,20 @@ export async function POST(
 
       await createNotifications(notifications, supabase);
       await maybeMarkTournamentFull(supabase, tournament.id);
+      if (profile.email) {
+        after(async () => {
+          await sendTournamentRegistrationConfirmedEmail({
+            to: profile.email as string,
+            playerName: profile.username,
+            tournamentTitle: tournament.title,
+            game: GAMES[tournament.game]?.label ?? tournament.game,
+            platform: tournament.platform,
+            scheduledFor: tournament.scheduled_for,
+            entryFee: tournament.entry_fee,
+            tournamentUrl: `${getAppUrl()}/t/${tournament.slug}`,
+          });
+        });
+      }
       void tryClaimBounty(supabase, authUser.id, 'tournament_register').catch(() => null);
       return NextResponse.json({ status: 'joined', player });
     }

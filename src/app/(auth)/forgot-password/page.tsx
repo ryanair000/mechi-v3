@@ -1,18 +1,16 @@
-'use client';
-
-import { use } from 'react';
+import { Suspense } from 'react';
 import { PasswordResetFlow } from '@/components/auth/PasswordResetFlow';
 import { FullScreenSignup } from '@/components/ui/full-screen-signup';
 import { getLoginPath, getSafeNextPath } from '@/lib/navigation';
 
 type ForgotPasswordSearchParams = Promise<{ [key: string]: string | string[] | undefined }>;
 
-export default function ForgotPasswordPage({
+export default async function ForgotPasswordPage({
   searchParams,
 }: {
   searchParams: ForgotPasswordSearchParams;
 }) {
-  const resolvedSearchParams = use(searchParams);
+  const resolvedSearchParams = await searchParams;
   const rawNextValue = resolvedSearchParams.next;
   const rawNext =
     typeof rawNextValue === 'string'
@@ -26,16 +24,18 @@ export default function ForgotPasswordPage({
   return (
     <FullScreenSignup
       title="Reset your password."
-      subtitle="Enter your username and email, then choose a new password right here."
-      sideTitle="Get back in quickly."
-      sideDescription="Confirm the username and email on your Mechi profile, then set a fresh password without waiting for an email."
+      subtitle="Enter your account email and we will send a one-time reset link."
+      sideTitle="Get back in safely."
+      sideDescription="Password changes now use secure email links so account recovery cannot be triggered by profile details alone."
       sidePoints={[
-        'Confirm username + email first',
-        'Set your new password on the next step',
+        'One-time email reset link',
+        'Set a new password securely',
         'Immediate sign-in after reset',
       ]}
     >
-      <PasswordResetFlow loginHref={loginHref} nextPath={nextPath} />
+      <Suspense fallback={null}>
+        <PasswordResetFlow loginHref={loginHref} nextPath={nextPath} />
+      </Suspense>
     </FullScreenSignup>
   );
 }

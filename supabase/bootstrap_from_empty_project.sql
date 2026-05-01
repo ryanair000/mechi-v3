@@ -112,6 +112,16 @@ CREATE TABLE IF NOT EXISTS notifications (
   created_at timestamptz NOT NULL DEFAULT timezone('utc', now())
 );
 
+CREATE TABLE IF NOT EXISTS email_delivery_events (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  event_key text NOT NULL UNIQUE,
+  event_type text NOT NULL,
+  user_id uuid REFERENCES profiles(id) ON DELETE SET NULL,
+  recipient text NOT NULL,
+  metadata jsonb NOT NULL DEFAULT '{}'::jsonb,
+  created_at timestamptz NOT NULL DEFAULT timezone('utc', now())
+);
+
 CREATE TABLE IF NOT EXISTS support_threads (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   channel text NOT NULL DEFAULT 'whatsapp'
@@ -252,6 +262,10 @@ CREATE INDEX IF NOT EXISTS idx_notifications_user_read_at
   ON notifications(user_id, read_at, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_support_threads_status_last_message_at
   ON support_threads(status, last_message_at DESC);
+CREATE INDEX IF NOT EXISTS idx_email_delivery_events_user_created_at
+  ON email_delivery_events(user_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_email_delivery_events_type_created_at
+  ON email_delivery_events(event_type, created_at DESC);
 CREATE UNIQUE INDEX IF NOT EXISTS idx_support_threads_channel_wa_id
   ON support_threads(channel, wa_id);
 CREATE INDEX IF NOT EXISTS idx_support_threads_assigned_status_last_message_at
@@ -316,6 +330,8 @@ REVOKE ALL ON TABLE notifications FROM anon, authenticated;
 REVOKE ALL ON TABLE match_challenges FROM anon, authenticated;
 REVOKE ALL ON TABLE support_threads FROM anon, authenticated;
 REVOKE ALL ON TABLE support_messages FROM anon, authenticated;
+REVOKE ALL ON TABLE email_delivery_events FROM anon, authenticated;
+GRANT ALL ON email_delivery_events TO service_role;
 REVOKE ALL ON TABLE match_messages FROM anon, authenticated;
 REVOKE ALL ON TABLE match_message_reads FROM anon, authenticated;
 REVOKE ALL ON TABLE match_escalations FROM anon, authenticated;
@@ -429,6 +445,147 @@ ALTER TABLE online_tournament_registrations ENABLE ROW LEVEL SECURITY;
 
 GRANT ALL ON online_tournament_registrations TO service_role;
 REVOKE ALL ON online_tournament_registrations FROM anon, authenticated;
+
+CREATE TABLE IF NOT EXISTS online_tournament_rooms (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  event_slug text NOT NULL,
+  game text NOT NULL CHECK (game IN ('pubgm', 'codm')),
+  match_number integer NOT NULL CHECK (match_number BETWEEN 1 AND 3),
+  title text,
+  map_name text,
+  room_id text,
+  room_password text,
+  instructions text,
+  starts_at timestamptz,
+  release_at timestamptz,
+  status text NOT NULL DEFAULT 'draft'
+    CHECK (status IN ('draft', 'released', 'locked', 'completed', 'cancelled')),
+  created_by uuid REFERENCES profiles(id) ON DELETE SET NULL,
+  updated_by uuid REFERENCES profiles(id) ON DELETE SET NULL,
+  created_at timestamptz NOT NULL DEFAULT timezone('utc', now()),
+  updated_at timestamptz NOT NULL DEFAULT timezone('utc', now()),
+  UNIQUE (event_slug, game, match_number)
+);
+
+CREATE TABLE IF NOT EXISTS online_tournament_fixtures (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  event_slug text NOT NULL,
+  game text NOT NULL DEFAULT 'efootball' CHECK (game = 'efootball'),
+  round text NOT NULL
+    CHECK (round IN ('round_of_16', 'quarterfinal', 'semifinal', 'final', 'bronze')),
+  round_label text NOT NULL,
+  slot integer NOT NULL CHECK (slot >= 0),
+  player1_registration_id uuid REFERENCES online_tournament_registrations(id) ON DELETE SET NULL,
+  player2_registration_id uuid REFERENCES online_tournament_registrations(id) ON DELETE SET NULL,
+  player1_score integer CHECK (player1_score IS NULL OR player1_score >= 0),
+  player2_score integer CHECK (player2_score IS NULL OR player2_score >= 0),
+  winner_registration_id uuid REFERENCES online_tournament_registrations(id) ON DELETE SET NULL,
+  status text NOT NULL DEFAULT 'pending'
+    CHECK (status IN ('pending', 'ready', 'completed', 'disputed', 'bye')),
+  screenshot_url text,
+  screenshot_public_id text,
+  admin_note text,
+  created_at timestamptz NOT NULL DEFAULT timezone('utc', now()),
+  updated_at timestamptz NOT NULL DEFAULT timezone('utc', now()),
+  UNIQUE (event_slug, game, round, slot)
+);
+
+CREATE TABLE IF NOT EXISTS online_tournament_result_submissions (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  event_slug text NOT NULL,
+  game text NOT NULL CHECK (game IN ('pubgm', 'codm', 'efootball')),
+  registration_id uuid REFERENCES online_tournament_registrations(id) ON DELETE CASCADE,
+  user_id uuid REFERENCES profiles(id) ON DELETE SET NULL,
+  room_id uuid REFERENCES online_tournament_rooms(id) ON DELETE SET NULL,
+  fixture_id uuid REFERENCES online_tournament_fixtures(id) ON DELETE SET NULL,
+  match_number integer CHECK (match_number IS NULL OR match_number BETWEEN 1 AND 3),
+  kills integer CHECK (kills IS NULL OR kills >= 0),
+  placement integer CHECK (placement IS NULL OR placement > 0),
+  player1_score integer CHECK (player1_score IS NULL OR player1_score >= 0),
+  player2_score integer CHECK (player2_score IS NULL OR player2_score >= 0),
+  reported_winner_registration_id uuid REFERENCES online_tournament_registrations(id) ON DELETE SET NULL,
+  screenshot_url text,
+  screenshot_public_id text,
+  status text NOT NULL DEFAULT 'pending'
+    CHECK (status IN ('pending', 'verified', 'rejected', 'disputed')),
+  admin_note text,
+  submitted_by uuid REFERENCES profiles(id) ON DELETE SET NULL,
+  verified_by uuid REFERENCES profiles(id) ON DELETE SET NULL,
+  verified_at timestamptz,
+  created_at timestamptz NOT NULL DEFAULT timezone('utc', now()),
+  updated_at timestamptz NOT NULL DEFAULT timezone('utc', now())
+);
+
+CREATE TABLE IF NOT EXISTS online_tournament_disputes (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  event_slug text NOT NULL,
+  game text NOT NULL CHECK (game IN ('pubgm', 'codm', 'efootball')),
+  result_submission_id uuid REFERENCES online_tournament_result_submissions(id) ON DELETE SET NULL,
+  fixture_id uuid REFERENCES online_tournament_fixtures(id) ON DELETE SET NULL,
+  opened_by uuid REFERENCES profiles(id) ON DELETE SET NULL,
+  reason text,
+  status text NOT NULL DEFAULT 'open'
+    CHECK (status IN ('open', 'resolved', 'dismissed')),
+  resolution_note text,
+  resolved_by uuid REFERENCES profiles(id) ON DELETE SET NULL,
+  resolved_at timestamptz,
+  created_at timestamptz NOT NULL DEFAULT timezone('utc', now()),
+  updated_at timestamptz NOT NULL DEFAULT timezone('utc', now())
+);
+
+CREATE TABLE IF NOT EXISTS online_tournament_payouts (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  event_slug text NOT NULL,
+  game text NOT NULL CHECK (game IN ('pubgm', 'codm', 'efootball')),
+  placement integer NOT NULL CHECK (placement BETWEEN 1 AND 3),
+  registration_id uuid REFERENCES online_tournament_registrations(id) ON DELETE SET NULL,
+  prize_label text NOT NULL,
+  prize_value_kes integer CHECK (prize_value_kes IS NULL OR prize_value_kes >= 0),
+  reward_type text NOT NULL CHECK (reward_type IN ('cash', 'uc', 'cp', 'coins')),
+  eligibility_status text NOT NULL DEFAULT 'pending'
+    CHECK (eligibility_status IN ('pending', 'eligible', 'ineligible')),
+  payout_status text NOT NULL DEFAULT 'pending'
+    CHECK (payout_status IN ('pending', 'approved', 'paid', 'failed', 'ineligible')),
+  payout_ref text,
+  admin_note text,
+  updated_by uuid REFERENCES profiles(id) ON DELETE SET NULL,
+  created_at timestamptz NOT NULL DEFAULT timezone('utc', now()),
+  updated_at timestamptz NOT NULL DEFAULT timezone('utc', now()),
+  UNIQUE (event_slug, game, placement)
+);
+
+CREATE INDEX IF NOT EXISTS idx_online_tournament_rooms_event_game
+  ON online_tournament_rooms(event_slug, game, match_number);
+CREATE INDEX IF NOT EXISTS idx_online_tournament_fixtures_event_game
+  ON online_tournament_fixtures(event_slug, game, round, slot);
+CREATE INDEX IF NOT EXISTS idx_online_tournament_fixtures_players
+  ON online_tournament_fixtures(player1_registration_id, player2_registration_id);
+CREATE INDEX IF NOT EXISTS idx_online_tournament_results_event_game
+  ON online_tournament_result_submissions(event_slug, game, match_number, status);
+CREATE INDEX IF NOT EXISTS idx_online_tournament_results_registration
+  ON online_tournament_result_submissions(registration_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_online_tournament_disputes_status
+  ON online_tournament_disputes(event_slug, status, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_online_tournament_payouts_event_game
+  ON online_tournament_payouts(event_slug, game, placement);
+
+ALTER TABLE online_tournament_rooms ENABLE ROW LEVEL SECURITY;
+ALTER TABLE online_tournament_fixtures ENABLE ROW LEVEL SECURITY;
+ALTER TABLE online_tournament_result_submissions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE online_tournament_disputes ENABLE ROW LEVEL SECURITY;
+ALTER TABLE online_tournament_payouts ENABLE ROW LEVEL SECURITY;
+
+GRANT ALL ON online_tournament_rooms TO service_role;
+GRANT ALL ON online_tournament_fixtures TO service_role;
+GRANT ALL ON online_tournament_result_submissions TO service_role;
+GRANT ALL ON online_tournament_disputes TO service_role;
+GRANT ALL ON online_tournament_payouts TO service_role;
+
+REVOKE ALL ON online_tournament_rooms FROM anon, authenticated;
+REVOKE ALL ON online_tournament_fixtures FROM anon, authenticated;
+REVOKE ALL ON online_tournament_result_submissions FROM anon, authenticated;
+REVOKE ALL ON online_tournament_disputes FROM anon, authenticated;
+REVOKE ALL ON online_tournament_payouts FROM anon, authenticated;
 
 ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public
   GRANT ALL ON TABLES TO service_role;
@@ -821,6 +978,66 @@ CREATE INDEX IF NOT EXISTS idx_rate_limit_attempts_key ON rate_limit_attempts(ke
 
 REVOKE ALL ON TABLE admin_audit_logs FROM anon, authenticated;
 GRANT ALL ON admin_audit_logs, rate_limit_attempts TO service_role;
+
+CREATE OR REPLACE FUNCTION check_rate_limit_attempt(
+  p_key text,
+  p_limit integer,
+  p_window_ms integer
+)
+RETURNS TABLE (
+  allowed boolean,
+  remaining integer,
+  retry_after_seconds integer,
+  attempts integer
+)
+LANGUAGE plpgsql
+SECURITY INVOKER
+SET search_path = public
+AS $$
+DECLARE
+  v_now timestamptz := timezone('utc', now());
+  v_window interval := make_interval(secs => p_window_ms::double precision / 1000.0);
+  v_window_start timestamptz;
+  v_attempts integer;
+BEGIN
+  IF p_key IS NULL OR length(trim(p_key)) = 0 THEN
+    RAISE EXCEPTION 'rate limit key is required';
+  END IF;
+
+  IF p_limit < 1 OR p_window_ms < 1000 THEN
+    RAISE EXCEPTION 'invalid rate limit policy';
+  END IF;
+
+  INSERT INTO rate_limit_attempts (key, attempts, window_start, last_attempt)
+  VALUES (p_key, 1, v_now, v_now)
+  ON CONFLICT (key) DO UPDATE
+    SET attempts = CASE
+        WHEN rate_limit_attempts.window_start <= v_now - v_window THEN 1
+        ELSE rate_limit_attempts.attempts + 1
+      END,
+      window_start = CASE
+        WHEN rate_limit_attempts.window_start <= v_now - v_window THEN v_now
+        ELSE rate_limit_attempts.window_start
+      END,
+      last_attempt = v_now
+  RETURNING rate_limit_attempts.attempts, rate_limit_attempts.window_start
+  INTO v_attempts, v_window_start;
+
+  RETURN QUERY
+  SELECT
+    v_attempts <= p_limit,
+    greatest(p_limit - v_attempts, 0),
+    CASE
+      WHEN v_attempts <= p_limit THEN 0
+      ELSE greatest(ceil(extract(epoch FROM ((v_window_start + v_window) - v_now)))::integer, 1)
+    END,
+    v_attempts;
+END;
+$$;
+
+REVOKE ALL ON FUNCTION check_rate_limit_attempt(text, integer, integer) FROM PUBLIC;
+REVOKE ALL ON FUNCTION check_rate_limit_attempt(text, integer, integer) FROM anon, authenticated;
+GRANT EXECUTE ON FUNCTION check_rate_limit_attempt(text, integer, integer) TO service_role;
 
 CREATE TABLE IF NOT EXISTS auth_action_tokens (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),

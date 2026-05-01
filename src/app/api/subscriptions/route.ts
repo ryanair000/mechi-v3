@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireActiveAccessProfile } from '@/lib/access';
+import { checkPersistentRateLimit, getClientIp, rateLimitResponse } from '@/lib/rateLimit';
 import { createServiceClient } from '@/lib/supabase';
 import type { BillingCycle, Plan } from '@/lib/plans';
 import { initiateSubscription, getActiveOrPendingSubscription, maybeExpireProfilePlan } from '@/lib/subscription';
@@ -55,6 +56,15 @@ export async function POST(request: NextRequest) {
   const authUser = access.profile;
 
   try {
+    const checkoutRateLimit = await checkPersistentRateLimit(
+      `subscription-checkout:${authUser.id}:${getClientIp(request)}`,
+      8,
+      30 * 60 * 1000
+    );
+    if (!checkoutRateLimit.allowed) {
+      return rateLimitResponse(checkoutRateLimit.retryAfterSeconds);
+    }
+
     const body = (await request.json()) as Record<string, unknown>;
     const plan = String(body.plan ?? '').trim() as Plan;
     const cycle = (String(body.cycle ?? 'monthly').trim() as BillingCycle) ?? 'monthly';

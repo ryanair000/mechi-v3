@@ -18,6 +18,8 @@ export interface TournamentMemberListItem {
   prizeLabel: string;
   progress: number;
   registeredLabel?: string | null;
+  secondaryActionHref?: string;
+  secondaryActionLabel?: string;
   slotsLabel: string;
   startsLabel: string;
   statusClassName?: string;
@@ -42,7 +44,7 @@ function TournamentLine({ item }: { item: TournamentMemberListItem }) {
   return (
     <div
       id={item.anchorId}
-      className="grid gap-3 border-b border-[var(--border-color)] px-3 py-4 text-sm transition-colors last:border-b-0 hover:bg-[var(--surface-elevated)] sm:px-5 md:grid-cols-[minmax(0,1.35fr)_118px_150px_120px_104px] md:items-center md:gap-4"
+      className="grid gap-3 border-b border-[var(--border-color)] px-3 py-4 text-sm transition-colors last:border-b-0 hover:bg-[var(--surface-elevated)] sm:px-5 md:grid-cols-[minmax(0,1.35fr)_118px_150px_120px_168px] md:items-center md:gap-4"
     >
       <div className="flex min-w-0 items-start gap-3">
         <div className="relative flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full border border-[var(--border-color)] bg-[var(--surface-strong)] text-xs font-black text-[var(--text-primary)]">
@@ -122,11 +124,11 @@ function TournamentLine({ item }: { item: TournamentMemberListItem }) {
         </div>
       </div>
 
-      <div className="md:text-right">
+      <div className="flex flex-col gap-2 sm:flex-row md:justify-end">
         <Link
           href={item.actionHref}
           className={cn(
-            'inline-flex min-h-9 w-full items-center justify-center rounded-md border px-3 py-2 text-xs font-black transition-colors md:w-auto',
+            'inline-flex min-h-9 w-full items-center justify-center rounded-md border px-3 py-2 text-xs font-black transition-colors sm:w-auto',
             actionIsMuted
               ? 'border-[var(--border-color)] bg-[var(--surface-elevated)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
               : 'border-[rgba(50,224,196,0.22)] bg-[rgba(50,224,196,0.1)] text-[var(--accent-secondary-text)] hover:bg-[rgba(50,224,196,0.16)]'
@@ -134,6 +136,14 @@ function TournamentLine({ item }: { item: TournamentMemberListItem }) {
         >
           {item.actionLabel}
         </Link>
+        {item.secondaryActionHref && item.secondaryActionLabel ? (
+          <Link
+            href={item.secondaryActionHref}
+            className="inline-flex min-h-9 w-full items-center justify-center rounded-md border border-[var(--border-color)] bg-[var(--surface-elevated)] px-3 py-2 text-xs font-black text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)] sm:w-auto"
+          >
+            {item.secondaryActionLabel}
+          </Link>
+        ) : null}
       </div>
     </div>
   );
@@ -152,7 +162,7 @@ export function TournamentMemberList({
         className
       )}
     >
-      <div className="sticky top-0 z-10 hidden grid-cols-[minmax(0,1.35fr)_118px_150px_120px_104px] items-center gap-4 border-b border-[var(--border-color)] bg-[var(--surface-strong)] px-5 py-3 text-[10px] font-black uppercase tracking-[0.14em] text-[var(--text-soft)] md:grid">
+      <div className="sticky top-0 z-10 hidden grid-cols-[minmax(0,1.35fr)_118px_150px_120px_168px] items-center gap-4 border-b border-[var(--border-color)] bg-[var(--surface-strong)] px-5 py-3 text-[10px] font-black uppercase tracking-[0.14em] text-[var(--text-soft)] md:grid">
         <div>Tournament</div>
         <div>Slots</div>
         <div>Starts</div>

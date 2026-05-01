@@ -13,8 +13,8 @@ import {
 import { GAMES } from '@/lib/config';
 import {
   ONLINE_TOURNAMENT_CASH_PRIZE_POOL,
+  ONLINE_TOURNAMENT_ARENA_PATH,
   ONLINE_TOURNAMENT_GAMES,
-  ONLINE_TOURNAMENT_PUBLIC_PATH,
   ONLINE_TOURNAMENT_REGISTRATION_API_PATH,
   ONLINE_TOURNAMENT_REGISTRATION_PATH,
   ONLINE_TOURNAMENT_TITLE,
@@ -25,6 +25,7 @@ import {
   type OnlineTournamentGameConfig,
   type OnlineTournamentRegistrationSummary,
 } from '@/lib/online-tournament';
+import { getOnlineTournamentArenaHref } from '@/lib/online-tournament-ops';
 import { resolvePlan } from '@/lib/plans';
 import { getTournamentPrizePoolLabel } from '@/lib/tournament-metrics';
 import { formatTournamentDateTime } from '@/lib/tournament-schedule';
@@ -193,7 +194,7 @@ export default function TournamentsPage() {
           actionLabel: action.label,
           actionVariant: userRegistration ? 'muted' : 'primary',
           anchorId: `playmechi-${game.game}`,
-          detailHref: ONLINE_TOURNAMENT_PUBLIC_PATH,
+          detailHref: getOnlineTournamentArenaHref(game.game),
           gameLabel: game.label,
           id: `playmechi-${game.game}`,
           metaLabel: 'Free entry',
@@ -202,11 +203,14 @@ export default function TournamentsPage() {
           registeredLabel: userRegistration?.in_game_username
             ? `Registered as ${userRegistration.in_game_username}`
             : null,
+          secondaryActionHref:
+            action.label === 'View' ? undefined : getOnlineTournamentArenaHref(game.game),
+          secondaryActionLabel: action.label === 'View' ? undefined : 'View',
           slotsLabel: `${registered}/${slots}`,
           startsLabel: `${game.dateLabel.replace(' 2026', '')}, ${game.timeLabel}`,
           statusClassName: getStatusClasses(onlineTournamentStatus),
           statusLabel: formatTournamentStatus(onlineTournamentStatus),
-          tagLabel: 'PlayMechi',
+          tagLabel: null,
           title: ONLINE_TOURNAMENT_TITLE,
         };
       })
@@ -300,7 +304,7 @@ export default function TournamentsPage() {
           ctaLabel={firstOnlineTournamentRegistration ? 'View your slot' : 'Reserve your spot'}
           href={
             firstOnlineTournamentRegistration?.game
-              ? `/tournaments#playmechi-${firstOnlineTournamentRegistration.game}`
+              ? getOnlineTournamentArenaHref(firstOnlineTournamentRegistration.game)
               : `${ONLINE_TOURNAMENT_REGISTRATION_PATH}?game=${ONLINE_TOURNAMENT_GAMES[0].game}`
           }
           title={ONLINE_TOURNAMENT_TITLE}
@@ -378,9 +382,9 @@ function getOnlineTournamentAction(
 ) {
   if (registration) {
     return {
-      href: `${ONLINE_TOURNAMENT_REGISTRATION_PATH}?game=${game.game}`,
-      label: 'Registered',
-      mobileLabel: 'Registered',
+      href: getOnlineTournamentArenaHref(game.game),
+      label: 'View',
+      mobileLabel: 'View',
     };
   }
 
@@ -393,7 +397,7 @@ function getOnlineTournamentAction(
   }
 
   return {
-    href: ONLINE_TOURNAMENT_PUBLIC_PATH,
+    href: ONLINE_TOURNAMENT_ARENA_PATH,
     label: 'View',
     mobileLabel: 'View event',
   };

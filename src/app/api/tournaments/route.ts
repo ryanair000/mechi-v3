@@ -5,7 +5,7 @@ import { filterVisibleTournaments, shouldHideE2EFixtures } from '@/lib/e2e-fixtu
 import { isTournamentSize } from '@/lib/bracket';
 import { notifyGameAudienceAboutTournament } from '@/lib/game-audience';
 import { resolveProfileLocation, validateLocationSelection } from '@/lib/location';
-import { checkRateLimit, getClientIp, rateLimitResponse } from '@/lib/rateLimit';
+import { checkPersistentRateLimit, getClientIp, rateLimitResponse } from '@/lib/rateLimit';
 import { makeSlug } from '@/lib/slug';
 import { maybeExpireProfilePlan } from '@/lib/subscription';
 import { createServiceClient } from '@/lib/supabase';
@@ -262,7 +262,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const createRateLimit = checkRateLimit(
+    const createRateLimit = await checkPersistentRateLimit(
       `tournament-create:${authUser.id}:${game}:${getClientIp(request)}`,
       2,
       60 * 60 * 1000

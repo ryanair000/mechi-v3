@@ -11,7 +11,7 @@ import {
 } from '@/lib/config';
 import { filterVisibleLobbies, shouldHideE2EFixtures } from '@/lib/e2e-fixtures';
 import { notifyGameAudienceAboutLobby } from '@/lib/game-audience';
-import { checkRateLimit, getClientIp, rateLimitResponse } from '@/lib/rateLimit';
+import { checkPersistentRateLimit, getClientIp, rateLimitResponse } from '@/lib/rateLimit';
 import type { GameKey, LobbyVisibility } from '@/types';
 
 function generateRoomCode(): string {
@@ -177,7 +177,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Select public or private' }, { status: 400 });
     }
 
-    const createRateLimit = checkRateLimit(
+    const createRateLimit = await checkPersistentRateLimit(
       `lobby-create:${authUser.id}:${game}:${getClientIp(request)}`,
       3,
       30 * 60 * 1000

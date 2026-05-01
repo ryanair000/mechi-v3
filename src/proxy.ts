@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import type { JWTPayload } from '@/types';
 import { hasPrimaryAdminAccess } from '@/lib/admin-access';
 import { getLoginPath, getSafeNextPath } from '@/lib/navigation';
+import { checkRateLimit, getClientIp } from '@/lib/rateLimit';
 import { createServiceClient } from '@/lib/supabase';
 import { ADMIN_HOST as CONFIGURED_ADMIN_HOST, ADMIN_URL, APP_HOST, APP_URL } from '@/lib/urls';
 
@@ -40,8 +41,37 @@ const HIDDEN_PREFIXES = ['/tutorial', '/tutorials'];
 const ADMIN_PREFIXES = ['/admin', '/api/admin'];
 const TESTS_HOSTS = new Set(['tests.mechi.club']);
 const LOCAL_APP_HOSTS = new Set(['localhost', '127.0.0.1']);
+const UNSAFE_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
 const CANONICAL_ADMIN_HOST = 'mechi.lokimax.top';
 const ADMIN_HOSTS = new Set([CONFIGURED_ADMIN_HOST, CANONICAL_ADMIN_HOST]);
+const EXTRA_ALLOWED_ORIGIN_HOSTS = new Set([
+  'mechi-v3.vercel.app',
+  'localhost',
+  '127.0.0.1',
+  'admin.localhost',
+]);
+const CROSS_ORIGIN_API_EXEMPT_PREFIXES = [
+  '/api/instagram/webhook',
+  '/api/webhooks/instagram',
+  '/api/whatsapp/webhook',
+  '/api/paystack/webhook',
+  '/api/streams/webhook',
+  '/api/integrations/chezahub/order-event',
+];
+const API_RATE_LIMIT_POLICIES = [
+  { prefix: '/api/auth/login', limit: 30, windowMs: 15 * 60 * 1000 },
+  { prefix: '/api/auth/register', limit: 30, windowMs: 15 * 60 * 1000 },
+  { prefix: '/api/auth/signup', limit: 30, windowMs: 15 * 60 * 1000 },
+  { prefix: '/api/auth/password', limit: 30, windowMs: 15 * 60 * 1000 },
+  { prefix: '/api/auth/magic-link', limit: 30, windowMs: 15 * 60 * 1000 },
+  { prefix: '/api/admin', limit: 180, windowMs: 5 * 60 * 1000 },
+  { prefix: '/api/events/mechi-online-gaming-tournament/results', limit: 30, windowMs: 15 * 60 * 1000 },
+  { prefix: '/api/events/mechi-online-gaming-tournament/register', limit: 60, windowMs: 15 * 60 * 1000 },
+  { prefix: '/api/subscriptions', limit: 45, windowMs: 15 * 60 * 1000 },
+  { prefix: '/api/rewards/redeem', limit: 30, windowMs: 15 * 60 * 1000 },
+  { prefix: '/api/streams', limit: 90, windowMs: 5 * 60 * 1000 },
+];
+const DEFAULT_UNSAFE_API_RATE_LIMIT = { limit: 240, windowMs: 5 * 60 * 1000 };
 
 const ADMIN_HOST_PATH_ALIASES: Record<string, string> = {
   '/': '/admin',
@@ -138,6 +168,104 @@ function getRequestHost(request: NextRequest) {
 
 function isAdminHost(request: NextRequest) {
   return ADMIN_HOSTS.has(getRequestHost(request));
+}
+
+function isCrossOriginApiExempt(pathname: string) {
+  return CROSS_ORIGIN_API_EXEMPT_PREFIXES.some((prefix) => pathname.startsWith(prefix));
+}
+
+function getAllowedOriginHosts(request: NextRequest) {
+  return new Set([
+    APP_HOST,
+    CONFIGURED_ADMIN_HOST,
+    CANONICAL_ADMIN_HOST,
+    getRequestHost(request),
+    ...EXTRA_ALLOWED_ORIGIN_HOSTS,
+  ]);
+}
+
+function isAllowedUnsafeOrigin(request: NextRequest) {
+  const origin = request.headers.get('origin');
+  if (!origin) {
+    return true;
+  }
+
+  try {
+    const originHost = normalizeHost(new URL(origin).host);
+    return getAllowedOriginHosts(request).has(originHost);
+  } catch {
+    return false;
+  }
+}
+
+function getApiRateLimitPolicy(pathname: string) {
+  return (
+    API_RATE_LIMIT_POLICIES.find((policy) => pathname.startsWith(policy.prefix)) ??
+    DEFAULT_UNSAFE_API_RATE_LIMIT
+  );
+}
+
+function blockedRequestResponse(message = 'Bad request') {
+  return NextResponse.json(
+    { error: message },
+    {
+      status: 400,
+      headers: {
+        'Cache-Control': 'no-store',
+      },
+    }
+  );
+}
+
+function rateLimitedApiResponse(retryAfterSeconds: number) {
+  return NextResponse.json(
+    { error: 'Too many requests. Please try again later.' },
+    {
+      status: 429,
+      headers: {
+        'Retry-After': String(retryAfterSeconds),
+        'X-RateLimit-Remaining': '0',
+        'Cache-Control': 'no-store',
+      },
+    }
+  );
+}
+
+function applyApiIngressGuards(request: NextRequest) {
+  const { pathname } = request.nextUrl;
+
+  if (request.headers.has('x-middleware-subrequest')) {
+    return blockedRequestResponse();
+  }
+
+  if (!pathname.startsWith('/api/') || !UNSAFE_METHODS.has(request.method)) {
+    return null;
+  }
+
+  if (!isCrossOriginApiExempt(pathname) && !isAllowedUnsafeOrigin(request)) {
+    return NextResponse.json(
+      { error: 'Cross-origin request blocked' },
+      {
+        status: 403,
+        headers: {
+          'Cache-Control': 'no-store',
+        },
+      }
+    );
+  }
+
+  const policy = getApiRateLimitPolicy(pathname);
+  const rateLimit = checkRateLimit(
+    `proxy:${pathname}:${getClientIp(request)}`,
+    policy.limit,
+    policy.windowMs
+  );
+
+  if (!rateLimit.allowed) {
+    return rateLimitedApiResponse(rateLimit.retryAfterSeconds);
+  }
+
+  return null;
 }
 
 function getAdminHostAlias(pathname: string) {
@@ -298,6 +426,11 @@ export async function proxy(request: NextRequest) {
   const host = getRequestHost(request);
   const adminHost = ADMIN_HOSTS.has(host);
   const sharedLocalHost = adminHost && host === APP_HOST;
+  const guardedResponse = applyApiIngressGuards(request);
+
+  if (guardedResponse) {
+    return guardedResponse;
+  }
 
   if (TESTS_HOSTS.has(host) && pathname === '/') {
     const testsUrl = request.nextUrl.clone();

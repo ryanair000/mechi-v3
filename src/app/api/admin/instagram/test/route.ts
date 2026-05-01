@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { hasAdminAccess, getRequestAccessProfile } from '@/lib/access';
 import { sendInstagramMessage } from '@/lib/instagram';
+import { checkPersistentRateLimit, getClientIp, rateLimitResponse } from '@/lib/rateLimit';
 
 export async function POST(request: NextRequest) {
   const admin = await getRequestAccessProfile(request);
@@ -9,6 +10,15 @@ export async function POST(request: NextRequest) {
   }
 
   try {
+    const sendRateLimit = await checkPersistentRateLimit(
+      `admin-instagram-test:${admin.id}:${getClientIp(request)}`,
+      10,
+      15 * 60 * 1000
+    );
+    if (!sendRateLimit.allowed) {
+      return rateLimitResponse(sendRateLimit.retryAfterSeconds);
+    }
+
     const body = (await request.json()) as Record<string, unknown>;
     const recipientId =
       typeof body.recipient_id === 'string' && body.recipient_id.trim().length > 0

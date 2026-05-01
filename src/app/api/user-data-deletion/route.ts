@@ -6,7 +6,7 @@ import {
   sendUserDataDeletionSupportEmail,
 } from '@/lib/email';
 import { normalizePhoneNumber } from '@/lib/phone';
-import { checkRateLimit, getClientIp, rateLimitResponse } from '@/lib/rateLimit';
+import { checkPersistentRateLimit, getClientIp, rateLimitResponse } from '@/lib/rateLimit';
 
 const SUPPORT_EMAIL = 'support@mechi.club';
 const MAX_USERNAME_LENGTH = 40;
@@ -43,7 +43,7 @@ function buildRequestId() {
 
 export async function POST(request: NextRequest) {
   try {
-    const rateLimit = checkRateLimit(
+    const rateLimit = await checkPersistentRateLimit(
       `user-data-deletion:${getClientIp(request)}`,
       REQUEST_LIMIT,
       REQUEST_WINDOW_MS

@@ -95,53 +95,151 @@ async function sendBccEmail(params: {
   }
 }
 
+function escapeHtml(value: unknown): string {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function escapeUrl(value: unknown): string {
+  const url = String(value ?? '').trim();
+  if (!url) {
+    return APP_URL;
+  }
+
+  if (url.startsWith('https://') || url.startsWith('http://')) {
+    return escapeHtml(url);
+  }
+
+  if (url.startsWith('/')) {
+    return escapeHtml(`${APP_URL}${url}`);
+  }
+
+  return escapeHtml(APP_URL);
+}
+
+function formatEatDateTimeLabel(value: string | Date): string {
+  const date = typeof value === 'string' ? new Date(value) : value;
+  if (Number.isNaN(date.getTime())) {
+    return 'TBA';
+  }
+
+  return new Intl.DateTimeFormat('en-KE', {
+    weekday: 'short',
+    day: 'numeric',
+    month: 'short',
+    hour: 'numeric',
+    minute: '2-digit',
+    timeZone: 'Africa/Nairobi',
+  }).format(date);
+}
+
+function statusLabel(value: string): string {
+  return value
+    .split(/[_-]+/g)
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(' ');
+}
+
 function baseLayout(title: string, content: string): string {
+  const escapedTitle = escapeHtml(title);
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>${title}</title>
+  <meta name="color-scheme" content="light only" />
+  <meta name="supported-color-schemes" content="light only" />
+  <title>${escapedTitle}</title>
   <style>
-    body { margin: 0; padding: 0; background: #eef3f7; font-family: 'Segoe UI', Arial, sans-serif; color: #0B1121; }
-    .wrapper { max-width: 620px; margin: 0 auto; padding: 32px 16px; }
-    .card { background: #ffffff; border: 1px solid #d7e1ea; border-radius: 24px; overflow: hidden; box-shadow: 0 24px 60px rgba(11, 17, 33, 0.08); }
-    .header { background: linear-gradient(135deg, #0B1121 0%, #152033 58%, #FF6B6B 100%); padding: 36px 32px; }
-    .brand { color: #ffffff; font-size: 28px; font-weight: 800; letter-spacing: -0.04em; margin: 0; }
-    .tagline { color: rgba(255,255,255,0.7); margin: 10px 0 0; font-size: 13px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; }
-    .body { padding: 32px; }
-    .body h2 { color: #0B1121; margin: 0 0 10px; font-size: 24px; font-weight: 800; letter-spacing: -0.03em; }
-    .body p { color: #435066; line-height: 1.7; margin: 0 0 16px; font-size: 14px; }
-    .info-box { background: #f8fbfd; border: 1px solid #d7e1ea; border-radius: 18px; padding: 20px; margin: 22px 0; }
-    .info-row { display: flex; justify-content: space-between; gap: 16px; padding: 10px 0; border-bottom: 1px solid #e3ebf2; }
+    body { margin: 0; padding: 0; background: #e9f0f7; font-family: Arial, Helvetica, sans-serif; color: #111827; }
+    table { border-collapse: collapse; }
+    a { color: inherit; }
+    .preheader { display: none !important; max-height: 0; max-width: 0; opacity: 0; overflow: hidden; visibility: hidden; }
+    .wrapper { width: 100%; background: #e9f0f7; padding: 32px 12px; }
+    .shell { width: 100%; max-width: 680px; margin: 0 auto; }
+    .card { background: #ffffff; border: 1px solid #d6e0ea; border-radius: 22px; overflow: hidden; box-shadow: 0 22px 50px rgba(15, 23, 42, 0.12); }
+    .topline { height: 6px; background: linear-gradient(90deg, #ff6b4a 0%, #34d399 48%, #38bdf8 100%); }
+    .header { background: #0b1121; padding: 30px 30px 28px; }
+    .brand-row { width: 100%; }
+    .brand { color: #ffffff; font-size: 28px; font-weight: 900; margin: 0; line-height: 1; }
+    .brand-mark { color: #ff6b4a; }
+    .eyebrow { color: #a7f3d0; font-size: 11px; font-weight: 800; margin: 0; letter-spacing: 0.12em; text-transform: uppercase; text-align: right; }
+    .tagline { color: #cbd5e1; margin: 16px 0 0; font-size: 14px; line-height: 1.6; max-width: 500px; }
+    .body { padding: 34px 30px 30px; }
+    .body h2 { color: #0f172a; margin: 0 0 12px; font-size: 26px; font-weight: 900; line-height: 1.18; }
+    .body p { color: #475569; line-height: 1.72; margin: 0 0 16px; font-size: 15px; }
+    .body strong { color: #0f172a; }
+    .info-box { background: #f8fafc; border: 1px solid #dbe5ef; border-radius: 16px; padding: 4px 18px; margin: 24px 0; }
+    .info-row { display: table; width: 100%; padding: 13px 0; border-bottom: 1px solid #e2e8f0; }
     .info-row:last-child { border-bottom: none; }
-    .info-label { color: #5f6d82; font-size: 13px; }
-    .info-value { color: #0B1121; font-size: 13px; font-weight: 700; text-align: right; }
-    .btn { display: inline-block; background: #FF6B6B; color: #0B1121 !important; text-decoration: none; padding: 14px 28px; border-radius: 14px; font-weight: 800; font-size: 14px; margin-top: 8px; }
-    .footer { padding: 22px 32px 28px; border-top: 1px solid #e3ebf2; text-align: center; }
-    .footer p { color: #5f6d82; font-size: 12px; margin: 0; line-height: 1.6; }
-    .badge { display: inline-block; padding: 5px 12px; border-radius: 999px; font-size: 11px; font-weight: 800; letter-spacing: 0.04em; text-transform: uppercase; }
-    .badge-win { background: rgba(50,224,196,0.16); color: #148a77; }
-    .badge-loss { background: rgba(255,107,107,0.12); color: #c94a4a; }
-    .badge-red { background: rgba(255,107,107,0.12); color: #c94a4a; }
+    .info-label { display: table-cell; color: #64748b; font-size: 13px; line-height: 1.45; padding-right: 16px; vertical-align: top; }
+    .info-value { display: table-cell; color: #0f172a; font-size: 13px; font-weight: 800; line-height: 1.45; text-align: right; vertical-align: top; }
+    .note { background: #fff7ed; border: 1px solid #fed7aa; border-radius: 14px; color: #7c2d12; font-size: 13px; line-height: 1.65; margin: 20px 0; padding: 14px 16px; }
+    .mini-grid { width: 100%; margin: 20px 0 4px; }
+    .mini-cell { background: #f1f5f9; border: 1px solid #dbe5ef; border-radius: 14px; padding: 14px; }
+    .mini-label { color: #64748b; display: block; font-size: 11px; font-weight: 800; letter-spacing: 0.08em; line-height: 1.2; text-transform: uppercase; }
+    .mini-value { color: #0f172a; display: block; font-size: 16px; font-weight: 900; line-height: 1.35; margin-top: 5px; }
+    .btn { display: inline-block; background: #ff5a3d; color: #ffffff !important; text-decoration: none; padding: 14px 24px; border-radius: 12px; font-weight: 900; font-size: 14px; margin-top: 8px; }
+    .secondary-link { color: #0f766e !important; font-size: 13px; font-weight: 800; text-decoration: none; }
+    .footer { padding: 24px 30px 30px; border-top: 1px solid #e2e8f0; background: #fbfdff; }
+    .footer p { color: #64748b; font-size: 12px; margin: 0 0 6px; line-height: 1.6; }
+    .badge { display: inline-block; padding: 5px 11px; border-radius: 999px; font-size: 11px; font-weight: 900; letter-spacing: 0.04em; text-transform: uppercase; }
+    .badge-win { background: #dcfce7; color: #166534; }
+    .badge-loss { background: #fee2e2; color: #991b1b; }
+    .badge-red { background: #fee2e2; color: #991b1b; }
+    .badge-blue { background: #dbeafe; color: #1d4ed8; }
+    .badge-green { background: #dcfce7; color: #166534; }
+    @media only screen and (max-width: 520px) {
+      .wrapper { padding: 18px 8px; }
+      .header, .body, .footer { padding-left: 20px; padding-right: 20px; }
+      .body h2 { font-size: 23px; }
+      .eyebrow { text-align: left; padding-top: 12px; }
+      .info-label, .info-value { display: block; text-align: left; padding-right: 0; }
+      .info-value { padding-top: 4px; }
+    }
   </style>
 </head>
 <body>
-  <div class="wrapper">
-    <div class="card">
-      <div class="header">
-        <p class="brand">MECHI</p>
-        <p class="tagline">Compete. Connect. Rise.</p>
-      </div>
-      <div class="body">
-        ${content}
-      </div>
-      <div class="footer">
-        <p>mechi.club</p>
-        <p>You are receiving this email because you have an account on Mechi.</p>
-      </div>
-    </div>
-  </div>
+  <div class="preheader">${escapedTitle}</div>
+  <table role="presentation" class="wrapper" cellpadding="0" cellspacing="0">
+    <tr>
+      <td align="center">
+        <table role="presentation" class="shell" cellpadding="0" cellspacing="0">
+          <tr>
+            <td class="card">
+              <div class="topline"></div>
+              <div class="header">
+                <table role="presentation" class="brand-row" cellpadding="0" cellspacing="0">
+                  <tr>
+                    <td>
+                      <p class="brand">MECHI<span class="brand-mark">.</span></p>
+                    </td>
+                    <td align="right">
+                      <p class="eyebrow">Kenya gaming ops</p>
+                    </td>
+                  </tr>
+                </table>
+                <p class="tagline">Matchmaking, tournaments, rewards, and player support built for competitive Kenyan gamers.</p>
+              </div>
+              <div class="body">
+                ${content}
+              </div>
+              <div class="footer">
+                <p><strong>mechi.club</strong></p>
+                <p>You are receiving this because your email is linked to a Mechi account or tournament registration.</p>
+                <p>Need help? Reply here or contact ${SUPPORT_ADDRESS}.</p>
+              </div>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
 </body>
 </html>`;
 }
@@ -151,33 +249,39 @@ export async function sendWelcomeEmail(params: {
   username: string;
 }): Promise<void> {
   const starterRank = getRankDivision(DEFAULT_RATING);
+  const username = escapeHtml(params.username);
+  const dashboardUrl = escapeUrl(`${APP_URL}/dashboard`);
   const content = `
-    <h2>Welcome, ${params.username}</h2>
-    <p>Your Mechi profile is live. Pick your focus games, lock in your setup, and start climbing through clean competitive matches.</p>
+    <h2>Registration confirmed</h2>
+    <p>Hey ${username}, your Mechi profile is live and your starter Pro trial is ready. Pick your focus games, lock in your IDs, and start climbing through clean competitive matches.</p>
     <div class="info-box">
       <div class="info-row">
         <span class="info-label">Starting Rank</span>
-        <span class="info-value">${starterRank.label}</span>
+        <span class="info-value">${escapeHtml(starterRank.label)}</span>
       </div>
       <div class="info-row">
         <span class="info-label">Level</span>
         <span class="info-value">Lv. 1</span>
       </div>
       <div class="info-row">
+        <span class="info-label">Trial</span>
+        <span class="info-value">1-month Pro trial</span>
+      </div>
+      <div class="info-row">
         <span class="info-label">Platform</span>
         <span class="info-value">mechi.club</span>
       </div>
     </div>
-    <p>Head to your dashboard, finish setup, and get into your first queue.</p>
-    <a href="${APP_URL}/dashboard" class="btn">Open Dashboard</a>
+    <p>Head to your dashboard, finish setup, and get into your first queue when you are ready.</p>
+    <a href="${dashboardUrl}" class="btn">Open Dashboard</a>
   `;
 
   try {
     await sendEmail({
       from: FROM,
       to: params.to,
-      subject: `Welcome to Mechi, ${params.username}!`,
-      html: baseLayout(`Welcome to Mechi, ${params.username}!`, content),
+      subject: `Registration confirmed: welcome to Mechi, ${params.username}`,
+      html: baseLayout(`Registration confirmed: welcome to Mechi, ${params.username}`, content),
     });
   } catch (err) {
     console.error('[Email] Welcome send error:', err);
@@ -742,6 +846,214 @@ export async function sendTournamentBroadcastEmail(params: {
   });
 }
 
+export async function sendTournamentRegistrationConfirmedEmail(params: {
+  to: string;
+  playerName: string;
+  tournamentTitle: string;
+  game: string;
+  platform?: string | null;
+  scheduledFor?: string | null;
+  entryFee: number;
+  tournamentUrl: string;
+}): Promise<void> {
+  const playerName = escapeHtml(params.playerName);
+  const tournamentTitle = escapeHtml(params.tournamentTitle);
+  const game = escapeHtml(params.game);
+  const platformBlock = params.platform
+    ? `
+      <div class="info-row">
+        <span class="info-label">Platform</span>
+        <span class="info-value">${escapeHtml(params.platform)}</span>
+      </div>
+    `
+    : '';
+  const scheduleBlock = params.scheduledFor
+    ? `
+      <div class="info-row">
+        <span class="info-label">Starts</span>
+        <span class="info-value">${escapeHtml(formatEatDateTimeLabel(params.scheduledFor))}</span>
+      </div>
+    `
+    : '';
+  const feeLabel = params.entryFee > 0 ? `KES ${params.entryFee.toLocaleString()}` : 'Free entry';
+  const content = `
+    <h2>Tournament registration confirmed</h2>
+    <p>Hey ${playerName}, your slot in <strong>${tournamentTitle}</strong> is locked. Keep an eye on your match room and be ready before check-in.</p>
+    <div class="info-box">
+      <div class="info-row">
+        <span class="info-label">Tournament</span>
+        <span class="info-value">${tournamentTitle}</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">Game</span>
+        <span class="info-value">${game}</span>
+      </div>
+      ${platformBlock}
+      ${scheduleBlock}
+      <div class="info-row">
+        <span class="info-label">Entry</span>
+        <span class="info-value">${escapeHtml(feeLabel)}</span>
+      </div>
+    </div>
+    <p class="note">Arrive early, confirm your connection, and watch the tournament page for bracket and match-room updates.</p>
+    <a href="${escapeUrl(params.tournamentUrl)}" class="btn">Open Tournament</a>
+  `;
+
+  try {
+    await sendEmail({
+      from: FROM,
+      to: params.to,
+      subject: `You're registered for ${params.tournamentTitle}`,
+      html: baseLayout(`You're registered for ${params.tournamentTitle}`, content),
+    });
+  } catch (err) {
+    console.error('[Email] Tournament registration confirmation send error:', err);
+  }
+}
+
+export async function sendOnlineTournamentRegistrationEmail(params: {
+  to: string;
+  username: string;
+  eventTitle: string;
+  gameLabel: string;
+  dateLabel: string;
+  timeLabel: string;
+  inGameUsername: string;
+  format: string;
+  matchCount: string;
+  scoring: string;
+  firstPrize: string;
+  secondPrize: string;
+  thirdPrize: string;
+  eligibilityStatus: string;
+  registrationUrl: string;
+}): Promise<void> {
+  const username = escapeHtml(params.username);
+  const eventTitle = escapeHtml(params.eventTitle);
+  const gameLabel = escapeHtml(params.gameLabel);
+  const eligibility = statusLabel(params.eligibilityStatus);
+  const content = `
+    <h2>PlayMechi registration received</h2>
+    <p>Hey ${username}, your <strong>${gameLabel}</strong> registration for <strong>${eventTitle}</strong> is in. Keep this email for the match-day details.</p>
+    <div class="info-box">
+      <div class="info-row">
+        <span class="info-label">Game</span>
+        <span class="info-value">${gameLabel}</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">Game tag</span>
+        <span class="info-value">${escapeHtml(params.inGameUsername)}</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">Starts</span>
+        <span class="info-value">${escapeHtml(params.dateLabel)}, ${escapeHtml(params.timeLabel)}</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">Eligibility</span>
+        <span class="info-value"><span class="badge ${params.eligibilityStatus === 'verified' ? 'badge-green' : 'badge-blue'}">${escapeHtml(eligibility)}</span></span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">Format</span>
+        <span class="info-value">${escapeHtml(params.format)}</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">Matches</span>
+        <span class="info-value">${escapeHtml(params.matchCount)}</span>
+      </div>
+    </div>
+    <div class="note">${escapeHtml(params.scoring)}</div>
+    <table role="presentation" class="mini-grid" cellpadding="0" cellspacing="0">
+      <tr>
+        <td class="mini-cell" width="33%">
+          <span class="mini-label">1st prize</span>
+          <span class="mini-value">${escapeHtml(params.firstPrize)}</span>
+        </td>
+        <td width="10"></td>
+        <td class="mini-cell" width="33%">
+          <span class="mini-label">2nd prize</span>
+          <span class="mini-value">${escapeHtml(params.secondPrize)}</span>
+        </td>
+        <td width="10"></td>
+        <td class="mini-cell" width="33%">
+          <span class="mini-label">3rd prize</span>
+          <span class="mini-value">${escapeHtml(params.thirdPrize)}</span>
+        </td>
+      </tr>
+    </table>
+    <p>We will use your Mechi profile and registered game tag to coordinate the event. Be online before the room opens.</p>
+    <a href="${escapeUrl(params.registrationUrl)}" class="btn">View Registration</a>
+  `;
+
+  try {
+    await sendEmail({
+      from: FROM,
+      to: params.to,
+      subject: `${params.gameLabel} registration confirmed for ${params.eventTitle}`,
+      html: baseLayout(`${params.gameLabel} registration confirmed`, content),
+    });
+  } catch (err) {
+    console.error('[Email] Online tournament registration send error:', err);
+  }
+}
+
+export async function sendOnlineTournamentGameReminderEmail(params: {
+  to: string;
+  username: string;
+  eventTitle: string;
+  gameLabel: string;
+  matchStartsAt: string;
+  inGameUsername: string;
+  format: string;
+  matchCount: string;
+  scoring: string;
+  registrationUrl: string;
+  streamUrl?: string | null;
+}): Promise<void> {
+  const username = escapeHtml(params.username);
+  const gameLabel = escapeHtml(params.gameLabel);
+  const startsAt = formatEatDateTimeLabel(params.matchStartsAt);
+  const streamLink = params.streamUrl
+    ? `<p><a href="${escapeUrl(params.streamUrl)}" class="secondary-link">Open stream channel</a></p>`
+    : '';
+  const content = `
+    <h2>Game time is close</h2>
+    <p>Hey ${username}, your <strong>${gameLabel}</strong> run for <strong>${escapeHtml(params.eventTitle)}</strong> starts soon. Get your device charged, data stable, and game account ready.</p>
+    <div class="info-box">
+      <div class="info-row">
+        <span class="info-label">Starts</span>
+        <span class="info-value">${escapeHtml(startsAt)}</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">Game tag</span>
+        <span class="info-value">${escapeHtml(params.inGameUsername)}</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">Format</span>
+        <span class="info-value">${escapeHtml(params.format)}</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">Matches</span>
+        <span class="info-value">${escapeHtml(params.matchCount)}</span>
+      </div>
+    </div>
+    <p class="note">${escapeHtml(params.scoring)}</p>
+    <p>Open your registration page for final instructions and keep WhatsApp/Mechi notifications nearby in case the ops team needs to reach you.</p>
+    <a href="${escapeUrl(params.registrationUrl)}" class="btn">Open Registration</a>
+    ${streamLink}
+  `;
+
+  try {
+    await sendEmail({
+      from: FROM,
+      to: params.to,
+      subject: `${params.gameLabel} starts soon on Mechi`,
+      html: baseLayout(`${params.gameLabel} starts soon`, content),
+    });
+  } catch (err) {
+    console.error('[Email] Online tournament reminder send error:', err);
+  }
+}
+
 export async function sendTournamentFullEmail(params: {
   to: string;
   organizerName: string;
@@ -775,20 +1087,25 @@ export async function sendTournamentMatchReadyEmail(params: {
   game: string;
   matchUrl: string;
 }): Promise<void> {
+  const playerName = escapeHtml(params.playerName);
+  const tournamentTitle = escapeHtml(params.tournamentTitle);
+  const opponentName = escapeHtml(params.opponentName);
+  const game = escapeHtml(params.game);
   const content = `
     <h2>Your bracket match is ready</h2>
-    <p>Hey ${params.playerName}, your match in <strong>${params.tournamentTitle}</strong> is live.</p>
+    <p>Hey ${playerName}, your match in <strong>${tournamentTitle}</strong> is live. Treat this as the match reminder: open the room, coordinate with your opponent, and report the result on Mechi.</p>
     <div class="info-box">
       <div class="info-row">
         <span class="info-label">Game</span>
-        <span class="info-value">${params.game}</span>
+        <span class="info-value">${game}</span>
       </div>
       <div class="info-row">
         <span class="info-label">Opponent</span>
-        <span class="info-value">${params.opponentName}</span>
+        <span class="info-value">${opponentName}</span>
       </div>
     </div>
-    <a href="${params.matchUrl}" class="btn">Open Match</a>
+    <p class="note">If the room code or scoreline is disputed, keep screenshots and use the match page so the ops team can review cleanly.</p>
+    <a href="${escapeUrl(params.matchUrl)}" class="btn">Open Match</a>
   `;
 
   try {

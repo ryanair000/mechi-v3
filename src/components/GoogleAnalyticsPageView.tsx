@@ -14,6 +14,19 @@ type GoogleAnalyticsPageViewProps = {
   measurementId: string;
 };
 
+const SENSITIVE_QUERY_PARAMS = new Set(['token', 'code', 'state']);
+
+function getAnalyticsPath(pathname: string, searchParams: { toString(): string }) {
+  const safeParams = new URLSearchParams(searchParams.toString());
+
+  for (const key of SENSITIVE_QUERY_PARAMS) {
+    safeParams.delete(key);
+  }
+
+  const query = safeParams.toString();
+  return query ? `${pathname}?${query}` : pathname;
+}
+
 function sendPageView(measurementId: string, path: string) {
   const pageLocation = `${window.location.origin}${path}`;
   const gtag =
@@ -37,8 +50,7 @@ export function GoogleAnalyticsPageView({ measurementId }: GoogleAnalyticsPageVi
   useEffect(() => {
     if (!measurementId || !pathname) return;
 
-    const query = searchParams.toString();
-    sendPageView(measurementId, query ? `${pathname}?${query}` : pathname);
+    sendPageView(measurementId, getAnalyticsPath(pathname, searchParams));
   }, [measurementId, pathname, searchParams]);
 
   return null;

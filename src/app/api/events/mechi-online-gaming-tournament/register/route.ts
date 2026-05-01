@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { after, NextRequest, NextResponse } from 'next/server';
 import { getRequestAccessProfile, requireActiveAccessProfile } from '@/lib/access';
 import {
   getConfiguredPlatformForGame,
@@ -11,14 +11,19 @@ import {
 import {
   ONLINE_TOURNAMENT_GAME_BY_KEY,
   ONLINE_TOURNAMENT_GAMES,
+  ONLINE_TOURNAMENT_REGISTRATION_PATH,
   ONLINE_TOURNAMENT_SLUG,
+  ONLINE_TOURNAMENT_TITLE,
   getOnlineTournamentWindowState,
   isOnlineTournamentGame,
   normalizeSocialHandle,
   type OnlineTournamentGameKey,
 } from '@/lib/online-tournament';
-import { checkRateLimit, getClientIp, rateLimitResponse } from '@/lib/rateLimit';
+import { sendOnlineTournamentRegistrationEmail } from '@/lib/email';
+import { checkPersistentRateLimit, getClientIp, rateLimitResponse } from '@/lib/rateLimit';
 import { createServiceClient } from '@/lib/supabase';
+import { sendOnlineTournamentRegistrationTelegramNotification } from '@/lib/telegram';
+import { APP_URL } from '@/lib/urls';
 import type { GameKey, PlatformKey } from '@/types';
 
 type EventRegistrationRow = {
@@ -156,7 +161,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: `${gameConfig.label} registration is closed` }, { status: 400 });
     }
 
-    const createRateLimit = checkRateLimit(
+    const createRateLimit = await checkPersistentRateLimit(
       `online-tournament-register:${access.profile.id}:${game}:${getClientIp(request)}`,
       5,
       30 * 60 * 1000
@@ -333,6 +338,57 @@ export async function POST(request: NextRequest) {
     }
 
     const summary = await getRegistrationSummary(access.profile.id);
+    const gameSummary = summary.games[game];
+    const registrationEmail = profile.email?.trim();
+
+    if (registrationEmail && !existingRegistration) {
+      after(async () => {
+        await sendOnlineTournamentRegistrationEmail({
+          to: registrationEmail,
+          username: profile.username,
+          eventTitle: ONLINE_TOURNAMENT_TITLE,
+          gameLabel: gameConfig.label,
+          dateLabel: gameConfig.dateLabel,
+          timeLabel: gameConfig.timeLabel,
+          inGameUsername,
+          format: gameConfig.format,
+          matchCount: gameConfig.matchCount,
+          scoring: gameConfig.scoring,
+          firstPrize: gameConfig.firstPrize,
+          secondPrize: gameConfig.secondPrize,
+          thirdPrize: gameConfig.thirdPrize,
+          eligibilityStatus: nextEligibilityStatus,
+          registrationUrl: `${APP_URL}${ONLINE_TOURNAMENT_REGISTRATION_PATH}`,
+        });
+      });
+    }
+
+    if (!existingRegistration) {
+      after(async () => {
+        try {
+          await sendOnlineTournamentRegistrationTelegramNotification({
+            eventTitle: ONLINE_TOURNAMENT_TITLE,
+            username: profile.username,
+            gameLabel: gameConfig.label,
+            inGameUsername,
+            email: profile.email ?? null,
+            phone: profile.phone ?? null,
+            whatsappNumber: profile.whatsapp_number ?? profile.phone ?? null,
+            instagramUsername,
+            youtubeName,
+            followedInstagram,
+            subscribedYoutube,
+            eligibilityStatus: nextEligibilityStatus,
+            registered: gameSummary?.registered ?? 0,
+            slots: gameSummary?.slots ?? gameConfig.slots,
+            spotsLeft: gameSummary?.spotsLeft ?? Math.max(0, gameConfig.slots - 1),
+            registrationId: registration.id,
+          });
+        } catch (error) {
+          console.error('[Telegram] Online tournament registration notification error:', error);
+        }
+      });
+    }
 
     return NextResponse.json({
       registration,

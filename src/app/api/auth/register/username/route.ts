@@ -1,10 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { checkRateLimit, getClientIp, rateLimitResponse } from '@/lib/rateLimit';
+import { checkPersistentRateLimit, getClientIp, rateLimitResponse } from '@/lib/rateLimit';
 import { isUsernameTaken } from '@/lib/username-availability';
 import { validateUsername } from '@/lib/username';
 
 export async function GET(request: NextRequest) {
-  const rateLimit = checkRateLimit(`register-username:${getClientIp(request)}`, 20, 15 * 60 * 1000);
+  const rateLimit = await checkPersistentRateLimit(
+    `register-username:${getClientIp(request)}`,
+    30,
+    15 * 60 * 1000
+  );
   if (!rateLimit.allowed) {
     return rateLimitResponse(rateLimit.retryAfterSeconds);
   }

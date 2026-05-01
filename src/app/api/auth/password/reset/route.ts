@@ -1,76 +1,78 @@
 import { NextRequest, NextResponse } from 'next/server';
 import {
   appendAuthNotice,
+  consumeAuthActionToken,
   getAuthActionSafeNextPath,
+  getAuthActionToken,
+  getAuthActionTokenState,
   normalizeEmailAddress,
 } from '@/lib/auth-actions';
 import { applyAuthCookie, createSessionForProfile, hashPassword } from '@/lib/auth';
-import { checkRateLimit, getClientIp, rateLimitResponse } from '@/lib/rateLimit';
+import { checkPersistentRateLimit, getClientIp, rateLimitResponse } from '@/lib/rateLimit';
 import { createServiceClient } from '@/lib/supabase';
-import { validateUsername } from '@/lib/username';
 
 const MIN_PASSWORD_LENGTH = 9;
 
-function isValidEmail(value: string) {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
-}
-
 export async function POST(request: NextRequest) {
   try {
-    const rateLimit = checkRateLimit(`password-reset:${getClientIp(request)}`, 8, 15 * 60 * 1000);
+    const rateLimit = await checkPersistentRateLimit(
+      `password-reset:${getClientIp(request)}`,
+      8,
+      15 * 60 * 1000
+    );
     if (!rateLimit.allowed) {
       return rateLimitResponse(rateLimit.retryAfterSeconds);
     }
 
-    const body = await request.json();
-    const intent = String(body.intent ?? 'reset').trim();
-    const { username, error: usernameError } = validateUsername(body.username);
-    const email = normalizeEmailAddress(body.email);
-    const password = String(body.password ?? '');
+    const body = (await request.json().catch(() => ({}))) as Record<string, unknown>;
+    const resetToken = typeof body.token === 'string' ? body.token.trim() : '';
+    const password = typeof body.password === 'string' ? body.password : '';
+    const submittedRedirect = typeof body.redirect_to === 'string' ? body.redirect_to : '/dashboard';
+    const redirectFallback = getAuthActionSafeNextPath(submittedRedirect);
 
-    if (usernameError || !isValidEmail(email)) {
+    if (!resetToken) {
+      return NextResponse.json({ error: 'Reset link is required.' }, { status: 400 });
+    }
+
+    if (password.length < MIN_PASSWORD_LENGTH) {
       return NextResponse.json(
-        {
-          error:
-            usernameError ?? 'Enter the username and email connected to this Mechi account.',
-        },
+        { error: 'Password must be more than 8 characters' },
         { status: 400 }
       );
     }
 
-    if (intent !== 'verify' && intent !== 'reset') {
-      return NextResponse.json({ error: 'Invalid reset request.' }, { status: 400 });
+    const tokenRow = await getAuthActionToken(resetToken);
+    const tokenState = getAuthActionTokenState(tokenRow);
+    const redirectTo = appendAuthNotice(
+      getAuthActionSafeNextPath(tokenRow?.next_path ?? redirectFallback),
+      'password_reset_success'
+    );
+
+    if (!tokenRow || tokenRow.purpose !== 'password_reset') {
+      return NextResponse.json({ error: 'That reset link is invalid or already used.' }, { status: 400 });
+    }
+
+    if (tokenState === 'expired' || tokenState === 'consumed') {
+      return NextResponse.json({ error: 'That reset link expired. Request a fresh one.' }, { status: 410 });
+    }
+
+    if (tokenState !== 'valid') {
+      return NextResponse.json({ error: 'That reset link is invalid or already used.' }, { status: 400 });
     }
 
     const supabase = createServiceClient();
-    const { data: profileRows, error: profileError } = await supabase
+    const { data: currentProfile, error: profileError } = await supabase
       .from('profiles')
       .select('*')
-      .ilike('email', email)
-      .limit(10);
+      .eq('id', tokenRow.user_id)
+      .single();
 
-    const currentProfile =
-      ((profileRows ?? []) as Array<{
-        id: string;
-        username?: string | null;
-        email?: string | null;
-        is_banned?: boolean | null;
-        ban_reason?: string | null;
-      }>).find(
-        (profile) =>
-          normalizeEmailAddress(profile.email) === email &&
-          String(profile.username ?? '').trim().toLowerCase() === username.toLowerCase()
-      ) ?? null;
-
-    if (profileError || !currentProfile) {
+    if (profileError || !currentProfile || normalizeEmailAddress(currentProfile.email) !== tokenRow.email) {
       if (profileError) {
         console.error('[Password Reset] Profile lookup error:', profileError);
       }
 
-      return NextResponse.json(
-        { error: 'That username and email do not match a Mechi account.' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: 'That reset link is invalid or already used.' }, { status: 400 });
     }
 
     if (currentProfile.is_banned) {
@@ -80,18 +82,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (intent === 'verify') {
-      return NextResponse.json({
-        success: true,
-        message: 'Identity confirmed. You can set a new password now.',
-      });
-    }
-
-    if (password.length < MIN_PASSWORD_LENGTH) {
-      return NextResponse.json(
-        { error: 'Password must be more than 8 characters' },
-        { status: 400 }
-      );
+    const consumed = await consumeAuthActionToken(tokenRow.id);
+    if (!consumed) {
+      return NextResponse.json({ error: 'That reset link expired. Request a fresh one.' }, { status: 410 });
     }
 
     const passwordHash = await hashPassword(password);
@@ -109,10 +102,6 @@ export async function POST(request: NextRequest) {
 
     const { token: sessionToken, user } = createSessionForProfile(
       updatedProfile as Record<string, unknown>
-    );
-    const redirectTo = appendAuthNotice(
-      getAuthActionSafeNextPath(String(body.redirect_to ?? '/dashboard')),
-      'password_reset_success'
     );
     const response = NextResponse.json({ token: sessionToken, user, redirect_to: redirectTo });
     applyAuthCookie(response, sessionToken);

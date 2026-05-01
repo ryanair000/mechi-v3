@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { hasAdminAccess, getRequestAccessProfile } from '@/lib/access';
+import { checkPersistentRateLimit, getClientIp, rateLimitResponse } from '@/lib/rateLimit';
 import { createServiceClient } from '@/lib/supabase';
 import {
   buildMatchDisputeMessage,
@@ -27,6 +28,15 @@ export async function POST(request: NextRequest) {
   }
 
   try {
+    const sendRateLimit = await checkPersistentRateLimit(
+      `admin-whatsapp-test:${admin.id}:${getClientIp(request)}`,
+      10,
+      15 * 60 * 1000
+    );
+    if (!sendRateLimit.allowed) {
+      return rateLimitResponse(sendRateLimit.retryAfterSeconds);
+    }
+
     const body = await request.json();
     const mode = body.mode;
 

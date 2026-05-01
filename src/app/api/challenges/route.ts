@@ -11,7 +11,7 @@ import {
 import { sendChallengeReceivedEmail } from '@/lib/email';
 import { createNotifications } from '@/lib/notifications';
 import { expireWaitingQueueEntries } from '@/lib/queue';
-import { checkRateLimit, getClientIp, rateLimitResponse } from '@/lib/rateLimit';
+import { checkPersistentRateLimit, getClientIp, rateLimitResponse } from '@/lib/rateLimit';
 import { createServiceClient } from '@/lib/supabase';
 import { APP_URL } from '@/lib/urls';
 import { notifyChallengeReceived } from '@/lib/whatsapp';
@@ -126,7 +126,7 @@ export async function POST(request: NextRequest) {
     }
 
     const game = getCanonicalGameKey(requestedGame);
-    const challengeRateLimit = checkRateLimit(
+    const challengeRateLimit = await checkPersistentRateLimit(
       `challenge-create:${authUser.id}:${opponentId}:${game}:${getClientIp(request)}`,
       4,
       30 * 60 * 1000

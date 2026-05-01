@@ -5,7 +5,7 @@ import { isMissingColumnError, isMissingTableError } from '@/lib/db-compat';
 import { sendWelcomeEmail } from '@/lib/email';
 import { findInviterByCode, generateUniqueInviteCode, normalizeInviteCode } from '@/lib/invite';
 import { getPhoneLookupVariants, isValidPhoneNumber, normalizePhoneNumber } from '@/lib/phone';
-import { checkRateLimit, getClientIp, rateLimitResponse } from '@/lib/rateLimit';
+import { checkPersistentRateLimit, getClientIp, rateLimitResponse } from '@/lib/rateLimit';
 import { awardAffiliateInviteSignup, ensureChezahubCustomer } from '@/lib/rewards';
 import { createServiceClient } from '@/lib/supabase';
 import { sendNewRegistrationTelegramNotification } from '@/lib/telegram';
@@ -35,7 +35,11 @@ function isValidEmail(value: string) {
 
 export async function POST(request: NextRequest) {
   try {
-    const rateLimit = checkRateLimit(`register:${getClientIp(request)}`, 5, 60 * 60 * 1000);
+    const rateLimit = await checkPersistentRateLimit(
+      `register:${getClientIp(request)}`,
+      5,
+      60 * 60 * 1000
+    );
     if (!rateLimit.allowed) {
       return rateLimitResponse(rateLimit.retryAfterSeconds);
     }

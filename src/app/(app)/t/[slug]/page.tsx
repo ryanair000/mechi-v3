@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import {
   ArrowLeft,
@@ -91,6 +91,14 @@ function formatTournamentStatusLabel(status: string) {
 }
 
 export default function TournamentDetailPage() {
+  return (
+    <Suspense fallback={<div className="page-container py-8">Loading tournament...</div>}>
+      <TournamentDetailContent />
+    </Suspense>
+  );
+}
+
+function TournamentDetailContent() {
   const params = useParams();
   const slug = params.slug as string;
   const router = useRouter();

@@ -1,10 +1,11 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { after, NextRequest, NextResponse } from 'next/server';
 import { requireActiveAccessProfile } from '@/lib/access';
 import { tryClaimBounty } from '@/lib/bounties';
 import { GAMES } from '@/lib/config';
+import { sendTournamentRegistrationConfirmedEmail } from '@/lib/email';
 import { createNotifications } from '@/lib/notifications';
 import { createServiceClient } from '@/lib/supabase';
-import { markTournamentPaymentPaidByReference } from '@/lib/tournaments';
+import { getAppUrl, markTournamentPaymentPaidByReference } from '@/lib/tournaments';
 import { verifyTournamentPayment } from '@/lib/paystack';
 import type { NotificationType, Tournament } from '@/types';
 
@@ -76,6 +77,14 @@ export async function POST(
       );
     }
 
+    const { data: profileRaw } = await supabase
+      .from('profiles')
+      .select('username, email')
+      .eq('id', authUser.id)
+      .maybeSingle();
+
+    const profile = profileRaw as { username?: string | null; email?: string | null } | null;
+
     const notifications: Array<{
       user_id: string;
       type: NotificationType;
@@ -99,16 +108,10 @@ export async function POST(
     ];
 
     if (tournament.organizer_id !== authUser.id) {
-      const { data: profileRaw } = await supabase
-        .from('profiles')
-        .select('username')
-        .eq('id', authUser.id)
-        .maybeSingle();
-
       notifications.push({
         user_id: tournament.organizer_id,
         type: 'tournament_player_joined',
-        title: `${String(profileRaw?.username ?? 'A player')} joined ${tournament.title}`,
+        title: `${String(profile?.username ?? 'A player')} joined ${tournament.title}`,
         body: `Their payment cleared and the ${GAMES[tournament.game]?.label ?? tournament.game} slot is locked.`,
         href: `/t/${tournament.slug}`,
         metadata: {
@@ -121,6 +124,20 @@ export async function POST(
     }
 
     await createNotifications(notifications, supabase);
+    if (profile?.email) {
+      after(async () => {
+        await sendTournamentRegistrationConfirmedEmail({
+          to: profile.email as string,
+          playerName: profile.username || authUser.username,
+          tournamentTitle: tournament.title,
+          game: GAMES[tournament.game]?.label ?? tournament.game,
+          platform: tournament.platform,
+          scheduledFor: tournament.scheduled_for,
+          entryFee: tournament.entry_fee,
+          tournamentUrl: `${getAppUrl()}/t/${tournament.slug}`,
+        });
+      });
+    }
     void tryClaimBounty(supabase, authUser.id, 'tournament_register').catch(() => null);
 
     return NextResponse.json({ status: 'paid' });

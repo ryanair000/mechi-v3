@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { after, NextRequest, NextResponse } from 'next/server';
 import { getAuthUser } from '@/lib/auth';
 import { uploadImageDataUri } from '@/lib/cloudinary';
-import { checkRateLimit, getClientIp, rateLimitResponse } from '@/lib/rateLimit';
+import { checkPersistentRateLimit, getClientIp, rateLimitResponse } from '@/lib/rateLimit';
 import { createServiceClient } from '@/lib/supabase';
 import { sendTestIssueReportTelegramNotification } from '@/lib/telegram';
 
@@ -18,7 +18,7 @@ function normalizeText(value: FormDataEntryValue | null) {
 
 export async function POST(request: NextRequest) {
   const clientIp = getClientIp(request);
-  const rateLimit = checkRateLimit(
+  const rateLimit = await checkPersistentRateLimit(
     `test-issue-report:${clientIp}`,
     RATE_LIMIT_MAX_SUBMISSIONS,
     RATE_LIMIT_WINDOW_MS

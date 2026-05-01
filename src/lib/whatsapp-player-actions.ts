@@ -16,7 +16,8 @@ type PlayerActionName =
   | 'find_match'
   | 'leave_queue'
   | 'list_lobbies'
-  | 'list_tournaments';
+  | 'list_tournaments'
+  | 'playmechi_register';
 
 type ParsedPlayerAction = {
   action: PlayerActionName;
@@ -46,6 +47,11 @@ const FIND_MATCH_PATTERNS = [
 ];
 const LEAVE_QUEUE_PATTERNS = [/\bleave (the )?queue\b/i, /\bcancel (my )?queue\b/i, /\bstop (the )?queue\b/i];
 const LOBBY_PATTERNS = [/\blobb(y|ies)\b/i, /\bshow rooms\b/i, /\bopen rooms\b/i];
+const PLAYMECHI_REGISTER_PATTERNS = [
+  /\b(register|join|sign ?up|enter)\b.*\b(tournament|playmechi|pubg ?m|pubg mobile|codm|call of duty:? mobile|efootball)\b/i,
+  /\b(tournament|playmechi|pubg ?m|pubg mobile|codm|call of duty:? mobile|efootball)\b.*\b(register|join|sign ?up|enter)\b/i,
+  /\bi want to register\b/i,
+];
 const TOURNAMENT_PATTERNS = [/\btournaments?\b/i, /\bbrackets?\b/i, /\bevents?\b/i];
 
 const GAME_ALIASES: Array<{ game: GameKey; patterns: RegExp[] }> = [
@@ -124,6 +130,10 @@ function parsePlayerAction(body: string): ParsedPlayerAction | null {
     return { action: 'list_lobbies', game, platform };
   }
 
+  if (matchesAny(normalized, PLAYMECHI_REGISTER_PATTERNS)) {
+    return { action: 'playmechi_register', game, platform };
+  }
+
   if (matchesAny(normalized, TOURNAMENT_PATTERNS)) {
     return { action: 'list_tournaments', game, platform };
   }
@@ -189,6 +199,18 @@ function requireLinkedAccountMessage() {
     'I need this WhatsApp number linked to a Mechi account before I can run player actions for you.',
     '',
     `Log in on ${APP_URL}, make sure this number is on your profile, then text me again.`,
+  ].join('\n');
+}
+
+function formatPlayMechiRegistrationMessage(game: GameKey | null) {
+  const gameLabel = game ? formatGameLabel(game) : 'PUBG Mobile, CODM, or eFootball';
+
+  return [
+    'Yes. Register for the free PlayMechi Online Gaming Tournament here:',
+    `${APP_URL}/playmechi/register`,
+    '',
+    `Pick ${gameLabel}, confirm your game tag, then join the WhatsApp group shown after registration.`,
+    'Matches start at 8:00 PM EAT from 8 May.',
   ].join('\n');
 }
 
@@ -387,6 +409,19 @@ export async function executeWhatsAppPlayerAction(params: {
     return {
       handled: true,
       message: formatTournamentMessage(result),
+      senderType: 'ai',
+      meta: {
+        source: 'whatsapp_action',
+        action: parsed.action,
+        game: parsed.game,
+      },
+    };
+  }
+
+  if (parsed.action === 'playmechi_register') {
+    return {
+      handled: true,
+      message: formatPlayMechiRegistrationMessage(parsed.game),
       senderType: 'ai',
       meta: {
         source: 'whatsapp_action',

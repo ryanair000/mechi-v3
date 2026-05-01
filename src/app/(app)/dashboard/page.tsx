@@ -1,5 +1,4 @@
 import { Component as BlogPosts } from '@/components/blog-posts';
-import { ONLINE_TOURNAMENT_YOUTUBE_URL } from '@/lib/online-tournament';
 import { getOnlineTournamentArenaHref } from '@/lib/online-tournament-ops';
 
 const dashboardPosts = [
@@ -17,7 +16,7 @@ const dashboardPosts = [
     category: 'PlayMechi live',
     description: 'Catch the next broadcast on YouTube at 8:00 PM EAT.',
     imageUrl: '/dashboard-promos/playmechi-upcoming-stream.jpg',
-    href: ONLINE_TOURNAMENT_YOUTUBE_URL,
+    href: '/streams',
   },
   {
     id: 3,

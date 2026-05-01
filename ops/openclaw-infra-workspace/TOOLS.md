@@ -8,6 +8,19 @@ Allowed infra surfaces:
 - host security posture and network exposure
 - incident triage and post-incident notes
 
+Installed ClawHub skills:
+
+- `aws`
+- `openclaw-security-scanner`
+- `incident`
+- `incident-hotfix`
+
+Installed CLIs:
+
+- `aws --version`
+- `openclaw config validate --json`
+- `openclaw agents list --json`
+
 Guardrails:
 
 - no destructive infrastructure changes without explicit approval

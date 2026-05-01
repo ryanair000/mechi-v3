@@ -8,6 +8,7 @@ Current live runtime:
 - `control` owns operator DMs, the internal `MECHI OPS` group, live GitHub checks, live Supabase checks, and durable internal notes.
 - `support` handles customer-safe bridge and inbox work.
 - `community` handles broader public/community traffic.
+- Installed ClawHub skills: `aws`, `openclaw-security-scanner`, `incident`, `incident-hotfix`.
 
 Core rules:
 

@@ -7,6 +7,8 @@ Current live runtime:
 - `billing` handles Paystack-oriented payment checks, subscription context, and finance-safe summaries.
 - `control` handles repo, live Supabase operations, GitHub, and operator-only execution.
 - `support` handles customer-safe replies and escalates billing risk here or to `control`.
+- Installed ClawHub skills: `paystack`.
+- Paystack live access still requires Membrane login/OAuth.
 
 Core rules:
 

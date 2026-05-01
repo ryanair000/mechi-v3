@@ -77,6 +77,40 @@ Default marketing budget split in the campaign app:
 
 Treat tournament results, payouts, and moderation outcomes as high-risk facts that must be verified before being stated publicly.
 
+## PlayMechi Online Gaming Tournament
+
+The current featured public homepage campaign is the Mechi.club Online Gaming Tournament. The main public page is `/` and `/playmechi`; player registration is `/playmechi/register`; admin control is `/admin/online-tournament`.
+
+Fixed event facts:
+
+- total capacity: 216 players
+- registration: free
+- cash prize pool: KSh 6,000
+- total estimated cash needed: KSh 7,500 including streamer fee
+- stream: PlayMechi on YouTube
+- streamer: Kabaka Mwangi
+- team: Kabaka Mwangi - Streamer, Ephrem Gichuhi - Manager, Ryan Alfred - Organizer
+
+Schedule:
+
+- PUBG Mobile: Friday 8 May 2026 at 8:00 PM EAT, 100 slots, individual Battle Royale, 3 matches, kills only
+- Call of Duty Mobile: Saturday 9 May 2026 at 8:00 PM EAT, 100 slots, individual Battle Royale, 3 matches, kills only
+- eFootball: Sunday 10 May 2026 at 8:00 PM EAT, 16 slots, 1v1 knockout from Round of 16
+
+Prizes:
+
+- PUBG Mobile: KSh 1,500, KSh 1,000, 60 UC
+- CODM: KSh 1,200, KSh 800, 80 CP
+- eFootball: KSh 1,000, KSh 500, 315 Coins
+
+Reward eligibility rule:
+
+- Players must follow PlayMechi on Instagram and subscribe to PlayMechi on YouTube before match day to qualify for rewards.
+- Players who do not complete both requirements may participate, but they are not eligible for prizes or rewards.
+- Admin verification in `/admin/online-tournament` is the source of truth for reward eligibility.
+
+OpenClaw should use `skills/playmechi-tournament-ops/SKILL.md` for full event details, WhatsApp player guidance, public replies, rules, prizes, result formats, admin checklist, and player roadmap.
+
 ## Messaging And Support
 
 Live operator and support surfaces include:
@@ -107,6 +141,9 @@ That helper uses the server-side Supabase credentials already approved for Mechi
 - spots left against the current beta cap
 - recent signups
 - new users in the last 24 hours or other requested time windows
+- PlayMechi tournament registration storage readiness and per-game counts under the `onlineTournament` object
+
+If the PlayMechi `onlineTournament.storageReady` value is `false`, the new `public.online_tournament_registrations` table has not been applied to live Supabase yet. Say that live tournament signups are not ready, and route migration/deploy work to `control` or `infra`.
 
 ## GitHub Truth Path
 

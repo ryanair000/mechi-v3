@@ -7,6 +7,7 @@ Current live runtime:
 - `data` handles GA4, Search Console, website analytics, and KPI reporting.
 - `control` handles live Supabase operations, GitHub, repo, and operator-only execution.
 - `growth` handles campaign execution and ad-side strategy.
+- Installed ClawHub skills: `ga4`, `skill-ga4-analytics`, `marketing-analytics`.
 
 Core rules:
 

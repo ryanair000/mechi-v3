@@ -7,6 +7,16 @@ import process from 'node:process';
 const BETA_PLAYER_CAP = 100;
 const DEFAULT_RECENT_LIMIT = 5;
 const DEFAULT_WINDOW_HOURS = 24;
+const ONLINE_TOURNAMENT_SLUG = 'mechi-club-online-gaming-tournament-2026-05';
+const ONLINE_TOURNAMENT_GAMES = [
+  { game: 'pubgm', label: 'PUBG Mobile', slots: 100 },
+  { game: 'codm', label: 'Call of Duty Mobile', slots: 100 },
+  { game: 'efootball', label: 'eFootball', slots: 16 },
+];
+const ONLINE_TOURNAMENT_TOTAL_SLOTS = ONLINE_TOURNAMENT_GAMES.reduce(
+  (total, game) => total + game.slots,
+  0
+);
 
 function normalizeEnvValue(value) {
   return (value ?? '').replace(/\\n/g, '').trim();
@@ -122,6 +132,21 @@ function formatSummary(summary, options) {
     `New users in last 7d: ${summary.newUsers7d}`,
   ];
 
+  if (summary.onlineTournament.storageReady) {
+    lines.push(
+      `PlayMechi tournament entries: ${summary.onlineTournament.registered}/${summary.onlineTournament.slots} (${summary.onlineTournament.spotsLeft} slots left)`
+    );
+    summary.onlineTournament.games.forEach((game) => {
+      lines.push(
+        `- ${game.label}: ${game.registered}/${game.slots} (${game.spotsLeft} left, ${game.verified} verified, ${game.pending} pending)`
+      );
+    });
+  } else {
+    lines.push(
+      `PlayMechi tournament entries: storage unavailable (${summary.onlineTournament.error})`
+    );
+  }
+
   if (summary.latestRegistration) {
     lines.push(
       `Latest registration: ${summary.latestRegistration.username} | ${summary.latestRegistration.plan} | ${summary.latestRegistration.locationLabel} | ${summary.latestRegistration.createdAtEat}`
@@ -202,6 +227,73 @@ async function getRecentRegistrations(limit) {
   return response.json();
 }
 
+async function getOnlineTournamentSummary() {
+  const url = new URL('/rest/v1/online_tournament_registrations', supabaseUrl);
+  url.searchParams.set(
+    'select',
+    'game,eligibility_status,reward_eligible,check_in_status,created_at'
+  );
+  url.searchParams.set('event_slug', `eq.${ONLINE_TOURNAMENT_SLUG}`);
+  url.searchParams.set('order', 'created_at.asc');
+
+  const response = await fetch(url, {
+    headers: buildHeaders(false),
+  });
+
+  if (!response.ok) {
+    const body = await response.text();
+    let errorMessage = body || `Supabase online tournament query failed with ${response.status}`;
+
+    try {
+      const parsed = JSON.parse(body);
+      errorMessage = parsed.message || errorMessage;
+    } catch {
+      // Keep the raw response text when Supabase does not return JSON.
+    }
+
+    return {
+      storageReady: false,
+      slug: ONLINE_TOURNAMENT_SLUG,
+      slots: ONLINE_TOURNAMENT_TOTAL_SLOTS,
+      registered: 0,
+      spotsLeft: ONLINE_TOURNAMENT_TOTAL_SLOTS,
+      error: errorMessage,
+      games: ONLINE_TOURNAMENT_GAMES.map((game) => ({
+        ...game,
+        registered: 0,
+        verified: 0,
+        pending: 0,
+        spotsLeft: game.slots,
+      })),
+    };
+  }
+
+  const rows = await response.json();
+  const games = ONLINE_TOURNAMENT_GAMES.map((game) => {
+    const gameRows = rows.filter(
+      (row) => row.game === game.game && row.eligibility_status !== 'disqualified'
+    );
+
+    return {
+      ...game,
+      registered: gameRows.length,
+      verified: gameRows.filter((row) => row.eligibility_status === 'verified').length,
+      pending: gameRows.filter((row) => row.eligibility_status === 'pending').length,
+      spotsLeft: Math.max(0, game.slots - gameRows.length),
+    };
+  });
+  const registered = games.reduce((total, game) => total + game.registered, 0);
+
+  return {
+    storageReady: true,
+    slug: ONLINE_TOURNAMENT_SLUG,
+    slots: ONLINE_TOURNAMENT_TOTAL_SLOTS,
+    registered,
+    spotsLeft: Math.max(0, ONLINE_TOURNAMENT_TOTAL_SLOTS - registered),
+    games,
+  };
+}
+
 const options = parseArgs(process.argv.slice(2));
 loadEnvFromWorkspace(process.cwd());
 const supabaseUrl = normalizeEnvValue(process.env.NEXT_PUBLIC_SUPABASE_URL);
@@ -222,15 +314,24 @@ let bannedProfiles;
 let newUsersInWindow;
 let newUsers7d;
 let recentRegistrationsRaw;
+let onlineTournament;
 
 try {
-  [totalProfiles, bannedProfiles, newUsersInWindow, newUsers7d, recentRegistrationsRaw] =
+  [
+    totalProfiles,
+    bannedProfiles,
+    newUsersInWindow,
+    newUsers7d,
+    recentRegistrationsRaw,
+    onlineTournament,
+  ] =
     await Promise.all([
       getCount(),
       getCount({ is_banned: 'eq.true' }),
       getCount({ created_at: `gte.${sinceWindow}` }),
       getCount({ created_at: `gte.${since7d}` }),
       getRecentRegistrations(options.limit),
+      getOnlineTournamentSummary(),
     ]);
 } catch (error) {
   console.error(error instanceof Error ? error.message : String(error));
@@ -270,6 +371,7 @@ const summary = {
   windowHours: options.windowHours,
   newUsersInWindow,
   newUsers7d,
+  onlineTournament,
   latestRegistration,
   recentRegistrations,
 };

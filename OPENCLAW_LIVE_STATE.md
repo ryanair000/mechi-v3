@@ -27,11 +27,13 @@ This file summarizes the current Mechi OpenClaw runtime so fresh agent sessions 
 
 OpenClaw native docs say ClawHub skills install into the active workspace `skills/` directory, and per-agent workspaces control which skills each agent sees. Current live install map:
 
+- `control` repo skills: `supabase-live-ops`, `playmechi-tournament-ops`, `github-ops`, `obsidian-ops`
 - `infra`: `aws`, `openclaw-security-scanner`, `incident`, `incident-hotfix`
 - `billing`: `paystack`
 - `data`: `ga4`, `skill-ga4-analytics`, `marketing-analytics`
 - `growth`: `cloudinary`, `openclaw-meta-ads`, `meta-ads-manager`, `instagram-api`, `instagram-content-studio`
-- `support`: `whatsapp-business`, `customer-support-autopilot`
+- `support`: `whatsapp-business`, `customer-support-autopilot`; may also receive the static `playmechi-tournament-ops` skill copy for public tournament FAQ only
+- `community`: may receive the static `playmechi-tournament-ops` skill copy for public tournament FAQ and announcement-safe replies only
 
 The direct ClawHub archives for slugs `meta-ads` and `instagram` were not forced into production because they unpacked without a valid top-level `SKILL.md`. Growth uses the working alternatives listed above.
 
@@ -49,11 +51,15 @@ The direct ClawHub archives for slugs `meta-ads` and `instagram` were not forced
 
 - operator/admin WhatsApp groups such as `MECHI ADMINS` must route to `control`, not the generic support/community prompt
 - customer WhatsApp support DMs should route through the Mechi support inbox/player-action path
-- if native OpenClaw WhatsApp is used, it must load the Mechi control workspace and use the live tournament helper for event availability questions
+- if native OpenClaw WhatsApp is used, it must load the Mechi control workspace for operator/admin groups and use `skills/playmechi-tournament-ops/SKILL.md` for event facts
+- for live PlayMechi slot counts, storage readiness, or registered-player counts, WhatsApp operator/admin groups must use `skills/supabase-live-ops/SKILL.md` and read the `onlineTournament` object from `npm run ops:registrations -- --json`
+- customer-safe WhatsApp support can answer fixed schedule, prize, rule, and registration-path facts from the PlayMechi skill, but must escalate live counts, disqualifications, payout status, and reward eligibility to `control`
 
 ## Current truth paths
 
 - live registrations and player counts: `npm run ops:registrations -- --json`
+- PlayMechi Online Gaming Tournament details: `skills/playmechi-tournament-ops/SKILL.md`
+- PlayMechi live registration state: `npm run ops:registrations -- --json`, then inspect `onlineTournament`
 - live open/active tournaments: `npm run ops:tournaments -- --json`
 - GitHub repo, issues, PRs, and workflow state: `./scripts/openclaw-gh.sh`
 - durable internal notes and memory: `./scripts/openclaw-obsidian.sh`
@@ -63,6 +69,7 @@ The direct ClawHub archives for slugs `meta-ads` and `instagram` were not forced
 
 - GitHub CLI installed and authenticated for repo-aware operations
 - Supabase live-ops helper wired with approved credentials for registration checks
+- PlayMechi tournament ops skill added in repo; live Supabase currently still needs `public.online_tournament_registrations` applied before tournament slot locking can be trusted
 - Obsidian wired headlessly through `notesmd-cli` plus `obsidian-cli` compatibility wrapper
 - AWS CLI installed for infra work
 - Membrane CLI installed for Paystack skill auth

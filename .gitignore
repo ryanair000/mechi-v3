@@ -53,6 +53,7 @@ supabase/.temp/
 
 # local test/audit output
 /output/
+/tmp/
 
 # design assets (binary artifacts)
 /Mechi\ Design\ System/

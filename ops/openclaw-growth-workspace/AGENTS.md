@@ -8,6 +8,8 @@ Current live runtime:
 - `data` handles analytics reporting.
 - `control` handles operator-only execution and production changes.
 - `community` handles public/community-safe messaging.
+- Installed ClawHub skills: `cloudinary`, `openclaw-meta-ads`, `meta-ads-manager`, `instagram-api`, `instagram-content-studio`.
+- Do not use direct slugs `meta-ads` or `instagram`; the working alternatives above are the live installed skills.
 
 Core rules:
 

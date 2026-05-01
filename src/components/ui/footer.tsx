@@ -8,6 +8,7 @@ import {
   FaYoutube,
 } from 'react-icons/fa6';
 import { BrandLogo } from '@/components/BrandLogo';
+import { cn } from '@/lib/utils';
 
 const links = [
   {
@@ -36,9 +37,13 @@ const links = [
   },
 ];
 
-export default function FooterSection() {
+type FooterSectionProps = {
+  className?: string;
+};
+
+export default function FooterSection({ className }: FooterSectionProps) {
   return (
-    <footer className="py-16 md:py-32">
+    <footer className={cn('py-16 md:py-32', className)}>
       <div className="landing-shell">
         <Link href="/" aria-label="go home" className="mx-auto block size-fit">
           <BrandLogo size="sm" />

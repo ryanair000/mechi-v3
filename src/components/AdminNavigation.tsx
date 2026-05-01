@@ -6,6 +6,7 @@ import {
   AtSign,
   BarChart2,
   ChevronRight,
+  ClipboardList,
   Clock3,
   DoorOpen,
   Headset,
@@ -45,6 +46,7 @@ const PRIMARY_ADMIN_NAV: AdminNavItem[] = [
   { href: '/admin/users', label: 'Users', icon: Users },
   { href: '/admin/support', label: 'Support', icon: Headset },
   { href: '/admin/tournaments', label: 'Tournaments', icon: Trophy },
+  { href: '/admin/online-tournament', label: 'Online Event', icon: ClipboardList },
 ];
 
 const TOOL_ADMIN_NAV: AdminNavItem[] = [

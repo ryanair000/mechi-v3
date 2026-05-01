@@ -2,6 +2,20 @@
 
 This file defines the recommended OpenClaw agent roster for Mechi, the skills each role needs, and the exact access surface each role should receive.
 
+## Current live OpenClaw deployment
+
+The EC2 OpenClaw gateway currently has these agents active:
+
+- `control`: Mechi COO, workspace `/home/ubuntu/mechi-v3`, repo and operator control.
+- `support`: Mechi Support, workspace `~/.openclaw/workspace-support`, installed skills `whatsapp-business` and `customer-support-autopilot`; recommended static local skill copy `playmechi-tournament-ops` for public tournament FAQ.
+- `community`: Mechi Community, workspace `~/.openclaw/workspace-community`, public/community-safe messaging; recommended static local skill copy `playmechi-tournament-ops` for announcement-safe tournament FAQ.
+- `infra`: Mechi Infra, workspace `~/.openclaw/workspace-infra`, installed skills `aws`, `openclaw-security-scanner`, `incident`, and `incident-hotfix`.
+- `billing`: Mechi Billing, workspace `~/.openclaw/workspace-billing`, installed skill `paystack`.
+- `data`: Mechi Data, workspace `~/.openclaw/workspace-data`, installed skills `ga4`, `skill-ga4-analytics`, and `marketing-analytics`.
+- `growth`: Mechi Growth, workspace `~/.openclaw/workspace-growth`, installed skills `cloudinary`, `openclaw-meta-ads`, `meta-ads-manager`, `instagram-api`, and `instagram-content-studio`.
+
+The direct ClawHub slugs `meta-ads` and `instagram` were skipped because their archives unpacked without a valid top-level `SKILL.md`; the growth workspace uses the working alternatives above. Provider credentials/OAuth are still separate from skill install and must be added per tool before live API calls.
+
 ## Access tiers
 
 - `Tier 0 - public`: no secrets, public docs only.
@@ -26,6 +40,8 @@ Rule: give each role the lowest tier that still lets it do its job.
   - incident triage and rollback thinking
   - support escalation judgment
   - concise operator updates to the Boss
+  - `supabase-live-ops` for live profile counts, PlayMechi tournament storage readiness, and per-game registrations
+  - `playmechi-tournament-ops` for full Mechi.club Online Gaming Tournament facts, WhatsApp answers, rules, prizes, schedule, stream, and player roadmap
 - Required access:
   - OpenClaw model auth via ChatGPT auth profile or `OPENAI_API_KEY`
   - repo write access and git credentials
@@ -57,6 +73,7 @@ Rule: give each role the lowest tier that still lets it do its job.
   - policy recall
   - bug report summarization
   - safe handoff to `control`
+  - static `playmechi-tournament-ops` for public schedule, registration path, prize, and rule questions
 - Required access:
   - OpenClaw model auth via ChatGPT auth profile or `OPENAI_API_KEY`
   - `MECHI_OPENCLAW_BRIDGE_URL`
@@ -78,6 +95,7 @@ Rule: give each role the lowest tier that still lets it do its job.
   - no shell access
   - no infra credentials
   - should not hold payment-provider write credentials
+  - no Supabase service-role key unless explicitly approved; live PlayMechi counts, eligibility, payouts, or disqualifications route to `control`
 
 ## Recommended specialist agents
 
@@ -92,6 +110,8 @@ Rule: give each role the lowest tier that still lets it do its job.
   - schedule management
   - dispute handling
   - clear player-facing announcements
+  - `playmechi-tournament-ops`
+  - `supabase-live-ops` if this role is granted production read/write tournament operations
 - Required access:
   - OpenClaw model auth
   - `NEXT_PUBLIC_SUPABASE_URL`
@@ -179,6 +199,7 @@ Rule: give each role the lowest tier that still lets it do its job.
   - tone management
   - de-escalation
   - fast routing of issues into support or operations
+  - static `playmechi-tournament-ops` for public schedule, registration path, prize, and rule questions
 - Required access:
   - OpenClaw model auth
   - `TELEGRAM_BOT_TOKEN`
@@ -189,6 +210,7 @@ Rule: give each role the lowest tier that still lets it do its job.
   - no DB write access by default
   - no repo write
   - no deploy or payment credentials
+  - no Supabase service-role key by default; live PlayMechi counts, payout, eligibility, or disqualification questions route to `control`
 
 ### `repo-engineering`
 

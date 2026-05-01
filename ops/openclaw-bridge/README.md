@@ -74,11 +74,17 @@ Recommended gateway layout for the dedicated Mechi instance:
 - `control` agent: workspace points at the Mechi repo, tool profile `coding`
 - `support` agent: separate support workspace, tool profile `minimal`
 - `community` agent: separate community workspace, tool profile `minimal`
+- `infra` agent: separate infra workspace, tool profile `coding`, skills `aws`, `openclaw-security-scanner`, `incident`, `incident-hotfix`
+- `billing` agent: separate billing workspace, tool profile `minimal`, skill `paystack`
+- `data` agent: separate data workspace, tool profile `minimal`, skills `ga4`, `skill-ga4-analytics`, `marketing-analytics`
+- `growth` agent: separate growth workspace, tool profile `minimal`, skills `cloudinary`, `openclaw-meta-ads`, `meta-ads-manager`, `instagram-api`, `instagram-content-studio`
 - gateway: loopback-only with token auth
 - `gh` plus `GH_TOKEN` / `GH_REPO` on the host for repo-aware GitHub operations from the control agent, with `scripts/openclaw-gh.sh` handling env loading and explicit `--exec 'gh ... "$GH_REPO" ...'` repo scoping when needed
 - `notesmd-cli` plus an `obsidian-cli` compatibility wrapper on the host for durable Obsidian-style operator memory without a desktop app
 - `MECHI_OBSIDIAN_VAULT=mechi-ops`, `MECHI_OBSIDIAN_VAULT_PATH=/home/ubuntu/.openclaw/vaults/mechi-ops`, and `EDITOR=/usr/bin/cat` for headless note operations from the control agent
 - `ops/obsidian-vault-seed` copied into the live vault so the COO agent starts with Mechi-specific structure instead of an empty notebook
+- AWS CLI, Membrane CLI, and Cloudflared installed on the host for specialist ClawHub workflows
+- Provider credentials/OAuth added only when the Boss is ready to enable live AWS, Paystack, GA4, Cloudinary, Meta Ads, Instagram, or WhatsApp access
 
 This keeps operator access powerful while keeping customer-facing support and community replies tool-free.
 

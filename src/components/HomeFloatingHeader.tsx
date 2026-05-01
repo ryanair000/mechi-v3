@@ -7,7 +7,12 @@ import { useAuth } from '@/components/AuthProvider';
 import { BrandLogo } from '@/components/BrandLogo';
 import { ThemeToggle } from '@/components/ThemeToggle';
 
-const NAV_ITEMS = [
+type NavItem = {
+  href: string;
+  label: string;
+};
+
+const DEFAULT_NAV_ITEMS: NavItem[] = [
   { href: '#how-it-works', label: 'HOW IT WORKS' },
   { href: '#supported', label: 'GAMES' },
   { href: '#pricing', label: 'PRICING' },
@@ -19,7 +24,17 @@ const HEADER_TEXT_CLASS =
 const SIGN_IN_BUTTON_CLASS =
   'inline-flex min-h-11 items-center justify-center rounded-[var(--radius-panel)] border border-[rgba(50,224,196,0.28)] bg-[var(--surface-elevated)] px-4 py-2 text-base font-semibold uppercase tracking-[0.14em] text-[var(--accent-secondary-text)] transition-all hover:border-[rgba(50,224,196,0.42)] hover:bg-[rgba(50,224,196,0.12)] hover:text-[var(--text-primary)] sm:text-sm';
 
-export function HomeFloatingHeader() {
+interface HomeFloatingHeaderProps {
+  navItems?: NavItem[];
+  signInHref?: string;
+  joinHref?: string;
+}
+
+export function HomeFloatingHeader({
+  navItems = DEFAULT_NAV_ITEMS,
+  signInHref = '/login',
+  joinHref = '/register',
+}: HomeFloatingHeaderProps) {
   const [isOpen, setIsOpen] = useState(false);
   const { user } = useAuth();
 
@@ -37,7 +52,7 @@ export function HomeFloatingHeader() {
             </Link>
 
             <div className="hidden min-w-0 flex-1 items-center justify-center gap-1 md:flex">
-              {NAV_ITEMS.map((item) => (
+              {navItems.map((item) => (
                 <Link
                   key={item.href}
                   href={item.href}
@@ -51,11 +66,11 @@ export function HomeFloatingHeader() {
             <div className="ml-auto flex items-center gap-2">
               <ThemeToggle />
               <div className="hidden items-center gap-2 sm:flex">
-                <Link href={user ? '/dashboard' : '/login'} className={SIGN_IN_BUTTON_CLASS}>
+                <Link href={user ? '/dashboard' : signInHref} className={SIGN_IN_BUTTON_CLASS}>
                   {user ? 'DASHBOARD' : 'SIGN IN'}
                 </Link>
                 {!user ? (
-                  <Link href="/register" className="btn-primary shadow-none text-sm uppercase tracking-[0.14em]">
+                  <Link href={joinHref} className="btn-primary shadow-none text-sm uppercase tracking-[0.14em]">
                     JOIN FREE
                   </Link>
                 ) : null}
@@ -75,7 +90,7 @@ export function HomeFloatingHeader() {
 
           {isOpen ? (
             <div id="home-mobile-nav" className="mt-2 grid gap-1 border-t border-[var(--border-color)] pt-2 md:hidden">
-              {NAV_ITEMS.map((item) => (
+              {navItems.map((item) => (
                 <Link
                   key={item.href}
                   href={item.href}
@@ -87,7 +102,7 @@ export function HomeFloatingHeader() {
               ))}
               <div className="mt-1 grid gap-2 px-1 pb-1 pt-2 sm:flex sm:items-center">
                 <Link
-                  href={user ? '/dashboard' : '/login'}
+                  href={user ? '/dashboard' : signInHref}
                   onClick={() => setIsOpen(false)}
                   className={SIGN_IN_BUTTON_CLASS}
                 >
@@ -95,7 +110,7 @@ export function HomeFloatingHeader() {
                 </Link>
                 {!user ? (
                   <Link
-                    href="/register"
+                    href={joinHref}
                     onClick={() => setIsOpen(false)}
                     className="btn-primary shadow-none text-sm uppercase tracking-[0.14em]"
                   >

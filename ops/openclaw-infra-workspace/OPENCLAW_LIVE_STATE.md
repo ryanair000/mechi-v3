@@ -14,4 +14,13 @@ Installed ClawHub skills for this workspace:
 - `incident`
 - `incident-hotfix`
 
+Host CLIs available:
+
+- `aws --version`
+
+Credential gates:
+
+- AWS API access still requires configured AWS credentials and region.
+- Destructive infra, firewall, service, DNS, or deploy changes require explicit Boss approval.
+
 Do not make destructive or public-facing changes without explicit Boss approval.

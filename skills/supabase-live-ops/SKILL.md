@@ -19,10 +19,11 @@ Use this skill when the Boss asks for live answers such as:
 - any active tournaments
 - open tournament registrations
 - tournament entry fees, player counts, prize pool, game, platform, or start time
+- PlayMechi Online Gaming Tournament registration storage, per-game counts, verified rewards, pending reviews, or spots left
 
 ## Canonical commands
 
-For registrations and player counts, run this from the repo root:
+For Mechi profile registrations, player counts, and PlayMechi tournament registration counts, run this from the repo root:
 
 ```bash
 npm run ops:registrations -- --json
@@ -43,6 +44,20 @@ Optional flags:
 - `--open-only`
 - `--active-only`
 
+## PlayMechi Tournament Output
+
+The registration helper includes an `onlineTournament` object for the Mechi.club Online Gaming Tournament.
+
+Read these fields before answering PlayMechi live-count questions:
+
+- `onlineTournament.storageReady`: whether `public.online_tournament_registrations` exists in live Supabase
+- `onlineTournament.slots`: total PlayMechi tournament capacity, expected `216`
+- `onlineTournament.registered`: total PlayMechi entries
+- `onlineTournament.spotsLeft`: remaining PlayMechi slots
+- `onlineTournament.games[]`: per-game counts for PUBG Mobile, CODM, and eFootball
+
+If `storageReady` is `false`, answer that the PlayMechi tournament registration storage is not ready yet and that the Supabase migration must be applied before live tournament signups can be trusted. Do not substitute the old beta profile cap for tournament capacity.
+
 ## Rules
 
 1. Use the relevant helper before answering from memory when the Boss wants live registration, profile, tournament, or event state.
@@ -52,6 +67,7 @@ Optional flags:
    - spots left
    - new users in the recent window
    - latest registrations
+   - PlayMechi tournament storage readiness and per-game registration counts
    - open or active tournaments
    - tournament entry fee, player count, prize pool, game, platform, start time, and link
 4. Keep Telegram replies compact:

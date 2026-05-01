@@ -10,11 +10,15 @@ Production rule: Mechi uses only the EC2 OpenClaw runtime. Local Windows or lapt
 2. `control` agent pointed at the Mechi repo for operator-grade repo access
 3. `support` agent pointed at the support workspace
 4. `community` agent pointed at the community workspace
-5. `ops/openclaw-bridge/server.mjs` for app compatibility
-6. Native OpenClaw Telegram channel with approved operator DMs routed to `control`
-7. Native OpenClaw WhatsApp, if enabled, with operator/admin groups routed to `control`
-8. `ops/openclaw-bridge/telegram-poller.mjs` only as a legacy fallback if the native channel is intentionally disabled
-9. GitHub CLI plus GitHub auth env for repo-aware OpenClaw control work
+5. `infra` agent pointed at the infra workspace with AWS/security/incident ClawHub skills
+6. `billing` agent pointed at the billing workspace with the Paystack ClawHub skill
+7. `data` agent pointed at the data workspace with GA4/Search Console/marketing analytics ClawHub skills
+8. `growth` agent pointed at the growth workspace with Cloudinary/Meta Ads/Instagram ClawHub skills
+9. `ops/openclaw-bridge/server.mjs` for app compatibility
+10. Native OpenClaw Telegram channel with approved operator DMs routed to `control`
+11. Native OpenClaw WhatsApp, if enabled, with operator/admin groups routed to `control`
+12. `ops/openclaw-bridge/telegram-poller.mjs` only as a legacy fallback if the native channel is intentionally disabled
+13. GitHub CLI plus GitHub auth env for repo-aware OpenClaw control work
 
 ## App envs to point at the dedicated host
 
@@ -36,6 +40,9 @@ OPENCLAW_TIMEOUT_MS=60000
 - `gateway.auth.mode: "token"`
 - `tools.profile: "coding"` for the repo agent
 - `agents.list[].tools.profile: "minimal"` for the support and community agents
+- `agents.list[].tools.profile: "minimal"` for `billing`, `data`, and `growth`
+- `agents.list[].tools.profile: "coding"` for `infra` because infra diagnosis often needs host/service inspection
+- `openclaw skills install <slug>` installs ClawHub skills into the active workspace `skills/` folder; keep skills scoped to each specialist workspace
 - `channels.telegram.streaming.mode: "off"` to prefer simple final Telegram replies
 - `channels.telegram.replyToMode: "first"` so replies stay anchored to the initiating message
 - `channels.telegram.dmPolicy: "allowlist"` so only approved operator DMs can reach `control`
@@ -45,6 +52,16 @@ OPENCLAW_TIMEOUT_MS=60000
 - `MECHI_OBSIDIAN_VAULT=mechi-ops`, `MECHI_OBSIDIAN_VAULT_PATH=/home/ubuntu/.openclaw/vaults/mechi-ops`, and `EDITOR=/usr/bin/cat` in `~/.openclaw/.env`
 - `scripts/openclaw-obsidian.sh` so the repo agent can use the Mechi vault safely without assuming a desktop app
 - `ops/obsidian-vault-seed` copied into the host vault for a reproducible Mechi COO starting memory set
+- Installed host CLIs: AWS CLI, Membrane CLI, and Cloudflared
+- Installed specialist skills:
+  - `control` repo skills: `supabase-live-ops`, `playmechi-tournament-ops`, `github-ops`, `obsidian-ops`
+  - `infra`: `aws`, `openclaw-security-scanner`, `incident`, `incident-hotfix`
+  - `billing`: `paystack`
+  - `data`: `ga4`, `skill-ga4-analytics`, `marketing-analytics`
+  - `growth`: `cloudinary`, `openclaw-meta-ads`, `meta-ads-manager`, `instagram-api`, `instagram-content-studio`
+  - `support`: `whatsapp-business`, `customer-support-autopilot`
+  - recommended `support` and `community` local skill copy: `playmechi-tournament-ops` for static public tournament FAQ only
+- Direct `meta-ads` and `instagram` ClawHub archives were skipped because they lacked a valid top-level `SKILL.md`; use the growth alternatives above
 
 That lets the operator control Mechi through OpenClaw while keeping support and community threads away from filesystem or shell tools.
 
@@ -102,7 +119,20 @@ Required posture:
 - native WhatsApp operator/admin groups such as `MECHI ADMINS` must route to `control`
 - generic support/community prompts must not answer operator WhatsApp groups
 - for "active tournaments", "open tournaments", "events", or "any tournaments today", the control agent should run `npm run ops:tournaments -- --json` from the Mechi repo
+- for Mechi.club Online Gaming Tournament, PlayMechi, PUBG Mobile, CODM, eFootball, registration, schedule, prizes, stream, or rules, the control agent should load `skills/playmechi-tournament-ops/SKILL.md`
+- for PlayMechi live slot counts or storage readiness, the control agent should run `npm run ops:registrations -- --json` and inspect `onlineTournament`
 - if the helper cannot run, the agent should say it needs a live check through `control`; it should not send the Boss to the public tournaments page as the primary answer
+
+Static tournament FAQ can be made available to support/community by copying the repo skill into those workspaces:
+
+```bash
+cd /home/ubuntu/mechi-v3
+mkdir -p ~/.openclaw/workspace-support/skills ~/.openclaw/workspace-community/skills
+cp -R skills/playmechi-tournament-ops ~/.openclaw/workspace-support/skills/
+cp -R skills/playmechi-tournament-ops ~/.openclaw/workspace-community/skills/
+```
+
+Do not copy `supabase-live-ops` into customer-safe support/community workspaces unless the Boss explicitly approves service-role data access there. Operator/admin WhatsApp groups should route to `control`, which already has the repo skill and approved Supabase helper.
 
 After changing native WhatsApp routing or prompts, restart the OpenClaw process that owns the WhatsApp session. Local repo changes alone will not alter already-running WhatsApp replies.
 

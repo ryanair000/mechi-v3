@@ -31,14 +31,47 @@ export const ONLINE_TOURNAMENT_SLUG = 'mechi-club-online-gaming-tournament-2026-
 export const ONLINE_TOURNAMENT_TITLE = 'Mechi.club Online Gaming Tournament';
 export const ONLINE_TOURNAMENT_PUBLIC_PATH = '/playmechi';
 export const ONLINE_TOURNAMENT_REGISTRATION_PATH = `${ONLINE_TOURNAMENT_PUBLIC_PATH}/register`;
+export const ONLINE_TOURNAMENT_REGISTRATION_API_PATH =
+  '/api/events/mechi-online-gaming-tournament/register';
 export const ONLINE_TOURNAMENT_EVENT_DATES = '8-10 May 2026';
+export const ONLINE_TOURNAMENT_GAME_LIST_LABEL = 'PUBG Mobile, CODM, and eFootball';
+export const ONLINE_TOURNAMENT_CASH_PRIZE_POOL = 6000;
 export const ONLINE_TOURNAMENT_STREAM_CHANNEL = 'PlayMechi';
 export const ONLINE_TOURNAMENT_STREAMER = 'Kabaka Mwangi';
 export const ONLINE_TOURNAMENT_INSTAGRAM = 'PlayMechi';
 export const ONLINE_TOURNAMENT_YOUTUBE = 'PlayMechi';
+export const ONLINE_TOURNAMENT_YOUTUBE_URL = 'https://www.youtube.com/@playmechi';
 export const ONLINE_TOURNAMENT_STREAM_DELAY_MINUTES = 5;
 export const ONLINE_TOURNAMENT_DISPUTE_WINDOW_MINUTES = 20;
 export const ONLINE_TOURNAMENT_PAYOUT_WINDOW_HOURS = 48;
+
+function cleanPublicEnv(value: string | undefined) {
+  return value?.trim() ?? '';
+}
+
+function getYoutubeEmbedUrl() {
+  const configuredEmbedUrl = cleanPublicEnv(process.env.NEXT_PUBLIC_PLAYMECHI_YOUTUBE_EMBED_URL);
+  if (
+    configuredEmbedUrl.startsWith('https://www.youtube.com/embed/') ||
+    configuredEmbedUrl.startsWith('https://www.youtube-nocookie.com/embed/')
+  ) {
+    return configuredEmbedUrl;
+  }
+
+  const configuredVideoId = cleanPublicEnv(process.env.NEXT_PUBLIC_PLAYMECHI_YOUTUBE_VIDEO_ID);
+  if (configuredVideoId) {
+    return `https://www.youtube.com/embed/${encodeURIComponent(configuredVideoId)}`;
+  }
+
+  const configuredChannelId = cleanPublicEnv(process.env.NEXT_PUBLIC_PLAYMECHI_YOUTUBE_CHANNEL_ID);
+  if (configuredChannelId) {
+    return `https://www.youtube.com/embed/live_stream?channel=${encodeURIComponent(configuredChannelId)}`;
+  }
+
+  return '';
+}
+
+export const ONLINE_TOURNAMENT_YOUTUBE_EMBED_URL = getYoutubeEmbedUrl();
 
 export const ONLINE_TOURNAMENT_GAMES: OnlineTournamentGameConfig[] = [
   {
@@ -95,6 +128,78 @@ export const ONLINE_TOURNAMENT_TOTAL_SLOTS = ONLINE_TOURNAMENT_GAMES.reduce(
   (total, game) => total + game.slots,
   0
 );
+
+export type OnlineTournamentGameRegistrationCount = {
+  registered: number;
+  slots: number;
+  spotsLeft: number;
+  full: boolean;
+};
+
+export type OnlineTournamentRegistrationSummary = {
+  games: Record<OnlineTournamentGameKey, OnlineTournamentGameRegistrationCount>;
+  registrations: unknown[];
+};
+
+export type OnlineTournamentDisplayStatus = 'open' | 'active' | 'completed';
+
+export function getFallbackOnlineTournamentSummary(): OnlineTournamentRegistrationSummary {
+  return {
+    games: ONLINE_TOURNAMENT_GAMES.reduce(
+      (counts, game) => {
+        counts[game.game] = {
+          registered: 0,
+          slots: game.slots,
+          spotsLeft: game.slots,
+          full: false,
+        };
+        return counts;
+      },
+      {} as Record<OnlineTournamentGameKey, OnlineTournamentGameRegistrationCount>
+    ),
+    registrations: [],
+  };
+}
+
+export function getOnlineTournamentTotals(summary: OnlineTournamentRegistrationSummary) {
+  const totals = ONLINE_TOURNAMENT_GAMES.reduce(
+    (totals, game) => {
+      const gameSummary = summary.games?.[game.game];
+      const slots = Number(gameSummary?.slots ?? game.slots);
+      const registered = Number(gameSummary?.registered ?? 0);
+
+      totals.registered += registered;
+      totals.slots += slots;
+      return totals;
+    },
+    { registered: 0, slots: 0, spotsLeft: 0, full: false }
+  );
+
+  totals.spotsLeft = Math.max(0, totals.slots - totals.registered);
+  totals.full = totals.registered >= totals.slots;
+  return totals;
+}
+
+export function getOnlineTournamentDisplayStatus(
+  now = new Date()
+): OnlineTournamentDisplayStatus {
+  if (
+    ONLINE_TOURNAMENT_GAMES.some(
+      (game) => getOnlineTournamentWindowState(game, now).isRegistrationOpen
+    )
+  ) {
+    return 'open';
+  }
+
+  const latestMatchWindowEnd = Math.max(
+    ...ONLINE_TOURNAMENT_GAMES.map((game) => {
+      const startsAt = new Date(game.matchStartsAt).getTime();
+      return startsAt + 6 * 60 * 60 * 1000;
+    })
+  );
+
+  return now.getTime() <= latestMatchWindowEnd ? 'active' : 'completed';
+}
 
 export const ONLINE_TOURNAMENT_GAME_BY_KEY = ONLINE_TOURNAMENT_GAMES.reduce(
   (games, game) => {

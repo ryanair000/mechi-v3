@@ -22,6 +22,7 @@ const PROTECTED_PREFIXES = [
   '/notifications',
   '/share',
   '/rewards',
+  '/streams',
   '/suggest',
   '/api/queue',
   '/api/challenges',
@@ -35,7 +36,7 @@ const PROTECTED_PREFIXES = [
   '/api/tournaments',
   '/api/rewards',
 ];
-const HIDDEN_PREFIXES = ['/streams', '/tutorial', '/tutorials'];
+const HIDDEN_PREFIXES = ['/tutorial', '/tutorials'];
 
 const ADMIN_PREFIXES = ['/admin', '/api/admin'];
 const TESTS_HOSTS = new Set(['tests.mechi.club']);
@@ -62,6 +63,7 @@ const PUBLIC_PREFIXES = [
   '/results',
   '/login',
   '/register',
+  '/signup',
   '/forgot-password',
   '/reset-password',
   '/pricing',
@@ -86,6 +88,7 @@ const PUBLIC_PREFIXES = [
 const ADMIN_HOST_LOCAL_PUBLIC_PREFIXES = [
   '/login',
   '/register',
+  '/signup',
   '/forgot-password',
   '/reset-password',
   '/banned',
@@ -341,7 +344,13 @@ export async function proxy(request: NextRequest) {
   const access =
     payload && needsProtectedAccess ? await getCurrentAccess(payload) : null;
 
-  if ((effectivePathname === '/login' || effectivePathname === '/register') && payload && access) {
+  if (
+    (effectivePathname === '/login' ||
+      effectivePathname === '/register' ||
+      effectivePathname === '/signup') &&
+    payload &&
+    access
+  ) {
     const fallbackPath =
       adminHost && !access.is_banned && hasPrimaryAdminAccess(access)
         ? '/admin'
@@ -350,7 +359,13 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(new URL(nextPath, request.url));
   }
 
-  if ((effectivePathname === '/login' || effectivePathname === '/register') && payload && !access) {
+  if (
+    (effectivePathname === '/login' ||
+      effectivePathname === '/register' ||
+      effectivePathname === '/signup') &&
+    payload &&
+    !access
+  ) {
     return clearAuthCookie(NextResponse.next());
   }
 

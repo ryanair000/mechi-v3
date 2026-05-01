@@ -21,13 +21,12 @@ export default function ChallengesPage() {
   const authFetch = useAuthFetch();
   const [isRouting, startTransition] = useTransition();
   const [searchValue, setSearchValue] = useState('');
-  const [inboundChallenges, setInboundChallenges] = useState<MatchChallenge[]>([]);
   const [outboundChallenges, setOutboundChallenges] = useState<MatchChallenge[]>([]);
   const [loadingChallenges, setLoadingChallenges] = useState(true);
   const [challengeError, setChallengeError] = useState<string | null>(null);
   const [actionId, setActionId] = useState<string | null>(null);
   const normalizedUsername = normalizeUsername(searchValue);
-  const liveChallengeCount = inboundChallenges.length + outboundChallenges.length;
+  const sentChallengeCount = outboundChallenges.length;
 
   const loadChallenges = useCallback(async () => {
     setLoadingChallenges(true);
@@ -36,7 +35,6 @@ export default function ChallengesPage() {
     try {
       const res = await authFetch('/api/challenges');
       const data = (await res.json()) as {
-        inbound?: MatchChallenge[];
         outbound?: MatchChallenge[];
         error?: string;
       };
@@ -45,11 +43,9 @@ export default function ChallengesPage() {
         throw new Error(data.error ?? 'Could not load live challenges');
       }
 
-      setInboundChallenges(data.inbound ?? []);
       setOutboundChallenges(data.outbound ?? []);
     } catch (error) {
       setChallengeError(error instanceof Error ? error.message : 'Could not load live challenges');
-      setInboundChallenges([]);
       setOutboundChallenges([]);
     } finally {
       setLoadingChallenges(false);
@@ -73,14 +69,14 @@ export default function ChallengesPage() {
   };
 
   const handleChallengeAction = useCallback(
-    async (challengeId: string, action: 'accept' | 'decline' | 'cancel') => {
+    async (challengeId: string, action: 'cancel') => {
       setActionId(`${challengeId}:${action}`);
 
       try {
         const res = await authFetch(`/api/challenges/${challengeId}/${action}`, {
           method: 'POST',
         });
-        const data = (await res.json()) as { error?: string; match_id?: string };
+        const data = (await res.json()) as { error?: string };
 
         if (!res.ok) {
           toast.error(data.error ?? 'Could not update challenge');
@@ -89,28 +85,14 @@ export default function ChallengesPage() {
 
         emitNotificationRefresh();
         await loadChallenges();
-
-        if (action === 'accept' && data.match_id) {
-          toast.success('Challenge accepted. Match is live.');
-          router.push(`/match/${data.match_id}`);
-          return;
-        }
-
-        if (action === 'decline') {
-          toast.success('Challenge declined');
-          return;
-        }
-
-        if (action === 'cancel') {
-          toast.success('Challenge cancelled');
-        }
+        toast.success('Challenge cancelled');
       } catch {
         toast.error('Network error');
       } finally {
         setActionId(null);
       }
     },
-    [authFetch, loadChallenges, router]
+    [authFetch, loadChallenges]
   );
 
   return (
@@ -123,13 +105,13 @@ export default function ChallengesPage() {
             </p>
             <h1 className="mt-2 text-2xl font-black text-[var(--text-primary)]">Challenge list</h1>
             <p className="mt-2 max-w-2xl text-sm text-[var(--text-secondary)]">
-              A simple queue for incoming calls, sent challenges, and quick player lookup.
+              A simple queue for sent challenges and quick player lookup.
             </p>
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
             <span className="text-sm font-semibold text-[var(--text-secondary)]">
-              {liveChallengeCount} live
+              {sentChallengeCount} sent
             </span>
             <button
               type="button"
@@ -151,12 +133,10 @@ export default function ChallengesPage() {
       ) : null}
 
       <ChallengesPanel
-        inboundChallenges={inboundChallenges}
         outboundChallenges={outboundChallenges}
         loading={loadingChallenges}
         actionId={actionId}
         onAction={handleChallengeAction}
-        emptyCopy="No live direct challenges right now. Search a player below to send one."
       />
 
       <section className="border-t border-[var(--border-color)] pt-5">

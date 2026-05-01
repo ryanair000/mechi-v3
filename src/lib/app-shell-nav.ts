@@ -5,6 +5,7 @@ import {
   History,
   Inbox,
   LayoutDashboard,
+  MonitorPlay,
   type LucideIcon,
   MessageCircle,
   Share2,
@@ -45,6 +46,13 @@ const LEADERBOARD_NAV_ITEM: AppNavItem = {
   href: '/leaderboard',
   label: 'Leaderboard',
   icon: Trophy,
+  matchMode: 'prefix',
+};
+
+const STREAM_NAV_ITEM: AppNavItem = {
+  href: '/streams',
+  label: 'Stream',
+  icon: MonitorPlay,
   matchMode: 'prefix',
 };
 
@@ -125,6 +133,7 @@ export const SIDEBAR_PRIMARY_ITEMS: AppNavItem[] = [
   DASHBOARD_NAV_ITEM,
   INBOX_NAV_ITEM,
   LEADERBOARD_NAV_ITEM,
+  STREAM_NAV_ITEM,
 ];
 
 export const SIDEBAR_SECTIONS: SidebarSectionConfig[] = [

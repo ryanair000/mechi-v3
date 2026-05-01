@@ -4,15 +4,13 @@ import { Clock3, X } from 'lucide-react';
 import { GAMES, PLATFORMS } from '@/lib/config';
 import type { MatchChallenge, PlatformKey } from '@/types';
 
-type ChallengeAction = 'accept' | 'decline' | 'cancel';
+type ChallengeAction = 'cancel';
 
 interface ChallengesPanelProps {
-  inboundChallenges: MatchChallenge[];
   outboundChallenges: MatchChallenge[];
   loading: boolean;
   actionId: string | null;
   onAction: (challengeId: string, action: ChallengeAction) => Promise<void> | void;
-  emptyCopy?: string;
 }
 
 function formatTimestamp(value: string) {
@@ -22,10 +20,6 @@ function formatTimestamp(value: string) {
     hour: 'numeric',
     minute: '2-digit',
   });
-}
-
-function getInitial(value?: string | null) {
-  return value?.trim().charAt(0).toUpperCase() || '?';
 }
 
 function getGameLabel(challenge: MatchChallenge) {
@@ -103,78 +97,20 @@ function ChallengeTable({
 }
 
 export function ChallengesPanel({
-  inboundChallenges,
   outboundChallenges,
   loading,
   actionId,
   onAction,
-  emptyCopy = 'No pending direct challenges yet. Use the leaderboard or a public profile to call someone out.',
 }: ChallengesPanelProps) {
-  const hasInbound = inboundChallenges.length > 0;
   const hasOutbound = outboundChallenges.length > 0;
 
   return (
     <div className="space-y-6">
       <ChallengeTable
-        title="Incoming"
-        description="Answer the direct challenges waiting on you."
-        emptyCopy={loading ? '' : emptyCopy}
-        loading={loading}
-        rows={
-          hasInbound
-            ? inboundChallenges.map((challenge) => {
-                const pendingAccept = actionId === `${challenge.id}:accept`;
-                const pendingDecline = actionId === `${challenge.id}:decline`;
-                const challengerName = challenge.challenger?.username ?? 'A player';
-
-                return (
-                  <tr key={challenge.id} className="border-b border-[var(--border-color)] align-top last:border-b-0">
-                    <td className="py-4 pr-4">
-                      <div className="min-w-0">
-                        <p className="font-semibold text-[var(--text-primary)]">{challengerName}</p>
-                        <p className="mt-1 text-xs text-[var(--text-soft)]">
-                          {getInitial(challengerName)}
-                        </p>
-                      </div>
-                    </td>
-                    <td className="py-4 pr-4 text-[var(--text-primary)]">{getGameLabel(challenge)}</td>
-                    <td className="py-4 pr-4 text-[var(--text-secondary)]">{getPlatformLabel(challenge)}</td>
-                    <td className="py-4 pr-4 text-[var(--text-secondary)]">
-                      {challenge.message?.trim() ? challenge.message : 'No message'}
-                    </td>
-                    <td className="py-4 pr-4 text-[var(--text-soft)]">{formatTimestamp(challenge.created_at)}</td>
-                    <td className="py-4 text-right">
-                      <div className="flex justify-end gap-2">
-                        <button
-                          type="button"
-                          onClick={() => void onAction(challenge.id, 'accept')}
-                          disabled={pendingAccept || pendingDecline}
-                          className="btn-primary min-h-9 px-3 py-2 text-xs"
-                        >
-                          {pendingAccept ? 'Accepting...' : 'Accept'}
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => void onAction(challenge.id, 'decline')}
-                          disabled={pendingAccept || pendingDecline}
-                          className="btn-ghost min-h-9 px-3 py-2 text-xs"
-                        >
-                          {pendingDecline ? 'Declining...' : 'Decline'}
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })
-            : null
-        }
-      />
-
-      <ChallengeTable
         title="Sent"
         description="Track the calls you already sent and cancel stale ones fast."
         emptyCopy={loading ? '' : 'No outgoing challenges waiting right now.'}
-        loading={loading && !hasInbound}
+        loading={loading}
         rows={
           hasOutbound
             ? outboundChallenges.map((challenge) => {

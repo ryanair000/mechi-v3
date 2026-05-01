@@ -7,6 +7,20 @@ import toast from 'react-hot-toast';
 import { useAuth, useAuthFetch } from '@/components/AuthProvider';
 import { LiveBadge } from '@/components/LiveBadge';
 import { GAMES } from '@/lib/config';
+import {
+  ONLINE_TOURNAMENT_CASH_PRIZE_POOL,
+  ONLINE_TOURNAMENT_EVENT_DATES,
+  ONLINE_TOURNAMENT_GAME_LIST_LABEL,
+  ONLINE_TOURNAMENT_PUBLIC_PATH,
+  ONLINE_TOURNAMENT_REGISTRATION_API_PATH,
+  ONLINE_TOURNAMENT_REGISTRATION_PATH,
+  ONLINE_TOURNAMENT_TITLE,
+  getFallbackOnlineTournamentSummary,
+  getOnlineTournamentDisplayStatus,
+  getOnlineTournamentTotals,
+  type OnlineTournamentDisplayStatus,
+  type OnlineTournamentRegistrationSummary,
+} from '@/lib/online-tournament';
 import { resolvePlan } from '@/lib/plans';
 import { getTournamentPrizePoolLabel } from '@/lib/tournament-metrics';
 import { formatTournamentDateTime } from '@/lib/tournament-schedule';
@@ -93,6 +107,9 @@ export default function TournamentsPage() {
   const { user } = useAuth();
   const authFetch = useAuthFetch();
   const [tournaments, setTournaments] = useState<TournamentListItem[]>([]);
+  const [onlineTournament, setOnlineTournament] = useState<OnlineTournamentRegistrationSummary>(
+    () => getFallbackOnlineTournamentSummary()
+  );
   const [status, setStatus] = useState<(typeof STATUS_FILTERS)[number]>('all');
   const [loading, setLoading] = useState(true);
   const canHostTournaments = resolvePlan(user?.plan, user?.plan_expires_at) !== 'free';
@@ -102,7 +119,10 @@ export default function TournamentsPage() {
   const fetchTournaments = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await authFetch(`/api/tournaments?status=${status}`);
+      const [res, onlineTournamentRes] = await Promise.all([
+        authFetch(`/api/tournaments?status=${status}`),
+        authFetch(ONLINE_TOURNAMENT_REGISTRATION_API_PATH),
+      ]);
       const data = (await res.json()) as {
         error?: string;
         tournaments?: TournamentListItem[];
@@ -115,9 +135,18 @@ export default function TournamentsPage() {
       }
 
       setTournaments(data.tournaments ?? []);
+
+      if (onlineTournamentRes.ok) {
+        const onlineTournamentData =
+          (await onlineTournamentRes.json()) as OnlineTournamentRegistrationSummary;
+        setOnlineTournament(onlineTournamentData);
+      } else {
+        setOnlineTournament(getFallbackOnlineTournamentSummary());
+      }
     } catch {
       toast.error('Could not load tournaments');
       setTournaments([]);
+      setOnlineTournament(getFallbackOnlineTournamentSummary());
     } finally {
       setLoading(false);
     }
@@ -126,6 +155,11 @@ export default function TournamentsPage() {
   useEffect(() => {
     void fetchTournaments();
   }, [fetchTournaments]);
+
+  const onlineTournamentStatus = getOnlineTournamentDisplayStatus();
+  const showOnlineTournament =
+    status === 'all' || status === onlineTournamentStatus;
+  const hasVisibleTournaments = showOnlineTournament || tournaments.length > 0;
 
   return (
     <div className="page-container space-y-5">
@@ -177,7 +211,7 @@ export default function TournamentsPage() {
             ))}
           </div>
         </div>
-      ) : tournaments.length === 0 ? (
+      ) : !hasVisibleTournaments ? (
         <div className="card py-16 text-center">
           <Trophy size={36} className="mx-auto mb-4 text-[var(--text-soft)] opacity-50" />
           <p className="font-black text-[var(--text-primary)]">
@@ -199,6 +233,14 @@ export default function TournamentsPage() {
               <span className="text-right">Prize</span>
               <span className="text-right">Action</span>
             </div>
+
+            {showOnlineTournament ? (
+              <OnlineTournamentDesktopRow
+                hasFollowingRows={tournaments.length > 0}
+                summary={onlineTournament}
+                status={onlineTournamentStatus}
+              />
+            ) : null}
 
             {tournaments.map((tournament, index) => {
               const playerCount = getPlayerCount(tournament);
@@ -289,6 +331,13 @@ export default function TournamentsPage() {
           </div>
 
           <div className="grid gap-4 lg:hidden">
+            {showOnlineTournament ? (
+              <OnlineTournamentMobileCard
+                summary={onlineTournament}
+                status={onlineTournamentStatus}
+              />
+            ) : null}
+
             {tournaments.map((tournament) => {
               const playerCount = getPlayerCount(tournament);
               const progress = Math.min(100, (playerCount / Math.max(1, tournament.size)) * 100);
@@ -384,6 +433,168 @@ export default function TournamentsPage() {
           </div>
         </>
       )}
+    </div>
+  );
+}
+
+function getOnlineTournamentPrizeLabel() {
+  return `KSh ${ONLINE_TOURNAMENT_CASH_PRIZE_POOL.toLocaleString('en-KE')}`;
+}
+
+function getOnlineTournamentAction(status: OnlineTournamentDisplayStatus) {
+  if (status === 'open') {
+    return {
+      href: ONLINE_TOURNAMENT_REGISTRATION_PATH,
+      label: 'Register',
+      mobileLabel: 'Register free',
+    };
+  }
+
+  return {
+    href: ONLINE_TOURNAMENT_PUBLIC_PATH,
+    label: 'View',
+    mobileLabel: 'View event',
+  };
+}
+
+function OnlineTournamentDesktopRow({
+  hasFollowingRows,
+  summary,
+  status,
+}: {
+  hasFollowingRows: boolean;
+  summary: OnlineTournamentRegistrationSummary;
+  status: OnlineTournamentDisplayStatus;
+}) {
+  const totals = getOnlineTournamentTotals(summary);
+  const progress = Math.min(100, (totals.registered / Math.max(1, totals.slots)) * 100);
+  const action = getOnlineTournamentAction(status);
+
+  return (
+    <div
+      className={`grid grid-cols-[minmax(0,1.3fr)_100px_150px_110px_90px] items-center gap-4 px-5 py-4 ${
+        hasFollowingRows ? 'border-b border-[var(--border-color)]' : ''
+      }`}
+    >
+      <div className="min-w-0">
+        <div className="flex flex-wrap items-center gap-2">
+          <p className="truncate text-sm font-black text-[var(--text-primary)]">
+            {ONLINE_TOURNAMENT_TITLE}
+          </p>
+          <span
+            className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.08em] ${getStatusClasses(status)}`}
+          >
+            {formatTournamentStatus(status)}
+          </span>
+          <span className="brand-chip-coral px-2 py-0.5">PlayMechi</span>
+        </div>
+        <div className="mt-2 flex flex-wrap items-center gap-2">
+          <span className="brand-chip px-2 py-0.5">{ONLINE_TOURNAMENT_GAME_LIST_LABEL}</span>
+          <span className="text-[11px] text-[var(--text-soft)]">Free entry</span>
+        </div>
+      </div>
+
+      <div>
+        <div className="mb-2 h-1.5 w-16 overflow-hidden rounded-full bg-[var(--border-color)]">
+          <div className="h-full bg-[var(--brand-teal)]" style={{ width: `${progress}%` }} />
+        </div>
+        <span className="text-xs text-[var(--text-soft)]">
+          {totals.registered}/{totals.slots}
+        </span>
+      </div>
+
+      <span className="text-sm text-[var(--text-secondary)]">
+        {ONLINE_TOURNAMENT_EVENT_DATES}
+      </span>
+
+      <span className="text-right text-sm font-black text-[var(--brand-teal)]">
+        {getOnlineTournamentPrizeLabel()}
+      </span>
+
+      <div className="text-right">
+        <Link
+          href={action.href}
+          className="inline-flex min-h-8 items-center justify-center rounded-md border border-[rgba(50,224,196,0.22)] bg-[rgba(50,224,196,0.1)] px-3 py-2 text-xs font-bold text-[var(--accent-secondary-text)]"
+        >
+          {action.label}
+        </Link>
+      </div>
+    </div>
+  );
+}
+
+function OnlineTournamentMobileCard({
+  summary,
+  status,
+}: {
+  summary: OnlineTournamentRegistrationSummary;
+  status: OnlineTournamentDisplayStatus;
+}) {
+  const totals = getOnlineTournamentTotals(summary);
+  const progress = Math.min(100, (totals.registered / Math.max(1, totals.slots)) * 100);
+  const action = getOnlineTournamentAction(status);
+
+  return (
+    <div className="card p-4">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-2">
+            <p className="text-sm font-black text-[var(--text-primary)]">
+              {ONLINE_TOURNAMENT_TITLE}
+            </p>
+            <span
+              className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.08em] ${getStatusClasses(status)}`}
+            >
+              {formatTournamentStatus(status)}
+            </span>
+          </div>
+          <p className="mt-2 text-xs text-[var(--text-soft)]">
+            {ONLINE_TOURNAMENT_GAME_LIST_LABEL}
+          </p>
+        </div>
+        <span className="brand-chip-coral px-2 py-0.5">PlayMechi</span>
+      </div>
+
+      <div className="mt-4 grid gap-3 sm:grid-cols-3">
+        <div className="rounded-xl border border-[var(--border-color)] bg-[var(--surface-elevated)] p-3">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--text-soft)]">
+            Slots
+          </p>
+          <p className="mt-2 text-sm font-semibold text-[var(--text-primary)]">
+            {totals.registered}/{totals.slots}
+          </p>
+          <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-[var(--border-color)]">
+            <div className="h-full bg-[var(--brand-teal)]" style={{ width: `${progress}%` }} />
+          </div>
+        </div>
+
+        <div className="rounded-xl border border-[var(--border-color)] bg-[var(--surface-elevated)] p-3">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--text-soft)]">
+            Starts
+          </p>
+          <p className="mt-2 text-sm font-semibold text-[var(--text-primary)]">
+            {ONLINE_TOURNAMENT_EVENT_DATES}
+          </p>
+        </div>
+
+        <div className="rounded-xl border border-[var(--border-color)] bg-[var(--surface-elevated)] p-3">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--text-soft)]">
+            Prize
+          </p>
+          <p className="mt-2 text-sm font-semibold text-[var(--brand-teal)]">
+            {getOnlineTournamentPrizeLabel()}
+          </p>
+        </div>
+      </div>
+
+      <div className="mt-4 flex gap-2">
+        <Link href={ONLINE_TOURNAMENT_PUBLIC_PATH} className="btn-outline flex-1 py-2 text-xs">
+          View details
+        </Link>
+        <Link href={action.href} className="btn-primary flex-1 py-2 text-xs">
+          {action.mobileLabel}
+        </Link>
+      </div>
     </div>
   );
 }

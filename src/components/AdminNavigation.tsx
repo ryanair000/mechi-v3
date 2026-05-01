@@ -15,6 +15,7 @@ import {
   Shield,
   Swords,
   Trophy,
+  UserCheck,
   Users,
   Zap,
   type LucideIcon,
@@ -38,6 +39,7 @@ type AdminNavSection = {
 
 const PRIMARY_ADMIN_NAV: AdminNavItem[] = [
   { href: '/admin', label: 'Overview', icon: BarChart2 },
+  { href: '/admin/ephrem', label: 'Ephrem Desk', icon: UserCheck },
   { href: '/admin/queue', label: 'Queue', icon: Clock3 },
   { href: '/admin/matches', label: 'Matches', icon: Swords },
   { href: '/admin/lobbies', label: 'Lobbies', icon: DoorOpen },

@@ -1062,6 +1062,11 @@ html[data-theme='dark'] {
     margin: 0 auto;
   }
 
+  .app-prototype-shell .dashboard-page-container {
+    width: min(100%, 48.3rem);
+    padding: 1.05rem 1.225rem 2.1rem;
+  }
+
   .app-prototype-shell .brand-logo-wordmark {
     letter-spacing: 0.2em;
     text-transform: uppercase;

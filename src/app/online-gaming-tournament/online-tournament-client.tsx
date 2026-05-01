@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import FooterSection from '@/components/footer';
+import { useAuth } from '@/components/AuthProvider';
 import { HomeFloatingHeader } from '@/components/HomeFloatingHeader';
 import { CtaCard } from '@/components/ui/cta-card';
 import { Faq5 } from '@/components/ui/faq-5';
@@ -10,6 +11,7 @@ import { GlassBlogCard } from '@/components/ui/glass-blog-card-shadcnui';
 import { Hero1 } from '@/components/ui/hero-with-text-and-two-button';
 import { TestimonialCarousel } from '@/components/ui/profile-card-testimonial-carousel';
 import { getGameImage } from '@/lib/config';
+import { getLoginPath, getRegisterPath } from '@/lib/navigation';
 import {
   ONLINE_TOURNAMENT_EVENT_DATES,
   ONLINE_TOURNAMENT_GAMES,
@@ -34,6 +36,10 @@ type RegistrationSummary = {
 };
 
 const API_PATH = '/api/events/mechi-online-gaming-tournament/register';
+const TOURNAMENT_SIGN_IN_PATH = getLoginPath(ONLINE_TOURNAMENT_REGISTRATION_PATH);
+const TOURNAMENT_SIGN_UP_PATH = getRegisterPath({
+  next: ONLINE_TOURNAMENT_REGISTRATION_PATH,
+});
 const TOURNAMENT_NAV_ITEMS = [
   { href: '#prizes', label: 'PRIZES' },
   { href: '#rules', label: 'RULES' },
@@ -60,9 +66,13 @@ function getFallbackSummary(): RegistrationSummary {
 }
 
 export function OnlineTournamentClient() {
+  const { user } = useAuth();
   const [summary, setSummary] = useState<RegistrationSummary>(() => getFallbackSummary());
   const [summaryLoading, setSummaryLoading] = useState(true);
   const [summaryError, setSummaryError] = useState<string | null>(null);
+  const tournamentRegistrationHref = user
+    ? ONLINE_TOURNAMENT_REGISTRATION_PATH
+    : TOURNAMENT_SIGN_UP_PATH;
 
   const loadSummary = useCallback(async () => {
     setSummaryLoading(true);
@@ -92,8 +102,8 @@ export function OnlineTournamentClient() {
     <div className="page-base marketing-prototype-shell min-h-screen">
       <HomeFloatingHeader
         navItems={TOURNAMENT_NAV_ITEMS}
-        signInHref={`/login?next=${ONLINE_TOURNAMENT_REGISTRATION_PATH}`}
-        joinHref={ONLINE_TOURNAMENT_REGISTRATION_PATH}
+        signInHref={TOURNAMENT_SIGN_IN_PATH}
+        joinHref={tournamentRegistrationHref}
       />
 
       <main className="landing-shell pb-8 pt-3 sm:pb-10 sm:pt-5">
@@ -105,7 +115,7 @@ export function OnlineTournamentClient() {
             secondaryLabel="See The Prizes"
             secondaryHref="#prizes"
             primaryLabel="Register Now!"
-            primaryHref={ONLINE_TOURNAMENT_REGISTRATION_PATH}
+            primaryHref={tournamentRegistrationHref}
           />
         </section>
 

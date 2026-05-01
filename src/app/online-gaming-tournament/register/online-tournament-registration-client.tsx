@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
 import { AlertCircle, CheckCircle2, Loader2, Trophy, Users } from 'lucide-react';
 import { useAuth, useAuthFetch } from '@/components/AuthProvider';
@@ -96,6 +97,7 @@ function isGameKey(value: string): value is OnlineTournamentGameKey {
 }
 
 export function OnlineTournamentRegistrationClient() {
+  const router = useRouter();
   const authFetch = useAuthFetch();
   const { user, loading: authLoading } = useAuth();
   const [summary, setSummary] = useState<RegistrationSummary>(() => getFallbackSummary());
@@ -123,6 +125,12 @@ export function OnlineTournamentRegistrationClient() {
   const createAccountHref = getRegisterPath({ next: RETURN_PATH });
   const signInHref = getLoginPath(RETURN_PATH);
 
+  useEffect(() => {
+    if (!authLoading && !user) {
+      router.replace(createAccountHref);
+    }
+  }, [authLoading, createAccountHref, router, user]);
+
   const loadSummary = useCallback(async () => {
     setSummaryLoading(true);
     try {
@@ -147,8 +155,12 @@ export function OnlineTournamentRegistrationClient() {
   }, [authFetch]);
 
   useEffect(() => {
+    if (authLoading || !user) {
+      return;
+    }
+
     void loadSummary();
-  }, [loadSummary]);
+  }, [authLoading, loadSummary, user]);
 
   useEffect(() => {
     if (currentRegistration) {
@@ -298,30 +310,9 @@ export function OnlineTournamentRegistrationClient() {
           </div>
 
           <Card className="border-white/10 bg-[rgba(10,18,31,0.78)] p-5 text-[var(--text-primary)] shadow-2xl shadow-black/20 ring-1 ring-white/10 backdrop-blur-md sm:p-6">
-            {authLoading ? (
+            {authLoading || !user ? (
               <div className="flex min-h-80 items-center justify-center">
                 <Loader2 className="h-6 w-6 animate-spin text-[var(--accent-secondary-text)]" />
-              </div>
-            ) : !user ? (
-              <div className="space-y-5">
-                <div>
-                  <p className="section-title">Step 1</p>
-                  <h2 className="mt-3 text-2xl font-black text-[var(--text-primary)]">
-                    Create your Mechi account first.
-                  </h2>
-                  <p className="mt-3 text-sm leading-7 text-[var(--text-secondary)]">
-                    Tournament registration is tied to a Mechi profile so admins can verify player
-                    tags, phone/WhatsApp contact, social requirements, and reward eligibility.
-                  </p>
-                </div>
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <Button asChild size="lg">
-                    <Link href={createAccountHref}>Create account</Link>
-                  </Button>
-                  <Button asChild size="lg" variant="outline">
-                    <Link href={signInHref}>Sign in</Link>
-                  </Button>
-                </div>
               </div>
             ) : (
               <div className="space-y-5">

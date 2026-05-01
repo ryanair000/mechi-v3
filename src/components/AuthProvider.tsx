@@ -12,6 +12,7 @@ const PUBLIC_AUTH_REFRESH_SKIP_PREFIXES = [
   '/report',
   '/reports',
   '/pricing',
+  '/signup',
   '/privacy-policy',
   '/terms-of-service',
   '/user-data-deletion',

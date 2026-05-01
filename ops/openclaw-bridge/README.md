@@ -6,13 +6,14 @@ It exposes:
 
 - `POST /v1/mechi-support-reply`
 - `POST /webhooks/instagram`
+- `POST /webhooks/email`
 - `GET /healthz`
 
 In production on the EC2 host, Nginx fronts `https://smm-api.lokimax.top` and proxies to this local bridge service.
 
 Production rule: Mechi uses only the EC2 OpenClaw runtime. Do not start a local Windows/laptop OpenClaw gateway for production WhatsApp, Telegram, Instagram, or support traffic.
 
-Both POST routes require `Authorization: Bearer <MECHI_OPENCLAW_BRIDGE_TOKEN>`.
+All POST routes require `Authorization: Bearer <MECHI_OPENCLAW_BRIDGE_TOKEN>`.
 
 This folder also includes `telegram-poller.mjs`, which can link a Telegram bot directly to the OpenClaw host using `getUpdates` polling instead of webhooks when you intentionally want a custom bridge layer.
 
@@ -22,6 +23,7 @@ The Mechi Next.js app already sends:
 
 - support inbox requests with `thread_id`, `conversation`, `mechi_context`, and a strict JSON reply contract
 - Instagram DM bridge requests with `sender`, `recipient`, `message`, and optional fallback auth
+- cPanel email pipe requests with mailbox metadata, headers, subject, sender, and extracted message text
 
 OpenClaw is great at the agent runtime, session state, and operator tooling, but it does not natively speak Mechi's existing request/response shapes. This bridge keeps the app stable while routing the work into a dedicated OpenClaw agent.
 
@@ -34,8 +36,10 @@ MECHI_OPENCLAW_BRIDGE_TOKEN=replace-with-a-long-random-token
 
 MECHI_OPENCLAW_SUPPORT_AGENT=support
 MECHI_OPENCLAW_INSTAGRAM_AGENT=support
+MECHI_OPENCLAW_EMAIL_AGENT=support
 MECHI_OPENCLAW_TIMEOUT_SECONDS=120
 MECHI_OPENCLAW_MAX_BODY_BYTES=256000
+MECHI_OPENCLAW_MAX_EMAIL_TEXT_CHARS=16000
 
 # Optional when openclaw is not on PATH.
 OPENCLAW_BIN=/home/ubuntu/.npm-global/bin/openclaw
@@ -95,8 +99,42 @@ Use `ops/openclaw-bridge/mechi-openclaw.nginx.conf` on the EC2 host to expose:
 - `https://smm-api.lokimax.top/healthz`
 - `https://smm-api.lokimax.top/v1/mechi-support-reply`
 - `https://smm-api.lokimax.top/webhooks/instagram`
+- `https://smm-api.lokimax.top/webhooks/email`
 
 The bundled config sets longer proxy timeouts so Mechi support and Instagram replies can wait on OpenClaw runs without Nginx returning `504 Gateway Time-out`.
+
+## cPanel email intake
+
+Use `cpanel-email-pipe.php` when TrueHost/cPanel should route inbound mailbox messages into OpenClaw.
+
+Recommended route for the current Mechi/Chezahub mailboxes:
+
+- `info@mechi.club` -> OpenClaw `support`
+- `support@mechi.club` -> OpenClaw `support`
+- `info@chezahub.co.ke` -> OpenClaw `support`
+- `support@chezahub.co.ke` -> OpenClaw `support`
+
+Deploy the pipe script outside `public_html`, for example:
+
+```bash
+cp ops/openclaw-bridge/cpanel-email-pipe.php /home/vawxwkah/openclaw-mail-pipe.php
+cp ops/openclaw-bridge/cpanel-email-pipe.config.example.php /home/vawxwkah/openclaw-mail-pipe.config.php
+chmod 700 /home/vawxwkah/openclaw-mail-pipe.php
+chmod 600 /home/vawxwkah/openclaw-mail-pipe.config.php
+```
+
+Then edit `/home/vawxwkah/openclaw-mail-pipe.config.php` on cPanel and put the live `MECHI_OPENCLAW_BRIDGE_TOKEN` value there. Do not commit that token.
+
+Create one cPanel pipe forwarder per mailbox:
+
+```text
+|/usr/local/bin/php -q /home/vawxwkah/openclaw-mail-pipe.php info@mechi.club
+|/usr/local/bin/php -q /home/vawxwkah/openclaw-mail-pipe.php support@mechi.club
+|/usr/local/bin/php -q /home/vawxwkah/openclaw-mail-pipe.php info@chezahub.co.ke
+|/usr/local/bin/php -q /home/vawxwkah/openclaw-mail-pipe.php support@chezahub.co.ke
+```
+
+The email webhook generates a bot response through the customer-safe `support` agent. It does not send outbound email by itself, which avoids accidental auto-replies, loops, refunds, payouts, account mutations, or privacy/legal responses without a human-controlled sender path.
 
 ## Telegram on OpenClaw
 

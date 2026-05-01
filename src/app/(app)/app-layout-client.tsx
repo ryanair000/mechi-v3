@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { AppOnboarding } from '@/components/AppOnboarding';
 import { AppMobileUtilityHeader } from '@/components/AppMobileUtilityHeader';
 import { useAuth } from '@/components/AuthProvider';
 import { BottomNav } from '@/components/BottomNav';
@@ -51,7 +50,6 @@ export function AppLayoutClient({ children }: { children: React.ReactNode }) {
           </main>
         </div>
         <BottomNav />
-        <AppOnboarding />
       </div>
     </div>
   );

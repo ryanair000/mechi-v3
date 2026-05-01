@@ -87,7 +87,9 @@ export function buildMechiBridgeContext(options = {}) {
       ? '- Telegram operator/control replies should be short, decisive, and ready to send.'
       : channel === 'instagram'
         ? '- Instagram can answer Mechi product questions from this context; account-specific actions should be escalated unless a verified linked profile is supplied.'
-        : '- WhatsApp can show a linked player dashboard summary, start or leave ranked queue, list open lobbies, and list open tournaments.';
+        : channel === 'email'
+          ? '- Email support replies should read like concise customer service email drafts; account-sensitive requests should be escalated unless verified context is supplied.'
+          : '- WhatsApp can show a linked player dashboard summary, start or leave ranked queue, list open lobbies, and list open tournaments.';
 
   return [
     `App: Mechi. Main site: ${APP_URL}. Pricing page: ${APP_URL}/pricing. Dashboard: ${APP_URL}/dashboard.`,
@@ -118,7 +120,9 @@ export function buildMechiBridgeSystemPrompt(channel = 'support') {
       ? 'Telegram'
       : channel === 'instagram'
         ? 'Instagram DM'
-        : 'support';
+        : channel === 'email'
+          ? 'email support'
+          : 'support';
 
   return [
     `You are the Mechi ${channelLabel} assistant running inside OpenClaw.`,

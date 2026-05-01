@@ -17,12 +17,15 @@ const AUTH_TOKEN =
 const OPENCLAW_BIN = process.env.OPENCLAW_BIN?.trim() || 'openclaw';
 const SUPPORT_AGENT = process.env.MECHI_OPENCLAW_SUPPORT_AGENT?.trim() || 'support';
 const INSTAGRAM_AGENT = process.env.MECHI_OPENCLAW_INSTAGRAM_AGENT?.trim() || SUPPORT_AGENT;
+const EMAIL_AGENT = process.env.MECHI_OPENCLAW_EMAIL_AGENT?.trim() || SUPPORT_AGENT;
 const SUPPORT_MODEL =
   process.env.MECHI_OPENCLAW_SUPPORT_MODEL?.trim() || 'openai-codex/gpt-5.5';
 const INSTAGRAM_MODEL =
   process.env.MECHI_OPENCLAW_INSTAGRAM_MODEL?.trim() || SUPPORT_MODEL;
+const EMAIL_MODEL = process.env.MECHI_OPENCLAW_EMAIL_MODEL?.trim() || SUPPORT_MODEL;
 const OPENCLAW_TIMEOUT_SECONDS = toPositiveInt(process.env.MECHI_OPENCLAW_TIMEOUT_SECONDS, 120);
 const MAX_BODY_BYTES = toPositiveInt(process.env.MECHI_OPENCLAW_MAX_BODY_BYTES, 256_000);
+const MAX_EMAIL_TEXT_CHARS = toPositiveInt(process.env.MECHI_OPENCLAW_MAX_EMAIL_TEXT_CHARS, 16_000);
 
 function toPositiveInt(value, fallback) {
   const parsed = Number.parseInt(String(value ?? ''), 10);
@@ -106,6 +109,78 @@ function stringifyJson(value) {
   } catch {
     return String(value);
   }
+}
+
+function firstString(...values) {
+  for (const value of values) {
+    if (typeof value === 'string' && value.trim()) {
+      return value.trim();
+    }
+  }
+
+  return '';
+}
+
+function textLimit(value, maxChars = MAX_EMAIL_TEXT_CHARS) {
+  const text = typeof value === 'string' ? value.trim() : '';
+  if (!text || text.length <= maxChars) {
+    return text;
+  }
+
+  return `${text.slice(0, maxChars)}\n\n[truncated ${text.length - maxChars} chars]`;
+}
+
+function normalizeEmailList(value) {
+  if (Array.isArray(value)) {
+    return value
+      .filter((item) => typeof item === 'string' && item.trim())
+      .map((item) => item.trim());
+  }
+
+  if (typeof value === 'string' && value.trim()) {
+    return value
+      .split(',')
+      .map((item) => item.trim())
+      .filter(Boolean);
+  }
+
+  return [];
+}
+
+function normalizeEmailPayload(input) {
+  const headers =
+    input?.headers && typeof input.headers === 'object' && !Array.isArray(input.headers)
+      ? input.headers
+      : {};
+  const to = normalizeEmailList(input?.to);
+  const cc = normalizeEmailList(input?.cc);
+
+  return {
+    sourceAccount: firstString(
+      input?.source_account,
+      input?.mailbox,
+      input?.account,
+      headers['delivered-to'],
+      headers['x-original-to']
+    ),
+    messageId: firstString(input?.message_id, input?.messageId, headers['message-id']),
+    from: firstString(input?.from, input?.sender, headers.from),
+    replyTo: firstString(input?.reply_to, input?.replyTo, headers['reply-to']),
+    to: to.length ? to : normalizeEmailList(headers.to),
+    cc: cc.length ? cc : normalizeEmailList(headers.cc),
+    subject: firstString(input?.subject, headers.subject) || '[no subject]',
+    receivedAt: firstString(input?.received_at, input?.receivedAt, headers.date),
+    text: textLimit(firstString(input?.text, input?.body, input?.plain_text, input?.plainText)),
+    html: textLimit(firstString(input?.html), Math.min(MAX_EMAIL_TEXT_CHARS, 6000)),
+    rawHeaders: headers,
+    attachments: Array.isArray(input?.attachments) ? input.attachments : [],
+    rawSizeBytes:
+      Number.isFinite(Number(input?.raw_size_bytes))
+        ? Number(input.raw_size_bytes)
+        : Number.isFinite(Number(input?.rawSizeBytes))
+          ? Number(input.rawSizeBytes)
+          : null,
+  };
 }
 
 function conversationToText(conversation) {
@@ -225,6 +300,72 @@ function buildInstagramPrompt(input) {
     '',
     'RAW EVENT:',
     stringifyJson(input?.raw_event || {}),
+  ].join('\n');
+}
+
+function buildEmailPrompt(input) {
+  const email = normalizeEmailPayload(input);
+  const systemPrompt = input.system_prompt || buildMechiBridgeSystemPrompt('email');
+  const mechiContext =
+    typeof input.mechi_context === 'string' && input.mechi_context.trim()
+      ? input.mechi_context
+      : buildMechiBridgeContext({
+          channel: 'email',
+          userSummary: input.user_summary,
+        });
+
+  return [
+    'You are the dedicated Mechi email support agent running inside OpenClaw.',
+    'This is inbound email routed from Mechi/Chezahub cPanel mailboxes.',
+    'Return exactly one JSON object and nothing else.',
+    'Do not use markdown, code fences, or commentary outside the JSON.',
+    'Required response schema:',
+    '{"disposition":"reply|clarify|escalate","reply_text":"string|null","confidence":"number|null","tags":["string"],"escalation_reason":"string|null"}',
+    'Rules:',
+    '- Produce a concise email reply draft in reply_text when safe.',
+    '- Do not claim the reply has been sent; this bridge only generates the bot response.',
+    '- Use "clarify" when one missing detail is needed before a safe answer.',
+    '- Use "escalate" for payment confirmations, refunds, payouts, account mutations, deletion requests, bans, disputes, legal/privacy requests, or anything requiring verified account state.',
+    '- Never invent mailbox state, delivery status, payment state, refund status, tournament rulings, ban outcomes, or account changes.',
+    '- Include "email" and the mailbox domain in tags when relevant.',
+    '',
+    'SYSTEM PROMPT (highest priority business rules):',
+    systemPrompt,
+    '',
+    'ALLOWED TOPICS:',
+    stringifyJson(input.allowed_topics || MECHI_ALLOWED_TOPICS),
+    '',
+    'BLOCKED TOPICS:',
+    stringifyJson(input.blocked_topics || MECHI_BLOCKED_TOPICS),
+    '',
+    'MECHI CONTEXT:',
+    mechiContext,
+    '',
+    'USER SUMMARY:',
+    stringifyJson(input.user_summary ?? null),
+    '',
+    'EMAIL METADATA:',
+    stringifyJson({
+      source_account: email.sourceAccount,
+      message_id: email.messageId,
+      from: email.from,
+      reply_to: email.replyTo,
+      to: email.to,
+      cc: email.cc,
+      subject: email.subject,
+      received_at: email.receivedAt,
+      raw_size_bytes: email.rawSizeBytes,
+      attachment_count: email.attachments.length,
+    }),
+    '',
+    'EMAIL TEXT:',
+    email.text || '[no plain text body]',
+    '',
+    'EMAIL HTML PREVIEW:',
+    email.html || '[no html body supplied]',
+    '',
+    'RAW HEADERS:',
+    stringifyJson(email.rawHeaders),
   ].join('\n');
 }
 
@@ -507,8 +648,10 @@ const server = http.createServer(async (request, response) => {
         openclaw_bin: OPENCLAW_BIN,
         support_agent: SUPPORT_AGENT,
         instagram_agent: INSTAGRAM_AGENT,
+        email_agent: EMAIL_AGENT,
         support_model: SUPPORT_MODEL,
         instagram_model: INSTAGRAM_MODEL,
+        email_model: EMAIL_MODEL,
       });
       return;
   }
@@ -559,6 +702,29 @@ const server = http.createServer(async (request, response) => {
       return;
     }
 
+    if (request.method === 'POST' && path === '/webhooks/email') {
+      const input = await readJsonBody(request);
+      const email = normalizeEmailPayload(input);
+      const cliResult = await runOpenClawAgent({
+        agent: EMAIL_AGENT,
+        sessionId: toSessionId(
+          'email',
+          email.messageId || `${email.sourceAccount}:${email.from}:${email.subject}`
+        ),
+        prompt: buildEmailPrompt(input),
+        timeoutSeconds: OPENCLAW_TIMEOUT_SECONDS,
+        model: EMAIL_MODEL,
+      });
+
+      json(response, 200, {
+        ...normalizeSupportResponse(cliResult),
+        channel: 'email',
+        source_account: email.sourceAccount || null,
+        message_id: email.messageId || null,
+      });
+      return;
+    }
+
     json(response, 404, {
       error: 'Not found',
       request_id: requestId,
@@ -581,8 +747,10 @@ server.listen(PORT, HOST, () => {
       port: PORT,
       support_agent: SUPPORT_AGENT,
       instagram_agent: INSTAGRAM_AGENT,
+      email_agent: EMAIL_AGENT,
       support_model: SUPPORT_MODEL,
       instagram_model: INSTAGRAM_MODEL,
+      email_model: EMAIL_MODEL,
     })
   );
 });

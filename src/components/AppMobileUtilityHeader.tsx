@@ -17,15 +17,6 @@ const HEADER_CONFIGS: Array<{
   config: HeaderConfig;
 }> = [
   {
-    matches: (pathname) => pathname.startsWith('/profile/settings'),
-    config: {
-      eyebrow: 'Profile',
-      title: 'Settings',
-      backHref: '/profile',
-      backLabel: 'Back to profile',
-    },
-  },
-  {
     matches: (pathname) => pathname.startsWith('/lobbies/create'),
     config: {
       eyebrow: 'Lobbies',

@@ -343,7 +343,7 @@ export const manualTestSections = [
           'The saved settings propagate back to profile and any other visible summary surface.',
         ],
         links: [
-          makeAppLink('/profile/settings', 'Profile settings'),
+          makeAppLink('/profile', 'Profile'),
           makeAppLink('/profile', 'Profile'),
         ],
       },
@@ -360,7 +360,7 @@ export const manualTestSections = [
           'The final media displays at the right size instead of stretching or disappearing.',
         ],
         links: [
-          makeAppLink('/profile/settings', 'Media settings'),
+          makeAppLink('/profile', 'Profile media'),
           makeAppLink('/profile', 'Profile preview'),
         ],
       },
@@ -422,7 +422,7 @@ export const manualTestSections = [
           'The saved snapshot remains visible after refresh and can be removed or changed cleanly.',
         ],
         links: [
-          makeAppLink('/profile/settings', 'Profile settings'),
+          makeAppLink('/profile', 'Profile'),
           makeAppLink('/profile', 'Profile'),
         ],
       },
@@ -795,7 +795,7 @@ export const manualTestSections = [
         ],
         links: [
           makeAppLink('/dashboard', 'Dashboard'),
-          makeAppLink('/profile/settings', 'Profile settings'),
+          makeAppLink('/profile', 'Profile'),
           makeAppLink('/tournaments/create', 'Tournament create'),
         ],
       },

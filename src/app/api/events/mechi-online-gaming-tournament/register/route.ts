@@ -2,7 +2,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getRequestAccessProfile, requireActiveAccessProfile } from '@/lib/access';
 import {
   getConfiguredPlatformForGame,
+  getGameIdKey,
   getGameIdValue,
+  getGamePlatformKey,
+  normalizeGameIdKeys,
   normalizeSelectedGameKeys,
 } from '@/lib/config';
 import {
@@ -187,12 +190,8 @@ export async function POST(request: NextRequest) {
     }
 
     const selectedGames = normalizeSelectedGameKeys(profile.selected_games ?? []);
-    if (!selectedGames.includes(game)) {
-      return NextResponse.json(
-        { error: `Add ${gameConfig.label} to your Mechi profile before registering` },
-        { status: 400 }
-      );
-    }
+    const profileGameIds = normalizeGameIdKeys(profile.game_ids ?? {});
+    const profilePlatforms = Array.isArray(profile.platforms) ? profile.platforms : [];
 
     const { count: registeredCount, error: countError } = await supabase
       .from('online_tournament_registrations')
@@ -219,8 +218,8 @@ export async function POST(request: NextRequest) {
 
     const profileGameId = getProfileGameId({
       game,
-      gameIds: profile.game_ids ?? {},
-      platforms: profile.platforms ?? [],
+      gameIds: profileGameIds,
+      platforms: profilePlatforms,
     });
     const inGameUsername = cleanText(body.in_game_username, 80) || profileGameId;
     const instagramUsername = normalizeSocialHandle(body.instagram_username);
@@ -254,9 +253,47 @@ export async function POST(request: NextRequest) {
 
     if (subscribedYoutube && youtubeName.length < 2) {
       return NextResponse.json(
-        { error: 'Add the YouTube account or channel name used to subscribe' },
+        { error: 'Add the Youtube mail or channel name used to subscribe' },
         { status: 400 }
       );
+    }
+
+    const tournamentPlatform: PlatformKey = 'mobile';
+    const profilePlatformKey = getGamePlatformKey(game);
+    const profileMobileGameId = getGameIdValue(profileGameIds, game, tournamentPlatform).trim();
+    const nextSelectedGames = selectedGames.includes(game) ? selectedGames : [...selectedGames, game];
+    const nextPlatforms = profilePlatforms.includes(tournamentPlatform)
+      ? profilePlatforms
+      : [...profilePlatforms, tournamentPlatform];
+    const nextGameIds = {
+      ...profileGameIds,
+      [profilePlatformKey]: tournamentPlatform,
+    };
+    const shouldSaveSubmittedGameId = !profileMobileGameId || !selectedGames.includes(game);
+
+    if (shouldSaveSubmittedGameId) {
+      nextGameIds[getGameIdKey(game, tournamentPlatform)] = inGameUsername;
+    }
+
+    const shouldUpdateProfile =
+      nextSelectedGames.length !== selectedGames.length ||
+      nextPlatforms.length !== profilePlatforms.length ||
+      profileGameIds[profilePlatformKey] !== tournamentPlatform ||
+      shouldSaveSubmittedGameId;
+
+    if (shouldUpdateProfile) {
+      const { error: profileUpdateError } = await supabase
+        .from('profiles')
+        .update({
+          selected_games: nextSelectedGames,
+          platforms: nextPlatforms,
+          game_ids: nextGameIds,
+        })
+        .eq('id', access.profile.id);
+
+      if (profileUpdateError) {
+        return NextResponse.json({ error: 'Could not update your game profile' }, { status: 500 });
+      }
     }
 
     const nextEligibilityStatus =

@@ -1,5 +1,5 @@
-import { ReviewFeedPage } from '@/components/ReviewFeedPage';
+import { NotificationsListPage } from '@/components/NotificationsListPage';
 
 export default function NotificationsPage() {
-  return <ReviewFeedPage />;
+  return <NotificationsListPage />;
 }

@@ -27,7 +27,7 @@ export function NotificationNavButton({ className }: NotificationNavButtonProps)
   const { user, loading } = useAuth();
   const authFetch = useAuthFetch();
   const [unreadCount, setUnreadCount] = useState(0);
-  const isActive = pathname.startsWith('/feed') || pathname.startsWith('/notifications');
+  const isActive = pathname.startsWith('/notifications');
   const visibleUnreadCount = user ? unreadCount : 0;
 
   useEffect(() => {
@@ -81,7 +81,7 @@ export function NotificationNavButton({ className }: NotificationNavButtonProps)
 
   return (
     <Link
-      href="/feed"
+      href="/notifications"
       aria-label={
         visibleUnreadCount > 0
           ? `Open notifications. ${visibleUnreadCount} unread.`

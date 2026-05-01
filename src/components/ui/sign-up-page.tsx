@@ -7,6 +7,7 @@ import { ArrowLeft } from 'lucide-react';
 import { BrandLogo } from '@/components/BrandLogo';
 
 type SignupPageVariant = 'default' | 'marketing';
+type SideContentPlacement = 'default' | 'bottom';
 
 interface SignupPageProps {
   children: ReactNode;
@@ -21,6 +22,8 @@ interface SignupPageProps {
   imageAlt?: string;
   variant?: SignupPageVariant;
   hideMainHeader?: boolean;
+  hideSideEyebrow?: boolean;
+  sideContentPlacement?: SideContentPlacement;
 }
 
 export function SignupPage({
@@ -36,6 +39,8 @@ export function SignupPage({
   imageAlt = 'Mechi community profile art',
   variant = 'default',
   hideMainHeader = false,
+  hideSideEyebrow = false,
+  sideContentPlacement = 'default',
 }: SignupPageProps) {
   const router = useRouter();
   const mainTitle = title || sideTitle;
@@ -43,6 +48,9 @@ export function SignupPage({
   const showSideCopy = Boolean(sideTitle || sideDescription || sidePoints.length);
   const isMarketingVariant = variant === 'marketing';
   const showMarketingHighlights = isMarketingVariant && sidePoints.length > 0;
+  const sideCopyClass =
+    sideContentPlacement === 'bottom' ? 'mt-auto max-w-2xl pt-8' : 'mt-10 max-w-2xl lg:mt-14';
+  const sideEyebrowLabel = hideSideEyebrow ? null : (sideEyebrow ?? 'Quick read');
 
   return (
     <div
@@ -92,12 +100,18 @@ export function SignupPage({
                     </button>
                   </div>
 
-                  <div className="mt-10 max-w-2xl lg:mt-14">
-                    <p className="section-title">{sideEyebrow || 'Quick read'}</p>
+                  <div className={sideCopyClass}>
+                    {sideEyebrowLabel ? (
+                      <p className="section-title">{sideEyebrowLabel}</p>
+                    ) : null}
                     {showSideCopy ? (
                       <>
                         {sideTitle ? (
-                          <h2 className="mt-4 max-w-xl text-[2.4rem] font-black leading-[0.96] text-[var(--text-primary)] sm:text-[3rem] lg:text-[3.6rem]">
+                          <h2
+                            className={`max-w-xl text-[2.4rem] font-black leading-[0.96] text-[var(--text-primary)] sm:text-[3rem] lg:text-[3.6rem] ${
+                              sideEyebrowLabel ? 'mt-4' : ''
+                            }`}
+                          >
                             {sideTitle}
                           </h2>
                         ) : null}

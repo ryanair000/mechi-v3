@@ -28,7 +28,7 @@ test.describe('Public and Auth Flows', () => {
     }
   });
 
-  test('registration wizard creates a new account from the browser @core', async ({
+  test('registration form creates a new account from the browser @core', async ({
     page,
   }) => {
     const account = createUniqueAccount('register');
@@ -36,23 +36,12 @@ test.describe('Public and Auth Flows', () => {
     await page.goto('/register');
     await page.getByLabel('Username').fill(account.username);
     await page.getByLabel('Phone Number').fill(account.phone);
-    await page.getByLabel('Email').fill(account.email);
-    await page.getByRole('button', { name: /next/i }).click();
-
-    await page.getByLabel('Country').selectOption('kenya');
-    await page.getByLabel('Region').selectOption('Nairobi');
+    await page.getByLabel('Mail Address').fill(account.email);
     await page.getByLabel('Password').fill(DEFAULT_PASSWORD);
-    await page.getByRole('button', { name: /next/i }).click();
-
-    await page.getByRole('button', { name: /eFootball 2026/i }).click();
-    await page.getByRole('button', { name: /EA FC 26/i }).click();
-    await page.getByRole('button', { name: /next/i }).click();
-
-    await page.getByLabel('PSN ID').fill(`${account.username.toUpperCase()}_PS`);
     await page.getByRole('button', { name: /create account/i }).click();
 
     await expect(page).toHaveURL(/\/dashboard/);
-    await expect(page.locator('body')).toContainText(/eFootball 2026/i);
+    await expect(page.locator('body')).toContainText(/Mechi playbook/i);
   });
 
   test('phone login works for a seeded account @core', async ({ page }) => {
@@ -97,16 +86,6 @@ test.describe('Public and Auth Flows', () => {
         phone: throwaway.phone,
         email: throwaway.email,
         password: DEFAULT_PASSWORD,
-        country: 'kenya',
-        region: 'Nairobi',
-        whatsapp_notifications: false,
-        whatsapp_number: throwaway.phone,
-        platforms: ['ps'],
-        selected_games: ['efootball'],
-        game_ids: {
-          'platform:efootball': 'ps',
-          ps: `${throwaway.username.toUpperCase()}_PS`,
-        },
       },
     });
     expect(registerResponse.ok()).toBeTruthy();

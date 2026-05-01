@@ -1,10 +1,9 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useCallback, useEffect, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import toast from 'react-hot-toast';
-import { AlertCircle, CheckCircle2, Loader2, Trophy, Users } from 'lucide-react';
+import { CheckCircle2, Loader2, Trophy, Users } from 'lucide-react';
 import { useAuth, useAuthFetch } from '@/components/AuthProvider';
 import { HomeFloatingHeader } from '@/components/HomeFloatingHeader';
 import { Button } from '@/components/ui/button';
@@ -12,7 +11,6 @@ import { Card } from '@/components/ui/card';
 import {
   getConfiguredPlatformForGame,
   getGameIdValue,
-  normalizeSelectedGameKeys,
 } from '@/lib/config';
 import { getLoginPath, getRegisterPath } from '@/lib/navigation';
 import {
@@ -98,13 +96,16 @@ function isGameKey(value: string): value is OnlineTournamentGameKey {
 
 export function OnlineTournamentRegistrationClient() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const authFetch = useAuthFetch();
   const { user, loading: authLoading } = useAuth();
   const [summary, setSummary] = useState<RegistrationSummary>(() => getFallbackSummary());
-  const [summaryLoading, setSummaryLoading] = useState(true);
   const [summaryError, setSummaryError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
-  const [selectedGame, setSelectedGame] = useState<OnlineTournamentGameKey>('pubgm');
+  const requestedGame = searchParams.get('game') ?? '';
+  const [selectedGame, setSelectedGame] = useState<OnlineTournamentGameKey>(() =>
+    isGameKey(requestedGame) ? requestedGame : 'pubgm'
+  );
   const [inGameUsername, setInGameUsername] = useState('');
   const [followedInstagram, setFollowedInstagram] = useState(true);
   const [instagramUsername, setInstagramUsername] = useState('');
@@ -113,17 +114,14 @@ export function OnlineTournamentRegistrationClient() {
   const [availableAt8pm, setAvailableAt8pm] = useState(true);
   const [acceptedRules, setAcceptedRules] = useState(false);
 
-  const userSelectedGames = useMemo(
-    () => normalizeSelectedGameKeys(user?.selected_games ?? []),
-    [user?.selected_games]
-  );
   const selectedGameConfig = ONLINE_TOURNAMENT_GAME_BY_KEY[selectedGame];
   const selectedGameSummary = summary.games[selectedGame];
   const currentRegistration = summary.registrations.find(
     (registration) => registration.game === selectedGame
   );
-  const createAccountHref = getRegisterPath({ next: RETURN_PATH });
-  const signInHref = getLoginPath(RETURN_PATH);
+  const returnPath = isGameKey(requestedGame) ? `${RETURN_PATH}?game=${requestedGame}` : RETURN_PATH;
+  const createAccountHref = getRegisterPath({ next: returnPath });
+  const signInHref = getLoginPath(returnPath);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -131,8 +129,13 @@ export function OnlineTournamentRegistrationClient() {
     }
   }, [authLoading, createAccountHref, router, user]);
 
+  useEffect(() => {
+    if (isGameKey(requestedGame)) {
+      setSelectedGame(requestedGame);
+    }
+  }, [requestedGame]);
+
   const loadSummary = useCallback(async () => {
-    setSummaryLoading(true);
     try {
       const res = await authFetch(API_PATH, { method: 'GET' });
       const data = (await res.json()) as RegistrationSummary & { error?: string };
@@ -149,8 +152,6 @@ export function OnlineTournamentRegistrationClient() {
     } catch {
       setSummaryError('Could not load tournament slots');
       toast.error('Could not load tournament slots');
-    } finally {
-      setSummaryLoading(false);
     }
   }, [authFetch]);
 
@@ -231,6 +232,7 @@ export function OnlineTournamentRegistrationClient() {
       }
 
       toast.success(`${selectedGameConfig.label} registration saved`);
+      router.push(`/tournaments?registered=${selectedGame}#playmechi-${selectedGame}`);
     } catch {
       toast.error('Network error while saving registration');
     } finally {
@@ -238,7 +240,6 @@ export function OnlineTournamentRegistrationClient() {
     }
   };
 
-  const selectedProfileHasGame = userSelectedGames.includes(selectedGame);
   const selectedGameIsFull = Boolean(selectedGameSummary?.full && !currentRegistration);
   const canSubmit = Boolean(user) && !selectedGameIsFull && !summaryError && !submitting;
 
@@ -261,11 +262,11 @@ export function OnlineTournamentRegistrationClient() {
             <div>
               <p className="section-title">Tournament registration</p>
               <h1 className="mt-3 text-4xl font-black leading-tight text-[var(--text-primary)] sm:text-5xl">
-                Lock your slot before match day.
+                Pull up and claim your slot.
               </h1>
               <p className="mt-4 text-sm leading-7 text-[var(--text-secondary)] sm:text-base">
-                One event, {ONLINE_TOURNAMENT_TOTAL_SLOTS} total player slots. Pick your game, confirm
-                your gamer tag, and complete the PlayMechi social requirement for reward eligibility.
+                {ONLINE_TOURNAMENT_TOTAL_SLOTS} spots, real players, and prizes on the line. Pick
+                your game, drop your gamer tag, and show PlayMechi some love to stay reward-ready.
               </p>
               {summaryError ? (
                 <div className="mt-4 rounded-[var(--radius-card)] border border-amber-400/20 bg-amber-400/10 p-4 text-sm leading-6 text-amber-100">
@@ -273,39 +274,6 @@ export function OnlineTournamentRegistrationClient() {
                   players can lock slots.
                 </div>
               ) : null}
-            </div>
-
-            <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-1">
-              {ONLINE_TOURNAMENT_GAMES.map((game) => {
-                const gameSummary = summary.games[game.game];
-                const isSelected = selectedGame === game.game;
-
-                return (
-                  <button
-                    key={game.game}
-                    type="button"
-                    onClick={() => setSelectedGame(game.game)}
-                    className={
-                      isSelected
-                        ? 'rounded-[var(--radius-card)] border border-[rgba(50,224,196,0.42)] bg-[rgba(50,224,196,0.1)] p-4 text-left'
-                        : 'rounded-[var(--radius-card)] border border-[var(--border-color)] bg-[var(--surface-strong)] p-4 text-left hover:border-[rgba(50,224,196,0.24)]'
-                    }
-                  >
-                    <div className="flex items-center justify-between gap-3">
-                      <p className="text-sm font-black text-[var(--text-primary)]">{game.label}</p>
-                      <span className="brand-chip px-2.5 py-1">{game.slots} slots</span>
-                    </div>
-                    <p className="mt-2 text-xs leading-5 text-[var(--text-secondary)]">
-                      {game.dateLabel} at {game.timeLabel}
-                    </p>
-                    <p className="mt-2 text-xs font-semibold text-[var(--accent-secondary-text)]">
-                      {summaryLoading
-                        ? 'Checking slots...'
-                        : `${gameSummary?.spotsLeft ?? game.slots} slots left`}
-                    </p>
-                  </button>
-                );
-              })}
             </div>
           </div>
 
@@ -343,25 +311,6 @@ export function OnlineTournamentRegistrationClient() {
                           Status: {currentRegistration.eligibility_status}. You can update your tag or
                           social proof before registration closes.
                         </p>
-                      </div>
-                    </div>
-                  </div>
-                ) : null}
-
-                {!selectedProfileHasGame ? (
-                  <div className="rounded-[var(--radius-card)] border border-amber-400/20 bg-amber-400/10 p-4">
-                    <div className="flex items-start gap-3">
-                      <AlertCircle className="mt-0.5 h-5 w-5 text-amber-300" />
-                      <div>
-                        <p className="text-sm font-black text-[var(--text-primary)]">
-                          Add {selectedGameConfig.label} to your profile if submit fails.
-                        </p>
-                        <p className="mt-1 text-sm leading-6 text-[var(--text-secondary)]">
-                          Mechi checks your saved games before locking a tournament slot.
-                        </p>
-                        <Link href="/profile/settings" className="brand-link mt-2 inline-flex text-sm font-semibold">
-                          Open profile settings
-                        </Link>
                       </div>
                     </div>
                   </div>
@@ -432,20 +381,27 @@ export function OnlineTournamentRegistrationClient() {
                   <div className="grid gap-4 sm:grid-cols-2">
                     <label className="block">
                       <span className="label">Instagram username</span>
-                      <input
-                        value={instagramUsername}
-                        onChange={(event) => setInstagramUsername(event.target.value)}
-                        className="input"
-                        placeholder="@yourhandle"
-                      />
+                      <div className="relative">
+                        <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm font-bold text-[var(--text-soft)]">
+                          @
+                        </span>
+                        <input
+                          value={instagramUsername}
+                          onChange={(event) =>
+                            setInstagramUsername(event.target.value.replace(/^@+/, ''))
+                          }
+                          className="input pl-8"
+                          placeholder="yourhandle"
+                        />
+                      </div>
                     </label>
                     <label className="block">
-                      <span className="label">YouTube account/channel name</span>
+                      <span className="label">Youtube Mail/Channel Name</span>
                       <input
                         value={youtubeName}
                         onChange={(event) => setYoutubeName(event.target.value)}
                         className="input"
-                        placeholder="Your YouTube name"
+                        placeholder="Email or channel name"
                       />
                     </label>
                   </div>

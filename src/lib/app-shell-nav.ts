@@ -1,5 +1,6 @@
 import {
   Coins,
+  Crosshair,
   Gamepad2,
   Gift,
   History,
@@ -134,15 +135,15 @@ export const SIDEBAR_PRIMARY_ITEMS: AppNavItem[] = [
   INBOX_NAV_ITEM,
   LEADERBOARD_NAV_ITEM,
   STREAM_NAV_ITEM,
+  TOURNAMENTS_NAV_ITEM,
 ];
 
 export const SIDEBAR_SECTIONS: SidebarSectionConfig[] = [
   {
     id: 'compete',
     title: 'Compete',
-    icon: Swords,
+    icon: Crosshair,
     items: [
-      TOURNAMENTS_NAV_ITEM,
       LOBBIES_NAV_ITEM,
       CHALLENGES_NAV_ITEM,
       MATCHES_NAV_ITEM,

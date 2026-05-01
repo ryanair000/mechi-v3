@@ -987,8 +987,8 @@ html[data-theme='dark'] {
   }
 
   .marketing-prototype-shell {
-    --radius-control: 0.55rem;
-    --radius-panel: 0.65rem;
+    --radius-control: 0.4rem;
+    --radius-panel: 0.5rem;
     --radius-card: 0.5rem;
     --radius-hero: 0.8rem;
     --radius-nav-shell: 1.75rem;

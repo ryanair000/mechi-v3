@@ -18,7 +18,6 @@ const PROTECTED_PREFIXES = [
   '/inbox',
   '/challenges',
   '/matches',
-  '/feed',
   '/notifications',
   '/share',
   '/rewards',
@@ -318,6 +317,20 @@ export async function proxy(request: NextRequest) {
 
   const adminHostAlias = adminHost && !sharedLocalHost ? getAdminHostAlias(pathname) : null;
   const effectivePathname = adminHostAlias ?? pathname;
+
+  if (pathname === '/feed' || pathname.startsWith('/feed/')) {
+    const notificationsUrl = request.nextUrl.clone();
+    notificationsUrl.pathname = '/notifications';
+    notificationsUrl.search = request.nextUrl.search;
+    return NextResponse.redirect(notificationsUrl);
+  }
+
+  if (pathname === '/profile/settings' || pathname.startsWith('/profile/settings/')) {
+    const profileUrl = request.nextUrl.clone();
+    profileUrl.pathname = '/profile';
+    profileUrl.search = '';
+    return NextResponse.redirect(profileUrl);
+  }
 
   if (isHiddenRoute(effectivePathname)) {
     const hiddenRouteRedirect = request.nextUrl.clone();

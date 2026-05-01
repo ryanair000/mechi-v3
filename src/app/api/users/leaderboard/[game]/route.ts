@@ -10,6 +10,7 @@ import {
 } from '@/lib/config';
 import { isMissingColumnError } from '@/lib/db-compat';
 import { getRankDivision } from '@/lib/gamification';
+import { CONFIRMED_PAYMENT_STATUSES } from '@/lib/tournament-metrics';
 import type { GameKey } from '@/types';
 
 type LeaderboardPlayerRow = Record<string, unknown>;
@@ -18,6 +19,211 @@ type DrawMatchRow = {
   player1_id?: string | null;
   player2_id?: string | null;
 };
+type Relation<T> = T | T[] | null | undefined;
+type TournamentLeaderboardProfile = {
+  avatar_url?: string | null;
+  id?: string | null;
+  username?: string | null;
+};
+type TournamentLeaderboardTournament = {
+  created_at?: string | null;
+  ended_at?: string | null;
+  game?: string | null;
+  id?: string | null;
+  scheduled_for?: string | null;
+  slug?: string | null;
+  started_at?: string | null;
+  status?: string | null;
+  title?: string | null;
+  winner_id?: string | null;
+};
+type TournamentLeaderboardPlayerRow = {
+  joined_at?: string | null;
+  payment_status?: string | null;
+  tournament?: Relation<TournamentLeaderboardTournament>;
+  user?: Relation<TournamentLeaderboardProfile>;
+  user_id?: string | null;
+};
+type TournamentLeaderboardMatchRow = {
+  player1?: Relation<TournamentLeaderboardProfile>;
+  player1_id?: string | null;
+  player2?: Relation<TournamentLeaderboardProfile>;
+  player2_id?: string | null;
+  status?: string | null;
+  tournament?: Relation<TournamentLeaderboardTournament>;
+  winner?: Relation<TournamentLeaderboardProfile>;
+  winner_id?: string | null;
+};
+type TournamentWinnerRow = TournamentLeaderboardTournament & {
+  winner?: Relation<TournamentLeaderboardProfile>;
+};
+type TournamentLeaderboardStat = {
+  avatarUrl: string | null;
+  id: string;
+  latestDate: string | null;
+  latestLabel: string | null;
+  matchWins: number;
+  matchesPlayed: number;
+  name: string;
+  points: number;
+  tournamentWins: number;
+  tournamentsPlayed: number;
+};
+
+function firstRelation<T>(value: Relation<T>): T | null {
+  if (Array.isArray(value)) return value[0] ?? null;
+  return value ?? null;
+}
+
+function getTournamentMoment(tournament?: TournamentLeaderboardTournament | null, fallback?: string | null) {
+  return tournament?.ended_at ?? tournament?.started_at ?? tournament?.scheduled_for ?? fallback ?? tournament?.created_at ?? null;
+}
+
+function touchTournamentStat(
+  statsByPlayer: Map<string, TournamentLeaderboardStat>,
+  profile: TournamentLeaderboardProfile | null | undefined,
+  tournament?: TournamentLeaderboardTournament | null,
+  fallbackDate?: string | null
+) {
+  const id = String(profile?.id ?? '').trim();
+  if (!id) return null;
+
+  const current = statsByPlayer.get(id) ?? {
+    avatarUrl: profile?.avatar_url ?? null,
+    id,
+    latestDate: null,
+    latestLabel: null,
+    matchWins: 0,
+    matchesPlayed: 0,
+    name: profile?.username?.trim() || 'Player',
+    points: 0,
+    tournamentWins: 0,
+    tournamentsPlayed: 0,
+  };
+  const latestDate = getTournamentMoment(tournament, fallbackDate);
+
+  if (
+    latestDate &&
+    (!current.latestDate || new Date(latestDate).getTime() > new Date(current.latestDate).getTime())
+  ) {
+    current.latestDate = latestDate;
+    current.latestLabel = tournament?.title ?? current.latestLabel;
+  }
+
+  if (!current.avatarUrl && profile?.avatar_url) {
+    current.avatarUrl = profile.avatar_url;
+  }
+  if (profile?.username?.trim()) {
+    current.name = profile.username.trim();
+  }
+
+  statsByPlayer.set(id, current);
+  return current;
+}
+
+async function getTournamentLeaderboard() {
+  const supabase = createServiceClient();
+  const statsByPlayer = new Map<string, TournamentLeaderboardStat>();
+  const tournamentParticipation = new Set<string>();
+
+  const [playersResult, matchesResult, winnersResult] = await Promise.all([
+    supabase
+      .from('tournament_players')
+      .select(
+        'user_id, joined_at, payment_status, user:user_id(id, username, avatar_url), tournament:tournament_id(id, title, slug, game, status, winner_id, scheduled_for, started_at, ended_at, created_at)'
+      )
+      .in('payment_status', [...CONFIRMED_PAYMENT_STATUSES])
+      .order('joined_at', { ascending: false })
+      .limit(1000),
+    supabase
+      .from('tournament_matches')
+      .select(
+        'player1_id, player2_id, winner_id, status, player1:player1_id(id, username, avatar_url), player2:player2_id(id, username, avatar_url), winner:winner_id(id, username, avatar_url), tournament:tournament_id(id, title, slug, game, status, winner_id, scheduled_for, started_at, ended_at, created_at)'
+      )
+      .eq('status', 'completed')
+      .limit(1000),
+    supabase
+      .from('tournaments')
+      .select('id, title, slug, game, status, winner_id, scheduled_for, started_at, ended_at, created_at, winner:winner_id(id, username, avatar_url)')
+      .eq('status', 'completed')
+      .not('winner_id', 'is', null)
+      .limit(500),
+  ]);
+
+  if (playersResult.error || matchesResult.error || winnersResult.error) {
+    console.error(
+      '[Leaderboard] Tournament-only query error:',
+      playersResult.error ?? matchesResult.error ?? winnersResult.error
+    );
+    return NextResponse.json({ error: 'Failed to fetch leaderboard' }, { status: 500 });
+  }
+
+  for (const row of ((playersResult.data ?? []) as TournamentLeaderboardPlayerRow[])) {
+    const profile = firstRelation(row.user);
+    const tournament = firstRelation(row.tournament);
+    const stat = touchTournamentStat(statsByPlayer, profile, tournament, row.joined_at);
+    if (!stat || !tournament?.id) continue;
+
+    const participationKey = `${stat.id}:${tournament.id}`;
+    if (!tournamentParticipation.has(participationKey)) {
+      tournamentParticipation.add(participationKey);
+      stat.tournamentsPlayed += 1;
+      stat.points += 1;
+    }
+  }
+
+  for (const row of ((matchesResult.data ?? []) as TournamentLeaderboardMatchRow[])) {
+    const tournament = firstRelation(row.tournament);
+    const player1 = firstRelation(row.player1);
+    const player2 = firstRelation(row.player2);
+    const winner = firstRelation(row.winner);
+
+    for (const player of [player1, player2]) {
+      const stat = touchTournamentStat(statsByPlayer, player, tournament);
+      if (stat) {
+        stat.matchesPlayed += 1;
+      }
+    }
+
+    const winnerStat = touchTournamentStat(statsByPlayer, winner, tournament);
+    if (winnerStat) {
+      winnerStat.matchWins += 1;
+      winnerStat.points += 3;
+    }
+  }
+
+  for (const row of ((winnersResult.data ?? []) as TournamentWinnerRow[])) {
+    const winner = firstRelation(row.winner);
+    const winnerStat = touchTournamentStat(statsByPlayer, winner, row);
+    if (winnerStat) {
+      winnerStat.tournamentWins += 1;
+      winnerStat.points += 10;
+    }
+  }
+
+  const leaderboard = Array.from(statsByPlayer.values())
+    .filter((entry) => entry.tournamentsPlayed > 0 || entry.matchWins > 0 || entry.tournamentWins > 0)
+    .sort((a, b) => {
+      const pointsDelta = b.points - a.points;
+      if (pointsDelta !== 0) return pointsDelta;
+      const tournamentWinDelta = b.tournamentWins - a.tournamentWins;
+      if (tournamentWinDelta !== 0) return tournamentWinDelta;
+      const matchWinDelta = b.matchWins - a.matchWins;
+      if (matchWinDelta !== 0) return matchWinDelta;
+      return a.name.localeCompare(b.name);
+    })
+    .slice(0, 100)
+    .map((entry, index) => ({
+      ...entry,
+      rank: index + 1,
+      subtitle:
+        entry.tournamentWins > 0
+          ? `${entry.tournamentWins} tournament win${entry.tournamentWins === 1 ? '' : 's'}`
+          : `${entry.matchWins} bracket match win${entry.matchWins === 1 ? '' : 's'}`,
+    }));
+
+  return NextResponse.json({ leaderboard, source: 'tournaments' });
+}
 
 function getLeaderboardLookupGames(game: GameKey): GameKey[] {
   const canonicalGame = getCanonicalGameKey(game);
@@ -140,6 +346,10 @@ export async function GET(
   { params }: { params: Promise<{ game: string }> }
 ) {
   const { game: requestedGame } = await params;
+
+  if (requestedGame === 'tournaments') {
+    return getTournamentLeaderboard();
+  }
 
   if (!requestedGame || !GAMES[requestedGame as GameKey]) {
     return NextResponse.json({ error: 'Invalid game' }, { status: 400 });

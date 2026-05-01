@@ -5,7 +5,7 @@ import { ONLINE_TOURNAMENT_TITLE } from '@/lib/online-tournament';
 export const metadata: Metadata = {
   title: `Register | ${ONLINE_TOURNAMENT_TITLE}`,
   description:
-    'Register for PUBG Mobile, Call of Duty Mobile, or eFootball in the Mechi.club Online Gaming Tournament.',
+    'Register for PUBG Mobile, Call of Duty Mobile, or eFootball in Playmechi Launch.',
 };
 
 export default function PlayMechiRegisterPage() {

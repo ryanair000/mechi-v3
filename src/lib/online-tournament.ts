@@ -28,7 +28,7 @@ export type OnlineTournamentGameConfig = {
 };
 
 export const ONLINE_TOURNAMENT_SLUG = 'mechi-club-online-gaming-tournament-2026-05';
-export const ONLINE_TOURNAMENT_TITLE = 'Mechi.club Online Gaming Tournament';
+export const ONLINE_TOURNAMENT_TITLE = 'Playmechi Launch';
 export const ONLINE_TOURNAMENT_PUBLIC_PATH = '/playmechi';
 export const ONLINE_TOURNAMENT_REGISTRATION_PATH = `${ONLINE_TOURNAMENT_PUBLIC_PATH}/register`;
 export const ONLINE_TOURNAMENT_REGISTRATION_API_PATH =

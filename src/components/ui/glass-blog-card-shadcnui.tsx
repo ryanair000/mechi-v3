@@ -108,7 +108,7 @@ export function GlassBlogCard({
               {stats.map((stat) => (
                 <div
                   key={`${stat.label}-${stat.value}`}
-                  className="min-w-32 flex-1 rounded-xl border border-[var(--border-color)] bg-[rgba(255,255,255,0.035)] px-3 py-3"
+                  className="min-w-32 flex-1 rounded-[var(--radius-card)] border border-[var(--border-color)] bg-[rgba(255,255,255,0.035)] px-3 py-3"
                 >
                   <p className="text-xs text-[var(--text-soft)]">{stat.label}</p>
                   <p className="mt-1 text-sm font-black text-[var(--text-primary)]">

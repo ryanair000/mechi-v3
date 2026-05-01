@@ -8,6 +8,7 @@ import { SignupPage } from '@/components/ui/sign-up-page';
 
 type FullScreenSignupVariant = 'default' | 'marketing';
 type FullScreenSignupFeedbackTone = 'error' | 'success' | 'loading';
+type SideContentPlacement = 'default' | 'bottom';
 
 export interface FullScreenSignupValues {
   email: string;
@@ -32,6 +33,8 @@ interface FullScreenSignupProps {
   sidePoints?: string[];
   variant?: FullScreenSignupVariant;
   hideMainHeader?: boolean;
+  hideSideEyebrow?: boolean;
+  sideContentPlacement?: SideContentPlacement;
   onSubmit?: (values: FullScreenSignupValues) => void | Promise<void>;
   submitting?: boolean;
   feedback?: FullScreenSignupFeedback | null;
@@ -49,6 +52,8 @@ export function FullScreenSignup({
   sidePoints = [],
   variant = 'default',
   hideMainHeader = false,
+  hideSideEyebrow = false,
+  sideContentPlacement = 'default',
   onSubmit,
   submitting = false,
   feedback = null,
@@ -77,6 +82,8 @@ export function FullScreenSignup({
       sidePoints={sidePoints}
       variant={variant}
       hideMainHeader={hideMainHeader}
+      hideSideEyebrow={hideSideEyebrow}
+      sideContentPlacement={sideContentPlacement}
     >
       {children}
     </SignupPage>
@@ -160,28 +167,28 @@ function StandaloneFullScreenSignup({
     autoComplete: string;
   }> = [
     {
-      id: 'email',
-      label: 'Mail',
-      type: 'email',
-      placeholder: 'you@mechi.club',
-      icon: <Mail className="h-4 w-4" />,
-      autoComplete: 'email',
-    },
-    {
-      id: 'phone',
-      label: 'Phone number',
-      type: 'tel',
-      placeholder: '0712 345 678',
-      icon: <Phone className="h-4 w-4" />,
-      autoComplete: 'tel',
-    },
-    {
       id: 'username',
       label: 'Username',
       type: 'text',
       placeholder: 'GameKing254',
       icon: <User className="h-4 w-4" />,
       autoComplete: 'username',
+    },
+    {
+      id: 'phone',
+      label: 'Phone Number',
+      type: 'tel',
+      placeholder: '0712 345 678',
+      icon: <Phone className="h-4 w-4" />,
+      autoComplete: 'tel',
+    },
+    {
+      id: 'email',
+      label: 'Mail Address',
+      type: 'email',
+      placeholder: 'you@mechi.club',
+      icon: <Mail className="h-4 w-4" />,
+      autoComplete: 'email',
     },
     {
       id: 'password',

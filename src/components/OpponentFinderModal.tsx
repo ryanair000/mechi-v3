@@ -207,7 +207,7 @@ export function OpponentFinderModal({
               opponents.
             </p>
             <div className="mt-4 flex flex-wrap gap-2">
-              <Link href="/profile/settings" className="btn-primary">
+              <Link href="/profile" className="btn-primary">
                 Update profile
               </Link>
               <button type="button" onClick={onClose} className="btn-outline">

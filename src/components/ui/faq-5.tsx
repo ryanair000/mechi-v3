@@ -50,7 +50,7 @@ const defaultFaqs: FaqItem[] = [
 export const Faq5 = ({
   badge = 'FAQ',
   heading = 'Quick answers before match day.',
-  description = 'Everything players usually ask before joining the Mechi.club Online Gaming Tournament.',
+  description = 'Everything players usually ask before joining Playmechi Launch.',
   faqs = defaultFaqs,
   className,
 }: Faq5Props) => {

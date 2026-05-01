@@ -3,13 +3,11 @@ import { Component as BlogPosts } from '@/components/blog-posts';
 const dashboardPosts = [
   {
     id: 1,
-    title: 'Friday FC26 cash ladder is open',
-    category: 'tournaments',
-    imageUrl: '/game-artwork/fc26-header.svg',
-    href: '/tournaments',
-    views: 2180,
-    readTime: 3,
-    rating: 5,
+    title: 'Playmechi Launch starts 8 May',
+    category: 'upcoming tournament',
+    description: 'PUBG Mobile, CODM, and eFootball go live across three nights at 8:00 PM EAT.',
+    imageUrl: '/game-artwork/pubgm-header.svg',
+    href: '/tournaments#playmechi-pubgm',
   },
   {
     id: 2,
@@ -35,14 +33,12 @@ const dashboardPosts = [
 
 export default function DashboardPage() {
   return (
-    <div className="min-h-screen overflow-hidden px-3 pb-8 pt-4 sm:px-5 lg:px-7 lg:pt-8">
+    <div className="min-h-screen overflow-hidden px-3 pb-8 pt-0 sm:px-5 lg:px-7">
       <BlogPosts
-        title="Mechi playbook"
-        description="Fresh routes into tournaments, ranked queues, and rewards."
         backgroundLabel="MECHI"
         backgroundPosition="left"
         posts={dashboardPosts}
-        className="my-0 max-w-7xl py-6 lg:py-10"
+        className="my-0 max-w-7xl py-0"
       />
     </div>
   );

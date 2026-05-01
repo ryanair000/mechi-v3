@@ -2,23 +2,17 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, Inbox, Shield, Swords, Trophy, User, Users } from 'lucide-react';
-import { hasPrimaryAdminAccess } from '@/lib/admin-access';
-import { useAuth } from '@/components/AuthProvider';
-import { ADMIN_URL } from '@/lib/urls';
+import { Home, MonitorPlay, Swords, User } from 'lucide-react';
 
 const NAV_ITEMS = [
   { href: '/dashboard', label: 'Home', icon: Home },
-  { href: '/inbox', label: 'Inbox', icon: Inbox },
-  { href: '/leaderboard', label: 'Ranks', icon: Trophy },
-  { href: '/tournaments', label: 'Brackets', icon: Swords },
-  { href: '/lobbies', label: 'Lobbies', icon: Users },
+  { href: '/tournaments', label: 'Tournaments', icon: Swords },
+  { href: '/streams', label: 'Streams', icon: MonitorPlay },
   { href: '/profile', label: 'Profile', icon: User },
 ];
 
 export function BottomNav() {
   const pathname = usePathname();
-  const { user } = useAuth();
 
   return (
     <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-[var(--border-color)] bg-[rgba(14,22,38,0.96)] pb-[env(safe-area-inset-bottom)] backdrop-blur-xl lg:hidden">
@@ -40,21 +34,6 @@ export function BottomNav() {
             </Link>
           );
         })}
-        {hasPrimaryAdminAccess(user) ? (
-          <a
-            href={ADMIN_URL}
-            className={`flex min-w-0 flex-1 flex-col items-center justify-center gap-1 self-stretch rounded-md px-1 py-2 transition-colors ${
-              pathname.startsWith('/admin')
-                ? 'bg-[rgba(50,224,196,0.08)] text-[var(--accent-secondary-text)]'
-                : 'text-[var(--text-soft)] hover:text-[var(--text-primary)]'
-            }`}
-          >
-            <Shield size={17} strokeWidth={pathname.startsWith('/admin') ? 2.3 : 1.6} />
-            <span className={`text-[10px] ${pathname.startsWith('/admin') ? 'font-semibold' : 'font-normal'}`}>
-              Admin
-            </span>
-          </a>
-        ) : null}
       </div>
     </nav>
   );

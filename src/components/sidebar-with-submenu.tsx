@@ -9,7 +9,6 @@ import {
   LogOut,
   PanelLeftClose,
   PanelLeftOpen,
-  Settings,
   User,
 } from 'lucide-react';
 import { useAuth } from '@/components/AuthProvider';
@@ -175,7 +174,6 @@ export default function SidebarWithSubmenu({ collapsed, onToggle }: SidebarWithS
   const { user, logout } = useAuth();
   const currentPlan = getPlan(user?.plan ?? 'free');
   const profileActive = pathname === '/profile';
-  const settingsActive = pathname === '/profile/settings';
   const [sectionOverrides, setSectionOverrides] = useState<Partial<Record<SidebarSectionKey, boolean>>>({});
 
   function toggleSection(sectionKey: SidebarSectionKey) {
@@ -263,23 +261,6 @@ export default function SidebarWithSubmenu({ collapsed, onToggle }: SidebarWithS
             </Link>
             <span className="pointer-events-none absolute -top-8 left-1/2 -translate-x-1/2 rounded-md border border-[var(--border-color)] bg-[var(--surface-strong)] px-2 py-1 text-[10px] font-semibold text-[var(--text-primary)] opacity-0 shadow-lg transition-opacity group-hover:opacity-100">
               Profile
-            </span>
-          </div>
-          <div className="group relative">
-            <Link
-              href="/profile/settings"
-              className={`inline-flex h-8 w-8 items-center justify-center rounded-md border text-[var(--text-secondary)] transition-colors hover:border-[var(--border-strong)] hover:bg-[var(--surface-elevated)] hover:text-[var(--text-primary)] ${
-                settingsActive
-                  ? 'border-[rgba(50,224,196,0.22)] bg-[rgba(50,224,196,0.1)] text-[var(--accent-secondary-text)]'
-                  : 'border-[var(--border-color)] bg-[var(--surface-elevated)]'
-              }`}
-              aria-label="Settings"
-              title="Settings"
-            >
-              <Settings size={14} />
-            </Link>
-            <span className="pointer-events-none absolute -top-8 left-1/2 -translate-x-1/2 rounded-md border border-[var(--border-color)] bg-[var(--surface-strong)] px-2 py-1 text-[10px] font-semibold text-[var(--text-primary)] opacity-0 shadow-lg transition-opacity group-hover:opacity-100">
-              Settings
             </span>
           </div>
           {collapsed ? (

@@ -207,9 +207,10 @@ export default function LoginPage({ searchParams }: { searchParams: LoginSearchP
     <FullScreenSignup
       title=""
       subtitle=""
-      sideEyebrow="mechi.club"
       sideTitle="Sign back in."
       sideDescription="Your profile, match history, and active setup are still waiting for you."
+      hideSideEyebrow
+      sideContentPlacement="bottom"
       hideMainHeader
       variant="marketing"
     >
@@ -222,7 +223,7 @@ export default function LoginPage({ searchParams }: { searchParams: LoginSearchP
                 key={method.key}
                 type="button"
                 onClick={() => setLoginMethod(method.key)}
-                className={`min-h-11 rounded-lg border px-3 py-2 text-sm font-semibold transition-all ${
+                className={`min-h-11 rounded-[var(--radius-control)] border px-3 py-2 text-sm font-semibold transition-all focus-visible:outline-none ${
                   active
                     ? 'border-[rgba(50,224,196,0.28)] bg-[rgba(50,224,196,0.14)] text-[var(--accent-secondary-text)]'
                     : 'border-[var(--border-color)] bg-[var(--surface-elevated)] text-[var(--text-secondary)]'

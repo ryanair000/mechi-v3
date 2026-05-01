@@ -25,7 +25,7 @@ function normalizeNotificationHref(href: string | null | undefined) {
     return null;
   }
 
-  return href === '/notifications' ? '/feed' : href;
+  return href === '/feed' ? '/notifications' : href;
 }
 
 function getStorageKey(userId: string) {
@@ -64,7 +64,7 @@ export function NotificationToastBridge() {
   const pathname = usePathname();
   const { user, loading } = useAuth();
   const authFetch = useAuthFetch();
-  const isNotificationsPage = pathname.startsWith('/feed') || pathname.startsWith('/notifications');
+  const isNotificationsPage = pathname.startsWith('/notifications');
   const initializedUserId = useRef<string | null>(null);
 
   useEffect(() => {

@@ -1,29 +1,21 @@
 import { after, NextRequest, NextResponse } from 'next/server';
-import { createServiceClient } from '@/lib/supabase';
 import { applyAuthCookie, createSessionForProfile, hashPassword } from '@/lib/auth';
-import { sendWelcomeEmail } from '@/lib/email';
-import {
-  DEFAULT_RATING,
-  PLATFORMS,
-  getConfiguredPlatformForGame,
-  getGameIdValue,
-  getValidCanonicalGameKey,
-  getPlatformsForGameSetup,
-  normalizeGameIdKeys,
-} from '@/lib/config';
+import { DEFAULT_RATING } from '@/lib/config';
 import { isMissingColumnError, isMissingTableError } from '@/lib/db-compat';
+import { sendWelcomeEmail } from '@/lib/email';
 import { findInviterByCode, generateUniqueInviteCode, normalizeInviteCode } from '@/lib/invite';
-import { guessCountryFromRegion, validateLocationSelection } from '@/lib/location';
 import { getPhoneLookupVariants, isValidPhoneNumber, normalizePhoneNumber } from '@/lib/phone';
-import { canSelectGames } from '@/lib/plans';
-import { awardAffiliateInviteSignup, ensureChezahubCustomer } from '@/lib/rewards';
 import { checkRateLimit, getClientIp, rateLimitResponse } from '@/lib/rateLimit';
+import { awardAffiliateInviteSignup, ensureChezahubCustomer } from '@/lib/rewards';
+import { createServiceClient } from '@/lib/supabase';
 import { sendNewRegistrationTelegramNotification } from '@/lib/telegram';
 import { isUsernameTaken } from '@/lib/username-availability';
 import { validateUsername } from '@/lib/username';
-import type { GameKey, PlatformKey } from '@/types';
+import type { CountryKey } from '@/types';
 
 const STARTER_TRIAL_PLAN = 'pro';
+const DEFAULT_COUNTRY: CountryKey = 'kenya';
+const DEFAULT_REGION = 'Other';
 const MIN_PASSWORD_LENGTH = 9;
 
 function getStarterTrialWindow() {
@@ -37,67 +29,8 @@ function getStarterTrialWindow() {
   };
 }
 
-function normalizeSelectedGames(value: unknown): { games: GameKey[]; hasInvalid: boolean } {
-  if (!Array.isArray(value)) {
-    return { games: [], hasInvalid: Boolean(value) };
-  }
-
-  const games: GameKey[] = [];
-  let hasInvalid = false;
-
-  for (const item of value) {
-    if (typeof item !== 'string') {
-      hasInvalid = true;
-      continue;
-    }
-
-    const game = getValidCanonicalGameKey(item);
-    if (game) {
-      if (!games.includes(game)) {
-        games.push(game);
-      }
-    } else {
-      hasInvalid = true;
-    }
-  }
-
-  return { games, hasInvalid };
-}
-
-function normalizePlatforms(value: unknown): { platforms: PlatformKey[]; hasInvalid: boolean } {
-  if (!Array.isArray(value)) {
-    return { platforms: [], hasInvalid: Boolean(value) };
-  }
-
-  const platforms: PlatformKey[] = [];
-  let hasInvalid = false;
-
-  for (const item of value) {
-    if (typeof item === 'string' && item in PLATFORMS) {
-      const platform = item as PlatformKey;
-      if (!platforms.includes(platform)) {
-        platforms.push(platform);
-      }
-    } else {
-      hasInvalid = true;
-    }
-  }
-
-  return { platforms, hasInvalid };
-}
-
-function normalizeGameIds(value: unknown): Record<string, string> {
-  if (!value || typeof value !== 'object' || Array.isArray(value)) {
-    return {};
-  }
-
-  return normalizeGameIdKeys(
-    Object.fromEntries(
-      Object.entries(value)
-        .filter((entry): entry is [string, string] => typeof entry[1] === 'string')
-        .map(([key, id]) => [key, id.trim()])
-    )
-  );
+function isValidEmail(value: string) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
 }
 
 export async function POST(request: NextRequest) {
@@ -107,147 +40,95 @@ export async function POST(request: NextRequest) {
       return rateLimitResponse(rateLimit.retryAfterSeconds);
     }
 
-    const body = await request.json();
-    const {
-      username: submittedUsername,
-      phone,
-      email,
-      password,
-      country,
-      region,
-      platforms,
-      game_ids,
-      selected_games,
-      whatsapp_number,
-      whatsapp_notifications,
-      invite_code,
-    } = body;
-    const { username, error: usernameError } = validateUsername(submittedUsername);
-    const { games: selectedGames, hasInvalid: hasInvalidSelectedGame } =
-      normalizeSelectedGames(selected_games);
-    const { platforms: requestedPlatforms, hasInvalid: hasInvalidPlatform } =
-      normalizePlatforms(platforms);
-    const submittedGameIds = normalizeGameIds(game_ids);
-    const finalPlatforms = getPlatformsForGameSetup(
-      selectedGames,
-      submittedGameIds,
-      requestedPlatforms
+    const body = (await request.json()) as Record<string, unknown>;
+    const { username, error: usernameError } = validateUsername(body.username);
+    const email = String(body.email ?? '').trim().toLowerCase();
+    const password = String(body.password ?? '');
+    const rawPhone = String(body.phone ?? '').trim();
+    const normalizedInviteCode = normalizeInviteCode(
+      typeof body.invite_code === 'string' ? body.invite_code : null
     );
-    const trimmedEmail = String(email ?? '').trim();
-    const normalizedInviteCode = normalizeInviteCode(invite_code);
-    const location = validateLocationSelection({
-      country: country ?? guessCountryFromRegion(String(region ?? '')),
-      region,
-    });
 
-    // Validation
-    if (usernameError || !phone || !password || !trimmedEmail || !region) {
+    if (usernameError || !rawPhone || !email || !password) {
       return NextResponse.json({ error: usernameError ?? 'Missing required fields' }, { status: 400 });
     }
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail)) {
+
+    if (!isValidEmail(email)) {
       return NextResponse.json({ error: 'Enter a valid email address' }, { status: 400 });
     }
+
     if (password.length < MIN_PASSWORD_LENGTH) {
       return NextResponse.json(
         { error: 'Password must be more than 8 characters' },
         { status: 400 }
       );
     }
-    if (!location) {
-      return NextResponse.json(
-        { error: 'Choose a supported country and region' },
-        { status: 400 }
-      );
-    }
-    const normalizedPhone = normalizePhoneNumber(phone ?? '', location.country);
-    const normalizedWhatsappNumber = normalizePhoneNumber(
-      whatsapp_number || normalizedPhone,
-      location.country
-    );
-    const resolvedWhatsappNumber = whatsapp_notifications ? normalizedWhatsappNumber : null;
-    if (hasInvalidPlatform) {
-      return NextResponse.json({ error: 'Choose valid platforms' }, { status: 400 });
-    }
-    if (hasInvalidSelectedGame) {
-      return NextResponse.json({ error: 'Choose valid games' }, { status: 400 });
-    }
-    if (selectedGames.length === 0) {
-      return NextResponse.json({ error: 'Select at least one game' }, { status: 400 });
-    }
-    if (!canSelectGames(STARTER_TRIAL_PLAN, selectedGames.length)) {
-      return NextResponse.json(
-        { error: 'New accounts start with a Pro trial and can save up to 3 games.' },
-        { status: 400 }
-      );
-    }
-    if (
-      selectedGames.some(
-        (game) => !getConfiguredPlatformForGame(game, submittedGameIds, finalPlatforms)
-      )
-    ) {
-      return NextResponse.json({ error: 'Choose a platform for each game' }, { status: 400 });
-    }
-    if (
-      selectedGames.some((game) => {
-        const platform = getConfiguredPlatformForGame(game, submittedGameIds, finalPlatforms);
-        return !platform || !getGameIdValue(submittedGameIds, game, platform).trim();
-      })
-    ) {
-      return NextResponse.json(
-        { error: 'Add the game IDs opponents will need' },
-        { status: 400 }
-      );
-    }
-    if (!isValidPhoneNumber(phone, location.country)) {
+
+    if (!isValidPhoneNumber(rawPhone, DEFAULT_COUNTRY)) {
       return NextResponse.json({ error: 'Enter a valid phone number' }, { status: 400 });
-    }
-    if (whatsapp_notifications && !isValidPhoneNumber(normalizedWhatsappNumber, location.country)) {
-      return NextResponse.json({ error: 'Enter a valid WhatsApp number' }, { status: 400 });
     }
 
     if (await isUsernameTaken(username)) {
       return NextResponse.json({ error: 'Username already taken' }, { status: 409 });
     }
 
+    const normalizedPhone = normalizePhoneNumber(rawPhone, DEFAULT_COUNTRY);
     const supabase = createServiceClient();
-    const phoneVariants = getPhoneLookupVariants(normalizedPhone, location.country);
-
-    // Check phone uniqueness
-    const { data: existingPhoneMatches } = await supabase
+    const phoneVariants = getPhoneLookupVariants(normalizedPhone, DEFAULT_COUNTRY);
+    const { data: existingPhoneMatches, error: phoneLookupError } = await supabase
       .from('profiles')
       .select('id')
       .in('phone', phoneVariants)
       .limit(1);
 
+    if (phoneLookupError) {
+      console.error('[Register] Phone lookup error:', phoneLookupError);
+      return NextResponse.json({ error: 'Could not verify phone number' }, { status: 500 });
+    }
+
     if (existingPhoneMatches?.length) {
       return NextResponse.json({ error: 'Phone number already registered' }, { status: 409 });
+    }
+
+    const { data: existingEmailMatches, error: emailLookupError } = await supabase
+      .from('profiles')
+      .select('id')
+      .ilike('email', email)
+      .limit(1);
+
+    if (emailLookupError) {
+      console.error('[Register] Email lookup error:', emailLookupError);
+      return NextResponse.json({ error: 'Could not verify email address' }, { status: 500 });
+    }
+
+    if (existingEmailMatches?.length) {
+      return NextResponse.json({ error: 'Email already registered' }, { status: 409 });
     }
 
     const ownInviteCode = await generateUniqueInviteCode(supabase, username);
     const inviter = normalizedInviteCode
       ? await findInviterByCode(supabase, normalizedInviteCode)
       : null;
-
     const password_hash = await hashPassword(password);
     const trialWindow = getStarterTrialWindow();
 
     const fullProfileInsert = {
       username,
       phone: normalizedPhone,
-      email: trimmedEmail,
+      email,
       invite_code: ownInviteCode,
       invited_by: inviter?.id ?? null,
       password_hash,
-      country: location.country,
-      region: location.region,
+      country: DEFAULT_COUNTRY,
+      region: DEFAULT_REGION,
       plan: STARTER_TRIAL_PLAN,
       plan_since: trialWindow.startedAtIso,
       plan_expires_at: trialWindow.expiresAtIso,
-      platforms: finalPlatforms,
-      game_ids: submittedGameIds,
-      selected_games: selectedGames,
-      whatsapp_number: resolvedWhatsappNumber,
-      whatsapp_notifications: Boolean(whatsapp_notifications),
+      platforms: [],
+      game_ids: {},
+      selected_games: [],
+      whatsapp_number: null,
+      whatsapp_notifications: false,
       rating_efootball: DEFAULT_RATING,
       rating_fc26: DEFAULT_RATING,
       rating_mk11: DEFAULT_RATING,
@@ -271,37 +152,31 @@ export async function POST(request: NextRequest) {
     const legacyProfileInsert = {
       username,
       phone: normalizedPhone,
-      email: trimmedEmail,
+      email,
       password_hash,
-      region: location.label,
-      platforms: finalPlatforms,
-      game_ids: submittedGameIds,
-      selected_games: selectedGames,
-      whatsapp_number: resolvedWhatsappNumber,
+      region: DEFAULT_REGION,
+      platforms: [],
+      game_ids: {},
+      selected_games: [],
+      whatsapp_number: null,
     };
 
-    let insertResult = await supabase
-      .from('profiles')
-      .insert(fullProfileInsert)
-      .select()
-      .single();
+    let insertResult = await supabase.from('profiles').insert(fullProfileInsert).select().single();
 
     if (insertResult.error && isMissingColumnError(insertResult.error)) {
-      insertResult = await supabase
-        .from('profiles')
-        .insert(legacyProfileInsert)
-        .select()
-        .single();
+      insertResult = await supabase.from('profiles').insert(legacyProfileInsert).select().single();
+    }
+
+    if (insertResult.error || !insertResult.data) {
+      console.error('[Register] Insert error:', insertResult.error);
+      const isUniqueConflict = insertResult.error?.code === '23505';
+      return NextResponse.json(
+        { error: isUniqueConflict ? 'Account details already registered' : 'Failed to create account' },
+        { status: isUniqueConflict ? 409 : 500 }
+      );
     }
 
     const profile = insertResult.data;
-    const insertError = insertResult.error;
-
-    if (insertError || !profile) {
-      console.error('[Register] Insert error:', insertError);
-      return NextResponse.json({ error: 'Failed to create account' }, { status: 500 });
-    }
-
     const { error: trialError } = await supabase.from('subscriptions').insert({
       user_id: profile.id,
       plan: STARTER_TRIAL_PLAN,
@@ -312,10 +187,8 @@ export async function POST(request: NextRequest) {
       expires_at: trialWindow.expiresAtIso,
     });
 
-    if (trialError) {
-      if (!isMissingTableError(trialError, 'subscriptions')) {
-        console.error('[Register] Trial subscription tracking error:', trialError);
-      }
+    if (trialError && !isMissingTableError(trialError, 'subscriptions')) {
+      console.error('[Register] Trial subscription tracking error:', trialError);
     }
 
     if (inviter?.id) {
@@ -330,16 +203,15 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Send welcome email async
-    sendWelcomeEmail({ to: trimmedEmail, username }).catch(console.error);
+    sendWelcomeEmail({ to: email, username }).catch(console.error);
     after(async () => {
       try {
         await sendNewRegistrationTelegramNotification({
           username: profile.username as string,
-          email: trimmedEmail,
+          email,
           phone: normalizedPhone,
-          location: location.label,
-          selectedGames,
+          location: 'Kenya / Other',
+          selectedGames: [],
           plan: STARTER_TRIAL_PLAN,
           inviteCode: normalizedInviteCode,
         });
@@ -353,7 +225,7 @@ export async function POST(request: NextRequest) {
         const ensuredCustomer = await ensureChezahubCustomer({
           mechiUserId: String(profile.id),
           username,
-          email: trimmedEmail,
+          email,
           phone: normalizedPhone,
         });
         const linkedAt = new Date().toISOString();

@@ -46,7 +46,7 @@ function QueueGamePicker() {
         {ranked1v1Games.length === 0 && (
           <p className="mt-4 text-xs text-[var(--text-soft)]">
             No ranked games set up yet.
-            <Link href="/profile/settings" className="brand-link ml-1">
+            <Link href="/profile" className="brand-link ml-1">
               Add games in settings.
             </Link>
           </p>

@@ -20,7 +20,7 @@ const testimonials: Testimonial[] = [
     name: 'Kabaka Mwangi',
     title: 'Streamer',
     description:
-      'Kabaka runs the PlayMechi broadcast, keeps the match energy clean, and makes sure viewers can follow the action live from kickoff to winner call.',
+      'Kabaka is on the PlayMechi stream all three nights, calling the big plays, the clutch moments, and every winner live on YouTube.',
     initials: 'KM',
     youtubeUrl: 'https://www.youtube.com/@playmechi',
   },
@@ -28,14 +28,14 @@ const testimonials: Testimonial[] = [
     name: 'Ephrem Gichuhi',
     title: 'Manager',
     description:
-      'Ephrem keeps the event moving: player coordination, admin readiness, match-day timing, and the little ops details that stop chaos before it starts.',
+      'Ephrem keeps the lobbies ready, the players locked in, and the night moving fast from check-in to match time.',
     initials: 'EG',
   },
   {
     name: 'Ryan Alfred',
     title: 'Organizer',
     description:
-      'Ryan owns the tournament structure, fixtures, rules flow, and final calls so every game has a clear path from registration to rewards.',
+      'Ryan leads the tournament run, setting up the brackets, rules, and prize path so players can focus on showing levels.',
     initials: 'RA',
   },
 ];

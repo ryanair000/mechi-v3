@@ -17,7 +17,6 @@ import {
   ONLINE_TOURNAMENT_GAMES,
   ONLINE_TOURNAMENT_REGISTRATION_PATH,
   ONLINE_TOURNAMENT_STREAM_CHANNEL,
-  ONLINE_TOURNAMENT_STREAM_DELAY_MINUTES,
   ONLINE_TOURNAMENT_STREAMER,
   ONLINE_TOURNAMENT_TOTAL_SLOTS,
   type OnlineTournamentGameKey,
@@ -154,7 +153,7 @@ export function OnlineTournamentClient() {
           <CtaCard
             title="Stream"
             subtitle={`Watch it live on ${ONLINE_TOURNAMENT_STREAM_CHANNEL}.`}
-            description={`${ONLINE_TOURNAMENT_STREAMER} handles the broadcast for all three nights. Pull up on YouTube at 8:00 PM EAT; PUBG Mobile and CODM run with a ${ONLINE_TOURNAMENT_STREAM_DELAY_MINUTES}-minute delay so the matches stay clean while the chat still catches the action.`}
+            description={`${ONLINE_TOURNAMENT_STREAMER} handles the broadcast for all three nights. Pull up on YouTube at 8:00 PM EAT, bring the chat energy, and watch PUBG Mobile, CODM, and eFootball go off live.`}
             buttonText="Watch on YouTube"
             buttonHref="https://www.youtube.com/@playmechi"
             buttonTarget="_blank"

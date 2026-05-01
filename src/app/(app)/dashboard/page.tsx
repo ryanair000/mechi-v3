@@ -1,4 +1,5 @@
 import { Component as BlogPosts } from '@/components/blog-posts';
+import { ONLINE_TOURNAMENT_YOUTUBE_URL } from '@/lib/online-tournament';
 import { getOnlineTournamentArenaHref } from '@/lib/online-tournament-ops';
 
 const dashboardPosts = [
@@ -12,23 +13,19 @@ const dashboardPosts = [
   },
   {
     id: 2,
-    title: 'Efootball Mobile queue briefing',
-    category: 'matchmaking',
+    title: 'Upcoming Stream',
+    category: 'PlayMechi live',
+    description: 'Catch the next broadcast on YouTube at 8:00 PM EAT.',
     imageUrl: '/game-artwork/efootball_mobile-header.svg',
-    href: '/queue?game=efootball_mobile',
-    views: 1456,
-    readTime: 2,
-    rating: 4,
+    href: ONLINE_TOURNAMENT_YOUTUBE_URL,
   },
   {
     id: 3,
-    title: 'Reward drops and redeemable missions',
-    category: 'rewards',
+    title: 'Socials and community drops',
+    category: 'socials',
+    description: 'Post your highlights, invite the squad, and keep the PlayMechi timeline loud.',
     imageUrl: '/game-artwork/codm-header.svg',
-    href: '/rewards',
-    views: 987,
-    readTime: 4,
-    rating: 4,
+    href: '/share',
   },
 ];
 

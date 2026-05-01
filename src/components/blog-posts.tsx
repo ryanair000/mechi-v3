@@ -65,7 +65,7 @@ export const Component = ({
         </p>
       ) : null}
       
-      <div className="grid h-auto grid-cols-1 gap-5 md:h-[650px] md:grid-cols-2 lg:grid-cols-[1fr_0.5fr]">
+      <div className="grid h-auto grid-cols-1 gap-4 md:h-[520px] md:grid-cols-2 lg:grid-cols-[1fr_0.5fr]">
         {posts.map((post, index) => {
           const {
             id,
@@ -87,7 +87,7 @@ export const Component = ({
               href={post.href}
               style={{ backgroundImage: `url(${imageUrl})` }}
               className={cn(
-                "group relative row-span-1 flex size-full cursor-pointer flex-col justify-end overflow-hidden rounded-[20px] bg-cover bg-center bg-no-repeat p-5 text-white max-md:h-[300px] transition-all duration-300 hover:scale-[0.98] hover:rotate-[0.3deg]",
+                "group relative row-span-1 flex size-full cursor-pointer flex-col justify-end overflow-hidden rounded-2xl bg-cover bg-center bg-no-repeat p-4 text-white max-md:h-[240px] transition-all duration-300 hover:scale-[0.98] hover:rotate-[0.3deg]",
                 isPrimary && "col-span-1 row-span-1 md:col-span-2 md:row-span-2 lg:col-span-1",
                 postClassName
               )}
@@ -103,37 +103,37 @@ export const Component = ({
               <div className="absolute inset-0 -z-0 h-[130%] w-full bg-gradient-to-t from-black/80 to-transparent transition-all duration-500 group-hover:h-full" />
               
               <article className="relative z-0 flex items-end">
-                <div className="flex flex-1 flex-col gap-3">
-                  <h2 className="text-3xl font-semibold md:text-4xl">
+                <div className="flex flex-1 flex-col gap-2.5">
+                  <h2 className="text-2xl font-semibold md:text-3xl">
                     {postTitle}
                   </h2>
                   {postDescription ? (
-                    <p className="max-w-xl text-base font-medium leading-7 text-white/80 md:text-lg">
+                    <p className="max-w-xl text-sm font-medium leading-6 text-white/80 md:text-base">
                       {postDescription}
                     </p>
                   ) : null}
-                  <div className="flex flex-col gap-3">
-                    <span className="text-base capitalize py-px px-2 rounded-md bg-white/40 w-fit text-white backdrop-blur-md">{category}</span>
+                  <div className="flex flex-col gap-2.5">
+                    <span className="w-fit rounded-md bg-white/40 px-2 py-px text-sm capitalize text-white backdrop-blur-md">{category}</span>
                     {views !== undefined ? (
                       <div className="flex items-center gap-2">
                         <div className="flex items-center gap-0.5">
                           {Array.from({ length: 5 }).map((_, idx) => (
                             <Star
-                              width={20}
-                              height={20}
+                              width={16}
+                              height={16}
                               key={idx}
                               stroke={idx < rating ? "#ffa534" : "#B9B8B8aa"}
                               fill={idx < rating ? "#ffa534" : "#B9B8B8aa"}
                             />
                           ))}
                         </div>
-                        <span className="text-lg font-thin">
+                        <span className="text-base font-thin">
                           ({views} Views)
                         </span>
                       </div>
                     ) : null}
                     {readTime && (
-                      <div className="text-xl font-semibold">
+                      <div className="text-lg font-semibold">
                         {readTime} min read
                       </div>
                     )}
@@ -142,8 +142,8 @@ export const Component = ({
                 <MoveRight
                   className="transition-all duration-300 group-hover:translate-x-2"
                   color="white"
-                  width={40}
-                  height={40}
+                  width={32}
+                  height={32}
                   strokeWidth={1.25}
                 />
               </article>

@@ -42,7 +42,6 @@ export const ONLINE_TOURNAMENT_STREAMER = 'Kabaka Mwangi';
 export const ONLINE_TOURNAMENT_INSTAGRAM = 'PlayMechi';
 export const ONLINE_TOURNAMENT_YOUTUBE = 'PlayMechi';
 export const ONLINE_TOURNAMENT_YOUTUBE_URL = 'https://www.youtube.com/@playmechi';
-export const ONLINE_TOURNAMENT_STREAM_DELAY_MINUTES = 5;
 export const ONLINE_TOURNAMENT_DISPUTE_WINDOW_MINUTES = 20;
 export const ONLINE_TOURNAMENT_PAYOUT_WINDOW_HOURS = 48;
 

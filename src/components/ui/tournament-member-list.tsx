@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { CalendarClock, Radio, Trophy, Users } from 'lucide-react';
+import { CalendarClock, ExternalLink, Radio, Trophy, Users } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 export interface TournamentMemberListItem {
@@ -19,6 +19,7 @@ export interface TournamentMemberListItem {
   progress: number;
   registeredLabel?: string | null;
   secondaryActionHref?: string;
+  secondaryActionExternal?: boolean;
   secondaryActionLabel?: string;
   slotsLabel: string;
   startsLabel: string;
@@ -40,6 +41,8 @@ function getInitial(value: string) {
 
 function TournamentLine({ item }: { item: TournamentMemberListItem }) {
   const actionIsMuted = item.actionVariant === 'muted';
+  const secondaryActionClassName =
+    'inline-flex min-h-9 w-full items-center justify-center gap-1.5 rounded-md border border-[var(--border-color)] bg-[var(--surface-elevated)] px-3 py-2 text-xs font-black text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)] sm:w-auto';
 
   return (
     <div
@@ -137,12 +140,21 @@ function TournamentLine({ item }: { item: TournamentMemberListItem }) {
           {item.actionLabel}
         </Link>
         {item.secondaryActionHref && item.secondaryActionLabel ? (
-          <Link
-            href={item.secondaryActionHref}
-            className="inline-flex min-h-9 w-full items-center justify-center rounded-md border border-[var(--border-color)] bg-[var(--surface-elevated)] px-3 py-2 text-xs font-black text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)] sm:w-auto"
-          >
-            {item.secondaryActionLabel}
-          </Link>
+          item.secondaryActionExternal ? (
+            <a
+              href={item.secondaryActionHref}
+              target="_blank"
+              rel="noopener noreferrer"
+              className={secondaryActionClassName}
+            >
+              {item.secondaryActionLabel}
+              <ExternalLink size={12} className="shrink-0" />
+            </a>
+          ) : (
+            <Link href={item.secondaryActionHref} className={secondaryActionClassName}>
+              {item.secondaryActionLabel}
+            </Link>
+          )
         ) : null}
       </div>
     </div>

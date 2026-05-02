@@ -1,10 +1,20 @@
 'use client';
 
-import { Loader2, LockKeyhole, Mail, Phone, SunIcon as Sunburst, User } from 'lucide-react';
+import {
+  ExternalLink,
+  Loader2,
+  LockKeyhole,
+  Mail,
+  MessageCircle,
+  Phone,
+  SunIcon as Sunburst,
+  User,
+} from 'lucide-react';
 import Link from 'next/link';
 import type { FormEvent, ReactNode } from 'react';
 import { useState } from 'react';
 import { SignupPage } from '@/components/ui/sign-up-page';
+import { PLAYMECHI_WHATSAPP_GROUP_URL } from '@/lib/social-links';
 
 type FullScreenSignupVariant = 'default' | 'marketing';
 type FullScreenSignupFeedbackTone = 'error' | 'success' | 'loading';
@@ -238,6 +248,17 @@ function StandaloneFullScreenSignup({
           </div>
 
           <form className="flex flex-col gap-4" onSubmit={handleSubmit} noValidate>
+            <a
+              href={PLAYMECHI_WHATSAPP_GROUP_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex min-h-11 items-center gap-3 rounded-lg border border-emerald-500/25 bg-emerald-500/10 px-3 py-2 text-sm font-medium text-emerald-950 transition-colors hover:bg-emerald-500/15"
+            >
+              <MessageCircle className="h-4 w-4 shrink-0" />
+              <span className="min-w-0 flex-1">Join the PlayMechi WhatsApp group</span>
+              <ExternalLink className="h-3.5 w-3.5 shrink-0 opacity-75" />
+            </a>
+
             {fields.map((field) => {
               const error = errors[field.id];
 

@@ -18,6 +18,7 @@ import {
   ONLINE_TOURNAMENT_REGISTRATION_API_PATH,
   ONLINE_TOURNAMENT_REGISTRATION_PATH,
   ONLINE_TOURNAMENT_TITLE,
+  ONLINE_TOURNAMENT_WHATSAPP_GROUP_URL,
   getFallbackOnlineTournamentSummary,
   getOnlineTournamentDisplayStatus,
   getOnlineTournamentTotals,
@@ -203,9 +204,9 @@ export default function TournamentsPage() {
           registeredLabel: userRegistration?.in_game_username
             ? `Registered as ${userRegistration.in_game_username}`
             : null,
-          secondaryActionHref:
-            action.label === 'View' ? undefined : getOnlineTournamentArenaHref(game.game),
-          secondaryActionLabel: action.label === 'View' ? undefined : 'View',
+          secondaryActionExternal: true,
+          secondaryActionHref: ONLINE_TOURNAMENT_WHATSAPP_GROUP_URL,
+          secondaryActionLabel: 'WhatsApp',
           slotsLabel: `${registered}/${slots}`,
           startsLabel: `${game.dateLabel.replace(' 2026', '')}, ${game.timeLabel}`,
           statusClassName: getStatusClasses(onlineTournamentStatus),

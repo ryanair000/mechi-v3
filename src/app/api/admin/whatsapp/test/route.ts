@@ -1,23 +1,34 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { hasAdminAccess, getRequestAccessProfile } from '@/lib/access';
 import { checkPersistentRateLimit, getClientIp, rateLimitResponse } from '@/lib/rateLimit';
+import { ONLINE_TOURNAMENT_GAME_BY_KEY, isOnlineTournamentGame } from '@/lib/online-tournament';
 import { createServiceClient } from '@/lib/supabase';
 import {
   buildMatchDisputeMessage,
   buildMatchFoundMessage,
   buildResultConfirmedMessage,
+  sendOnlineTournamentRegistrationWhatsApp,
+  sendOnlineTournamentReminderWhatsApp,
   sendWhatsApp,
   sendWhatsAppTemplate,
 } from '@/lib/whatsapp';
 
-type TestMode = 'hello_world' | 'match_found' | 'result_confirmed' | 'dispute';
+type TestMode =
+  | 'hello_world'
+  | 'match_found'
+  | 'result_confirmed'
+  | 'dispute'
+  | 'playmechi_registration'
+  | 'playmechi_reminder';
 
 function isValidMode(value: unknown): value is TestMode {
   return (
     value === 'hello_world' ||
     value === 'match_found' ||
     value === 'result_confirmed' ||
-    value === 'dispute'
+    value === 'dispute' ||
+    value === 'playmechi_registration' ||
+    value === 'playmechi_reminder'
   );
 }
 
@@ -97,6 +108,39 @@ export async function POST(request: NextRequest) {
 
     if (mode === 'hello_world') {
       result = await sendWhatsAppTemplate({ to: resolvedPhone });
+    } else if (mode === 'playmechi_registration') {
+      const tournamentGameRaw = typeof body.game === 'string' ? body.game.trim() : 'codm';
+      const tournamentGame = isOnlineTournamentGame(tournamentGameRaw) ? tournamentGameRaw : 'codm';
+      const config = ONLINE_TOURNAMENT_GAME_BY_KEY[tournamentGame];
+      result = await sendOnlineTournamentRegistrationWhatsApp({
+        to: resolvedPhone,
+        username: resolvedUsername,
+        gameLabel: config.label,
+        dateLabel: config.dateLabel,
+        timeLabel: config.timeLabel,
+        inGameUsername:
+          typeof body.inGameUsername === 'string' && body.inGameUsername.trim().length > 0
+            ? body.inGameUsername.trim()
+            : `${resolvedUsername}-tag`,
+        whatsappGroupUrl: config.whatsappGroupUrl,
+      });
+    } else if (mode === 'playmechi_reminder') {
+      const tournamentGameRaw = typeof body.game === 'string' ? body.game.trim() : 'codm';
+      const tournamentGame = isOnlineTournamentGame(tournamentGameRaw) ? tournamentGameRaw : 'codm';
+      const config = ONLINE_TOURNAMENT_GAME_BY_KEY[tournamentGame];
+      result = await sendOnlineTournamentReminderWhatsApp({
+        to: resolvedPhone,
+        username: resolvedUsername,
+        gameLabel: config.label,
+        dateLabel: config.dateLabel,
+        timeLabel: config.timeLabel,
+        inGameUsername:
+          typeof body.inGameUsername === 'string' && body.inGameUsername.trim().length > 0
+            ? body.inGameUsername.trim()
+            : `${resolvedUsername}-tag`,
+        format: config.format,
+        scoring: config.scoring,
+      });
     } else if (mode === 'match_found') {
       result = await sendWhatsApp(
         resolvedPhone,

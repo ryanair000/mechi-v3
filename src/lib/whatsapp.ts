@@ -1,4 +1,9 @@
 import { APP_URL } from '@/lib/urls';
+import {
+  ONLINE_TOURNAMENT_ARENA_PATH,
+  ONLINE_TOURNAMENT_REGISTRATION_PATH,
+  ONLINE_TOURNAMENT_YOUTUBE_URL,
+} from '@/lib/online-tournament';
 import { normalizePhoneNumber } from '@/lib/phone';
 import { isMockProviderMode, shouldCaptureProviderTranscripts } from '@/lib/provider-mode';
 import { captureProviderTranscript } from '@/lib/provider-transcript';
@@ -12,6 +17,12 @@ const MATCH_FOUND_TEMPLATE = process.env.WHATSAPP_TEMPLATE_MATCH_FOUND;
 const RESULT_CONFIRMED_TEMPLATE = process.env.WHATSAPP_TEMPLATE_RESULT_CONFIRMED;
 const MATCH_DISPUTE_TEMPLATE = process.env.WHATSAPP_TEMPLATE_MATCH_DISPUTE;
 const CHALLENGE_RECEIVED_TEMPLATE = process.env.WHATSAPP_TEMPLATE_CHALLENGE_RECEIVED;
+const ONLINE_TOURNAMENT_REGISTRATION_TEMPLATE =
+  process.env.WHATSAPP_TEMPLATE_PLAYMECHI_REGISTRATION ??
+  process.env.WHATSAPP_TEMPLATE_ONLINE_TOURNAMENT_REGISTRATION;
+const ONLINE_TOURNAMENT_REMINDER_TEMPLATE =
+  process.env.WHATSAPP_TEMPLATE_PLAYMECHI_REMINDER ??
+  process.env.WHATSAPP_TEMPLATE_ONLINE_TOURNAMENT_REMINDER;
 const WHATSAPP_ENABLED = Boolean(WHATSAPP_TOKEN && PHONE_NUMBER_ID);
 
 type WhatsAppTemplateParameter = {
@@ -53,6 +64,26 @@ function normalizeRecipient(to: string): string {
   return normalized;
 }
 
+function createSkippedResult(params: {
+  to: string;
+  type: 'text' | 'template';
+  error: string;
+  details?: string;
+  templateName?: string;
+}): WhatsAppSendResult {
+  return {
+    ok: false,
+    skipped: true,
+    status: 0,
+    to: params.to,
+    normalizedTo: params.to ? normalizeRecipient(params.to) : '',
+    type: params.type,
+    templateName: params.templateName,
+    error: params.error,
+    details: params.details,
+  };
+}
+
 function createBodyParameters(values: string[]): WhatsAppTemplateParameter[] {
   return values.map((text) => ({
     type: 'text',
@@ -83,6 +114,18 @@ export function formatWhatsAppDeliveryError(result: WhatsAppSendResult): string 
   }
 
   return 'Unknown WhatsApp delivery failure';
+}
+
+export function isWhatsAppConfigured() {
+  return WHATSAPP_ENABLED;
+}
+
+export function isOnlineTournamentRegistrationWhatsAppConfigured() {
+  return Boolean(ONLINE_TOURNAMENT_REGISTRATION_TEMPLATE);
+}
+
+export function isOnlineTournamentReminderWhatsAppConfigured() {
+  return Boolean(ONLINE_TOURNAMENT_REMINDER_TEMPLATE);
 }
 
 async function dispatchWhatsApp(
@@ -121,16 +164,12 @@ async function dispatchWhatsApp(
   }
 
   if (!WHATSAPP_ENABLED || !WHATSAPP_TOKEN || !PHONE_NUMBER_ID) {
-    const skippedResult: WhatsAppSendResult = {
-      ok: false,
-      skipped: true,
-      status: 0,
+    const skippedResult = createSkippedResult({
       to,
-      normalizedTo,
       type,
       templateName,
       error: 'WhatsApp credentials not configured',
-    };
+    });
 
     if (shouldCaptureProviderTranscripts()) {
       await captureProviderTranscript({
@@ -271,6 +310,30 @@ async function dispatchWhatsApp(
   }
 }
 
+function sendRequiredBusinessTemplate(params: {
+  to: string;
+  templateName?: string;
+  missingTemplateEnv: string;
+  bodyParameters: string[];
+}): Promise<WhatsAppSendResult> {
+  if (!params.templateName) {
+    return Promise.resolve(
+      createSkippedResult({
+        to: params.to,
+        type: 'template',
+        error: 'WhatsApp template is not configured',
+        details: `Set ${params.missingTemplateEnv} to an approved Meta WhatsApp template name.`,
+      })
+    );
+  }
+
+  return sendWhatsAppTemplate({
+    to: params.to,
+    name: params.templateName,
+    bodyParameters: params.bodyParameters,
+  });
+}
+
 async function safeNotify(label: string, fn: () => Promise<void>): Promise<void> {
   if (!WHATSAPP_ENABLED) {
     console.log(`[WhatsApp] ${label} skipped - credentials not configured`);
@@ -389,6 +452,103 @@ export function buildChallengeReceivedMessage(params: {
     challengeNote +
     `Review it here: ${destination}`
   );
+}
+
+export function buildOnlineTournamentRegistrationMessage(params: {
+  username: string;
+  gameLabel: string;
+  dateLabel: string;
+  timeLabel: string;
+  inGameUsername: string;
+  whatsappGroupUrl: string;
+  appUrl?: string;
+}): string {
+  return [
+    `${params.username}, your PlayMechi registration is in.`,
+    `Game: ${params.gameLabel}`,
+    `Time: ${params.dateLabel}, ${params.timeLabel}`,
+    `Username: ${params.inGameUsername}`,
+    `Join the game group: ${params.whatsappGroupUrl}`,
+    `Registration: ${params.appUrl ?? APP_URL}${ONLINE_TOURNAMENT_REGISTRATION_PATH}`,
+  ].join('\n');
+}
+
+export function buildOnlineTournamentReminderMessage(params: {
+  username: string;
+  gameLabel: string;
+  dateLabel: string;
+  timeLabel: string;
+  inGameUsername: string;
+  format: string;
+  scoring: string;
+  appUrl?: string;
+  streamUrl?: string;
+}): string {
+  return [
+    `${params.username}, PlayMechi reminder.`,
+    `${params.gameLabel} starts ${params.dateLabel} at ${params.timeLabel}.`,
+    `Use username: ${params.inGameUsername}`,
+    `Format: ${params.format}`,
+    `Scoring: ${params.scoring}`,
+    `Arena: ${params.appUrl ?? APP_URL}${ONLINE_TOURNAMENT_ARENA_PATH}`,
+    `Stream: ${params.streamUrl ?? ONLINE_TOURNAMENT_YOUTUBE_URL}`,
+  ].join('\n');
+}
+
+export async function sendOnlineTournamentRegistrationWhatsApp(params: {
+  to: string;
+  username: string;
+  gameLabel: string;
+  dateLabel: string;
+  timeLabel: string;
+  inGameUsername: string;
+  whatsappGroupUrl: string;
+  appUrl?: string;
+}): Promise<WhatsAppSendResult> {
+  return sendRequiredBusinessTemplate({
+    to: params.to,
+    templateName: ONLINE_TOURNAMENT_REGISTRATION_TEMPLATE,
+    missingTemplateEnv: 'WHATSAPP_TEMPLATE_PLAYMECHI_REGISTRATION',
+    bodyParameters: [
+      params.username,
+      params.gameLabel,
+      params.dateLabel,
+      params.timeLabel,
+      params.inGameUsername,
+      `${params.appUrl ?? APP_URL}${ONLINE_TOURNAMENT_REGISTRATION_PATH}`,
+      params.whatsappGroupUrl,
+    ],
+  });
+}
+
+export async function sendOnlineTournamentReminderWhatsApp(params: {
+  to: string;
+  username: string;
+  gameLabel: string;
+  dateLabel: string;
+  timeLabel: string;
+  inGameUsername: string;
+  format: string;
+  scoring: string;
+  appUrl?: string;
+  streamUrl?: string;
+}): Promise<WhatsAppSendResult> {
+  return sendRequiredBusinessTemplate({
+    to: params.to,
+    templateName: ONLINE_TOURNAMENT_REMINDER_TEMPLATE,
+    missingTemplateEnv: 'WHATSAPP_TEMPLATE_PLAYMECHI_REMINDER',
+    bodyParameters: [
+      params.username,
+      params.gameLabel,
+      params.dateLabel,
+      params.timeLabel,
+      params.inGameUsername,
+      params.format,
+      params.scoring,
+      `${params.appUrl ?? APP_URL}${ONLINE_TOURNAMENT_ARENA_PATH}`,
+      params.streamUrl ?? ONLINE_TOURNAMENT_YOUTUBE_URL,
+    ],
+  });
 }
 
 export async function notifyMatchFound(params: {

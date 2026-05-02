@@ -24,6 +24,10 @@ import { checkPersistentRateLimit, getClientIp, rateLimitResponse } from '@/lib/
 import { createServiceClient } from '@/lib/supabase';
 import { sendOnlineTournamentRegistrationTelegramNotification } from '@/lib/telegram';
 import { APP_URL } from '@/lib/urls';
+import {
+  formatWhatsAppDeliveryError,
+  sendOnlineTournamentRegistrationWhatsApp,
+} from '@/lib/whatsapp';
 import type { GameKey, PlatformKey } from '@/types';
 
 type EventRegistrationRow = {
@@ -361,6 +365,29 @@ export async function POST(request: NextRequest) {
           registrationUrl: `${APP_URL}${ONLINE_TOURNAMENT_REGISTRATION_PATH}`,
           whatsappGroupUrl: gameConfig.whatsappGroupUrl,
         });
+      });
+    }
+
+    const registrationWhatsAppNumber = (profile.whatsapp_number ?? profile.phone ?? '').trim();
+    if (registrationWhatsAppNumber && !existingRegistration) {
+      after(async () => {
+        const result = await sendOnlineTournamentRegistrationWhatsApp({
+          to: registrationWhatsAppNumber,
+          username: profile.username,
+          gameLabel: gameConfig.label,
+          dateLabel: gameConfig.dateLabel,
+          timeLabel: gameConfig.timeLabel,
+          inGameUsername,
+          whatsappGroupUrl: gameConfig.whatsappGroupUrl,
+          appUrl: APP_URL,
+        });
+
+        if (!result.ok && !result.skipped) {
+          console.error(
+            '[WhatsApp] Online tournament registration confirmation failed:',
+            formatWhatsAppDeliveryError(result)
+          );
+        }
       });
     }
 

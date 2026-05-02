@@ -1,6 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 
-export async function claimEmailDeliveryEvent(
+export async function claimDeliveryEvent(
   supabase: SupabaseClient,
   params: {
     eventKey: string;
@@ -29,3 +29,5 @@ export async function claimEmailDeliveryEvent(
   console.error('[Email Delivery Events] Claim error:', error);
   return false;
 }
+
+export const claimEmailDeliveryEvent = claimDeliveryEvent;

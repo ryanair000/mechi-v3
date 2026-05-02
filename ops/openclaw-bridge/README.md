@@ -168,10 +168,16 @@ Use `telegram-poller.mjs` only if you deliberately want a custom prompt/translat
 
 Native OpenClaw WhatsApp sessions are not the same as the Mechi app WhatsApp Cloud API webhook. If WhatsApp group messages are enabled on the OpenClaw host:
 
+- native OpenClaw WhatsApp uses `+254733638841` for operator/admin groups only
+- Meta Cloud API uses `+254113033475` for player/customer WhatsApp through the Mechi app
 - operator/admin groups such as `MECHI ADMINS` should route to `control`
 - customer support DMs should stay on the support inbox/player-action path
 - live tournament availability should be answered through `npm run ops:tournaments -- --json --summary-only`
 - a deployed/restarted OpenClaw WhatsApp process is required before prompt or routing changes show up in WhatsApp Web
+
+For player DMs, prefer Meta WhatsApp Cloud API through the Mechi app. The app receives Meta webhooks at `/api/whatsapp/webhook`, stores the conversation in the support inbox, asks this bridge for safe OpenClaw responses when needed, then sends through Meta Graph API. See `../../META_WHATSAPP_CLOUD_API.md`.
+
+If `+254733638841` was recently shadowbanned, do not relink or automate it repeatedly. Keep it on EC2 only, route it to approved internal groups, and avoid bulk sends, cold DMs, repeated identical messages, and unknown-chat auto-replies. The EC2 QR login runbook is `../../OPENCLAW_WHATSAPP_EC2_RUNBOOK.md`.
 
 ## EC2 restart
 

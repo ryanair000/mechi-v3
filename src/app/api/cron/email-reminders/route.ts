@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { claimEmailDeliveryEvent } from '@/lib/email-delivery-events';
+import { claimDeliveryEvent } from '@/lib/email-delivery-events';
 import { sendOnlineTournamentGameReminderEmail } from '@/lib/email';
 import {
   ONLINE_TOURNAMENT_GAME_BY_KEY,
@@ -12,6 +12,11 @@ import {
 } from '@/lib/online-tournament';
 import { createServiceClient } from '@/lib/supabase';
 import { APP_URL } from '@/lib/urls';
+import {
+  formatWhatsAppDeliveryError,
+  isOnlineTournamentReminderWhatsAppConfigured,
+  sendOnlineTournamentReminderWhatsApp,
+} from '@/lib/whatsapp';
 
 export const runtime = 'nodejs';
 
@@ -24,6 +29,8 @@ type ReminderRegistrationRow = {
   game: OnlineTournamentGameKey;
   in_game_username: string;
   email?: string | null;
+  phone?: string | null;
+  whatsapp_number?: string | null;
   eligibility_status?: string | null;
   check_in_status?: string | null;
   user?: { id: string; username: string; email?: string | null } | Array<{
@@ -84,7 +91,8 @@ export async function GET(request: NextRequest) {
     const now = new Date();
     const supabase = createServiceClient();
     let checked = 0;
-    let claimed = 0;
+    let emailClaimed = 0;
+    let whatsappClaimed = 0;
     let skipped = 0;
     const sendTasks: Promise<void>[] = [];
 
@@ -96,7 +104,7 @@ export async function GET(request: NextRequest) {
       const { data, error } = await supabase
         .from('online_tournament_registrations')
         .select(
-          'id, user_id, game, in_game_username, email, eligibility_status, check_in_status, user:user_id(id, username, email)'
+          'id, user_id, game, in_game_username, email, phone, whatsapp_number, eligibility_status, check_in_status, user:user_id(id, username, email)'
         )
         .eq('event_slug', ONLINE_TOURNAMENT_SLUG)
         .eq('game', game.game)
@@ -111,24 +119,77 @@ export async function GET(request: NextRequest) {
       for (const registration of ((data ?? []) as ReminderRegistrationRow[])) {
         checked += 1;
         const profile = firstRelation(registration.user);
-        const recipient = registration.email?.trim() || profile?.email?.trim() || '';
+        const username = profile?.username || 'player';
+        const config = ONLINE_TOURNAMENT_GAME_BY_KEY[registration.game];
+        const emailRecipient = registration.email?.trim() || profile?.email?.trim() || '';
 
-        if (!recipient) {
+        if (!emailRecipient) {
+          skipped += 1;
+        } else {
+          const emailEventKey = [
+            'online-tournament-email-reminder',
+            ONLINE_TOURNAMENT_SLUG,
+            registration.game,
+            registration.user_id,
+            game.matchStartsAt,
+          ].join(':');
+          const didClaimEmail = await claimDeliveryEvent(supabase, {
+            eventKey: emailEventKey,
+            eventType: 'online_tournament_game_email_reminder',
+            recipient: emailRecipient,
+            userId: registration.user_id,
+            metadata: {
+              event_slug: ONLINE_TOURNAMENT_SLUG,
+              game: registration.game,
+              starts_at: game.matchStartsAt,
+              registration_id: registration.id,
+            },
+          });
+
+          if (didClaimEmail) {
+            emailClaimed += 1;
+            sendTasks.push(
+              sendOnlineTournamentGameReminderEmail({
+                to: emailRecipient,
+                username,
+                eventTitle: ONLINE_TOURNAMENT_TITLE,
+                gameLabel: config.label,
+                matchStartsAt: config.matchStartsAt,
+                inGameUsername: registration.in_game_username,
+                format: config.format,
+                matchCount: config.matchCount,
+                scoring: config.scoring,
+                registrationUrl: `${APP_URL}${ONLINE_TOURNAMENT_REGISTRATION_PATH}`,
+                streamUrl: ONLINE_TOURNAMENT_YOUTUBE_URL,
+              })
+            );
+          } else {
+            skipped += 1;
+          }
+        }
+
+        const whatsappRecipient = registration.whatsapp_number?.trim() || registration.phone?.trim() || '';
+        if (!whatsappRecipient) {
           skipped += 1;
           continue;
         }
 
-        const eventKey = [
-          'online-tournament-reminder',
+        if (!isOnlineTournamentReminderWhatsAppConfigured()) {
+          skipped += 1;
+          continue;
+        }
+
+        const whatsappEventKey = [
+          'online-tournament-whatsapp-reminder',
           ONLINE_TOURNAMENT_SLUG,
           registration.game,
           registration.user_id,
           game.matchStartsAt,
         ].join(':');
-        const didClaim = await claimEmailDeliveryEvent(supabase, {
-          eventKey,
-          eventType: 'online_tournament_game_reminder',
-          recipient,
+        const didClaimWhatsApp = await claimDeliveryEvent(supabase, {
+          eventKey: whatsappEventKey,
+          eventType: 'online_tournament_game_whatsapp_reminder',
+          recipient: whatsappRecipient,
           userId: registration.user_id,
           metadata: {
             event_slug: ONLINE_TOURNAMENT_SLUG,
@@ -138,26 +199,31 @@ export async function GET(request: NextRequest) {
           },
         });
 
-        if (!didClaim) {
+        if (!didClaimWhatsApp) {
           skipped += 1;
           continue;
         }
 
-        claimed += 1;
-        const config = ONLINE_TOURNAMENT_GAME_BY_KEY[registration.game];
+        whatsappClaimed += 1;
         sendTasks.push(
-          sendOnlineTournamentGameReminderEmail({
-            to: recipient,
-            username: profile?.username || 'player',
-            eventTitle: ONLINE_TOURNAMENT_TITLE,
+          sendOnlineTournamentReminderWhatsApp({
+            to: whatsappRecipient,
+            username,
             gameLabel: config.label,
-            matchStartsAt: config.matchStartsAt,
+            dateLabel: config.dateLabel,
+            timeLabel: config.timeLabel,
             inGameUsername: registration.in_game_username,
             format: config.format,
-            matchCount: config.matchCount,
             scoring: config.scoring,
-            registrationUrl: `${APP_URL}${ONLINE_TOURNAMENT_REGISTRATION_PATH}`,
+            appUrl: APP_URL,
             streamUrl: ONLINE_TOURNAMENT_YOUTUBE_URL,
+          }).then((result) => {
+            if (!result.ok && !result.skipped) {
+              console.error(
+                '[WhatsApp Reminders] Delivery failed:',
+                formatWhatsAppDeliveryError(result)
+              );
+            }
           })
         );
       }
@@ -168,7 +234,9 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       ok: true,
       checked,
-      claimed,
+      claimed: emailClaimed + whatsappClaimed,
+      emailClaimed,
+      whatsappClaimed,
       skipped,
       sent: sendTasks.length,
       timestamp: now.toISOString(),

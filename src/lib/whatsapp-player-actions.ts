@@ -1,5 +1,20 @@
 import { GAMES, PLATFORMS, getCanonicalGameKey } from '@/lib/config';
 import {
+  ONLINE_TOURNAMENT_ARENA_PATH,
+  ONLINE_TOURNAMENT_CASH_PRIZE_POOL,
+  ONLINE_TOURNAMENT_GAME_BY_KEY,
+  ONLINE_TOURNAMENT_GAME_LIST_LABEL,
+  ONLINE_TOURNAMENT_GAMES,
+  ONLINE_TOURNAMENT_PUBLIC_PATH,
+  ONLINE_TOURNAMENT_REGISTRATION_PATH,
+  ONLINE_TOURNAMENT_STREAM_CHANNEL,
+  ONLINE_TOURNAMENT_STREAMER,
+  ONLINE_TOURNAMENT_TITLE,
+  ONLINE_TOURNAMENT_TOTAL_SLOTS,
+  ONLINE_TOURNAMENT_YOUTUBE_URL,
+  isOnlineTournamentGame,
+} from '@/lib/online-tournament';
+import {
   getPlayerDashboardSnapshot,
   joinQueueForUser,
   leaveQueueForUser,
@@ -17,7 +32,13 @@ type PlayerActionName =
   | 'leave_queue'
   | 'list_lobbies'
   | 'list_tournaments'
-  | 'playmechi_register';
+  | 'playmechi_register'
+  | 'playmechi_info'
+  | 'playmechi_schedule'
+  | 'playmechi_prizes'
+  | 'playmechi_rules'
+  | 'playmechi_groups'
+  | 'playmechi_stream';
 
 type ParsedPlayerAction = {
   action: PlayerActionName;
@@ -47,11 +68,26 @@ const FIND_MATCH_PATTERNS = [
 ];
 const LEAVE_QUEUE_PATTERNS = [/\bleave (the )?queue\b/i, /\bcancel (my )?queue\b/i, /\bstop (the )?queue\b/i];
 const LOBBY_PATTERNS = [/\blobb(y|ies)\b/i, /\bshow rooms\b/i, /\bopen rooms\b/i];
+const PLAYMECHI_CONTEXT_PATTERNS = [
+  /\bplaymechi\b/i,
+  /\bmechi\.?club online\b/i,
+  /\bonline gaming tournament\b/i,
+  /\bpubg ?m\b/i,
+  /\bpubg mobile\b/i,
+  /\bcodm\b/i,
+  /\bcall of duty:? mobile\b/i,
+  /\befootball\b/i,
+];
 const PLAYMECHI_REGISTER_PATTERNS = [
   /\b(register|join|sign ?up|enter)\b.*\b(tournament|playmechi|pubg ?m|pubg mobile|codm|call of duty:? mobile|efootball)\b/i,
   /\b(tournament|playmechi|pubg ?m|pubg mobile|codm|call of duty:? mobile|efootball)\b.*\b(register|join|sign ?up|enter)\b/i,
   /\bi want to register\b/i,
 ];
+const PLAYMECHI_SCHEDULE_PATTERNS = [/\bschedule\b/i, /\btime\b/i, /\bdate\b/i, /\bwhen\b/i, /\bmatch day\b/i];
+const PLAYMECHI_PRIZE_PATTERNS = [/\bprizes?\b/i, /\brewards?\b/i, /\bpool\b/i, /\buc\b/i, /\bcp\b/i, /\bcoins?\b/i];
+const PLAYMECHI_RULE_PATTERNS = [/\brules?\b/i, /\bformat\b/i, /\bscoring\b/i, /\bpoints?\b/i, /\bqualif(y|ication)\b/i, /\beligib(le|ility)\b/i];
+const PLAYMECHI_GROUP_PATTERNS = [/\bwhatsapp\b/i, /\bgroups?\b/i, /\broom id\b/i, /\bfixtures?\b/i];
+const PLAYMECHI_STREAM_PATTERNS = [/\bstream\b/i, /\byoutube\b/i, /\bwatch\b/i, /\bkabaka\b/i];
 const TOURNAMENT_PATTERNS = [/\btournaments?\b/i, /\bbrackets?\b/i, /\bevents?\b/i];
 
 const GAME_ALIASES: Array<{ game: GameKey; patterns: RegExp[] }> = [
@@ -130,8 +166,37 @@ function parsePlayerAction(body: string): ParsedPlayerAction | null {
     return { action: 'list_lobbies', game, platform };
   }
 
+  const isPlayMechiContext =
+    matchesAny(normalized, PLAYMECHI_CONTEXT_PATTERNS) ||
+    (matchesAny(normalized, TOURNAMENT_PATTERNS) &&
+      (!game || isOnlineTournamentGame(game)));
+
   if (matchesAny(normalized, PLAYMECHI_REGISTER_PATTERNS)) {
     return { action: 'playmechi_register', game, platform };
+  }
+
+  if (isPlayMechiContext && matchesAny(normalized, PLAYMECHI_SCHEDULE_PATTERNS)) {
+    return { action: 'playmechi_schedule', game, platform };
+  }
+
+  if (isPlayMechiContext && matchesAny(normalized, PLAYMECHI_PRIZE_PATTERNS)) {
+    return { action: 'playmechi_prizes', game, platform };
+  }
+
+  if (isPlayMechiContext && matchesAny(normalized, PLAYMECHI_RULE_PATTERNS)) {
+    return { action: 'playmechi_rules', game, platform };
+  }
+
+  if (isPlayMechiContext && matchesAny(normalized, PLAYMECHI_GROUP_PATTERNS)) {
+    return { action: 'playmechi_groups', game, platform };
+  }
+
+  if (isPlayMechiContext && matchesAny(normalized, PLAYMECHI_STREAM_PATTERNS)) {
+    return { action: 'playmechi_stream', game, platform };
+  }
+
+  if (isPlayMechiContext) {
+    return { action: 'playmechi_info', game, platform };
   }
 
   if (matchesAny(normalized, TOURNAMENT_PATTERNS)) {
@@ -203,14 +268,80 @@ function requireLinkedAccountMessage() {
 }
 
 function formatPlayMechiRegistrationMessage(game: GameKey | null) {
-  const gameLabel = game ? formatGameLabel(game) : 'PUBG Mobile, CODM, or eFootball';
+  const tournamentGame = game && isOnlineTournamentGame(game) ? ONLINE_TOURNAMENT_GAME_BY_KEY[game] : null;
+  const gameLabel = tournamentGame ? tournamentGame.label : ONLINE_TOURNAMENT_GAME_LIST_LABEL;
 
   return [
-    'Yes. Register for the free PlayMechi Online Gaming Tournament here:',
-    `${APP_URL}/playmechi/register`,
+    `Yes. Register for ${ONLINE_TOURNAMENT_TITLE} here:`,
+    `${APP_URL}${ONLINE_TOURNAMENT_REGISTRATION_PATH}`,
     '',
     `Pick ${gameLabel}, confirm your game tag, then join the WhatsApp group shown after registration.`,
-    'Matches start at 8:00 PM EAT from 8 May.',
+    'Matches start at 8:00 PM EAT from 8-10 May 2026.',
+  ].join('\n');
+}
+
+function getTournamentGamesForReply(game: GameKey | null) {
+  return game && isOnlineTournamentGame(game)
+    ? [ONLINE_TOURNAMENT_GAME_BY_KEY[game]]
+    : ONLINE_TOURNAMENT_GAMES;
+}
+
+function formatPlayMechiInfoMessage(game: GameKey | null) {
+  const gameLines = getTournamentGamesForReply(game)
+    .map((config) => `${config.label}: ${config.dateLabel}, ${config.timeLabel}, ${config.slots} slots`)
+    .join('\n');
+
+  return [
+    `${ONLINE_TOURNAMENT_TITLE} is free to enter.`,
+    `${ONLINE_TOURNAMENT_TOTAL_SLOTS} slots for ${ONLINE_TOURNAMENT_GAME_LIST_LABEL}. Prize pool: KSh ${ONLINE_TOURNAMENT_CASH_PRIZE_POOL.toLocaleString('en-KE')}.`,
+    '',
+    gameLines,
+    '',
+    `Register: ${APP_URL}${ONLINE_TOURNAMENT_REGISTRATION_PATH}`,
+  ].join('\n');
+}
+
+function formatPlayMechiScheduleMessage(game: GameKey | null) {
+  return getTournamentGamesForReply(game)
+    .map((config) => `${config.label}: ${config.dateLabel} at ${config.timeLabel}`)
+    .join('\n');
+}
+
+function formatPlayMechiPrizeMessage(game: GameKey | null) {
+  return getTournamentGamesForReply(game)
+    .map(
+      (config) =>
+        `${config.label}\n1st: ${config.firstPrize}\n2nd: ${config.secondPrize}\n3rd: ${config.thirdPrize}`
+    )
+    .join('\n\n');
+}
+
+function formatPlayMechiRulesMessage(game: GameKey | null) {
+  const gameRules = getTournamentGamesForReply(game)
+    .map((config) => `${config.label}: ${config.format}. ${config.matchCount}. ${config.scoring}`)
+    .join('\n');
+
+  return [
+    gameRules,
+    '',
+    'Core rules: use the same registered username, join on time, no cheating, no teaming, no scripts, no toxic abuse.',
+    'Rewards need PlayMechi Instagram follow + YouTube subscription before match day. Admin verification is final.',
+  ].join('\n');
+}
+
+function formatPlayMechiGroupMessage(game: GameKey | null) {
+  return getTournamentGamesForReply(game)
+    .map((config) => `${config.label} group:\n${config.whatsappGroupUrl}`)
+    .join('\n\n');
+}
+
+function formatPlayMechiStreamMessage() {
+  return [
+    `Stream: ${ONLINE_TOURNAMENT_STREAM_CHANNEL} on YouTube`,
+    ONLINE_TOURNAMENT_YOUTUBE_URL,
+    `Streamer: ${ONLINE_TOURNAMENT_STREAMER}`,
+    `Arena: ${APP_URL}${ONLINE_TOURNAMENT_ARENA_PATH}`,
+    `Tournament page: ${APP_URL}${ONLINE_TOURNAMENT_PUBLIC_PATH}`,
   ].join('\n');
 }
 
@@ -427,6 +558,83 @@ export async function executeWhatsAppPlayerAction(params: {
         source: 'whatsapp_action',
         action: parsed.action,
         game: parsed.game,
+      },
+    };
+  }
+
+  if (parsed.action === 'playmechi_info') {
+    return {
+      handled: true,
+      message: formatPlayMechiInfoMessage(parsed.game),
+      senderType: 'ai',
+      meta: {
+        source: 'whatsapp_action',
+        action: parsed.action,
+        game: parsed.game,
+      },
+    };
+  }
+
+  if (parsed.action === 'playmechi_schedule') {
+    return {
+      handled: true,
+      message: formatPlayMechiScheduleMessage(parsed.game),
+      senderType: 'ai',
+      meta: {
+        source: 'whatsapp_action',
+        action: parsed.action,
+        game: parsed.game,
+      },
+    };
+  }
+
+  if (parsed.action === 'playmechi_prizes') {
+    return {
+      handled: true,
+      message: formatPlayMechiPrizeMessage(parsed.game),
+      senderType: 'ai',
+      meta: {
+        source: 'whatsapp_action',
+        action: parsed.action,
+        game: parsed.game,
+      },
+    };
+  }
+
+  if (parsed.action === 'playmechi_rules') {
+    return {
+      handled: true,
+      message: formatPlayMechiRulesMessage(parsed.game),
+      senderType: 'ai',
+      meta: {
+        source: 'whatsapp_action',
+        action: parsed.action,
+        game: parsed.game,
+      },
+    };
+  }
+
+  if (parsed.action === 'playmechi_groups') {
+    return {
+      handled: true,
+      message: formatPlayMechiGroupMessage(parsed.game),
+      senderType: 'ai',
+      meta: {
+        source: 'whatsapp_action',
+        action: parsed.action,
+        game: parsed.game,
+      },
+    };
+  }
+
+  if (parsed.action === 'playmechi_stream') {
+    return {
+      handled: true,
+      message: formatPlayMechiStreamMessage(),
+      senderType: 'ai',
+      meta: {
+        source: 'whatsapp_action',
+        action: parsed.action,
       },
     };
   }

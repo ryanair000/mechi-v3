@@ -9,7 +9,13 @@ const WHATSAPP_GROUP_URL =
   process.env.NEXT_PUBLIC_WHATSAPP_GROUP_URL ??
   'https://chat.whatsapp.com/GRquLpTxzQ35er85N33Ec7';
 
-type TestMode = 'hello_world' | 'match_found' | 'result_confirmed' | 'dispute';
+type TestMode =
+  | 'hello_world'
+  | 'match_found'
+  | 'result_confirmed'
+  | 'dispute'
+  | 'playmechi_registration'
+  | 'playmechi_reminder';
 
 type TestResult = {
   success?: boolean;
@@ -33,7 +39,6 @@ type TestResult = {
 
 const QUICK_RECIPIENTS = [
   { label: 'ryanair001', username: 'ryanair001', phone: '+254708355692' },
-  { label: 'samawesome', username: 'samawesome', phone: '+254113033475' },
 ];
 
 const MODE_META: Record<TestMode, { label: string; helper: string }> = {
@@ -52,6 +57,14 @@ const MODE_META: Record<TestMode, { label: string; helper: string }> = {
   dispute: {
     label: 'Dispute',
     helper: 'Preview the dispute escalation message',
+  },
+  playmechi_registration: {
+    label: 'PlayMechi Registration',
+    helper: 'Approved template confirmation for new entrants',
+  },
+  playmechi_reminder: {
+    label: 'PlayMechi Reminder',
+    helper: 'Approved template reminder before match time',
   },
 };
 
@@ -81,6 +94,7 @@ export default function WhatsAppOpsClient() {
           phone,
           opponentUsername,
           game,
+          inGameUsername: matchId,
           rankLabel,
           level: Number(level),
           matchId,
@@ -163,7 +177,15 @@ export default function WhatsAppOpsClient() {
                   <button
                     key={key}
                     type="button"
-                    onClick={() => setMode(key)}
+                    onClick={() => {
+                      setMode(key);
+                      if (
+                        (key === 'playmechi_registration' || key === 'playmechi_reminder') &&
+                        !['pubgm', 'codm', 'efootball'].includes(game.trim())
+                      ) {
+                        setGame('codm');
+                      }
+                    }}
                     className={`rounded-2xl border p-3 text-left transition-colors ${
                       mode === key
                         ? 'border-[rgba(50,224,196,0.3)] bg-[rgba(50,224,196,0.14)]'
@@ -205,11 +227,20 @@ export default function WhatsAppOpsClient() {
                 />
               </div>
               <div>
-                <label className="label">Game label</label>
+                <label className="label">
+                  {mode === 'playmechi_registration' || mode === 'playmechi_reminder'
+                    ? 'PlayMechi game key'
+                    : 'Game label'}
+                </label>
                 <input
                   value={game}
                   onChange={(event) => setGame(event.target.value)}
                   className="input"
+                  placeholder={
+                    mode === 'playmechi_registration' || mode === 'playmechi_reminder'
+                      ? 'codm'
+                      : 'eFootball 2026'
+                  }
                 />
               </div>
               <div>

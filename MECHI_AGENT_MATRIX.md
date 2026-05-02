@@ -55,6 +55,7 @@ Rule: give each role the lowest tier that still lets it do its job.
   - `OPENCLAW_WEBHOOK_URL`
   - `OPENCLAW_API_KEY`
   - `TELEGRAM_BOT_TOKEN` for native Telegram control
+  - native OpenClaw WhatsApp access only for `+254733638841` operator/admin groups when enabled
   - host-level access such as SSH key and AWS credentials when infra work is expected
 - Guardrails:
   - addresses the owner as `Boss` or `the Boss`
@@ -84,7 +85,7 @@ Rule: give each role the lowest tier that still lets it do its job.
   - `INSTAGRAM_APP_SECRET`
   - `INSTAGRAM_VERIFY_TOKEN`
   - `INSTAGRAM_WEBHOOK_VERIFY_TOKEN`
-  - `WHATSAPP_TOKEN` if WhatsApp support is enabled
+  - `WHATSAPP_TOKEN` for Meta Cloud API player/customer WhatsApp support when enabled
   - `WHATSAPP_PHONE_NUMBER_ID`
   - `WHATSAPP_WEBHOOK_VERIFY_TOKEN`
   - `NEXT_PUBLIC_SUPABASE_URL`
@@ -205,12 +206,13 @@ Rule: give each role the lowest tier that still lets it do its job.
   - `TELEGRAM_BOT_TOKEN`
   - `TELEGRAM_CHAT_ID`
   - `INSTAGRAM_PAGE_ACCESS_TOKEN`
-  - `WHATSAPP_TOKEN` if WhatsApp community messaging is used
+  - `WHATSAPP_TOKEN` for Meta Cloud API WhatsApp only if community messaging is explicitly approved
 - Guardrails:
   - no DB write access by default
   - no repo write
   - no deploy or payment credentials
   - no Supabase service-role key by default; live PlayMechi counts, payout, eligibility, or disqualification questions route to `control`
+  - no native OpenClaw WhatsApp access to `+254733638841`; that number is operator/admin only
 
 ### `repo-engineering`
 

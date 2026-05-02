@@ -1,4 +1,16 @@
 import { GAMES, getSelectableGameKeys } from '@/lib/config';
+import {
+  ONLINE_TOURNAMENT_CASH_PRIZE_POOL,
+  ONLINE_TOURNAMENT_GAME_LIST_LABEL,
+  ONLINE_TOURNAMENT_GAMES,
+  ONLINE_TOURNAMENT_PUBLIC_PATH,
+  ONLINE_TOURNAMENT_REGISTRATION_PATH,
+  ONLINE_TOURNAMENT_STREAM_CHANNEL,
+  ONLINE_TOURNAMENT_STREAMER,
+  ONLINE_TOURNAMENT_TITLE,
+  ONLINE_TOURNAMENT_TOTAL_SLOTS,
+  ONLINE_TOURNAMENT_YOUTUBE_URL,
+} from '@/lib/online-tournament';
 import { PLANS } from '@/lib/plans';
 import { APP_URL } from '@/lib/urls';
 import type {
@@ -46,6 +58,7 @@ export const SUPPORT_ALLOWED_TOPICS = [
   'direct_challenges',
   'tournaments',
   'tournament_discovery',
+  'playmechi_online_tournament',
   'lobby_discovery',
   'notifications',
   'profile_setup',
@@ -114,6 +127,18 @@ const TAG_PATTERNS: Array<{ tag: string; patterns: RegExp[] }> = [
   { tag: 'games', patterns: [/\bgame\b/i, /\bsupported\b/i, /\befootball\b/i, /\bfc ?26\b/i] },
   { tag: 'queue', patterns: [/\bqueue\b/i, /\bfind match\b/i, /\branked\b/i, /\bmatchmaking\b/i] },
   { tag: 'challenges', patterns: [/\bchallenge\b/i, /\b1.?on.?1\b/i, /\bdirect\b/i] },
+  {
+    tag: 'playmechi',
+    patterns: [
+      /\bplaymechi\b/i,
+      /\bonline gaming tournament\b/i,
+      /\bpubg ?m\b/i,
+      /\bpubg mobile\b/i,
+      /\bcodm\b/i,
+      /\bcall of duty:? mobile\b/i,
+      /\befootball\b/i,
+    ],
+  },
   { tag: 'tournaments', patterns: [/\btournament\b/i, /\bbracket\b/i, /\bentry fee\b/i] },
   { tag: 'profile', patterns: [/\bprofile\b/i, /\bavatar\b/i, /\bcover\b/i] },
   { tag: 'notifications', patterns: [/\bnotification\b/i, /\balert\b/i, /\bwhatsapp\b/i] },
@@ -150,6 +175,22 @@ function summarizeGames(mode: '1v1' | 'lobby') {
     .filter((gameKey) => GAMES[gameKey].mode === mode)
     .map((gameKey) => `${GAMES[gameKey].label} (${GAMES[gameKey].platforms.join(', ')})`)
     .join(', ');
+}
+
+function summarizePlayMechiTournament() {
+  const schedule = ONLINE_TOURNAMENT_GAMES.map(
+    (game) =>
+      `${game.label}: ${game.dateLabel} at ${game.timeLabel}, ${game.slots} slots, ${game.format}, ${game.matchCount}, prizes ${game.firstPrize}, ${game.secondPrize}, ${game.thirdPrize}.`
+  ).join('\n');
+
+  return [
+    `${ONLINE_TOURNAMENT_TITLE}: free online tournament for ${ONLINE_TOURNAMENT_GAME_LIST_LABEL}.`,
+    `Registration: ${APP_URL}${ONLINE_TOURNAMENT_REGISTRATION_PATH}. Public page: ${APP_URL}${ONLINE_TOURNAMENT_PUBLIC_PATH}.`,
+    `Total slots: ${ONLINE_TOURNAMENT_TOTAL_SLOTS}. Cash prize pool: KSh ${ONLINE_TOURNAMENT_CASH_PRIZE_POOL.toLocaleString('en-KE')}.`,
+    `Stream: ${ONLINE_TOURNAMENT_STREAM_CHANNEL} on YouTube (${ONLINE_TOURNAMENT_YOUTUBE_URL}), streamer ${ONLINE_TOURNAMENT_STREAMER}.`,
+    `Schedule:\n${schedule}`,
+    'Reward eligibility: players must follow PlayMechi on Instagram and subscribe to PlayMechi on YouTube before match day. Do not confirm eligibility, payouts, winners, disqualifications, or disputes from support chat.',
+  ].join('\n');
 }
 
 type SupportContextChannel = 'whatsapp' | 'instagram';
@@ -207,6 +248,7 @@ export function buildMechiSupportContext(
     '- Pro and Elite organizers can run auto prize pools from paid entries or set a specified prize pool up front.',
     '- FC26 and eFootball score reporting use scorelines. Matching score reports can confirm either a win or a draw. Mismatched reports go to dispute review.',
     '- WhatsApp alerts are optional backup notifications when a player has them enabled in profile.',
+    `PlayMechi tournament:\n${summarizePlayMechiTournament()}`,
     channelCapabilityLine,
     `Supported 1v1 games: ${oneOnOneGames}.`,
     `Supported lobby games: ${lobbyGames}.`,

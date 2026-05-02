@@ -1,14 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import {
-  AUTH_ACTION_TTLS,
-  buildResetPasswordUrl,
-  createAuthActionToken,
-  getAuthActionSafeNextPath,
+  getProfileForUsernameEmail,
   normalizeEmailAddress,
+  normalizeAuthUsername,
 } from '@/lib/auth-actions';
-import { sendPasswordResetEmail } from '@/lib/email';
 import { checkPersistentRateLimit, getClientIp, rateLimitResponse } from '@/lib/rateLimit';
-import { createServiceClient } from '@/lib/supabase';
 
 export async function POST(request: NextRequest) {
   try {
@@ -23,62 +19,48 @@ export async function POST(request: NextRequest) {
 
     const body = (await request.json().catch(() => ({}))) as Record<string, unknown>;
     const submittedEmail = typeof body.email === 'string' ? body.email : null;
-    const submittedRedirect = typeof body.redirect_to === 'string' ? body.redirect_to : '/dashboard';
+    const submittedUsername = typeof body.username === 'string' ? body.username : null;
     const email = normalizeEmailAddress(submittedEmail);
-    const nextPath = getAuthActionSafeNextPath(submittedRedirect);
+    const username = normalizeAuthUsername(submittedUsername);
 
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       return NextResponse.json({ error: 'Enter a valid email address' }, { status: 400 });
     }
 
-    const genericResponse = NextResponse.json({
-      success: true,
-      message: 'If that email exists, a reset link is on the way.',
-    });
+    if (!username) {
+      return NextResponse.json({ error: 'Enter your username' }, { status: 400 });
+    }
 
     const emailRateLimit = await checkPersistentRateLimit(
-      `password-forgot-email:${email}`,
+      `password-forgot-identity:${username}:${email}`,
       3,
       60 * 60 * 1000
     );
     if (!emailRateLimit.allowed) {
-      return genericResponse;
+      return rateLimitResponse(emailRateLimit.retryAfterSeconds);
     }
 
-    const supabase = createServiceClient();
-    const { data } = await supabase
-      .from('profiles')
-      .select('id, username, email, is_banned')
-      .ilike('email', email)
-      .limit(3);
-
-    const profile =
-      ((data ?? []) as Array<{
-        id: string;
-        username?: string | null;
-        email?: string | null;
-        is_banned?: boolean | null;
-      }>).find((candidate) => normalizeEmailAddress(candidate.email) === email) ?? null;
-
-    const profileEmail = profile?.email;
-    const profileUsername = profile?.username ?? null;
-    if (profileEmail && !profile.is_banned) {
-      const token = await createAuthActionToken({
-        userId: profile.id,
-        purpose: 'password_reset',
-        email: profileEmail,
-        nextPath,
-      });
-
-      await sendPasswordResetEmail({
-        to: profileEmail,
-        username: profileUsername,
-        resetLink: buildResetPasswordUrl(token.token),
-        expiresInMinutes: Math.round(AUTH_ACTION_TTLS.password_reset / 60000),
-      });
+    const profile = await getProfileForUsernameEmail({ username, email });
+    if (!profile) {
+      return NextResponse.json(
+        { error: 'No account matched that username and email.' },
+        { status: 401 }
+      );
     }
 
-    return genericResponse;
+    if (profile.is_banned) {
+      return NextResponse.json(
+        { error: `Account suspended: ${profile.ban_reason ?? 'Contact support.'}` },
+        { status: 403 }
+      );
+    }
+
+    return NextResponse.json({
+      success: true,
+      username: profile.username,
+      email: profile.email,
+      message: 'Account matched. Choose a new password.',
+    });
   } catch (error) {
     console.error('[Password Forgot] Error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });

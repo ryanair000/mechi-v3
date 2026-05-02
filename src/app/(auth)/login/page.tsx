@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { use, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
-import { Eye, EyeOff, Loader2, Mail } from 'lucide-react';
+import { Eye, EyeOff, Loader2, UserCheck } from 'lucide-react';
 import { ActionFeedback, type ActionFeedbackState } from '@/components/ActionFeedback';
 import { useAuth } from '@/components/AuthProvider';
 import { FullScreenSignup } from '@/components/ui/full-screen-signup';
@@ -36,7 +36,7 @@ const LOGIN_METHODS: Array<{
     key: 'email',
     label: 'Email',
     placeholder: 'you@mail.com',
-    helper: 'Use your email with a password or request a magic link.',
+    helper: 'Use your email with a password or match it with your username.',
   },
 ];
 
@@ -70,6 +70,7 @@ export default function LoginPage({ searchParams }: { searchParams: LoginSearchP
     [loginMethod]
   );
   const [identifier, setIdentifier] = useState('');
+  const [magicUsername, setMagicUsername] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -151,12 +152,23 @@ export default function LoginPage({ searchParams }: { searchParams: LoginSearchP
 
   const handleMagicLinkRequest = async () => {
     const email = identifier.trim();
+    const username = magicUsername.trim();
+    if (!username) {
+      toast.error('Enter your username first');
+      setFeedback({
+        tone: 'error',
+        title: 'Your username is required.',
+        detail: 'Enter the username and email on the same Mechi profile.',
+      });
+      return;
+    }
+
     if (!isValidEmail(email)) {
       toast.error('Enter a valid email address first');
       setFeedback({
         tone: 'error',
-        title: 'A valid email is required for magic link sign-in.',
-        detail: 'Switch to Email, enter your address, then request the link again.',
+        title: 'A valid email is required.',
+        detail: 'Switch to Email and enter the address on your Mechi profile.',
       });
       return;
     }
@@ -164,38 +176,42 @@ export default function LoginPage({ searchParams }: { searchParams: LoginSearchP
     setSendingMagicLink(true);
     setFeedback({
       tone: 'loading',
-      title: 'Sending your sign-in link...',
-      detail: 'If the account exists, the link will land in your inbox shortly.',
+      title: 'Checking those details...',
+      detail: 'Matching the username and email on your Mechi profile.',
     });
 
     try {
       const res = await fetch('/api/auth/magic-link/request', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, redirect_to: nextPath }),
+        body: JSON.stringify({ username, email, redirect_to: nextPath }),
       });
       const data = await res.json();
 
       if (!res.ok) {
         setFeedback({
           tone: 'error',
-          title: 'Could not send the sign-in link.',
-          detail: data.error ?? 'Please try again in a moment.',
+          title: 'Those details did not match.',
+          detail: data.error ?? 'Check the username and email, then try again.',
         });
-        toast.error(data.error ?? 'Could not send sign-in link');
+        toast.error(data.error ?? 'Those account details did not match.');
         return;
       }
 
+      login(data.token, data.user);
       setFeedback({
         tone: 'success',
-        title: 'Check your email.',
-        detail: data.message ?? 'If the account exists, the sign-in link is on the way.',
+        title: `Welcome back, ${data.user.username}.`,
+        detail: 'Those details matched. Taking you into Mechi now.',
       });
-      toast.success(data.message ?? 'If that email exists, a sign-in link is on the way.');
+      toast.success(data.message ?? 'Signed in successfully.');
+      window.location.assign(
+        typeof data.redirect_to === 'string' ? data.redirect_to : nextPath
+      );
     } catch {
       setFeedback({
         tone: 'error',
-        title: 'We could not send the sign-in link.',
+        title: 'We could not check those details.',
         detail: 'Please check your connection and try again.',
       });
       toast.error('Network error.');
@@ -304,24 +320,41 @@ export default function LoginPage({ searchParams }: { searchParams: LoginSearchP
           </button>
 
           {loginMethod === 'email' ? (
-            <button
-              type="button"
-              onClick={() => void handleMagicLinkRequest()}
-              disabled={sendingMagicLink}
-              className="btn-ghost w-full"
-            >
-              {sendingMagicLink ? (
-                <>
-                  <Loader2 size={14} className="animate-spin" />
-                  Sending link...
-                </>
-              ) : (
-                <>
-                  <Mail size={14} />
-                  Email me a magic link
-                </>
-              )}
-            </button>
+            <div className="rounded-xl border border-[var(--border-color)] bg-[var(--surface-elevated)] p-3">
+              <label className="label" htmlFor="login-magic-username">
+                Username
+              </label>
+              <input
+                id="login-magic-username"
+                type="text"
+                value={magicUsername}
+                onChange={(event) => setMagicUsername(event.target.value)}
+                onBlur={() => setMagicUsername((current) => current.trim())}
+                placeholder="Your Mechi username"
+                className="input"
+                autoComplete="username"
+                autoCapitalize="none"
+                spellCheck={false}
+              />
+              <button
+                type="button"
+                onClick={() => void handleMagicLinkRequest()}
+                disabled={sendingMagicLink}
+                className="btn-ghost mt-3 w-full"
+              >
+                {sendingMagicLink ? (
+                  <>
+                    <Loader2 size={14} className="animate-spin" />
+                    Signing in...
+                  </>
+                ) : (
+                  <>
+                    <UserCheck size={14} />
+                    Sign in with username and email
+                  </>
+                )}
+              </button>
+            </div>
           ) : null}
         </form>
 

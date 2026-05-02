@@ -4,7 +4,6 @@ import {
   createApiContextAs,
   createUniqueAccount,
   expectNoConsoleErrors,
-  extractFirstLinkFromHtml,
   trackConsoleErrors,
 } from './support';
 
@@ -54,38 +53,16 @@ test.describe('Public and Auth Flows', () => {
     await expect(page).toHaveURL(/\/dashboard/);
   });
 
-  test('email magic link and password reset emails complete the auth flows @core', async ({
+  test('username and email recovery completes magic sign-in and password reset @core', async ({
     page,
     playwright,
     appUrl,
-    providerTranscripts,
   }) => {
     await page.goto('/login');
     await page.getByRole('button', { name: /email/i }).click();
     await page.getByLabel('Email').fill(SEEDED_PERSONAS.playerElite.email);
-    await page.getByRole('button', { name: /email me a magic link/i }).click();
-    await expect(page.locator('body')).toContainText(/check your email/i);
-
-    const magicLinkTranscript = await providerTranscripts.waitFor(
-      'email',
-      (entry) => {
-        const requestPayload = entry.request as { to?: string; subject?: string } | undefined;
-        return (
-          entry.operation === 'send' &&
-          requestPayload?.to === SEEDED_PERSONAS.playerElite.email &&
-          requestPayload.subject === 'Your Mechi sign-in link'
-        );
-      }
-    );
-    expect(magicLinkTranscript).toBeTruthy();
-    const magicLinkPayload = magicLinkTranscript.request as { html?: string } | undefined;
-    const magicLink = extractFirstLinkFromHtml(
-      magicLinkPayload?.html ?? '',
-      /\/api\/auth\/magic-link\/consume\?token=/
-    );
-    expect(magicLink).toBeTruthy();
-
-    await page.goto(magicLink!);
+    await page.getByLabel('Username').fill(SEEDED_PERSONAS.playerElite.username);
+    await page.getByRole('button', { name: /sign in with username and email/i }).click();
     await expect(page).toHaveURL(/\/dashboard/);
 
     await page.evaluate(() => localStorage.clear());
@@ -104,33 +81,10 @@ test.describe('Public and Auth Flows', () => {
     expect(registerResponse.ok()).toBeTruthy();
 
     await page.goto('/forgot-password');
+    await page.getByLabel('Username').fill(throwaway.username);
     await page.getByLabel('Email').fill(throwaway.email);
-    await page.getByRole('button', { name: /send reset link/i }).click();
-    await expect(page.locator('body')).toContainText(/check your email/i);
-
-    const passwordResetTranscript = await providerTranscripts.waitFor(
-      'email',
-      (entry) => {
-        const requestPayload = entry.request as { to?: string; subject?: string } | undefined;
-        return (
-          entry.operation === 'send' &&
-          requestPayload?.to === throwaway.email &&
-          requestPayload.subject === 'Reset your Mechi password'
-        );
-      }
-    );
-    expect(passwordResetTranscript).toBeTruthy();
-    const passwordResetPayload = passwordResetTranscript.request as { html?: string } | undefined;
-    const resetLink = extractFirstLinkFromHtml(
-      passwordResetPayload?.html ?? '',
-      /\/reset-password\?token=/
-    );
-    expect(resetLink).toBeTruthy();
-
-    const resetToken = new URL(resetLink!).searchParams.get('token');
-    expect(resetToken).toBeTruthy();
-
-    await page.goto(resetLink!);
+    await page.getByRole('button', { name: /continue/i }).click();
+    await expect(page.locator('body')).toContainText(/account matched/i);
     await page.getByLabel('New password').fill('MechiReset!456');
     await page.getByLabel('Confirm password').fill('MechiReset!456');
     await page.getByRole('button', { name: /reset password/i }).click();
@@ -154,14 +108,6 @@ test.describe('Public and Auth Flows', () => {
       },
     });
     expect(newPasswordResponse.ok()).toBeTruthy();
-
-    const reusedResetResponse = await anonApi.post('/api/auth/password/reset', {
-      data: {
-        token: resetToken,
-        password: 'MechiReset!789',
-      },
-    });
-    expect(reusedResetResponse.status()).toBe(410);
 
     await anonApi.dispose();
   });

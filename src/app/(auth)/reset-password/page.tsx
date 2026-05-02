@@ -34,11 +34,11 @@ export default async function ResetPasswordPage({
       subtitle=""
       sideEyebrow="mechi.club"
       sideTitle="Reset your password."
-      sideDescription="Use the secure link sent to your email to set a fresh password and jump back in."
+      sideDescription="Match your username and email, set a fresh password, and jump back in."
       sidePoints={[
-        'One-time email reset link',
+        'Username and email match',
+        'No email link needed',
         'Set a new password securely',
-        'Immediate sign-in after reset',
       ]}
       hideMainHeader
       variant="marketing"

@@ -24,12 +24,12 @@ export default async function ForgotPasswordPage({
   return (
     <FullScreenSignup
       title="Reset your password."
-      subtitle="Enter your account email and we will send a one-time reset link."
+      subtitle="Enter your username and email, then choose a new password."
       sideTitle="Get back in safely."
-      sideDescription="Password changes now use secure email links so account recovery cannot be triggered by profile details alone."
+      sideDescription="Match the username and email on your Mechi profile, then reset your password right here."
       sidePoints={[
-        'One-time email reset link',
-        'Set a new password securely',
+        'Username and email match',
+        'No email link needed',
         'Immediate sign-in after reset',
       ]}
     >

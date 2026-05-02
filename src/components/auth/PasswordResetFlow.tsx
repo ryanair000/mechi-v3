@@ -1,10 +1,9 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
-import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { useState } from 'react';
 import toast from 'react-hot-toast';
-import { Eye, EyeOff, KeyRound, Loader2, Mail } from 'lucide-react';
+import { Eye, EyeOff, KeyRound, Loader2, UserCheck } from 'lucide-react';
 import { ActionFeedback, type ActionFeedbackState } from '@/components/ActionFeedback';
 import { useAuth } from '@/components/AuthProvider';
 
@@ -20,52 +19,57 @@ function isValidEmail(value: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
 }
 
+interface VerifiedIdentity {
+  username: string;
+  email: string;
+}
+
 export function PasswordResetFlow({ loginHref, nextPath, token }: PasswordResetFlowProps) {
   const { login } = useAuth();
-  const pathname = usePathname();
-  const router = useRouter();
-  const searchParams = useSearchParams();
   const [resetToken] = useState(token ?? '');
+  const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [requestingLink, setRequestingLink] = useState(false);
+  const [verifyingAccount, setVerifyingAccount] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [feedback, setFeedback] = useState<ActionFeedbackState | null>(null);
+  const [verifiedIdentity, setVerifiedIdentity] = useState<VerifiedIdentity | null>(null);
   const hasToken = Boolean(resetToken);
+  const canSetPassword = hasToken || Boolean(verifiedIdentity);
 
-  useEffect(() => {
-    if (!resetToken || !searchParams.has('token')) {
-      return;
-    }
-
-    const nextParams = new URLSearchParams(searchParams.toString());
-    nextParams.delete('token');
-    const query = nextParams.toString();
-    router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false });
-  }, [pathname, resetToken, router, searchParams]);
-
-  const handleRequestResetLink = async (event: React.FormEvent) => {
+  const handleVerifyIdentity = async (event: React.FormEvent) => {
     event.preventDefault();
 
     const submittedEmail = email.trim().toLowerCase();
+    const submittedUsername = username.trim();
+    if (!submittedUsername) {
+      setFeedback({
+        tone: 'error',
+        title: 'Your username is required.',
+        detail: 'Enter the username on the Mechi account you want to recover.',
+      });
+      toast.error('Enter your username.');
+      return;
+    }
+
     if (!isValidEmail(submittedEmail)) {
       setFeedback({
         tone: 'error',
         title: 'A valid email is required.',
-        detail: 'Use the email connected to the profile you want to recover.',
+        detail: 'Use the email connected to the same Mechi profile.',
       });
       toast.error('Enter a valid email address.');
       return;
     }
 
-    setRequestingLink(true);
+    setVerifyingAccount(true);
     setFeedback({
       tone: 'loading',
-      title: 'Sending reset link...',
-      detail: 'If that email is on Mechi, a secure reset link will be sent.',
+      title: 'Checking those details...',
+      detail: 'Matching the username and email on your Mechi profile.',
     });
 
     try {
@@ -73,6 +77,7 @@ export function PasswordResetFlow({ loginHref, nextPath, token }: PasswordResetF
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          username: submittedUsername,
           email: submittedEmail,
           redirect_to: nextPath,
         }),
@@ -82,41 +87,47 @@ export function PasswordResetFlow({ loginHref, nextPath, token }: PasswordResetF
       if (!res.ok) {
         setFeedback({
           tone: 'error',
-          title: 'We could not send that reset link.',
-          detail: data.error ?? 'Please check the email and try again.',
+          title: 'Those details did not match.',
+          detail: data.error ?? 'Check the username and email, then try again.',
         });
-        toast.error(data.error ?? 'Could not send reset link.');
+        toast.error(data.error ?? 'Those account details did not match.');
         return;
       }
 
+      const matchedUsername =
+        typeof data.username === 'string' ? data.username : submittedUsername;
+      const matchedEmail = typeof data.email === 'string' ? data.email : submittedEmail;
+      setVerifiedIdentity({ username: matchedUsername, email: matchedEmail });
+      setPassword('');
+      setConfirmPassword('');
       setFeedback({
         tone: 'success',
-        title: 'Check your email.',
-        detail: data.message ?? 'If that email exists, a reset link is on the way.',
+        title: 'Account matched.',
+        detail: data.message ?? 'Choose a new password now.',
       });
-      toast.success('If that email exists, a reset link is on the way.');
+      toast.success('Account matched. Choose a new password.');
     } catch {
       setFeedback({
         tone: 'error',
-        title: 'We could not send that reset link.',
+        title: 'We could not check those details.',
         detail: 'Please check your connection and try again.',
       });
       toast.error('Network error.');
     } finally {
-      setRequestingLink(false);
+      setVerifyingAccount(false);
     }
   };
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
 
-    if (!resetToken) {
+    if (!canSetPassword) {
       setFeedback({
         tone: 'error',
-        title: 'Reset link required.',
-        detail: 'Request a fresh password reset email before setting a new password.',
+        title: 'Match the account first.',
+        detail: 'Enter your username and email before choosing a new password.',
       });
-      toast.error('Request a reset link first.');
+      toast.error('Match the account first.');
       return;
     }
 
@@ -152,7 +163,12 @@ export function PasswordResetFlow({ loginHref, nextPath, token }: PasswordResetF
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          token: resetToken,
+          ...(hasToken
+            ? { token: resetToken }
+            : {
+                username: verifiedIdentity?.username,
+                email: verifiedIdentity?.email,
+              }),
           password,
           redirect_to: nextPath,
         }),
@@ -163,7 +179,7 @@ export function PasswordResetFlow({ loginHref, nextPath, token }: PasswordResetF
         setFeedback({
           tone: 'error',
           title: 'We could not reset your password.',
-          detail: data.error ?? 'Please request a fresh reset link and try again.',
+          detail: data.error ?? 'Check your account details and try again.',
         });
         toast.error(data.error ?? 'Could not reset your password.');
         return;
@@ -195,17 +211,35 @@ export function PasswordResetFlow({ loginHref, nextPath, token }: PasswordResetF
     <div className="card p-4 sm:p-6">
       <div className="mb-5 rounded-xl border border-[rgba(50,224,196,0.2)] bg-[rgba(50,224,196,0.08)] px-4 py-3">
         <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--accent-secondary-text)]">
-          {hasToken ? 'Secure reset' : 'Email recovery'}
+          {canSetPassword ? 'New password' : 'Account match'}
         </p>
         <p className="mt-1 text-sm text-[var(--text-primary)]">
-          {hasToken
-            ? 'Set a new password from the secure link sent to your email.'
-            : 'Enter your account email and we will send a one-time reset link.'}
+          {canSetPassword
+            ? 'Set a new password and Mechi will sign you in right away.'
+            : 'Enter your username and email. If they match, you can reset here.'}
         </p>
       </div>
 
-      {!hasToken ? (
-        <form onSubmit={handleRequestResetLink} className="space-y-4">
+      {!canSetPassword ? (
+        <form onSubmit={handleVerifyIdentity} className="space-y-4">
+          <div>
+            <label htmlFor="password-reset-username" className="label">
+              Username
+            </label>
+            <input
+              id="password-reset-username"
+              type="text"
+              value={username}
+              onChange={(event) => setUsername(event.target.value)}
+              onBlur={() => setUsername((current) => current.trim())}
+              placeholder="Your Mechi username"
+              className="input"
+              autoComplete="username"
+              autoCapitalize="none"
+              spellCheck={false}
+            />
+          </div>
+
           <div>
             <label htmlFor="password-reset-email" className="label">
               Email
@@ -226,22 +260,45 @@ export function PasswordResetFlow({ loginHref, nextPath, token }: PasswordResetF
 
           {feedback ? <ActionFeedback {...feedback} /> : null}
 
-          <button type="submit" disabled={requestingLink} className="btn-primary mt-2 w-full">
-            {requestingLink ? (
+          <button type="submit" disabled={verifyingAccount} className="btn-primary mt-2 w-full">
+            {verifyingAccount ? (
               <>
                 <Loader2 size={14} className="animate-spin" />
-                Sending link...
+                Checking...
               </>
             ) : (
               <>
-                <Mail size={14} />
-                Send reset link
+                <UserCheck size={14} />
+                Continue
               </>
             )}
           </button>
         </form>
       ) : (
         <form onSubmit={handleSubmit} className="space-y-4">
+          {verifiedIdentity ? (
+            <div className="rounded-xl border border-[var(--border-color)] bg-[var(--surface-elevated)] px-4 py-3 text-sm text-[var(--text-secondary)]">
+              <p>
+                Resetting{' '}
+                <span className="font-semibold text-[var(--text-primary)]">
+                  {verifiedIdentity.username}
+                </span>
+              </p>
+              <button
+                type="button"
+                onClick={() => {
+                  setVerifiedIdentity(null);
+                  setPassword('');
+                  setConfirmPassword('');
+                  setFeedback(null);
+                }}
+                className="brand-link-coral mt-2 text-xs font-semibold uppercase tracking-[0.12em]"
+              >
+                Change details
+              </button>
+            </div>
+          ) : null}
+
           <div>
             <label htmlFor="password-reset-new-password" className="label">
               New password

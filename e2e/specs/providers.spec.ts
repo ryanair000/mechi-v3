@@ -1,5 +1,5 @@
-import { ONE_PIXEL_PNG, createApiContextAs } from './support';
-import { SEEDED_PERSONAS } from '../helpers/personas';
+import { ONE_PIXEL_PNG, createApiContextAs, createUniqueAccount } from './support';
+import { DEFAULT_PASSWORD, SEEDED_PERSONAS } from '../helpers/personas';
 import { test, expect } from '../fixtures';
 
 test.describe('Provider Transcripts', () => {
@@ -11,20 +11,23 @@ test.describe('Provider Transcripts', () => {
     const anonApi = await createApiContextAs(playwright, appUrl(), 'anon');
     const playerApi = await createApiContextAs(playwright, appUrl(), 'playerPro');
 
-    const magicLinkResponse = await anonApi.post('/api/auth/magic-link/request', {
+    const emailAccount = createUniqueAccount('provider-email');
+    const registerResponse = await anonApi.post('/api/auth/register', {
       data: {
-        email: SEEDED_PERSONAS.playerPro.email,
-        redirect_to: '/dashboard',
+        username: emailAccount.username,
+        phone: emailAccount.phone,
+        email: emailAccount.email,
+        password: DEFAULT_PASSWORD,
       },
     });
-    expect(magicLinkResponse.ok()).toBeTruthy();
+    expect(registerResponse.ok()).toBeTruthy();
 
     const emailTranscript = await providerTranscripts.waitFor('email', (entry) => {
       const requestPayload = entry.request as { to?: string; subject?: string } | undefined;
       return (
         entry.operation === 'send' &&
-        requestPayload?.to === SEEDED_PERSONAS.playerPro.email &&
-        requestPayload.subject === 'Your Mechi sign-in link'
+        requestPayload?.to === emailAccount.email &&
+        requestPayload.subject === `Registration confirmed: welcome to Mechi, ${emailAccount.username}`
       );
     });
     expect(emailTranscript.mode).toMatch(/mock|sandbox/);

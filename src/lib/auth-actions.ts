@@ -17,12 +17,24 @@ interface AuthActionTokenRow {
   created_at: string;
 }
 
+export interface AuthIdentityProfile extends Record<string, unknown> {
+  id: string;
+  username?: string | null;
+  email?: string | null;
+  is_banned?: boolean | null;
+  ban_reason?: string | null;
+}
+
 export const AUTH_ACTION_TTLS: Record<AuthActionPurpose, number> = {
   magic_link_signin: 15 * 60 * 1000,
   password_reset: 30 * 60 * 1000,
 };
 
 export function normalizeEmailAddress(value: string | null | undefined) {
+  return String(value ?? '').trim().toLowerCase();
+}
+
+export function normalizeAuthUsername(value: string | null | undefined) {
   return String(value ?? '').trim().toLowerCase();
 }
 
@@ -110,6 +122,38 @@ export async function createAuthActionToken(params: {
     token,
     expiresAt,
   };
+}
+
+export async function getProfileForUsernameEmail(params: {
+  username: string;
+  email: string;
+}) {
+  const normalizedEmail = normalizeEmailAddress(params.email);
+  const normalizedUsername = normalizeAuthUsername(params.username);
+
+  if (!normalizedEmail || !normalizedUsername) {
+    return null;
+  }
+
+  const supabase = createServiceClient();
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('*')
+    .ilike('email', normalizedEmail)
+    .limit(5);
+
+  if (error) {
+    throw error;
+  }
+
+  const profiles = ((data ?? []) as AuthIdentityProfile[]).filter((profile) => {
+    return (
+      normalizeEmailAddress(profile.email) === normalizedEmail &&
+      normalizeAuthUsername(profile.username) === normalizedUsername
+    );
+  });
+
+  return profiles.length === 1 ? profiles[0] : null;
 }
 
 export async function getAuthActionToken(token: string) {

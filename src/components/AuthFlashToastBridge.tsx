@@ -7,15 +7,15 @@ import toast from 'react-hot-toast';
 const AUTH_NOTICE_COPY: Record<string, { tone: 'success' | 'error'; message: string }> = {
   magic_link_success: {
     tone: 'success',
-    message: 'Signed in with your email link.',
+    message: 'Signed in with your username and email.',
   },
   magic_link_sent: {
     tone: 'success',
-    message: 'If that email exists, a sign-in link is on the way.',
+    message: 'Account matched. Signing you in now.',
   },
   reset_email_sent: {
     tone: 'success',
-    message: 'If that email exists, a reset link is on the way.',
+    message: 'Account matched. Choose a new password.',
   },
   password_reset_success: {
     tone: 'success',

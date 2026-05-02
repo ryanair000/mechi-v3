@@ -39,6 +39,7 @@ const localActionOrigins = Array.from(
 
 const distDir = process.env.MECHI_NEXT_DIST_DIR;
 const isProductionBuild = process.env.NODE_ENV === "production";
+const isBuildCommand = process.env.npm_lifecycle_event === "build";
 const isDev = process.env.NODE_ENV !== "production";
 
 const cspHeader = [
@@ -81,7 +82,7 @@ const nextConfig: NextConfig = {
   poweredByHeader: false,
   allowedDevOrigins: localDevOrigins,
   typescript: {
-    tsconfigPath: isProductionBuild ? "tsconfig.build.json" : "tsconfig.json",
+    tsconfigPath: isProductionBuild || isBuildCommand ? "tsconfig.build.json" : "tsconfig.json",
   },
   images: {
     remotePatterns: [

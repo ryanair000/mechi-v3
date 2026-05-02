@@ -76,6 +76,7 @@ export async function createAuthActionToken(params: {
 }) {
   const token = createAuthActionTokenValue();
   const tokenHash = hashAuthActionToken(token);
+  const normalizedEmail = normalizeEmailAddress(params.email);
   const expiresAt = new Date(Date.now() + AUTH_ACTION_TTLS[params.purpose]);
   const supabase = createServiceClient();
 
@@ -83,13 +84,26 @@ export async function createAuthActionToken(params: {
     user_id: params.userId,
     purpose: params.purpose,
     token_hash: tokenHash,
-    email: normalizeEmailAddress(params.email),
+    email: normalizedEmail,
     next_path: params.nextPath ? getAuthActionSafeNextPath(params.nextPath) : null,
     expires_at: expiresAt.toISOString(),
   });
 
   if (error) {
     throw error;
+  }
+
+  const { error: revokeError } = await supabase
+    .from('auth_action_tokens')
+    .update({ consumed_at: new Date().toISOString() })
+    .eq('user_id', params.userId)
+    .eq('purpose', params.purpose)
+    .eq('email', normalizedEmail)
+    .is('consumed_at', null)
+    .neq('token_hash', tokenHash);
+
+  if (revokeError) {
+    console.warn('[Auth Action] Could not revoke previous auth action tokens:', revokeError.message);
   }
 
   return {

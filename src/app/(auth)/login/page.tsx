@@ -75,6 +75,7 @@ export default function LoginPage({ searchParams }: { searchParams: LoginSearchP
   const [submitting, setSubmitting] = useState(false);
   const [sendingMagicLink, setSendingMagicLink] = useState(false);
   const [feedback, setFeedback] = useState<ActionFeedbackState | null>(null);
+  const identifierInputId = `login-${loginMethod}-identifier`;
 
   useEffect(() => {
     if (!authLoading && user) {
@@ -240,8 +241,11 @@ export default function LoginPage({ searchParams }: { searchParams: LoginSearchP
           <input type="hidden" name="login_method" value={loginMethod} />
 
           <div>
-            <label className="label">{methodMeta.label}</label>
+            <label className="label" htmlFor={identifierInputId}>
+              {methodMeta.label}
+            </label>
             <input
+              id={identifierInputId}
               name="identifier"
               type={loginMethod === 'email' ? 'email' : loginMethod === 'phone' ? 'tel' : 'text'}
               value={identifier}
@@ -257,13 +261,16 @@ export default function LoginPage({ searchParams }: { searchParams: LoginSearchP
 
           <div>
             <div className="flex items-center justify-between gap-3">
-              <label className="label mb-0">Password</label>
+              <label className="label mb-0" htmlFor="login-password">
+                Password
+              </label>
               <Link href={forgotPasswordHref} className="brand-link-coral text-xs font-semibold uppercase tracking-[0.12em]">
                 Forgot password?
               </Link>
             </div>
             <div className="relative mt-2">
               <input
+                id="login-password"
                 name="password"
                 type={showPassword ? 'text' : 'password'}
                 value={password}

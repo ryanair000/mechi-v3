@@ -294,7 +294,9 @@ export async function sendMagicLinkEmail(params: {
   magicLink: string;
   expiresInMinutes: number;
 }): Promise<void> {
-  const recipientName = params.username?.trim() || 'there';
+  const recipientName = escapeHtml(params.username?.trim() || 'there');
+  const requestedEmail = escapeHtml(params.to);
+  const magicLink = escapeUrl(params.magicLink);
   const content = `
     <h2>Sign in to Mechi</h2>
     <p>Hey ${recipientName}, use this secure link to open your account without typing your password.</p>
@@ -305,11 +307,11 @@ export async function sendMagicLinkEmail(params: {
       </div>
       <div class="info-row">
         <span class="info-label">Requested for</span>
-        <span class="info-value">${params.to}</span>
+        <span class="info-value">${requestedEmail}</span>
       </div>
     </div>
     <p>If you did not request this, you can ignore the email. Your password stays unchanged.</p>
-    <a href="${params.magicLink}" class="btn">Sign in to Mechi</a>
+    <a href="${magicLink}" class="btn">Sign in to Mechi</a>
   `;
 
   try {
@@ -330,7 +332,9 @@ export async function sendPasswordResetEmail(params: {
   resetLink: string;
   expiresInMinutes: number;
 }): Promise<void> {
-  const recipientName = params.username?.trim() || 'there';
+  const recipientName = escapeHtml(params.username?.trim() || 'there');
+  const requestedEmail = escapeHtml(params.to);
+  const resetLink = escapeUrl(params.resetLink);
   const content = `
     <h2>Reset your password</h2>
     <p>Hey ${recipientName}, use this secure link to set a new password for your Mechi account.</p>
@@ -341,11 +345,11 @@ export async function sendPasswordResetEmail(params: {
       </div>
       <div class="info-row">
         <span class="info-label">Requested for</span>
-        <span class="info-value">${params.to}</span>
+        <span class="info-value">${requestedEmail}</span>
       </div>
     </div>
     <p>If you did not request this, you can ignore the email and keep your current password.</p>
-    <a href="${params.resetLink}" class="btn">Reset password</a>
+    <a href="${resetLink}" class="btn">Reset password</a>
   `;
 
   try {

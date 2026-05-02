@@ -30,7 +30,7 @@ export default defineConfig({
     command: 'npm run start:e2e',
     url: environment.baseURL,
     reuseExistingServer: false,
-    timeout: 300_000,
+    timeout: 600_000,
     env: {
       ...process.env,
       PORT: String(environment.port),

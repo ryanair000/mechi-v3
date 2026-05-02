@@ -15,6 +15,7 @@ import {
 import { getLoginPath, getRegisterPath } from '@/lib/navigation';
 import {
   ONLINE_TOURNAMENT_GAMES,
+  ONLINE_TOURNAMENT_ARENA_PATH,
   ONLINE_TOURNAMENT_GAME_BY_KEY,
   ONLINE_TOURNAMENT_PUBLIC_PATH,
   ONLINE_TOURNAMENT_REGISTRATION_PATH,
@@ -131,6 +132,7 @@ export function OnlineTournamentRegistrationClient() {
   const returnPath = isGameKey(requestedGame) ? `${RETURN_PATH}?game=${requestedGame}` : RETURN_PATH;
   const createAccountHref = getRegisterPath({ next: returnPath });
   const signInHref = getLoginPath(returnPath);
+  const tournamentArenaHref = `${ONLINE_TOURNAMENT_ARENA_PATH}?game=${encodeURIComponent(selectedGame)}`;
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -248,7 +250,17 @@ export function OnlineTournamentRegistrationClient() {
     }
   };
 
+  const handlePrimaryAction = () => {
+    if (currentRegistration) {
+      router.push(tournamentArenaHref);
+      return;
+    }
+
+    void handleSubmit();
+  };
+
   const canSubmit = Boolean(user) && !selectedGameIsLocked && !summaryError && !submitting;
+  const canUsePrimaryAction = currentRegistration ? Boolean(user) && !submitting : canSubmit;
 
   return (
     <div className="page-base marketing-prototype-shell min-h-screen">
@@ -481,13 +493,13 @@ export function OnlineTournamentRegistrationClient() {
                       ? `${selectedGameConfig.label} is full.`
                       : `${selectedGameSummary?.spotsLeft ?? selectedGameConfig.slots} slots left for ${selectedGameConfig.shortLabel}.`}
                   </div>
-                  <Button type="button" size="lg" disabled={!canSubmit} onClick={() => void handleSubmit()}>
+                  <Button type="button" size="lg" disabled={!canUsePrimaryAction} onClick={handlePrimaryAction}>
                     {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trophy className="h-4 w-4" />}
-                    {!selectedGameRegistrationOpen
+                    {currentRegistration
+                      ? 'Confirm Registration'
+                      : !selectedGameRegistrationOpen
                       ? 'Registration closed'
-                      : currentRegistration
-                        ? 'Update registration'
-                        : 'Lock my slot'}
+                      : 'Lock my slot'}
                   </Button>
                 </div>
               </div>

@@ -8,7 +8,7 @@ export async function isUsernameTaken(value: string) {
   }
 
   const supabase = createServiceClient();
-  const { data, error } = await supabase.from('profiles').select('id').eq('username', username).limit(1);
+  const { data, error } = await supabase.from('profiles').select('id').ilike('username', username).limit(1);
 
   if (error) {
     throw error;

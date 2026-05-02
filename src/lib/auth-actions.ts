@@ -38,6 +38,31 @@ export function normalizeAuthUsername(value: string | null | undefined) {
   return String(value ?? '').trim().toLowerCase();
 }
 
+function getCollisionUsernameBase(value: string | null | undefined) {
+  const normalizedUsername = normalizeAuthUsername(value);
+  const match = normalizedUsername.match(/^(.+)-\d+$/);
+  return match?.[1] ?? null;
+}
+
+export function isRecoveryUsernameMatch(
+  profileUsername: string | null | undefined,
+  submittedUsername: string | null | undefined
+) {
+  const normalizedProfileUsername = normalizeAuthUsername(profileUsername);
+  const normalizedSubmittedUsername = normalizeAuthUsername(submittedUsername);
+
+  if (!normalizedProfileUsername || !normalizedSubmittedUsername) {
+    return false;
+  }
+
+  if (normalizedProfileUsername === normalizedSubmittedUsername) {
+    return true;
+  }
+
+  // Imported feeds suffix colliding usernames, so allow the source username when email also matches.
+  return getCollisionUsernameBase(normalizedProfileUsername) === normalizedSubmittedUsername;
+}
+
 export function hashAuthActionToken(token: string) {
   return createHash('sha256').update(token).digest('hex');
 }
@@ -140,7 +165,7 @@ export async function getProfileForUsernameEmail(params: {
     .from('profiles')
     .select('*')
     .ilike('email', normalizedEmail)
-    .limit(5);
+    .limit(20);
 
   if (error) {
     throw error;
@@ -149,7 +174,7 @@ export async function getProfileForUsernameEmail(params: {
   const profiles = ((data ?? []) as AuthIdentityProfile[]).filter((profile) => {
     return (
       normalizeEmailAddress(profile.email) === normalizedEmail &&
-      normalizeAuthUsername(profile.username) === normalizedUsername
+      isRecoveryUsernameMatch(profile.username, normalizedUsername)
     );
   });
 

@@ -47,14 +47,16 @@ The direct ClawHub archives for slugs `meta-ads` and `instagram` were not forced
 - Meta Ads skills require the correct Meta account/OAuth context and explicit Boss approval before any write, spend, budget, or campaign-state action.
 - WhatsApp Business skill requires Maton/WhatsApp connection credentials such as `MATON_API_KEY`; customer-visible replies remain high-risk.
 - Meta WhatsApp Cloud API for player/customer traffic is intended for `+254113033475`, but the observed Meta setup on 2026-05-02 is still test-WABA only until a production WABA/number and templates are approved.
-- Native OpenClaw WhatsApp is intended for `+254733638841` operator/admin groups only. This number was reported recently shadowbanned and should not be repeatedly relinked or used for automation until manual account behavior is healthy.
+- Native OpenClaw WhatsApp is linked on `+254733638841`. Boss direct WhatsApp from `+254708355692` routes to `control`; other direct WhatsApp senders are treated as gamer/player tournament inquiries and route to customer-safe `support` with the static PlayMechi skill. This number was reported recently shadowbanned and should not be repeatedly relinked or used for automation until manual account behavior is healthy.
 
 ## WhatsApp routing requirement
 
 - operator/admin WhatsApp groups such as `MECHI ADMINS` must route to `control`, not the generic support/community prompt
+- native WhatsApp direct messages from `+254708355692` are the Boss/operator path and route to `control`
+- native WhatsApp direct messages from any other number are gamer/player tournament inquiries and must not reach the repo-capable `control` agent
 - customer WhatsApp support DMs should route through the Mechi support inbox/player-action path
 - if native OpenClaw WhatsApp is used, it must load the Mechi control workspace for operator/admin groups and use `skills/playmechi-tournament-ops/SKILL.md` for event facts
-- native OpenClaw WhatsApp on `+254733638841` must not send player DMs, marketing broadcasts, mass tournament reminders, cold outreach, or unknown-chat auto-replies
+- native OpenClaw WhatsApp on `+254733638841` must not send marketing broadcasts, mass tournament reminders, cold outreach, or repeated unknown-chat automation; non-Boss direct replies must stay customer-safe, tournament-focused, and low-volume
 - Meta Cloud API on `+254113033475` is the player/customer path and must use opt-in, approved templates outside the 24-hour service window, and immediate opt-out handling
 - for live PlayMechi slot counts, storage readiness, or registered-player counts, WhatsApp operator/admin groups must use `skills/supabase-live-ops/SKILL.md` and read the `onlineTournament` object from `npm run ops:registrations -- --json`
 - customer-safe WhatsApp support can answer fixed schedule, prize, rule, and registration-path facts from the PlayMechi skill, but must escalate live counts, disqualifications, payout status, and reward eligibility to `control`

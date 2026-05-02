@@ -5,15 +5,17 @@ This runbook links the native OpenClaw WhatsApp plugin for Mechi.
 Target number:
 
 - `+254733638841`
+- Boss/operator direct sender: `+254708355692`
 
 Purpose:
 
-- Operator/admin WhatsApp groups only.
-- Route to the repo-capable `control` agent.
+- Boss/operator direct messages route to the repo-capable `control` agent.
+- Other direct senders are gamers/player tournament inquiries and route to customer-safe `support`.
+- Operator/admin WhatsApp groups should route to `control` when exact group routing is configured.
 - Use `skills/playmechi-tournament-ops/SKILL.md` for fixed tournament facts.
 - Use `npm run ops:registrations -- --json` for live PlayMechi slot counts.
 
-Do not use this number for player DMs, marketing broadcasts, mass tournament reminders, cold outreach, or automated replies to unknown chats. Player/customer WhatsApp goes through Meta Cloud API on `+254113033475` and the Mechi app webhook.
+Do not use this number for marketing broadcasts, mass tournament reminders, cold outreach, or repeated automated replies to unknown chats. Player/customer WhatsApp should move to Meta Cloud API on `+254113033475` and the Mechi app webhook once production setup is approved.
 
 ## Before login
 
@@ -101,7 +103,8 @@ Before live use, confirm the OpenClaw native WhatsApp channel is configured so:
 
 - approved operator/admin groups route to `control`;
 - unknown groups are ignored or require an explicit mention;
-- unknown DMs do not auto-reply;
+- Boss DM `+254708355692` routes to `control`;
+- non-Boss DMs route to customer-safe `support` for tournament participation guidance;
 - support/community agents do not handle operator WhatsApp groups;
 - `control` has the Mechi repo workspace `/home/ubuntu/mechi-v3`;
 - `support` and `community` only get static tournament FAQ facts unless the Boss explicitly grants live-data access.

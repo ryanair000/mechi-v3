@@ -165,6 +165,10 @@ const DEFAULT_CHEZAHUB_BASE_URL = 'https://chezahub.co.ke';
 const DEFAULT_CHEZAHUB_REDEEM_URL = 'https://redeem.chezahub.co.ke';
 const DEFAULT_LINK_TOKEN_TTL_MS = 1000 * 60 * 15;
 
+const SUPPRESSED_PARTNER_CATALOG_PATTERNS = [
+  /\b(?:battlefield\s*(?:6|vi)|bf\s*6)\b/i,
+] as const;
+
 export const VOUCHER_TIERS = [
   { id: 'voucher_50', points_cost: 500, value_kes: 50, title: 'KES 50 Reward Credit' },
   { id: 'voucher_100', points_cost: 1000, value_kes: 100, title: 'KES 100 Reward Credit' },
@@ -195,6 +199,40 @@ function buildGameRedeemable(params: {
     value_kes: params.valueKes,
     sort_order: params.sortOrder,
   };
+}
+
+function normalizeCatalogGuardText(value: string) {
+  return value
+    .replace(/[™®©]/g, ' ')
+    .normalize('NFKD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-zA-Z0-9]+/g, ' ')
+    .trim()
+    .replace(/\s+/g, ' ')
+    .toLowerCase();
+}
+
+function getCatalogGuardText(item: RewardCatalogItem) {
+  return normalizeCatalogGuardText(
+    [
+      item.id,
+      item.title,
+      item.description,
+      item.sku_name ?? '',
+      item.margin_class ?? '',
+    ].join(' ')
+  );
+}
+
+export function isSuppressedPartnerCatalogItem(item: RewardCatalogItem) {
+  if (item.source === 'mechi_native') return false;
+
+  const searchText = getCatalogGuardText(item);
+  return SUPPRESSED_PARTNER_CATALOG_PATTERNS.some((pattern) => pattern.test(searchText));
+}
+
+export function filterSuppressedPartnerCatalogItems(items: RewardCatalogItem[]) {
+  return items.filter((item) => !isSuppressedPartnerCatalogItem(item));
 }
 
 export const GAME_REDEEMABLE_CATALOG: RewardCatalogItem[] = [
@@ -1094,7 +1132,7 @@ export async function getRewardSummaryForUser(
   };
 }
 
-export async function fetchChezahubRewardCatalog() {
+export async function fetchChezahubRewardCatalog(options: { includeSuppressed?: boolean } = {}) {
   const payload = { scope: 'reward_catalog' };
   const response = await fetch(`${getChezahubBaseUrl()}/api/mechi/rewards/catalog`, {
     method: 'POST',
@@ -1114,7 +1152,8 @@ export async function fetchChezahubRewardCatalog() {
     throw new Error(data?.error || 'Failed to load reward catalog');
   }
 
-  return data?.items ?? [];
+  const items = data?.items ?? [];
+  return options.includeSuppressed ? items : filterSuppressedPartnerCatalogItems(items);
 }
 
 export async function ensureChezahubCustomer(params: {
@@ -1728,7 +1767,7 @@ export async function getRewardCatalogFromCache(supabase: SupabaseClient): Promi
     throw error;
   }
 
-  return (data ?? []) as RewardCatalogItem[];
+  return filterSuppressedPartnerCatalogItems((data ?? []) as RewardCatalogItem[]);
 }
 
 export async function syncChezahubCatalogToCache(
@@ -1737,15 +1776,33 @@ export async function syncChezahubCatalogToCache(
 ): Promise<void> {
   if (items.length === 0) return;
 
-  const rows = items.map((item) => ({
+  const blockedItems = items.filter(isSuppressedPartnerCatalogItem);
+  const allowedItems = filterSuppressedPartnerCatalogItems(items);
+  const rows = allowedItems.map((item) => ({
     ...item,
     source: 'chezahub',
     synced_at: new Date().toISOString(),
   }));
 
-  const { error } = await supabase
-    .from('reward_catalog_cache')
-    .upsert(rows, { onConflict: 'id' });
+  if (blockedItems.length > 0) {
+    const { error: blockedError } = await supabase
+      .from('reward_catalog_cache')
+      .update({
+        active: false,
+        synced_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      })
+      .in('id', blockedItems.map((item) => item.id))
+      .eq('source', 'chezahub');
+
+    if (blockedError) {
+      throw blockedError;
+    }
+  }
+
+  if (rows.length === 0) return;
+
+  const { error } = await supabase.from('reward_catalog_cache').upsert(rows, { onConflict: 'id' });
 
   if (error) {
     throw error;

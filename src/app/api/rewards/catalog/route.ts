@@ -21,7 +21,7 @@ export async function GET(request: NextRequest) {
 
     if (items.length === 0 || missingPartnerCatalog) {
       try {
-        const fresh = await fetchChezahubRewardCatalog({ includeSuppressed: true });
+        const fresh = await fetchChezahubRewardCatalog();
         if (fresh.length > 0) {
           await syncChezahubCatalogToCache(supabase, fresh);
           items = await getRewardCatalogFromCache(supabase);

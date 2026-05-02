@@ -23,6 +23,7 @@ const SUPPORT_MODEL =
 const INSTAGRAM_MODEL =
   process.env.MECHI_OPENCLAW_INSTAGRAM_MODEL?.trim() || SUPPORT_MODEL;
 const EMAIL_MODEL = process.env.MECHI_OPENCLAW_EMAIL_MODEL?.trim() || SUPPORT_MODEL;
+const OPENCLAW_THINKING = process.env.MECHI_OPENCLAW_THINKING?.trim() || 'fast';
 const OPENCLAW_TIMEOUT_SECONDS = toPositiveInt(process.env.MECHI_OPENCLAW_TIMEOUT_SECONDS, 120);
 const MAX_BODY_BYTES = toPositiveInt(process.env.MECHI_OPENCLAW_MAX_BODY_BYTES, 256_000);
 const MAX_EMAIL_TEXT_CHARS = toPositiveInt(process.env.MECHI_OPENCLAW_MAX_EMAIL_TEXT_CHARS, 16_000);
@@ -509,7 +510,7 @@ function runOpenClawAgent({ agent, sessionId, prompt, timeoutSeconds, model }) {
         '--message',
         prompt,
         '--thinking',
-        'medium',
+        OPENCLAW_THINKING,
         '--timeout',
         String(timeoutSeconds),
         '--model',

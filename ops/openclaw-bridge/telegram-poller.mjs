@@ -24,6 +24,10 @@ const TELEGRAM_MODEL =
   process.env.MECHI_OPENCLAW_TELEGRAM_MODEL?.trim() ||
   process.env.MECHI_OPENCLAW_SUPPORT_MODEL?.trim() ||
   'openai-codex/gpt-5.5';
+const OPENCLAW_THINKING =
+  process.env.MECHI_OPENCLAW_TELEGRAM_THINKING?.trim() ||
+  process.env.MECHI_OPENCLAW_THINKING?.trim() ||
+  'fast';
 const OPENCLAW_TIMEOUT_SECONDS = toPositiveInt(
   process.env.MECHI_OPENCLAW_TELEGRAM_TIMEOUT_SECONDS ??
     process.env.MECHI_OPENCLAW_TIMEOUT_SECONDS,
@@ -399,7 +403,7 @@ function runOpenClawAgent({ agent, sessionId, prompt, timeoutSeconds, model }) {
       '--message',
       prompt,
       '--thinking',
-      'medium',
+      OPENCLAW_THINKING,
       '--timeout',
       String(timeoutSeconds),
       '--model',

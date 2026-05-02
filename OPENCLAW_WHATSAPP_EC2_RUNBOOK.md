@@ -4,22 +4,22 @@ This runbook links the native OpenClaw WhatsApp plugin for Mechi.
 
 Target number:
 
-- `+254733638841`
-- Boss/operator direct sender: `+254708355692`
+- current native OpenClaw account: `+254113033475` (`accountId=254113033475`)
+- legacy native account: `+254733638841` is disabled unless the Boss explicitly approves relinking it
 
 Purpose:
 
 - Boss/operator direct messages route to the repo-capable `control` agent.
-- Other direct senders are gamers/player tournament inquiries and route to customer-safe `support`.
+- Other direct senders are gamers/player tournament inquiries and must stay customer-safe, short, and low-volume.
 - Operator/admin WhatsApp groups should route to `control` when exact group routing is configured.
 - Use `skills/playmechi-tournament-ops/SKILL.md` for fixed tournament facts.
 - Use `npm run ops:registrations -- --json` for live PlayMechi slot counts.
 
-Do not use this number for marketing broadcasts, mass tournament reminders, cold outreach, or repeated automated replies to unknown chats. Player/customer WhatsApp should move to Meta Cloud API on `+254113033475` and the Mechi app webhook once production setup is approved.
+Do not use native WhatsApp for marketing broadcasts, mass tournament reminders, cold outreach, or repeated automated replies to unknown chats. Player/customer WhatsApp should still move to Meta Cloud API on `+254113033475` and the Mechi app webhook once production WABA setup is approved.
 
 ## Before login
 
-If `+254733638841` was recently shadowbanned or restricted, wait until normal manual send/receive behavior is healthy before linking it again. Do not repeatedly scan QR codes, run multiple web sessions, or connect from a local Windows/laptop gateway.
+If `+254733638841` was recently shadowbanned or restricted, keep it disabled until normal manual send/receive behavior is healthy. Do not repeatedly scan QR codes, run multiple web sessions, or connect from a local Windows/laptop gateway.
 
 Use exactly one production host:
 
@@ -39,7 +39,8 @@ Then run this on EC2:
 ```bash
 set -euo pipefail
 
-export MECHI_NATIVE_WHATSAPP_NUMBER="+254733638841"
+export MECHI_NATIVE_WHATSAPP_NUMBER="+254113033475"
+export MECHI_NATIVE_WHATSAPP_ACCOUNT_ID="254113033475"
 export MECHI_REPO="/home/ubuntu/mechi-v3"
 
 cd "$MECHI_REPO"
@@ -62,6 +63,18 @@ cp -a skills/playmechi-tournament-ops/. ~/.openclaw/workspace-community/skills/p
 # Validate OpenClaw before touching the WhatsApp session.
 openclaw config validate --json
 
+# Configure the active native WhatsApp account.
+openclaw config set channels.whatsapp.enabled true
+openclaw config set channels.whatsapp.defaultAccount "$MECHI_NATIVE_WHATSAPP_ACCOUNT_ID"
+openclaw config set channels.whatsapp.dmPolicy open
+openclaw config set channels.whatsapp.allowFrom '["*"]' --strict-json
+openclaw config set channels.whatsapp.accounts.default.enabled false
+openclaw config set channels.whatsapp.accounts."$MECHI_NATIVE_WHATSAPP_ACCOUNT_ID".enabled true
+openclaw config set channels.whatsapp.accounts."$MECHI_NATIVE_WHATSAPP_ACCOUNT_ID".name "$MECHI_NATIVE_WHATSAPP_NUMBER native OpenClaw WhatsApp"
+openclaw config set channels.whatsapp.accounts."$MECHI_NATIVE_WHATSAPP_ACCOUNT_ID".authDir "~/.openclaw/credentials/whatsapp/$MECHI_NATIVE_WHATSAPP_ACCOUNT_ID"
+openclaw config set channels.whatsapp.accounts."$MECHI_NATIVE_WHATSAPP_ACCOUNT_ID".dmPolicy open
+openclaw config set channels.whatsapp.accounts."$MECHI_NATIVE_WHATSAPP_ACCOUNT_ID".allowFrom '["*"]' --strict-json
+
 # Restart whichever OpenClaw gateway unit exists on this host.
 if systemctl --user list-unit-files | grep -q '^openclaw-gateway.service'; then
   systemctl --user restart openclaw-gateway.service
@@ -77,11 +90,11 @@ if systemctl list-units --type=service --all | grep -q 'mechi-openclaw-bridge'; 
   sudo systemctl status mechi-openclaw-bridge --no-pager
 fi
 
-# Use the globally installed OpenClaw WhatsApp QR module.
-export OPENCLAW_DIST_DIR="${OPENCLAW_DIST_DIR:-$(npm root -g)/openclaw/dist}"
+# Use the OpenClaw runtime installed on EC2.
+export OPENCLAW_DIST_DIR="${OPENCLAW_DIST_DIR:-$HOME/.openclaw/tools/node-v22.22.0/lib/node_modules/openclaw/dist}"
 
-# Run once. Scan with WhatsApp > Linked Devices on +254733638841 only.
-npm run ops:whatsapp-qr -- --qr-timeout-ms=180000 --wait-timeout-ms=600000
+# Run once. Scan with WhatsApp > Linked Devices on +254113033475 only.
+npm run ops:whatsapp-qr -- --account="$MECHI_NATIVE_WHATSAPP_ACCOUNT_ID" --qr-timeout-ms=180000 --wait-timeout-ms=600000
 ```
 
 After scanning:
@@ -103,15 +116,15 @@ Before live use, confirm the OpenClaw native WhatsApp channel is configured so:
 
 - approved operator/admin groups route to `control`;
 - unknown groups are ignored or require an explicit mention;
-- Boss DM `+254708355692` routes to `control`;
-- non-Boss DMs route to customer-safe `support` for tournament participation guidance;
+- Boss/operator DMs route to `control`;
+- non-operator DMs stay customer-safe and tournament-focused;
 - support/community agents do not handle operator WhatsApp groups;
 - `control` has the Mechi repo workspace `/home/ubuntu/mechi-v3`;
 - `support` and `community` only get static tournament FAQ facts unless the Boss explicitly grants live-data access.
 
 ## Anti-ban operating limits
 
-For `+254733638841`:
+For native WhatsApp:
 
 - One linked production session on EC2 only.
 - No bulk sends, no contact scraping, no cold DMs, no invite-link spam, no repeated identical messages.

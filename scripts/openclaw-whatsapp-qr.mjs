@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import { execFileSync } from "node:child_process";
-import { existsSync } from "node:fs";
+import { existsSync, readdirSync } from "node:fs";
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -46,6 +46,16 @@ function resolveOpenClawDistDir() {
   }
 
   candidates.push(path.join(os.homedir(), "AppData", "Roaming", "npm", "node_modules", "openclaw", "dist"));
+  candidates.push(path.join(os.homedir(), ".openclaw", "tools", "node", "lib", "node_modules", "openclaw", "dist"));
+
+  const openclawToolsDir = path.join(os.homedir(), ".openclaw", "tools");
+  try {
+    for (const entry of readdirSync(openclawToolsDir, { withFileTypes: true })) {
+      if (entry.isDirectory() && entry.name.startsWith("node-")) {
+        candidates.push(path.join(openclawToolsDir, entry.name, "lib", "node_modules", "openclaw", "dist"));
+      }
+    }
+  } catch {}
 
   try {
     const npmRoot = execFileSync("npm", ["root", "-g"], {

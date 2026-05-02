@@ -123,7 +123,8 @@ For player DMs, the preferred production transport is Meta WhatsApp Cloud API th
 
 For native OpenClaw WhatsApp:
 
-- target native sender: `+254733638841`
+- current target native sender: `+254113033475` (`accountId=254113033475`)
+- legacy native sender: `+254733638841` remains disabled unless the Boss explicitly approves relinking it
 - Boss/operator direct sender: `+254708355692`
 - purpose: Boss/operator DMs plus low-volume player tournament inquiries that accidentally arrive on the native number
 - EC2 login runbook: `OPENCLAW_WHATSAPP_EC2_RUNBOOK.md`
@@ -132,8 +133,8 @@ For native OpenClaw WhatsApp:
 Required posture:
 
 - customer WhatsApp DMs handled by the Mechi app must keep using the support inbox/player-action path
-- native WhatsApp DM from `+254708355692` must route to `control`
-- native WhatsApp direct messages from other numbers are gamer/player tournament inquiries and must route to customer-safe `support`, not repo-capable `control`
+- native WhatsApp direct messages are currently open on `+254113033475` by Boss request; keep non-operator replies customer-safe, tournament-focused, and low-volume
+- native WhatsApp DM from known Boss/operator senders must route to `control`
 - native WhatsApp operator/admin groups such as `MECHI ADMINS` should route to `control` when exact group routing is configured
 - generic support/community prompts must not answer operator WhatsApp groups
 - for "active tournaments", "open tournaments", "events", or "any tournaments today", the control agent should run `npm run ops:tournaments -- --json` from the Mechi repo
@@ -154,7 +155,7 @@ Do not copy `supabase-live-ops` into customer-safe support/community workspaces 
 
 After changing native WhatsApp routing or prompts, restart the OpenClaw process that owns the WhatsApp session. Local repo changes alone will not alter already-running WhatsApp replies.
 
-Shadowban prevention for `+254733638841`:
+Shadowban prevention for native WhatsApp:
 
 - keep one production linked session on EC2 only
 - do not relink repeatedly after a restriction; wait until manual WhatsApp behavior is healthy

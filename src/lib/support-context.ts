@@ -20,6 +20,8 @@ import type {
   SupportThreadStatus,
 } from '@/types';
 
+const GAME_ENQUIRIES_WHATSAPP = '+254104003156';
+
 export interface SupportUserSummary {
   id: string;
   username: string;
@@ -63,6 +65,7 @@ export const SUPPORT_ALLOWED_TOPICS = [
   'notifications',
   'profile_setup',
   'whatsapp_alerts',
+  'game_purchase_enquiries',
 ];
 
 export const SUPPORT_BLOCKED_TOPICS = [
@@ -125,6 +128,16 @@ const TAG_PATTERNS: Array<{ tag: string; patterns: RegExp[] }> = [
   { tag: 'pricing', patterns: [/\bprice\b/i, /\bpricing\b/i, /\bhow much\b/i, /\bkes\b/i] },
   { tag: 'plans', patterns: [/\bplan\b/i, /\bpro\b/i, /\belite\b/i, /\btrial\b/i] },
   { tag: 'games', patterns: [/\bgame\b/i, /\bsupported\b/i, /\befootball\b/i, /\bfc ?26\b/i] },
+  {
+    tag: 'game_enquiry',
+    patterns: [
+      /\bbuy (a )?game\b/i,
+      /\bpurchase (a )?game\b/i,
+      /\border (a )?game\b/i,
+      /\bsell(ing)? (games?|game accounts?)\b/i,
+      /\bgame enquiries?\b/i,
+    ],
+  },
   { tag: 'queue', patterns: [/\bqueue\b/i, /\bfind match\b/i, /\branked\b/i, /\bmatchmaking\b/i] },
   { tag: 'challenges', patterns: [/\bchallenge\b/i, /\b1.?on.?1\b/i, /\bdirect\b/i] },
   {
@@ -212,6 +225,7 @@ export function buildSupportSystemPrompt(channel: SupportContextChannel = 'whats
     'Do not use markdown tables, hashtags, or long walls of text.',
     channelActionLine,
     'You are not allowed to process money, refunds, payouts, subscription cancellations, bans, disputes, or account-changing actions.',
+    `If someone wants to buy a game or asks for game purchase enquiries, reply that game enquiries are handled on WhatsApp at ${GAME_ENQUIRIES_WHATSAPP}. Do not negotiate prices or collect payment details.`,
     'If the user needs anything operational, risky, or policy-sensitive, return disposition "escalate".',
     'If the user is asking an informational question and the answer is supported by the supplied Mechi context, return disposition "reply".',
     'If you need one missing detail to answer safely, return disposition "clarify" with a short question.',
@@ -248,6 +262,7 @@ export function buildMechiSupportContext(
     '- Pro and Elite organizers can run auto prize pools from paid entries or set a specified prize pool up front.',
     '- FC26 and eFootball score reporting use scorelines. Matching score reports can confirm either a win or a draw. Mismatched reports go to dispute review.',
     '- WhatsApp alerts are optional backup notifications when a player has them enabled in profile.',
+    `- Game purchase enquiries are handled on WhatsApp at ${GAME_ENQUIRIES_WHATSAPP}. If someone wants to buy a game, tell them to DM that number and do not collect payment details.`,
     `PlayMechi tournament:\n${summarizePlayMechiTournament()}`,
     channelCapabilityLine,
     `Supported 1v1 games: ${oneOnOneGames}.`,

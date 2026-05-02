@@ -16,8 +16,16 @@ const qrFile = path.join(outDir, "terminal-whatsapp-qr.png");
 
 const args = new Set(process.argv.slice(2));
 const forceRelink = !args.has("--reuse");
+const accountId = readStringFlag("--account") ?? readStringFlag("--account-id");
 const qrTimeoutMs = readNumberFlag("--qr-timeout-ms", 180_000);
 const waitTimeoutMs = readNumberFlag("--wait-timeout-ms", 10 * 60 * 1000);
+
+function readStringFlag(name) {
+  const prefix = `${name}=`;
+  const raw = process.argv.find((arg) => arg.startsWith(prefix));
+  const value = raw?.slice(prefix.length).trim();
+  return value || null;
+}
 
 function readNumberFlag(name, fallback) {
   const raw = process.argv.find((arg) => arg.startsWith(`${name}=`));
@@ -113,11 +121,15 @@ async function main() {
 
   await appendLog(`using openclaw dist ${openclawDistDir}`);
   console.log("Starting native OpenClaw WhatsApp QR flow...");
+  if (accountId) {
+    console.log(`OpenClaw WhatsApp account: ${accountId}`);
+  }
 
   const { loginMod, modulePath } = await resolveLoginModuleUrl(openclawDistDir);
   await appendLog(`imported login module ${modulePath}`);
 
   const result = await loginMod.startWebLoginWithQr({
+    ...(accountId ? { accountId } : {}),
     timeoutMs: qrTimeoutMs,
     force: forceRelink,
   });
@@ -148,7 +160,10 @@ async function main() {
   console.log("Waiting for WhatsApp to confirm the link...");
   await appendLog("waiting for scan");
 
-  const waitResult = await loginMod.waitForWebLogin({ timeoutMs: waitTimeoutMs });
+  const waitResult = await loginMod.waitForWebLogin({
+    ...(accountId ? { accountId } : {}),
+    timeoutMs: waitTimeoutMs,
+  });
   const finalPayload = { ...payload, waitResult, finishedAt: new Date().toISOString() };
   await fs.writeFile(resultFile, JSON.stringify(finalPayload, null, 2));
   await appendLog(`wait finished ${JSON.stringify(waitResult)}`);

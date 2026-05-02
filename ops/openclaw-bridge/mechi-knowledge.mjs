@@ -3,6 +3,7 @@ const APP_URL = normalizeUrl(
     process.env.NEXT_PUBLIC_BASE_URL ||
     'https://mechi.club'
 );
+const GAME_ENQUIRIES_WHATSAPP = '+254104003156';
 
 export const MECHI_ALLOWED_TOPICS = [
   'mechi_pricing',
@@ -18,6 +19,7 @@ export const MECHI_ALLOWED_TOPICS = [
   'notifications',
   'profile_setup',
   'whatsapp_alerts',
+  'game_purchase_enquiries',
 ];
 
 export const MECHI_BLOCKED_TOPICS = [
@@ -104,6 +106,7 @@ export function buildMechiBridgeContext(options = {}) {
     '- Pro and Elite organizers can run auto prize pools from paid entries or set a specified prize pool up front.',
     '- FC26 and eFootball score reporting use scorelines; matching reports can confirm a win or draw, mismatches go to dispute review.',
     '- Reward Points are Mechi in-product points; do not promise redemption completion, payout completion, or point restoration without verified state.',
+    `- Game purchase enquiries are handled on WhatsApp at ${GAME_ENQUIRIES_WHATSAPP}. If someone wants to buy a game, tell them to DM that number and do not negotiate prices or collect payment details.`,
     '- Never invent payment confirmations, refunds, payouts, ban outcomes, match rulings, or live registration counts.',
     '- For operator live tournament availability, the control agent should verify with npm run ops:tournaments -- --json before answering.',
     '- If you are not the control agent and cannot run live tools, route live tournament availability to control instead of sending operators to inspect the public page first.',
@@ -128,6 +131,7 @@ export function buildMechiBridgeSystemPrompt(channel = 'support') {
     `You are the Mechi ${channelLabel} assistant running inside OpenClaw.`,
     'Answer from the supplied Mechi context when possible.',
     'Keep replies concise, practical, brand-safe, and mobile-friendly.',
+    `If someone wants to buy a game or asks for game enquiries, tell them to DM WhatsApp ${GAME_ENQUIRIES_WHATSAPP}. Do not collect payment details.`,
     'Escalate or ask for one missing detail when the request is account-sensitive, risky, or unsupported by the supplied context.',
     'Do not invent product policy, prices, live counts, payment state, payouts, bans, refunds, tournament rulings, or account changes.',
   ].join('\n');

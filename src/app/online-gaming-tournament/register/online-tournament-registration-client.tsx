@@ -19,6 +19,7 @@ import {
   ONLINE_TOURNAMENT_PUBLIC_PATH,
   ONLINE_TOURNAMENT_REGISTRATION_PATH,
   ONLINE_TOURNAMENT_TOTAL_SLOTS,
+  ONLINE_TOURNAMENT_YOUTUBE_URL,
   formatEatDateTime,
   type OnlineTournamentGameKey,
 } from '@/lib/online-tournament';
@@ -387,6 +388,26 @@ export function OnlineTournamentRegistrationClient() {
                       </span>
                     </label>
                   </div>
+
+                  <a
+                    href={ONLINE_TOURNAMENT_YOUTUBE_URL}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex flex-col gap-3 rounded-[var(--radius-card)] border border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.045)] p-4 text-sm transition hover:border-[rgba(50,224,196,0.28)] hover:bg-[rgba(50,224,196,0.08)] sm:flex-row sm:items-center sm:justify-between"
+                  >
+                    <span>
+                      <span className="block font-black text-[var(--text-primary)]">
+                        PlayMechi YouTube channel
+                      </span>
+                      <span className="mt-1 block break-all text-[var(--accent-secondary-text)]">
+                        youtube.com/@playmechi
+                      </span>
+                    </span>
+                    <span className="inline-flex items-center gap-2 font-bold text-[var(--text-primary)]">
+                      Open channel
+                      <ExternalLink className="h-4 w-4" />
+                    </span>
+                  </a>
 
                   <div className="grid gap-4 sm:grid-cols-2">
                     <label className="block">

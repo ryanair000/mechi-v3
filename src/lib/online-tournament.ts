@@ -19,6 +19,7 @@ export type OnlineTournamentGameConfig = {
   timeLabel: string;
   matchStartsAt: string;
   registrationClosesAt: string;
+  registrationClosed?: boolean;
   slots: number;
   format: string;
   matchCount: string;
@@ -119,6 +120,7 @@ export const ONLINE_TOURNAMENT_GAMES: OnlineTournamentGameConfig[] = [
     timeLabel: '8:00 PM EAT',
     matchStartsAt: '2026-05-10T20:00:00+03:00',
     registrationClosesAt: '2026-05-10T19:30:00+03:00',
+    registrationClosed: true,
     slots: 16,
     format: '1v1 knockout bracket with bronze match',
     matchCount: 'Round of 16 to final',
@@ -149,15 +151,20 @@ export type OnlineTournamentRegistrationSummary = {
 
 export type OnlineTournamentDisplayStatus = 'open' | 'active' | 'completed';
 
+export function isOnlineTournamentRegistrationClosed(game: OnlineTournamentGameConfig) {
+  return Boolean(game.registrationClosed);
+}
+
 export function getFallbackOnlineTournamentSummary(): OnlineTournamentRegistrationSummary {
   return {
     games: ONLINE_TOURNAMENT_GAMES.reduce(
       (counts, game) => {
+        const registrationClosed = isOnlineTournamentRegistrationClosed(game);
         counts[game.game] = {
           registered: 0,
           slots: game.slots,
-          spotsLeft: game.slots,
-          full: false,
+          spotsLeft: registrationClosed ? 0 : game.slots,
+          full: registrationClosed,
         };
         return counts;
       },
@@ -173,16 +180,20 @@ export function getOnlineTournamentTotals(summary: OnlineTournamentRegistrationS
       const gameSummary = summary.games?.[game.game];
       const slots = Number(gameSummary?.slots ?? game.slots);
       const registered = Number(gameSummary?.registered ?? 0);
+      const fallbackSpotsLeft = isOnlineTournamentRegistrationClosed(game)
+        ? 0
+        : Math.max(0, slots - registered);
+      const spotsLeft = Number(gameSummary?.spotsLeft ?? fallbackSpotsLeft);
 
       totals.registered += registered;
       totals.slots += slots;
+      totals.spotsLeft += Math.max(0, spotsLeft);
       return totals;
     },
     { registered: 0, slots: 0, spotsLeft: 0, full: false }
   );
 
-  totals.spotsLeft = Math.max(0, totals.slots - totals.registered);
-  totals.full = totals.registered >= totals.slots;
+  totals.full = totals.spotsLeft <= 0;
   return totals;
 }
 
@@ -247,7 +258,8 @@ export function getOnlineTournamentWindowState(
   const startsAt = new Date(game.matchStartsAt);
 
   return {
-    isRegistrationOpen: now.getTime() < closesAt.getTime(),
+    isRegistrationOpen:
+      !isOnlineTournamentRegistrationClosed(game) && now.getTime() < closesAt.getTime(),
     closesAt,
     startsAt,
   };

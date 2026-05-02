@@ -19,6 +19,7 @@ import {
   ONLINE_TOURNAMENT_STREAM_CHANNEL,
   ONLINE_TOURNAMENT_STREAMER,
   ONLINE_TOURNAMENT_TOTAL_SLOTS,
+  isOnlineTournamentRegistrationClosed,
   type OnlineTournamentGameKey,
 } from '@/lib/online-tournament';
 
@@ -50,11 +51,12 @@ function getFallbackSummary(): RegistrationSummary {
   return {
     games: ONLINE_TOURNAMENT_GAMES.reduce(
       (counts, game) => {
+        const registrationClosed = isOnlineTournamentRegistrationClosed(game);
         counts[game.game] = {
           registered: 0,
           slots: game.slots,
-          spotsLeft: game.slots,
-          full: false,
+          spotsLeft: registrationClosed ? 0 : game.slots,
+          full: registrationClosed,
         };
         return counts;
       },

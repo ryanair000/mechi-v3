@@ -15,6 +15,7 @@ import {
   ONLINE_TOURNAMENT_SLUG,
   ONLINE_TOURNAMENT_TITLE,
   getOnlineTournamentWindowState,
+  isOnlineTournamentRegistrationClosed,
   isOnlineTournamentGame,
   normalizeSocialHandle,
   type OnlineTournamentGameKey,
@@ -48,11 +49,12 @@ type EventRegistrationRow = {
 function emptyGameCounts() {
   return ONLINE_TOURNAMENT_GAMES.reduce(
     (counts, game) => {
+      const registrationClosed = isOnlineTournamentRegistrationClosed(game);
       counts[game.game] = {
         registered: 0,
         slots: game.slots,
-        spotsLeft: game.slots,
-        full: false,
+        spotsLeft: registrationClosed ? 0 : game.slots,
+        full: registrationClosed,
       };
       return counts;
     },
@@ -104,8 +106,11 @@ async function getRegistrationSummary(userId?: string | null) {
 
   for (const game of ONLINE_TOURNAMENT_GAMES) {
     const registered = gameCounts[game.game].registered;
-    gameCounts[game.game].spotsLeft = Math.max(0, game.slots - registered);
-    gameCounts[game.game].full = registered >= game.slots;
+    const registrationClosed = isOnlineTournamentRegistrationClosed(game);
+    gameCounts[game.game].spotsLeft = registrationClosed
+      ? 0
+      : Math.max(0, game.slots - registered);
+    gameCounts[game.game].full = registrationClosed || registered >= game.slots;
   }
 
   return {
@@ -162,7 +167,10 @@ export async function POST(request: NextRequest) {
     const windowState = getOnlineTournamentWindowState(gameConfig);
 
     if (!windowState.isRegistrationOpen) {
-      return NextResponse.json({ error: `${gameConfig.label} registration is closed` }, { status: 400 });
+      const error = isOnlineTournamentRegistrationClosed(gameConfig)
+        ? `${gameConfig.label} slots are full`
+        : `${gameConfig.label} registration is closed`;
+      return NextResponse.json({ error }, { status: 400 });
     }
 
     const createRateLimit = await checkPersistentRateLimit(

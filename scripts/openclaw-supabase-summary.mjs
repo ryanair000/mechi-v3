@@ -11,7 +11,7 @@ const ONLINE_TOURNAMENT_SLUG = 'mechi-club-online-gaming-tournament-2026-05';
 const ONLINE_TOURNAMENT_GAMES = [
   { game: 'pubgm', label: 'PUBG Mobile', slots: 100 },
   { game: 'codm', label: 'Call of Duty Mobile', slots: 100 },
-  { game: 'efootball', label: 'eFootball', slots: 16 },
+  { game: 'efootball', label: 'eFootball', slots: 16, registrationClosed: true },
 ];
 const ONLINE_TOURNAMENT_TOTAL_SLOTS = ONLINE_TOURNAMENT_GAMES.reduce(
   (total, game) => total + game.slots,
@@ -251,20 +251,22 @@ async function getOnlineTournamentSummary() {
       // Keep the raw response text when Supabase does not return JSON.
     }
 
+    const games = ONLINE_TOURNAMENT_GAMES.map((game) => ({
+      ...game,
+      registered: 0,
+      verified: 0,
+      pending: 0,
+      spotsLeft: game.registrationClosed ? 0 : game.slots,
+    }));
+
     return {
       storageReady: false,
       slug: ONLINE_TOURNAMENT_SLUG,
       slots: ONLINE_TOURNAMENT_TOTAL_SLOTS,
       registered: 0,
-      spotsLeft: ONLINE_TOURNAMENT_TOTAL_SLOTS,
+      spotsLeft: games.reduce((total, game) => total + game.spotsLeft, 0),
       error: errorMessage,
-      games: ONLINE_TOURNAMENT_GAMES.map((game) => ({
-        ...game,
-        registered: 0,
-        verified: 0,
-        pending: 0,
-        spotsLeft: game.slots,
-      })),
+      games,
     };
   }
 
@@ -279,17 +281,18 @@ async function getOnlineTournamentSummary() {
       registered: gameRows.length,
       verified: gameRows.filter((row) => row.eligibility_status === 'verified').length,
       pending: gameRows.filter((row) => row.eligibility_status === 'pending').length,
-      spotsLeft: Math.max(0, game.slots - gameRows.length),
+      spotsLeft: game.registrationClosed ? 0 : Math.max(0, game.slots - gameRows.length),
     };
   });
   const registered = games.reduce((total, game) => total + game.registered, 0);
+  const spotsLeft = games.reduce((total, game) => total + game.spotsLeft, 0);
 
   return {
     storageReady: true,
     slug: ONLINE_TOURNAMENT_SLUG,
     slots: ONLINE_TOURNAMENT_TOTAL_SLOTS,
     registered,
-    spotsLeft: Math.max(0, ONLINE_TOURNAMENT_TOTAL_SLOTS - registered),
+    spotsLeft,
     games,
   };
 }

@@ -13,6 +13,7 @@ import {
   ONLINE_TOURNAMENT_TOTAL_SLOTS,
   ONLINE_TOURNAMENT_YOUTUBE_URL,
   isOnlineTournamentGame,
+  isOnlineTournamentRegistrationClosed,
 } from '@/lib/online-tournament';
 import {
   getPlayerDashboardSnapshot,
@@ -269,7 +270,25 @@ function requireLinkedAccountMessage() {
 
 function formatPlayMechiRegistrationMessage(game: GameKey | null) {
   const tournamentGame = game && isOnlineTournamentGame(game) ? ONLINE_TOURNAMENT_GAME_BY_KEY[game] : null;
-  const gameLabel = tournamentGame ? tournamentGame.label : ONLINE_TOURNAMENT_GAME_LIST_LABEL;
+  const openGames = ONLINE_TOURNAMENT_GAMES.filter(
+    (config) => !isOnlineTournamentRegistrationClosed(config)
+  );
+
+  if (tournamentGame && isOnlineTournamentRegistrationClosed(tournamentGame)) {
+    const openGameLabel = openGames.map((config) => config.label).join(', ');
+
+    return [
+      `${tournamentGame.label} registration is full now.`,
+      openGameLabel
+        ? `You can still register for ${openGameLabel} here:`
+        : 'Registration page:',
+      `${APP_URL}${ONLINE_TOURNAMENT_REGISTRATION_PATH}`,
+    ].join('\n');
+  }
+
+  const gameLabel = tournamentGame
+    ? tournamentGame.label
+    : openGames.map((config) => config.label).join(', ') || ONLINE_TOURNAMENT_GAME_LIST_LABEL;
 
   return [
     `Yes. Register for ${ONLINE_TOURNAMENT_TITLE} here:`,
@@ -288,7 +307,12 @@ function getTournamentGamesForReply(game: GameKey | null) {
 
 function formatPlayMechiInfoMessage(game: GameKey | null) {
   const gameLines = getTournamentGamesForReply(game)
-    .map((config) => `${config.label}: ${config.dateLabel}, ${config.timeLabel}, ${config.slots} slots`)
+    .map(
+      (config) =>
+        `${config.label}: ${config.dateLabel}, ${config.timeLabel}, ${config.slots} slots${
+          isOnlineTournamentRegistrationClosed(config) ? ' (full)' : ''
+        }`
+    )
     .join('\n');
 
   return [

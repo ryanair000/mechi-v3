@@ -21,6 +21,8 @@ import {
   ONLINE_TOURNAMENT_TOTAL_SLOTS,
   ONLINE_TOURNAMENT_YOUTUBE_URL,
   formatEatDateTime,
+  getOnlineTournamentWindowState,
+  isOnlineTournamentRegistrationClosed,
   type OnlineTournamentGameKey,
 } from '@/lib/online-tournament';
 import type { PlatformKey } from '@/types';
@@ -59,11 +61,12 @@ function getFallbackSummary(): RegistrationSummary {
   return {
     games: ONLINE_TOURNAMENT_GAMES.reduce(
       (counts, game) => {
+        const registrationClosed = isOnlineTournamentRegistrationClosed(game);
         counts[game.game] = {
           registered: 0,
           slots: game.slots,
-          spotsLeft: game.slots,
-          full: false,
+          spotsLeft: registrationClosed ? 0 : game.slots,
+          full: registrationClosed,
         };
         return counts;
       },
@@ -120,6 +123,11 @@ export function OnlineTournamentRegistrationClient() {
   const currentRegistration = summary.registrations.find(
     (registration) => registration.game === selectedGame
   );
+  const selectedGameRegistrationOpen =
+    getOnlineTournamentWindowState(selectedGameConfig).isRegistrationOpen;
+  const selectedGameIsFull = Boolean(selectedGameSummary?.full);
+  const selectedGameIsLocked =
+    !selectedGameRegistrationOpen || Boolean(selectedGameIsFull && !currentRegistration);
   const returnPath = isGameKey(requestedGame) ? `${RETURN_PATH}?game=${requestedGame}` : RETURN_PATH;
   const createAccountHref = getRegisterPath({ next: returnPath });
   const signInHref = getLoginPath(returnPath);
@@ -240,8 +248,7 @@ export function OnlineTournamentRegistrationClient() {
     }
   };
 
-  const selectedGameIsFull = Boolean(selectedGameSummary?.full && !currentRegistration);
-  const canSubmit = Boolean(user) && !selectedGameIsFull && !summaryError && !submitting;
+  const canSubmit = Boolean(user) && !selectedGameIsLocked && !summaryError && !submitting;
 
   return (
     <div className="page-base marketing-prototype-shell min-h-screen">
@@ -308,8 +315,10 @@ export function OnlineTournamentRegistrationClient() {
                           You are already registered for this game.
                         </p>
                         <p className="mt-1 text-sm leading-6 text-[var(--text-secondary)]">
-                          Status: {currentRegistration.eligibility_status}. You can update your tag or
-                          social proof before registration closes.
+                          Status: {currentRegistration.eligibility_status}.{' '}
+                          {selectedGameRegistrationOpen
+                            ? 'You can update your tag or social proof before registration closes.'
+                            : 'Registration is now closed for this game. Your saved slot stays on the list.'}
                         </p>
                         <Button asChild size="sm" className="mt-3">
                           <a
@@ -338,6 +347,7 @@ export function OnlineTournamentRegistrationClient() {
                       {ONLINE_TOURNAMENT_GAMES.map((game) => (
                         <option key={game.game} value={game.game}>
                           {game.label}
+                          {summary.games[game.game]?.full ? ' - Full' : ''}
                         </option>
                       ))}
                     </select>
@@ -465,13 +475,19 @@ export function OnlineTournamentRegistrationClient() {
                 <div className="grid gap-3 border-t border-[var(--border-color)] pt-5 sm:grid-cols-[1fr_auto] sm:items-center">
                   <div className="flex items-center gap-3 text-sm text-[var(--text-secondary)]">
                     <Users className="h-4 w-4 text-[var(--accent-secondary-text)]" />
-                    {selectedGameIsFull
+                    {!selectedGameRegistrationOpen
+                      ? `${selectedGameConfig.label} registration is closed.`
+                      : selectedGameIsFull
                       ? `${selectedGameConfig.label} is full.`
                       : `${selectedGameSummary?.spotsLeft ?? selectedGameConfig.slots} slots left for ${selectedGameConfig.shortLabel}.`}
                   </div>
                   <Button type="button" size="lg" disabled={!canSubmit} onClick={() => void handleSubmit()}>
                     {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trophy className="h-4 w-4" />}
-                    {currentRegistration ? 'Update registration' : 'Lock my slot'}
+                    {!selectedGameRegistrationOpen
+                      ? 'Registration closed'
+                      : currentRegistration
+                        ? 'Update registration'
+                        : 'Lock my slot'}
                   </Button>
                 </div>
               </div>

@@ -10,6 +10,7 @@ import {
   ONLINE_TOURNAMENT_TITLE,
   ONLINE_TOURNAMENT_TOTAL_SLOTS,
   ONLINE_TOURNAMENT_YOUTUBE_URL,
+  isOnlineTournamentRegistrationClosed,
 } from '@/lib/online-tournament';
 import { PLANS } from '@/lib/plans';
 import { APP_URL } from '@/lib/urls';
@@ -193,7 +194,9 @@ function summarizeGames(mode: '1v1' | 'lobby') {
 function summarizePlayMechiTournament() {
   const schedule = ONLINE_TOURNAMENT_GAMES.map(
     (game) =>
-      `${game.label}: ${game.dateLabel} at ${game.timeLabel}, ${game.slots} slots, ${game.format}, ${game.matchCount}, prizes ${game.firstPrize}, ${game.secondPrize}, ${game.thirdPrize}.`
+      `${game.label}: ${game.dateLabel} at ${game.timeLabel}, ${game.slots} slots${
+        isOnlineTournamentRegistrationClosed(game) ? ' (registration full)' : ''
+      }, ${game.format}, ${game.matchCount}, prizes ${game.firstPrize}, ${game.secondPrize}, ${game.thirdPrize}.`
   ).join('\n');
 
   return [

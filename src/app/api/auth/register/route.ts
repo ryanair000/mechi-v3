@@ -207,7 +207,9 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    sendWelcomeEmail({ to: email, username }).catch(console.error);
+    after(async () => {
+      await sendWelcomeEmail({ to: email, username });
+    });
     after(async () => {
       try {
         await sendNewRegistrationTelegramNotification({

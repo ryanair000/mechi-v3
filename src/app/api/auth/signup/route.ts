@@ -186,7 +186,9 @@ export async function POST(request: NextRequest) {
       console.error('[Signup] Trial subscription tracking error:', trialError);
     }
 
-    sendWelcomeEmail({ to: email, username }).catch(console.error);
+    after(async () => {
+      await sendWelcomeEmail({ to: email, username });
+    });
     after(async () => {
       try {
         await sendNewRegistrationTelegramNotification({

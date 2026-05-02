@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { after, NextRequest, NextResponse } from 'next/server';
 import {
   AUTH_ACTION_TTLS,
   buildMagicLinkConsumeUrl,
@@ -58,19 +58,23 @@ export async function POST(request: NextRequest) {
       is_banned?: boolean | null;
     }>)[0];
 
-    if (profile?.email && !profile.is_banned) {
+    const profileEmail = profile?.email;
+    const profileUsername = profile?.username ?? null;
+    if (profileEmail && !profile.is_banned) {
       const token = await createAuthActionToken({
         userId: profile.id,
         purpose: 'magic_link_signin',
-        email: profile.email,
+        email: profileEmail,
         nextPath,
       });
 
-      void sendMagicLinkEmail({
-        to: profile.email,
-        username: profile.username ?? null,
-        magicLink: buildMagicLinkConsumeUrl(token.token),
-        expiresInMinutes: Math.round(AUTH_ACTION_TTLS.magic_link_signin / 60000),
+      after(async () => {
+        await sendMagicLinkEmail({
+          to: profileEmail,
+          username: profileUsername,
+          magicLink: buildMagicLinkConsumeUrl(token.token),
+          expiresInMinutes: Math.round(AUTH_ACTION_TTLS.magic_link_signin / 60000),
+        });
       });
     }
 

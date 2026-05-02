@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { after, NextRequest, NextResponse } from 'next/server';
 import {
   AUTH_ACTION_TTLS,
   buildResetPasswordUrl,
@@ -60,19 +60,23 @@ export async function POST(request: NextRequest) {
         is_banned?: boolean | null;
       }>).find((candidate) => normalizeEmailAddress(candidate.email) === email) ?? null;
 
-    if (profile?.email && !profile.is_banned) {
+    const profileEmail = profile?.email;
+    const profileUsername = profile?.username ?? null;
+    if (profileEmail && !profile.is_banned) {
       const token = await createAuthActionToken({
         userId: profile.id,
         purpose: 'password_reset',
-        email: profile.email,
+        email: profileEmail,
         nextPath,
       });
 
-      void sendPasswordResetEmail({
-        to: profile.email,
-        username: profile.username ?? null,
-        resetLink: buildResetPasswordUrl(token.token),
-        expiresInMinutes: Math.round(AUTH_ACTION_TTLS.password_reset / 60000),
+      after(async () => {
+        await sendPasswordResetEmail({
+          to: profileEmail,
+          username: profileUsername,
+          resetLink: buildResetPasswordUrl(token.token),
+          expiresInMinutes: Math.round(AUTH_ACTION_TTLS.password_reset / 60000),
+        });
       });
     }
 

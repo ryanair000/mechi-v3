@@ -16,7 +16,7 @@ Production rule: Mechi uses only the EC2 OpenClaw runtime. Local Windows or lapt
 8. `growth` agent pointed at the growth workspace with Cloudinary/Meta Ads/Instagram ClawHub skills
 9. `ops/openclaw-bridge/server.mjs` for app compatibility
 10. Native OpenClaw Telegram channel with approved operator DMs routed to `control`
-11. Native OpenClaw WhatsApp on `+254733638841`, if enabled, with Boss DM `+254708355692` routed to `control` and other direct senders routed to customer-safe `support`
+11. Native OpenClaw WhatsApp on `+254113033475`, plus `+254733638841` after a clean EC2 QR relink, with Boss DM `+254708355692` routed to `control` and other direct senders routed to customer-safe `support`
 12. `ops/openclaw-bridge/telegram-poller.mjs` only as a legacy fallback if the native channel is intentionally disabled
 13. GitHub CLI plus GitHub auth env for repo-aware OpenClaw control work
 
@@ -124,7 +124,7 @@ For player DMs, the preferred production transport is Meta WhatsApp Cloud API th
 For native OpenClaw WhatsApp:
 
 - current target native sender: `+254113033475` (`accountId=254113033475`)
-- legacy native sender: `+254733638841` remains disabled unless the Boss explicitly approves relinking it
+- second native support sender approved by the Boss: `+254733638841` (`accountId=default`), currently requiring a fresh EC2 QR relink after its old credential folder was backed up for repeated `440 session conflict` errors
 - Boss/operator direct sender: `+254708355692`
 - purpose: Boss/operator DMs plus low-volume player tournament inquiries that accidentally arrive on the native number
 - EC2 login runbook: `OPENCLAW_WHATSAPP_EC2_RUNBOOK.md`
@@ -134,6 +134,7 @@ Required posture:
 
 - customer WhatsApp DMs handled by the Mechi app must keep using the support inbox/player-action path
 - native WhatsApp direct messages are currently open on `+254113033475` by Boss request; keep non-operator replies customer-safe, tournament-focused, and low-volume
+- `+254733638841` should be treated as pending relink until `sudo journalctl -u openclaw-gateway` shows it starting and listening without `440 session conflict`
 - native WhatsApp DM from known Boss/operator senders must route to `control`
 - native WhatsApp operator/admin groups such as `MECHI ADMINS` should route to `control` when exact group routing is configured
 - generic support/community prompts must not answer operator WhatsApp groups

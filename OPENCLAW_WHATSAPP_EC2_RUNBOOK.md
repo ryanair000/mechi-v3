@@ -5,7 +5,8 @@ This runbook links the native OpenClaw WhatsApp plugin for Mechi.
 Target number:
 
 - current native OpenClaw account: `+254113033475` (`accountId=254113033475`)
-- legacy native account: `+254733638841` is disabled unless the Boss explicitly approves relinking it
+- second native support account approved by the Boss: `+254733638841` (`accountId=default`)
+- `+254733638841` requires a clean EC2 QR relink if logs show WhatsApp Web `440 session conflict`
 
 Purpose:
 
@@ -19,7 +20,7 @@ Do not use native WhatsApp for marketing broadcasts, mass tournament reminders, 
 
 ## Before login
 
-If `+254733638841` was recently shadowbanned or restricted, keep it disabled until normal manual send/receive behavior is healthy. Do not repeatedly scan QR codes, run multiple web sessions, or connect from a local Windows/laptop gateway.
+If `+254733638841` was recently shadowbanned or restricted, keep it quiet until normal manual send/receive behavior is healthy. Do not repeatedly scan QR codes, run multiple web sessions, or connect from a local Windows/laptop gateway. If OpenClaw logs show `440 session conflict`, back up only `~/.openclaw/credentials/whatsapp/default` and relink it with a fresh QR.
 
 Use exactly one production host:
 
@@ -41,6 +42,8 @@ set -euo pipefail
 
 export MECHI_NATIVE_WHATSAPP_NUMBER="+254113033475"
 export MECHI_NATIVE_WHATSAPP_ACCOUNT_ID="254113033475"
+export MECHI_NATIVE_SUPPORT_WHATSAPP_NUMBER="+254733638841"
+export MECHI_NATIVE_SUPPORT_WHATSAPP_ACCOUNT_ID="default"
 export MECHI_REPO="/home/ubuntu/mechi-v3"
 
 cd "$MECHI_REPO"
@@ -68,7 +71,10 @@ openclaw config set channels.whatsapp.enabled true
 openclaw config set channels.whatsapp.defaultAccount "$MECHI_NATIVE_WHATSAPP_ACCOUNT_ID"
 openclaw config set channels.whatsapp.dmPolicy open
 openclaw config set channels.whatsapp.allowFrom '["*"]' --strict-json
-openclaw config set channels.whatsapp.accounts.default.enabled false
+openclaw config set channels.whatsapp.accounts.default.enabled true
+openclaw config set channels.whatsapp.accounts.default.name "$MECHI_NATIVE_SUPPORT_WHATSAPP_NUMBER native OpenClaw WhatsApp"
+openclaw config set channels.whatsapp.accounts.default.dmPolicy open
+openclaw config set channels.whatsapp.accounts.default.allowFrom '["*"]' --strict-json
 openclaw config set channels.whatsapp.accounts."$MECHI_NATIVE_WHATSAPP_ACCOUNT_ID".enabled true
 openclaw config set channels.whatsapp.accounts."$MECHI_NATIVE_WHATSAPP_ACCOUNT_ID".name "$MECHI_NATIVE_WHATSAPP_NUMBER native OpenClaw WhatsApp"
 openclaw config set channels.whatsapp.accounts."$MECHI_NATIVE_WHATSAPP_ACCOUNT_ID".authDir "~/.openclaw/credentials/whatsapp/$MECHI_NATIVE_WHATSAPP_ACCOUNT_ID"
@@ -95,6 +101,31 @@ export OPENCLAW_DIST_DIR="${OPENCLAW_DIST_DIR:-$HOME/.openclaw/tools/node-v22.22
 
 # Run once. Scan with WhatsApp > Linked Devices on +254113033475 only.
 npm run ops:whatsapp-qr -- --account="$MECHI_NATIVE_WHATSAPP_ACCOUNT_ID" --qr-timeout-ms=180000 --wait-timeout-ms=600000
+```
+
+To cleanly relink the second support number `+254733638841` after a `440 session conflict`:
+
+```bash
+set -euo pipefail
+
+cd /home/ubuntu/mechi-v3
+sudo systemctl stop openclaw-gateway
+
+target="$HOME/.openclaw/credentials/whatsapp/default"
+case "$target" in
+  "$HOME/.openclaw/credentials/whatsapp/default") ;;
+  *) echo "Refusing unexpected WhatsApp credential path: $target"; exit 1 ;;
+esac
+
+if [ -d "$target" ]; then
+  mv "$target" "${target}.bak.$(date -u +%Y%m%dT%H%M%SZ)"
+fi
+
+export OPENCLAW_DIST_DIR="${OPENCLAW_DIST_DIR:-$HOME/.openclaw/tools/node-v22.22.0/lib/node_modules/openclaw/dist}"
+npm run ops:whatsapp-qr -- --account=default --qr-timeout-ms=180000 --wait-timeout-ms=600000
+
+sudo systemctl start openclaw-gateway
+sudo journalctl -u openclaw-gateway --since "5 minutes ago" --no-pager | grep -Ei 'whatsapp|254113|733638841|listening|conflict|failed'
 ```
 
 After scanning:

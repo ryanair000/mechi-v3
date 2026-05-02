@@ -61,6 +61,11 @@ async function sendEmail(payload: Parameters<Resend['emails']['send']>[0]): Prom
   }
 
   const response = await resend.emails.send(payload);
+  if (response.error) {
+    console.error('[Email] Resend send error:', response.error);
+    throw new Error(`Resend email send failed: ${response.error.message}`);
+  }
+  console.info('[Email] Resend accepted email', { id: response.data.id });
 
   if (shouldCaptureProviderTranscripts()) {
     await captureProviderTranscript({

@@ -1,4 +1,4 @@
-import { after, NextRequest, NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import {
   AUTH_ACTION_TTLS,
   buildResetPasswordUrl,
@@ -70,13 +70,11 @@ export async function POST(request: NextRequest) {
         nextPath,
       });
 
-      after(async () => {
-        await sendPasswordResetEmail({
-          to: profileEmail,
-          username: profileUsername,
-          resetLink: buildResetPasswordUrl(token.token),
-          expiresInMinutes: Math.round(AUTH_ACTION_TTLS.password_reset / 60000),
-        });
+      await sendPasswordResetEmail({
+        to: profileEmail,
+        username: profileUsername,
+        resetLink: buildResetPasswordUrl(token.token),
+        expiresInMinutes: Math.round(AUTH_ACTION_TTLS.password_reset / 60000),
       });
     }
 

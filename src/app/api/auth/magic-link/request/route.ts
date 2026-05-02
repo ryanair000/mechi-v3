@@ -1,4 +1,4 @@
-import { after, NextRequest, NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import {
   AUTH_ACTION_TTLS,
   buildMagicLinkConsumeUrl,
@@ -68,13 +68,11 @@ export async function POST(request: NextRequest) {
         nextPath,
       });
 
-      after(async () => {
-        await sendMagicLinkEmail({
-          to: profileEmail,
-          username: profileUsername,
-          magicLink: buildMagicLinkConsumeUrl(token.token),
-          expiresInMinutes: Math.round(AUTH_ACTION_TTLS.magic_link_signin / 60000),
-        });
+      await sendMagicLinkEmail({
+        to: profileEmail,
+        username: profileUsername,
+        magicLink: buildMagicLinkConsumeUrl(token.token),
+        expiresInMinutes: Math.round(AUTH_ACTION_TTLS.magic_link_signin / 60000),
       });
     }
 

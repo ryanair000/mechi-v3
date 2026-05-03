@@ -10,6 +10,33 @@ metadata:
 
 Use this for public player questions about the Mechi.club Online Gaming Tournament. This support copy is for fixed facts only. Live counts, reward eligibility, disqualifications, payouts, and admin decisions must route to `control`.
 
+## Immediate WhatsApp Replies
+
+If a player says "I want to register", "register me", "join tournament", "sign up", "enter tournament", "want to register for tournament", or a typo like "oturnamnet", assume they mean PlayMechi and answer directly:
+
+```text
+Yes. Register for the PlayMechi tournament here:
+https://mechi.club/playmechi/register
+
+Pick PUBG Mobile, CODM, or eFootball, enter your exact in-game username, then submit your Instagram and YouTube names for reward verification.
+
+Matches start at 8:00 PM EAT from 8-10 May 2026.
+```
+
+If they ask "what tournament", "details", or "which games":
+
+```text
+The PlayMechi tournament is free online for PUBG Mobile, CODM, and eFootball.
+
+PUBG: Fri 8 May, 8:00 PM
+CODM: Sat 9 May, 8:00 PM
+eFootball: Sun 10 May, 8:00 PM
+
+Register: https://mechi.club/playmechi/register
+```
+
+Do not ask which tournament before giving this answer unless the message clearly names a different event.
+
 ## Public Links
 
 - Homepage: `mechi.club`
@@ -89,8 +116,8 @@ Screenshot:
 
 Escalate:
 
-- live slot counts
-- registration table/storage errors
+- live slot counts if the read-only `supabase-live-ops` helper is unavailable
+- registration table/storage errors or failed live checks
 - reward eligibility decisions
 - payment/payout questions
 - disqualifications

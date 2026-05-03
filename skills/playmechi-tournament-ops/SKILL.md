@@ -10,6 +10,21 @@ metadata:
 
 Use this skill whenever a player, operator, admin, or WhatsApp group asks about the Mechi.club Online Gaming Tournament, PlayMechi tournament registration, PUBG Mobile, CODM, eFootball, prizes, schedule, rules, player slots, stream, or reward eligibility.
 
+## Immediate WhatsApp Replies
+
+If a player says "I want to register", "register me", "join tournament", "sign up", "enter tournament", "want to register for tournament", or a typo like "oturnamnet", assume they mean PlayMechi and answer directly:
+
+```text
+Yes. Register for the PlayMechi tournament here:
+https://mechi.club/playmechi/register
+
+Pick PUBG Mobile, CODM, or eFootball, enter your exact in-game username, then submit your Instagram and YouTube names for reward verification.
+
+Matches start at 8:00 PM EAT from 8-10 May 2026.
+```
+
+Do not ask which tournament before giving this answer unless the message clearly names a different event.
+
 ## Canonical Public Paths
 
 - Main public homepage on Mechi: `/`

@@ -6,7 +6,8 @@ Target number:
 
 - current native OpenClaw account: `+254113033475` (`accountId=254113033475`)
 - second native support account approved by the Boss: `+254733638841` (`accountId=default`)
-- `+254733638841` requires a clean EC2 QR relink if logs show WhatsApp Web `440 session conflict`
+- both accounts are reported by the Boss as logged in and responding as of 2026-05-03 EAT
+- `+254733638841` requires a clean EC2 QR relink only if logs again show WhatsApp Web `440 session conflict`
 
 Purpose:
 
@@ -58,10 +59,9 @@ grep -q '^MECHI_NATIVE_WHATSAPP_NUMBER=' ~/.openclaw/.env || \
   printf '\nMECHI_NATIVE_WHATSAPP_NUMBER=%s\n' "$MECHI_NATIVE_WHATSAPP_NUMBER" >> ~/.openclaw/.env
 
 # Keep the tournament public FAQ skill available to customer-safe workspaces.
-install -d ~/.openclaw/workspace-support/skills/playmechi-tournament-ops
-install -d ~/.openclaw/workspace-community/skills/playmechi-tournament-ops
-cp -a skills/playmechi-tournament-ops/. ~/.openclaw/workspace-support/skills/playmechi-tournament-ops/
-cp -a skills/playmechi-tournament-ops/. ~/.openclaw/workspace-community/skills/playmechi-tournament-ops/
+install -d ~/.openclaw/workspace-support ~/.openclaw/workspace-community
+cp -a ops/openclaw-support-workspace/. ~/.openclaw/workspace-support/
+cp -a ops/openclaw-community-workspace/. ~/.openclaw/workspace-community/
 
 # Validate OpenClaw before touching the WhatsApp session.
 openclaw config validate --json
@@ -71,15 +71,18 @@ openclaw config set channels.whatsapp.enabled true
 openclaw config set channels.whatsapp.defaultAccount "$MECHI_NATIVE_WHATSAPP_ACCOUNT_ID"
 openclaw config set channels.whatsapp.dmPolicy open
 openclaw config set channels.whatsapp.allowFrom '["*"]' --strict-json
-openclaw config set channels.whatsapp.accounts.default.enabled true
-openclaw config set channels.whatsapp.accounts.default.name "$MECHI_NATIVE_SUPPORT_WHATSAPP_NUMBER native OpenClaw WhatsApp"
-openclaw config set channels.whatsapp.accounts.default.dmPolicy open
-openclaw config set channels.whatsapp.accounts.default.allowFrom '["*"]' --strict-json
 openclaw config set channels.whatsapp.accounts."$MECHI_NATIVE_WHATSAPP_ACCOUNT_ID".enabled true
 openclaw config set channels.whatsapp.accounts."$MECHI_NATIVE_WHATSAPP_ACCOUNT_ID".name "$MECHI_NATIVE_WHATSAPP_NUMBER native OpenClaw WhatsApp"
 openclaw config set channels.whatsapp.accounts."$MECHI_NATIVE_WHATSAPP_ACCOUNT_ID".authDir "~/.openclaw/credentials/whatsapp/$MECHI_NATIVE_WHATSAPP_ACCOUNT_ID"
 openclaw config set channels.whatsapp.accounts."$MECHI_NATIVE_WHATSAPP_ACCOUNT_ID".dmPolicy open
 openclaw config set channels.whatsapp.accounts."$MECHI_NATIVE_WHATSAPP_ACCOUNT_ID".allowFrom '["*"]' --strict-json
+
+# Configure the second logged-in support account too.
+openclaw config set channels.whatsapp.accounts.default.enabled true
+openclaw config set channels.whatsapp.accounts.default.name "$MECHI_NATIVE_SUPPORT_WHATSAPP_NUMBER native OpenClaw WhatsApp"
+openclaw config set channels.whatsapp.accounts.default.authDir "~/.openclaw/credentials/whatsapp/default"
+openclaw config set channels.whatsapp.accounts.default.dmPolicy open
+openclaw config set channels.whatsapp.accounts.default.allowFrom '["*"]' --strict-json
 
 # Restart whichever OpenClaw gateway unit exists on this host.
 if systemctl --user list-unit-files | grep -q '^openclaw-gateway.service'; then
@@ -102,6 +105,16 @@ export OPENCLAW_DIST_DIR="${OPENCLAW_DIST_DIR:-$HOME/.openclaw/tools/node-v22.22
 # Run once. Scan with WhatsApp > Linked Devices on +254113033475 only.
 npm run ops:whatsapp-qr -- --account="$MECHI_NATIVE_WHATSAPP_ACCOUNT_ID" --qr-timeout-ms=180000 --wait-timeout-ms=600000
 ```
+
+After both numbers are logged in, sync the current customer-service brain to both live workspaces:
+
+```bash
+cd /home/ubuntu/mechi-v3
+git pull --ff-only
+bash scripts/openclaw-sync-customer-workspaces.sh
+```
+
+That copies the support/community workspaces, installs the PlayMechi and read-only live ops skills into both, configures both native WhatsApp accounts, validates OpenClaw, and restarts the gateway/bridge.
 
 To cleanly relink the second support number `+254733638841` after a `440 session conflict`:
 

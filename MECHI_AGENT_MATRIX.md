@@ -7,8 +7,8 @@ This file defines the recommended OpenClaw agent roster for Mechi, the skills ea
 The EC2 OpenClaw gateway currently has these agents active:
 
 - `control`: Mechi COO, workspace `/home/ubuntu/mechi-v3`, repo and operator control.
-- `support`: Mechi Support, workspace `~/.openclaw/workspace-support`, installed skills `whatsapp-business` and `customer-support-autopilot`; recommended static local skill copy `playmechi-tournament-ops` for public tournament FAQ.
-- `community`: Mechi Community, workspace `~/.openclaw/workspace-community`, public/community-safe messaging; recommended static local skill copy `playmechi-tournament-ops` for announcement-safe tournament FAQ.
+- `support`: Mechi Support, workspace `~/.openclaw/workspace-support`, installed skills `whatsapp-business` and `customer-support-autopilot`; local skills `playmechi-tournament-ops` and read-only `supabase-live-ops` for public tournament FAQ and verified slot counts.
+- `community`: Mechi Community, workspace `~/.openclaw/workspace-community`, public/community-safe messaging; local skills `playmechi-tournament-ops` and read-only `supabase-live-ops` for announcement-safe tournament FAQ and verified slot counts.
 - `infra`: Mechi Infra, workspace `~/.openclaw/workspace-infra`, installed skills `aws`, `openclaw-security-scanner`, `incident`, and `incident-hotfix`.
 - `billing`: Mechi Billing, workspace `~/.openclaw/workspace-billing`, installed skill `paystack`.
 - `data`: Mechi Data, workspace `~/.openclaw/workspace-data`, installed skills `ga4`, `skill-ga4-analytics`, and `marketing-analytics`.
@@ -74,7 +74,8 @@ Rule: give each role the lowest tier that still lets it do its job.
   - policy recall
   - bug report summarization
   - safe handoff to `control`
-  - static `playmechi-tournament-ops` for public schedule, registration path, prize, and rule questions
+  - `playmechi-tournament-ops` for public schedule, registration path, prize, and rule questions
+  - read-only `supabase-live-ops` for verified PlayMechi slot counts when the helper is available
 - Required access:
   - OpenClaw model auth via ChatGPT auth profile or `OPENAI_API_KEY`
   - `MECHI_OPENCLAW_BRIDGE_URL`
@@ -88,6 +89,7 @@ Rule: give each role the lowest tier that still lets it do its job.
   - `WHATSAPP_TOKEN` for Meta Cloud API player/customer WhatsApp support when enabled
   - `WHATSAPP_PHONE_NUMBER_ID`
   - `WHATSAPP_WEBHOOK_VERIFY_TOKEN`
+  - native OpenClaw WhatsApp customer-safe access for non-operator DMs on `+254113033475` and `+254733638841`
   - `NEXT_PUBLIC_SUPABASE_URL`
   - `NEXT_PUBLIC_SUPABASE_ANON_KEY` for read-only customer-safe lookups
   - `SUPABASE_SERVICE_ROLE_KEY` only if support workflows truly require writes
@@ -96,7 +98,7 @@ Rule: give each role the lowest tier that still lets it do its job.
   - no shell access
   - no infra credentials
   - should not hold payment-provider write credentials
-  - no Supabase service-role key unless explicitly approved; live PlayMechi counts, eligibility, payouts, or disqualifications route to `control`
+  - no Supabase service-role key unless explicitly approved; read-only PlayMechi counts can use the approved helper if available, while eligibility, payouts, disputes, or disqualifications route to `control`
 
 ## Recommended specialist agents
 
@@ -200,19 +202,21 @@ Rule: give each role the lowest tier that still lets it do its job.
   - tone management
   - de-escalation
   - fast routing of issues into support or operations
-  - static `playmechi-tournament-ops` for public schedule, registration path, prize, and rule questions
+  - `playmechi-tournament-ops` for public schedule, registration path, prize, and rule questions
+  - read-only `supabase-live-ops` for verified PlayMechi slot counts when the helper is available
 - Required access:
   - OpenClaw model auth
   - `TELEGRAM_BOT_TOKEN`
   - `TELEGRAM_CHAT_ID`
   - `INSTAGRAM_PAGE_ACCESS_TOKEN`
   - `WHATSAPP_TOKEN` for Meta Cloud API WhatsApp only if community messaging is explicitly approved
+  - native OpenClaw WhatsApp customer-safe access for non-operator DMs on `+254113033475` and `+254733638841` when configured
 - Guardrails:
   - no DB write access by default
   - no repo write
   - no deploy or payment credentials
-  - no Supabase service-role key by default; live PlayMechi counts, payout, eligibility, or disqualification questions route to `control`
-  - no native OpenClaw WhatsApp access to Boss/operator routes; non-Boss direct senders on `+254733638841` may be treated as customer-safe tournament inquiries
+  - no Supabase service-role key by default; read-only PlayMechi counts can use the approved helper if available, while payout, eligibility, dispute, or disqualification questions route to `control`
+  - no native OpenClaw WhatsApp access to Boss/operator routes; non-Boss direct senders on `+254113033475` and `+254733638841` may be treated as customer-safe tournament inquiries
 
 ### `repo-engineering`
 

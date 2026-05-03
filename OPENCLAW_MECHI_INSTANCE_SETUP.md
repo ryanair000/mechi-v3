@@ -16,7 +16,7 @@ Production rule: Mechi uses only the EC2 OpenClaw runtime. Local Windows or lapt
 8. `growth` agent pointed at the growth workspace with Cloudinary/Meta Ads/Instagram ClawHub skills
 9. `ops/openclaw-bridge/server.mjs` for app compatibility
 10. Native OpenClaw Telegram channel with approved operator DMs routed to `control`
-11. Native OpenClaw WhatsApp on `+254113033475`, plus `+254733638841` after a clean EC2 QR relink, with Boss DM `+254708355692` routed to `control` and other direct senders routed to customer-safe `support`
+11. Native OpenClaw WhatsApp on `+254113033475` and `+254733638841`, with Boss DM `+254708355692` routed to `control` and other direct senders routed to customer-safe `support`
 12. `ops/openclaw-bridge/telegram-poller.mjs` only as a legacy fallback if the native channel is intentionally disabled
 13. GitHub CLI plus GitHub auth env for repo-aware OpenClaw control work
 
@@ -124,7 +124,7 @@ For player DMs, the preferred production transport is Meta WhatsApp Cloud API th
 For native OpenClaw WhatsApp:
 
 - current target native sender: `+254113033475` (`accountId=254113033475`)
-- second native support sender approved by the Boss: `+254733638841` (`accountId=default`), currently requiring a fresh EC2 QR relink after its old credential folder was backed up for repeated `440 session conflict` errors
+- second native support sender approved by the Boss: `+254733638841` (`accountId=default`), confirmed by the Boss as logged in and responding on 2026-05-03 EAT after the clean relink path
 - Boss/operator direct sender: `+254708355692`
 - purpose: Boss/operator DMs plus low-volume player tournament inquiries that accidentally arrive on the native number
 - EC2 login runbook: `OPENCLAW_WHATSAPP_EC2_RUNBOOK.md`
@@ -134,7 +134,7 @@ Required posture:
 
 - customer WhatsApp DMs handled by the Mechi app must keep using the support inbox/player-action path
 - native WhatsApp direct messages are currently open on `+254113033475` by Boss request; keep non-operator replies customer-safe, tournament-focused, and low-volume
-- `+254733638841` should be treated as pending relink until `sudo journalctl -u openclaw-gateway` shows it starting and listening without `440 session conflict`
+- `+254733638841` should stay on EC2 only; if `sudo journalctl -u openclaw-gateway` shows a fresh `440 session conflict`, stop automation and relink cleanly instead of restoring old credentials
 - native WhatsApp DM from known Boss/operator senders must route to `control`
 - native WhatsApp operator/admin groups such as `MECHI ADMINS` should route to `control` when exact group routing is configured
 - generic support/community prompts must not answer operator WhatsApp groups
@@ -143,16 +143,14 @@ Required posture:
 - for PlayMechi live slot counts or storage readiness, the control agent should run `npm run ops:registrations -- --json` and inspect `onlineTournament`
 - if the helper cannot run, the agent should say it needs a live check through `control`; it should not send the Boss to the public tournaments page as the primary answer
 
-Static tournament FAQ can be made available to support/community by copying the repo skill into those workspaces:
+The full customer-service brain can be made available to both logged-in WhatsApp support numbers by syncing the versioned support/community workspaces:
 
 ```bash
 cd /home/ubuntu/mechi-v3
-mkdir -p ~/.openclaw/workspace-support/skills ~/.openclaw/workspace-community/skills
-cp -R skills/playmechi-tournament-ops ~/.openclaw/workspace-support/skills/
-cp -R skills/playmechi-tournament-ops ~/.openclaw/workspace-community/skills/
+bash scripts/openclaw-sync-customer-workspaces.sh
 ```
 
-Do not copy `supabase-live-ops` into customer-safe support/community workspaces unless the Boss explicitly approves service-role data access there. Operator/admin WhatsApp groups should route to `control`, which already has the repo skill and approved Supabase helper.
+This copies PlayMechi tournament facts, customer-safe prompts, and the read-only live ops skill into `support` and `community`, configures `+254113033475` and `+254733638841`, validates OpenClaw, and restarts the gateway/bridge. Operator/admin WhatsApp groups should route to `control`, which already has the repo skill and approved Supabase helper.
 
 After changing native WhatsApp routing or prompts, restart the OpenClaw process that owns the WhatsApp session. Local repo changes alone will not alter already-running WhatsApp replies.
 

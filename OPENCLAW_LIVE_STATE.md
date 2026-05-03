@@ -32,8 +32,8 @@ OpenClaw native docs say ClawHub skills install into the active workspace `skill
 - `billing`: `paystack`
 - `data`: `ga4`, `skill-ga4-analytics`, `marketing-analytics`
 - `growth`: `cloudinary`, `openclaw-meta-ads`, `meta-ads-manager`, `instagram-api`, `instagram-content-studio`
-- `support`: `whatsapp-business`, `customer-support-autopilot`; may also receive the static `playmechi-tournament-ops` skill copy for public tournament FAQ only
-- `community`: may receive the static `playmechi-tournament-ops` skill copy for public tournament FAQ and announcement-safe replies only
+- `support`: `whatsapp-business`, `customer-support-autopilot`; local skills `playmechi-tournament-ops` and read-only `supabase-live-ops` for customer-safe tournament FAQ and verified slot counts
+- `community`: local skills `playmechi-tournament-ops` and read-only `supabase-live-ops` for public tournament FAQ, announcement-safe replies, and verified slot counts
 
 The direct ClawHub archives for slugs `meta-ads` and `instagram` were not forced into production because they unpacked without a valid top-level `SKILL.md`. Growth uses the working alternatives listed above.
 
@@ -49,13 +49,13 @@ The direct ClawHub archives for slugs `meta-ads` and `instagram` were not forced
 - Meta WhatsApp Cloud API for player/customer traffic is intended for `+254113033475`, but the observed Meta setup on 2026-05-02 is still test-WABA only until a production WABA/number and templates are approved.
 - OpenAI Codex model OAuth was repaired on 2026-05-03 EAT by removing the reused/expired profile, keeping the fresh `openai-codex` OAuth profile, and repointing active sessions to that profile. `openclaw models status --json` reports the profile as `ok`.
 - Native OpenClaw WhatsApp is currently linked and listening on EC2 account `254113033475` (`+254113033475`). On 2026-05-02 the Boss approved open direct-message access, so `channels.whatsapp.accounts.254113033475.dmPolicy` is `open` with `allowFrom=["*"]`.
-- The old native OpenClaw WhatsApp account `+254733638841` is approved for support use but is not fully live until it is freshly linked on EC2. Its previous `default` credential folder was backed up on 2026-05-03 EAT after repeated WhatsApp Web `440 session conflict` errors; the next step is a fresh QR scan for account `default`.
+- The second native OpenClaw WhatsApp support account `+254733638841` (`accountId=default`) is also reported by the Boss as logged in and responding as of 2026-05-03 EAT. Keep it on EC2 only and do not restore the old conflicting credential folder unless the Boss explicitly asks for rollback.
 
 ## WhatsApp routing requirement
 
 - operator/admin WhatsApp groups such as `MECHI ADMINS` must route to `control`, not the generic support/community prompt
 - native WhatsApp direct messages are currently open on `+254113033475` by Boss request; keep replies short, customer-safe, and tournament-focused for non-operator senders
-- `+254733638841` may be used as a second native support number only after a clean EC2 QR relink; do not restore the old conflicting credential folder unless the Boss explicitly asks for rollback
+- `+254733638841` is now available as a second native support number after the Boss confirmed responses from both numbers; do not restore the old conflicting credential folder unless the Boss explicitly asks for rollback
 - native WhatsApp direct messages from known Boss/operator senders are the operator path and route to `control`
 - customer WhatsApp support DMs should route through the Mechi support inbox/player-action path
 - game purchase enquiries are handled on WhatsApp at `+254104003156`; customer-safe agents should tell clients to DM that number and must not negotiate prices or collect payment details
@@ -86,7 +86,7 @@ The direct ClawHub archives for slugs `meta-ads` and `instagram` were not forced
 - Cloudflared installed for Cloudinary/Instagram content studio local tunnel workflows
 - Nginx fronts the Mechi bridge at `https://smm-api.lokimax.top`
 - native OpenClaw Telegram channel is the production Telegram path
-- native OpenClaw WhatsApp on `+254113033475` is the current live support/operator path; `+254733638841` is configured for relink but pending a fresh QR scan
+- native OpenClaw WhatsApp on `+254113033475` and `+254733638841` are the current live native WhatsApp support/operator paths after the Boss confirmed both are logged in and responding
 - OpenClaw gateway defaults are set for fast operation: `agents.defaults.thinkingDefault=minimal`; main agent `thinkingDefault=minimal` and `fastModeDefault=true`
 - local Windows OpenClaw gateways are not production and should stay stopped for Mechi
 

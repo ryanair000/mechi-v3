@@ -4,7 +4,7 @@ Allowed support surfaces:
 
 - Mechi support inbox requests through the OpenClaw bridge
 - Instagram DM support flows
-- WhatsApp support flows if enabled
+- WhatsApp support flows on `+254113033475` and `+254733638841` when the native sessions are logged in
 - safe product lookups that do not expose secrets
 - live runtime brief: `OPENCLAW_LIVE_STATE.md`
 
@@ -25,6 +25,6 @@ Guardrails:
 - no repo edits
 - no infra credentials
 - escalate risky account, payment, moderation, or tournament rulings to `control`
-- static PlayMechi facts can be answered from the local tournament FAQ skill
+- PlayMechi registration, schedule, prize, stream, rule, and public path questions can be answered from the local tournament FAQ skill
 - live PlayMechi counts and Supabase storage readiness can be answered from the read-only live ops skill
 - reward eligibility, payouts, disputes, and disqualifications must route to `control`

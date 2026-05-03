@@ -4,6 +4,28 @@ const APP_URL = normalizeUrl(
     'https://mechi.club'
 );
 const GAME_ENQUIRIES_WHATSAPP = '+254104003156';
+const PLAYMECHI_REGISTER_URL = `${APP_URL}/playmechi/register`;
+const PLAYMECHI_PAGE_URL = `${APP_URL}/playmechi`;
+const PLAYMECHI_YOUTUBE_URL = 'https://www.youtube.com/@playmechi';
+
+const PLAYMECHI_FACT_LINES = [
+  'PlayMechi tournament: Playmechi Launch / Mechi.club Online Gaming Tournament.',
+  `Registration link: ${PLAYMECHI_REGISTER_URL}. Tournament page: ${PLAYMECHI_PAGE_URL}.`,
+  'Registration is free. Total slots: 216 players. Cash prize pool: KSh 6,000.',
+  'Games: PUBG Mobile, CODM, and eFootball.',
+  'PUBG Mobile: Friday 8 May 2026 at 8:00 PM EAT, 100 slots, 3 Battle Royale matches, kills only. Prizes: KSh 1,500, KSh 1,000, 60 UC.',
+  'CODM: Saturday 9 May 2026 at 8:00 PM EAT, 100 slots, 3 Battle Royale matches, kills only. Prizes: KSh 1,200, KSh 800, 80 CP.',
+  'eFootball: Sunday 10 May 2026 at 8:00 PM EAT, 16 slots, 1v1 knockout. Prizes: KSh 1,000, KSh 500, 315 Coins.',
+  `Stream: PlayMechi on YouTube (${PLAYMECHI_YOUTUBE_URL}). Streamer: Kabaka Mwangi.`,
+  'Reward eligibility: players must follow PlayMechi on Instagram and subscribe to PlayMechi on YouTube before match day. Admin verification is the only eligibility truth.',
+  'Registration requirements: Mechi account, full name, phone/WhatsApp, email, game, exact in-game username, 8:00 PM availability, rules acceptance, Instagram username, and YouTube name.',
+];
+
+const PLAYMECHI_REGISTER_REPLY = [
+  `Yes. Register for the PlayMechi tournament here: ${PLAYMECHI_REGISTER_URL}`,
+  'Pick PUBG Mobile, CODM, or eFootball, enter your exact in-game username, then submit your Instagram and YouTube names for reward verification.',
+  'Matches start at 8:00 PM EAT from 8-10 May 2026.',
+].join('\n');
 
 export const MECHI_ALLOWED_TOPICS = [
   'mechi_pricing',
@@ -15,6 +37,11 @@ export const MECHI_ALLOWED_TOPICS = [
   'direct_challenges',
   'tournaments',
   'tournament_discovery',
+  'playmechi_online_tournament',
+  'playmechi_registration',
+  'playmechi_schedule',
+  'playmechi_prizes',
+  'playmechi_rules',
   'lobby_discovery',
   'notifications',
   'profile_setup',
@@ -106,6 +133,10 @@ export function buildMechiBridgeContext(options = {}) {
     '- Pro and Elite organizers can run auto prize pools from paid entries or set a specified prize pool up front.',
     '- FC26 and eFootball score reporting use scorelines; matching reports can confirm a win or draw, mismatches go to dispute review.',
     '- Reward Points are Mechi in-product points; do not promise redemption completion, payout completion, or point restoration without verified state.',
+    'PlayMechi tournament facts:',
+    ...PLAYMECHI_FACT_LINES.map((line) => `- ${line}`),
+    'Default PlayMechi registration reply:',
+    PLAYMECHI_REGISTER_REPLY,
     `- Game purchase enquiries are handled on WhatsApp at ${GAME_ENQUIRIES_WHATSAPP}. If someone wants to buy a game, tell them to DM that number and do not negotiate prices or collect payment details.`,
     '- Never invent payment confirmations, refunds, payouts, ban outcomes, match rulings, or live registration counts.',
     '- For operator live tournament availability, the control agent should verify with npm run ops:tournaments -- --json before answering.',
@@ -131,6 +162,8 @@ export function buildMechiBridgeSystemPrompt(channel = 'support') {
     `You are the Mechi ${channelLabel} assistant running inside OpenClaw.`,
     'Answer from the supplied Mechi context when possible.',
     'Keep replies concise, practical, brand-safe, and mobile-friendly.',
+    `If someone says they want to register, join, or sign up for "the tournament", assume they mean the PlayMechi tournament and reply with: ${PLAYMECHI_REGISTER_REPLY}`,
+    'For PlayMechi schedule, prize, stream, rule, and registration questions, answer from the supplied PlayMechi facts instead of asking which tournament.',
     `If someone wants to buy a game or asks for game enquiries, tell them to DM WhatsApp ${GAME_ENQUIRIES_WHATSAPP}. Do not collect payment details.`,
     'Escalate or ask for one missing detail when the request is account-sensitive, risky, or unsupported by the supplied context.',
     'Do not invent product policy, prices, live counts, payment state, payouts, bans, refunds, tournament rulings, or account changes.',

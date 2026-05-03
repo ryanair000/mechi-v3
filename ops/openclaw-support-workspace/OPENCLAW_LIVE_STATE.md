@@ -15,6 +15,7 @@ This workspace is the customer-safe support agent for Mechi.
 - `whatsapp-business`
 - `customer-support-autopilot`
 - static local skill: `playmechi-tournament-ops`
+- read-only local skill: `supabase-live-ops`
 
 ## Credential gates
 
@@ -24,14 +25,16 @@ This workspace is the customer-safe support agent for Mechi.
 ## Current routing
 
 - support bridge and customer-safe inbox-style work should route here
+- customer-safe native WhatsApp DMs can arrive through `+254113033475` or `+254733638841`
 - Telegram operator DMs and the internal `MECHI OPS` group route to `control`
 - broader public/community traffic routes to `community`
 
 ## Current truth paths
 
-- live registrations and player counts are verified by `control` through the Supabase helper
+- fixed PlayMechi registration questions should be answered immediately with `https://mechi.club/playmechi/register`
 - fixed PlayMechi tournament facts are available in `skills/playmechi-tournament-ops/SKILL.md`
-- live PlayMechi counts and storage readiness are verified by `control` through `npm run ops:registrations -- --json` and the `onlineTournament` object
+- live PlayMechi counts and storage readiness can be checked with the read-only `skills/supabase-live-ops/SKILL.md`; if the helper is unavailable, escalate to `control`
+- live registrations and player counts outside customer-safe read-only checks are verified by `control` through the Supabase helper
 - GitHub repo, PR, issue, and workflow state are verified by `control`
 - durable internal notes and operator memory are maintained by `control` in the Mechi Obsidian vault
 

@@ -168,9 +168,9 @@ Use `telegram-poller.mjs` only if you deliberately want a custom prompt/translat
 
 Native OpenClaw WhatsApp sessions are not the same as the Mechi app WhatsApp Cloud API webhook. If WhatsApp group messages are enabled on the OpenClaw host:
 
-- native OpenClaw WhatsApp uses `+254733638841`
+- native OpenClaw WhatsApp uses both logged-in Mechi numbers: `+254113033475` (`accountId=254113033475`) and `+254733638841` (`accountId=default`)
 - Boss direct WhatsApp is `+254708355692` and should route to the repo-capable `control` agent
-- other direct senders on the native WhatsApp number are gamers/player tournament inquiries and should route to customer-safe `support`
+- other direct senders on either native WhatsApp number are gamers/player tournament inquiries and should route to customer-safe `support`
 - Meta Cloud API uses `+254113033475` for player/customer WhatsApp through the Mechi app
 - operator/admin groups such as `MECHI ADMINS` should route to `control` when exact group routing is configured
 - customer support DMs should stay on the support inbox/player-action path
@@ -179,7 +179,7 @@ Native OpenClaw WhatsApp sessions are not the same as the Mechi app WhatsApp Clo
 
 For player DMs, prefer Meta WhatsApp Cloud API through the Mechi app. The app receives Meta webhooks at `/api/whatsapp/webhook`, stores the conversation in the support inbox, asks this bridge for safe OpenClaw responses when needed, then sends through Meta Graph API. See `../../META_WHATSAPP_CLOUD_API.md`.
 
-If `+254733638841` was recently shadowbanned, do not relink or automate it repeatedly. Keep it on EC2 only, route non-Boss direct messages to customer-safe tournament support, and avoid bulk sends, cold DMs, repeated identical messages, and unknown-chat auto-replies. The EC2 QR login runbook is `../../OPENCLAW_WHATSAPP_EC2_RUNBOOK.md`.
+If either native number starts hitting WhatsApp Web session conflicts or delivery weirdness, do not relink or automate it repeatedly. Keep it on EC2 only, route non-Boss direct messages to customer-safe tournament support, and avoid bulk sends, cold DMs, repeated identical messages, and unknown-chat auto-replies. The EC2 QR login runbook is `../../OPENCLAW_WHATSAPP_EC2_RUNBOOK.md`.
 
 ## EC2 restart
 

@@ -73,6 +73,9 @@ const PLAYMECHI_CONTEXT_PATTERNS = [
   /\bplaymechi\b/i,
   /\bmechi\.?club online\b/i,
   /\bonline gaming tournament\b/i,
+  /\boturnamnet\b/i,
+  /\btournamnet\b/i,
+  /\btournamnent\b/i,
   /\bpubg ?m\b/i,
   /\bpubg mobile\b/i,
   /\bcodm\b/i,
@@ -82,6 +85,8 @@ const PLAYMECHI_CONTEXT_PATTERNS = [
 const PLAYMECHI_REGISTER_PATTERNS = [
   /\b(register|join|sign ?up|enter)\b.*\b(tournament|playmechi|pubg ?m|pubg mobile|codm|call of duty:? mobile|efootball)\b/i,
   /\b(tournament|playmechi|pubg ?m|pubg mobile|codm|call of duty:? mobile|efootball)\b.*\b(register|join|sign ?up|enter)\b/i,
+  /\b(register|join|sign ?up|enter)\b.*\b(oturnamnet|tournamnet|tournamnent)\b/i,
+  /\b(oturnamnet|tournamnet|tournamnent)\b.*\b(register|join|sign ?up|enter)\b/i,
   /\bi want to register\b/i,
 ];
 const PLAYMECHI_SCHEDULE_PATTERNS = [/\bschedule\b/i, /\btime\b/i, /\bdate\b/i, /\bwhen\b/i, /\bmatch day\b/i];
@@ -89,7 +94,14 @@ const PLAYMECHI_PRIZE_PATTERNS = [/\bprizes?\b/i, /\brewards?\b/i, /\bpool\b/i, 
 const PLAYMECHI_RULE_PATTERNS = [/\brules?\b/i, /\bformat\b/i, /\bscoring\b/i, /\bpoints?\b/i, /\bqualif(y|ication)\b/i, /\beligib(le|ility)\b/i];
 const PLAYMECHI_GROUP_PATTERNS = [/\bwhatsapp\b/i, /\bgroups?\b/i, /\broom id\b/i, /\bfixtures?\b/i];
 const PLAYMECHI_STREAM_PATTERNS = [/\bstream\b/i, /\byoutube\b/i, /\bwatch\b/i, /\bkabaka\b/i];
-const TOURNAMENT_PATTERNS = [/\btournaments?\b/i, /\bbrackets?\b/i, /\bevents?\b/i];
+const TOURNAMENT_PATTERNS = [
+  /\btournaments?\b/i,
+  /\boturnamnet\b/i,
+  /\btournamnet\b/i,
+  /\btournamnent\b/i,
+  /\bbrackets?\b/i,
+  /\bevents?\b/i,
+];
 
 const GAME_ALIASES: Array<{ game: GameKey; patterns: RegExp[] }> = [
   { game: 'fc26', patterns: [/\bfc ?26\b/i, /\bea ?fc\b/i, /\bfifa\b/i] },

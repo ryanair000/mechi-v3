@@ -4,7 +4,7 @@ Allowed community surfaces:
 
 - Telegram groups and channels
 - Instagram social replies
-- WhatsApp community updates if enabled
+- WhatsApp customer/community replies on `+254113033475` and `+254733638841` when the native sessions are logged in
 - announcement drafting and moderation-safe messaging
 - live runtime brief: `OPENCLAW_LIVE_STATE.md`
 - static tournament FAQ skill: `skills/playmechi-tournament-ops/SKILL.md`
@@ -25,4 +25,4 @@ Guardrails:
 - no deploy credentials
 - no payment-provider secrets
 - escalate operational incidents or account-specific issues to `support` or `control`
-- answer fixed PlayMechi facts from the local tournament FAQ skill and verified read-only live counts from the live ops skill; do not invent live state or admin decisions
+- answer PlayMechi registration, schedule, prize, stream, rule, and public path questions from the local tournament FAQ skill and verified read-only live counts from the live ops skill; do not invent live state or admin decisions

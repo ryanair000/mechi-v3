@@ -53,7 +53,7 @@ OpenClaw native and ClawHub:
 - current `growth` skills: `cloudinary`, `openclaw-meta-ads`, `meta-ads-manager`, `instagram-api`, `instagram-content-studio`
 - current `support` skills: `whatsapp-business`, `customer-support-autopilot`
 - current repo/control skills: `supabase-live-ops`, `playmechi-tournament-ops`, `github-ops`, `obsidian-ops`
-- recommended support/community local skill copy: `playmechi-tournament-ops` for static public tournament FAQ; keep live Supabase checks on `control`
+- support/community local skills: `playmechi-tournament-ops` plus read-only `supabase-live-ops` for public tournament FAQ and verified slot counts; payout, eligibility, dispute, and admin decisions still route to `control`
 - do not use broken direct slugs `meta-ads` or `instagram`; their archives lacked a valid top-level `SKILL.md` during install, so the working alternatives above are the live source of truth.
 
 Installed host CLIs:

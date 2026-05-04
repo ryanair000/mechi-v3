@@ -4,8 +4,8 @@ set -euo pipefail
 MECHI_REPO="${MECHI_REPO:-/home/ubuntu/mechi-v3}"
 OPENCLAW_HOME="${OPENCLAW_HOME:-$HOME/.openclaw}"
 OPENCLAW_BIN="${OPENCLAW_BIN:-openclaw}"
-PRIMARY_WHATSAPP_NUMBER="${MECHI_NATIVE_WHATSAPP_NUMBER:-+254113033475}"
-PRIMARY_WHATSAPP_ACCOUNT_ID="${MECHI_NATIVE_WHATSAPP_ACCOUNT_ID:-254113033475}"
+PRIMARY_WHATSAPP_NUMBER="${MECHI_NATIVE_WHATSAPP_NUMBER:-}"
+PRIMARY_WHATSAPP_ACCOUNT_ID="${MECHI_NATIVE_WHATSAPP_ACCOUNT_ID:-}"
 SECONDARY_WHATSAPP_NUMBER="${MECHI_NATIVE_SUPPORT_WHATSAPP_NUMBER:-+254733638841}"
 SECONDARY_WHATSAPP_ACCOUNT_ID="${MECHI_NATIVE_SUPPORT_WHATSAPP_ACCOUNT_ID:-default}"
 RESTART_SERVICES="${1:---restart}"
@@ -122,32 +122,41 @@ const existingAccounts = current.accounts &&
   typeof current.accounts === 'object'
   ? current.accounts
   : {};
+const accounts = { ...existingAccounts };
+
+if (!primaryAccountId) {
+  delete accounts['254113033475'];
+}
+
+if (primaryAccountId) {
+  accounts[primaryAccountId] = {
+    ...(accounts[primaryAccountId] || {}),
+    enabled: true,
+    name: `${primaryNumber} native OpenClaw WhatsApp`,
+    authDir: path.join(openclawHome, 'credentials', 'whatsapp', primaryAccountId),
+    dmPolicy: 'open',
+    allowFrom: ['*'],
+  };
+}
+
+if (secondaryAccountId) {
+  accounts[secondaryAccountId] = {
+    ...(accounts[secondaryAccountId] || {}),
+    enabled: true,
+    name: `${secondaryNumber} native OpenClaw WhatsApp`,
+    authDir: path.join(openclawHome, 'credentials', 'whatsapp', secondaryAccountId),
+    dmPolicy: 'open',
+    allowFrom: ['*'],
+  };
+}
 
 config.channels.whatsapp = {
   ...current,
   enabled: true,
-  defaultAccount: primaryAccountId,
+  defaultAccount: primaryAccountId || secondaryAccountId || current.defaultAccount || 'default',
   dmPolicy: 'open',
   allowFrom: ['*'],
-  accounts: {
-    ...existingAccounts,
-    [primaryAccountId]: {
-      ...(existingAccounts[primaryAccountId] || {}),
-      enabled: true,
-      name: `${primaryNumber} native OpenClaw WhatsApp`,
-      authDir: path.join(openclawHome, 'credentials', 'whatsapp', primaryAccountId),
-      dmPolicy: 'open',
-      allowFrom: ['*'],
-    },
-    [secondaryAccountId]: {
-      ...(existingAccounts[secondaryAccountId] || {}),
-      enabled: true,
-      name: `${secondaryNumber} native OpenClaw WhatsApp`,
-      authDir: path.join(openclawHome, 'credentials', 'whatsapp', secondaryAccountId),
-      dmPolicy: 'open',
-      allowFrom: ['*'],
-    },
-  },
+  accounts,
 };
 
 fs.writeFileSync(configPath, `${JSON.stringify(config, null, 2)}\n`);
@@ -159,8 +168,12 @@ echo "Customer workspaces synced:"
 echo "- $OPENCLAW_HOME/workspace-support"
 echo "- $OPENCLAW_HOME/workspace-community"
 echo "WhatsApp accounts configured:"
-echo "- $PRIMARY_WHATSAPP_NUMBER ($PRIMARY_WHATSAPP_ACCOUNT_ID)"
-echo "- $SECONDARY_WHATSAPP_NUMBER ($SECONDARY_WHATSAPP_ACCOUNT_ID)"
+if [ -n "$PRIMARY_WHATSAPP_ACCOUNT_ID" ]; then
+  echo "- $PRIMARY_WHATSAPP_NUMBER ($PRIMARY_WHATSAPP_ACCOUNT_ID)"
+fi
+if [ -n "$SECONDARY_WHATSAPP_ACCOUNT_ID" ]; then
+  echo "- $SECONDARY_WHATSAPP_NUMBER ($SECONDARY_WHATSAPP_ACCOUNT_ID)"
+fi
 
 if [ "$RESTART_SERVICES" = "--no-restart" ]; then
   echo "Skipped service restart."

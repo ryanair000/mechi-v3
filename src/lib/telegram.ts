@@ -23,6 +23,8 @@ type SendTelegramMessageOptions = {
   threadKey?: TelegramThreadKey;
 };
 
+type AndroidTesterNotificationAction = 'registered' | 'updated';
+
 function escapeTelegramHtml(value: string): string {
   return value
     .replace(/&/g, '&amp;')
@@ -273,6 +275,42 @@ export async function sendOnlineTournamentRegistrationTelegramNotification(param
 
   await sendTelegramMessage(message, {
     operation: 'online-tournament-registration',
+    threadKey: 'registration',
+  });
+}
+
+export async function sendAndroidTesterRegistrationTelegramNotification(params: {
+  action: AndroidTesterNotificationAction;
+  fullName: string;
+  playEmail: string;
+  whatsappNumber: string;
+  mechiUsername: string;
+  deviceModel: string;
+  androidVersion?: string | null;
+  status: string;
+}): Promise<void> {
+  const testerListUrl = `${APP_URL}/android-testers`;
+  const message = [
+    params.action === 'registered'
+      ? '<b>New Mechi Android tester signup</b>'
+      : '<b>Mechi Android tester updated details</b>',
+    '',
+    formatField('Player', params.mechiUsername),
+    formatField('Name', params.fullName),
+    formatField('Play Store email', params.playEmail),
+    formatField('WhatsApp', params.whatsappNumber),
+    formatField('Phone model', params.deviceModel),
+    formatField('Android version', params.androidVersion),
+    formatField('Status', formatStatusLabel(params.status)),
+    '',
+    formatTelegramLink('Open Android tester page', testerListUrl),
+  ].join('\n');
+
+  await sendTelegramMessage(message, {
+    operation:
+      params.action === 'registered'
+        ? 'android-tester-registration'
+        : 'android-tester-registration-update',
     threadKey: 'registration',
   });
 }

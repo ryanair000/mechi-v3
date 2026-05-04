@@ -1,8 +1,9 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { after, NextRequest, NextResponse } from 'next/server';
 import { requireActiveAccessProfile } from '@/lib/access';
 import { isMissingTableError } from '@/lib/db-compat';
 import { checkPersistentRateLimit, getClientIp, rateLimitResponse } from '@/lib/rateLimit';
 import { createServiceClient } from '@/lib/supabase';
+import { sendAndroidTesterRegistrationTelegramNotification } from '@/lib/telegram';
 
 const MAX_TEXT_LENGTH = 500;
 const TARGET_TRACK = 'closed';
@@ -151,6 +152,23 @@ export async function POST(request: NextRequest) {
         return jsonError('Could not update your early access details.', 500);
       }
 
+      after(async () => {
+        try {
+          await sendAndroidTesterRegistrationTelegramNotification({
+            action: 'updated',
+            fullName,
+            playEmail,
+            whatsappNumber,
+            mechiUsername: player.username,
+            deviceModel,
+            androidVersion,
+            status: existingSignupStatus,
+          });
+        } catch (telegramError) {
+          console.error('[Telegram] Android tester update notification error:', telegramError);
+        }
+      });
+
       return NextResponse.json(
         {
           ok: true,
@@ -177,6 +195,23 @@ export async function POST(request: NextRequest) {
       console.error('[AndroidTesters] Insert error:', insertError);
       return jsonError('Could not save your early access details.', 500);
     }
+
+    after(async () => {
+      try {
+        await sendAndroidTesterRegistrationTelegramNotification({
+          action: 'registered',
+          fullName,
+          playEmail,
+          whatsappNumber,
+          mechiUsername: player.username,
+          deviceModel,
+          androidVersion,
+          status: 'pending',
+        });
+      } catch (telegramError) {
+        console.error('[Telegram] Android tester registration notification error:', telegramError);
+      }
+    });
 
     return NextResponse.json(
       {

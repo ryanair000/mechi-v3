@@ -37,6 +37,21 @@ copy_workspace() {
 }
 
 restart_gateway() {
+  if systemctl --user restart openclaw-gateway.service >/dev/null 2>&1; then
+    systemctl --user status openclaw-gateway.service --no-pager
+    return
+  fi
+
+  if sudo systemctl restart openclaw-gateway.service >/dev/null 2>&1; then
+    sudo systemctl status openclaw-gateway.service --no-pager
+    return
+  fi
+
+  if sudo systemctl restart openclaw-gateway >/dev/null 2>&1; then
+    sudo systemctl status openclaw-gateway --no-pager
+    return
+  fi
+
   if systemctl --user list-unit-files 2>/dev/null | grep -q '^openclaw-gateway.service'; then
     systemctl --user restart openclaw-gateway.service
     systemctl --user status openclaw-gateway.service --no-pager
@@ -59,6 +74,16 @@ restart_gateway() {
 }
 
 restart_bridge() {
+  if sudo systemctl restart mechi-openclaw-bridge.service >/dev/null 2>&1; then
+    sudo systemctl status mechi-openclaw-bridge.service --no-pager
+    return
+  fi
+
+  if sudo systemctl restart mechi-openclaw-bridge >/dev/null 2>&1; then
+    sudo systemctl status mechi-openclaw-bridge --no-pager
+    return
+  fi
+
   if systemctl list-units --type=service --all 2>/dev/null | grep -q 'mechi-openclaw-bridge'; then
     sudo systemctl restart mechi-openclaw-bridge
     sudo systemctl status mechi-openclaw-bridge --no-pager

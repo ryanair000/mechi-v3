@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { requireActiveAccessProfile } from '@/lib/access';
 import { isMissingTableError } from '@/lib/db-compat';
 import { checkPersistentRateLimit, getClientIp, rateLimitResponse } from '@/lib/rateLimit';
 import { createServiceClient } from '@/lib/supabase';
@@ -10,7 +11,6 @@ type TesterBody = {
   fullName?: unknown;
   playEmail?: unknown;
   whatsappNumber?: unknown;
-  mechiUsername?: unknown;
   deviceModel?: unknown;
   androidVersion?: unknown;
   notes?: unknown;
@@ -42,6 +42,12 @@ function jsonError(message: string, status: number) {
 
 export async function POST(request: NextRequest) {
   try {
+    const access = await requireActiveAccessProfile(request);
+    if (access.response) {
+      return access.response;
+    }
+
+    const player = access.profile;
     const rateLimit = await checkPersistentRateLimit(
       `android-testers:${getClientIp(request)}`,
       4,
@@ -56,7 +62,6 @@ export async function POST(request: NextRequest) {
     const fullName = normalizeField(body.fullName, 80);
     const playEmail = normalizeEmail(body.playEmail);
     const whatsappNumber = normalizeField(body.whatsappNumber, 40);
-    const mechiUsername = normalizeField(body.mechiUsername, 32) || null;
     const deviceModel = normalizeField(body.deviceModel, 100);
     const androidVersion = normalizeField(body.androidVersion, 40) || null;
     const notes = normalizeField(body.notes, MAX_TEXT_LENGTH) || null;
@@ -82,7 +87,7 @@ export async function POST(request: NextRequest) {
     const submittedAt = new Date().toISOString();
     const { data: existing, error: existingError } = await supabase
       .from('android_tester_signups')
-      .select('id,status')
+      .select('id,status,mechi_username')
       .eq('play_email_normalized', playEmail)
       .maybeSingle();
 
@@ -95,12 +100,33 @@ export async function POST(request: NextRequest) {
       return jsonError('Could not check early access status.', 500);
     }
 
+    if (existing?.mechi_username && existing.mechi_username !== player.username) {
+      return jsonError('That Play Store email is already on the Mechi v4.0.1 early access list.', 409);
+    }
+
+    const { data: existingPlayer, error: existingPlayerError } = await supabase
+      .from('android_tester_signups')
+      .select('id,status,play_email_normalized')
+      .eq('mechi_username', player.username)
+      .order('created_at', { ascending: true })
+      .limit(1)
+      .maybeSingle();
+
+    if (existingPlayerError) {
+      if (isMissingTableError(existingPlayerError, 'android_tester_signups')) {
+        return jsonError('Android early access is not connected yet. Please try again later.', 503);
+      }
+
+      console.error('[AndroidTesters] Player lookup error:', existingPlayerError);
+      return jsonError('Could not check your early access status.', 500);
+    }
+
     const values = {
       full_name: fullName,
       play_email: playEmail,
       play_email_normalized: playEmail,
       whatsapp_number: whatsappNumber,
-      mechi_username: mechiUsername,
+      mechi_username: player.username,
       device_model: deviceModel,
       android_version: androidVersion,
       country: 'Kenya',
@@ -111,12 +137,14 @@ export async function POST(request: NextRequest) {
       source: 'mechi.club/android-testers',
       updated_at: submittedAt,
     };
+    const existingSignupId = existing?.id ?? existingPlayer?.id ?? null;
+    const existingSignupStatus = existing?.status ?? existingPlayer?.status ?? 'pending';
 
-    if (existing?.id) {
+    if (existingSignupId) {
       const { error: updateError } = await supabase
         .from('android_tester_signups')
         .update(values)
-        .eq('id', existing.id);
+        .eq('id', existingSignupId);
 
       if (updateError) {
         console.error('[AndroidTesters] Update error:', updateError);
@@ -126,7 +154,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         {
           ok: true,
-          status: existing.status ?? 'pending',
+          status: existingSignupStatus,
+          username: player.username,
           message:
             'Your early access details were updated. Use this same Google account when the Play Store invite lands.',
         },
@@ -153,6 +182,7 @@ export async function POST(request: NextRequest) {
       {
         ok: true,
         status: 'pending',
+        username: player.username,
         message:
           'You are on the Mechi v4.0.1 Android early access list. We will send the Play Store invite on WhatsApp when your spot is ready.',
       },

@@ -34,6 +34,7 @@ const HERO_STATS = [
 
 const PLATFORM_NAV_ITEMS = [
   { href: '/', label: 'TOURNAMENTS' },
+  { href: '/android-testers', label: 'ANDROID' },
   { href: '/pricing', label: 'SUBSCRIPTIONS' },
 ];
 

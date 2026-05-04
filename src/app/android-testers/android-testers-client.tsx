@@ -1,14 +1,15 @@
 'use client';
 
 import { useState, type FormEvent } from 'react';
+import Link from 'next/link';
 import { CheckCircle2, Loader2, ShieldCheck } from 'lucide-react';
 import { ActionFeedback, type ActionFeedbackState } from '@/components/ActionFeedback';
+import { useAuth, useAuthFetch } from '@/components/AuthProvider';
 
 type TesterForm = {
   fullName: string;
   playEmail: string;
   whatsappNumber: string;
-  mechiUsername: string;
   deviceModel: string;
   androidVersion: string;
   notes: string;
@@ -19,7 +20,6 @@ const initialForm: TesterForm = {
   fullName: '',
   playEmail: '',
   whatsappNumber: '',
-  mechiUsername: '',
   deviceModel: '',
   androidVersion: '',
   notes: '',
@@ -46,11 +46,14 @@ function hasEnoughPhoneDigits(value: string) {
 }
 
 export function AndroidTestersClient() {
+  const { user, loading: authLoading } = useAuth();
+  const authFetch = useAuthFetch();
   const [form, setForm] = useState<TesterForm>(initialForm);
   const [feedback, setFeedback] = useState<ActionFeedbackState | null>(null);
   const [loading, setLoading] = useState(false);
 
   const formIsValid =
+    Boolean(user) &&
     form.fullName.trim().length >= 2 &&
     isValidEmail(form.playEmail) &&
     hasEnoughPhoneDigits(form.whatsappNumber) &&
@@ -64,6 +67,15 @@ export function AndroidTestersClient() {
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+
+    if (!user) {
+      setFeedback({
+        tone: 'error',
+        title: 'Sign in first.',
+        detail: 'Only logged-in Mechi players can join the v4.0.1 Android early access list.',
+      });
+      return;
+    }
 
     if (!formIsValid) {
       setFeedback({
@@ -83,9 +95,8 @@ export function AndroidTestersClient() {
     });
 
     try {
-      const response = await fetch('/api/android-testers', {
+      const response = await authFetch('/api/android-testers', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(form),
       });
       const data = (await response.json()) as { error?: string; message?: string };
@@ -118,6 +129,53 @@ export function AndroidTestersClient() {
     }
   };
 
+  if (authLoading) {
+    return (
+      <section className="card p-4 sm:p-5" aria-live="polite">
+        <div className="flex items-start gap-3">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[var(--radius-panel)] bg-[var(--accent-secondary-soft)] text-[var(--accent-secondary-text)]">
+            <Loader2 size={18} className="animate-spin" />
+          </div>
+          <div>
+            <p className="section-title">Checking account</p>
+            <h2 className="mt-1 text-xl font-black text-[var(--text-primary)]">Loading your Mechi player profile</h2>
+            <p className="mt-1 text-sm leading-6 text-[var(--text-secondary)]">
+              Early access is only open to signed-in Mechi players.
+            </p>
+          </div>
+        </div>
+      </section>
+    );
+  }
+
+  if (!user) {
+    return (
+      <section className="card p-4 sm:p-5">
+        <div className="flex items-start gap-3 border-b border-[var(--border-color)] pb-4">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[var(--radius-panel)] bg-[var(--accent-secondary-soft)] text-[var(--accent-secondary-text)]">
+            <ShieldCheck size={18} />
+          </div>
+          <div>
+            <p className="section-title">Mechi players only</p>
+            <h2 className="mt-1 text-xl font-black text-[var(--text-primary)]">Sign in to get early access</h2>
+            <p className="mt-1 text-sm leading-6 text-[var(--text-secondary)]">
+              Your Mechi username is pulled from your player profile automatically.
+            </p>
+          </div>
+        </div>
+
+        <div className="mt-5 grid gap-3">
+          <Link href="/login?next=/android-testers" className="btn-primary w-full">
+            Sign in
+          </Link>
+          <Link href="/register?next=/android-testers" className="btn-ghost w-full">
+            Create Mechi account
+          </Link>
+        </div>
+      </section>
+    );
+  }
+
   return (
     <form id="apply" className="card p-4 sm:p-5" onSubmit={handleSubmit} noValidate>
       <div className="flex items-start gap-3 border-b border-[var(--border-color)] pb-4">
@@ -128,7 +186,7 @@ export function AndroidTestersClient() {
           <p className="section-title">Early access</p>
           <h2 className="mt-1 text-xl font-black text-[var(--text-primary)]">Join the v4.0.1 Android list</h2>
           <p className="mt-1 text-sm leading-6 text-[var(--text-secondary)]">
-            Use the Google account already signed in on Play Store.
+            Signed in as @{user.username}.
           </p>
         </div>
       </div>
@@ -189,18 +247,11 @@ export function AndroidTestersClient() {
           </div>
 
           <div>
-            <label className="label" htmlFor="mechiUsername">
-              Mechi username
-            </label>
-            <input
-              id="mechiUsername"
-              className="input"
-              value={form.mechiUsername}
-              onChange={(event) => setField('mechiUsername', event.target.value)}
-              placeholder="Optional"
-              autoComplete="username"
-              maxLength={32}
-            />
+            <p className="label">Mechi player</p>
+            <div className="flex min-h-12 items-center rounded-[var(--radius-control)] border border-[var(--border-color)] bg-[var(--surface-elevated)] px-3 text-sm font-black text-[var(--text-primary)]">
+              @{user.username}
+            </div>
+            <p className="input-hint mt-2">Fetched from your logged-in Mechi profile.</p>
           </div>
         </div>
 
@@ -210,10 +261,10 @@ export function AndroidTestersClient() {
               Android phone model
             </label>
             <input
-            id="deviceModel"
-            className="input"
-            value={form.deviceModel}
-            onChange={(event) => setField('deviceModel', event.target.value)}
+              id="deviceModel"
+              className="input"
+              value={form.deviceModel}
+              onChange={(event) => setField('deviceModel', event.target.value)}
               placeholder="Samsung A24, Redmi Note 12..."
               maxLength={100}
               required

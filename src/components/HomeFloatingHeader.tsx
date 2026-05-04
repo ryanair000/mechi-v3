@@ -15,6 +15,7 @@ type NavItem = {
 const DEFAULT_NAV_ITEMS: NavItem[] = [
   { href: '#how-it-works', label: 'HOW IT WORKS' },
   { href: '#supported', label: 'GAMES' },
+  { href: '/android-testers', label: 'ANDROID' },
   { href: '#pricing', label: 'PRICING' },
   { href: '#ranks', label: 'RANKS' },
 ];

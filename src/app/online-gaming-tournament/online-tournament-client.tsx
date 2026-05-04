@@ -45,6 +45,7 @@ const TOURNAMENT_NAV_ITEMS = [
   { href: '#rules', label: 'RULES' },
   { href: '#stream', label: 'STREAM' },
   { href: '#team', label: 'TEAM' },
+  { href: '/android-testers', label: 'ANDROID' },
   { href: '/platform', label: 'PLATFORM' },
 ];
 

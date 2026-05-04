@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Redirect, useRouter } from 'expo-router';
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { Text } from 'react-native';
 import { ApiError } from '../../src/api/client';
 import { getProfile, patchProfile } from '../../src/api/mechi';
@@ -9,13 +9,10 @@ import {
   buildGameSetup,
   COUNTRIES,
   getConfiguredGameId,
-  getConfiguredPlatform,
-  getGame,
   getGameIdLabel,
   getGameIdPlaceholder,
-  getSelectableGames,
-  PLATFORMS,
 } from '../../src/config/games';
+import { TOURNAMENT_GAME_BY_KEY, TOURNAMENT_GAMES, isTournamentGame } from '../../src/config/tournament';
 import {
   Button,
   Card,
@@ -27,9 +24,8 @@ import {
   SectionTitle,
   textStyles,
 } from '../../src/components/ui';
-import type { CountryKey, GameKey, PlatformKey, Profile } from '../../src/types';
+import type { CountryKey, OnlineTournamentGameKey, Profile } from '../../src/types';
 
-const selectableGames = getSelectableGames();
 const fallbackRegion = COUNTRIES.kenya.regions[0] ?? 'Nairobi';
 const countryOptions = Object.entries(COUNTRIES).map(([value, country]) => ({
   label: country.label,
@@ -39,8 +35,7 @@ const countryOptions = Object.entries(COUNTRIES).map(([value, country]) => ({
 type ProfileFormDefaults = {
   country: CountryKey;
   region: string;
-  game: GameKey;
-  platform: PlatformKey;
+  game: OnlineTournamentGameKey;
   gameId: string;
   whatsappNumber: string;
   whatsappNotifications: boolean;
@@ -48,18 +43,14 @@ type ProfileFormDefaults = {
 
 function getProfileFormDefaults(profile: Profile | null | undefined): ProfileFormDefaults {
   const country = profile?.country ?? 'kenya';
-  const game = profile?.selected_games?.[0] ?? 'efootball';
-  const platform =
-    getConfiguredPlatform(game, profile?.game_ids ?? {}, profile?.platforms ?? []) ??
-    getGame(game).platforms[0] ??
-    'mobile';
+  const selectedGame = profile?.selected_games?.find(isTournamentGame);
+  const game = selectedGame ?? 'pubgm';
 
   return {
     country,
     region: profile?.region || COUNTRIES[country].regions[0] || fallbackRegion,
     game,
-    platform,
-    gameId: getConfiguredGameId(game, platform, profile?.game_ids ?? {}),
+    gameId: getConfiguredGameId(game, 'mobile', profile?.game_ids ?? {}),
     whatsappNumber: profile?.whatsapp_number ?? profile?.phone ?? '',
     whatsappNotifications: profile?.whatsapp_notifications ?? true,
   };
@@ -121,18 +112,12 @@ function ProfileSetupForm({ profile }: { profile: Profile | null | undefined }) 
   const defaults = getProfileFormDefaults(profile);
   const [country, setCountry] = useState<CountryKey>(defaults.country);
   const [region, setRegion] = useState<string>(defaults.region);
-  const [game, setGame] = useState<GameKey>(defaults.game);
-  const [platform, setPlatform] = useState<PlatformKey>(defaults.platform);
+  const [game, setGame] = useState<OnlineTournamentGameKey>(defaults.game);
   const [gameId, setGameId] = useState(defaults.gameId);
   const [whatsappNumber, setWhatsappNumber] = useState(defaults.whatsappNumber);
   const [whatsappNotifications, setWhatsappNotifications] = useState(defaults.whatsappNotifications);
   const [error, setError] = useState<string | null>(null);
 
-  const gameDefinition = getGame(game);
-  const platformOptions = useMemo(
-    () => gameDefinition.platforms.map((value) => ({ value, label: PLATFORMS[value].label })),
-    [gameDefinition.platforms]
-  );
   const regionOptions = COUNTRIES[country].regions.map((value) => ({ label: value, value }));
 
   const mutation = useMutation({
@@ -152,10 +137,8 @@ function ProfileSetupForm({ profile }: { profile: Profile | null | undefined }) 
     setRegion(COUNTRIES[value].regions[0] ?? fallbackRegion);
   }
 
-  function handleGameChange(value: GameKey) {
-    const nextGame = getGame(value);
+  function handleGameChange(value: OnlineTournamentGameKey) {
     setGame(value);
-    setPlatform(nextGame.platforms.includes(platform) ? platform : nextGame.platforms[0] ?? 'mobile');
     setGameId('');
   }
 
@@ -164,7 +147,7 @@ function ProfileSetupForm({ profile }: { profile: Profile | null | undefined }) 
     mutation.mutate({
       country,
       region,
-      ...buildGameSetup(game, platform, gameId),
+      ...buildGameSetup(game, 'mobile', gameId),
       whatsapp_number: whatsappNotifications ? whatsappNumber.trim() : null,
       whatsapp_notifications: whatsappNotifications,
     });
@@ -173,7 +156,7 @@ function ProfileSetupForm({ profile }: { profile: Profile | null | undefined }) 
   return (
     <Screen
       title={isProfileComplete(profile) ? 'Edit profile' : 'Complete profile'}
-      subtitle="Choose the game, platform, and in-game ID opponents will use to find you."
+      subtitle="Set the tournament game, gamer tag, and WhatsApp number admins will use for PlayMechi."
     >
       <Card>
         <Text style={textStyles.h2}>Location</Text>
@@ -182,18 +165,20 @@ function ProfileSetupForm({ profile }: { profile: Profile | null | undefined }) 
       </Card>
 
       <Card>
-        <SectionTitle title="Game setup" />
+        <SectionTitle title="Tournament setup" />
         <ChipGroup
-          options={selectableGames.map((item) => ({ value: item.key, label: item.label }))}
+          options={TOURNAMENT_GAMES.map((item) => ({ value: item.game, label: item.shortLabel }))}
           value={game}
           onChange={handleGameChange}
         />
-        <ChipGroup options={platformOptions} value={platform} onChange={setPlatform} />
+        <Text style={textStyles.muted}>
+          {TOURNAMENT_GAME_BY_KEY[game].label} uses your mobile in-game username for this event.
+        </Text>
         <Field
-          label={getGameIdLabel(game, platform)}
+          label={getGameIdLabel(game, 'mobile')}
           value={gameId}
           onChangeText={setGameId}
-          placeholder={getGameIdPlaceholder(game, platform)}
+          placeholder={getGameIdPlaceholder(game, 'mobile')}
         />
       </Card>
 

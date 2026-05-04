@@ -10,7 +10,7 @@ export default function TabsLayout() {
   if (initializing) {
     return (
       <Screen scroll={false}>
-        <LoadingState label="Opening Mechi" />
+        <LoadingState label="Opening PlayMechi" />
       </Screen>
     );
   }
@@ -32,40 +32,41 @@ export default function TabsLayout() {
         tabBarStyle: {
           backgroundColor: colors.bg2,
           borderTopColor: colors.border,
-          minHeight: 64,
+          minHeight: 66,
+          paddingBottom: 8,
           paddingTop: 8,
         },
         tabBarLabelStyle: {
           fontSize: 11,
-          fontWeight: '800',
+          fontWeight: '900',
         },
       }}
     >
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Home',
-          tabBarIcon: ({ color, size }) => <Ionicons name="home" color={color} size={size} />,
+          title: 'Overview',
+          tabBarIcon: ({ color, size }) => <Ionicons name="trophy" color={color} size={size} />,
         }}
       />
       <Tabs.Screen
-        name="play"
+        name="register"
         options={{
-          title: 'Play',
-          tabBarIcon: ({ color, size }) => <Ionicons name="game-controller" color={color} size={size} />,
+          title: 'Register',
+          tabBarIcon: ({ color, size }) => <Ionicons name="ticket" color={color} size={size} />,
         }}
       />
       <Tabs.Screen
-        name="leaderboard"
+        name="arena"
         options={{
-          title: 'Leaders',
-          tabBarIcon: ({ color, size }) => <Ionicons name="podium" color={color} size={size} />,
+          title: 'Desk',
+          tabBarIcon: ({ color, size }) => <Ionicons name="clipboard" color={color} size={size} />,
         }}
       />
       <Tabs.Screen
         name="profile"
         options={{
-          title: 'Profile',
+          title: 'Account',
           tabBarIcon: ({ color, size }) => <Ionicons name="person-circle" color={color} size={size} />,
         }}
       />

@@ -1,5 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { getMe, login, register, type LoginPayload, type RegisterPayload } from '../api/mechi';
+import { getConfiguredGameId } from '../config/games';
+import { isTournamentGame } from '../config/tournament';
 import { clearStoredToken, getStoredToken, setStoredToken } from '../lib/token-store';
 import type { AuthUser } from '../types';
 
@@ -16,7 +18,13 @@ type AuthContextValue = {
 const AuthContext = createContext<AuthContextValue | null>(null);
 
 export function isProfileComplete(user: AuthUser | null | undefined): boolean {
-  return Boolean(user?.selected_games?.length && Object.keys(user.game_ids ?? {}).length);
+  const tournamentGame = user?.selected_games?.find(isTournamentGame);
+
+  if (!tournamentGame) {
+    return false;
+  }
+
+  return Boolean(getConfiguredGameId(tournamentGame, 'mobile', user?.game_ids ?? {}).trim());
 }
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {

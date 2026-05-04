@@ -1,17 +1,15 @@
 import { Link, useRouter } from 'expo-router';
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { ApiError } from '../../src/api/client';
 import { useAuth } from '../../src/auth/AuthProvider';
 import {
   buildGameSetup,
   COUNTRIES,
-  getGame,
   getGameIdLabel,
   getGameIdPlaceholder,
-  getSelectableGames,
-  PLATFORMS,
 } from '../../src/config/games';
+import { TOURNAMENT_GAME_BY_KEY, TOURNAMENT_GAMES } from '../../src/config/tournament';
 import {
   Button,
   Card,
@@ -23,9 +21,8 @@ import {
   textStyles,
 } from '../../src/components/ui';
 import { colors, spacing } from '../../src/theme';
-import type { CountryKey, GameKey, PlatformKey } from '../../src/types';
+import type { CountryKey, OnlineTournamentGameKey } from '../../src/types';
 
-const selectableGames = getSelectableGames();
 const fallbackRegion = COUNTRIES.kenya.regions[0] ?? 'Nairobi';
 const countryOptions = Object.entries(COUNTRIES).map(([value, country]) => ({
   label: country.label,
@@ -41,22 +38,12 @@ export default function RegisterScreen() {
   const [password, setPassword] = useState('');
   const [country, setCountry] = useState<CountryKey>('kenya');
   const [region, setRegion] = useState<string>(fallbackRegion);
-  const [game, setGame] = useState<GameKey>('efootball');
-  const [platform, setPlatform] = useState<PlatformKey>('mobile');
+  const [game, setGame] = useState<OnlineTournamentGameKey>('pubgm');
   const [gameId, setGameId] = useState('');
   const [whatsappNotifications, setWhatsappNotifications] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  const gameDefinition = getGame(game);
-  const platformOptions = useMemo(
-    () =>
-      gameDefinition.platforms.map((value) => ({
-        value,
-        label: PLATFORMS[value].label,
-      })),
-    [gameDefinition.platforms]
-  );
   const regionOptions = COUNTRIES[country].regions.map((value) => ({ label: value, value }));
 
   function handleCountryChange(value: CountryKey) {
@@ -64,10 +51,8 @@ export default function RegisterScreen() {
     setRegion(COUNTRIES[value].regions[0] ?? fallbackRegion);
   }
 
-  function handleGameChange(value: GameKey) {
-    const nextGame = getGame(value);
+  function handleGameChange(value: OnlineTournamentGameKey) {
     setGame(value);
-    setPlatform(nextGame.platforms.includes(platform) ? platform : nextGame.platforms[0] ?? 'mobile');
     setGameId('');
   }
 
@@ -76,7 +61,7 @@ export default function RegisterScreen() {
     setLoading(true);
 
     try {
-      const setup = buildGameSetup(game, platform, gameId);
+      const setup = buildGameSetup(game, 'mobile', gameId);
       await signUp({
         username: username.trim(),
         phone: phone.trim(),
@@ -88,7 +73,7 @@ export default function RegisterScreen() {
         whatsapp_number: phone.trim(),
         whatsapp_notifications: whatsappNotifications,
       });
-      router.replace('/(tabs)');
+      router.replace(`/(tabs)/register?game=${game}`);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Could not create account. Try again.');
     } finally {
@@ -105,10 +90,10 @@ export default function RegisterScreen() {
     gameId.trim();
 
   return (
-    <Screen title="Create account" subtitle="Set up your first game so opponents can find you immediately.">
+    <Screen title="Create account" subtitle="Set up your PlayMechi tournament account and continue to slot registration.">
       <Card>
         <Text style={textStyles.h2}>Account</Text>
-        <Field label="Username" value={username} onChangeText={setUsername} placeholder="mechiwarrior" />
+        <Field label="Username" value={username} onChangeText={setUsername} placeholder="playmechiwarrior" />
         <Field
           label="Phone"
           value={phone}
@@ -142,21 +127,23 @@ export default function RegisterScreen() {
       </Card>
 
       <Card>
-        <SectionTitle title="First game" />
+        <SectionTitle title="Tournament game" />
         <ChipGroup
-          options={selectableGames.map((item) => ({
-            value: item.key,
-            label: item.label,
+          options={TOURNAMENT_GAMES.map((item) => ({
+            value: item.game,
+            label: item.shortLabel,
           }))}
           value={game}
           onChange={handleGameChange}
         />
-        <ChipGroup options={platformOptions} value={platform} onChange={setPlatform} />
+        <Text style={textStyles.muted}>
+          {TOURNAMENT_GAME_BY_KEY[game].label} plays on mobile for this PlayMechi event.
+        </Text>
         <Field
-          label={getGameIdLabel(game, platform)}
+          label={getGameIdLabel(game, 'mobile')}
           value={gameId}
           onChangeText={setGameId}
-          placeholder={getGameIdPlaceholder(game, platform)}
+          placeholder={getGameIdPlaceholder(game, 'mobile')}
         />
         <ChipGroup
           options={[

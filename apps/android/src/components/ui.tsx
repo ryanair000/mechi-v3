@@ -8,6 +8,7 @@ import {
   StyleSheet,
   Text,
   TextInput,
+  type DimensionValue,
   type TextInputProps,
   View,
 } from 'react-native';
@@ -38,7 +39,11 @@ export function Screen({ title, subtitle, children, scroll = true, padded = true
         behavior={Platform.select({ ios: 'padding', android: undefined })}
       >
         {scroll ? (
-          <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
+          <ScrollView
+            contentContainerStyle={styles.scrollContent}
+            contentInsetAdjustmentBehavior="automatic"
+            keyboardShouldPersistTaps="handled"
+          >
             {content}
           </ScrollView>
         ) : (
@@ -87,7 +92,10 @@ export function Button({
           size={18}
         />
       ) : null}
-      <Text style={[styles.buttonText, variant === 'primary' && styles.buttonTextPrimary]}>
+      <Text
+        numberOfLines={2}
+        style={[styles.buttonText, variant === 'primary' && styles.buttonTextPrimary]}
+      >
         {label}
       </Text>
     </Pressable>
@@ -109,7 +117,7 @@ export function Field({ label, error, style, ...props }: FieldProps) {
         style={[styles.field, error && styles.fieldError, style]}
         {...props}
       />
-      {error ? <Text style={styles.fieldErrorText}>{error}</Text> : null}
+      {error ? <Text selectable style={styles.fieldErrorText}>{error}</Text> : null}
     </View>
   );
 }
@@ -136,7 +144,9 @@ export function Chip<T extends string>({ label, value, selected, onPress, icon }
       {icon ? (
         <Ionicons name={icon} size={15} color={selected ? colors.bg : colors.muted} />
       ) : null}
-      <Text style={[styles.chipText, selected && styles.chipTextSelected]}>{label}</Text>
+      <Text numberOfLines={2} style={[styles.chipText, selected && styles.chipTextSelected]}>
+        {label}
+      </Text>
     </Pressable>
   );
 }
@@ -176,7 +186,7 @@ export function ErrorBanner({ message }: { message?: string | null }) {
   return (
     <View style={styles.errorBanner}>
       <Ionicons name="alert-circle" color={colors.danger} size={18} />
-      <Text style={styles.errorText}>{message}</Text>
+      <Text selectable style={styles.errorText}>{message}</Text>
     </View>
   );
 }
@@ -228,6 +238,49 @@ export function StatPill({ label, value }: { label: string; value: string | numb
   );
 }
 
+export function ProgressBar({ value }: { value: number }) {
+  const width = `${Math.max(0, Math.min(100, value))}%` as DimensionValue;
+
+  return (
+    <View style={styles.progressTrack}>
+      <View style={[styles.progressFill, { width }]} />
+    </View>
+  );
+}
+
+export function StatusBadge({
+  label,
+  tone = 'neutral',
+}: {
+  label: string;
+  tone?: 'good' | 'warn' | 'danger' | 'info' | 'neutral';
+}) {
+  return (
+    <View style={[styles.statusBadge, styles[`statusBadge_${tone}`]]}>
+      <Text style={styles.statusBadgeText}>{label}</Text>
+    </View>
+  );
+}
+
+export function InfoRow({
+  label,
+  value,
+  selectable,
+}: {
+  label: string;
+  value: string | number;
+  selectable?: boolean;
+}) {
+  return (
+    <View style={styles.infoRow}>
+      <Text style={styles.infoLabel}>{label}</Text>
+      <Text selectable={selectable} style={styles.infoValue}>
+        {value}
+      </Text>
+    </View>
+  );
+}
+
 export const textStyles = StyleSheet.create({
   h2: {
     color: colors.text,
@@ -271,7 +324,7 @@ const styles = StyleSheet.create({
   },
   title: {
     color: colors.text,
-    fontSize: 30,
+    fontSize: 29,
     fontWeight: '900',
     letterSpacing: 0,
   },
@@ -363,6 +416,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: spacing.xs,
     backgroundColor: colors.panel,
+    flexShrink: 1,
   },
   chipSelected: {
     backgroundColor: colors.primary,
@@ -372,6 +426,7 @@ const styles = StyleSheet.create({
     color: colors.muted,
     fontSize: 13,
     fontWeight: '800',
+    textAlign: 'center',
   },
   chipTextSelected: {
     color: colors.bg,
@@ -456,5 +511,67 @@ const styles = StyleSheet.create({
     color: colors.muted,
     fontSize: 11,
     marginTop: 2,
+  },
+  progressTrack: {
+    height: 8,
+    borderRadius: radii.pill,
+    backgroundColor: colors.panel2,
+    overflow: 'hidden',
+  },
+  progressFill: {
+    height: 8,
+    borderRadius: radii.pill,
+    backgroundColor: colors.primary,
+  },
+  statusBadge: {
+    alignSelf: 'flex-start',
+    borderRadius: radii.pill,
+    borderWidth: 1,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+  },
+  statusBadge_good: {
+    backgroundColor: 'rgba(50, 224, 196, 0.12)',
+    borderColor: 'rgba(50, 224, 196, 0.32)',
+  },
+  statusBadge_warn: {
+    backgroundColor: 'rgba(255, 184, 107, 0.12)',
+    borderColor: 'rgba(255, 184, 107, 0.32)',
+  },
+  statusBadge_danger: {
+    backgroundColor: 'rgba(255, 92, 119, 0.12)',
+    borderColor: 'rgba(255, 92, 119, 0.34)',
+  },
+  statusBadge_info: {
+    backgroundColor: 'rgba(116, 185, 255, 0.12)',
+    borderColor: 'rgba(116, 185, 255, 0.32)',
+  },
+  statusBadge_neutral: {
+    backgroundColor: colors.panel2,
+    borderColor: colors.border,
+  },
+  statusBadgeText: {
+    color: colors.text,
+    fontSize: 11,
+    fontWeight: '900',
+    textTransform: 'capitalize',
+  },
+  infoRow: {
+    minHeight: 38,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.md,
+  },
+  infoLabel: {
+    color: colors.muted,
+    fontSize: 13,
+  },
+  infoValue: {
+    color: colors.text,
+    flexShrink: 1,
+    fontSize: 13,
+    fontWeight: '900',
+    textAlign: 'right',
   },
 });

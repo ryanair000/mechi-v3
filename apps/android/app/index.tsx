@@ -25,7 +25,7 @@ export default function IndexRoute() {
 
   return (
     <Screen scroll={false}>
-      <LoadingState label="Opening Mechi" />
+      <LoadingState label="Opening PlayMechi" />
     </Screen>
   );
 }

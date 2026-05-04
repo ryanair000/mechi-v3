@@ -1,6 +1,6 @@
-# Mechi Android
+# PlayMechi Android
 
-Native Android MVP for Mechi, built with Expo and React Native.
+Native Android app for PlayMechi tournament players, built with Expo and React Native.
 
 ## Run locally
 
@@ -46,19 +46,19 @@ If you ever want to regenerate the Android project from scratch:
 npx expo prebuild --clean --platform android
 ```
 
-## Current MVP scope
+## Current tournament scope
 
 - Register and log in
 - Secure token persistence
-- Profile completion/editing
-- Game and platform setup
-- Queue joining for 1v1 games
-- Lobby list/create/join for lobby games
-- Active match view
-- Match result submit
-- Dispute screenshot upload
-- Leaderboard
-- Profile/logout
+- Tournament-only profile completion/editing
+- PlayMechi tournament overview
+- PUBG Mobile, CODM, and eFootball slot registration
+- Instagram and YouTube reward-verification capture
+- Tournament desk with check-in
+- Battle Royale room credentials and verified standings
+- eFootball fixtures
+- Result screenshot upload for admin review
+- Prize desk status, support, legal, and logout
 
 ## Build
 
@@ -99,3 +99,21 @@ For Google Play-based tester access:
 2. In Play Console, add the tester email address to the internal testing list or linked Google Group.
 3. Share the internal testing opt-in link with that same Google account.
 4. Have the tester open the opt-in link before opening the Play Store listing.
+
+## Mechi.club tester intake
+
+Use the standalone web page at `/android-testers` to collect Android tester details. This is separate from PlayMechi tournament registration and writes to `android_tester_signups`.
+
+Before sharing the page publicly, apply:
+
+```bash
+supabase/migrations/20260504130000_android_tester_signups.sql
+```
+
+Export the Play Console email list:
+
+```bash
+npm run ops:android-testers -- --play-console-csv
+```
+
+The export prints one Google Play account email per line, with no header and no BOM, so it can be pasted or uploaded into Play Console.

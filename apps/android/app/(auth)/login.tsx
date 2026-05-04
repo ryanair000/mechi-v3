@@ -1,7 +1,7 @@
 import { Link, useRouter } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { ApiError, getApiBaseUrl } from '../../src/api/client';
+import { ApiError } from '../../src/api/client';
 import { useAuth } from '../../src/auth/AuthProvider';
 import { Button, Card, ErrorBanner, Field, Screen, textStyles } from '../../src/components/ui';
 import { colors, spacing } from '../../src/theme';
@@ -30,8 +30,8 @@ export default function LoginScreen() {
 
   return (
     <Screen
-      title="Mechi"
-      subtitle="Log in to find opponents, join lobbies, report results, and climb the leaderboard."
+      title="PlayMechi"
+      subtitle="Log in to register, check in, view rooms, upload results, and follow your tournament status."
     >
       <Card>
         <Text style={textStyles.h2}>Welcome back</Text>
@@ -61,15 +61,13 @@ export default function LoginScreen() {
       </Card>
 
       <View style={styles.footer}>
-        <Text style={styles.footerText}>New to Mechi?</Text>
+        <Text style={styles.footerText}>New to PlayMechi?</Text>
         <Link href="/(auth)/register" asChild>
           <Pressable>
             <Text style={styles.footerLink}>Create account</Text>
           </Pressable>
         </Link>
       </View>
-
-      <Text style={styles.apiHint}>API: {getApiBaseUrl()}</Text>
     </Screen>
   );
 }
@@ -87,10 +85,5 @@ const styles = StyleSheet.create({
   footerLink: {
     color: colors.primary,
     fontWeight: '900',
-  },
-  apiHint: {
-    color: colors.faint,
-    fontSize: 11,
-    textAlign: 'center',
   },
 });

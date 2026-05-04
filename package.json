@@ -11,6 +11,7 @@
     "start": "next start",
     "import:registrations": "node ./scripts/import-registration-feed.mjs",
     "ops:instagram:check": "node ./scripts/openclaw-instagram-check.mjs",
+    "ops:android-testers": "node ./scripts/export-android-testers.mjs",
     "ops:registrations": "node ./scripts/openclaw-supabase-summary.mjs",
     "ops:tournaments": "node ./scripts/openclaw-tournaments-summary.mjs",
     "ops:whatsapp-qr": "node ./scripts/openclaw-whatsapp-qr.mjs",

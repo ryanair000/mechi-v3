@@ -3,13 +3,11 @@ import type {
   AuthResponse,
   AuthUser,
   GameKey,
-  LeaderboardEntry,
-  Lobby,
-  LobbyMember,
-  Match,
+  OnlineTournamentGameKey,
+  OnlineTournamentPlayerState,
+  OnlineTournamentRegistrationSummary,
   PlatformKey,
   Profile,
-  QueuePlayer,
 } from '../types';
 
 export type LoginPayload = {
@@ -45,6 +43,37 @@ export type ProfilePatchPayload = Partial<{
   whatsapp_notifications: boolean;
 }>;
 
+export type TournamentRegistrationPayload = {
+  game: OnlineTournamentGameKey;
+  in_game_username: string;
+  followed_instagram: boolean;
+  instagram_username: string;
+  subscribed_youtube: boolean;
+  youtube_name: string;
+  available_at_8pm: boolean;
+  accepted_rules: boolean;
+};
+
+export type TournamentResultPayload =
+  | {
+      game: Extract<OnlineTournamentGameKey, 'pubgm' | 'codm'>;
+      uri: string;
+      name?: string | null;
+      mimeType?: string | null;
+      match_number: number;
+      kills: number;
+      placement: number;
+    }
+  | {
+      game: 'efootball';
+      uri: string;
+      name?: string | null;
+      mimeType?: string | null;
+      fixture_id: string;
+      player1_score: number;
+      player2_score: number;
+    };
+
 export function login(payload: LoginPayload) {
   return apiRequest<AuthResponse>('/api/auth/login', {
     method: 'POST',
@@ -79,123 +108,65 @@ export function patchProfile(payload: ProfilePatchPayload) {
   });
 }
 
-export function joinQueue(payload: { game: GameKey; platform?: PlatformKey | null }) {
-  return apiRequest<{ entry: unknown }>('/api/queue/join', {
-    method: 'POST',
-    body: payload,
-  });
+export function getTournamentRegistrationSummary() {
+  return apiRequest<OnlineTournamentRegistrationSummary>(
+    '/api/events/mechi-online-gaming-tournament/register'
+  );
 }
 
-export function leaveQueue() {
-  return apiRequest<{ success?: boolean }>('/api/queue/leave', {
-    method: 'POST',
-  });
-}
-
-export function getActiveQueue(limit = 80) {
-  return apiRequest<{ players: QueuePlayer[]; updated_at: string }>(`/api/queue/active?limit=${limit}`);
-}
-
-export function getCurrentMatch() {
-  return apiRequest<{ match: Match | null }>('/api/matches/current');
-}
-
-export function getMatch(id: string) {
-  return apiRequest<{ match: Match }>(`/api/matches/${encodeURIComponent(id)}`);
-}
-
-export function submitMatchResult(
-  id: string,
-  payload:
-    | { winner_id: string }
-    | {
-        player1_score: number;
-        player2_score: number;
-      }
-) {
-  return apiRequest<{
-    status: string;
-    winner_id?: string | null;
-    player1_score?: number | null;
-    player2_score?: number | null;
-    gamification?: unknown;
-  }>(`/api/matches/${encodeURIComponent(id)}/report`, {
-    method: 'POST',
-    body: payload,
-  });
-}
-
-export function uploadDisputeScreenshot(params: {
-  matchId: string;
-  uri: string;
-  name?: string;
-  mimeType?: string;
-}) {
-  const form = new FormData();
-  form.append('screenshot', {
-    uri: params.uri,
-    name: params.name ?? `match-${params.matchId}.jpg`,
-    type: params.mimeType ?? 'image/jpeg',
-  } as unknown as Blob);
-
-  return apiRequest<{ screenshot_url: string }>(
-    `/api/matches/${encodeURIComponent(params.matchId)}/dispute`,
+export function registerForTournament(payload: TournamentRegistrationPayload) {
+  return apiRequest<OnlineTournamentRegistrationSummary>(
+    '/api/events/mechi-online-gaming-tournament/register',
     {
       method: 'POST',
-      body: form,
+      body: payload,
     }
   );
 }
 
-export function getLobbies(game?: GameKey) {
-  const query = game ? `?game=${encodeURIComponent(game)}` : '';
-  return apiRequest<{ lobbies: Lobby[] }>(`/api/lobbies${query}`);
+export function getTournamentState() {
+  return apiRequest<OnlineTournamentPlayerState>(
+    '/api/events/mechi-online-gaming-tournament/state'
+  );
 }
 
-export function getLobby(id: string) {
-  return apiRequest<{ lobby: Lobby; members: LobbyMember[] }>(`/api/lobbies/${encodeURIComponent(id)}`);
+export function checkInTournament(game: OnlineTournamentGameKey) {
+  return apiRequest<OnlineTournamentPlayerState>(
+    '/api/events/mechi-online-gaming-tournament/state',
+    {
+      method: 'POST',
+      body: {
+        action: 'check_in',
+        game,
+      },
+    }
+  );
 }
 
-export function createLobby(payload: {
-  game: GameKey;
-  title: string;
-  visibility: 'public' | 'private';
-  mode: string;
-  map_name?: string | null;
-  scheduled_for: string;
-}) {
-  return apiRequest<{ lobby: Lobby }>('/api/lobbies', {
-    method: 'POST',
-    body: payload,
-  });
-}
+export function submitTournamentResult(payload: TournamentResultPayload) {
+  const form = new FormData();
+  form.append('game', payload.game);
+  form.append('screenshot', {
+    uri: payload.uri,
+    name: payload.name ?? `playmechi-${payload.game}.jpg`,
+    type: payload.mimeType ?? 'image/jpeg',
+  } as unknown as Blob);
 
-export function joinLobby(id: string) {
-  return apiRequest<{ member: LobbyMember }>(`/api/lobbies/${encodeURIComponent(id)}/join`, {
-    method: 'POST',
-  });
-}
+  if (payload.game === 'efootball') {
+    form.append('fixture_id', payload.fixture_id);
+    form.append('player1_score', String(payload.player1_score));
+    form.append('player2_score', String(payload.player2_score));
+  } else {
+    form.append('match_number', String(payload.match_number));
+    form.append('kills', String(payload.kills));
+    form.append('placement', String(payload.placement));
+  }
 
-export function submitLobbyResult(
-  id: string,
-  payload: { placement: number; kills: number; total_players?: number }
-) {
-  return apiRequest<{
-    ok: boolean;
-    score_gained: number;
-    new_total: number;
-    placement: number;
-    kills: number;
-    game: GameKey;
-    game_label: string;
-  }>(`/api/lobbies/${encodeURIComponent(id)}/result`, {
-    method: 'POST',
-    body: payload,
-  });
-}
-
-export function getLeaderboard(game: GameKey) {
-  return apiRequest<{ leaderboard: LeaderboardEntry[]; game: GameKey }>(
-    `/api/users/leaderboard/${encodeURIComponent(game)}`
+  return apiRequest<OnlineTournamentPlayerState>(
+    '/api/events/mechi-online-gaming-tournament/results',
+    {
+      method: 'POST',
+      body: form,
+    }
   );
 }

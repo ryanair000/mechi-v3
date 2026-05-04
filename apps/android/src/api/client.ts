@@ -1,8 +1,10 @@
 import Constants from 'expo-constants';
+import { Platform } from 'react-native';
 import { getStoredToken } from '../lib/token-store';
 import type { ApiErrorBody } from '../types';
 
 const EMULATOR_API_URL = 'http://10.0.2.2:3000';
+const LOCAL_WEB_API_URL = 'http://localhost:3000';
 const PRODUCTION_API_URL = 'https://mechi.club';
 
 type RequestOptions = {
@@ -44,7 +46,11 @@ export function getApiBaseUrl(): string {
     return fromConfig;
   }
 
-  return __DEV__ ? EMULATOR_API_URL : PRODUCTION_API_URL;
+  if (__DEV__) {
+    return Platform.OS === 'web' ? LOCAL_WEB_API_URL : EMULATOR_API_URL;
+  }
+
+  return PRODUCTION_API_URL;
 }
 
 function isFormData(body: unknown): body is FormData {

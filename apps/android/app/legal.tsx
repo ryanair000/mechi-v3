@@ -14,11 +14,11 @@ import { colors, spacing } from '../src/theme';
 const deletionMailto = buildSupportMailto(
   'User Data Deletion Request',
   [
-    'Hello Mechi team,',
+    'Hello PlayMechi team,',
     '',
-    'I want to request deletion of my Mechi account and associated personal data.',
+    'I want to request deletion of my PlayMechi/Mechi account and associated personal data.',
     '',
-    'Mechi username:',
+    'Account username:',
     'Phone or email on the account:',
     '',
     'Thank you.',
@@ -41,14 +41,14 @@ export default function LegalScreen() {
   return (
     <Screen
       title="Account & policy"
-      subtitle="Review Mechi legal pages, contact support, or start an account deletion request."
+      subtitle="Review account policy links, contact support, or start an account deletion request."
     >
       <ErrorBanner message={error} />
 
       <Card>
         <SectionTitle title="Delete account" />
         <Text style={textStyles.body}>
-          Start your deletion request from here, then follow the instructions on the Mechi deletion page.
+          Start your deletion request from here, then follow the instructions on the account deletion page.
         </Text>
         <View style={styles.metaGroup}>
           <Text style={styles.metaLabel}>Deletion page</Text>
@@ -89,7 +89,7 @@ export default function LegalScreen() {
       <Card>
         <SectionTitle title="Support" />
         <Text style={textStyles.body}>
-          Reach the Mechi team if you need help with sign-in, account access, tournaments, or data requests.
+          Reach the PlayMechi team if you need help with sign-in, account access, tournaments, or data requests.
         </Text>
         <View style={styles.metaGroup}>
           <Text style={styles.metaLabel}>Support email</Text>
@@ -102,7 +102,7 @@ export default function LegalScreen() {
         <Button
           label="Email support"
           icon="mail-open"
-          onPress={() => void openExternal(buildSupportMailto('Mechi Android support'))}
+          onPress={() => void openExternal(buildSupportMailto('PlayMechi Android support'))}
         />
       </Card>
     </Screen>

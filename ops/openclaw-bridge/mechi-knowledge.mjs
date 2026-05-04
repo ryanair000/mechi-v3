@@ -16,6 +16,7 @@ const PLAYMECHI_FACT_LINES = [
   'PUBG Mobile: Friday 8 May 2026 at 8:00 PM EAT, 100 slots, 3 Battle Royale matches, kills only. Prizes: KSh 1,500, KSh 1,000, 60 UC.',
   'CODM: Saturday 9 May 2026 at 8:00 PM EAT, 100 slots, 3 Battle Royale matches, kills only. Prizes: KSh 1,200, KSh 800, 80 CP.',
   'eFootball: Sunday 10 May 2026 at 8:00 PM EAT, 16 slots, 1v1 knockout. Prizes: KSh 1,000, KSh 500, 315 Coins.',
+  'WhatsApp groups: PUBG Mobile https://chat.whatsapp.com/HDZwDyft00kIVHb6vYVbJv, CODM https://chat.whatsapp.com/JmizQcphVYR2LiRYcrHEaC, eFootball https://chat.whatsapp.com/Cf9R0k2dPeP683wpNnib1N, community https://chat.whatsapp.com/GRquLpTxzQ35er85N33Ec7?mode=gi_t.',
   `Stream: PlayMechi on YouTube (${PLAYMECHI_YOUTUBE_URL}). Streamer: Kabaka Mwangi.`,
   'Reward eligibility: players must follow PlayMechi on Instagram and subscribe to PlayMechi on YouTube before match day. Admin verification is the only eligibility truth.',
   'Registration requirements: Mechi account, full name, phone/WhatsApp, email, game, exact in-game username, 8:00 PM availability, rules acceptance, Instagram username, and YouTube name.',

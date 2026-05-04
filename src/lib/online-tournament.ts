@@ -93,7 +93,7 @@ export const ONLINE_TOURNAMENT_GAMES: OnlineTournamentGameConfig[] = [
     firstPrize: 'KSh 1,500',
     secondPrize: 'KSh 1,000',
     thirdPrize: '60 UC',
-    whatsappGroupUrl: 'https://chat.whatsapp.com/Cf9R0k2dPeP683wpNnib1N',
+    whatsappGroupUrl: 'https://chat.whatsapp.com/HDZwDyft00kIVHb6vYVbJv',
   },
   {
     game: 'codm',

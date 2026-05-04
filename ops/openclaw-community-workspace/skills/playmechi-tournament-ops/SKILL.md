@@ -42,6 +42,10 @@ Do not ask which tournament before giving this answer unless the message clearly
 - Homepage: `mechi.club`
 - Tournament page: `mechi.club/playmechi`
 - Registration: `mechi.club/playmechi/register`
+- PUBG Mobile WhatsApp group: `https://chat.whatsapp.com/HDZwDyft00kIVHb6vYVbJv`
+- CODM WhatsApp group: `https://chat.whatsapp.com/JmizQcphVYR2LiRYcrHEaC`
+- eFootball WhatsApp group: `https://chat.whatsapp.com/Cf9R0k2dPeP683wpNnib1N`
+- PlayMechi Community WhatsApp group: `https://chat.whatsapp.com/GRquLpTxzQ35er85N33Ec7?mode=gi_t`
 - Stream: YouTube, PlayMechi
 
 ## Fixed Facts

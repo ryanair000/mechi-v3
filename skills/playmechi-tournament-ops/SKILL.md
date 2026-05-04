@@ -195,9 +195,10 @@ If players have equal total kills after 3 matches:
 
 Recommended WhatsApp groups:
 
-- Mechi PUBG Mobile Tournament Group
-- Mechi CODM Tournament Group
-- Mechi eFootball Tournament Group
+- Mechi PUBG Mobile Tournament Group: `https://chat.whatsapp.com/HDZwDyft00kIVHb6vYVbJv`
+- Mechi CODM Tournament Group: `https://chat.whatsapp.com/JmizQcphVYR2LiRYcrHEaC`
+- Mechi eFootball Tournament Group: `https://chat.whatsapp.com/Cf9R0k2dPeP683wpNnib1N`
+- PlayMechi Community Group: `https://chat.whatsapp.com/GRquLpTxzQ35er85N33Ec7?mode=gi_t`
 - Mechi Tournament Admin Group
 
 Use groups for announcements, rules updates, room ID/password sharing, fixtures, result submission, player support, disputes, and winner announcements.

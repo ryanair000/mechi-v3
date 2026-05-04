@@ -60,6 +60,7 @@ supabase/.temp/
 # OpenClaw EC2 operational backups/workspace copies
 *.bak-*
 /main/
+/SKILL.md
 
 # design assets (binary artifacts)
 /Mechi\ Design\ System/

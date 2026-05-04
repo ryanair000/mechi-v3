@@ -75,22 +75,58 @@ copy_workspace \
   "$MECHI_REPO/ops/openclaw-community-workspace" \
   "$OPENCLAW_HOME/workspace-community"
 
-"$OPENCLAW_BIN" config set channels.whatsapp.enabled true
-"$OPENCLAW_BIN" config set channels.whatsapp.defaultAccount "$PRIMARY_WHATSAPP_ACCOUNT_ID"
-"$OPENCLAW_BIN" config set channels.whatsapp.dmPolicy open
-"$OPENCLAW_BIN" config set channels.whatsapp.allowFrom '["*"]' --strict-json
+node - "$OPENCLAW_HOME" "$PRIMARY_WHATSAPP_NUMBER" "$PRIMARY_WHATSAPP_ACCOUNT_ID" "$SECONDARY_WHATSAPP_NUMBER" "$SECONDARY_WHATSAPP_ACCOUNT_ID" <<'NODE'
+const fs = require('node:fs');
+const path = require('node:path');
 
-"$OPENCLAW_BIN" config set "channels.whatsapp.accounts.$PRIMARY_WHATSAPP_ACCOUNT_ID.enabled" true
-"$OPENCLAW_BIN" config set "channels.whatsapp.accounts.$PRIMARY_WHATSAPP_ACCOUNT_ID.name" "$PRIMARY_WHATSAPP_NUMBER native OpenClaw WhatsApp"
-"$OPENCLAW_BIN" config set "channels.whatsapp.accounts.$PRIMARY_WHATSAPP_ACCOUNT_ID.authDir" "$OPENCLAW_HOME/credentials/whatsapp/$PRIMARY_WHATSAPP_ACCOUNT_ID"
-"$OPENCLAW_BIN" config set "channels.whatsapp.accounts.$PRIMARY_WHATSAPP_ACCOUNT_ID.dmPolicy" open
-"$OPENCLAW_BIN" config set "channels.whatsapp.accounts.$PRIMARY_WHATSAPP_ACCOUNT_ID.allowFrom" '["*"]' --strict-json
+const [
+  openclawHome,
+  primaryNumber,
+  primaryAccountId,
+  secondaryNumber,
+  secondaryAccountId,
+] = process.argv.slice(2);
+const configPath = path.join(openclawHome, 'openclaw.json');
+const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+config.channels = config.channels || {};
+const current = config.channels.whatsapp && typeof config.channels.whatsapp === 'object'
+  ? config.channels.whatsapp
+  : {};
+const existingAccounts = current.accounts &&
+  !Array.isArray(current.accounts) &&
+  typeof current.accounts === 'object'
+  ? current.accounts
+  : {};
 
-"$OPENCLAW_BIN" config set "channels.whatsapp.accounts.$SECONDARY_WHATSAPP_ACCOUNT_ID.enabled" true
-"$OPENCLAW_BIN" config set "channels.whatsapp.accounts.$SECONDARY_WHATSAPP_ACCOUNT_ID.name" "$SECONDARY_WHATSAPP_NUMBER native OpenClaw WhatsApp"
-"$OPENCLAW_BIN" config set "channels.whatsapp.accounts.$SECONDARY_WHATSAPP_ACCOUNT_ID.authDir" "$OPENCLAW_HOME/credentials/whatsapp/$SECONDARY_WHATSAPP_ACCOUNT_ID"
-"$OPENCLAW_BIN" config set "channels.whatsapp.accounts.$SECONDARY_WHATSAPP_ACCOUNT_ID.dmPolicy" open
-"$OPENCLAW_BIN" config set "channels.whatsapp.accounts.$SECONDARY_WHATSAPP_ACCOUNT_ID.allowFrom" '["*"]' --strict-json
+config.channels.whatsapp = {
+  ...current,
+  enabled: true,
+  defaultAccount: primaryAccountId,
+  dmPolicy: 'open',
+  allowFrom: ['*'],
+  accounts: {
+    ...existingAccounts,
+    [primaryAccountId]: {
+      ...(existingAccounts[primaryAccountId] || {}),
+      enabled: true,
+      name: `${primaryNumber} native OpenClaw WhatsApp`,
+      authDir: path.join(openclawHome, 'credentials', 'whatsapp', primaryAccountId),
+      dmPolicy: 'open',
+      allowFrom: ['*'],
+    },
+    [secondaryAccountId]: {
+      ...(existingAccounts[secondaryAccountId] || {}),
+      enabled: true,
+      name: `${secondaryNumber} native OpenClaw WhatsApp`,
+      authDir: path.join(openclawHome, 'credentials', 'whatsapp', secondaryAccountId),
+      dmPolicy: 'open',
+      allowFrom: ['*'],
+    },
+  },
+};
+
+fs.writeFileSync(configPath, `${JSON.stringify(config, null, 2)}\n`);
+NODE
 
 "$OPENCLAW_BIN" config validate --json
 

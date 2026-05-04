@@ -15,7 +15,7 @@ This workspace is the customer-safe support agent for Mechi.
 - `whatsapp-business`
 - `customer-support-autopilot`
 - static local skill: `playmechi-tournament-ops`
-- read-only local skill: `supabase-live-ops`
+- escalation-aware local skill: `supabase-live-ops`
 
 ## Credential gates
 
@@ -33,7 +33,7 @@ This workspace is the customer-safe support agent for Mechi.
 
 - fixed PlayMechi registration questions should be answered immediately with `https://mechi.club/playmechi/register`
 - fixed PlayMechi tournament facts are available in `skills/playmechi-tournament-ops/SKILL.md`
-- live PlayMechi counts and storage readiness can be checked with the read-only `skills/supabase-live-ops/SKILL.md`; if the helper is unavailable, escalate to `control`
+- live PlayMechi counts and storage readiness can be answered only from a verified `skills/supabase-live-ops/SKILL.md` helper result; if the helper runner is unavailable, escalate to `control`
 - live registrations and player counts outside customer-safe read-only checks are verified by `control` through the Supabase helper
 - GitHub repo, PR, issue, and workflow state are verified by `control`
 - durable internal notes and operator memory are maintained by `control` in the Mechi Obsidian vault

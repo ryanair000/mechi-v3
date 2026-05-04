@@ -12,7 +12,7 @@ Use this skill whenever a player, operator, admin, or WhatsApp group asks about 
 
 ## Immediate WhatsApp Replies
 
-If a player says "I want to register", "register me", "join tournament", "sign up", "enter tournament", "want to register for tournament", or a typo like "oturnamnet", assume they mean PlayMechi and answer directly:
+If a player says "How can I register?", "registration link", "I want to register", "register me", "how do I join", "join tournament", "sign up", "enter tournament", "want to register for tournament", or a typo like "oturnamnet", assume they mean PlayMechi and answer directly:
 
 ```text
 Yes. Register for the PlayMechi tournament here:

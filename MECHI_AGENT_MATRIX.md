@@ -7,8 +7,8 @@ This file defines the recommended OpenClaw agent roster for Mechi, the skills ea
 The EC2 OpenClaw gateway currently has these agents active:
 
 - `control`: Mechi COO, workspace `/home/ubuntu/mechi-v3`, repo and operator control.
-- `support`: Mechi Support, workspace `~/.openclaw/workspace-support`, installed skills `whatsapp-business` and `customer-support-autopilot`; local skills `playmechi-tournament-ops` and read-only `supabase-live-ops` for public tournament FAQ and verified slot counts.
-- `community`: Mechi Community, workspace `~/.openclaw/workspace-community`, public/community-safe messaging; local skills `playmechi-tournament-ops` and read-only `supabase-live-ops` for announcement-safe tournament FAQ and verified slot counts.
+- `support`: Mechi Support, workspace `~/.openclaw/workspace-support`, installed skills `whatsapp-business` and `customer-support-autopilot`; local `playmechi-tournament-ops` for public tournament FAQ, plus `supabase-live-ops` only when an approved read-only helper runner is exposed.
+- `community`: Mechi Community, workspace `~/.openclaw/workspace-community`, public/community-safe messaging; local `playmechi-tournament-ops` for announcement-safe tournament FAQ, plus `supabase-live-ops` only when an approved read-only helper runner is exposed.
 - `infra`: Mechi Infra, workspace `~/.openclaw/workspace-infra`, installed skills `aws`, `openclaw-security-scanner`, `incident`, and `incident-hotfix`.
 - `billing`: Mechi Billing, workspace `~/.openclaw/workspace-billing`, installed skill `paystack`.
 - `data`: Mechi Data, workspace `~/.openclaw/workspace-data`, installed skills `ga4`, `skill-ga4-analytics`, and `marketing-analytics`.

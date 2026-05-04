@@ -45,6 +45,9 @@ export MECHI_NATIVE_WHATSAPP_NUMBER="+254113033475"
 export MECHI_NATIVE_WHATSAPP_ACCOUNT_ID="254113033475"
 export MECHI_NATIVE_SUPPORT_WHATSAPP_NUMBER="+254733638841"
 export MECHI_NATIVE_SUPPORT_WHATSAPP_ACCOUNT_ID="default"
+export MECHI_WHATSAPP_CONTROL_GROUP_IDS=""
+export MECHI_WHATSAPP_CUSTOMER_GROUP_IDS=""
+export MECHI_WHATSAPP_CUSTOMER_GROUP_AGENT="community"
 export MECHI_REPO="/home/ubuntu/mechi-v3"
 
 cd "$MECHI_REPO"
@@ -106,7 +109,15 @@ export OPENCLAW_DIST_DIR="${OPENCLAW_DIST_DIR:-$HOME/.openclaw/tools/node-v22.22
 npm run ops:whatsapp-qr -- --account="$MECHI_NATIVE_WHATSAPP_ACCOUNT_ID" --qr-timeout-ms=180000 --wait-timeout-ms=600000
 ```
 
-After both numbers are logged in, sync the current customer-service brain to both live workspaces:
+After both numbers are logged in, sync the current customer-service brain to both live workspaces.
+
+Before syncing, discover WhatsApp group JIDs for known Mechi groups and set exact routing:
+
+```bash
+openclaw directory peers list --channel whatsapp --query "MECHI"
+```
+
+Set `MECHI_WHATSAPP_CONTROL_GROUP_IDS` to operator/admin group JIDs such as `MECHI ADMINS`, and set `MECHI_WHATSAPP_CUSTOMER_GROUP_IDS` to player/community group JIDs such as `MECHI 1v1` or `MECHI BETA`. Values are comma-separated WhatsApp group IDs such as `120363403215116621@g.us`. Customer groups default to `community`; use `MECHI_WHATSAPP_CUSTOMER_GROUP_AGENT=support` only when those groups are purely support inboxes.
 
 ```bash
 cd /home/ubuntu/mechi-v3
@@ -115,6 +126,8 @@ bash scripts/openclaw-sync-customer-workspaces.sh
 ```
 
 That copies the support/community workspaces, installs the PlayMechi and read-only live ops skills into both, configures both native WhatsApp accounts, validates OpenClaw, and restarts the gateway/bridge.
+
+If the group ID variables are empty, the sync keeps the wildcard mention gate but does not pin known groups. Do not treat that as complete routing for live operator/admin groups.
 
 To cleanly relink the second support number `+254733638841` after a `440 session conflict`:
 
@@ -159,6 +172,7 @@ fi
 Before live use, confirm the OpenClaw native WhatsApp channel is configured so:
 
 - approved operator/admin groups route to `control`;
+- known player/community groups such as `MECHI 1v1` and `MECHI BETA` route to `community` or `support`, based on the exact group JID configuration;
 - unknown groups are ignored or require an explicit mention;
 - Boss/operator DMs route to `control`;
 - non-operator DMs stay customer-safe and tournament-focused;

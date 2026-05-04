@@ -31,7 +31,7 @@ This workspace is the public/community-safe agent for Mechi.
 
 - fixed PlayMechi registration questions should be answered immediately with `https://mechi.club/playmechi/register`
 - fixed PlayMechi tournament facts are available in `skills/playmechi-tournament-ops/SKILL.md`
-- live PlayMechi counts and storage readiness can be checked with the read-only `skills/supabase-live-ops/SKILL.md`; if the helper is unavailable, route to `control`
+- live PlayMechi counts and storage readiness can be answered only from a verified `skills/supabase-live-ops/SKILL.md` helper result; if the helper runner is unavailable, route to `control`
 - live registrations and player counts outside customer-safe read-only checks are verified by `control`
 - GitHub repo, PR, issue, and workflow state are verified by `control`
 - durable internal notes and operator memory live in the Mechi Obsidian vault, owned by `control`

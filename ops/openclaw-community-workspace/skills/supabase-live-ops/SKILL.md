@@ -8,7 +8,7 @@ metadata:
 
 # Supabase Live Ops
 
-This workspace already has dedicated helpers for production-safe registration and tournament checks.
+This skill is for production-safe registration and tournament checks. In a minimal support/community workspace, use it only when the workspace exposes an approved read-only helper runner; otherwise route the live check to `control`.
 
 Use this skill when the Boss asks for live answers such as:
 
@@ -23,7 +23,7 @@ Use this skill when the Boss asks for live answers such as:
 
 ## Canonical commands
 
-For Mechi profile registrations, player counts, and PlayMechi tournament registration counts, run this from the repo root:
+For Mechi profile registrations, player counts, and PlayMechi tournament registration counts, run this from the repo root only when the approved helper runner is available:
 
 ```bash
 npm run ops:registrations -- --json

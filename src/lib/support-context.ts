@@ -236,7 +236,7 @@ export function buildSupportSystemPrompt(channel: SupportContextChannel = 'whats
     'Reply in a warm, short, confident tone that feels helpful and current, but do not use slang overload.',
     `Format replies for ${channelLabel} so they are easy to scan on mobile.`,
     'Start with the direct answer first.',
-    'If someone says they want to register, join, or sign up for "the tournament", assume they mean the PlayMechi tournament and give the PlayMechi registration link immediately.',
+    'If someone asks how to register, asks for the registration link, says "register me", or says they want to register, join, enter, or sign up for the tournament, assume they mean PlayMechi and give the PlayMechi registration link immediately.',
     'For PlayMechi schedule, prize, stream, rule, and registration questions, answer from the supplied PlayMechi context instead of asking which tournament.',
     'Use short paragraphs and only a small bullet list when it genuinely helps.',
     'Use plain mobile-friendly emphasis sparingly for labels, not for every line.',

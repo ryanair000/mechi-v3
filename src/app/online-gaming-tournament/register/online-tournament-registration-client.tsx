@@ -26,6 +26,10 @@ import {
   isOnlineTournamentRegistrationClosed,
   type OnlineTournamentGameKey,
 } from '@/lib/online-tournament';
+import {
+  CUSTOMER_WHATSAPP_SUPPORT_NUMBER_LABEL,
+  getCustomerWhatsAppSupportUrl,
+} from '@/lib/social-links';
 import type { PlatformKey } from '@/types';
 
 type GameRegistrationCount = {
@@ -57,6 +61,9 @@ type RegistrationSummary = {
 
 const API_PATH = '/api/events/mechi-online-gaming-tournament/register';
 const RETURN_PATH = ONLINE_TOURNAMENT_REGISTRATION_PATH;
+const TOURNAMENT_REGISTRATION_SUPPORT_URL = getCustomerWhatsAppSupportUrl(
+  'Hi PlayMechi, I need help with tournament registration.'
+);
 
 function getFallbackSummary(): RegistrationSummary {
   return {
@@ -293,6 +300,18 @@ export function OnlineTournamentRegistrationClient() {
                   players can lock slots.
                 </div>
               ) : null}
+              <a
+                href={TOURNAMENT_REGISTRATION_SUPPORT_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-4 inline-flex min-h-11 max-w-full items-center gap-2 rounded-[var(--radius-control)] border border-[rgba(50,224,196,0.24)] bg-[rgba(50,224,196,0.08)] px-4 py-2 text-sm font-semibold text-[var(--accent-secondary-text)] transition hover:border-[rgba(50,224,196,0.34)] hover:bg-[rgba(50,224,196,0.12)]"
+              >
+                <MessageCircle className="h-4 w-4 shrink-0" />
+                <span className="min-w-0 break-words">
+                  WhatsApp support: {CUSTOMER_WHATSAPP_SUPPORT_NUMBER_LABEL}
+                </span>
+                <ExternalLink className="h-3.5 w-3.5 shrink-0" />
+              </a>
             </div>
           </div>
 

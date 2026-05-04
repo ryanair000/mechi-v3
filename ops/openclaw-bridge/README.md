@@ -172,7 +172,8 @@ Native OpenClaw WhatsApp sessions are not the same as the Mechi app WhatsApp Clo
 - Boss direct WhatsApp is `+254708355692` and should route to the repo-capable `control` agent
 - other direct senders on either native WhatsApp number are gamers/player tournament inquiries and should route to customer-safe `support`
 - Meta Cloud API uses `+254113033475` for player/customer WhatsApp through the Mechi app
-- operator/admin groups such as `MECHI ADMINS` should route to `control` when exact group routing is configured
+- operator/admin groups such as `MECHI ADMINS` should route to `control` when exact group JID routing is configured
+- customer/community groups such as `MECHI 1v1` and `MECHI BETA` should route to `community` or `support` by exact group JID, with mention gating left on
 - customer support DMs should stay on the support inbox/player-action path
 - live tournament availability should be answered through `npm run ops:tournaments -- --json --summary-only`
 - a deployed/restarted OpenClaw WhatsApp process is required before prompt or routing changes show up in WhatsApp Web

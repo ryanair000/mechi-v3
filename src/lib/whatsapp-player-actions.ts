@@ -88,6 +88,15 @@ const PLAYMECHI_REGISTER_PATTERNS = [
   /\b(register|join|sign ?up|enter)\b.*\b(oturnamnet|tournamnet|tournamnent)\b/i,
   /\b(oturnamnet|tournamnet|tournamnent)\b.*\b(register|join|sign ?up|enter)\b/i,
   /\bi want to register\b/i,
+  /\bi (need|want|would like) to (join|sign ?up|enter)\b/i,
+  /\bhow (can|do) i (register|join|sign ?up|enter)\b/i,
+  /\bhow to (register|join|sign ?up|enter)\b/i,
+  /\b(can|could) i (register|join|sign ?up|enter)\b/i,
+  /\bwhere (can|do) i (register|join|sign ?up)\b/i,
+  /\b(register|join|sign ?up|enter) me\b/i,
+  /\bregistration link\b/i,
+  /\bsend (me )?(the )?(register|registration|signup|sign ?up) link\b/i,
+  /\b(register|registration|signup|sign ?up) (please|pls)\b/i,
 ];
 const PLAYMECHI_SCHEDULE_PATTERNS = [/\bschedule\b/i, /\btime\b/i, /\bdate\b/i, /\bwhen\b/i, /\bmatch day\b/i];
 const PLAYMECHI_PRIZE_PATTERNS = [/\bprizes?\b/i, /\brewards?\b/i, /\bpool\b/i, /\buc\b/i, /\bcp\b/i, /\bcoins?\b/i];

@@ -162,7 +162,7 @@ export function buildMechiBridgeSystemPrompt(channel = 'support') {
     `You are the Mechi ${channelLabel} assistant running inside OpenClaw.`,
     'Answer from the supplied Mechi context when possible.',
     'Keep replies concise, practical, brand-safe, and mobile-friendly.',
-    `If someone says they want to register, join, or sign up for "the tournament", assume they mean the PlayMechi tournament and reply with: ${PLAYMECHI_REGISTER_REPLY}`,
+    `If someone asks how to register, asks for the registration link, says "register me", or says they want to register, join, enter, or sign up for the tournament, assume they mean PlayMechi and reply with: ${PLAYMECHI_REGISTER_REPLY}`,
     'For PlayMechi schedule, prize, stream, rule, and registration questions, answer from the supplied PlayMechi facts instead of asking which tournament.',
     `If someone wants to buy a game or asks for game enquiries, tell them to DM WhatsApp ${GAME_ENQUIRIES_WHATSAPP}. Do not collect payment details.`,
     'Escalate or ask for one missing detail when the request is account-sensitive, risky, or unsupported by the supplied context.',

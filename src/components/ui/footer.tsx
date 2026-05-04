@@ -4,10 +4,15 @@ import {
   FaFacebookF,
   FaInstagram,
   FaTwitch,
+  FaWhatsapp,
   FaXTwitter,
   FaYoutube,
 } from 'react-icons/fa6';
 import { BrandLogo } from '@/components/BrandLogo';
+import {
+  CUSTOMER_WHATSAPP_SUPPORT_NUMBER_LABEL,
+  CUSTOMER_WHATSAPP_SUPPORT_URL,
+} from '@/lib/social-links';
 import { cn } from '@/lib/utils';
 
 const links = [
@@ -61,6 +66,15 @@ export default function FooterSection({ className }: FooterSectionProps) {
           ))}
         </div>
         <div className="my-8 flex flex-wrap justify-center gap-6 text-sm">
+          <Link
+            href={CUSTOMER_WHATSAPP_SUPPORT_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="WhatsApp support"
+            className="text-muted-foreground hover:text-primary block"
+          >
+            <FaWhatsapp className="size-6" />
+          </Link>
           <Link
             href="https://www.instagram.com/playmechi"
             target="_blank"
@@ -116,6 +130,17 @@ export default function FooterSection({ className }: FooterSectionProps) {
             <FaTwitch className="size-6" />
           </Link>
         </div>
+        <Link
+          href={CUSTOMER_WHATSAPP_SUPPORT_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-muted-foreground hover:text-primary mx-auto mb-4 flex w-fit max-w-full items-center justify-center gap-2 text-center text-sm font-medium duration-150"
+        >
+          <FaWhatsapp className="size-4 shrink-0" />
+          <span className="min-w-0 break-words">
+            Customer WhatsApp support: {CUSTOMER_WHATSAPP_SUPPORT_NUMBER_LABEL}
+          </span>
+        </Link>
         <span className="text-muted-foreground block text-center text-sm">
           Copyright {new Date().getFullYear()} Mechi, All rights reserved
         </span>

@@ -13,7 +13,7 @@ Installed ClawHub skills:
 - `whatsapp-business`
 - `customer-support-autopilot`
 - static tournament FAQ skill: `skills/playmechi-tournament-ops/SKILL.md`
-- read-only Supabase live ops skill: `skills/supabase-live-ops/SKILL.md`
+- escalation-aware Supabase live ops skill: `skills/supabase-live-ops/SKILL.md`
 
 Provider auth:
 
@@ -21,10 +21,10 @@ Provider auth:
 
 Guardrails:
 
-- no ad hoc shell access; use only approved read-only helpers inside `skills/supabase-live-ops/SKILL.md`
+- no ad hoc shell access; use the Supabase live ops helper only when this workspace exposes an approved read-only runner, otherwise route live checks to `control`
 - no repo edits
 - no infra credentials
 - escalate risky account, payment, moderation, or tournament rulings to `control`
 - PlayMechi registration, schedule, prize, stream, rule, and public path questions can be answered from the local tournament FAQ skill
-- live PlayMechi counts and Supabase storage readiness can be answered from the read-only live ops skill
+- live PlayMechi counts and Supabase storage readiness can be answered only from a verified helper result; if the helper is unavailable, route to `control`
 - reward eligibility, payouts, disputes, and disqualifications must route to `control`

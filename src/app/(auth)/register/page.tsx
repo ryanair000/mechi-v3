@@ -9,7 +9,11 @@ import { useAuth } from '@/components/AuthProvider';
 import { FullScreenSignup } from '@/components/ui/full-screen-signup';
 import { normalizeInviteCode } from '@/lib/invite';
 import { getLoginPath, getSafeNextPath } from '@/lib/navigation';
-import { PLAYMECHI_WHATSAPP_GROUP_URL } from '@/lib/social-links';
+import {
+  CUSTOMER_WHATSAPP_SUPPORT_NUMBER_LABEL,
+  PLAYMECHI_WHATSAPP_GROUP_URL,
+  getCustomerWhatsAppSupportUrl,
+} from '@/lib/social-links';
 import {
   normalizeUsername,
   USERNAME_MAX_LENGTH,
@@ -18,6 +22,9 @@ import {
 } from '@/lib/username';
 
 const MIN_PASSWORD_LENGTH = 9;
+const ACCOUNT_REGISTRATION_SUPPORT_URL = getCustomerWhatsAppSupportUrl(
+  'Hi Mechi, I need help creating my account.'
+);
 
 type RegisterSearchParams = Promise<{ [key: string]: string | string[] | undefined }>;
 
@@ -161,16 +168,31 @@ export default function RegisterPage({ searchParams }: { searchParams: RegisterS
           </Link>
         </p>
 
-        <a
-          href={PLAYMECHI_WHATSAPP_GROUP_URL}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="mb-5 flex min-h-12 items-center gap-3 rounded-lg border border-[#25d366]/25 bg-[#25d366]/10 px-3 py-2 text-sm font-semibold text-[#7cf0ad] transition-colors hover:bg-[#25d366]/15"
-        >
-          <MessageCircle size={16} className="shrink-0" />
-          <span className="min-w-0 flex-1">Join the PlayMechi WhatsApp group</span>
-          <ExternalLink size={14} className="shrink-0 opacity-80" />
-        </a>
+        <div className="mb-5 grid gap-2">
+          <a
+            href={PLAYMECHI_WHATSAPP_GROUP_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex min-h-12 items-center gap-3 rounded-lg border border-[#25d366]/25 bg-[#25d366]/10 px-3 py-2 text-sm font-semibold text-[#7cf0ad] transition-colors hover:bg-[#25d366]/15"
+          >
+            <MessageCircle size={16} className="shrink-0" />
+            <span className="min-w-0 flex-1">Join the PlayMechi WhatsApp group</span>
+            <ExternalLink size={14} className="shrink-0 opacity-80" />
+          </a>
+
+          <a
+            href={ACCOUNT_REGISTRATION_SUPPORT_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex min-h-12 items-center gap-3 rounded-lg border border-[rgba(50,224,196,0.24)] bg-[rgba(50,224,196,0.08)] px-3 py-2 text-sm font-semibold text-[var(--accent-secondary-text)] transition-colors hover:bg-[rgba(50,224,196,0.12)]"
+          >
+            <MessageCircle size={16} className="shrink-0" />
+            <span className="min-w-0 flex-1">
+              WhatsApp support: {CUSTOMER_WHATSAPP_SUPPORT_NUMBER_LABEL}
+            </span>
+            <ExternalLink size={14} className="shrink-0 opacity-80" />
+          </a>
+        </div>
 
         <div className="space-y-4">
           <div>

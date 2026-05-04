@@ -32,8 +32,8 @@ OpenClaw native docs say ClawHub skills install into the active workspace `skill
 - `billing`: `paystack`
 - `data`: `ga4`, `skill-ga4-analytics`, `marketing-analytics`
 - `growth`: `cloudinary`, `openclaw-meta-ads`, `meta-ads-manager`, `instagram-api`, `instagram-content-studio`
-- `support`: `whatsapp-business`, `customer-support-autopilot`; local skills `playmechi-tournament-ops` and read-only `supabase-live-ops` for customer-safe tournament FAQ and verified slot counts
-- `community`: local skills `playmechi-tournament-ops` and read-only `supabase-live-ops` for public tournament FAQ, announcement-safe replies, and verified slot counts
+- `support`: `whatsapp-business`, `customer-support-autopilot`; local `playmechi-tournament-ops` for customer-safe tournament FAQ, plus `supabase-live-ops` only when an approved read-only helper runner is exposed
+- `community`: local `playmechi-tournament-ops` for public tournament FAQ and announcement-safe replies, plus `supabase-live-ops` only when an approved read-only helper runner is exposed
 
 The direct ClawHub archives for slugs `meta-ads` and `instagram` were not forced into production because they unpacked without a valid top-level `SKILL.md`. Growth uses the working alternatives listed above.
 
@@ -53,11 +53,12 @@ The direct ClawHub archives for slugs `meta-ads` and `instagram` were not forced
 
 ## WhatsApp routing requirement
 
-- operator/admin WhatsApp groups such as `MECHI ADMINS` must route to `control`, not the generic support/community prompt
+- operator/admin WhatsApp groups such as `MECHI ADMINS` must be pinned by exact WhatsApp group JID to `control`, not the generic support/community prompt
+- customer/community WhatsApp groups such as `MECHI 1v1` and `MECHI BETA` should be pinned by exact WhatsApp group JID to `community` unless the group is a pure support inbox
 - native WhatsApp direct messages are currently open on `+254733638841`; keep replies short, customer-safe, and tournament-focused for non-operator senders
 - `+254113033475` is not active in native OpenClaw WhatsApp for now; it needs a fresh EC2 QR relink before it can be safely restored
 - native WhatsApp direct messages from known Boss/operator senders are the operator path and route to `control`
-- native WhatsApp groups on `+254733638841` are mention-only: respond only when the bot/number is tagged or directly quoted; do not auto-reply to ordinary group chatter
+- native WhatsApp groups on `+254733638841` are mention-only unless explicitly configured otherwise: respond only when the bot/number is tagged or directly quoted; do not auto-reply to ordinary group chatter
 - customer WhatsApp support DMs should route through the Mechi support inbox/player-action path
 - game purchase enquiries are handled on WhatsApp at `+254104003156`; customer-safe agents should tell clients to DM that number and must not negotiate prices or collect payment details
 - if native OpenClaw WhatsApp is used, it must load the Mechi control workspace for operator/admin groups and use `skills/playmechi-tournament-ops/SKILL.md` for event facts

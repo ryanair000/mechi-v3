@@ -36,6 +36,8 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
+.openclaw/
+.openclaw-*-watch.json
 .tmp-*
 .codex-deploy-*/
 dev-*.log
@@ -54,6 +56,10 @@ supabase/.temp/
 # local test/audit output
 /output/
 /tmp/
+
+# OpenClaw EC2 operational backups/workspace copies
+*.bak-*
+/main/
 
 # design assets (binary artifacts)
 /Mechi\ Design\ System/

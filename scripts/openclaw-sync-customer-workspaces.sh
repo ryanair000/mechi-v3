@@ -134,6 +134,7 @@ if (primaryAccountId) {
     enabled: true,
     name: `${primaryNumber} native OpenClaw WhatsApp`,
     authDir: path.join(openclawHome, 'credentials', 'whatsapp', primaryAccountId),
+    selfChatMode: false,
     dmPolicy: 'open',
     allowFrom: ['*'],
     groupPolicy: 'open',
@@ -148,6 +149,7 @@ if (secondaryAccountId) {
     enabled: true,
     name: `${secondaryNumber} native OpenClaw WhatsApp`,
     authDir: path.join(openclawHome, 'credentials', 'whatsapp', secondaryAccountId),
+    selfChatMode: false,
     dmPolicy: 'open',
     allowFrom: ['*'],
     groupPolicy: 'open',
@@ -159,6 +161,7 @@ if (secondaryAccountId) {
 config.channels.whatsapp = {
   ...current,
   enabled: true,
+  selfChatMode: false,
   defaultAccount: primaryAccountId || secondaryAccountId || current.defaultAccount || 'default',
   dmPolicy: 'open',
   allowFrom: ['*'],

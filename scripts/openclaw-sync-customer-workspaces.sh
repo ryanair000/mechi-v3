@@ -11,7 +11,20 @@ SECONDARY_WHATSAPP_ACCOUNT_ID="${MECHI_NATIVE_SUPPORT_WHATSAPP_ACCOUNT_ID:-defau
 WHATSAPP_CONTROL_GROUP_IDS="${MECHI_WHATSAPP_CONTROL_GROUP_IDS:-}"
 WHATSAPP_CUSTOMER_GROUP_IDS="${MECHI_WHATSAPP_CUSTOMER_GROUP_IDS:-}"
 WHATSAPP_CUSTOMER_GROUP_AGENT="${MECHI_WHATSAPP_CUSTOMER_GROUP_AGENT:-community}"
+WHATSAPP_CONTROL_DIRECT_IDS="${MECHI_WHATSAPP_CONTROL_DIRECT_IDS:-+254708355692}"
+WHATSAPP_DEFAULT_DM_AGENT="${MECHI_WHATSAPP_DEFAULT_DM_AGENT:-support}"
+WHATSAPP_DM_SCOPE="${MECHI_OPENCLAW_WHATSAPP_DM_SCOPE:-per-account-channel-peer}"
 RESTART_SERVICES="${1:---restart}"
+
+case "$WHATSAPP_DEFAULT_DM_AGENT" in
+  support|community|control) ;;
+  *) WHATSAPP_DEFAULT_DM_AGENT="support" ;;
+esac
+
+case "$WHATSAPP_DM_SCOPE" in
+  main|per-peer|per-channel-peer|per-account-channel-peer) ;;
+  *) WHATSAPP_DM_SCOPE="per-account-channel-peer" ;;
+esac
 
 copy_workspace() {
   local source_dir="$1"
@@ -103,7 +116,7 @@ copy_workspace \
   "$MECHI_REPO/ops/openclaw-community-workspace" \
   "$OPENCLAW_HOME/workspace-community"
 
-node - "$OPENCLAW_HOME" "$PRIMARY_WHATSAPP_NUMBER" "$PRIMARY_WHATSAPP_ACCOUNT_ID" "$SECONDARY_WHATSAPP_NUMBER" "$SECONDARY_WHATSAPP_ACCOUNT_ID" "$WHATSAPP_CONTROL_GROUP_IDS" "$WHATSAPP_CUSTOMER_GROUP_IDS" "$WHATSAPP_CUSTOMER_GROUP_AGENT" <<'NODE'
+node - "$OPENCLAW_HOME" "$PRIMARY_WHATSAPP_NUMBER" "$PRIMARY_WHATSAPP_ACCOUNT_ID" "$SECONDARY_WHATSAPP_NUMBER" "$SECONDARY_WHATSAPP_ACCOUNT_ID" "$WHATSAPP_CONTROL_GROUP_IDS" "$WHATSAPP_CUSTOMER_GROUP_IDS" "$WHATSAPP_CUSTOMER_GROUP_AGENT" "$WHATSAPP_CONTROL_DIRECT_IDS" "$WHATSAPP_DEFAULT_DM_AGENT" "$WHATSAPP_DM_SCOPE" <<'NODE'
 const fs = require('node:fs');
 const path = require('node:path');
 
@@ -116,6 +129,9 @@ const [
   controlGroupIdsRaw,
   customerGroupIdsRaw,
   customerGroupAgentRaw,
+  controlDirectIdsRaw,
+  defaultDmAgentRaw,
+  dmScopeRaw,
 ] = process.argv.slice(2);
 const configPath = path.join(openclawHome, 'openclaw.json');
 const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
@@ -130,6 +146,7 @@ const existingAccounts = current.accounts &&
   : {};
 const accounts = { ...existingAccounts };
 const activeAccountIds = [primaryAccountId, secondaryAccountId].filter(Boolean);
+const retiredAccountIds = new Set(primaryAccountId ? [] : ['254113033475']);
 
 function parseCsv(value) {
   return String(value || '')
@@ -147,9 +164,51 @@ const controlGroupIds = parseCsv(controlGroupIdsRaw);
 const customerGroupIds = parseCsv(customerGroupIdsRaw);
 const managedGroupIds = new Set([...controlGroupIds, ...customerGroupIds]);
 const customerGroupAgent = normalizeCustomerGroupAgent(customerGroupAgentRaw);
+const controlDirectIds = normalizeDirectPeerIds(parseCsv(controlDirectIdsRaw));
+const managedDirectIds = new Set(controlDirectIds);
+const defaultDmAgent = normalizeRouteAgent(defaultDmAgentRaw, 'support');
+const dmScope = normalizeDmScope(dmScopeRaw);
 
 function objectOrEmpty(value) {
   return value && typeof value === 'object' && !Array.isArray(value) ? value : {};
+}
+
+function normalizeRouteAgent(value, fallback) {
+  const agent = String(value || '').trim();
+  return ['support', 'community', 'control'].includes(agent) ? agent : fallback;
+}
+
+function normalizeDmScope(value) {
+  const scope = String(value || '').trim();
+  return ['main', 'per-peer', 'per-channel-peer', 'per-account-channel-peer'].includes(scope)
+    ? scope
+    : 'per-account-channel-peer';
+}
+
+function normalizeDirectPeerIds(values) {
+  const normalized = [];
+  const seen = new Set();
+
+  function add(value) {
+    const id = String(value || '').trim();
+    if (!id || seen.has(id)) {
+      return;
+    }
+    seen.add(id);
+    normalized.push(id);
+  }
+
+  for (const value of values) {
+    add(value);
+    const digits = String(value || '').replace(/\D/g, '');
+    if (digits) {
+      add(`+${digits}`);
+      add(digits);
+      add(`${digits}@s.whatsapp.net`);
+    }
+  }
+
+  return normalized;
 }
 
 function mentionGatedGroups(existingGroups) {
@@ -180,14 +239,43 @@ function buildGroupRouteBindings(existingBindings) {
       return true;
     }
 
-    const peer = binding.match.peer;
-    const peerId = peer?.kind === 'group' ? String(peer.id || '') : '';
+    const bindingAccountId = String(binding.match.accountId || 'default');
+    if (retiredAccountIds.has(bindingAccountId)) {
+      return false;
+    }
 
-    return !peerId || !managedGroupIds.has(peerId);
+    const peer = binding.match.peer;
+    const peerKind = String(peer?.kind || '');
+    const peerId = String(peer?.id || '');
+
+    if (peerKind === 'group') {
+      return !peerId || !managedGroupIds.has(peerId);
+    }
+
+    if (peerKind === 'direct') {
+      return !peerId || !managedDirectIds.has(peerId);
+    }
+
+    if (!peerKind && !binding.match.guildId && !binding.match.teamId) {
+      if (!binding.match.accountId) {
+        return activeAccountIds.length === 0;
+      }
+      return !activeAccountIds.includes(bindingAccountId);
+    }
+
+    return true;
   });
   const next = [...preserved];
 
   for (const accountId of activeAccountIds) {
+    for (const directId of controlDirectIds) {
+      next.push({
+        type: 'route',
+        agentId: 'control',
+        match: { channel: 'whatsapp', accountId, peer: { kind: 'direct', id: directId } },
+      });
+    }
+
     for (const groupId of controlGroupIds) {
       next.push({
         type: 'route',
@@ -203,6 +291,12 @@ function buildGroupRouteBindings(existingBindings) {
         match: { channel: 'whatsapp', accountId, peer: { kind: 'group', id: groupId } },
       });
     }
+
+    next.push({
+      type: 'route',
+      agentId: defaultDmAgent,
+      match: { channel: 'whatsapp', accountId },
+    });
   }
 
   return next;
@@ -257,6 +351,10 @@ config.channels.whatsapp = {
   accounts,
 };
 config.bindings = buildGroupRouteBindings(config.bindings);
+config.session = {
+  ...objectOrEmpty(config.session),
+  dmScope,
+};
 
 fs.writeFileSync(configPath, `${JSON.stringify(config, null, 2)}\n`);
 NODE
@@ -284,6 +382,12 @@ if [ -n "$WHATSAPP_CUSTOMER_GROUP_IDS" ]; then
 else
   echo "- customer groups not pinned; set MECHI_WHATSAPP_CUSTOMER_GROUP_IDS with WhatsApp group JIDs"
 fi
+echo "WhatsApp DM routing:"
+echo "- active account DMs pinned to $WHATSAPP_DEFAULT_DM_AGENT"
+if [ -n "$WHATSAPP_CONTROL_DIRECT_IDS" ]; then
+  echo "- control direct senders pinned to control: $WHATSAPP_CONTROL_DIRECT_IDS"
+fi
+echo "- DM session scope: $WHATSAPP_DM_SCOPE"
 
 if [ "$RESTART_SERVICES" = "--no-restart" ]; then
   echo "Skipped service restart."

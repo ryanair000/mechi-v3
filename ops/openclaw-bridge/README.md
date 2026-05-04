@@ -57,6 +57,11 @@ MECHI_OPENCLAW_TELEGRAM_RETRY_DELAY_MS=3000
 MECHI_OPENCLAW_TELEGRAM_ALLOWED_CHAT_TYPES=private
 MECHI_OPENCLAW_TELEGRAM_ALLOWED_CHAT_IDS=
 MECHI_OPENCLAW_TELEGRAM_DELETE_WEBHOOK=true
+
+# Optional native WhatsApp routing overrides used by scripts/openclaw-sync-customer-workspaces.sh.
+MECHI_WHATSAPP_CONTROL_DIRECT_IDS=+254708355692
+MECHI_WHATSAPP_DEFAULT_DM_AGENT=support
+MECHI_OPENCLAW_WHATSAPP_DM_SCOPE=per-account-channel-peer
 ```
 
 ## Run locally
@@ -171,6 +176,7 @@ Native OpenClaw WhatsApp sessions are not the same as the Mechi app WhatsApp Clo
 - native OpenClaw WhatsApp uses both logged-in Mechi numbers: `+254113033475` (`accountId=254113033475`) and `+254733638841` (`accountId=default`)
 - Boss direct WhatsApp is `+254708355692` and should route to the repo-capable `control` agent
 - other direct senders on either native WhatsApp number are gamers/player tournament inquiries and should route to customer-safe `support`
+- `scripts/openclaw-sync-customer-workspaces.sh` pins active account DMs to `MECHI_WHATSAPP_DEFAULT_DM_AGENT`, pins `MECHI_WHATSAPP_CONTROL_DIRECT_IDS` to `control`, and sets `session.dmScope` to `per-account-channel-peer` by default so one stuck sender does not block other WhatsApp DMs
 - Meta Cloud API uses `+254113033475` for player/customer WhatsApp through the Mechi app
 - operator/admin groups such as `MECHI ADMINS` should route to `control` when exact group JID routing is configured
 - customer/community groups such as `MECHI 1v1` and `MECHI BETA` should route to `community` or `support` by exact group JID, with mention gating left on

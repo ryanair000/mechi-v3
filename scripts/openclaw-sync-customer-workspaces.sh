@@ -136,6 +136,9 @@ if (primaryAccountId) {
     authDir: path.join(openclawHome, 'credentials', 'whatsapp', primaryAccountId),
     dmPolicy: 'open',
     allowFrom: ['*'],
+    groupPolicy: 'open',
+    groupAllowFrom: ['*'],
+    groups: { '*': { requireMention: true } },
   };
 }
 
@@ -147,6 +150,9 @@ if (secondaryAccountId) {
     authDir: path.join(openclawHome, 'credentials', 'whatsapp', secondaryAccountId),
     dmPolicy: 'open',
     allowFrom: ['*'],
+    groupPolicy: 'open',
+    groupAllowFrom: ['*'],
+    groups: { '*': { requireMention: true } },
   };
 }
 
@@ -156,6 +162,9 @@ config.channels.whatsapp = {
   defaultAccount: primaryAccountId || secondaryAccountId || current.defaultAccount || 'default',
   dmPolicy: 'open',
   allowFrom: ['*'],
+  groupPolicy: 'open',
+  groupAllowFrom: ['*'],
+  groups: { '*': { requireMention: true } },
   accounts,
 };
 

@@ -57,6 +57,7 @@ The direct ClawHub archives for slugs `meta-ads` and `instagram` were not forced
 - native WhatsApp direct messages are currently open on `+254733638841`; keep replies short, customer-safe, and tournament-focused for non-operator senders
 - `+254113033475` is not active in native OpenClaw WhatsApp for now; it needs a fresh EC2 QR relink before it can be safely restored
 - native WhatsApp direct messages from known Boss/operator senders are the operator path and route to `control`
+- native WhatsApp groups on `+254733638841` are mention-only: respond only when the bot/number is tagged or directly quoted; do not auto-reply to ordinary group chatter
 - customer WhatsApp support DMs should route through the Mechi support inbox/player-action path
 - game purchase enquiries are handled on WhatsApp at `+254104003156`; customer-safe agents should tell clients to DM that number and must not negotiate prices or collect payment details
 - if native OpenClaw WhatsApp is used, it must load the Mechi control workspace for operator/admin groups and use `skills/playmechi-tournament-ops/SKILL.md` for event facts

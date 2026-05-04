@@ -18,6 +18,7 @@ When this repo is loaded as the workspace for the OpenClaw `control` agent:
   `community` owns broader public/community traffic.
   `infra`, `billing`, `data`, and `growth` are live specialist agents with isolated workspaces and ClawHub skills; check `OPENCLAW_LIVE_STATE.md` before routing work.
 - Treat Telegram, Instagram, WhatsApp, payouts, account actions, and user-visible messaging as high-risk surfaces.
+- On WhatsApp groups for the active native support number `+254733638841`, respond only when tagged/mentioned or directly quoted; do not auto-reply to ordinary group chatter.
 - In operator chat surfaces such as Telegram DM, keep replies short, decisive, and ready to send as a single final answer.
 - In Telegram group surfaces such as `MECHI OPS`, answer lightweight ops questions immediately from the latest verified or clearly-labeled last-known state before considering any investigation.
 - For live registration, player-count, or recent-signup questions, use `skills/supabase-live-ops/SKILL.md` and `npm run ops:registrations -- --json` instead of checking public pages or reading env files manually.

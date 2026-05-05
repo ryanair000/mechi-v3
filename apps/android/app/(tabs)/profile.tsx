@@ -1,5 +1,6 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link, useRouter } from 'expo-router';
+import { useEffect, useState } from 'react';
 import { Linking, StyleSheet, Text, View } from 'react-native';
 import { getProfile, getTournamentRegistrationSummary } from '../../src/api/mechi';
 import { useAuth } from '../../src/auth/AuthProvider';
@@ -19,6 +20,10 @@ import {
   TOURNAMENT_GAME_BY_KEY,
   formatStatus,
 } from '../../src/config/tournament';
+import {
+  getPushNotificationStatusMessage,
+  registerForPushNotificationsAsync,
+} from '../../src/lib/push-notifications';
 import { colors, spacing } from '../../src/theme';
 
 function getStatusTone(status: string | null | undefined): 'good' | 'warn' | 'danger' | 'neutral' {
@@ -39,6 +44,28 @@ export default function AccountTab() {
   });
   const profile = profileQuery.data?.profile ?? user;
   const registrations = summaryQuery.data?.registrations ?? [];
+  const [notificationMessage, setNotificationMessage] = useState('Checking notification access...');
+  const [enablingNotifications, setEnablingNotifications] = useState(false);
+
+  useEffect(() => {
+    let mounted = true;
+
+    getPushNotificationStatusMessage()
+      .then((message) => {
+        if (mounted) {
+          setNotificationMessage(message);
+        }
+      })
+      .catch(() => {
+        if (mounted) {
+          setNotificationMessage('Could not check notification access.');
+        }
+      });
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   async function handleSignOut() {
     await signOut();
@@ -48,6 +75,18 @@ export default function AccountTab() {
 
   async function openSupport() {
     await Linking.openURL(PLAYMECHI_SUPPORT_URL);
+  }
+
+  async function enableNotifications() {
+    try {
+      setEnablingNotifications(true);
+      const result = await registerForPushNotificationsAsync();
+      setNotificationMessage(result.message);
+    } catch {
+      setNotificationMessage('Could not enable app notifications.');
+    } finally {
+      setEnablingNotifications(false);
+    }
   }
 
   return (
@@ -126,6 +165,18 @@ export default function AccountTab() {
             <Link href="/legal" asChild>
               <Button label="Privacy, terms, deletion" icon="shield-checkmark" variant="secondary" />
             </Link>
+          </Card>
+
+          <Card>
+            <SectionTitle title="App notifications" />
+            <Text style={textStyles.muted}>{notificationMessage}</Text>
+            <Button
+              label="Enable app notifications"
+              icon="notifications"
+              variant="secondary"
+              loading={enablingNotifications}
+              onPress={() => void enableNotifications()}
+            />
           </Card>
 
           <Button label="Log out" icon="log-out" variant="danger" onPress={handleSignOut} />

@@ -16,12 +16,18 @@
     },
     "production": {
       "autoIncrement": true,
+      "env": {
+        "ORG_GRADLE_PROJECT_reactNativeArchitectures": "armeabi-v7a,arm64-v8a"
+      },
       "android": {
         "buildType": "app-bundle"
       }
     },
     "playInternal": {
       "autoIncrement": true,
+      "env": {
+        "ORG_GRADLE_PROJECT_reactNativeArchitectures": "armeabi-v7a,arm64-v8a"
+      },
       "android": {
         "buildType": "app-bundle"
       }

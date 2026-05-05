@@ -3,7 +3,7 @@ import { Platform } from 'react-native';
 import { getStoredToken } from '../lib/token-store';
 import type { ApiErrorBody } from '../types';
 
-const EMULATOR_API_URL = 'http://10.0.2.2:3000';
+const USB_REVERSED_API_URL = 'http://127.0.0.1:3000';
 const LOCAL_WEB_API_URL = 'http://localhost:3000';
 const PRODUCTION_API_URL = 'https://mechi.club';
 
@@ -12,6 +12,7 @@ type RequestOptions = {
   body?: unknown;
   auth?: boolean;
   headers?: Record<string, string>;
+  timeoutMs?: number;
 };
 
 export class ApiError extends Error {
@@ -42,12 +43,12 @@ export function getApiBaseUrl(): string {
   }
 
   const fromConfig = readConfiguredApiUrl(Constants.expoConfig?.extra?.apiUrl);
-  if (fromConfig && (__DEV__ || fromConfig !== EMULATOR_API_URL)) {
+  if (fromConfig) {
     return fromConfig;
   }
 
   if (__DEV__) {
-    return Platform.OS === 'web' ? LOCAL_WEB_API_URL : EMULATOR_API_URL;
+    return Platform.OS === 'web' ? LOCAL_WEB_API_URL : USB_REVERSED_API_URL;
   }
 
   return PRODUCTION_API_URL;
@@ -69,6 +70,8 @@ function parseJson(text: string): unknown {
 
 export async function apiRequest<T>(path: string, options: RequestOptions = {}): Promise<T> {
   const method = options.method ?? (options.body ? 'POST' : 'GET');
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), options.timeoutMs ?? 12_000);
   const headers: Record<string, string> = {
     Accept: 'application/json',
     ...(options.headers ?? {}),
@@ -91,22 +94,33 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
     }
   }
 
-  const response = await fetch(`${getApiBaseUrl()}${path}`, {
-    method,
-    headers,
-    body,
-  });
-  const rawText = await response.text();
-  const parsed = parseJson(rawText);
+  try {
+    const response = await fetch(`${getApiBaseUrl()}${path}`, {
+      method,
+      headers,
+      body,
+      signal: controller.signal,
+    });
+    const rawText = await response.text();
+    const parsed = parseJson(rawText);
 
-  if (!response.ok) {
-    const apiBody = parsed && typeof parsed === 'object' ? (parsed as ApiErrorBody) : null;
-    const message =
-      apiBody?.error ??
-      apiBody?.message ??
-      (typeof parsed === 'string' ? parsed : `Request failed with ${response.status}`);
-    throw new ApiError(message, response.status, apiBody);
+    if (!response.ok) {
+      const apiBody = parsed && typeof parsed === 'object' ? (parsed as ApiErrorBody) : null;
+      const message =
+        apiBody?.error ??
+        apiBody?.message ??
+        (typeof parsed === 'string' ? parsed : `Request failed with ${response.status}`);
+      throw new ApiError(message, response.status, apiBody);
+    }
+
+    return parsed as T;
+  } catch (error) {
+    if (error instanceof Error && error.name === 'AbortError') {
+      throw new ApiError('Request timed out. Check the USB backend connection.', 0, null);
+    }
+
+    throw error;
+  } finally {
+    clearTimeout(timeout);
   }
-
-  return parsed as T;
 }

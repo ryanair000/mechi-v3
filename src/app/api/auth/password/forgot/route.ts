@@ -1,9 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import {
+  AUTH_ACTION_TTLS,
+  buildResetPasswordUrl,
+  createAuthActionToken,
+  getAuthActionSafeNextPath,
   getProfileForUsernameEmail,
   normalizeEmailAddress,
   normalizeAuthUsername,
 } from '@/lib/auth-actions';
+import { isTransactionalEmailReady, sendPasswordResetEmail } from '@/lib/email';
 import { checkPersistentRateLimit, getClientIp, rateLimitResponse } from '@/lib/rateLimit';
 
 export async function POST(request: NextRequest) {
@@ -22,6 +27,9 @@ export async function POST(request: NextRequest) {
     const submittedUsername = typeof body.username === 'string' ? body.username : null;
     const email = normalizeEmailAddress(submittedEmail);
     const username = normalizeAuthUsername(submittedUsername);
+    const nextPath = getAuthActionSafeNextPath(
+      typeof body.redirect_to === 'string' ? body.redirect_to : '/dashboard'
+    );
 
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       return NextResponse.json({ error: 'Enter a valid email address' }, { status: 400 });
@@ -40,12 +48,14 @@ export async function POST(request: NextRequest) {
       return rateLimitResponse(emailRateLimit.retryAfterSeconds);
     }
 
+    const genericResponse = {
+      success: true,
+      message: 'If that account exists, we sent a password reset link to the email address.',
+    };
+
     const profile = await getProfileForUsernameEmail({ username, email });
     if (!profile) {
-      return NextResponse.json(
-        { error: 'No account matched that username and email.' },
-        { status: 401 }
-      );
+      return NextResponse.json(genericResponse);
     }
 
     if (profile.is_banned) {
@@ -55,12 +65,24 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    return NextResponse.json({
-      success: true,
-      username: profile.username,
-      email: profile.email,
-      message: 'Account matched. Choose a new password.',
+    if (!isTransactionalEmailReady()) {
+      return NextResponse.json({ error: 'Email delivery is not configured.' }, { status: 503 });
+    }
+
+    const { token } = await createAuthActionToken({
+      userId: profile.id,
+      purpose: 'password_reset',
+      email,
+      nextPath,
     });
+    await sendPasswordResetEmail({
+      to: email,
+      username: profile.username,
+      resetLink: buildResetPasswordUrl(token),
+      expiresInMinutes: Math.floor(AUTH_ACTION_TTLS.password_reset / 60_000),
+    });
+
+    return NextResponse.json(genericResponse);
   } catch (error) {
     console.error('[Password Forgot] Error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });

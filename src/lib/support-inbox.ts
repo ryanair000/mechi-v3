@@ -922,6 +922,24 @@ async function handleInboundSupportMessage(message: NormalizedSupportMessage) {
     return { duplicate: false, escalated: true, reason: 'blocked_thread' };
   }
 
+  if (classification.route === 'auto_reply') {
+    await sendOutboundSupportMessage({
+      thread,
+      senderType: 'system',
+      message: classification.acknowledgement,
+      meta: {
+        source: 'classification',
+        reason: classification.reason,
+        tags: classification.tags,
+      },
+      successStatus: 'open',
+      failureStatus: 'waiting_on_human',
+      escalationReason: 'reply_delivery_failed',
+    });
+
+    return { duplicate: false, escalated: false, reason: classification.reason };
+  }
+
   if (message.channel === 'instagram' && !getInstagramAutoReplyEnabled()) {
     const humanStatus =
       classification.reason === 'banned_account' ? 'blocked' : 'waiting_on_human';

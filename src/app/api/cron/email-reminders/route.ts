@@ -1,5 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { claimDeliveryEvent } from '@/lib/email-delivery-events';
+import {
+  claimDeliveryEvent,
+  markDeliveryEventFailed,
+  markDeliveryEventSent,
+  markDeliveryEventSkipped,
+} from '@/lib/email-delivery-events';
 import { sendOnlineTournamentGameReminderEmail } from '@/lib/email';
 import {
   ONLINE_TOURNAMENT_GAME_BY_KEY,
@@ -133,17 +138,18 @@ export async function GET(request: NextRequest) {
             registration.user_id,
             game.matchStartsAt,
           ].join(':');
+          const emailMetadata = {
+            event_slug: ONLINE_TOURNAMENT_SLUG,
+            game: registration.game,
+            starts_at: game.matchStartsAt,
+            registration_id: registration.id,
+          };
           const didClaimEmail = await claimDeliveryEvent(supabase, {
             eventKey: emailEventKey,
             eventType: 'online_tournament_game_email_reminder',
             recipient: emailRecipient,
             userId: registration.user_id,
-            metadata: {
-              event_slug: ONLINE_TOURNAMENT_SLUG,
-              game: registration.game,
-              starts_at: game.matchStartsAt,
-              registration_id: registration.id,
-            },
+            metadata: emailMetadata,
           });
 
           if (didClaimEmail) {
@@ -162,6 +168,20 @@ export async function GET(request: NextRequest) {
                 registrationUrl: `${APP_URL}${ONLINE_TOURNAMENT_REGISTRATION_PATH}`,
                 streamUrl: ONLINE_TOURNAMENT_YOUTUBE_URL,
               })
+                .then(() =>
+                  markDeliveryEventSent(supabase, {
+                    eventKey: emailEventKey,
+                    metadata: { ...emailMetadata, sent_at: new Date().toISOString() },
+                  })
+                )
+                .catch(async (error) => {
+                  await markDeliveryEventFailed(supabase, {
+                    eventKey: emailEventKey,
+                    error,
+                    metadata: { ...emailMetadata, failed_at: new Date().toISOString() },
+                  });
+                  console.error('[Email Reminders] Delivery failed:', error);
+                })
             );
           } else {
             skipped += 1;
@@ -186,17 +206,18 @@ export async function GET(request: NextRequest) {
           registration.user_id,
           game.matchStartsAt,
         ].join(':');
+        const whatsappMetadata = {
+          event_slug: ONLINE_TOURNAMENT_SLUG,
+          game: registration.game,
+          starts_at: game.matchStartsAt,
+          registration_id: registration.id,
+        };
         const didClaimWhatsApp = await claimDeliveryEvent(supabase, {
           eventKey: whatsappEventKey,
           eventType: 'online_tournament_game_whatsapp_reminder',
           recipient: whatsappRecipient,
           userId: registration.user_id,
-          metadata: {
-            event_slug: ONLINE_TOURNAMENT_SLUG,
-            game: registration.game,
-            starts_at: game.matchStartsAt,
-            registration_id: registration.id,
-          },
+          metadata: whatsappMetadata,
         });
 
         if (!didClaimWhatsApp) {
@@ -217,13 +238,29 @@ export async function GET(request: NextRequest) {
             scoring: config.scoring,
             appUrl: APP_URL,
             streamUrl: ONLINE_TOURNAMENT_YOUTUBE_URL,
-          }).then((result) => {
+          }).then(async (result) => {
             if (!result.ok && !result.skipped) {
               console.error(
                 '[WhatsApp Reminders] Delivery failed:',
                 formatWhatsAppDeliveryError(result)
               );
+              await markDeliveryEventFailed(supabase, {
+                eventKey: whatsappEventKey,
+                error: formatWhatsAppDeliveryError(result),
+                metadata: { ...whatsappMetadata, failed_at: new Date().toISOString() },
+              });
+              return;
             }
+
+            await (result.skipped
+              ? markDeliveryEventSkipped(supabase, {
+                  eventKey: whatsappEventKey,
+                  metadata: { ...whatsappMetadata, skipped_at: new Date().toISOString() },
+                })
+              : markDeliveryEventSent(supabase, {
+                  eventKey: whatsappEventKey,
+                  metadata: { ...whatsappMetadata, sent_at: new Date().toISOString() },
+                }));
           })
         );
       }

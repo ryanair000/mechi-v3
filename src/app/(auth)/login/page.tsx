@@ -176,8 +176,8 @@ export default function LoginPage({ searchParams }: { searchParams: LoginSearchP
     setSendingMagicLink(true);
     setFeedback({
       tone: 'loading',
-      title: 'Checking those details...',
-      detail: 'Matching the username and email on your Mechi profile.',
+      title: 'Sending a secure sign-in link...',
+      detail: 'If the details match, Mechi will email a one-time link.',
     });
 
     try {
@@ -198,16 +198,12 @@ export default function LoginPage({ searchParams }: { searchParams: LoginSearchP
         return;
       }
 
-      login(data.token, data.user);
       setFeedback({
         tone: 'success',
-        title: `Welcome back, ${data.user.username}.`,
-        detail: 'Those details matched. Taking you into Mechi now.',
+        title: 'Check your email.',
+        detail: data.message ?? 'If those details match, your sign-in link is on the way.',
       });
-      toast.success(data.message ?? 'Signed in successfully.');
-      window.location.assign(
-        typeof data.redirect_to === 'string' ? data.redirect_to : nextPath
-      );
+      toast.success('Check your email for the sign-in link.');
     } catch {
       setFeedback({
         tone: 'error',
@@ -345,12 +341,12 @@ export default function LoginPage({ searchParams }: { searchParams: LoginSearchP
                 {sendingMagicLink ? (
                   <>
                     <Loader2 size={14} className="animate-spin" />
-                    Signing in...
+                    Sending link...
                   </>
                 ) : (
                   <>
                     <UserCheck size={14} />
-                    Sign in with username and email
+                    Email me a sign-in link
                   </>
                 )}
               </button>

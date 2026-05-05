@@ -1,3 +1,4 @@
+import { withSentryConfig } from "@sentry/nextjs";
 import type { NextConfig } from "next";
 
 function normalizeConfiguredHost(value: string | undefined) {
@@ -13,8 +14,7 @@ function normalizeConfiguredHost(value: string | undefined) {
 }
 
 const configuredAdminHost =
-  normalizeConfiguredHost(process.env.NEXT_PUBLIC_ADMIN_URL) ??
-  "mechi.lokimax.top";
+  normalizeConfiguredHost(process.env.NEXT_PUBLIC_ADMIN_URL) ?? "mechi.lokimax.top";
 
 const localDevOrigins = Array.from(
   new Set([
@@ -39,50 +39,13 @@ const localActionOrigins = Array.from(
 
 const distDir = process.env.MECHI_NEXT_DIST_DIR;
 const isProductionBuild = process.env.NODE_ENV === "production";
-const isBuildCommand = process.env.npm_lifecycle_event === "build";
-const isDev = process.env.NODE_ENV !== "production";
-
-const cspHeader = [
-  "default-src 'self'",
-  `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ""} https://www.googletagmanager.com`,
-  "style-src 'self' 'unsafe-inline'",
-  [
-    "img-src 'self' data: blob:",
-    "https://cdn.cloudflare.steamstatic.com",
-    "https://res.cloudinary.com",
-    "https://shared.cloudflare.steamstatic.com",
-    "https://www.google-analytics.com",
-    "https://region1.google-analytics.com",
-    "https://image.mux.com",
-    "https://*.mux.com",
-  ].join(" "),
-  "font-src 'self' data:",
-  [
-    "connect-src 'self'",
-    "https://*.supabase.co",
-    "wss://*.supabase.co",
-    "https://api.resend.com",
-    "https://api.paystack.co",
-    "https://www.googletagmanager.com",
-    "https://www.google-analytics.com",
-    "https://region1.google-analytics.com",
-    "https://*.mux.com",
-  ].join(" "),
-  "media-src 'self' blob: https://stream.mux.com https://*.mux.com",
-  "frame-src 'self' https://www.youtube.com https://www.youtube-nocookie.com",
-  "object-src 'none'",
-  "base-uri 'self'",
-  "form-action 'self'",
-  "frame-ancestors 'none'",
-  "upgrade-insecure-requests",
-].join("; ");
+const sentryAuthToken = process.env.SENTRY_AUTH_TOKEN?.trim();
 
 const nextConfig: NextConfig = {
   ...(distDir ? { distDir } : {}),
-  poweredByHeader: false,
   allowedDevOrigins: localDevOrigins,
   typescript: {
-    tsconfigPath: isProductionBuild || isBuildCommand ? "tsconfig.build.json" : "tsconfig.json",
+    tsconfigPath: isProductionBuild ? "tsconfig.build.json" : "tsconfig.json",
   },
   images: {
     remotePatterns: [
@@ -105,18 +68,14 @@ const nextConfig: NextConfig = {
   },
   experimental: {
     serverActions: {
-      allowedOrigins: [
-        ...localActionOrigins,
-        "mechi-v3.vercel.app",
-        "mechi.club",
-      ],
+      allowedOrigins: [...localActionOrigins, "mechi-v3.vercel.app", "mechi.club"],
     },
   },
   async redirects() {
     return [
       {
         source:
-          "/:path((?!$|admin(?:/|$)|users(?:/|$)|matches(?:/|$)|support(?:/|$)|whatsapp(?:/|$)|instagram(?:/|$)|logs(?:/|$)|rewards(?:/|$)|dashboard(?:/|$)|login(?:/|$)|register(?:/|$)|forgot-password(?:/|$)|reset-password(?:/|$)|banned(?:/|$)|api(?:/|$)|_next(?:/|$)|favicon|icon|robots|sitemap).*)",
+          "/:path((?!$|admin(?:/|$)|dashboard(?:/|$)|login(?:/|$)|register(?:/|$)|forgot-password(?:/|$)|reset-password(?:/|$)|banned(?:/|$)|api(?:/|$)|_next(?:/|$)|favicon|icon|robots|sitemap).*)",
         has: [
           {
             type: "host",
@@ -137,9 +96,18 @@ const nextConfig: NextConfig = {
           { key: "X-Content-Type-Options", value: "nosniff" },
           { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
           { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=()" },
-          { key: "Content-Security-Policy", value: cspHeader },
-          { key: "Cross-Origin-Opener-Policy", value: "same-origin" },
-          { key: "X-DNS-Prefetch-Control", value: "off" },
+          {
+            key: "Content-Security-Policy",
+            value: [
+              "default-src 'self'",
+              "script-src 'self' 'unsafe-eval' 'unsafe-inline' https://www.googletagmanager.com",
+              "style-src 'self' 'unsafe-inline'",
+              "img-src 'self' data: blob: https://cdn.cloudflare.steamstatic.com https://res.cloudinary.com https://shared.cloudflare.steamstatic.com https://www.google-analytics.com https://region1.google-analytics.com",
+              "font-src 'self' data:",
+              "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.paystack.co https://www.googletagmanager.com https://www.google-analytics.com https://region1.google-analytics.com",
+              "frame-ancestors 'none'",
+            ].join("; "),
+          },
           {
             key: "Strict-Transport-Security",
             value: "max-age=63072000; includeSubDomains; preload",
@@ -157,4 +125,18 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default nextConfig;
+export default withSentryConfig(nextConfig, {
+  tunnelRoute: "/api/monitoring",
+  sourcemaps: {
+    disable: !sentryAuthToken,
+  },
+  silent: true,
+  webpack: {
+    treeshake: {
+      removeDebugLogging: true,
+    },
+  },
+  errorHandler(error) {
+    console.warn("[Sentry] Web build integration warning:", error.message);
+  },
+});

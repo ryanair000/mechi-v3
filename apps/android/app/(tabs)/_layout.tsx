@@ -1,11 +1,15 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Redirect, Tabs } from 'expo-router';
+import { Platform } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LoadingState, Screen } from '../../src/components/ui';
 import { isProfileComplete, useAuth } from '../../src/auth/AuthProvider';
 import { colors } from '../../src/theme';
 
 export default function TabsLayout() {
   const { initializing, token, user } = useAuth();
+  const insets = useSafeAreaInsets();
+  const bottomInset = Math.max(insets.bottom, Platform.OS === 'android' ? 34 : 0);
 
   if (initializing) {
     return (
@@ -29,12 +33,18 @@ export default function TabsLayout() {
         headerShown: false,
         tabBarActiveTintColor: colors.primary,
         tabBarInactiveTintColor: colors.muted,
+        sceneStyle: {
+          backgroundColor: colors.bg,
+        },
         tabBarStyle: {
           backgroundColor: colors.bg2,
           borderTopColor: colors.border,
-          minHeight: 66,
-          paddingBottom: 8,
+          height: 64 + bottomInset,
+          paddingBottom: bottomInset + 6,
           paddingTop: 8,
+        },
+        tabBarItemStyle: {
+          minHeight: 50,
         },
         tabBarLabelStyle: {
           fontSize: 11,

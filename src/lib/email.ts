@@ -1,4 +1,7 @@
-import { Resend } from 'resend';
+import { existsSync, readFileSync } from 'node:fs';
+import { homedir } from 'node:os';
+import { join } from 'node:path';
+import { createHash, createHmac } from 'node:crypto';
 import { DEFAULT_RATING } from '@/lib/config';
 import { getRankDivision } from '@/lib/gamification';
 import { shouldHideOpponentPlatformIds, usesEfootballRoomCodeFlow } from '@/lib/match-room';
@@ -8,19 +11,130 @@ import { formatTournamentDateTime, getTournamentCheckInDate } from '@/lib/tourna
 import { APP_URL } from '@/lib/urls';
 import type { GameKey, PlatformKey } from '@/types';
 
-let resendClient: Resend | null | undefined;
-const FROM_ADDRESS = process.env.RESEND_FROM_EMAIL ?? 'noreply@mechi.club';
+type EmailPayload = {
+  from: string;
+  to: string | string[];
+  bcc?: string | string[];
+  replyTo?: string | string[];
+  subject: string;
+  html: string;
+  text?: string;
+  headers?: Record<string, string>;
+};
+
+type AwsSesCredentials = {
+  accessKeyId: string;
+  secretAccessKey: string;
+  sessionToken?: string;
+  expiration?: number;
+};
+
+const FROM_ADDRESS =
+  process.env.AWS_SES_FROM_EMAIL ?? process.env.EMAIL_FROM_ADDRESS ?? 'noreply@mechi.club';
 const FROM = `Mechi <${FROM_ADDRESS}>`;
 const SUPPORT_ADDRESS = 'support@mechi.club';
+let cachedInstanceCredentials: AwsSesCredentials | null = null;
+let cachedSharedCredentials: AwsSesCredentials | null | undefined;
 
-function getResendClient(): Resend | null {
-  if (resendClient !== undefined) {
-    return resendClient;
+function getAwsSesRegion() {
+  return (
+    process.env.AWS_SES_REGION?.trim() ||
+    process.env.AWS_REGION?.trim() ||
+    process.env.AWS_DEFAULT_REGION?.trim() ||
+    getSharedAwsRegion() ||
+    'us-east-2'
+  );
+}
+
+function getAwsSesAccessKeyId() {
+  return process.env.AWS_SES_ACCESS_KEY_ID?.trim() || process.env.AWS_ACCESS_KEY_ID?.trim() || '';
+}
+
+function getAwsSesSecretAccessKey() {
+  return process.env.AWS_SES_SECRET_ACCESS_KEY?.trim() || process.env.AWS_SECRET_ACCESS_KEY?.trim() || '';
+}
+
+function getAwsSesSessionToken() {
+  return process.env.AWS_SESSION_TOKEN?.trim() || '';
+}
+
+function shouldUseInstanceRoleCredentials() {
+  return process.env.AWS_SES_USE_INSTANCE_ROLE === 'true';
+}
+
+function getAwsProfileName() {
+  return process.env.AWS_PROFILE?.trim() || 'default';
+}
+
+function parseAwsIni(content: string): Record<string, Record<string, string>> {
+  const sections: Record<string, Record<string, string>> = {};
+  let currentSection: string | null = null;
+
+  for (const rawLine of content.split(/\r?\n/)) {
+    const line = rawLine.trim();
+    if (!line || line.startsWith('#') || line.startsWith(';')) {
+      continue;
+    }
+
+    const sectionMatch = line.match(/^\[([^\]]+)\]$/);
+    if (sectionMatch) {
+      currentSection = sectionMatch[1].trim();
+      sections[currentSection] ??= {};
+      continue;
+    }
+
+    const separatorIndex = line.indexOf('=');
+    if (!currentSection || separatorIndex < 0) {
+      continue;
+    }
+
+    const key = line.slice(0, separatorIndex).trim();
+    const value = line.slice(separatorIndex + 1).trim();
+    sections[currentSection][key] = value;
   }
 
-  const apiKey = process.env.RESEND_API_KEY?.trim();
-  resendClient = apiKey ? new Resend(apiKey) : null;
-  return resendClient;
+  return sections;
+}
+
+function getSharedAwsCredentials(): AwsSesCredentials | null {
+  if (cachedSharedCredentials !== undefined) {
+    return cachedSharedCredentials;
+  }
+
+  const credentialsPath =
+    process.env.AWS_SHARED_CREDENTIALS_FILE?.trim() || join(homedir(), '.aws', 'credentials');
+  if (!existsSync(credentialsPath)) {
+    cachedSharedCredentials = null;
+    return cachedSharedCredentials;
+  }
+
+  const profile = getAwsProfileName();
+  const sections = parseAwsIni(readFileSync(credentialsPath, 'utf8'));
+  const credentials = sections[profile];
+  const accessKeyId = credentials?.aws_access_key_id?.trim();
+  const secretAccessKey = credentials?.aws_secret_access_key?.trim();
+
+  cachedSharedCredentials =
+    accessKeyId && secretAccessKey
+      ? {
+          accessKeyId,
+          secretAccessKey,
+          sessionToken: credentials.aws_session_token?.trim() || undefined,
+        }
+      : null;
+
+  return cachedSharedCredentials;
+}
+
+function getSharedAwsRegion() {
+  const configPath = process.env.AWS_CONFIG_FILE?.trim() || join(homedir(), '.aws', 'config');
+  if (!existsSync(configPath)) {
+    return null;
+  }
+
+  const profile = getAwsProfileName();
+  const sections = parseAwsIni(readFileSync(configPath, 'utf8'));
+  return sections[`profile ${profile}`]?.region?.trim() || sections[profile]?.region?.trim() || null;
 }
 
 export function isTransactionalEmailReady(): boolean {
@@ -28,10 +142,18 @@ export function isTransactionalEmailReady(): boolean {
     return true;
   }
 
-  return Boolean(process.env.RESEND_API_KEY?.trim());
+  return Boolean(
+    FROM_ADDRESS &&
+      ((getAwsSesAccessKeyId() && getAwsSesSecretAccessKey()) ||
+        getSharedAwsCredentials() ||
+        shouldUseInstanceRoleCredentials())
+  );
 }
 
-async function sendEmail(payload: Parameters<Resend['emails']['send']>[0]): Promise<void> {
+async function sendEmail(
+  payload: EmailPayload,
+  options: { requireConfigured?: boolean } = {}
+): Promise<void> {
   if (isMockProviderMode()) {
     await captureProviderTranscript({
       provider: 'email',
@@ -46,26 +168,24 @@ async function sendEmail(payload: Parameters<Resend['emails']['send']>[0]): Prom
     return;
   }
 
-  const resend = getResendClient();
-  if (!resend) {
-    console.warn('[Email] Send skipped - RESEND_API_KEY is not configured');
+  if (!isTransactionalEmailReady()) {
+    console.warn('[Email] Send skipped - AWS SES credentials are not configured');
     if (shouldCaptureProviderTranscripts()) {
       await captureProviderTranscript({
         provider: 'email',
         operation: 'send',
         request: payload,
-        error: 'RESEND_API_KEY is not configured',
+        error: 'AWS SES credentials are not configured',
       });
+    }
+    if (options.requireConfigured) {
+      throw new Error('AWS SES credentials are not configured');
     }
     return;
   }
 
-  const response = await resend.emails.send(payload);
-  if (response.error) {
-    console.error('[Email] Resend send error:', response.error);
-    throw new Error(`Resend email send failed: ${response.error.message}`);
-  }
-  console.info('[Email] Resend accepted email', { id: response.data.id });
+  const response = await sendEmailWithAwsSes(payload);
+  console.info('[Email] AWS SES accepted email', { id: response.messageId });
 
   if (shouldCaptureProviderTranscripts()) {
     await captureProviderTranscript({
@@ -82,22 +202,300 @@ async function sendBccEmail(params: {
   subject: string;
   title: string;
   content: string;
+  unsubscribeUrl?: string | null;
 }): Promise<void> {
-  if (params.bcc.length === 0) {
+  const recipients = params.bcc.map((email) => email.trim()).filter(Boolean);
+  if (recipients.length === 0) {
     return;
   }
 
   try {
+    const singleRecipient = recipients.length === 1 ? recipients[0] : null;
+    const unsubscribeUrl = params.unsubscribeUrl ? escapeUrl(params.unsubscribeUrl) : null;
+    const unsubscribeContent = unsubscribeUrl
+      ? `
+        <p class="note">You received this because this game is selected on your Mechi profile.</p>
+        <p><a href="${unsubscribeUrl}" class="secondary-link">Unsubscribe from game update emails</a></p>
+      `
+      : '';
     await sendEmail({
       from: FROM,
-      to: FROM_ADDRESS,
-      bcc: params.bcc,
+      to: singleRecipient ?? FROM_ADDRESS,
+      ...(singleRecipient ? {} : { bcc: recipients }),
       subject: params.subject,
-      html: baseLayout(params.title, params.content),
+      html: baseLayout(params.title, `${params.content}${unsubscribeContent}`),
+      ...(params.unsubscribeUrl
+        ? {
+            headers: {
+              'List-Unsubscribe': `<${params.unsubscribeUrl}>`,
+              'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
+            },
+          }
+        : {}),
     });
   } catch (err) {
     console.error(`[Email] ${params.title} broadcast send error:`, err);
   }
+}
+
+function toAddressArray(value: string | string[] | null | undefined): string[] {
+  return (Array.isArray(value) ? value : value ? [value] : [])
+    .map((address) => address.trim())
+    .filter(Boolean);
+}
+
+function htmlToText(html: string) {
+  return html
+    .replace(/<style[\s\S]*?<\/style>/gi, '')
+    .replace(/<script[\s\S]*?<\/script>/gi, '')
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<\/p>/gi, '\n\n')
+    .replace(/<[^>]+>/g, '')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+}
+
+function sha256Hex(value: string) {
+  return createHash('sha256').update(value, 'utf8').digest('hex');
+}
+
+function hmac(key: Buffer | string, value: string) {
+  return createHmac('sha256', key).update(value, 'utf8').digest();
+}
+
+function hmacHex(key: Buffer | string, value: string) {
+  return createHmac('sha256', key).update(value, 'utf8').digest('hex');
+}
+
+function getAwsSignatureKey(secretAccessKey: string, dateStamp: string, region: string) {
+  const dateKey = hmac(`AWS4${secretAccessKey}`, dateStamp);
+  const regionKey = hmac(dateKey, region);
+  const serviceKey = hmac(regionKey, 'ses');
+  return hmac(serviceKey, 'aws4_request');
+}
+
+function getAmzDate(date: Date) {
+  return date.toISOString().replace(/[:-]|\.\d{3}/g, '');
+}
+
+function getDateStamp(amzDate: string) {
+  return amzDate.slice(0, 8);
+}
+
+function getAwsSesHeaders(headers: Record<string, string> | undefined) {
+  return Object.entries(headers ?? {})
+    .map(([name, value]) => ({ Name: name, Value: value }))
+    .filter((header) => header.Name && header.Value)
+    .slice(0, 15);
+}
+
+async function fetchWithTimeout(url: string, init: RequestInit = {}, timeoutMs = 1200) {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    return await fetch(url, { ...init, signal: controller.signal });
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
+
+async function resolveAwsSesCredentials(): Promise<AwsSesCredentials> {
+  const envAccessKeyId = getAwsSesAccessKeyId();
+  const envSecretAccessKey = getAwsSesSecretAccessKey();
+  const envSessionToken = getAwsSesSessionToken();
+
+  if (envAccessKeyId && envSecretAccessKey) {
+    return {
+      accessKeyId: envAccessKeyId,
+      secretAccessKey: envSecretAccessKey,
+      sessionToken: envSessionToken || undefined,
+    };
+  }
+
+  const sharedCredentials = getSharedAwsCredentials();
+  if (sharedCredentials) {
+    return sharedCredentials;
+  }
+
+  if (!shouldUseInstanceRoleCredentials()) {
+    throw new Error('AWS SES credentials are not configured');
+  }
+
+  if (
+    cachedInstanceCredentials?.expiration &&
+    cachedInstanceCredentials.expiration - Date.now() > 5 * 60 * 1000
+  ) {
+    return cachedInstanceCredentials;
+  }
+
+  const tokenResponse = await fetchWithTimeout('http://169.254.169.254/latest/api/token', {
+    method: 'PUT',
+    headers: {
+      'X-aws-ec2-metadata-token-ttl-seconds': '21600',
+    },
+  });
+
+  if (!tokenResponse.ok) {
+    throw new Error(`Could not load EC2 metadata token: ${tokenResponse.status}`);
+  }
+
+  const metadataToken = await tokenResponse.text();
+  const roleResponse = await fetchWithTimeout(
+    'http://169.254.169.254/latest/meta-data/iam/security-credentials/',
+    {
+      headers: {
+        'X-aws-ec2-metadata-token': metadataToken,
+      },
+    }
+  );
+
+  if (!roleResponse.ok) {
+    throw new Error(`Could not load EC2 IAM role name: ${roleResponse.status}`);
+  }
+
+  const roleName = (await roleResponse.text()).split('\n')[0]?.trim();
+  if (!roleName) {
+    throw new Error('No EC2 IAM role is attached to this instance');
+  }
+
+  const credentialsResponse = await fetchWithTimeout(
+    `http://169.254.169.254/latest/meta-data/iam/security-credentials/${encodeURIComponent(roleName)}`,
+    {
+      headers: {
+        'X-aws-ec2-metadata-token': metadataToken,
+      },
+    }
+  );
+
+  if (!credentialsResponse.ok) {
+    throw new Error(`Could not load EC2 IAM role credentials: ${credentialsResponse.status}`);
+  }
+
+  const data = (await credentialsResponse.json()) as {
+    AccessKeyId?: string;
+    SecretAccessKey?: string;
+    Token?: string;
+    Expiration?: string;
+  };
+
+  if (!data.AccessKeyId || !data.SecretAccessKey || !data.Token) {
+    throw new Error('EC2 IAM role credentials were incomplete');
+  }
+
+  cachedInstanceCredentials = {
+    accessKeyId: data.AccessKeyId,
+    secretAccessKey: data.SecretAccessKey,
+    sessionToken: data.Token,
+    expiration: data.Expiration ? new Date(data.Expiration).getTime() : Date.now() + 30 * 60 * 1000,
+  };
+
+  return cachedInstanceCredentials;
+}
+
+async function sendEmailWithAwsSes(payload: EmailPayload): Promise<{ messageId: string | null }> {
+  const region = getAwsSesRegion();
+  const credentials = await resolveAwsSesCredentials();
+  const endpoint = new URL(
+    process.env.AWS_SES_ENDPOINT_URL?.trim() ||
+      `https://email.${region}.amazonaws.com/v2/email/outbound-emails`
+  );
+  const amzDate = getAmzDate(new Date());
+  const dateStamp = getDateStamp(amzDate);
+  const toAddresses = toAddressArray(payload.to);
+  const bccAddresses = toAddressArray(payload.bcc);
+  const replyToAddresses = toAddressArray(payload.replyTo);
+  const customHeaders = getAwsSesHeaders(payload.headers);
+  const body = JSON.stringify({
+    ...(process.env.AWS_SES_CONFIGURATION_SET?.trim()
+      ? { ConfigurationSetName: process.env.AWS_SES_CONFIGURATION_SET.trim() }
+      : {}),
+    ...(process.env.AWS_SES_FEEDBACK_EMAIL?.trim()
+      ? { FeedbackForwardingEmailAddress: process.env.AWS_SES_FEEDBACK_EMAIL.trim() }
+      : {}),
+    FromEmailAddress: payload.from,
+    Destination: {
+      ToAddresses: toAddresses,
+      ...(bccAddresses.length > 0 ? { BccAddresses: bccAddresses } : {}),
+    },
+    ...(replyToAddresses.length > 0 ? { ReplyToAddresses: replyToAddresses } : {}),
+    Content: {
+      Simple: {
+        Subject: {
+          Charset: 'UTF-8',
+          Data: payload.subject,
+        },
+        Body: {
+          Html: {
+            Charset: 'UTF-8',
+            Data: payload.html,
+          },
+          Text: {
+            Charset: 'UTF-8',
+            Data: payload.text ?? htmlToText(payload.html),
+          },
+        },
+        ...(customHeaders.length > 0 ? { Headers: customHeaders } : {}),
+      },
+    },
+  });
+  const signedHeaders = credentials.sessionToken
+    ? 'content-type;host;x-amz-date;x-amz-security-token'
+    : 'content-type;host;x-amz-date';
+  const canonicalHeaders = [
+    'content-type:application/json',
+    `host:${endpoint.host}`,
+    `x-amz-date:${amzDate}`,
+    ...(credentials.sessionToken ? [`x-amz-security-token:${credentials.sessionToken}`] : []),
+    '',
+  ].join('\n');
+  const canonicalRequest = [
+    'POST',
+    endpoint.pathname,
+    '',
+    canonicalHeaders,
+    signedHeaders,
+    sha256Hex(body),
+  ].join('\n');
+  const credentialScope = `${dateStamp}/${region}/ses/aws4_request`;
+  const stringToSign = [
+    'AWS4-HMAC-SHA256',
+    amzDate,
+    credentialScope,
+    sha256Hex(canonicalRequest),
+  ].join('\n');
+  const signature = hmacHex(
+    getAwsSignatureKey(credentials.secretAccessKey, dateStamp, region),
+    stringToSign
+  );
+  const authorizationHeader =
+    `AWS4-HMAC-SHA256 Credential=${credentials.accessKeyId}/${credentialScope}, ` +
+    `SignedHeaders=${signedHeaders}, Signature=${signature}`;
+  const response = await fetch(endpoint, {
+    method: 'POST',
+    headers: {
+      Authorization: authorizationHeader,
+      'Content-Type': 'application/json',
+      'X-Amz-Date': amzDate,
+      ...(credentials.sessionToken ? { 'X-Amz-Security-Token': credentials.sessionToken } : {}),
+    },
+    body,
+  });
+  const responseText = await response.text();
+
+  if (!response.ok) {
+    console.error('[Email] AWS SES send error:', response.status, responseText);
+    throw new Error(`AWS SES email send failed: ${response.status} ${responseText}`);
+  }
+
+  const data = responseText ? (JSON.parse(responseText) as { MessageId?: string }) : {};
+  return { messageId: data.MessageId ?? null };
 }
 
 function escapeHtml(value: unknown): string {
@@ -124,6 +522,15 @@ function escapeUrl(value: unknown): string {
   }
 
   return escapeHtml(APP_URL);
+}
+
+function plainTextToHtml(value: string): string {
+  return value
+    .split(/\n{2,}/)
+    .map((paragraph) => paragraph.trim())
+    .filter(Boolean)
+    .map((paragraph) => `<p>${escapeHtml(paragraph).replace(/\n/g, '<br />')}</p>`)
+    .join('');
 }
 
 function formatEatDateTimeLabel(value: string | Date): string {
@@ -325,9 +732,10 @@ export async function sendMagicLinkEmail(params: {
       to: params.to,
       subject: 'Your Mechi sign-in link',
       html: baseLayout('Sign in to Mechi', content),
-    });
+    }, { requireConfigured: true });
   } catch (err) {
     console.error('[Email] Magic link send error:', err);
+    throw err;
   }
 }
 
@@ -363,9 +771,10 @@ export async function sendPasswordResetEmail(params: {
       to: params.to,
       subject: 'Reset your Mechi password',
       html: baseLayout('Reset your Mechi password', content),
-    });
+    }, { requireConfigured: true });
   } catch (err) {
     console.error('[Email] Password reset send error:', err);
+    throw err;
   }
 }
 
@@ -637,31 +1046,36 @@ export async function sendChallengeReceivedEmail(params: {
   challengeUrl: string;
   message?: string | null;
 }): Promise<void> {
+  const username = escapeHtml(params.username);
+  const challengerUsername = escapeHtml(params.challengerUsername);
+  const game = escapeHtml(params.game);
+  const platform = escapeHtml(params.platform);
+  const challengeUrl = escapeUrl(params.challengeUrl);
   const messageBlock = params.message
     ? `
       <div class="info-row">
         <span class="info-label">Message</span>
-        <span class="info-value">${params.message}</span>
+        <span class="info-value">${escapeHtml(params.message)}</span>
       </div>
     `
     : '';
 
   const content = `
     <h2>Direct challenge received</h2>
-    <p>Hey ${params.username}, ${params.challengerUsername} wants to run a direct match with you on Mechi.</p>
+    <p>Hey ${username}, ${challengerUsername} wants to run a direct match with you on Mechi.</p>
     <div class="info-box">
       <div class="info-row">
         <span class="info-label">Game</span>
-        <span class="info-value">${params.game}</span>
+        <span class="info-value">${game}</span>
       </div>
       <div class="info-row">
         <span class="info-label">Platform</span>
-        <span class="info-value">${params.platform}</span>
+        <span class="info-value">${platform}</span>
       </div>
       ${messageBlock}
     </div>
     <p>Open your notifications to accept, decline, or keep the challenge moving.</p>
-    <a href="${params.challengeUrl}" class="btn">Review Challenge</a>
+    <a href="${challengeUrl}" class="btn">Review Challenge</a>
   `;
 
   try {
@@ -683,26 +1097,31 @@ export async function sendQueueBroadcastEmail(params: {
   platform: string;
   queueWindowMinutes: number;
   queueUrl: string;
+  unsubscribeUrl?: string | null;
 }): Promise<void> {
+  const username = escapeHtml(params.username);
+  const game = escapeHtml(params.game);
+  const platform = escapeHtml(params.platform);
+  const queueUrl = escapeUrl(params.queueUrl);
   const content = `
     <h2>Fresh queue run available</h2>
-    <p>${params.username} just joined the ${params.game} queue on ${params.platform}.</p>
+    <p>${username} just joined the ${game} queue on ${platform}.</p>
     <div class="info-box">
       <div class="info-row">
         <span class="info-label">Game</span>
-        <span class="info-value">${params.game}</span>
+        <span class="info-value">${game}</span>
       </div>
       <div class="info-row">
         <span class="info-label">Platform</span>
-        <span class="info-value">${params.platform}</span>
+        <span class="info-value">${platform}</span>
       </div>
       <div class="info-row">
         <span class="info-label">Queue window</span>
-        <span class="info-value">Up to ${params.queueWindowMinutes} minutes</span>
+        <span class="info-value">Up to ${escapeHtml(params.queueWindowMinutes)} minutes</span>
       </div>
     </div>
     <p>If you are ready to play now, join the queue before the current window closes.</p>
-    <a href="${params.queueUrl}" class="btn">Open Queue</a>
+    <a href="${queueUrl}" class="btn">Open Queue</a>
   `;
 
   await sendBccEmail({
@@ -710,6 +1129,7 @@ export async function sendQueueBroadcastEmail(params: {
     subject: `${params.game}: a player is waiting right now`,
     title: 'Queue Opportunity',
     content,
+    unsubscribeUrl: params.unsubscribeUrl,
   });
 }
 
@@ -722,6 +1142,7 @@ export async function sendLobbyBroadcastEmail(params: {
   mapName?: string | null;
   scheduledFor?: string | null;
   lobbyUrl: string;
+  unsubscribeUrl?: string | null;
 }): Promise<void> {
   const scheduledCopy = params.scheduledFor
     ? new Date(params.scheduledFor).toLocaleString('en-KE', {
@@ -736,31 +1157,36 @@ export async function sendLobbyBroadcastEmail(params: {
     ? `
       <div class="info-row">
         <span class="info-label">Map</span>
-        <span class="info-value">${params.mapName}</span>
+        <span class="info-value">${escapeHtml(params.mapName)}</span>
       </div>
     `
     : '';
+  const hostName = escapeHtml(params.hostName);
+  const game = escapeHtml(params.game);
+  const lobbyTitle = escapeHtml(params.lobbyTitle);
+  const mode = escapeHtml(params.mode);
+  const lobbyUrl = escapeUrl(params.lobbyUrl);
 
   const content = `
     <h2>New lobby is open</h2>
-    <p>${params.hostName} opened a new ${params.game} lobby on Mechi.</p>
+    <p>${hostName} opened a new ${game} lobby on Mechi.</p>
     <div class="info-box">
       <div class="info-row">
         <span class="info-label">Lobby</span>
-        <span class="info-value">${params.lobbyTitle}</span>
+        <span class="info-value">${lobbyTitle}</span>
       </div>
       <div class="info-row">
         <span class="info-label">Mode</span>
-        <span class="info-value">${params.mode}</span>
+        <span class="info-value">${mode}</span>
       </div>
       ${mapBlock}
       <div class="info-row">
         <span class="info-label">Starts</span>
-        <span class="info-value">${scheduledCopy}</span>
+        <span class="info-value">${escapeHtml(scheduledCopy)}</span>
       </div>
     </div>
     <p>Join the room early so the host knows the slot is taken.</p>
-    <a href="${params.lobbyUrl}" class="btn">View Lobby</a>
+    <a href="${lobbyUrl}" class="btn">View Lobby</a>
   `;
 
   await sendBccEmail({
@@ -768,6 +1194,7 @@ export async function sendLobbyBroadcastEmail(params: {
     subject: `${params.game}: ${params.lobbyTitle} is now open`,
     title: 'Lobby Open',
     content,
+    unsubscribeUrl: params.unsubscribeUrl,
   });
 }
 
@@ -782,12 +1209,13 @@ export async function sendTournamentBroadcastEmail(params: {
   region: string;
   scheduledFor?: string | null;
   tournamentUrl: string;
+  unsubscribeUrl?: string | null;
 }): Promise<void> {
   const platformBlock = params.platform
     ? `
       <div class="info-row">
         <span class="info-label">Platform</span>
-        <span class="info-value">${params.platform}</span>
+        <span class="info-value">${escapeHtml(params.platform)}</span>
       </div>
     `
     : '';
@@ -803,48 +1231,53 @@ export async function sendTournamentBroadcastEmail(params: {
     ? `
       <div class="info-row">
         <span class="info-label">Starts</span>
-        <span class="info-value">${formatTournamentDateTime(
+        <span class="info-value">${escapeHtml(formatTournamentDateTime(
           params.scheduledFor,
           'TBA',
           scheduleOptions
-        )}</span>
+        ))}</span>
       </div>
       <div class="info-row">
         <span class="info-label">Check-in</span>
-        <span class="info-value">${formatTournamentDateTime(
+        <span class="info-value">${escapeHtml(formatTournamentDateTime(
           getTournamentCheckInDate(params.scheduledFor),
           '1 hour before kickoff',
           scheduleOptions
-        )}</span>
+        ))}</span>
       </div>
     `
     : '';
+  const organizerName = escapeHtml(params.organizerName);
+  const tournamentTitle = escapeHtml(params.tournamentTitle);
+  const game = escapeHtml(params.game);
+  const region = escapeHtml(params.region);
+  const tournamentUrl = escapeUrl(params.tournamentUrl);
 
   const content = `
     <h2>New tournament is open</h2>
-    <p>${params.organizerName} just opened ${params.tournamentTitle} on Mechi.</p>
+    <p>${organizerName} just opened ${tournamentTitle} on Mechi.</p>
     <div class="info-box">
       <div class="info-row">
         <span class="info-label">Game</span>
-        <span class="info-value">${params.game}</span>
+        <span class="info-value">${game}</span>
       </div>
       ${platformBlock}
       <div class="info-row">
         <span class="info-label">Bracket size</span>
-        <span class="info-value">${params.size} players</span>
+        <span class="info-value">${escapeHtml(params.size)} players</span>
       </div>
       <div class="info-row">
         <span class="info-label">Entry fee</span>
-        <span class="info-value">KES ${params.entryFee.toLocaleString()}</span>
+        <span class="info-value">KES ${escapeHtml(params.entryFee.toLocaleString())}</span>
       </div>
       <div class="info-row">
         <span class="info-label">Location</span>
-        <span class="info-value">${params.region}</span>
+        <span class="info-value">${region}</span>
       </div>
       ${scheduleBlock}
     </div>
     <p>Open the bracket page to join before the slots fill up.</p>
-    <a href="${params.tournamentUrl}" class="btn">View Tournament</a>
+    <a href="${tournamentUrl}" class="btn">View Tournament</a>
   `;
 
   await sendBccEmail({
@@ -852,7 +1285,42 @@ export async function sendTournamentBroadcastEmail(params: {
     subject: `${params.tournamentTitle} is open for ${params.game}`,
     title: 'Tournament Open',
     content,
+    unsubscribeUrl: params.unsubscribeUrl,
   });
+}
+
+export async function sendClientMarketingEmail(params: {
+  to: string;
+  subject: string;
+  title: string;
+  bodyText: string;
+  ctaLabel?: string | null;
+  ctaUrl?: string | null;
+  unsubscribeUrl: string;
+}): Promise<void> {
+  const unsubscribeUrl = escapeUrl(params.unsubscribeUrl);
+  const cta =
+    params.ctaLabel && params.ctaUrl
+      ? `<a href="${escapeUrl(params.ctaUrl)}" class="btn">${escapeHtml(params.ctaLabel)}</a>`
+      : '';
+  const content = `
+    <h2>${escapeHtml(params.title)}</h2>
+    ${plainTextToHtml(params.bodyText)}
+    ${cta}
+    <p class="note">You received this because your email is linked to Mechi.</p>
+    <p><a href="${unsubscribeUrl}" class="secondary-link">Unsubscribe from client emails</a></p>
+  `;
+
+  await sendEmail({
+    from: FROM,
+    to: params.to,
+    subject: params.subject,
+    html: baseLayout(params.title, content),
+    headers: {
+      'List-Unsubscribe': `<${params.unsubscribeUrl}>`,
+      'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
+    },
+  }, { requireConfigured: true });
 }
 
 export async function sendTournamentRegistrationConfirmedEmail(params: {
@@ -1059,9 +1527,10 @@ export async function sendOnlineTournamentGameReminderEmail(params: {
       to: params.to,
       subject: `${params.gameLabel} starts soon on Mechi`,
       html: baseLayout(`${params.gameLabel} starts soon`, content),
-    });
+    }, { requireConfigured: true });
   } catch (err) {
     console.error('[Email] Online tournament reminder send error:', err);
+    throw err;
   }
 }
 

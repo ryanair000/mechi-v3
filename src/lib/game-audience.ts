@@ -5,6 +5,11 @@ import {
   sendQueueBroadcastEmail,
   sendTournamentBroadcastEmail,
 } from '@/lib/email';
+import {
+  buildEmailUnsubscribeUrl,
+  getUnsubscribedEmailSet,
+  normalizePreferenceEmail,
+} from '@/lib/email-preferences';
 import { QUEUE_MAX_WAIT_MINUTES } from '@/lib/queue';
 import { APP_URL } from '@/lib/urls';
 import type { GameKey, PlatformKey } from '@/types';
@@ -16,7 +21,7 @@ type GameAudienceMember = {
 };
 
 const AUDIENCE_PAGE_SIZE = 500;
-const BROADCAST_EMAIL_BATCH_SIZE = 50;
+const BROADCAST_EMAIL_BATCH_SIZE = 1;
 const BROADCAST_COOLDOWN_RETENTION_MS = 24 * 60 * 60 * 1000;
 const QUEUE_BROADCAST_COOLDOWN_MS = 10 * 60 * 1000;
 const LOBBY_BROADCAST_COOLDOWN_MS = 15 * 60 * 1000;
@@ -40,6 +45,11 @@ function chunkRecipients(values: string[]): string[][] {
   }
 
   return chunks;
+}
+
+function getSingleRecipientUnsubscribeUrl(recipients: string[]) {
+  const [recipient] = recipients;
+  return recipient ? buildEmailUnsubscribeUrl(recipient, 'broadcast') : null;
 }
 
 function pruneLocalBroadcastCooldowns(now = Date.now()) {
@@ -171,7 +181,16 @@ export async function getGameAudienceMembers(params: {
     }
   }
 
-  return Array.from(recipients.values());
+  const audience = Array.from(recipients.values());
+  const unsubscribedEmails = await getUnsubscribedEmailSet(
+    supabase,
+    audience.map((member) => member.email),
+    'broadcast'
+  );
+
+  return audience.filter(
+    (member) => !unsubscribedEmails.has(normalizePreferenceEmail(member.email))
+  );
 }
 
 export async function notifyGameAudienceAboutQueue(params: {
@@ -209,6 +228,7 @@ export async function notifyGameAudienceAboutQueue(params: {
         platform: platformLabel,
         queueWindowMinutes: QUEUE_MAX_WAIT_MINUTES,
         queueUrl: `${APP_URL}/queue?game=${canonicalGame}&platform=${params.platform}`,
+        unsubscribeUrl: getSingleRecipientUnsubscribeUrl(bcc),
       })
     )
   );
@@ -254,6 +274,7 @@ export async function notifyGameAudienceAboutLobby(params: {
         mapName: params.mapName ?? null,
         scheduledFor: params.scheduledFor ?? null,
         lobbyUrl: `${APP_URL}/lobbies/${params.lobbyId}`,
+        unsubscribeUrl: getSingleRecipientUnsubscribeUrl(bcc),
       })
     )
   );
@@ -306,6 +327,7 @@ export async function notifyGameAudienceAboutTournament(params: {
         region: params.region,
         scheduledFor: params.scheduledFor ?? null,
         tournamentUrl: `${APP_URL}/t/${params.slug}`,
+        unsubscribeUrl: getSingleRecipientUnsubscribeUrl(bcc),
       })
     )
   );

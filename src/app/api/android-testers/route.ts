@@ -30,10 +30,6 @@ function isValidEmail(value: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
 }
 
-function hasEnoughPhoneDigits(value: string) {
-  return value.replace(/\D/g, '').length >= 9;
-}
-
 function jsonError(message: string, status: number) {
   return NextResponse.json(
     { error: message },
@@ -60,24 +56,22 @@ export async function POST(request: NextRequest) {
     }
 
     const body = (await request.json()) as TesterBody;
-    const fullName = normalizeField(body.fullName, 80);
     const playEmail = normalizeEmail(body.playEmail);
-    const whatsappNumber = normalizeField(body.whatsappNumber, 40);
-    const deviceModel = normalizeField(body.deviceModel, 100);
+    const fullName = normalizeField(body.fullName, 80) || player.username;
+    const whatsappNumber =
+      normalizeField(body.whatsappNumber, 40) || normalizeField(player.phone, 40);
+    const deviceModel = normalizeField(body.deviceModel, 100) || 'Not requested';
     const androidVersion = normalizeField(body.androidVersion, 40) || null;
     const notes = normalizeField(body.notes, MAX_TEXT_LENGTH) || null;
-    const acceptedRequirements = body.canStayOptedIn === true;
+    const acceptedRequirements =
+      typeof body.canStayOptedIn === 'undefined' ? true : body.canStayOptedIn === true;
 
-    if (!fullName || !playEmail || !whatsappNumber || !deviceModel) {
-      return jsonError('Name, Google Play email, WhatsApp number, and phone model are required.', 400);
+    if (!playEmail) {
+      return jsonError('Google Play account email is required.', 400);
     }
 
     if (!isValidEmail(playEmail)) {
       return jsonError('Enter a valid Google Play account email.', 400);
-    }
-
-    if (!hasEnoughPhoneDigits(whatsappNumber)) {
-      return jsonError('Enter a valid WhatsApp number.', 400);
     }
 
     if (!acceptedRequirements) {
@@ -175,7 +169,7 @@ export async function POST(request: NextRequest) {
           status: existingSignupStatus,
           username: player.username,
           message:
-            'Your early access details were updated. Use this same Google account when the Play Store invite lands.',
+            'Your Google Play account was updated. Use this same account when the Play Store invite lands.',
         },
         { headers: { 'Cache-Control': 'no-store' } }
       );
@@ -219,7 +213,7 @@ export async function POST(request: NextRequest) {
         status: 'pending',
         username: player.username,
         message:
-          'You are on the Mechi v4.0.1 Android early access list. We will send the Play Store invite on WhatsApp when your spot is ready.',
+          'You are on the Mechi v4.0.1 Android tester list. We will add this Google account to the Play Store invite list.',
       },
       { headers: { 'Cache-Control': 'no-store' } }
     );

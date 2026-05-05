@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { verifySessionCookieValue } from "@/lib/session";
 
-const PUBLIC_PATHS = new Set(["/login", "/favicon.ico", "/icon", "/apple-icon"]);
+const PUBLIC_PATHS = new Set(["/login", "/favicon.ico", "/icon", "/apple-icon", "/api/monitoring"]);
 
 function isPublicPath(pathname: string) {
   if (PUBLIC_PATHS.has(pathname)) return true;

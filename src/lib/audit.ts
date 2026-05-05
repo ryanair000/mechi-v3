@@ -28,6 +28,7 @@ export type AuditAction =
   | 'reply_match_chat'
   | 'resolve_match_escalation'
   | 'dismiss_match_escalation'
+  | 'send_email_campaign'
   | 'system_note';
 
 export interface AuditEntry {

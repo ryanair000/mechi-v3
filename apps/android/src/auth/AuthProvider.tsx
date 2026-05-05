@@ -2,6 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState } 
 import { getMe, login, register, type LoginPayload, type RegisterPayload } from '../api/mechi';
 import { getConfiguredGameId } from '../config/games';
 import { isTournamentGame } from '../config/tournament';
+import { unregisterStoredPushToken } from '../lib/push-notifications';
 import { clearStoredToken, getStoredToken, setStoredToken } from '../lib/token-store';
 import type { AuthUser } from '../types';
 
@@ -16,6 +17,17 @@ type AuthContextValue = {
 };
 
 const AuthContext = createContext<AuthContextValue | null>(null);
+const SESSION_RESTORE_TIMEOUT_MS = 4_000;
+
+function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const timeout = setTimeout(() => reject(new Error('Session restore timed out')), timeoutMs);
+
+    promise
+      .then(resolve, reject)
+      .finally(() => clearTimeout(timeout));
+  });
+}
 
 export function isProfileComplete(user: AuthUser | null | undefined): boolean {
   const tournamentGame = user?.selected_games?.find(isTournamentGame);
@@ -49,20 +61,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     let mounted = true;
 
     async function restoreSession() {
-      const storedToken = await getStoredToken();
+      try {
+        const storedToken = await withTimeout(getStoredToken(), SESSION_RESTORE_TIMEOUT_MS);
 
-      if (!mounted) return;
+        if (!mounted) return;
 
-      if (!storedToken) {
-        setInitializing(false);
-        return;
-      }
+        if (!storedToken) {
+          return;
+        }
 
-      setToken(storedToken);
-      await refreshUser();
-
-      if (mounted) {
-        setInitializing(false);
+        setToken(storedToken);
+        await refreshUser();
+      } catch {
+        await clearStoredToken().catch(() => {});
+        if (mounted) {
+          setToken(null);
+          setUser(null);
+        }
+      } finally {
+        if (mounted) {
+          setInitializing(false);
+        }
       }
     }
 
@@ -88,6 +107,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const signOut = useCallback(async () => {
+    await unregisterStoredPushToken().catch(() => {});
     await clearStoredToken();
     setToken(null);
     setUser(null);

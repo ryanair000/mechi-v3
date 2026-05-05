@@ -1,6 +1,13 @@
 node_modules
 .expo
 .playwright-cli
+.codex-logs
 output
+android
+android/
+android/**
+expo-qr.png
+google-play-service-account.json
+eas-*.txt
 *.log
 *.err.log

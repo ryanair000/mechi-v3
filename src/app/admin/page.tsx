@@ -377,6 +377,11 @@ export default async function AdminOverviewPage() {
           detail: 'Trace staff decisions without taking up prime dashboard space.',
         },
         {
+          href: '/admin/email',
+          title: 'Email campaigns',
+          detail: 'Send client emails with unsubscribe handling and delivery records.',
+        },
+        {
           href: '/admin/whatsapp',
           title: 'WhatsApp tests',
           detail: 'Preview business-message delivery and templates.',

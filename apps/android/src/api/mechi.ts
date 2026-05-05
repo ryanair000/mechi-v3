@@ -74,6 +74,14 @@ export type TournamentResultPayload =
       player2_score: number;
     };
 
+export type PushTokenPayload = {
+  token: string;
+  platform: string;
+  device_name?: string | null;
+  app_version?: string | null;
+  experience_id?: string | null;
+};
+
 export function login(payload: LoginPayload) {
   return apiRequest<AuthResponse>('/api/auth/login', {
     method: 'POST',
@@ -95,6 +103,20 @@ export function register(payload: RegisterPayload) {
 
 export function getMe() {
   return apiRequest<{ user: AuthUser }>('/api/auth/me');
+}
+
+export function registerPushToken(payload: PushTokenPayload) {
+  return apiRequest<{ success: true }>('/api/notifications/push-token', {
+    method: 'POST',
+    body: payload,
+  });
+}
+
+export function deletePushToken(token: string) {
+  return apiRequest<{ success: true }>('/api/notifications/push-token', {
+    method: 'DELETE',
+    body: { token },
+  });
 }
 
 export function getProfile() {

@@ -19,11 +19,6 @@ function isValidEmail(value: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
 }
 
-interface VerifiedIdentity {
-  username: string;
-  email: string;
-}
-
 export function PasswordResetFlow({ loginHref, nextPath, token }: PasswordResetFlowProps) {
   const { login } = useAuth();
   const [resetToken] = useState(token ?? '');
@@ -36,9 +31,7 @@ export function PasswordResetFlow({ loginHref, nextPath, token }: PasswordResetF
   const [verifyingAccount, setVerifyingAccount] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [feedback, setFeedback] = useState<ActionFeedbackState | null>(null);
-  const [verifiedIdentity, setVerifiedIdentity] = useState<VerifiedIdentity | null>(null);
   const hasToken = Boolean(resetToken);
-  const canSetPassword = hasToken || Boolean(verifiedIdentity);
 
   const handleVerifyIdentity = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -68,8 +61,8 @@ export function PasswordResetFlow({ loginHref, nextPath, token }: PasswordResetF
     setVerifyingAccount(true);
     setFeedback({
       tone: 'loading',
-      title: 'Checking those details...',
-      detail: 'Matching the username and email on your Mechi profile.',
+      title: 'Sending a reset link...',
+      detail: 'If the details match, Mechi will email a secure password reset link.',
     });
 
     try {
@@ -94,18 +87,14 @@ export function PasswordResetFlow({ loginHref, nextPath, token }: PasswordResetF
         return;
       }
 
-      const matchedUsername =
-        typeof data.username === 'string' ? data.username : submittedUsername;
-      const matchedEmail = typeof data.email === 'string' ? data.email : submittedEmail;
-      setVerifiedIdentity({ username: matchedUsername, email: matchedEmail });
       setPassword('');
       setConfirmPassword('');
       setFeedback({
         tone: 'success',
-        title: 'Account matched.',
-        detail: data.message ?? 'Choose a new password now.',
+        title: 'Check your email.',
+        detail: data.message ?? 'If those details match, your reset link is on the way.',
       });
-      toast.success('Account matched. Choose a new password.');
+      toast.success('Check your email for the reset link.');
     } catch {
       setFeedback({
         tone: 'error',
@@ -121,13 +110,13 @@ export function PasswordResetFlow({ loginHref, nextPath, token }: PasswordResetF
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
 
-    if (!canSetPassword) {
+    if (!hasToken) {
       setFeedback({
         tone: 'error',
-        title: 'Match the account first.',
-        detail: 'Enter your username and email before choosing a new password.',
+        title: 'Use your reset link.',
+        detail: 'Request a reset email, then open the link before choosing a new password.',
       });
-      toast.error('Match the account first.');
+      toast.error('Use the reset link from your email.');
       return;
     }
 
@@ -163,12 +152,7 @@ export function PasswordResetFlow({ loginHref, nextPath, token }: PasswordResetF
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          ...(hasToken
-            ? { token: resetToken }
-            : {
-                username: verifiedIdentity?.username,
-                email: verifiedIdentity?.email,
-              }),
+          token: resetToken,
           password,
           redirect_to: nextPath,
         }),
@@ -211,16 +195,16 @@ export function PasswordResetFlow({ loginHref, nextPath, token }: PasswordResetF
     <div className="card p-4 sm:p-6">
       <div className="mb-5 rounded-xl border border-[rgba(50,224,196,0.2)] bg-[rgba(50,224,196,0.08)] px-4 py-3">
         <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--accent-secondary-text)]">
-          {canSetPassword ? 'New password' : 'Account match'}
+          {hasToken ? 'New password' : 'Reset link'}
         </p>
         <p className="mt-1 text-sm text-[var(--text-primary)]">
-          {canSetPassword
+          {hasToken
             ? 'Set a new password and Mechi will sign you in right away.'
-            : 'Enter your username and email. If they match, you can reset here.'}
+            : 'Enter your username and email. If they match, Mechi will email a reset link.'}
         </p>
       </div>
 
-      {!canSetPassword ? (
+      {!hasToken ? (
         <form onSubmit={handleVerifyIdentity} className="space-y-4">
           <div>
             <label htmlFor="password-reset-username" className="label">
@@ -264,41 +248,18 @@ export function PasswordResetFlow({ loginHref, nextPath, token }: PasswordResetF
             {verifyingAccount ? (
               <>
                 <Loader2 size={14} className="animate-spin" />
-                Checking...
+                Sending link...
               </>
             ) : (
               <>
                 <UserCheck size={14} />
-                Continue
+                Send reset link
               </>
             )}
           </button>
         </form>
       ) : (
         <form onSubmit={handleSubmit} className="space-y-4">
-          {verifiedIdentity ? (
-            <div className="rounded-xl border border-[var(--border-color)] bg-[var(--surface-elevated)] px-4 py-3 text-sm text-[var(--text-secondary)]">
-              <p>
-                Resetting{' '}
-                <span className="font-semibold text-[var(--text-primary)]">
-                  {verifiedIdentity.username}
-                </span>
-              </p>
-              <button
-                type="button"
-                onClick={() => {
-                  setVerifiedIdentity(null);
-                  setPassword('');
-                  setConfirmPassword('');
-                  setFeedback(null);
-                }}
-                className="brand-link-coral mt-2 text-xs font-semibold uppercase tracking-[0.12em]"
-              >
-                Change details
-              </button>
-            </div>
-          ) : null}
-
           <div>
             <label htmlFor="password-reset-new-password" className="label">
               New password

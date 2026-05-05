@@ -22,6 +22,7 @@ import type {
 } from '@/types';
 
 const GAME_ENQUIRIES_WHATSAPP = '+254104003156';
+const EXTERNAL_ENQUIRIES_REPLY = `For games, gift cards, Fortnite, or anything outside Mechi, please DM ${GAME_ENQUIRIES_WHATSAPP}.`;
 
 export interface SupportUserSummary {
   id: string;
@@ -37,10 +38,11 @@ export interface SupportUserSummary {
 }
 
 export interface SupportClassification {
-  route: 'ai' | 'human';
+  route: 'ai' | 'human' | 'auto_reply';
   priority: SupportThreadPriority;
   reason:
     | 'ai_safe'
+    | 'external_sales_enquiry'
     | 'empty_message'
     | 'unsupported_media'
     | 'requested_human'
@@ -86,6 +88,53 @@ const HUMAN_REQUEST_PATTERNS = [
   /\bperson\b/i,
   /\bsomeone real\b/i,
   /\btalk to (someone|a person|an admin)\b/i,
+];
+
+const MECHI_CONTEXT_PATTERNS = [
+  /\bmechi\b/i,
+  /\bplaymechi\b/i,
+  /\branked\b/i,
+  /\bqueue\b/i,
+  /\bmatchmaking\b/i,
+  /\bdirect challenge\b/i,
+  /\bchallenge\b/i,
+  /\btournament\b/i,
+  /\blobby\b/i,
+  /\bprofile\b/i,
+  /\bplan\b/i,
+  /\bpro\b/i,
+  /\belite\b/i,
+  /\bregister\b/i,
+  /\bsign ?up\b/i,
+  /\b(supported|supports)\b/i,
+];
+
+const EXTERNAL_ENQUIRY_DIRECT_PATTERNS = [
+  /\b(buy|purchase|order|sell|selling|top ?up|recharge)\b.{0,48}\b(games?|gift\s*cards?|giftcards?|fortnite|v-?bucks?|vbucks?|battle pass)\b/i,
+  /\b(games?|gift\s*cards?|giftcards?|fortnite|v-?bucks?|vbucks?|battle pass)\b.{0,48}\b(buy|purchase|order|sell|selling|top ?up|recharge)\b/i,
+];
+
+const EXTERNAL_ENQUIRY_COMMERCE_PATTERNS = [
+  /\b(buy|purchase|order|get|need|want|sell|selling|top ?up|recharge|available|availability|price|how much)\b.{0,48}\b(games?|gift\s*cards?|giftcards?|fortnite|v-?bucks?|vbucks?|steam|psn|playstation|xbox|roblox|google play|itunes|apple|battle pass|uc|cp)\b/i,
+  /\b(games?|gift\s*cards?|giftcards?|fortnite|v-?bucks?|vbucks?|steam|psn|playstation|xbox|roblox|google play|itunes|apple|battle pass|uc|cp)\b.{0,48}\b(buy|purchase|order|get|need|want|sell|selling|top ?up|recharge|available|availability|price|how much)\b/i,
+];
+
+const EXTERNAL_ENQUIRY_NON_MECHI_PRODUCT_PATTERNS = [
+  /\bgift\s*cards?\b/i,
+  /\bgiftcards?\b/i,
+  /\bv-?bucks?\b/i,
+  /\bvbucks?\b/i,
+  /\bbattle pass\b/i,
+  /\b(psn|playstation|xbox|steam|roblox|google play|itunes|apple)\s+(gift\s*)?cards?\b/i,
+];
+
+const EXTERNAL_ENQUIRY_TOPIC_PATTERNS = [
+  /\bgift\s*cards?\b/i,
+  /\bgiftcards?\b/i,
+  /\bv-?bucks?\b/i,
+  /\bvbucks?\b/i,
+  /\bfortnite\b/i,
+  /\b(psn|playstation|xbox|steam|roblox|google play|itunes|apple)\s+(gift\s*)?cards?\b/i,
 ];
 
 const BLOCKED_PATTERNS: Array<{
@@ -137,6 +186,10 @@ const TAG_PATTERNS: Array<{ tag: string; patterns: RegExp[] }> = [
       /\border (a )?game\b/i,
       /\bsell(ing)? (games?|game accounts?)\b/i,
       /\bgame enquiries?\b/i,
+      /\bgift\s*cards?\b/i,
+      /\bgiftcards?\b/i,
+      /\bv-?bucks?\b/i,
+      /\bvbucks?\b/i,
     ],
   },
   { tag: 'queue', patterns: [/\bqueue\b/i, /\bfind match\b/i, /\branked\b/i, /\bmatchmaking\b/i] },
@@ -186,6 +239,24 @@ function deriveTags(text: string) {
   }
 
   return [...tags];
+}
+
+function isExternalSalesEnquiry(text: string) {
+  if (matchesAny(text, EXTERNAL_ENQUIRY_DIRECT_PATTERNS)) {
+    return true;
+  }
+
+  const hasMechiContext = matchesAny(text, MECHI_CONTEXT_PATTERNS);
+  const hasClearlyExternalProduct = matchesAny(text, EXTERNAL_ENQUIRY_NON_MECHI_PRODUCT_PATTERNS);
+
+  if (
+    matchesAny(text, EXTERNAL_ENQUIRY_COMMERCE_PATTERNS) &&
+    (!hasMechiContext || hasClearlyExternalProduct)
+  ) {
+    return true;
+  }
+
+  return matchesAny(text, EXTERNAL_ENQUIRY_TOPIC_PATTERNS) && !hasMechiContext;
 }
 
 function summarizePlanLines() {
@@ -243,7 +314,7 @@ export function buildSupportSystemPrompt(channel: SupportContextChannel = 'whats
     'Do not use markdown tables, hashtags, or long walls of text.',
     channelActionLine,
     'You are not allowed to process money, refunds, payouts, subscription cancellations, bans, disputes, or account-changing actions.',
-    `If someone wants to buy a game or asks for game purchase enquiries, reply that game enquiries are handled on WhatsApp at ${GAME_ENQUIRIES_WHATSAPP}. Do not negotiate prices or collect payment details.`,
+    `If someone asks about games, gift cards, Fortnite, V-Bucks, or anything outside Mechi, reply exactly: "${EXTERNAL_ENQUIRIES_REPLY}" Do not negotiate prices or collect payment details.`,
     'If the user needs anything operational, risky, or policy-sensitive, return disposition "escalate".',
     'If the user is asking an informational question and the answer is supported by the supplied Mechi context, return disposition "reply".',
     'If you need one missing detail to answer safely, return disposition "clarify" with a short question.',
@@ -280,7 +351,7 @@ export function buildMechiSupportContext(
     '- Pro and Elite organizers can run auto prize pools from paid entries or set a specified prize pool up front.',
     '- FC26 and eFootball score reporting use scorelines. Matching score reports can confirm either a win or a draw. Mismatched reports go to dispute review.',
     '- WhatsApp alerts are optional backup notifications when a player has them enabled in profile.',
-    `- Game purchase enquiries are handled on WhatsApp at ${GAME_ENQUIRIES_WHATSAPP}. If someone wants to buy a game, tell them to DM that number and do not collect payment details.`,
+    `- Games, gift cards, Fortnite, V-Bucks, and other non-Mechi enquiries are handled on WhatsApp at ${GAME_ENQUIRIES_WHATSAPP}. Tell people to DM that number and do not collect payment details.`,
     `PlayMechi tournament:\n${summarizePlayMechiTournament()}`,
     channelCapabilityLine,
     `Supported 1v1 games: ${oneOnOneGames}.`,
@@ -303,6 +374,8 @@ function acknowledgementFor(reason: SupportClassification['reason']) {
       return "This lane is already with the Mechi support team, so they'll continue from here.";
     case 'empty_message':
       return "Send me a quick text message with what you need and I'll try to point you the right way.";
+    case 'external_sales_enquiry':
+      return EXTERNAL_ENQUIRIES_REPLY;
     case 'ai_safe':
     default:
       return '';
@@ -366,6 +439,16 @@ export function classifySupportMessage(params: {
       reason: 'requested_human',
       acknowledgement: acknowledgementFor('requested_human'),
       tags,
+    };
+  }
+
+  if (isExternalSalesEnquiry(body)) {
+    return {
+      route: 'auto_reply',
+      priority: 'normal',
+      reason: 'external_sales_enquiry',
+      acknowledgement: acknowledgementFor('external_sales_enquiry'),
+      tags: [...new Set([...tags, 'game_enquiry', 'external_enquiry'])],
     };
   }
 

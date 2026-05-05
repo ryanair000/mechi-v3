@@ -13,7 +13,7 @@ npm run dev
 Start the Android app:
 
 ```bash
-npm run android:dev
+npm run dev:usb
 ```
 
 Open the native Android Studio project here after prebuild:
@@ -22,13 +22,19 @@ Open the native Android Studio project here after prebuild:
 apps/android/android
 ```
 
-In local Expo development, the default mobile API URL is `http://10.0.2.2:3000`, which works for the Android emulator. For a physical device, set the backend URL before starting Expo:
+Local Android development is wired for USB debugging only. The app uses `adb reverse`, so the phone talks to the computer through `http://127.0.0.1:3000`.
 
 ```bash
-EXPO_PUBLIC_MECHI_API_URL=http://YOUR_LAN_IP:3000 npm run android:dev
+npm run dev:usb
 ```
 
-Installed builds fall back to `https://mechi.club` unless `EXPO_PUBLIC_MECHI_API_URL` is set at build time.
+To rebuild and install on the connected phone:
+
+```bash
+npm run android:usb
+```
+
+Installed release builds use `https://mechi.club` unless `EXPO_PUBLIC_MECHI_API_URL` is explicitly set at build time.
 
 ## Android Studio workflow
 

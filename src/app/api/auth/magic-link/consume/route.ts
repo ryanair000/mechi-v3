@@ -5,6 +5,7 @@ import {
   consumeAuthActionToken,
   getAuthActionToken,
   getAuthActionTokenState,
+  normalizeEmailAddress,
 } from '@/lib/auth-actions';
 import { applyAuthCookie, createSessionForProfile } from '@/lib/auth';
 import { createServiceClient } from '@/lib/supabase';
@@ -47,7 +48,12 @@ export async function GET(request: NextRequest) {
       .eq('id', tokenRow.user_id)
       .single();
 
-    if (error || !profile || profile.is_banned) {
+    if (
+      error ||
+      !profile ||
+      profile.is_banned ||
+      normalizeEmailAddress(profile.email) !== tokenRow.email
+    ) {
       return NextResponse.redirect(new URL(appendAuthError('magic_link_invalid', nextPath), request.url), {
         status: 303,
       });

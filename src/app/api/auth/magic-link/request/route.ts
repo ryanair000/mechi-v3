@@ -1,12 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import {
-  appendAuthNotice,
+  AUTH_ACTION_TTLS,
+  buildMagicLinkConsumeUrl,
+  createAuthActionToken,
   getAuthActionSafeNextPath,
   getProfileForUsernameEmail,
   normalizeEmailAddress,
   normalizeAuthUsername,
 } from '@/lib/auth-actions';
-import { applyAuthCookie, createSessionForProfile } from '@/lib/auth';
+import { isTransactionalEmailReady, sendMagicLinkEmail } from '@/lib/email';
 import { checkPersistentRateLimit, getClientIp, rateLimitResponse } from '@/lib/rateLimit';
 
 function isValidEmail(value: string) {
@@ -46,12 +48,14 @@ export async function POST(request: NextRequest) {
       return rateLimitResponse(emailRateLimit.retryAfterSeconds);
     }
 
+    const genericResponse = {
+      success: true,
+      message: 'If that account exists, we sent a secure sign-in link to the email address.',
+    };
+
     const profile = await getProfileForUsernameEmail({ username, email });
     if (!profile) {
-      return NextResponse.json(
-        { error: 'No account matched that username and email.' },
-        { status: 401 }
-      );
+      return NextResponse.json(genericResponse);
     }
 
     if (profile.is_banned) {
@@ -61,15 +65,24 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { token, user } = createSessionForProfile(profile);
-    const response = NextResponse.json({
-      token,
-      user,
-      redirect_to: appendAuthNotice(nextPath, 'magic_link_success'),
-      message: 'Account matched. Signing you in now.',
+    if (!isTransactionalEmailReady()) {
+      return NextResponse.json({ error: 'Email delivery is not configured.' }, { status: 503 });
+    }
+
+    const { token } = await createAuthActionToken({
+      userId: profile.id,
+      purpose: 'magic_link_signin',
+      email,
+      nextPath,
     });
-    applyAuthCookie(response, token);
-    return response;
+    await sendMagicLinkEmail({
+      to: email,
+      username: profile.username,
+      magicLink: buildMagicLinkConsumeUrl(token),
+      expiresInMinutes: Math.floor(AUTH_ACTION_TTLS.magic_link_signin / 60_000),
+    });
+
+    return NextResponse.json(genericResponse);
   } catch (error) {
     console.error('[Magic Link Request] Error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });

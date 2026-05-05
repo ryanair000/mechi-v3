@@ -31,11 +31,11 @@ export default function AndroidTestersPage() {
               <div className="max-w-3xl">
                 <span className="brand-kicker">Mechi v4.0.1 Android</span>
                 <h1 className="mt-4 text-[2rem] font-black leading-[1.04] tracking-normal text-[var(--text-primary)] sm:text-[3rem]">
-                  Get early access before the Android app goes wide.
+                  Join the Android tester list.
                 </h1>
                 <p className="mt-4 max-w-2xl text-sm leading-7 text-[var(--text-secondary)] sm:text-base">
-                  Lock in your spot for Mechi v4.0.1. Add the Google account you use on
-                  Play Store, then we will send the early access link when your invite is ready.
+                  Add the Google account you use on Play Store. Your Mechi profile already has the
+                  contact details we need.
                 </p>
               </div>
             </div>

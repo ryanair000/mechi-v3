@@ -51,6 +51,7 @@ const EXTRA_ALLOWED_ORIGIN_HOSTS = new Set([
   '127.0.0.1',
   'admin.localhost',
 ]);
+const SENTRY_TUNNEL_PREFIXES = ['/api/monitoring'];
 const CROSS_ORIGIN_API_EXEMPT_PREFIXES = [
   '/api/instagram/webhook',
   '/api/webhooks/instagram',
@@ -172,7 +173,10 @@ function isAdminHost(request: NextRequest) {
 }
 
 function isCrossOriginApiExempt(pathname: string) {
-  return CROSS_ORIGIN_API_EXEMPT_PREFIXES.some((prefix) => pathname.startsWith(prefix));
+  return (
+    SENTRY_TUNNEL_PREFIXES.some((prefix) => pathname.startsWith(prefix)) ||
+    CROSS_ORIGIN_API_EXEMPT_PREFIXES.some((prefix) => pathname.startsWith(prefix))
+  );
 }
 
 function getAllowedOriginHosts(request: NextRequest) {
@@ -240,6 +244,10 @@ function applyApiIngressGuards(request: NextRequest) {
   }
 
   if (!pathname.startsWith('/api/') || !UNSAFE_METHODS.has(request.method)) {
+    return null;
+  }
+
+  if (SENTRY_TUNNEL_PREFIXES.some((prefix) => pathname.startsWith(prefix))) {
     return null;
   }
 

@@ -40,6 +40,12 @@
     ".next/dev/dev/types/**/*.ts"
   ],
   "exclude": [
-    "node_modules"
+    "node_modules",
+    "apps/**",
+    "e2e/**",
+    "tmp/**",
+    "output/**",
+    "data_dump/**",
+    ".claude/**"
   ]
 }

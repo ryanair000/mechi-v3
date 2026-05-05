@@ -7,42 +7,15 @@ import { ActionFeedback, type ActionFeedbackState } from '@/components/ActionFee
 import { useAuth, useAuthFetch } from '@/components/AuthProvider';
 
 type TesterForm = {
-  fullName: string;
   playEmail: string;
-  whatsappNumber: string;
-  deviceModel: string;
-  androidVersion: string;
-  notes: string;
-  canStayOptedIn: boolean;
 };
 
 const initialForm: TesterForm = {
-  fullName: '',
   playEmail: '',
-  whatsappNumber: '',
-  deviceModel: '',
-  androidVersion: '',
-  notes: '',
-  canStayOptedIn: false,
 };
-
-const ANDROID_VERSIONS = [
-  'Android 15',
-  'Android 14',
-  'Android 13',
-  'Android 12',
-  'Android 11',
-  'Android 10',
-  'Android 9 or older',
-  'Not sure',
-];
 
 function isValidEmail(value: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
-}
-
-function hasEnoughPhoneDigits(value: string) {
-  return value.replace(/\D/g, '').length >= 9;
 }
 
 export function AndroidTestersClient() {
@@ -54,11 +27,7 @@ export function AndroidTestersClient() {
 
   const formIsValid =
     Boolean(user) &&
-    form.fullName.trim().length >= 2 &&
-    isValidEmail(form.playEmail) &&
-    hasEnoughPhoneDigits(form.whatsappNumber) &&
-    form.deviceModel.trim().length >= 2 &&
-    form.canStayOptedIn;
+    isValidEmail(form.playEmail);
 
   const setField = <Key extends keyof TesterForm>(field: Key, value: TesterForm[Key]) => {
     setForm((current) => ({ ...current, [field]: value }));
@@ -81,8 +50,7 @@ export function AndroidTestersClient() {
       setFeedback({
         tone: 'error',
         title: 'Almost there.',
-        detail:
-          'Add your name, Play Store email, WhatsApp number, Android phone model, and early access confirmation.',
+        detail: 'Add the Google account email you use with Play Store.',
       });
       return;
     }
@@ -91,7 +59,7 @@ export function AndroidTestersClient() {
     setFeedback({
       tone: 'loading',
       title: 'Locking in your spot...',
-      detail: 'Adding your Play Store account to the Mechi v4.0.1 early access list.',
+      detail: 'Saving your Google Play account for the Mechi v4.0.1 invite.',
     });
 
     try {
@@ -116,7 +84,7 @@ export function AndroidTestersClient() {
         title: 'You are on the early list.',
         detail:
           data.message ??
-          'We will send the Mechi v4.0.1 Android early access link on WhatsApp when your invite is ready.',
+          'Your Google Play account is saved for the Mechi v4.0.1 tester invite.',
       });
     } catch {
       setFeedback({
@@ -159,7 +127,7 @@ export function AndroidTestersClient() {
             <p className="section-title">Mechi players only</p>
             <h2 className="mt-1 text-xl font-black text-[var(--text-primary)]">Sign in to get early access</h2>
             <p className="mt-1 text-sm leading-6 text-[var(--text-secondary)]">
-              Your Mechi username is pulled from your player profile automatically.
+              We will use your Mechi profile details automatically.
             </p>
           </div>
         </div>
@@ -183,34 +151,18 @@ export function AndroidTestersClient() {
           <ShieldCheck size={18} />
         </div>
         <div>
-          <p className="section-title">Early access</p>
-          <h2 className="mt-1 text-xl font-black text-[var(--text-primary)]">Join the v4.0.1 Android list</h2>
+          <p className="section-title">Google Play invite</p>
+          <h2 className="mt-1 text-xl font-black text-[var(--text-primary)]">Add your Play Store email</h2>
           <p className="mt-1 text-sm leading-6 text-[var(--text-secondary)]">
-            Signed in as @{user.username}.
+            Signed in as @{user.username}. We will use your Mechi profile for contact details.
           </p>
         </div>
       </div>
 
       <div className="mt-5 grid gap-4">
         <div>
-          <label className="label" htmlFor="fullName">
-            Full name
-          </label>
-          <input
-            id="fullName"
-            className="input"
-            value={form.fullName}
-            onChange={(event) => setField('fullName', event.target.value)}
-            placeholder="Ryan Alfred"
-            autoComplete="name"
-            maxLength={80}
-            required
-          />
-        </div>
-
-        <div>
           <label className="label" htmlFor="playEmail">
-            Play Store email
+            Google Play account email
           </label>
           <input
             id="playEmail"
@@ -224,100 +176,14 @@ export function AndroidTestersClient() {
             maxLength={160}
             required
           />
-          <p className="input-hint mt-2">This should match the Google account on your Android phone.</p>
+          <p className="input-hint mt-2">
+            Use the Google account signed in on the Android phone that will install Mechi.
+          </p>
         </div>
 
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div>
-            <label className="label" htmlFor="whatsappNumber">
-              WhatsApp number
-            </label>
-            <input
-              id="whatsappNumber"
-              className="input"
-              type="tel"
-              value={form.whatsappNumber}
-              onChange={(event) => setField('whatsappNumber', event.target.value)}
-              placeholder="+254 712 345 678"
-              autoComplete="tel"
-              inputMode="tel"
-              maxLength={40}
-              required
-            />
-          </div>
-
-          <div>
-            <p className="label">Mechi player</p>
-            <div className="flex min-h-12 items-center rounded-[var(--radius-control)] border border-[var(--border-color)] bg-[var(--surface-elevated)] px-3 text-sm font-black text-[var(--text-primary)]">
-              @{user.username}
-            </div>
-            <p className="input-hint mt-2">Fetched from your logged-in Mechi profile.</p>
-          </div>
-        </div>
-
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div>
-            <label className="label" htmlFor="deviceModel">
-              Android phone model
-            </label>
-            <input
-              id="deviceModel"
-              className="input"
-              value={form.deviceModel}
-              onChange={(event) => setField('deviceModel', event.target.value)}
-              placeholder="Samsung A24, Redmi Note 12..."
-              maxLength={100}
-              required
-            />
-          </div>
-
-          <div>
-            <label className="label" htmlFor="androidVersion">
-              Android version
-            </label>
-            <select
-              id="androidVersion"
-              className="input"
-              value={form.androidVersion}
-              onChange={(event) => setField('androidVersion', event.target.value)}
-            >
-              <option value="">Select version</option>
-              {ANDROID_VERSIONS.map((version) => (
-                <option key={version} value={version}>
-                  {version}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
-
-        <div>
-          <label className="label" htmlFor="notes">
-            Notes
-          </label>
-          <textarea
-            id="notes"
-            className="input min-h-24 resize-y"
-            value={form.notes}
-            onChange={(event) => setField('notes', event.target.value)}
-            placeholder="Anything we should know before sending your early access link?"
-            maxLength={500}
-          />
-        </div>
-
-        <label className="flex items-start gap-3 rounded-[var(--radius-panel)] border border-[var(--border-color)] bg-[var(--surface-elevated)] p-3 text-sm leading-6 text-[var(--text-secondary)]">
-          <input
-            type="checkbox"
-            className="mt-1 h-4 w-4 accent-[var(--brand-teal)]"
-            checked={form.canStayOptedIn}
-            onChange={(event) => setField('canStayOptedIn', event.target.checked)}
-            required
-          />
-          <span>
-            I can use this Play Store account for Mechi v4.0.1 Android early access and receive
-            update messages on WhatsApp.
-          </span>
-        </label>
+        <p className="rounded-[var(--radius-panel)] border border-[var(--border-color)] bg-[var(--surface-elevated)] p-3 text-sm leading-6 text-[var(--text-secondary)]">
+          Already known: your Mechi username and account phone. No need to enter them again.
+        </p>
 
         {feedback ? <ActionFeedback {...feedback} /> : null}
 
@@ -330,7 +196,7 @@ export function AndroidTestersClient() {
           ) : (
             <>
               <CheckCircle2 size={16} />
-              Get early access
+              Join tester list
             </>
           )}
         </button>

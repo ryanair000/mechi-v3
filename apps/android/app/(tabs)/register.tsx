@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Linking, StyleSheet, Switch, Text, View } from 'react-native';
 import {
   getProfile,
@@ -47,20 +47,27 @@ function getFormKey(params: {
   return `${params.game}:${params.registrationId ?? 'new'}:${params.profileId ?? 'no-profile'}`;
 }
 
+type RegistrationFormValues = {
+  inGameUsername: string;
+  followedInstagram: boolean;
+  instagramUsername: string;
+  subscribedYoutube: boolean;
+  youtubeName: string;
+  availableAt8pm: boolean;
+  acceptedRules: boolean;
+};
+
 export default function RegisterTab() {
   const router = useRouter();
   const params = useLocalSearchParams<{ game?: string }>();
   const queryClient = useQueryClient();
-  const [selectedGame, setSelectedGame] = useState<OnlineTournamentGameKey>(() =>
-    getGameFromParam(params.game)
-  );
-  const [inGameUsername, setInGameUsername] = useState('');
-  const [followedInstagram, setFollowedInstagram] = useState(true);
-  const [instagramUsername, setInstagramUsername] = useState('');
-  const [subscribedYoutube, setSubscribedYoutube] = useState(true);
-  const [youtubeName, setYoutubeName] = useState('');
-  const [availableAt8pm, setAvailableAt8pm] = useState(true);
-  const [acceptedRules, setAcceptedRules] = useState(false);
+  const routeGame = getGameFromParam(params.game);
+  const [gameState, setGameState] = useState(() => ({
+    routeGame,
+    selectedGame: routeGame,
+  }));
+  const selectedGame =
+    gameState.routeGame === routeGame ? gameState.selectedGame : routeGame;
   const [error, setError] = useState<string | null>(null);
 
   const profileQuery = useQuery({ queryKey: ['profile'], queryFn: getProfile });
@@ -89,37 +96,94 @@ export default function RegisterTab() {
         game: selectedGame,
         registrationId: currentRegistration?.id,
         profileId: profile?.id,
-      }),
+    }),
     [currentRegistration?.id, profile?.id, selectedGame]
   );
-
-  useEffect(() => {
-    const nextGame = getGameFromParam(params.game, selectedGame);
-    if (nextGame !== selectedGame) {
-      setSelectedGame(nextGame);
-    }
-  }, [params.game, selectedGame]);
-
-  useEffect(() => {
+  const defaultFormValues = useMemo<RegistrationFormValues>(() => {
     if (currentRegistration) {
-      setInGameUsername(currentRegistration.in_game_username);
-      setFollowedInstagram(currentRegistration.followed_instagram);
-      setInstagramUsername(currentRegistration.instagram_username ?? '');
-      setSubscribedYoutube(currentRegistration.subscribed_youtube);
-      setYoutubeName(currentRegistration.youtube_name ?? '');
-      setAvailableAt8pm(true);
-      setAcceptedRules(true);
-      return;
+      return {
+        inGameUsername: currentRegistration.in_game_username,
+        followedInstagram: currentRegistration.followed_instagram,
+        instagramUsername: currentRegistration.instagram_username ?? '',
+        subscribedYoutube: currentRegistration.subscribed_youtube,
+        youtubeName: currentRegistration.youtube_name ?? '',
+        availableAt8pm: true,
+        acceptedRules: true,
+      };
     }
 
-    setInGameUsername(getProfileGameId(profile, selectedGame));
-    setFollowedInstagram(true);
-    setInstagramUsername('');
-    setSubscribedYoutube(true);
-    setYoutubeName('');
-    setAvailableAt8pm(true);
-    setAcceptedRules(false);
-  }, [currentRegistration, formKey, profile, selectedGame]);
+    return {
+      inGameUsername: getProfileGameId(profile, selectedGame),
+      followedInstagram: true,
+      instagramUsername: '',
+      subscribedYoutube: true,
+      youtubeName: '',
+      availableAt8pm: true,
+      acceptedRules: false,
+    };
+  }, [currentRegistration, profile, selectedGame]);
+  const [formState, setFormState] = useState(() => ({
+    key: formKey,
+    values: defaultFormValues,
+  }));
+  const formValues = formState.key === formKey ? formState.values : defaultFormValues;
+  const {
+    inGameUsername,
+    followedInstagram,
+    instagramUsername,
+    subscribedYoutube,
+    youtubeName,
+    availableAt8pm,
+    acceptedRules,
+  } = formValues;
+
+  function setSelectedGame(nextGame: OnlineTournamentGameKey) {
+    setGameState({ routeGame, selectedGame: nextGame });
+  }
+
+  function updateForm<K extends keyof RegistrationFormValues>(
+    key: K,
+    value: RegistrationFormValues[K]
+  ) {
+    setFormState((current) => {
+      const values = current.key === formKey ? current.values : defaultFormValues;
+      return {
+        key: formKey,
+        values: {
+          ...values,
+          [key]: value,
+        },
+      };
+    });
+  }
+
+  function setInGameUsername(value: string) {
+    updateForm('inGameUsername', value);
+  }
+
+  function setFollowedInstagram(value: boolean) {
+    updateForm('followedInstagram', value);
+  }
+
+  function setInstagramUsername(value: string) {
+    updateForm('instagramUsername', value);
+  }
+
+  function setSubscribedYoutube(value: boolean) {
+    updateForm('subscribedYoutube', value);
+  }
+
+  function setYoutubeName(value: string) {
+    updateForm('youtubeName', value);
+  }
+
+  function setAvailableAt8pm(value: boolean) {
+    updateForm('availableAt8pm', value);
+  }
+
+  function setAcceptedRules(value: boolean) {
+    updateForm('acceptedRules', value);
+  }
 
   const mutation = useMutation({
     mutationFn: () =>

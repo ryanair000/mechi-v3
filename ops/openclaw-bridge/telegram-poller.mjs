@@ -46,14 +46,19 @@ const DELETE_WEBHOOK_ON_START = toBoolean(
   true
 );
 const ALLOWED_CHAT_TYPES = parseCsvSet(
-  process.env.MECHI_OPENCLAW_TELEGRAM_ALLOWED_CHAT_TYPES || 'private'
+  process.env.MECHI_OPENCLAW_TELEGRAM_ALLOWED_CHAT_TYPES || 'private,group,supergroup'
 );
 const ALLOWED_CHAT_IDS = parseCsvSet(
   process.env.MECHI_OPENCLAW_TELEGRAM_ALLOWED_CHAT_IDS || ''
 );
 const ALLOWED_UPDATES = [...parseCsvSet(process.env.MECHI_OPENCLAW_TELEGRAM_ALLOWED_UPDATES || 'message')];
+const GROUP_REQUIRE_MENTION = toBoolean(
+  process.env.MECHI_OPENCLAW_TELEGRAM_GROUP_REQUIRE_MENTION,
+  true
+);
 
 let shuttingDown = false;
+let botUsername = '';
 
 function toPositiveInt(value, fallback) {
   const parsed = Number.parseInt(String(value ?? ''), 10);
@@ -341,6 +346,7 @@ function buildTelegramPrompt(event) {
       `USERNAME: ${event.username || ''}`,
       `NAME: ${[event.firstName, event.lastName].filter(Boolean).join(' ')}`,
       `MESSAGE ID: ${event.messageId || ''}`,
+      `MESSAGE THREAD ID: ${event.messageThreadId || ''}`,
       `MESSAGE DATE: ${event.dateIso || ''}`,
       '',
       'OPERATOR MESSAGE:',
@@ -381,6 +387,7 @@ function buildTelegramPrompt(event) {
     `USERNAME: ${event.username || ''}`,
     `NAME: ${[event.firstName, event.lastName].filter(Boolean).join(' ')}`,
     `MESSAGE ID: ${event.messageId || ''}`,
+    `MESSAGE THREAD ID: ${event.messageThreadId || ''}`,
     `MESSAGE DATE: ${event.dateIso || ''}`,
     '',
     'MESSAGE:',
@@ -504,8 +511,8 @@ async function getTelegramUpdates(offset) {
   });
 }
 
-async function sendTelegramMessage(chatId, text, replyToMessageId) {
-  return telegramApi('sendMessage', {
+async function sendTelegramMessage(chatId, text, replyToMessageId, messageThreadId) {
+  const payload = {
     chat_id: /^-?\d+$/.test(String(chatId)) ? Number(chatId) : String(chatId),
     text,
     reply_parameters:
@@ -515,7 +522,13 @@ async function sendTelegramMessage(chatId, text, replyToMessageId) {
             allow_sending_without_reply: true,
           }
         : undefined,
-  });
+  };
+
+  if (typeof messageThreadId === 'number' && messageThreadId > 1) {
+    payload.message_thread_id = messageThreadId;
+  }
+
+  return telegramApi('sendMessage', payload);
 }
 
 function readMessageText(message) {
@@ -571,6 +584,36 @@ function isAllowedChat(event) {
   return true;
 }
 
+function isGroupChat(event) {
+  return event.chatType === 'group' || event.chatType === 'supergroup';
+}
+
+function isBotAddressed(event) {
+  if (!isGroupChat(event) || !GROUP_REQUIRE_MENTION) {
+    return true;
+  }
+
+  const text = String(event.text || '').trim();
+  if (!text) {
+    return false;
+  }
+
+  const normalizedBotUsername = botUsername.replace(/^@/, '').toLowerCase();
+  const loweredText = text.toLowerCase();
+
+  if (normalizedBotUsername && loweredText.includes(`@${normalizedBotUsername}`)) {
+    return true;
+  }
+
+  const commandMatch = text.match(/^\/[a-z0-9_]+(?:@([a-z0-9_]+))?\b/i);
+  if (!commandMatch) {
+    return false;
+  }
+
+  const addressedUsername = commandMatch[1]?.toLowerCase();
+  return !addressedUsername || addressedUsername === normalizedBotUsername;
+}
+
 function extractIncomingTelegramEvent(update) {
   if (!update || typeof update !== 'object') {
     return null;
@@ -608,6 +651,10 @@ function extractIncomingTelegramEvent(update) {
     messageId:
       typeof message.message_id === 'number' && Number.isFinite(message.message_id)
         ? message.message_id
+        : null,
+    messageThreadId:
+      typeof message.message_thread_id === 'number' && Number.isFinite(message.message_thread_id)
+        ? message.message_thread_id
         : null,
     fromId:
       typeof message.from?.id === 'number' || typeof message.from?.id === 'string'
@@ -656,13 +703,28 @@ async function handleTelegramEvent(event) {
     return;
   }
 
-  if (event.text === '/start') {
+  if (!isBotAddressed(event)) {
+    console.log(
+      JSON.stringify({
+        level: 'info',
+        service: 'mechi-openclaw-telegram-poller',
+        reason: 'group_mention_required',
+        chat_id: event.chatId,
+        chat_type: event.chatType,
+        message_thread_id: event.messageThreadId ?? null,
+      })
+    );
+    return;
+  }
+
+  if (/^\/start(?:@[a-z0-9_]+)?$/i.test(event.text)) {
     await sendTelegramMessage(
       event.chatId,
       TELEGRAM_MODE === 'direct'
         ? 'Mechi OpenClaw control is live here. Send a message and I will route it straight into the Mechi control agent.'
         : 'Mechi OpenClaw is live here. Send a message and I will route it through the Mechi support agent.',
-      event.messageId ?? undefined
+      event.messageId ?? undefined,
+      event.messageThreadId ?? undefined
     );
     return;
   }
@@ -671,7 +733,8 @@ async function handleTelegramEvent(event) {
     await sendTelegramMessage(
       event.chatId,
       'I can handle text messages here right now. Send your message in text and I will reply.',
-      event.messageId ?? undefined
+      event.messageId ?? undefined,
+      event.messageThreadId ?? undefined
     );
     return;
   }
@@ -679,7 +742,10 @@ async function handleTelegramEvent(event) {
   try {
     const cliResult = await runOpenClawAgent({
       agent: TELEGRAM_AGENT,
-      sessionId: toSessionId('telegram', event.chatId),
+      sessionId: toSessionId(
+        'telegram',
+        event.messageThreadId ? `${event.chatId}:topic:${event.messageThreadId}` : event.chatId
+      ),
       prompt: buildTelegramPrompt(event),
       timeoutSeconds: OPENCLAW_TIMEOUT_SECONDS,
       model: TELEGRAM_MODEL,
@@ -690,7 +756,12 @@ async function handleTelegramEvent(event) {
 
     for (const reply of messages) {
       for (const chunk of splitTelegramText(reply)) {
-        await sendTelegramMessage(event.chatId, chunk, event.messageId ?? undefined);
+        await sendTelegramMessage(
+          event.chatId,
+          chunk,
+          event.messageId ?? undefined,
+          event.messageThreadId ?? undefined
+        );
       }
     }
   } catch (error) {
@@ -698,7 +769,8 @@ async function handleTelegramEvent(event) {
     await sendTelegramMessage(
       event.chatId,
       'I hit a snag on my side while reaching the Mechi agent. Please try again in a moment.',
-      event.messageId ?? undefined
+      event.messageId ?? undefined,
+      event.messageThreadId ?? undefined
     );
   }
 }
@@ -712,6 +784,7 @@ async function main() {
 
   await deleteTelegramWebhookIfNeeded();
   const me = await getTelegramMe();
+  botUsername = typeof me?.username === 'string' ? me.username : '';
   let offset = await readOffset();
 
   console.log(
@@ -727,6 +800,7 @@ async function main() {
       allowed_chat_types: [...ALLOWED_CHAT_TYPES],
       allowed_chat_ids: [...ALLOWED_CHAT_IDS],
       allowed_updates: ALLOWED_UPDATES,
+      group_require_mention: GROUP_REQUIRE_MENTION,
       offset_file: OFFSET_FILE,
       offset,
     })

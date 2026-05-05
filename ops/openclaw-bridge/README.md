@@ -46,6 +46,16 @@ OPENCLAW_BIN=/home/ubuntu/.npm-global/bin/openclaw
 
 # Optional Telegram poller settings.
 MECHI_OPENCLAW_TELEGRAM_BOT_TOKEN=
+# Native OpenClaw Telegram is preferred. "auto" enables it when a bot token exists.
+MECHI_OPENCLAW_TELEGRAM_NATIVE_ENABLED=auto
+MECHI_OPENCLAW_TELEGRAM_OPERATOR_IDS=6806783421,6738706706
+MECHI_OPENCLAW_TELEGRAM_CONTROL_GROUP_IDS=
+MECHI_OPENCLAW_TELEGRAM_COMMUNITY_GROUP_IDS=
+MECHI_OPENCLAW_TELEGRAM_REGISTRATION_TOPIC_ID=
+MECHI_OPENCLAW_TELEGRAM_DEFAULT_GROUP_AGENT=community
+MECHI_OPENCLAW_TELEGRAM_COMMUNITY_GROUP_MENTION_REQUIRED=true
+MECHI_OPENCLAW_TELEGRAM_OPS_GROUP_MENTION_REQUIRED=false
+MECHI_OPENCLAW_KEEP_TELEGRAM_POLLER=false
 # support is customer-safe and includes built-in Mechi product context.
 # For an operator fallback bot, set mode=direct, agent=default/main, and restrict allowed chat ids.
 MECHI_OPENCLAW_TELEGRAM_MODE=support
@@ -54,7 +64,8 @@ MECHI_OPENCLAW_TELEGRAM_MODEL=openai-codex/gpt-5.5
 MECHI_OPENCLAW_TELEGRAM_TIMEOUT_SECONDS=120
 MECHI_OPENCLAW_TELEGRAM_POLL_TIMEOUT_SECONDS=25
 MECHI_OPENCLAW_TELEGRAM_RETRY_DELAY_MS=3000
-MECHI_OPENCLAW_TELEGRAM_ALLOWED_CHAT_TYPES=private
+MECHI_OPENCLAW_TELEGRAM_ALLOWED_CHAT_TYPES=private,group,supergroup
+MECHI_OPENCLAW_TELEGRAM_GROUP_REQUIRE_MENTION=true
 MECHI_OPENCLAW_TELEGRAM_ALLOWED_CHAT_IDS=
 MECHI_OPENCLAW_TELEGRAM_DELETE_WEBHOOK=true
 
@@ -167,7 +178,7 @@ Current live posture:
 - `streaming.mode: "off"` and `replyToMode: "first"` are recommended for stable, simple Telegram delivery
 - GitHub CLI should be installed on the host if the control agent needs PR, issue, or workflow visibility
 
-Use `telegram-poller.mjs` only if you deliberately want a custom prompt/translation layer outside the native OpenClaw channel.
+Use `telegram-poller.mjs` only if you deliberately want a custom prompt/translation layer outside the native OpenClaw channel. When `scripts/openclaw-sync-customer-workspaces.sh` enables native Telegram and `MECHI_OPENCLAW_KEEP_TELEGRAM_POLLER` is not true, it stops the legacy poller service so two `getUpdates` consumers do not steal updates from each other.
 
 ## WhatsApp operator groups
 

@@ -179,7 +179,7 @@ Native OpenClaw WhatsApp sessions are not the same as the Mechi app WhatsApp Clo
 - `scripts/openclaw-sync-customer-workspaces.sh` pins active account DMs to `MECHI_WHATSAPP_DEFAULT_DM_AGENT`, pins `MECHI_WHATSAPP_CONTROL_DIRECT_IDS` to `control`, and sets `session.dmScope` to `per-account-channel-peer` by default so one stuck sender does not block other WhatsApp DMs
 - Meta Cloud API uses `+254113033475` for player/customer WhatsApp through the Mechi app
 - operator/admin groups such as `MECHI ADMINS` should route to `control` when exact group JID routing is configured
-- customer/community groups such as `MECHI 1v1` and `MECHI BETA` should route to `community` or `support` by exact group JID, with mention gating left on
+- customer/community groups such as `MECHI 1v1` and `MECHI BETA` should route to `community` or `support` by exact group JID; configured customer groups allow no-mention tournament registration replies by default, and can opt back into tag-only replies with `MECHI_WHATSAPP_CUSTOMER_GROUP_MENTION_REQUIRED=true`
 - customer support DMs should stay on the support inbox/player-action path
 - live tournament availability should be answered through `npm run ops:tournaments -- --json --summary-only`
 - a deployed/restarted OpenClaw WhatsApp process is required before prompt or routing changes show up in WhatsApp Web

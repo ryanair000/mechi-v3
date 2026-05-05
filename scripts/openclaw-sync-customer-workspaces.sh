@@ -11,6 +11,7 @@ SECONDARY_WHATSAPP_ACCOUNT_ID="${MECHI_NATIVE_SUPPORT_WHATSAPP_ACCOUNT_ID:-defau
 WHATSAPP_CONTROL_GROUP_IDS="${MECHI_WHATSAPP_CONTROL_GROUP_IDS:-}"
 WHATSAPP_CUSTOMER_GROUP_IDS="${MECHI_WHATSAPP_CUSTOMER_GROUP_IDS:-}"
 WHATSAPP_CUSTOMER_GROUP_AGENT="${MECHI_WHATSAPP_CUSTOMER_GROUP_AGENT:-community}"
+WHATSAPP_CUSTOMER_GROUP_MENTION_REQUIRED="${MECHI_WHATSAPP_CUSTOMER_GROUP_MENTION_REQUIRED:-false}"
 WHATSAPP_CONTROL_DIRECT_IDS="${MECHI_WHATSAPP_CONTROL_DIRECT_IDS:-+254708355692}"
 WHATSAPP_DEFAULT_DM_AGENT="${MECHI_WHATSAPP_DEFAULT_DM_AGENT:-support}"
 WHATSAPP_DM_SCOPE="${MECHI_OPENCLAW_WHATSAPP_DM_SCOPE:-per-account-channel-peer}"
@@ -24,6 +25,11 @@ esac
 case "$WHATSAPP_DM_SCOPE" in
   main|per-peer|per-channel-peer|per-account-channel-peer) ;;
   *) WHATSAPP_DM_SCOPE="per-account-channel-peer" ;;
+esac
+
+case "$(printf '%s' "$WHATSAPP_CUSTOMER_GROUP_MENTION_REQUIRED" | tr '[:upper:]' '[:lower:]')" in
+  1|true|yes|on) WHATSAPP_CUSTOMER_GROUP_MENTION_REQUIRED="true" ;;
+  *) WHATSAPP_CUSTOMER_GROUP_MENTION_REQUIRED="false" ;;
 esac
 
 copy_workspace() {
@@ -116,7 +122,7 @@ copy_workspace \
   "$MECHI_REPO/ops/openclaw-community-workspace" \
   "$OPENCLAW_HOME/workspace-community"
 
-node - "$OPENCLAW_HOME" "$PRIMARY_WHATSAPP_NUMBER" "$PRIMARY_WHATSAPP_ACCOUNT_ID" "$SECONDARY_WHATSAPP_NUMBER" "$SECONDARY_WHATSAPP_ACCOUNT_ID" "$WHATSAPP_CONTROL_GROUP_IDS" "$WHATSAPP_CUSTOMER_GROUP_IDS" "$WHATSAPP_CUSTOMER_GROUP_AGENT" "$WHATSAPP_CONTROL_DIRECT_IDS" "$WHATSAPP_DEFAULT_DM_AGENT" "$WHATSAPP_DM_SCOPE" <<'NODE'
+node - "$OPENCLAW_HOME" "$PRIMARY_WHATSAPP_NUMBER" "$PRIMARY_WHATSAPP_ACCOUNT_ID" "$SECONDARY_WHATSAPP_NUMBER" "$SECONDARY_WHATSAPP_ACCOUNT_ID" "$WHATSAPP_CONTROL_GROUP_IDS" "$WHATSAPP_CUSTOMER_GROUP_IDS" "$WHATSAPP_CUSTOMER_GROUP_AGENT" "$WHATSAPP_CUSTOMER_GROUP_MENTION_REQUIRED" "$WHATSAPP_CONTROL_DIRECT_IDS" "$WHATSAPP_DEFAULT_DM_AGENT" "$WHATSAPP_DM_SCOPE" <<'NODE'
 const fs = require('node:fs');
 const path = require('node:path');
 
@@ -129,6 +135,7 @@ const [
   controlGroupIdsRaw,
   customerGroupIdsRaw,
   customerGroupAgentRaw,
+  customerGroupMentionRequiredRaw,
   controlDirectIdsRaw,
   defaultDmAgentRaw,
   dmScopeRaw,
@@ -164,6 +171,7 @@ const controlGroupIds = parseCsv(controlGroupIdsRaw);
 const customerGroupIds = parseCsv(customerGroupIdsRaw);
 const managedGroupIds = new Set([...controlGroupIds, ...customerGroupIds]);
 const customerGroupAgent = normalizeCustomerGroupAgent(customerGroupAgentRaw);
+const customerGroupMentionRequired = parseBoolean(customerGroupMentionRequiredRaw, false);
 const controlDirectIds = normalizeDirectPeerIds(parseCsv(controlDirectIdsRaw));
 const managedDirectIds = new Set(controlDirectIds);
 const defaultDmAgent = normalizeRouteAgent(defaultDmAgentRaw, 'support');
@@ -176,6 +184,17 @@ function objectOrEmpty(value) {
 function normalizeRouteAgent(value, fallback) {
   const agent = String(value || '').trim();
   return ['support', 'community', 'control'].includes(agent) ? agent : fallback;
+}
+
+function parseBoolean(value, fallback) {
+  const normalized = String(value || '').trim().toLowerCase();
+  if (['1', 'true', 'yes', 'on'].includes(normalized)) {
+    return true;
+  }
+  if (['0', 'false', 'no', 'off'].includes(normalized)) {
+    return false;
+  }
+  return fallback;
 }
 
 function normalizeDmScope(value) {
@@ -211,7 +230,7 @@ function normalizeDirectPeerIds(values) {
   return normalized;
 }
 
-function mentionGatedGroups(existingGroups) {
+function mentionGatedGroups(existingGroups, mentionRequiredByGroup = new Map()) {
   const groups = { ...objectOrEmpty(existingGroups) };
   groups['*'] = {
     ...objectOrEmpty(groups['*']),
@@ -221,12 +240,16 @@ function mentionGatedGroups(existingGroups) {
   for (const groupId of managedGroupIds) {
     groups[groupId] = {
       ...objectOrEmpty(groups[groupId]),
-      requireMention: true,
+      requireMention: mentionRequiredByGroup.get(groupId) ?? true,
     };
   }
 
   return groups;
 }
+
+const mentionRequiredByGroup = new Map(
+  customerGroupIds.map((groupId) => [groupId, customerGroupMentionRequired])
+);
 
 function buildGroupRouteBindings(existingBindings) {
   const existing = Array.isArray(existingBindings) ? existingBindings : [];
@@ -318,7 +341,7 @@ if (primaryAccountId) {
     allowFrom: ['*'],
     groupPolicy: 'open',
     groupAllowFrom: ['*'],
-    groups: mentionGatedGroups(previousAccount.groups),
+    groups: mentionGatedGroups(previousAccount.groups, mentionRequiredByGroup),
   };
 }
 
@@ -334,7 +357,7 @@ if (secondaryAccountId) {
     allowFrom: ['*'],
     groupPolicy: 'open',
     groupAllowFrom: ['*'],
-    groups: mentionGatedGroups(previousAccount.groups),
+    groups: mentionGatedGroups(previousAccount.groups, mentionRequiredByGroup),
   };
 }
 
@@ -347,7 +370,7 @@ config.channels.whatsapp = {
   allowFrom: ['*'],
   groupPolicy: 'open',
   groupAllowFrom: ['*'],
-  groups: mentionGatedGroups(current.groups),
+  groups: mentionGatedGroups(current.groups, mentionRequiredByGroup),
   accounts,
 };
 config.bindings = buildGroupRouteBindings(config.bindings);
@@ -379,6 +402,7 @@ else
 fi
 if [ -n "$WHATSAPP_CUSTOMER_GROUP_IDS" ]; then
   echo "- customer groups pinned to $WHATSAPP_CUSTOMER_GROUP_AGENT: $WHATSAPP_CUSTOMER_GROUP_IDS"
+  echo "- customer group mention required: $WHATSAPP_CUSTOMER_GROUP_MENTION_REQUIRED"
 else
   echo "- customer groups not pinned; set MECHI_WHATSAPP_CUSTOMER_GROUP_IDS with WhatsApp group JIDs"
 fi

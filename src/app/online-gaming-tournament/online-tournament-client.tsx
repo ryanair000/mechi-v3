@@ -44,7 +44,7 @@ const TOURNAMENT_NAV_ITEMS = [
   { href: '#prizes', label: 'PRIZES' },
   { href: '#rules', label: 'RULES' },
   { href: '#stream', label: 'STREAM' },
-  { href: '#team', label: 'TEAM' },
+  { href: '/blog', label: 'BLOG' },
   { href: '/android-testers', label: 'ANDROID' },
   { href: '/platform', label: 'PLATFORM' },
 ];

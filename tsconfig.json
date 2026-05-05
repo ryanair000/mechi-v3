@@ -46,6 +46,7 @@
     "tmp/**",
     "output/**",
     "data_dump/**",
-    ".claude/**"
+    ".claude/**",
+    "scripts/test-email.ts"
   ]
 }

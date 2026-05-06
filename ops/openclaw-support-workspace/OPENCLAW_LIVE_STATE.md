@@ -25,7 +25,7 @@ This workspace is the customer-safe support agent for Mechi.
 ## Current routing
 
 - support bridge and customer-safe inbox-style work should route here
-- customer-safe native WhatsApp DMs can arrive through `+254113033475` or `+254733638841`
+- customer-safe native WhatsApp DMs arrive through `+254733638841`
 - Telegram operator DMs and the internal `MECHI OPS` group route to `control`
 - broader public/community traffic routes to `community`
 

@@ -7,7 +7,7 @@ Read `OPENCLAW_LIVE_STATE.md` before making major support or escalation decision
 Current live runtime:
 
 - `support` handles customer-safe bridge and inbox work
-- Native WhatsApp customer DMs can arrive on either logged-in Mechi number: `+254113033475` or `+254733638841`
+- Native WhatsApp customer DMs arrive through `+254733638841`
 - `control` handles operator DMs, the internal `MECHI OPS` group, live GitHub checks, live Supabase checks, and durable internal notes
 - `community` handles broader public/community traffic
 - Installed ClawHub skills: `whatsapp-business`, `customer-support-autopilot`

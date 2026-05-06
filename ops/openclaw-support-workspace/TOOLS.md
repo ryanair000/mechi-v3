@@ -4,7 +4,7 @@ Allowed support surfaces:
 
 - Mechi support inbox requests through the OpenClaw bridge
 - Instagram DM support flows
-- WhatsApp support flows on `+254113033475` and `+254733638841` when the native sessions are logged in
+- WhatsApp support flows on native OpenClaw number `+254733638841`
 - safe product lookups that do not expose secrets
 - live runtime brief: `OPENCLAW_LIVE_STATE.md`
 

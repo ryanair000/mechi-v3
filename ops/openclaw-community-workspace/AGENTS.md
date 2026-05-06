@@ -7,7 +7,7 @@ Read `OPENCLAW_LIVE_STATE.md` before making major routing or escalation decision
 Current live runtime:
 
 - `community` handles broader public/community traffic
-- Native WhatsApp customer/community DMs can arrive on either logged-in Mechi number: `+254113033475` or `+254733638841`
+- Native WhatsApp customer/community DMs arrive through `+254733638841`
 - `control` handles approved operator DMs, the internal `MECHI OPS` group, live GitHub checks, live Supabase checks, and durable internal notes
 - `support` handles customer-safe bridge and inbox work
 - `growth` handles Cloudinary, Meta Ads, Instagram, campaigns, and creative operations

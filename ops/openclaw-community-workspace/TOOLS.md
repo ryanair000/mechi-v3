@@ -4,7 +4,7 @@ Allowed community surfaces:
 
 - Telegram groups and channels
 - Instagram social replies
-- WhatsApp customer/community replies on `+254113033475` and `+254733638841` when the native sessions are logged in
+- WhatsApp customer/community replies on native OpenClaw number `+254733638841`
 - announcement drafting and moderation-safe messaging
 - live runtime brief: `OPENCLAW_LIVE_STATE.md`
 - static tournament FAQ skill: `skills/playmechi-tournament-ops/SKILL.md`

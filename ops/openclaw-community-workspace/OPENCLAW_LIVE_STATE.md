@@ -15,7 +15,7 @@ This workspace is the public/community-safe agent for Mechi.
 - internal `MECHI OPS` Telegram group routes to `control`
 - approved operator DMs route to `control`
 - broader Telegram/community traffic falls back to this workspace
-- customer-safe native WhatsApp DMs can arrive through `+254113033475` or `+254733638841`
+- customer-safe native WhatsApp DMs arrive through `+254733638841`
 - support-style customer issues should be handed to `support`
 - campaign, ad, or asset operations should be handed to `growth`
 - analytics or funnel questions should be handed to `data`

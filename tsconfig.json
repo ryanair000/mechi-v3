@@ -39,6 +39,7 @@
     ".next-build-production-readiness/dev/types/**/*.ts"
   ],
   "exclude": [
-    "node_modules"
+    "node_modules",
+    "scripts/test-email.ts"
   ]
 }

@@ -1,0 +1,37 @@
+insert into public.reward_catalog_cache
+  (id, title, description, reward_type, points_cost, source, sku_name, margin_class, sort_order, active, updated_at)
+values
+  ('codm_cp_30', 'CODM 30 CP', 'CODM CP redeemable. Estimated fulfillment value: KSh 70.', 'reward_claim', 700, 'chezahub', 'CODM 30 CP', 'game_redeemable', 100, true, now()),
+  ('codm_cp_80', 'CODM 80 CP', 'CODM CP redeemable. Estimated fulfillment value: KSh 160.', 'reward_claim', 1600, 'chezahub', 'CODM 80 CP', 'game_redeemable', 110, true, now()),
+  ('codm_cp_420', 'CODM 420 CP', 'CODM CP redeemable. Estimated fulfillment value: KSh 800.', 'reward_claim', 8000, 'chezahub', 'CODM 420 CP', 'game_redeemable', 120, true, now()),
+  ('codm_cp_880', 'CODM 880 CP', 'CODM CP redeemable. Estimated fulfillment value: KSh 1,600.', 'reward_claim', 16000, 'chezahub', 'CODM 880 CP', 'game_redeemable', 130, true, now()),
+  ('codm_cp_2400', 'CODM 2,400 CP', 'CODM CP redeemable. Estimated fulfillment value: KSh 3,900.', 'reward_claim', 39000, 'chezahub', 'CODM 2,400 CP', 'game_redeemable', 140, true, now()),
+  ('codm_cp_5000', 'CODM 5,000 CP', 'CODM CP redeemable. Estimated fulfillment value: KSh 7,700.', 'reward_claim', 77000, 'chezahub', 'CODM 5,000 CP', 'game_redeemable', 150, true, now()),
+  ('codm_cp_10800', 'CODM 10,800 CP', 'CODM CP redeemable. Estimated fulfillment value: KSh 15,400.', 'reward_claim', 154000, 'chezahub', 'CODM 10,800 CP', 'game_redeemable', 160, true, now()),
+  ('pubg_uc_60', 'PUBG Mobile 60 UC', 'PUBG UC redeemable. Estimated fulfillment value: KSh 120.', 'reward_claim', 1200, 'chezahub', 'PUBG Mobile 60 UC', 'game_redeemable', 200, true, now()),
+  ('pubg_uc_325', 'PUBG Mobile 325 UC', 'PUBG UC redeemable. Estimated fulfillment value: KSh 600.', 'reward_claim', 6000, 'chezahub', 'PUBG Mobile 325 UC', 'game_redeemable', 210, true, now()),
+  ('pubg_uc_660', 'PUBG Mobile 660 UC', 'PUBG UC redeemable. Estimated fulfillment value: KSh 1,200.', 'reward_claim', 12000, 'chezahub', 'PUBG Mobile 660 UC', 'game_redeemable', 220, true, now()),
+  ('pubg_uc_1800', 'PUBG Mobile 1,800 UC', 'PUBG UC redeemable. Estimated fulfillment value: KSh 3,000.', 'reward_claim', 30000, 'chezahub', 'PUBG Mobile 1,800 UC', 'game_redeemable', 230, true, now()),
+  ('pubg_uc_3850', 'PUBG Mobile 3,850 UC', 'PUBG UC redeemable. Estimated fulfillment value: KSh 6,000.', 'reward_claim', 60000, 'chezahub', 'PUBG Mobile 3,850 UC', 'game_redeemable', 240, true, now()),
+  ('pubg_uc_8100', 'PUBG Mobile 8,100 UC', 'PUBG UC redeemable. Estimated fulfillment value: KSh 12,000.', 'reward_claim', 120000, 'chezahub', 'PUBG Mobile 8,100 UC', 'game_redeemable', 250, true, now()),
+  ('efootball_coins_137', 'eFootball 137 Coins', 'eFootball Coins redeemable. Estimated fulfillment value: KSh 150.', 'reward_claim', 1500, 'chezahub', 'eFootball 137 Coins', 'game_redeemable', 300, true, now()),
+  ('efootball_coins_315', 'eFootball 315 Coins', 'eFootball Coins redeemable. Estimated fulfillment value: KSh 340.', 'reward_claim', 3400, 'chezahub', 'eFootball 315 Coins', 'game_redeemable', 310, true, now()),
+  ('efootball_coins_578', 'eFootball 578 Coins', 'eFootball Coins redeemable. Estimated fulfillment value: KSh 610.', 'reward_claim', 6100, 'chezahub', 'eFootball 578 Coins', 'game_redeemable', 320, true, now()),
+  ('efootball_coins_788', 'eFootball 788 Coins', 'eFootball Coins redeemable. Estimated fulfillment value: KSh 830.', 'reward_claim', 8300, 'chezahub', 'eFootball 788 Coins', 'game_redeemable', 330, true, now()),
+  ('efootball_coins_1092', 'eFootball 1,092 Coins', 'eFootball Coins redeemable. Estimated fulfillment value: KSh 1,150.', 'reward_claim', 11500, 'chezahub', 'eFootball 1,092 Coins', 'game_redeemable', 340, true, now()),
+  ('efootball_coins_2237', 'eFootball 2,237 Coins', 'eFootball Coins redeemable. Estimated fulfillment value: KSh 2,300.', 'reward_claim', 23000, 'chezahub', 'eFootball 2,237 Coins', 'game_redeemable', 350, true, now()),
+  ('efootball_coins_3413', 'eFootball 3,413 Coins', 'eFootball Coins redeemable. Estimated fulfillment value: KSh 3,400.', 'reward_claim', 34000, 'chezahub', 'eFootball 3,413 Coins', 'game_redeemable', 360, true, now()),
+  ('efootball_coins_5985', 'eFootball 5,985 Coins', 'eFootball Coins redeemable. Estimated fulfillment value: KSh 5,700.', 'reward_claim', 57000, 'chezahub', 'eFootball 5,985 Coins', 'game_redeemable', 370, true, now()),
+  ('efootball_coins_13440', 'eFootball 13,440 Coins', 'eFootball Coins redeemable. Estimated fulfillment value: KSh 12,000.', 'reward_claim', 120000, 'chezahub', 'eFootball 13,440 Coins', 'game_redeemable', 380, true, now()),
+  ('efootball_coins_32200', 'eFootball 32,200 Coins', 'eFootball Coins redeemable. Estimated fulfillment value: KSh 28,000.', 'reward_claim', 280000, 'chezahub', 'eFootball 32,200 Coins', 'game_redeemable', 390, true, now())
+on conflict (id) do update set
+  title = excluded.title,
+  description = excluded.description,
+  reward_type = excluded.reward_type,
+  points_cost = excluded.points_cost,
+  source = excluded.source,
+  sku_name = excluded.sku_name,
+  margin_class = excluded.margin_class,
+  sort_order = excluded.sort_order,
+  active = excluded.active,
+  updated_at = excluded.updated_at;

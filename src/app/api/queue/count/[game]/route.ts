@@ -1,0 +1,56 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { createServiceClient } from '@/lib/supabase';
+import { GAMES, getCanonicalGameKey } from '@/lib/config';
+import { isMissingColumnError } from '@/lib/db-compat';
+import { getQueueExpiryCutoffIso } from '@/lib/queue';
+import type { GameKey } from '@/types';
+
+export async function GET(
+  request: NextRequest,
+  { params }: { params: Promise<{ game: string }> }
+) {
+  const { game: requestedGame } = await params;
+  const { searchParams } = new URL(request.url);
+  const platform = searchParams.get('platform');
+
+  if (!requestedGame || !GAMES[requestedGame as GameKey]) {
+    return NextResponse.json({ error: 'Invalid game' }, { status: 400 });
+  }
+
+  const game = getCanonicalGameKey(requestedGame as GameKey);
+
+  try {
+    const supabase = createServiceClient();
+    const activeQueueCutoff = getQueueExpiryCutoffIso();
+
+    const buildCountQuery = () =>
+      supabase
+        .from('queue')
+        .select('id', { count: 'exact' })
+        .eq('game', game)
+        .eq('status', 'waiting')
+        .gte('joined_at', activeQueueCutoff)
+        .limit(1);
+
+    let query = buildCountQuery();
+    if (platform) {
+      query = query.eq('platform', platform);
+    }
+
+    let { count, error } = await query;
+
+    if (error && platform && isMissingColumnError(error, 'queue.platform')) {
+      ({ count, error } = await buildCountQuery());
+    }
+
+    if (error) {
+      console.error('[Queue Count] Query error:', error);
+      return NextResponse.json({ count: 0, game, degraded: true }, { status: 200 });
+    }
+
+    return NextResponse.json({ count: count ?? 0, game });
+  } catch (err) {
+    console.error('[Queue Count] Error:', err);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
+}

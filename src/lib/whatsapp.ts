@@ -1,0 +1,680 @@
+import { APP_URL } from '@/lib/urls';
+import {
+  ONLINE_TOURNAMENT_ARENA_PATH,
+  ONLINE_TOURNAMENT_REGISTRATION_PATH,
+  ONLINE_TOURNAMENT_YOUTUBE_URL,
+} from '@/lib/online-tournament';
+import { normalizePhoneNumber } from '@/lib/phone';
+import { isMockProviderMode, shouldCaptureProviderTranscripts } from '@/lib/provider-mode';
+import { captureProviderTranscript } from '@/lib/provider-transcript';
+
+const WHATSAPP_TOKEN = process.env.WHATSAPP_TOKEN;
+const PHONE_NUMBER_ID = process.env.WHATSAPP_PHONE_NUMBER_ID;
+const API_VERSION = 'v25.0';
+const DEFAULT_TEMPLATE_LANGUAGE = process.env.WHATSAPP_TEMPLATE_LANGUAGE ?? 'en_US';
+const TEST_TEMPLATE_NAME = process.env.WHATSAPP_TEST_TEMPLATE_NAME ?? 'hello_world';
+const MATCH_FOUND_TEMPLATE = process.env.WHATSAPP_TEMPLATE_MATCH_FOUND;
+const RESULT_CONFIRMED_TEMPLATE = process.env.WHATSAPP_TEMPLATE_RESULT_CONFIRMED;
+const MATCH_DISPUTE_TEMPLATE = process.env.WHATSAPP_TEMPLATE_MATCH_DISPUTE;
+const CHALLENGE_RECEIVED_TEMPLATE = process.env.WHATSAPP_TEMPLATE_CHALLENGE_RECEIVED;
+const ONLINE_TOURNAMENT_REGISTRATION_TEMPLATE =
+  process.env.WHATSAPP_TEMPLATE_PLAYMECHI_REGISTRATION ??
+  process.env.WHATSAPP_TEMPLATE_ONLINE_TOURNAMENT_REGISTRATION;
+const ONLINE_TOURNAMENT_REMINDER_TEMPLATE =
+  process.env.WHATSAPP_TEMPLATE_PLAYMECHI_REMINDER ??
+  process.env.WHATSAPP_TEMPLATE_ONLINE_TOURNAMENT_REMINDER;
+const WHATSAPP_ENABLED = Boolean(WHATSAPP_TOKEN && PHONE_NUMBER_ID);
+
+type WhatsAppTemplateParameter = {
+  type: 'text';
+  text: string;
+};
+
+type WhatsAppTemplateComponent = {
+  type: 'body';
+  parameters: WhatsAppTemplateParameter[];
+};
+
+export interface WhatsAppSendResult {
+  ok: boolean;
+  status: number;
+  to: string;
+  normalizedTo: string;
+  type: 'text' | 'template';
+  templateName?: string;
+  messageId?: string | null;
+  waId?: string | null;
+  skipped?: boolean;
+  error?: string;
+  details?: string;
+  responseBody?: unknown;
+}
+
+function normalizeRecipient(to: string): string {
+  const normalized = normalizePhoneNumber(to);
+
+  if (/^(254|255|256|250|251)\d{9}$/.test(normalized)) {
+    return normalized;
+  }
+
+  if (/^0\d{9}$/.test(normalized)) {
+    return `254${normalized.slice(1)}`;
+  }
+
+  return normalized;
+}
+
+function createSkippedResult(params: {
+  to: string;
+  type: 'text' | 'template';
+  error: string;
+  details?: string;
+  templateName?: string;
+}): WhatsAppSendResult {
+  return {
+    ok: false,
+    skipped: true,
+    status: 0,
+    to: params.to,
+    normalizedTo: params.to ? normalizeRecipient(params.to) : '',
+    type: params.type,
+    templateName: params.templateName,
+    error: params.error,
+    details: params.details,
+  };
+}
+
+function createBodyParameters(values: string[]): WhatsAppTemplateParameter[] {
+  return values.map((text) => ({
+    type: 'text',
+    text,
+  }));
+}
+
+function createBodyComponent(values: string[]): WhatsAppTemplateComponent[] {
+  if (values.length === 0) {
+    return [];
+  }
+
+  return [
+    {
+      type: 'body',
+      parameters: createBodyParameters(values),
+    },
+  ];
+}
+
+export function formatWhatsAppDeliveryError(result: WhatsAppSendResult): string {
+  if (result.details) {
+    return result.details;
+  }
+
+  if (result.error) {
+    return result.error;
+  }
+
+  return 'Unknown WhatsApp delivery failure';
+}
+
+export function isWhatsAppConfigured() {
+  return WHATSAPP_ENABLED;
+}
+
+export function isOnlineTournamentRegistrationWhatsAppConfigured() {
+  return Boolean(ONLINE_TOURNAMENT_REGISTRATION_TEMPLATE);
+}
+
+export function isOnlineTournamentReminderWhatsAppConfigured() {
+  return Boolean(ONLINE_TOURNAMENT_REMINDER_TEMPLATE);
+}
+
+async function dispatchWhatsApp(
+  to: string,
+  type: 'text' | 'template',
+  payload: Record<string, unknown>,
+  templateName?: string
+): Promise<WhatsAppSendResult> {
+  const normalizedTo = normalizeRecipient(to);
+
+  if (isMockProviderMode()) {
+    const mockResult: WhatsAppSendResult = {
+      ok: true,
+      status: 200,
+      to,
+      normalizedTo,
+      type,
+      templateName,
+      messageId: `mock-whatsapp-${Date.now()}`,
+      waId: normalizedTo,
+    };
+
+    await captureProviderTranscript({
+      provider: 'whatsapp',
+      operation: type === 'template' ? 'send-template' : 'send-text',
+      request: {
+        to,
+        normalizedTo,
+        payload,
+        templateName,
+      },
+      response: mockResult,
+    });
+
+    return mockResult;
+  }
+
+  if (!WHATSAPP_ENABLED || !WHATSAPP_TOKEN || !PHONE_NUMBER_ID) {
+    const skippedResult = createSkippedResult({
+      to,
+      type,
+      templateName,
+      error: 'WhatsApp credentials not configured',
+    });
+
+    if (shouldCaptureProviderTranscripts()) {
+      await captureProviderTranscript({
+        provider: 'whatsapp',
+        operation: type === 'template' ? 'send-template' : 'send-text',
+        request: {
+          to,
+          normalizedTo,
+          payload,
+          templateName,
+        },
+        response: skippedResult,
+      });
+    }
+
+    return skippedResult;
+  }
+
+  try {
+    const response = await fetch(
+      `https://graph.facebook.com/${API_VERSION}/${PHONE_NUMBER_ID}/messages`,
+      {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${WHATSAPP_TOKEN}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          messaging_product: 'whatsapp',
+          to: normalizedTo,
+          ...payload,
+        }),
+      }
+    );
+
+    const rawText = await response.text();
+    let responseBody: unknown = rawText;
+
+    try {
+      responseBody = rawText ? JSON.parse(rawText) : null;
+    } catch {
+      responseBody = rawText;
+    }
+
+    if (!response.ok) {
+      const metaError =
+        responseBody && typeof responseBody === 'object' && 'error' in responseBody
+          ? (responseBody as { error?: { message?: string; error_data?: { details?: string } } }).error
+          : undefined;
+
+      const errorResult: WhatsAppSendResult = {
+        ok: false,
+        status: response.status,
+        to,
+        normalizedTo,
+        type,
+        templateName,
+        error: metaError?.message ?? 'WhatsApp request failed',
+        details: metaError?.error_data?.details,
+        responseBody,
+      };
+
+      if (shouldCaptureProviderTranscripts()) {
+        await captureProviderTranscript({
+          provider: 'whatsapp',
+          operation: type === 'template' ? 'send-template' : 'send-text',
+          request: {
+            to,
+            normalizedTo,
+            payload,
+            templateName,
+          },
+          response: errorResult,
+        });
+      }
+
+      return errorResult;
+    }
+
+    const parsedBody = responseBody as {
+      contacts?: Array<{ wa_id?: string }>;
+      messages?: Array<{ id?: string }>;
+    } | null;
+
+    const successResult: WhatsAppSendResult = {
+      ok: true,
+      status: response.status,
+      to,
+      normalizedTo,
+      type,
+      templateName,
+      waId: parsedBody?.contacts?.[0]?.wa_id ?? null,
+      messageId: parsedBody?.messages?.[0]?.id ?? null,
+      responseBody,
+    };
+
+    if (shouldCaptureProviderTranscripts()) {
+      await captureProviderTranscript({
+        provider: 'whatsapp',
+        operation: type === 'template' ? 'send-template' : 'send-text',
+        request: {
+          to,
+          normalizedTo,
+          payload,
+          templateName,
+        },
+        response: successResult,
+      });
+    }
+
+    return successResult;
+  } catch (err) {
+    const errorResult: WhatsAppSendResult = {
+      ok: false,
+      status: 0,
+      to,
+      normalizedTo,
+      type,
+      templateName,
+      error: err instanceof Error ? err.message : 'Network error',
+    };
+
+    if (shouldCaptureProviderTranscripts()) {
+      await captureProviderTranscript({
+        provider: 'whatsapp',
+        operation: type === 'template' ? 'send-template' : 'send-text',
+        request: {
+          to,
+          normalizedTo,
+          payload,
+          templateName,
+        },
+        response: errorResult,
+      });
+    }
+
+    return errorResult;
+  }
+}
+
+function sendRequiredBusinessTemplate(params: {
+  to: string;
+  templateName?: string;
+  missingTemplateEnv: string;
+  bodyParameters: string[];
+}): Promise<WhatsAppSendResult> {
+  if (!params.templateName) {
+    return Promise.resolve(
+      createSkippedResult({
+        to: params.to,
+        type: 'template',
+        error: 'WhatsApp template is not configured',
+        details: `Set ${params.missingTemplateEnv} to an approved Meta WhatsApp template name.`,
+      })
+    );
+  }
+
+  return sendWhatsAppTemplate({
+    to: params.to,
+    name: params.templateName,
+    bodyParameters: params.bodyParameters,
+  });
+}
+
+async function safeNotify(label: string, fn: () => Promise<void>): Promise<void> {
+  if (!WHATSAPP_ENABLED) {
+    console.log(`[WhatsApp] ${label} skipped - credentials not configured`);
+    return;
+  }
+
+  try {
+    await fn();
+  } catch (err) {
+    console.error(`[WhatsApp] ${label} error:`, err);
+  }
+}
+
+export async function sendWhatsApp(to: string, message: string): Promise<WhatsAppSendResult> {
+  return dispatchWhatsApp(to, 'text', {
+    type: 'text',
+    text: { body: message },
+  });
+}
+
+export async function sendWhatsAppTemplate(params: {
+  to: string;
+  name?: string;
+  languageCode?: string;
+  bodyParameters?: string[];
+}): Promise<WhatsAppSendResult> {
+  const templateName = params.name ?? TEST_TEMPLATE_NAME;
+
+  return dispatchWhatsApp(
+    params.to,
+    'template',
+    {
+      type: 'template',
+      template: {
+        name: templateName,
+        language: { code: params.languageCode ?? DEFAULT_TEMPLATE_LANGUAGE },
+        components: createBodyComponent(params.bodyParameters ?? []),
+      },
+    },
+    templateName
+  );
+}
+
+export function buildMatchFoundMessage(params: {
+  username: string;
+  game: string;
+  opponentUsername: string;
+  matchId: string;
+  appUrl?: string;
+}): string {
+  const matchUrl = `${params.appUrl ?? APP_URL}/match/${params.matchId}`;
+
+  return (
+    `Yo ${params.username}, your Mechi match is ready.\n` +
+    `Game: ${params.game}\n` +
+    `Opponent: ${params.opponentUsername}\n` +
+    `Open match: ${matchUrl}`
+  );
+}
+
+export function buildResultConfirmedMessage(params: {
+  username: string;
+  opponentUsername: string;
+  game: string;
+  won: boolean;
+  rankLabel: string;
+  level: number;
+  appUrl?: string;
+}): string {
+  const dashboardUrl = `${params.appUrl ?? APP_URL}/dashboard`;
+
+  return (
+    `${params.username}, your result is locked in.\n` +
+    `Game: ${params.game}\n` +
+    `Opponent: ${params.opponentUsername}\n` +
+    `Result: ${params.won ? 'Win confirmed' : 'Match closed'}\n` +
+    `Rank: ${params.rankLabel}\n` +
+    `Level: ${params.level}\n` +
+    `${dashboardUrl}`
+  );
+}
+
+export function buildMatchDisputeMessage(params: {
+  username: string;
+  opponentUsername: string;
+  game: string;
+  matchId: string;
+  appUrl?: string;
+}): string {
+  const matchUrl = `${params.appUrl ?? APP_URL}/match/${params.matchId}`;
+
+  return (
+    `${params.username}, your Mechi match has been disputed.\n` +
+    `Game: ${params.game}\n` +
+    `Opponent: ${params.opponentUsername}\n` +
+    `Upload a screenshot here: ${matchUrl}`
+  );
+}
+
+export function buildChallengeReceivedMessage(params: {
+  username: string;
+  challengerUsername: string;
+  game: string;
+  platform: string;
+  message?: string | null;
+  challengeUrl?: string;
+  appUrl?: string;
+}): string {
+  const destination = params.challengeUrl ?? `${params.appUrl ?? APP_URL}/notifications`;
+  const challengeNote = params.message ? `Message: ${params.message}\n` : '';
+
+  return (
+    `${params.username}, ${params.challengerUsername} challenged you on Mechi.\n` +
+    `Game: ${params.game}\n` +
+    `Platform: ${params.platform}\n` +
+    challengeNote +
+    `Review it here: ${destination}`
+  );
+}
+
+export function buildOnlineTournamentRegistrationMessage(params: {
+  username: string;
+  gameLabel: string;
+  dateLabel: string;
+  timeLabel: string;
+  inGameUsername: string;
+  whatsappGroupUrl: string;
+  appUrl?: string;
+}): string {
+  return [
+    `${params.username}, your PlayMechi registration is in.`,
+    `Game: ${params.gameLabel}`,
+    `Time: ${params.dateLabel}, ${params.timeLabel}`,
+    `Username: ${params.inGameUsername}`,
+    `Join the game group: ${params.whatsappGroupUrl}`,
+    `Registration: ${params.appUrl ?? APP_URL}${ONLINE_TOURNAMENT_REGISTRATION_PATH}`,
+  ].join('\n');
+}
+
+export function buildOnlineTournamentReminderMessage(params: {
+  username: string;
+  gameLabel: string;
+  dateLabel: string;
+  timeLabel: string;
+  inGameUsername: string;
+  format: string;
+  scoring: string;
+  appUrl?: string;
+  streamUrl?: string;
+}): string {
+  return [
+    `${params.username}, PlayMechi reminder.`,
+    `${params.gameLabel} starts ${params.dateLabel} at ${params.timeLabel}.`,
+    `Use username: ${params.inGameUsername}`,
+    `Format: ${params.format}`,
+    `Scoring: ${params.scoring}`,
+    `Arena: ${params.appUrl ?? APP_URL}${ONLINE_TOURNAMENT_ARENA_PATH}`,
+    `Stream: ${params.streamUrl ?? ONLINE_TOURNAMENT_YOUTUBE_URL}`,
+  ].join('\n');
+}
+
+export async function sendOnlineTournamentRegistrationWhatsApp(params: {
+  to: string;
+  username: string;
+  gameLabel: string;
+  dateLabel: string;
+  timeLabel: string;
+  inGameUsername: string;
+  whatsappGroupUrl: string;
+  appUrl?: string;
+}): Promise<WhatsAppSendResult> {
+  return sendRequiredBusinessTemplate({
+    to: params.to,
+    templateName: ONLINE_TOURNAMENT_REGISTRATION_TEMPLATE,
+    missingTemplateEnv: 'WHATSAPP_TEMPLATE_PLAYMECHI_REGISTRATION',
+    bodyParameters: [
+      params.username,
+      params.gameLabel,
+      params.dateLabel,
+      params.timeLabel,
+      params.inGameUsername,
+      `${params.appUrl ?? APP_URL}${ONLINE_TOURNAMENT_REGISTRATION_PATH}`,
+      params.whatsappGroupUrl,
+    ],
+  });
+}
+
+export async function sendOnlineTournamentReminderWhatsApp(params: {
+  to: string;
+  username: string;
+  gameLabel: string;
+  dateLabel: string;
+  timeLabel: string;
+  inGameUsername: string;
+  format: string;
+  scoring: string;
+  appUrl?: string;
+  streamUrl?: string;
+}): Promise<WhatsAppSendResult> {
+  return sendRequiredBusinessTemplate({
+    to: params.to,
+    templateName: ONLINE_TOURNAMENT_REMINDER_TEMPLATE,
+    missingTemplateEnv: 'WHATSAPP_TEMPLATE_PLAYMECHI_REMINDER',
+    bodyParameters: [
+      params.username,
+      params.gameLabel,
+      params.dateLabel,
+      params.timeLabel,
+      params.inGameUsername,
+      params.format,
+      params.scoring,
+      `${params.appUrl ?? APP_URL}${ONLINE_TOURNAMENT_ARENA_PATH}`,
+      params.streamUrl ?? ONLINE_TOURNAMENT_YOUTUBE_URL,
+    ],
+  });
+}
+
+export async function notifyMatchFound(params: {
+  whatsappNumber: string;
+  username: string;
+  game: string;
+  opponentUsername: string;
+  matchId: string;
+  appUrl?: string;
+}): Promise<void> {
+  await safeNotify('match_found', async () => {
+    const result = MATCH_FOUND_TEMPLATE
+      ? await sendWhatsAppTemplate({
+          to: params.whatsappNumber,
+          name: MATCH_FOUND_TEMPLATE,
+          bodyParameters: [
+            params.username,
+            params.game,
+            params.opponentUsername,
+            `${params.appUrl ?? APP_URL}/match/${params.matchId}`,
+          ],
+        })
+      : await sendWhatsApp(params.whatsappNumber, buildMatchFoundMessage(params));
+
+    if (!result.ok) {
+      throw new Error(formatWhatsAppDeliveryError(result));
+    }
+  });
+}
+
+export async function notifyResultConfirmed(params: {
+  whatsappNumber: string;
+  username: string;
+  opponentUsername: string;
+  game: string;
+  won: boolean;
+  rankLabel: string;
+  level: number;
+  appUrl?: string;
+}): Promise<void> {
+  await safeNotify('result_confirmed', async () => {
+    const result = RESULT_CONFIRMED_TEMPLATE
+      ? await sendWhatsAppTemplate({
+          to: params.whatsappNumber,
+          name: RESULT_CONFIRMED_TEMPLATE,
+          bodyParameters: [
+            params.username,
+            params.game,
+            params.opponentUsername,
+            params.won ? 'Win confirmed' : 'Match closed',
+            params.rankLabel,
+            String(params.level),
+            `${params.appUrl ?? APP_URL}/dashboard`,
+          ],
+        })
+      : await sendWhatsApp(params.whatsappNumber, buildResultConfirmedMessage(params));
+
+    if (!result.ok) {
+      throw new Error(formatWhatsAppDeliveryError(result));
+    }
+  });
+}
+
+export async function notifyMatchDispute(params: {
+  whatsappNumber: string;
+  username: string;
+  opponentUsername: string;
+  game: string;
+  matchId: string;
+  appUrl?: string;
+}): Promise<void> {
+  await safeNotify('match_dispute', async () => {
+    const result = MATCH_DISPUTE_TEMPLATE
+      ? await sendWhatsAppTemplate({
+          to: params.whatsappNumber,
+          name: MATCH_DISPUTE_TEMPLATE,
+          bodyParameters: [
+            params.username,
+            params.game,
+            params.opponentUsername,
+            `${params.appUrl ?? APP_URL}/match/${params.matchId}`,
+          ],
+        })
+      : await sendWhatsApp(params.whatsappNumber, buildMatchDisputeMessage(params));
+
+    if (!result.ok) {
+      throw new Error(formatWhatsAppDeliveryError(result));
+    }
+  });
+}
+
+export async function notifyChallengeReceived(params: {
+  whatsappNumber: string;
+  username: string;
+  challengerUsername: string;
+  game: string;
+  platform: string;
+  message?: string | null;
+  challengeUrl?: string;
+  appUrl?: string;
+}): Promise<void> {
+  await safeNotify('challenge_received', async () => {
+    const challengeUrl = params.challengeUrl ?? `${params.appUrl ?? APP_URL}/notifications`;
+    const result = CHALLENGE_RECEIVED_TEMPLATE
+      ? await sendWhatsAppTemplate({
+          to: params.whatsappNumber,
+          name: CHALLENGE_RECEIVED_TEMPLATE,
+          bodyParameters: [
+            params.username,
+            params.challengerUsername,
+            params.game,
+            params.platform,
+            challengeUrl,
+          ],
+        })
+      : await sendWhatsApp(params.whatsappNumber, buildChallengeReceivedMessage(params));
+
+    if (!result.ok) {
+      throw new Error(formatWhatsAppDeliveryError(result));
+    }
+  });
+}
+
+export async function sendSupportWhatsAppMessage(params: {
+  whatsappNumber: string;
+  message: string;
+}): Promise<WhatsAppSendResult> {
+  return sendWhatsApp(params.whatsappNumber, params.message);
+}

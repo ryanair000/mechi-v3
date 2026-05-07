@@ -1,0 +1,14 @@
+.git
+.github
+.next
+.playwright-cli
+node_modules
+data_dump
+e2e
+output
+tmp
+contracts
+supabase
+apps/android
+*.log
+tsconfig.build.tsbuildinfo

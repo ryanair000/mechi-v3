@@ -1,0 +1,15 @@
+node_modules
+apps/android/node_modules
+apps/marketing/node_modules
+.next
+.next-*
+apps/marketing/.next
+output
+playwright-report
+test-results
+.playwright-cli
+.codex*
+.claude
+*.log
+*.err.log
+*.out.log

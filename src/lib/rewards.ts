@@ -1,0 +1,1803 @@
+import { createHash, createHmac, randomBytes, randomUUID, timingSafeEqual } from 'crypto';
+import type { NextRequest } from 'next/server';
+import { tryClaimBounty } from '@/lib/bounties';
+import { getNairobiDateStamp } from '@/lib/gamification';
+import { createServiceClient } from '@/lib/supabase';
+import type { Profile } from '@/types';
+
+type SupabaseClient = ReturnType<typeof createServiceClient>;
+
+type RewardEventRpcResult = {
+  inserted: boolean;
+  available: number;
+  pending: number;
+  lifetime: number;
+};
+
+export type RewardCodeType = 'discount_code' | 'reward_claim';
+
+export type RewardCatalogItem = {
+  id: string;
+  title: string;
+  description: string;
+  reward_type: RewardCodeType | 'mechi_perk';
+  points_cost: number;
+  phase: string;
+  active: boolean;
+  expires_in_hours?: number | null;
+  discount_amount_kes?: number | null;
+  max_order_coverage_percent?: number | null;
+  sku_name?: string | null;
+  margin_class?: string | null;
+  source?: 'chezahub' | 'mechi_native' | string | null;
+  value_kes?: number | null;
+  sort_order?: number | null;
+};
+
+export type RewardRedemptionRow = {
+  id: string;
+  reward_id: string;
+  reward_type: RewardCodeType | 'mechi_perk';
+  title: string;
+  code: string | null;
+  points_cost: number;
+  external_issuance_id: string | null;
+  status: 'issued' | 'claimed' | 'void' | 'reversed' | 'expired';
+  expires_at: string | null;
+  chezahub_order_id: string | null;
+  metadata: Record<string, unknown> | null;
+  created_at: string;
+  updated_at: string;
+  partner_order_url?: string | null;
+  partner_status?: string | null;
+  delivery_channel?: string | null;
+  access_hint?: string | null;
+  source?: 'chezahub' | 'mechi_native' | string | null;
+};
+
+export type RewardSummary = {
+  linked: boolean;
+  chezahub_user_id: string | null;
+  chezahub_linked_at: string | null;
+  balances: {
+    available: number;
+    pending: number;
+    lifetime: number;
+  };
+  referrals: {
+    invited: number;
+    pending: number;
+    qualified: number;
+    completed: number;
+    flagged: number;
+  };
+  affiliate: {
+    signups: number;
+    rp_earned: number;
+    rp_per_signup: number;
+    qualified: number;
+    completed: number;
+  };
+  recent_activity: Array<{
+    id: string;
+    event_type: string;
+    title: string;
+    available_delta: number;
+    pending_delta: number;
+    created_at: string;
+  }>;
+  active_codes: RewardRedemptionRow[];
+  ways_to_earn: Array<{
+    id: string;
+    title: string;
+    description: string;
+    rp_amount: number;
+    category: string;
+    frequency: string;
+  }>;
+};
+
+type EnsureChezahubCustomerResult = {
+  chezahubUserId: string;
+  ordersUrl: string | null;
+  accessHint: string | null;
+};
+
+type IssueChezahubRewardOrderResult = {
+  issuanceId: string;
+  orderId: string;
+  orderUrl: string | null;
+  status: string | null;
+  title: string;
+  deliveryChannel: string | null;
+  accessHint: string | null;
+};
+
+export type ChezahubLinkTokenPayload = {
+  mechi_user_id: string;
+  username: string;
+  invite_code: string | null;
+  return_url: string;
+  issued_at: number;
+  expires_at: number;
+  nonce: string;
+};
+
+export type ChezahubOrderEventPayload = {
+  order_id: string;
+  status: 'paid' | 'completed' | 'cancelled' | 'expired' | 'refunded' | 'abuse_review';
+  chezahub_user_id: string | null;
+  mechi_user_id: string | null;
+  order_total_kes: number;
+  customer_email?: string | null;
+  customer_phone?: string | null;
+  applied_discount_code?: string | null;
+  reward_issuance_id?: string | null;
+  reward_code?: string | null;
+  reward_catalog_id?: string | null;
+  occurred_at?: string | null;
+  idempotency_key?: string | null;
+};
+
+type RewardProfileFields = Pick<
+  Profile,
+  | 'id'
+  | 'username'
+  | 'phone'
+  | 'email'
+  | 'invite_code'
+  | 'invited_by'
+  | 'country'
+  | 'region'
+  | 'selected_games'
+  | 'game_ids'
+  | 'avatar_url'
+  | 'cover_url'
+> & {
+  reward_points_available?: number | null;
+  reward_points_pending?: number | null;
+  reward_points_lifetime?: number | null;
+  chezahub_user_id?: string | null;
+  chezahub_linked_at?: string | null;
+};
+
+const DEFAULT_CHEZAHUB_BASE_URL = 'https://chezahub.co.ke';
+const DEFAULT_CHEZAHUB_REDEEM_URL = 'https://redeem.chezahub.co.ke';
+const DEFAULT_LINK_TOKEN_TTL_MS = 1000 * 60 * 15;
+
+export const VOUCHER_TIERS = [
+  { id: 'voucher_50', points_cost: 500, value_kes: 50, title: 'KES 50 Reward Credit' },
+  { id: 'voucher_100', points_cost: 1000, value_kes: 100, title: 'KES 100 Reward Credit' },
+  { id: 'voucher_200', points_cost: 2000, value_kes: 200, title: 'KES 200 Reward Credit' },
+  { id: 'voucher_500', points_cost: 5000, value_kes: 500, title: 'KES 500 Reward Credit' },
+] as const;
+
+const RP_PER_KSH = 10;
+
+function buildGameRedeemable(params: {
+  id: string;
+  title: string;
+  game: string;
+  valueKes: number;
+  sortOrder: number;
+}): RewardCatalogItem {
+  return {
+    id: params.id,
+    title: params.title,
+    description: `${params.game} redeemable. Estimated fulfillment value: KSh ${params.valueKes.toLocaleString('en-KE')}.`,
+    reward_type: 'reward_claim',
+    points_cost: params.valueKes * RP_PER_KSH,
+    phase: 'live',
+    active: true,
+    sku_name: params.title,
+    margin_class: 'game_redeemable',
+    source: 'chezahub',
+    value_kes: params.valueKes,
+    sort_order: params.sortOrder,
+  };
+}
+
+export const GAME_REDEEMABLE_CATALOG: RewardCatalogItem[] = [
+  buildGameRedeemable({ id: 'codm_cp_30', title: 'CODM 30 CP', game: 'CODM CP', valueKes: 70, sortOrder: 100 }),
+  buildGameRedeemable({ id: 'codm_cp_80', title: 'CODM 80 CP', game: 'CODM CP', valueKes: 160, sortOrder: 110 }),
+  buildGameRedeemable({ id: 'codm_cp_420', title: 'CODM 420 CP', game: 'CODM CP', valueKes: 800, sortOrder: 120 }),
+  buildGameRedeemable({ id: 'codm_cp_880', title: 'CODM 880 CP', game: 'CODM CP', valueKes: 1600, sortOrder: 130 }),
+  buildGameRedeemable({ id: 'codm_cp_2400', title: 'CODM 2,400 CP', game: 'CODM CP', valueKes: 3900, sortOrder: 140 }),
+  buildGameRedeemable({ id: 'codm_cp_5000', title: 'CODM 5,000 CP', game: 'CODM CP', valueKes: 7700, sortOrder: 150 }),
+  buildGameRedeemable({ id: 'codm_cp_10800', title: 'CODM 10,800 CP', game: 'CODM CP', valueKes: 15400, sortOrder: 160 }),
+  buildGameRedeemable({ id: 'pubg_uc_60', title: 'PUBG Mobile 60 UC', game: 'PUBG UC', valueKes: 120, sortOrder: 200 }),
+  buildGameRedeemable({ id: 'pubg_uc_325', title: 'PUBG Mobile 325 UC', game: 'PUBG UC', valueKes: 600, sortOrder: 210 }),
+  buildGameRedeemable({ id: 'pubg_uc_660', title: 'PUBG Mobile 660 UC', game: 'PUBG UC', valueKes: 1200, sortOrder: 220 }),
+  buildGameRedeemable({ id: 'pubg_uc_1800', title: 'PUBG Mobile 1,800 UC', game: 'PUBG UC', valueKes: 3000, sortOrder: 230 }),
+  buildGameRedeemable({ id: 'pubg_uc_3850', title: 'PUBG Mobile 3,850 UC', game: 'PUBG UC', valueKes: 6000, sortOrder: 240 }),
+  buildGameRedeemable({ id: 'pubg_uc_8100', title: 'PUBG Mobile 8,100 UC', game: 'PUBG UC', valueKes: 12000, sortOrder: 250 }),
+  buildGameRedeemable({ id: 'efootball_coins_137', title: 'eFootball 137 Coins', game: 'eFootball Coins', valueKes: 150, sortOrder: 300 }),
+  buildGameRedeemable({ id: 'efootball_coins_315', title: 'eFootball 315 Coins', game: 'eFootball Coins', valueKes: 340, sortOrder: 310 }),
+  buildGameRedeemable({ id: 'efootball_coins_578', title: 'eFootball 578 Coins', game: 'eFootball Coins', valueKes: 610, sortOrder: 320 }),
+  buildGameRedeemable({ id: 'efootball_coins_788', title: 'eFootball 788 Coins', game: 'eFootball Coins', valueKes: 830, sortOrder: 330 }),
+  buildGameRedeemable({ id: 'efootball_coins_1092', title: 'eFootball 1,092 Coins', game: 'eFootball Coins', valueKes: 1150, sortOrder: 340 }),
+  buildGameRedeemable({ id: 'efootball_coins_2237', title: 'eFootball 2,237 Coins', game: 'eFootball Coins', valueKes: 2300, sortOrder: 350 }),
+  buildGameRedeemable({ id: 'efootball_coins_3413', title: 'eFootball 3,413 Coins', game: 'eFootball Coins', valueKes: 3400, sortOrder: 360 }),
+  buildGameRedeemable({ id: 'efootball_coins_5985', title: 'eFootball 5,985 Coins', game: 'eFootball Coins', valueKes: 5700, sortOrder: 370 }),
+  buildGameRedeemable({ id: 'efootball_coins_13440', title: 'eFootball 13,440 Coins', game: 'eFootball Coins', valueKes: 12000, sortOrder: 380 }),
+  buildGameRedeemable({ id: 'efootball_coins_32200', title: 'eFootball 32,200 Coins', game: 'eFootball Coins', valueKes: 28000, sortOrder: 390 }),
+];
+
+export function withDefaultGameRedeemables(items: RewardCatalogItem[]): RewardCatalogItem[] {
+  const byId = new Map(items.map((item) => [item.id, item]));
+
+  for (const item of GAME_REDEEMABLE_CATALOG) {
+    const existing = byId.get(item.id);
+    if (existing) {
+      byId.set(item.id, {
+        ...item,
+        ...existing,
+        sku_name: existing.sku_name ?? item.sku_name,
+        margin_class: existing.margin_class ?? item.margin_class,
+        value_kes: existing.value_kes ?? item.value_kes,
+        sort_order: existing.sort_order ?? item.sort_order,
+      });
+    } else {
+      byId.set(item.id, item);
+    }
+  }
+
+  return Array.from(byId.values()).sort((left, right) => {
+    const leftOrder = left.sort_order ?? 0;
+    const rightOrder = right.sort_order ?? 0;
+    if (leftOrder !== rightOrder) return leftOrder - rightOrder;
+    return left.title.localeCompare(right.title);
+  });
+}
+
+export type VoucherTier = (typeof VOUCHER_TIERS)[number];
+
+export function generateVoucherCode(): string {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  const bytes = randomBytes(12);
+  let code = '';
+  for (let i = 0; i < 12; i++) {
+    code += chars[bytes[i] % chars.length];
+  }
+  return code;
+}
+
+export const REWARD_RULES = {
+  accountLink: 200,
+  profileCompletion: 200,
+  firstMatchOfDay: 30,
+  streak3Daily: 75,
+  streak5Weekly: 150,
+  streak10Weekly: 400,
+  shareActionDaily: 25,
+  affiliateInviteUsed: 300,
+  inviteeStarter: 500,
+  inviterMain: 3000,
+  linkedFirstPaidOrder: 250,
+  watchStream: 5,
+  goLiveBonus: 50,
+  maxWatchRpPerDay: 20,
+  qualifiedReferralMinimumKes: 2000,
+  maxOrderCoveragePercent: 25,
+  tournament_win: 500,
+  tournament_runner_up: 200,
+  tournament_top_four: 75,
+  first_tournament_join: 100,
+  season_top_ten: 1000,
+  perfect_bo3_sweep: 50,
+  lobby_first_place: 30,
+  lobby_win_streak_3: 100,
+  rankedTierUp: 100,
+  dailyLogin: 10,
+} as const;
+
+export const REWARD_WAYS_TO_EARN = [
+  {
+    id: 'profile_completion',
+    title: 'Complete your profile',
+    description: `+${REWARD_RULES.profileCompletion} RP when your profile is fully set up.`,
+  },
+  {
+    id: 'first_match_of_day',
+    title: 'Play your first match of the day',
+    description: `+${REWARD_RULES.firstMatchOfDay} RP once per day.`,
+  },
+  {
+    id: 'streak_three',
+    title: 'Hit a 3-win streak',
+    description: `+${REWARD_RULES.streak3Daily} RP once per day when your streak reaches 3 or more.`,
+  },
+  {
+    id: 'streak_five',
+    title: 'Hit a 5-win streak',
+    description: `+${REWARD_RULES.streak5Weekly} RP once per week when your streak reaches 5 or more.`,
+  },
+  {
+    id: 'share_page_action',
+    title: 'Share from your Share page',
+    description: `+${REWARD_RULES.shareActionDaily} RP once per day for a verified share action.`,
+  },
+  {
+    id: 'affiliate_invite_used',
+    title: 'Get a signup through your invite code',
+    description: `+${REWARD_RULES.affiliateInviteUsed} RP every time a new player finishes signup with your invite code.`,
+  },
+  {
+    id: 'invitee_starter',
+    title: 'Be an invited player and play your first match',
+    description: `+${REWARD_RULES.inviteeStarter} RP after you finish your first Mechi match as an invited player.`,
+  },
+  {
+    id: 'referral_main',
+    title: 'Refer a buyer who completes a first order',
+    description: `+${REWARD_RULES.inviterMain} RP after your invitee completes a paid redeemable order of at least KES ${REWARD_RULES.qualifiedReferralMinimumKes.toLocaleString()}.`,
+  },
+] as const;
+
+function base64UrlEncode(value: string) {
+  return Buffer.from(value)
+    .toString('base64')
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=+$/g, '');
+}
+
+function base64UrlDecode(value: string) {
+  const normalized = value.replace(/-/g, '+').replace(/_/g, '/');
+  const padding = normalized.length % 4 === 0 ? '' : '='.repeat(4 - (normalized.length % 4));
+  return Buffer.from(`${normalized}${padding}`, 'base64').toString('utf8');
+}
+
+function stableStringify(value: unknown): string {
+  if (value === null || typeof value !== 'object') {
+    return JSON.stringify(value);
+  }
+
+  if (Array.isArray(value)) {
+    return `[${value.map((entry) => stableStringify(entry)).join(',')}]`;
+  }
+
+  const keys = Object.keys(value).sort();
+  return `{${keys.map((key) => `${JSON.stringify(key)}:${stableStringify((value as Record<string, unknown>)[key])}`).join(',')}}`;
+}
+
+export function getChezahubBaseUrl() {
+  return process.env.CHEZAHUB_BASE_URL || DEFAULT_CHEZAHUB_BASE_URL;
+}
+
+export function getChezahubRedeemBaseUrl() {
+  return (
+    process.env.CHEZAHUB_REDEEM_URL ||
+    process.env.NEXT_PUBLIC_CHEZAHUB_REDEEM_URL ||
+    DEFAULT_CHEZAHUB_REDEEM_URL
+  );
+}
+
+export function getRewardSharedSecret() {
+  return (
+    process.env.MECHI_CHEZAHUB_SHARED_SECRET ||
+    process.env.CHEZAHUB_SHARED_SECRET ||
+    process.env.INTERNAL_ACTION_SECRET ||
+    ''
+  );
+}
+
+function createHexHmac(value: string, secret = getRewardSharedSecret()) {
+  return createHmac('sha256', secret).update(value).digest('hex');
+}
+
+function safeCompare(left: string, right: string) {
+  const leftBuffer = Buffer.from(String(left));
+  const rightBuffer = Buffer.from(String(right));
+  if (leftBuffer.length !== rightBuffer.length) {
+    return false;
+  }
+
+  return timingSafeEqual(leftBuffer, rightBuffer);
+}
+
+export function createChezahubLinkToken(payload: Omit<ChezahubLinkTokenPayload, 'issued_at' | 'expires_at' | 'nonce'>) {
+  const issuedAt = Date.now();
+  const fullPayload: ChezahubLinkTokenPayload = {
+    ...payload,
+    issued_at: issuedAt,
+    expires_at: issuedAt + DEFAULT_LINK_TOKEN_TTL_MS,
+    nonce: randomUUID(),
+  };
+  const encodedPayload = base64UrlEncode(JSON.stringify(fullPayload));
+  const signature = createHexHmac(encodedPayload);
+
+  return `${encodedPayload}.${signature}`;
+}
+
+export function verifyChezahubLinkToken(token: string | null | undefined): ChezahubLinkTokenPayload | null {
+  if (!token || !getRewardSharedSecret()) {
+    return null;
+  }
+
+  const [encodedPayload, signature] = token.split('.');
+  if (!encodedPayload || !signature) {
+    return null;
+  }
+
+  const expectedSignature = createHexHmac(encodedPayload);
+  if (!safeCompare(signature, expectedSignature)) {
+    return null;
+  }
+
+  try {
+    const payload = JSON.parse(base64UrlDecode(encodedPayload)) as ChezahubLinkTokenPayload;
+    if (!payload.mechi_user_id || !payload.return_url) {
+      return null;
+    }
+    if (payload.expires_at < Date.now()) {
+      return null;
+    }
+    return payload;
+  } catch {
+    return null;
+  }
+}
+
+export function createSignedActionHeaders(payload: unknown) {
+  const secret = getRewardSharedSecret();
+  if (!secret) {
+    throw new Error('Reward integration secret is not configured');
+  }
+
+  const timestamp = Date.now().toString();
+  return {
+    'X-Internal-Action-Timestamp': timestamp,
+    'X-Internal-Action-Signature': createHexHmac(`${timestamp}.${stableStringify(payload)}`, secret),
+  };
+}
+
+export function hasValidSignedAction(
+  request: NextRequest,
+  payload: unknown,
+  { maxAgeMs = 10 * 60 * 1000 }: { maxAgeMs?: number } = {}
+) {
+  const secret = getRewardSharedSecret();
+  const timestamp = request.headers.get('x-internal-action-timestamp');
+  const signature = request.headers.get('x-internal-action-signature');
+
+  if (!secret || !timestamp || !signature) {
+    return false;
+  }
+
+  const timestampValue = Number(timestamp);
+  if (!Number.isFinite(timestampValue)) {
+    return false;
+  }
+
+  if (Math.abs(Date.now() - timestampValue) > maxAgeMs) {
+    return false;
+  }
+
+  const expected = createHexHmac(`${timestamp}.${stableStringify(payload)}`, secret);
+  return safeCompare(signature, expected);
+}
+
+export async function applyRewardEvent(
+  supabase: SupabaseClient,
+  params: {
+    userId: string;
+    eventKey: string;
+    eventType: string;
+    availableDelta: number;
+    pendingDelta?: number;
+    lifetimeDelta?: number;
+    source?: string | null;
+    relatedUserId?: string | null;
+    relatedMatchId?: string | null;
+    relatedOrderId?: string | null;
+    metadata?: Record<string, unknown> | null;
+  }
+) {
+  const { data, error } = await supabase.rpc('apply_reward_event', {
+    p_user_id: params.userId,
+    p_event_key: params.eventKey,
+    p_event_type: params.eventType,
+    p_available_delta: params.availableDelta,
+    p_pending_delta: params.pendingDelta ?? 0,
+    p_lifetime_delta: params.lifetimeDelta ?? 0,
+    p_source: params.source ?? null,
+    p_related_user_id: params.relatedUserId ?? null,
+    p_related_match_id: params.relatedMatchId ?? null,
+    p_related_order_id: params.relatedOrderId ?? null,
+    p_metadata: params.metadata ?? {},
+  });
+
+  if (error) {
+    throw error;
+  }
+
+  return (data ?? null) as RewardEventRpcResult | null;
+}
+
+export async function rewardEventExists(supabase: SupabaseClient, eventKey: string) {
+  const { data } = await supabase
+    .from('reward_events')
+    .select('id')
+    .eq('event_key', eventKey)
+    .maybeSingle();
+
+  return Boolean(data);
+}
+
+export function isProfileCompleteForRewards(profile: RewardProfileFields) {
+  const selectedGames = Array.isArray(profile.selected_games) ? profile.selected_games : [];
+  const gameIds = profile.game_ids && typeof profile.game_ids === 'object' ? profile.game_ids : {};
+  const hasGameIds = Object.keys(gameIds as Record<string, string>).length > 0;
+
+  return Boolean(
+    profile.username?.trim() &&
+      profile.phone?.trim() &&
+      profile.email?.trim() &&
+      profile.country &&
+      profile.region?.trim() &&
+      selectedGames.length > 0 &&
+      hasGameIds
+  );
+}
+
+export async function maybeAwardProfileCompletion(
+  supabase: SupabaseClient,
+  profile: RewardProfileFields
+) {
+  if (!isProfileCompleteForRewards(profile)) {
+    return null;
+  }
+
+  const result = await applyRewardEvent(supabase, {
+    userId: profile.id,
+    eventKey: `reward:profile-complete:${profile.id}`,
+    eventType: 'profile_completion',
+    availableDelta: REWARD_RULES.profileCompletion,
+    lifetimeDelta: REWARD_RULES.profileCompletion,
+    source: 'mechi_profile',
+    metadata: {
+      selected_games: Array.isArray(profile.selected_games) ? profile.selected_games.length : 0,
+    },
+  });
+
+  if (result?.inserted) {
+    void tryClaimBounty(supabase, profile.id, 'profile_complete').catch(() => null);
+  }
+
+  return result;
+}
+
+export async function awardAffiliateInviteSignup(
+  supabase: SupabaseClient,
+  params: {
+    inviterUserId: string;
+    inviteeUserId: string;
+    inviteCode?: string | null;
+  }
+) {
+  if (
+    !params.inviterUserId ||
+    !params.inviteeUserId ||
+    params.inviterUserId === params.inviteeUserId
+  ) {
+    return null;
+  }
+
+  const { data: existingConversion } = await supabase
+    .from('referral_conversions')
+    .select('inviter_user_id')
+    .eq('invitee_user_id', params.inviteeUserId)
+    .maybeSingle();
+
+  if (
+    existingConversion?.inviter_user_id &&
+    existingConversion.inviter_user_id !== params.inviterUserId
+  ) {
+    return null;
+  }
+
+  if (!existingConversion?.inviter_user_id) {
+    const { error: conversionError } = await supabase.from('referral_conversions').upsert(
+      {
+        inviter_user_id: params.inviterUserId,
+        invitee_user_id: params.inviteeUserId,
+        status: 'pending',
+        metadata: {
+          invite_code: params.inviteCode ?? null,
+          source: 'signup',
+        },
+      },
+      {
+        onConflict: 'invitee_user_id',
+        ignoreDuplicates: true,
+      }
+    );
+
+    if (conversionError) {
+      throw conversionError;
+    }
+  }
+
+  const result = await applyRewardEvent(supabase, {
+    userId: params.inviterUserId,
+    eventKey: `reward:affiliate-invite-used:${params.inviterUserId}:${params.inviteeUserId}`,
+    eventType: 'affiliate_invite_used',
+    availableDelta: REWARD_RULES.affiliateInviteUsed,
+    lifetimeDelta: REWARD_RULES.affiliateInviteUsed,
+    source: 'invite_signup',
+    relatedUserId: params.inviteeUserId,
+    metadata: {
+      invite_code: params.inviteCode ?? null,
+    },
+  });
+
+  if (result?.inserted) {
+    void tryClaimBounty(supabase, params.inviterUserId, 'referral_converted').catch(() => null);
+  }
+
+  return result;
+}
+
+export async function addRewardReviewQueueItem(
+  supabase: SupabaseClient,
+  params: {
+    userId?: string | null;
+    reason: string;
+    dedupeKey?: string | null;
+    metadata?: Record<string, unknown> | null;
+  }
+) {
+  const dedupeKey = params.dedupeKey?.trim() ? params.dedupeKey.trim() : null;
+
+  if (dedupeKey) {
+    const { data: existingItem } = await supabase
+      .from('reward_review_queue')
+      .select('id')
+      .eq('dedupe_key', dedupeKey)
+      .in('status', ['open', 'reviewing'])
+      .maybeSingle();
+
+    if (existingItem?.id) {
+      return existingItem.id;
+    }
+  }
+
+  const { error } = await supabase.from('reward_review_queue').insert({
+    user_id: params.userId ?? null,
+    reason: params.reason,
+    dedupe_key: dedupeKey,
+    metadata: params.metadata ?? {},
+  });
+
+  if (error && error.code !== '23505') {
+    throw error;
+  }
+
+  return null;
+}
+
+function getIsoWeekStamp(dayStamp: string) {
+  const date = new Date(`${dayStamp}T00:00:00+03:00`);
+  const day = date.getUTCDay() || 7;
+  date.setUTCDate(date.getUTCDate() + 4 - day);
+  const yearStart = new Date(Date.UTC(date.getUTCFullYear(), 0, 1));
+  const weekNo = Math.ceil((((date.getTime() - yearStart.getTime()) / 86400000) + 1) / 7);
+  return `${date.getUTCFullYear()}-W${String(weekNo).padStart(2, '0')}`;
+}
+
+function getNairobiDayStartIso(dayStamp: string) {
+  return new Date(`${dayStamp}T00:00:00+03:00`).toISOString();
+}
+
+function normalizeRewardRedemptionMetadata(row: RewardRedemptionRow): RewardRedemptionRow {
+  const metadata =
+    row.metadata && typeof row.metadata === 'object'
+      ? (row.metadata as Record<string, unknown>)
+      : {};
+  const source =
+    typeof metadata.source === 'string'
+      ? metadata.source
+      : row.reward_type === 'mechi_perk'
+        ? 'mechi_native'
+        : 'chezahub';
+
+  return {
+    ...row,
+    partner_order_url: null,
+    partner_status:
+      typeof metadata.partner_status === 'string' ? metadata.partner_status : null,
+    delivery_channel:
+      typeof metadata.delivery_channel === 'string' ? metadata.delivery_channel : null,
+    access_hint:
+      source === 'mechi_native'
+        ? typeof metadata.access_hint === 'string'
+          ? metadata.access_hint
+          : null
+        : 'Fulfillment updates will appear here in Mechi rewards.',
+    source,
+  };
+}
+
+export async function processMatchRewardMilestones(
+  supabase: SupabaseClient,
+  params: {
+    matchId: string;
+    matchDate: string;
+    winner: {
+      id: string;
+      totalMatchesBefore: number;
+      firstMatchToday: boolean;
+      newStreak: number;
+      invitedBy: string | null;
+      chezahubUserId: string | null;
+      previousLifetimeRp: number;
+    };
+    loser: {
+      id: string;
+      totalMatchesBefore: number;
+      firstMatchToday: boolean;
+      invitedBy: string | null;
+      chezahubUserId: string | null;
+    };
+  }
+) {
+  const weekStamp = getIsoWeekStamp(params.matchDate);
+  const operations: Array<Promise<{ key: string; inserted: boolean }>> = [];
+  const trackRewardOperation = (
+    key: string,
+    operation: ReturnType<typeof applyRewardEvent>
+  ) => {
+    operations.push(
+      operation
+        .then((result) => ({ key, inserted: Boolean(result?.inserted) }))
+        .catch((error) => {
+          console.error('[Rewards] Failed to apply milestone reward:', {
+            error,
+            key,
+            matchId: params.matchId,
+          });
+          return { key, inserted: false };
+        })
+    );
+  };
+
+  if (params.winner.firstMatchToday) {
+    trackRewardOperation(
+      'winner_first_match_of_day',
+      applyRewardEvent(supabase, {
+        userId: params.winner.id,
+        eventKey: `reward:first-match-day:${params.winner.id}:${params.matchDate}`,
+        eventType: 'match_first_of_day',
+        availableDelta: REWARD_RULES.firstMatchOfDay,
+        lifetimeDelta: REWARD_RULES.firstMatchOfDay,
+        source: 'mechi_match',
+        relatedMatchId: params.matchId,
+        metadata: { stamp: params.matchDate },
+      })
+    );
+  }
+
+  if (params.loser.firstMatchToday) {
+    trackRewardOperation(
+      'loser_first_match_of_day',
+      applyRewardEvent(supabase, {
+        userId: params.loser.id,
+        eventKey: `reward:first-match-day:${params.loser.id}:${params.matchDate}`,
+        eventType: 'match_first_of_day',
+        availableDelta: REWARD_RULES.firstMatchOfDay,
+        lifetimeDelta: REWARD_RULES.firstMatchOfDay,
+        source: 'mechi_match',
+        relatedMatchId: params.matchId,
+        metadata: { stamp: params.matchDate },
+      })
+    );
+  }
+
+  if (params.winner.newStreak >= 3) {
+    trackRewardOperation(
+      'winner_win_streak_3',
+      applyRewardEvent(supabase, {
+        userId: params.winner.id,
+        eventKey: `reward:streak-three:${params.winner.id}:${params.matchDate}`,
+        eventType: 'streak_three_daily',
+        availableDelta: REWARD_RULES.streak3Daily,
+        lifetimeDelta: REWARD_RULES.streak3Daily,
+        source: 'mechi_match',
+        relatedMatchId: params.matchId,
+        metadata: { streak: params.winner.newStreak, stamp: params.matchDate },
+      })
+    );
+  }
+
+  if (params.winner.newStreak >= 5) {
+    trackRewardOperation(
+      'winner_streak_five_weekly',
+      applyRewardEvent(supabase, {
+        userId: params.winner.id,
+        eventKey: `reward:streak-five:${params.winner.id}:${weekStamp}`,
+        eventType: 'streak_five_weekly',
+        availableDelta: REWARD_RULES.streak5Weekly,
+        lifetimeDelta: REWARD_RULES.streak5Weekly,
+        source: 'mechi_match',
+        relatedMatchId: params.matchId,
+        metadata: { streak: params.winner.newStreak, week: weekStamp },
+      })
+    );
+  }
+
+  if (params.winner.newStreak >= 10) {
+    trackRewardOperation(
+      'winner_streak_ten_weekly',
+      applyRewardEvent(supabase, {
+        userId: params.winner.id,
+        eventKey: `reward:streak-ten:${params.winner.id}:${weekStamp}`,
+        eventType: 'streak_ten_weekly',
+        availableDelta: REWARD_RULES.streak10Weekly,
+        lifetimeDelta: REWARD_RULES.streak10Weekly,
+        source: 'mechi_match',
+        relatedMatchId: params.matchId,
+        metadata: { streak: params.winner.newStreak, week: weekStamp },
+      })
+    );
+  }
+
+  if (
+    params.winner.totalMatchesBefore === 0 &&
+    params.winner.invitedBy
+  ) {
+    trackRewardOperation(
+      'winner_invitee_starter',
+      applyRewardEvent(supabase, {
+        userId: params.winner.id,
+        eventKey: `reward:invitee-starter:${params.winner.id}`,
+        eventType: 'invitee_starter',
+        availableDelta: REWARD_RULES.inviteeStarter,
+        lifetimeDelta: REWARD_RULES.inviteeStarter,
+        source: 'mechi_match',
+        relatedMatchId: params.matchId,
+        relatedUserId: params.winner.invitedBy,
+      })
+    );
+  }
+
+  if (
+    params.loser.totalMatchesBefore === 0 &&
+    params.loser.invitedBy
+  ) {
+    trackRewardOperation(
+      'loser_invitee_starter',
+      applyRewardEvent(supabase, {
+        userId: params.loser.id,
+        eventKey: `reward:invitee-starter:${params.loser.id}`,
+        eventType: 'invitee_starter',
+        availableDelta: REWARD_RULES.inviteeStarter,
+        lifetimeDelta: REWARD_RULES.inviteeStarter,
+        source: 'mechi_match',
+        relatedMatchId: params.matchId,
+        relatedUserId: params.loser.invitedBy,
+      })
+    );
+  }
+
+  const results = await Promise.all(operations);
+
+  if (results.some((result) => result.key === 'winner_first_match_of_day' && result.inserted)) {
+    void tryClaimBounty(supabase, params.winner.id, 'first_match_of_day').catch(() => null);
+  }
+
+  if (results.some((result) => result.key === 'winner_win_streak_3' && result.inserted)) {
+    void tryClaimBounty(supabase, params.winner.id, 'win_streak_3').catch(() => null);
+  }
+
+  if (params.winner.previousLifetimeRp < 1000) {
+    const { data: refreshedWinnerRaw, error: refreshedWinnerError } = await supabase
+      .from('profiles')
+      .select('reward_points_lifetime')
+      .eq('id', params.winner.id)
+      .maybeSingle();
+
+    if (refreshedWinnerError) {
+      console.error('[Rewards] Failed to refresh winner lifetime RP:', refreshedWinnerError);
+    } else {
+      const refreshedWinnerLifetime =
+        (refreshedWinnerRaw?.reward_points_lifetime as number | null | undefined) ?? 0;
+
+      if (refreshedWinnerLifetime >= 1000) {
+        void tryClaimBounty(supabase, params.winner.id, 'rp_milestone_1000').catch(() => null);
+      }
+    }
+  }
+
+  const { count: winnerMatchesToday, error: winnerMatchesTodayError } = await supabase
+    .from('matches')
+    .select('id', { count: 'exact', head: true })
+    .or(`player1_id.eq.${params.winner.id},player2_id.eq.${params.winner.id}`)
+    .gt('created_at', getNairobiDayStartIso(params.matchDate));
+
+  if (winnerMatchesTodayError) {
+    console.error('[Rewards] Failed to count winner matches for today:', winnerMatchesTodayError);
+  } else if ((winnerMatchesToday ?? 0) >= 5) {
+    void tryClaimBounty(supabase, params.winner.id, 'matches_played_5_today').catch(() => null);
+  }
+}
+
+function getRewardEventTitle(eventType: string, availableDelta: number, pendingDelta: number) {
+  const delta = availableDelta !== 0 ? availableDelta : pendingDelta;
+
+  switch (eventType) {
+    case 'account_link':
+      return 'Rewards profile ready';
+    case 'profile_completion':
+      return 'Profile completed';
+    case 'match_first_of_day':
+      return 'First match of the day';
+    case 'streak_three_daily':
+      return '3-win streak';
+    case 'streak_five_weekly':
+      return '5-win streak';
+    case 'share_page_action':
+      return 'Share page action';
+    case 'affiliate_invite_used':
+      return 'Affiliate signup bonus';
+    case 'invitee_starter':
+      return 'Invitee starter bonus';
+    case 'referral_main_pending':
+      return 'Referral reward pending';
+    case 'referral_main_vested':
+      return 'Referral reward vested';
+    case 'chezahub_first_paid_order':
+      return 'First redeemable order';
+    case 'reward_redemption_spend':
+      return delta < 0 ? 'Reward redeemed' : 'Reward adjustment';
+    case 'reward_redemption_reversal':
+      return 'Reward points restored';
+    case 'streak_ten_weekly':
+      return '10-win streak';
+    case 'ranked_tier_up':
+      return 'Rank tier advanced';
+    case 'daily_login':
+      return 'Daily login bonus';
+    case 'tournament_win':
+      return 'Tournament winner';
+    case 'tournament_runner_up':
+      return 'Tournament runner-up';
+    case 'tournament_top_four':
+      return 'Tournament top 4';
+    case 'lobby_first_place':
+      return 'Lobby first place';
+    default:
+      return eventType.replace(/_/g, ' ');
+  }
+}
+
+export async function getRewardSummaryForUser(
+  supabase: SupabaseClient,
+  userId: string
+): Promise<RewardSummary> {
+  const { data: profileRaw, error: profileError } = await supabase
+    .from('profiles')
+    .select(
+      'id, username, phone, email, invite_code, invited_by, country, region, selected_games, game_ids, avatar_url, cover_url, reward_points_available, reward_points_pending, reward_points_lifetime, chezahub_user_id, chezahub_linked_at'
+    )
+    .eq('id', userId)
+    .single();
+
+  if (profileError || !profileRaw) {
+    throw profileError ?? new Error('Profile not found');
+  }
+
+  const profile = profileRaw as RewardProfileFields;
+  await maybeAwardProfileCompletion(supabase, profile);
+
+  const [
+    referralsResult,
+    affiliateEventsResult,
+    recentEventsResult,
+    activeCodesResult,
+    refreshedProfileResult,
+    waysToEarnResult,
+  ] = await Promise.all([
+    supabase
+      .from('referral_conversions')
+      .select('status', { count: 'exact' })
+      .eq('inviter_user_id', userId),
+    supabase
+      .from('reward_events')
+      .select('available_delta')
+      .eq('user_id', userId)
+      .eq('event_type', 'affiliate_invite_used'),
+    supabase
+      .from('reward_events')
+      .select('id, event_type, available_delta, pending_delta, created_at')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false })
+      .limit(10),
+    supabase
+      .from('reward_redemptions')
+      .select('*')
+      .eq('user_id', userId)
+      .in('status', ['issued', 'claimed'])
+      .order('created_at', { ascending: false })
+      .limit(5),
+    supabase
+      .from('profiles')
+      .select('reward_points_available, reward_points_pending, reward_points_lifetime, chezahub_user_id, chezahub_linked_at')
+      .eq('id', userId)
+      .single(),
+    getWaysToEarnFromDb(supabase).catch(() => REWARD_WAYS_TO_EARN.map(w => ({ ...w, rp_amount: 0, category: 'general', frequency: 'once' }))),
+  ]);
+
+  const referralRows =
+    ((referralsResult.data as Array<{ status: string }> | null) ?? []).filter(Boolean);
+  const affiliateEvents =
+    ((affiliateEventsResult.data as Array<{ available_delta: number }> | null) ?? []).filter(
+      Boolean
+    );
+  const recentRows =
+    ((recentEventsResult.data as Array<{
+      id: string;
+      event_type: string;
+      available_delta: number;
+      pending_delta: number;
+      created_at: string;
+    }> | null) ?? []);
+  const activeCodes =
+    (((activeCodesResult.data as RewardRedemptionRow[] | null) ?? []).map(
+      normalizeRewardRedemptionMetadata
+    ));
+  const refreshedProfile =
+    (refreshedProfileResult.data as {
+      reward_points_available?: number | null;
+      reward_points_pending?: number | null;
+      reward_points_lifetime?: number | null;
+      chezahub_user_id?: string | null;
+      chezahub_linked_at?: string | null;
+    } | null) ?? {};
+
+  return {
+    linked: Boolean(refreshedProfile.chezahub_user_id),
+    chezahub_user_id: refreshedProfile.chezahub_user_id ?? null,
+    chezahub_linked_at: refreshedProfile.chezahub_linked_at ?? null,
+    balances: {
+      available: refreshedProfile.reward_points_available ?? 0,
+      pending: refreshedProfile.reward_points_pending ?? 0,
+      lifetime: refreshedProfile.reward_points_lifetime ?? 0,
+    },
+    referrals: {
+      invited: referralRows.length,
+      pending: referralRows.filter((row) => row.status === 'pending').length,
+      qualified: referralRows.filter((row) => row.status === 'qualified').length,
+      completed: referralRows.filter((row) => row.status === 'completed').length,
+      flagged: referralRows.filter((row) => row.status === 'flagged').length,
+    },
+    affiliate: {
+      signups: affiliateEvents.length,
+      rp_earned: affiliateEvents.reduce(
+        (total, row) => total + (Number(row.available_delta) || 0),
+        0
+      ),
+      rp_per_signup: REWARD_RULES.affiliateInviteUsed,
+      qualified: referralRows.filter((row) => row.status === 'qualified').length,
+      completed: referralRows.filter((row) => row.status === 'completed').length,
+    },
+    recent_activity: recentRows.map((event) => ({
+      id: event.id,
+      event_type: event.event_type,
+      title: getRewardEventTitle(event.event_type, event.available_delta, event.pending_delta),
+      available_delta: event.available_delta,
+      pending_delta: event.pending_delta,
+      created_at: event.created_at,
+    })),
+    active_codes: activeCodes,
+    ways_to_earn: Array.isArray(waysToEarnResult) ? waysToEarnResult : [],
+  };
+}
+
+export async function fetchChezahubRewardCatalog() {
+  const payload = { scope: 'reward_catalog' };
+  const response = await fetch(`${getChezahubBaseUrl()}/api/mechi/rewards/catalog`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...createSignedActionHeaders(payload),
+    },
+    body: JSON.stringify(payload),
+    cache: 'no-store',
+  });
+
+  const data = (await response.json().catch(() => null)) as
+    | { items?: RewardCatalogItem[]; error?: string }
+    | null;
+
+  if (!response.ok) {
+    throw new Error(data?.error || 'Failed to load reward catalog');
+  }
+
+  return data?.items ?? [];
+}
+
+export async function ensureChezahubCustomer(params: {
+  mechiUserId: string;
+  username: string;
+  email: string;
+  phone?: string | null;
+}): Promise<EnsureChezahubCustomerResult> {
+  const payload = {
+    mechi_user_id: params.mechiUserId,
+    username: params.username,
+    email: params.email,
+    phone: params.phone ?? null,
+  };
+
+  const response = await fetch(`${getChezahubBaseUrl()}/api/mechi/rewards/ensure-customer`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...createSignedActionHeaders(payload),
+    },
+    body: JSON.stringify(payload),
+    cache: 'no-store',
+  });
+
+  const data = (await response.json().catch(() => null)) as
+    | {
+        error?: string;
+        chezahub_user_id?: string;
+        orders_url?: string | null;
+        access_hint?: string | null;
+      }
+    | null;
+
+  if (!response.ok || !data?.chezahub_user_id) {
+    throw new Error(data?.error || 'Failed to ensure ChezaHub customer');
+  }
+
+  return {
+    chezahubUserId: data.chezahub_user_id,
+    ordersUrl: data.orders_url ?? null,
+    accessHint: data.access_hint ?? null,
+  };
+}
+
+export async function issueChezahubRewardOrder(params: {
+  mechiUserId: string;
+  chezahubUserId: string;
+  rewardId: string;
+  rewardType: RewardCodeType;
+  customerEmail: string;
+  customerName: string;
+  customerPhone?: string | null;
+}): Promise<IssueChezahubRewardOrderResult> {
+  const payload = {
+    mechi_user_id: params.mechiUserId,
+    chezahub_user_id: params.chezahubUserId,
+    reward_id: params.rewardId,
+    reward_type: params.rewardType,
+    customer_email: params.customerEmail,
+    customer_name: params.customerName,
+    customer_phone: params.customerPhone ?? null,
+  };
+
+  const response = await fetch(`${getChezahubBaseUrl()}/api/mechi/rewards/issue`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...createSignedActionHeaders(payload),
+    },
+    body: JSON.stringify(payload),
+    cache: 'no-store',
+  });
+
+  const data = (await response.json().catch(() => null)) as
+    | {
+        error?: string;
+        issuance_id?: string;
+        order_id?: string;
+        order_url?: string | null;
+        status?: string | null;
+        title?: string;
+        delivery_channel?: string | null;
+        access_hint?: string | null;
+      }
+    | null;
+
+  if (!response.ok || !data?.issuance_id) {
+    throw new Error(data?.error || 'Failed to create ChezaHub reward order');
+  }
+
+  return {
+    issuanceId: data.issuance_id,
+    orderId: data.order_id ?? data.issuance_id,
+    orderUrl: data.order_url ?? null,
+    status: data.status ?? null,
+    title: data.title ?? '',
+    deliveryChannel: data.delivery_channel ?? null,
+    accessHint: data.access_hint ?? null,
+  };
+}
+
+export async function voidChezahubRewardOrder(issuanceId: string) {
+  const payload = { issuance_id: issuanceId };
+
+  await fetch(`${getChezahubBaseUrl()}/api/mechi/rewards/void`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...createSignedActionHeaders(payload),
+    },
+    body: JSON.stringify(payload),
+    cache: 'no-store',
+  }).catch(() => null);
+}
+
+export async function issueChezahubRewardCode(params: {
+  mechiUserId: string;
+  chezahubUserId: string;
+  rewardId: string;
+  rewardType: RewardCodeType;
+}) {
+  const payload = {
+    mechi_user_id: params.mechiUserId,
+    chezahub_user_id: params.chezahubUserId,
+    reward_id: params.rewardId,
+    reward_type: params.rewardType,
+  };
+
+  const response = await fetch(`${getChezahubBaseUrl()}/api/mechi/rewards/issue`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...createSignedActionHeaders(payload),
+    },
+    body: JSON.stringify(payload),
+    cache: 'no-store',
+  });
+
+  const data = (await response.json().catch(() => null)) as
+    | {
+        error?: string;
+        issuance_id?: string;
+        code?: string;
+        expires_at?: string | null;
+        title?: string;
+      }
+    | null;
+
+  if (!response.ok || !data?.issuance_id || !data.code) {
+    throw new Error(data?.error || 'Failed to issue reward code');
+  }
+
+  return {
+    issuanceId: data.issuance_id,
+    code: data.code,
+    expiresAt: data.expires_at ?? null,
+    title: data.title ?? '',
+  };
+}
+
+export async function voidChezahubRewardCode(issuanceId: string) {
+  const payload = { issuance_id: issuanceId };
+
+  await fetch(`${getChezahubBaseUrl()}/api/mechi/rewards/void`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...createSignedActionHeaders(payload),
+    },
+    body: JSON.stringify(payload),
+    cache: 'no-store',
+  }).catch(() => null);
+}
+
+function normalizeComparableValue(value: string | null | undefined) {
+  return String(value || '')
+    .trim()
+    .replace(/\s+/g, '')
+    .toLowerCase();
+}
+
+function looksLikeSelfReferral(
+  inviter: { phone?: string | null; email?: string | null },
+  orderEvent: ChezahubOrderEventPayload
+) {
+  const inviterPhone = normalizeComparableValue(inviter.phone);
+  const inviterEmail = normalizeComparableValue(inviter.email);
+  const eventPhone = normalizeComparableValue(orderEvent.customer_phone);
+  const eventEmail = normalizeComparableValue(orderEvent.customer_email);
+
+  return Boolean(
+    (inviterPhone && eventPhone && inviterPhone === eventPhone) ||
+      (inviterEmail && eventEmail && inviterEmail === eventEmail)
+  );
+}
+
+export async function handleChezahubOrderEvent(
+  supabase: SupabaseClient,
+  event: ChezahubOrderEventPayload
+) {
+  if (!event.mechi_user_id || !event.chezahub_user_id) {
+    return { ignored: true, reason: 'missing_link_identity' };
+  }
+
+  const { data: profileRaw } = await supabase
+    .from('profiles')
+    .select('id, invited_by, phone, email, chezahub_user_id')
+    .eq('id', event.mechi_user_id)
+    .eq('chezahub_user_id', event.chezahub_user_id)
+    .maybeSingle();
+
+  const profile = profileRaw as {
+    id: string;
+    invited_by: string | null;
+    phone?: string | null;
+    email?: string | null;
+    chezahub_user_id?: string | null;
+  } | null;
+
+  if (!profile) {
+    return { ignored: true, reason: 'profile_not_linked' };
+  }
+
+  if (event.status === 'paid' && event.order_total_kes > 0) {
+    const { data: firstPaidRewardRow } = await supabase
+      .from('reward_events')
+      .select('id')
+      .eq('user_id', profile.id)
+      .eq('event_type', 'chezahub_first_paid_order')
+      .limit(1)
+      .maybeSingle();
+
+    if (!firstPaidRewardRow) {
+      await applyRewardEvent(supabase, {
+        userId: profile.id,
+        eventKey: `reward:chezahub-first-paid:${profile.id}`,
+        eventType: 'chezahub_first_paid_order',
+        availableDelta: REWARD_RULES.linkedFirstPaidOrder,
+        lifetimeDelta: REWARD_RULES.linkedFirstPaidOrder,
+        source: 'chezahub_order',
+        relatedOrderId: event.order_id,
+        metadata: {
+          total_kes: event.order_total_kes,
+        },
+      }).catch(() => null);
+    }
+  }
+
+  if (
+    profile.invited_by &&
+    event.order_total_kes >= REWARD_RULES.qualifiedReferralMinimumKes &&
+    (event.status === 'paid' || event.status === 'completed')
+  ) {
+    const { data: existingConversionRaw } = await supabase
+      .from('referral_conversions')
+      .select('id, first_order_id, status, inviter_user_id')
+      .eq('invitee_user_id', profile.id)
+      .maybeSingle();
+
+    const existingConversion = existingConversionRaw as {
+      id: string;
+      first_order_id: string | null;
+      status: string;
+      inviter_user_id: string;
+    } | null;
+
+    if (existingConversion?.first_order_id && existingConversion.first_order_id !== event.order_id) {
+      return { ignored: false, reason: 'referral_already_qualified' };
+    }
+
+    const { data: inviterRaw } = await supabase
+      .from('profiles')
+      .select('id, phone, email')
+      .eq('id', profile.invited_by)
+      .maybeSingle();
+
+    const inviter = inviterRaw as { id: string; phone?: string | null; email?: string | null } | null;
+
+    if (inviter && looksLikeSelfReferral(inviter, event)) {
+      await supabase.from('referral_conversions').upsert({
+        inviter_user_id: inviter.id,
+        invitee_user_id: profile.id,
+        chezahub_user_id: event.chezahub_user_id,
+        first_order_id: event.order_id,
+        order_total_kes: event.order_total_kes,
+        status: 'flagged',
+        suspicious_reason: 'matching_contact_details',
+        metadata: {
+          customer_email: event.customer_email ?? null,
+          customer_phone: event.customer_phone ?? null,
+        },
+      }, {
+        onConflict: 'invitee_user_id',
+      });
+
+      await addRewardReviewQueueItem(supabase, {
+        userId: profile.id,
+        reason: 'matching_contact_details',
+        dedupeKey: `reward-review:matching-contact:${profile.id}:${event.order_id}`,
+        metadata: {
+          inviter_user_id: inviter.id,
+          order_id: event.order_id,
+        },
+      });
+    } else if (inviter) {
+      await supabase.from('referral_conversions').upsert({
+        inviter_user_id: inviter.id,
+        invitee_user_id: profile.id,
+        chezahub_user_id: event.chezahub_user_id,
+        first_order_id: event.order_id,
+        order_total_kes: event.order_total_kes,
+        status: event.status === 'completed' ? 'completed' : 'qualified',
+        qualified_at: new Date().toISOString(),
+        ...(event.status === 'completed' ? { completed_at: new Date().toISOString() } : {}),
+        metadata: {
+          customer_email: event.customer_email ?? null,
+          customer_phone: event.customer_phone ?? null,
+        },
+      }, {
+        onConflict: 'invitee_user_id',
+      });
+
+      if (event.status === 'paid') {
+        const pendingEventKey = `reward:referral-main-pending:${profile.id}:${event.order_id}`;
+        const pendingExists = await rewardEventExists(supabase, pendingEventKey);
+
+        if (!pendingExists) {
+          const pendingReward = await applyRewardEvent(supabase, {
+            userId: inviter.id,
+            eventKey: pendingEventKey,
+            eventType: 'referral_main_pending',
+            availableDelta: 0,
+            pendingDelta: REWARD_RULES.inviterMain,
+            source: 'chezahub_order',
+            relatedUserId: profile.id,
+            relatedOrderId: event.order_id,
+            metadata: {
+              invitee_user_id: profile.id,
+              order_total_kes: event.order_total_kes,
+            },
+          }).catch(() => null);
+
+          if (pendingReward?.inserted) {
+            void tryClaimBounty(supabase, inviter.id, 'referral_converted').catch(() => null);
+          }
+        }
+      }
+
+      if (event.status === 'completed') {
+        const pendingEventKey = `reward:referral-main-pending:${profile.id}:${event.order_id}`;
+        const pendingExists = await rewardEventExists(supabase, pendingEventKey);
+
+        await applyRewardEvent(supabase, {
+          userId: inviter.id,
+          eventKey: `reward:referral-main-vested:${profile.id}:${event.order_id}`,
+          eventType: 'referral_main_vested',
+          availableDelta: REWARD_RULES.inviterMain,
+          pendingDelta: pendingExists ? -REWARD_RULES.inviterMain : 0,
+          lifetimeDelta: REWARD_RULES.inviterMain,
+          source: 'chezahub_order',
+          relatedUserId: profile.id,
+          relatedOrderId: event.order_id,
+        }).catch(() => null);
+      }
+    }
+  }
+
+  if (
+    event.status === 'cancelled' ||
+    event.status === 'expired' ||
+    event.status === 'refunded' ||
+    event.status === 'abuse_review'
+  ) {
+    const { data: firstPaidRewardRow } = await supabase
+      .from('reward_events')
+      .select('id')
+      .eq('user_id', profile.id)
+      .eq('event_type', 'chezahub_first_paid_order')
+      .eq('related_order_id', event.order_id)
+      .limit(1)
+      .maybeSingle();
+
+    if (firstPaidRewardRow) {
+      await applyRewardEvent(supabase, {
+        userId: profile.id,
+        eventKey: `reward:chezahub-first-paid-reversal:${profile.id}:${event.order_id}`,
+        eventType: 'chezahub_first_paid_order_reversal',
+        availableDelta: -REWARD_RULES.linkedFirstPaidOrder,
+        lifetimeDelta: -REWARD_RULES.linkedFirstPaidOrder,
+        source: 'chezahub_order',
+        relatedOrderId: event.order_id,
+      }).catch(() => null);
+    }
+
+    if (profile.invited_by) {
+      const { data: conversionRaw } = await supabase
+        .from('referral_conversions')
+        .select('inviter_user_id, first_order_id')
+        .eq('invitee_user_id', profile.id)
+        .maybeSingle();
+      const conversion = conversionRaw as {
+        inviter_user_id: string;
+        first_order_id: string | null;
+      } | null;
+
+      if (
+        conversion &&
+        conversion.first_order_id === event.order_id &&
+        await rewardEventExists(supabase, `reward:referral-main-pending:${profile.id}:${event.order_id}`)
+      ) {
+        await applyRewardEvent(supabase, {
+          userId: conversion.inviter_user_id,
+          eventKey: `reward:referral-main-pending-reversal:${profile.id}:${event.order_id}`,
+          eventType: 'referral_main_pending_reversal',
+          availableDelta: 0,
+          pendingDelta: -REWARD_RULES.inviterMain,
+          source: 'chezahub_order',
+          relatedUserId: profile.id,
+          relatedOrderId: event.order_id,
+        }).catch(() => null);
+      }
+
+      if (
+        conversion &&
+        conversion.first_order_id === event.order_id &&
+        await rewardEventExists(supabase, `reward:referral-main-vested:${profile.id}:${event.order_id}`)
+      ) {
+        await applyRewardEvent(supabase, {
+          userId: conversion.inviter_user_id,
+          eventKey: `reward:referral-main-vested-reversal:${profile.id}:${event.order_id}`,
+          eventType: 'referral_main_vested_reversal',
+          availableDelta: -REWARD_RULES.inviterMain,
+          lifetimeDelta: -REWARD_RULES.inviterMain,
+          source: 'chezahub_order',
+          relatedUserId: profile.id,
+          relatedOrderId: event.order_id,
+        }).catch(() => null);
+      }
+
+      await supabase
+        .from('referral_conversions')
+        .update({
+          status: event.status === 'abuse_review' ? 'flagged' : 'reversed',
+          suspicious_reason: event.status === 'abuse_review' ? 'abuse_review' : null,
+          reversed_at: new Date().toISOString(),
+        })
+        .eq('invitee_user_id', profile.id)
+        .eq('first_order_id', event.order_id);
+    }
+
+    const redemptionQuery = event.reward_issuance_id
+      ? supabase
+          .from('reward_redemptions')
+          .select('id, user_id, points_cost, status')
+          .eq('external_issuance_id', event.reward_issuance_id)
+          .maybeSingle()
+      : event.reward_code
+        ? supabase
+            .from('reward_redemptions')
+            .select('id, user_id, points_cost, status')
+            .eq('code', event.reward_code)
+            .maybeSingle()
+        : null;
+
+    if (redemptionQuery) {
+      const { data: redemptionRaw } = await redemptionQuery;
+      const redemption = redemptionRaw as {
+        id: string;
+        user_id: string;
+        points_cost: number;
+        status: string;
+      } | null;
+
+      if (redemption && redemption.status !== 'reversed') {
+        await applyRewardEvent(supabase, {
+          userId: redemption.user_id,
+          eventKey: `reward:redemption-reversal:${redemption.id}:${event.status}`,
+          eventType: 'reward_redemption_reversal',
+          availableDelta: redemption.points_cost,
+          source: 'chezahub_order',
+          relatedOrderId: event.order_id,
+          metadata: {
+            status: event.status,
+          },
+        }).catch(() => null);
+
+        await supabase
+          .from('reward_redemptions')
+          .update({
+            status: 'reversed',
+            chezahub_order_id: event.order_id,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', redemption.id);
+      }
+    }
+  }
+
+  if (event.status === 'abuse_review') {
+    await addRewardReviewQueueItem(supabase, {
+      userId: profile.id,
+      reason: 'chezahub_abuse_review',
+      dedupeKey: `reward-review:abuse:${profile.id}:${event.order_id}`,
+      metadata: {
+        order_id: event.order_id,
+        reward_code: event.reward_code ?? null,
+        reward_issuance_id: event.reward_issuance_id ?? null,
+        order_total_kes: event.order_total_kes,
+        customer_email: event.customer_email ?? null,
+        customer_phone: event.customer_phone ?? null,
+      },
+    });
+  }
+
+  if (
+    event.status === 'cancelled' ||
+    event.status === 'expired' ||
+    event.status === 'refunded' ||
+    event.status === 'abuse_review'
+  ) {
+    const reversalWindowStart = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+    const { count: recentReversalCount } = await supabase
+      .from('reward_events')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', profile.id)
+      .in('event_type', ['chezahub_first_paid_order_reversal', 'reward_redemption_reversal'])
+      .gte('created_at', reversalWindowStart);
+
+    if ((recentReversalCount ?? 0) >= 2) {
+      await addRewardReviewQueueItem(supabase, {
+        userId: profile.id,
+        reason: 'repeat_reward_reversals',
+        dedupeKey: `reward-review:repeat-reversals:${profile.id}`,
+        metadata: {
+          recent_reversal_count: recentReversalCount ?? 0,
+          last_order_id: event.order_id,
+          window_days: 30,
+        },
+      });
+    }
+  }
+
+  if (
+    (event.status === 'paid' || event.status === 'completed') &&
+    (event.reward_issuance_id || event.reward_code)
+  ) {
+    let query = supabase
+      .from('reward_redemptions')
+      .select('id')
+      .limit(1);
+
+    if (event.reward_issuance_id) {
+      query = query.eq('external_issuance_id', event.reward_issuance_id);
+    } else if (event.reward_code) {
+      query = query.eq('code', event.reward_code);
+    }
+
+    const { data: redemptionRaw } = await query.maybeSingle();
+    const redemption = redemptionRaw as { id: string } | null;
+
+    if (redemption) {
+      await supabase
+        .from('reward_redemptions')
+        .update({
+          status: 'claimed',
+          chezahub_order_id: event.order_id,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', redemption.id);
+    }
+  }
+
+  return { ignored: false };
+}
+
+export function buildChezahubLinkUrl(params: {
+  mechiUserId: string;
+  username: string;
+  inviteCode: string | null;
+  returnUrl: string;
+}) {
+  const token = createChezahubLinkToken({
+    mechi_user_id: params.mechiUserId,
+    username: params.username,
+    invite_code: params.inviteCode,
+    return_url: params.returnUrl,
+  });
+  const url = new URL(getChezahubRedeemBaseUrl());
+  url.searchParams.set('mechi_link_token', token);
+  url.searchParams.set('mechi_return', params.returnUrl);
+  return url.toString();
+}
+
+export function hashRewardBindingValue(value: string | null | undefined) {
+  return createHash('sha256').update(String(value || '')).digest('hex');
+}
+
+export function getRewardDayStamp() {
+  return getNairobiDateStamp();
+}
+
+export async function getRewardCatalogFromCache(supabase: SupabaseClient): Promise<RewardCatalogItem[]> {
+  const { data, error } = await supabase
+    .from('reward_catalog_cache')
+    .select('*')
+    .eq('active', true)
+    .order('sort_order', { ascending: true });
+
+  if (error) {
+    throw error;
+  }
+
+  return (data ?? []) as RewardCatalogItem[];
+}
+
+export async function syncChezahubCatalogToCache(
+  supabase: SupabaseClient,
+  items: RewardCatalogItem[]
+): Promise<void> {
+  if (items.length === 0) return;
+
+  const rows = items.map((item) => ({
+    ...item,
+    source: 'chezahub',
+    synced_at: new Date().toISOString(),
+  }));
+
+  const { error } = await supabase
+    .from('reward_catalog_cache')
+    .upsert(rows, { onConflict: 'id' });
+
+  if (error) {
+    throw error;
+  }
+}
+
+export async function getWaysToEarnFromDb(supabase: SupabaseClient) {
+  const { data, error } = await supabase
+    .from('ways_to_earn')
+    .select('id, title, description, rp_amount, category, frequency')
+    .eq('active', true)
+    .order('sort_order', { ascending: true });
+
+  if (error) {
+    throw error;
+  }
+
+  return (data ?? []) as Array<{
+    id: string;
+    title: string;
+    description: string;
+    rp_amount: number;
+    category: string;
+    frequency: string;
+  }>;
+}
+
+export async function maybeAwardDailyLogin(supabase: SupabaseClient, userId: string) {
+  const stamp = getNairobiDateStamp();
+  return applyRewardEvent(supabase, {
+    userId,
+    eventKey: `reward:daily-login:${userId}:${stamp}`,
+    eventType: 'daily_login',
+    availableDelta: REWARD_RULES.dailyLogin,
+    lifetimeDelta: REWARD_RULES.dailyLogin,
+    source: 'mechi_daily',
+    metadata: { stamp },
+  }).catch(() => null);
+}
+
+export async function maybeAwardRankedTierUp(
+  supabase: SupabaseClient,
+  params: { userId: string; previousTier: string; newTier: string; stamp: string }
+) {
+  const { userId, previousTier, newTier, stamp } = params;
+  return applyRewardEvent(supabase, {
+    userId,
+    eventKey: `reward:tier-up:${userId}:${newTier}`,
+    eventType: 'ranked_tier_up',
+    availableDelta: REWARD_RULES.rankedTierUp,
+    lifetimeDelta: REWARD_RULES.rankedTierUp,
+    source: 'mechi_ranked',
+    metadata: { previous_tier: previousTier, new_tier: newTier, stamp },
+  }).catch(() => null);
+}

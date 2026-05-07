@@ -35,7 +35,7 @@ const sections = [
       'Account details such as your name, username, email address, password credentials, and profile settings.',
       'Player and activity data such as selected games, match history, tournament participation, rankings, reports, uploaded media, and support messages.',
       'Transaction details connected to subscriptions, tournament payments, refunds, or billing status processed through our payment partners.',
-      'Technical and usage data such as device information, approximate location, browser details, IP address, referral pages, and analytics events that help us keep the platform stable and secure.',
+      'Technical and usage data such as device information, approximate location, browser details, IP address, referral pages, product analytics events, and session diagnostics that help us keep the platform stable and secure.',
     ],
   },
   {

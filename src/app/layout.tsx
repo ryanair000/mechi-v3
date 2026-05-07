@@ -5,6 +5,7 @@ import { Suspense } from 'react';
 import './globals.css';
 import { AppProviders } from '@/components/AppProviders';
 import { GoogleAnalyticsPageView } from '@/components/GoogleAnalyticsPageView';
+import { PostHogAnalyticsBridge } from '@/components/PostHogAnalyticsBridge';
 import {
   GOOGLE_ANALYTICS_ID,
   getGoogleAnalyticsConfigScript,
@@ -123,6 +124,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <AppProviders>{children}</AppProviders>
         <Suspense fallback={null}>
           <GoogleAnalyticsPageView measurementId={GOOGLE_ANALYTICS_ID} />
+        </Suspense>
+        <Suspense fallback={null}>
+          <PostHogAnalyticsBridge />
         </Suspense>
         <Script
           src={`https://www.googletagmanager.com/gtag/js?id=${GOOGLE_ANALYTICS_ID}`}

@@ -1,6 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import {
   ONLINE_TOURNAMENT_SLUG,
+  isValidTournamentDeviceSerialLast6,
   type OnlineTournamentGameKey,
 } from '@/lib/online-tournament';
 import {
@@ -73,7 +74,7 @@ const REGISTRATION_SELECT =
   'id, event_slug, user_id, game, in_game_username, game_uid, phone, whatsapp_number, device_model, device_serial_last6, tournament_lobby_number, tournament_lobby_slot, tournament_lobby_assigned_at, email, instagram_username, youtube_name, followed_instagram, subscribed_youtube, available_at_8pm, accepted_rules, reward_eligible, eligibility_status, check_in_status, checked_in_at, admin_note, created_at, updated_at, user:user_id(id, username, phone, email, role, is_banned)';
 
 const SUBMISSION_SELECT =
-  'id, event_slug, game, registration_id, user_id, room_id, fixture_id, match_number, kills, placement, player1_score, player2_score, reported_winner_registration_id, screenshot_url, screenshot_public_id, status, admin_note, submitted_by, verified_by, verified_at, created_at, updated_at, registration:registration_id(id, in_game_username, game, user_id)';
+  'id, event_slug, game, registration_id, user_id, room_id, fixture_id, match_number, kills, placement, player1_score, player2_score, reported_winner_registration_id, screenshot_url, screenshot_public_id, ocr_status, ocr_text, ocr_confidence, ocr_kills, ocr_placement, ocr_error, ocr_scanned_at, status, admin_note, submitted_by, verified_by, verified_at, created_at, updated_at, registration:registration_id(id, in_game_username, game, user_id)';
 
 function ensureArray<T>(value: T[] | null | undefined): T[] {
   return Array.isArray(value) ? value : [];
@@ -183,7 +184,7 @@ function hasCompleteTournamentCheckInDetails(
       registration.game_uid?.trim() &&
       registration.device_model?.trim() &&
       registration.whatsapp_number?.trim() &&
-      /^\d{6}$/.test(registration.device_serial_last6 ?? '')
+      isValidTournamentDeviceSerialLast6(registration.device_serial_last6)
   );
 }
 

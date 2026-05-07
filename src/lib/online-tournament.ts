@@ -37,6 +37,8 @@ export type OnlineTournamentGameConfig = {
   };
 };
 
+export const ONLINE_TOURNAMENT_DEVICE_SERIAL_LAST6_REGEX = /^[A-Z0-9]{6}$/;
+
 export const ONLINE_TOURNAMENT_SLUG = 'mechi-club-online-gaming-tournament-2026-05';
 export const ONLINE_TOURNAMENT_TITLE = 'Playmechi Launch';
 export const ONLINE_TOURNAMENT_PUBLIC_PATH = '/playmechi';
@@ -111,6 +113,19 @@ function getYoutubeEmbedUrl() {
 }
 
 export const ONLINE_TOURNAMENT_YOUTUBE_EMBED_URL = getYoutubeEmbedUrl();
+
+export function normalizeTournamentDeviceSerialLast6(value: unknown) {
+  return String(value ?? '')
+    .replace(/[^a-z0-9]/gi, '')
+    .toUpperCase()
+    .slice(-6);
+}
+
+export function isValidTournamentDeviceSerialLast6(value: unknown) {
+  return ONLINE_TOURNAMENT_DEVICE_SERIAL_LAST6_REGEX.test(
+    normalizeTournamentDeviceSerialLast6(value)
+  );
+}
 
 export const ONLINE_TOURNAMENT_GAMES: OnlineTournamentGameConfig[] = [
   {

@@ -10,9 +10,14 @@ import {
   Loader2,
   Mail,
   Send,
+  Sparkles,
   Users,
 } from 'lucide-react';
 import { useAuthFetch } from '@/components/AuthProvider';
+import {
+  DEFAULT_EMAIL_CAMPAIGN_TEMPLATE_ID,
+  EMAIL_CAMPAIGN_TEMPLATES,
+} from '@/lib/email-campaign-templates';
 
 type AudienceType = 'all_profiles' | 'manual';
 
@@ -52,21 +57,39 @@ export default function EmailOpsClient({
   recentCampaigns: EmailCampaignSummary[];
 }) {
   const authFetch = useAuthFetch();
+  const defaultTemplate =
+    EMAIL_CAMPAIGN_TEMPLATES.find(
+      (template) => template.id === DEFAULT_EMAIL_CAMPAIGN_TEMPLATE_ID
+    ) ?? EMAIL_CAMPAIGN_TEMPLATES[0]!;
   const [audienceType, setAudienceType] = useState<AudienceType>('manual');
   const [recipients, setRecipients] = useState('');
-  const [subject, setSubject] = useState('');
-  const [title, setTitle] = useState('');
-  const [bodyText, setBodyText] = useState('');
-  const [ctaLabel, setCtaLabel] = useState('');
-  const [ctaUrl, setCtaUrl] = useState('');
+  const [selectedTemplateId, setSelectedTemplateId] = useState(defaultTemplate.id);
+  const [subject, setSubject] = useState(defaultTemplate.subject);
+  const [title, setTitle] = useState(defaultTemplate.title);
+  const [bodyText, setBodyText] = useState(defaultTemplate.bodyText);
+  const [ctaLabel, setCtaLabel] = useState(defaultTemplate.ctaLabel);
+  const [ctaUrl, setCtaUrl] = useState(defaultTemplate.ctaUrl);
   const [confirmText, setConfirmText] = useState('');
   const [previewing, setPreviewing] = useState(false);
   const [sending, setSending] = useState(false);
   const [result, setResult] = useState<CampaignResponse | null>(null);
+  const selectedTemplate =
+    EMAIL_CAMPAIGN_TEMPLATES.find((template) => template.id === selectedTemplateId) ??
+    defaultTemplate;
+
+  const loadSelectedTemplate = () => {
+    setSubject(selectedTemplate.subject);
+    setTitle(selectedTemplate.title);
+    setBodyText(selectedTemplate.bodyText);
+    setCtaLabel(selectedTemplate.ctaLabel);
+    setCtaUrl(selectedTemplate.ctaUrl);
+    setResult(null);
+  };
 
   const payload = (dryRun: boolean) => ({
     audience_type: audienceType,
     recipients,
+    template_id: selectedTemplateId,
     subject,
     title,
     body_text: bodyText,
@@ -145,6 +168,43 @@ export default function EmailOpsClient({
           </div>
 
           <div className="mt-5 space-y-4">
+            <div className="rounded-[0.6rem] border border-[rgba(50,224,196,0.28)] bg-[rgba(50,224,196,0.08)] p-4">
+              <div className="flex items-center gap-2">
+                <Sparkles size={16} className="text-[var(--brand-teal)]" />
+                <p className="text-sm font-semibold text-[var(--text-primary)]">
+                  Mechi template library
+                </p>
+              </div>
+              <div className="mt-3 grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto]">
+                <select
+                  value={selectedTemplateId}
+                  onChange={(event) => setSelectedTemplateId(event.target.value)}
+                  className="input"
+                >
+                  {EMAIL_CAMPAIGN_TEMPLATES.map((template) => (
+                    <option key={template.id} value={template.id}>
+                      {template.category} - {template.name}
+                    </option>
+                  ))}
+                </select>
+                <button type="button" onClick={loadSelectedTemplate} className="btn-outline">
+                  <FileText size={14} />
+                  Load template
+                </button>
+              </div>
+              <div className="mt-3 rounded-[0.55rem] border border-[var(--border-color)] bg-[var(--surface-elevated)] p-3">
+                <p className="text-xs font-black uppercase text-[var(--brand-coral)]">
+                  {selectedTemplate.category}
+                </p>
+                <p className="mt-1 text-sm font-semibold text-[var(--text-primary)]">
+                  {selectedTemplate.subject}
+                </p>
+                <p className="mt-1 text-xs leading-6 text-[var(--text-secondary)]">
+                  {selectedTemplate.description}
+                </p>
+              </div>
+            </div>
+
             <div>
               <label className="label">Audience</label>
               <div className="grid gap-2 sm:grid-cols-2">

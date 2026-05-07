@@ -47,5 +47,13 @@ export function getScopedRoleForHost(
   identity: AdminIdentity | null | undefined,
   host: string | null | undefined
 ): UserRole {
-  return hasPrimaryAdminAccess(identity) && isPrimaryAdminHost(host) ? 'admin' : 'user';
+  if (identity?.role === 'moderator') {
+    return 'moderator';
+  }
+
+  if (hasPrimaryAdminAccess(identity)) {
+    return isPrimaryAdminHost(host) ? 'admin' : 'moderator';
+  }
+
+  return 'user';
 }

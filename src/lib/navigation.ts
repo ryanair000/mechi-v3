@@ -1,4 +1,11 @@
 import { normalizeInviteCode } from '@/lib/invite';
+import type { UserRole } from '@/types';
+
+export const MODERATOR_DESK_PATH = '/moderators';
+
+type PostLoginIdentity = {
+  role?: UserRole | null;
+};
 
 export function getSafeNextPath(value: string | null | undefined, fallback = '/dashboard') {
   if (!value || !value.startsWith('/') || value.startsWith('//')) {
@@ -6,6 +13,45 @@ export function getSafeNextPath(value: string | null | undefined, fallback = '/d
   }
 
   return value;
+}
+
+function matchesAppPath(pathname: string, basePath: string) {
+  return (
+    pathname === basePath ||
+    pathname.startsWith(`${basePath}/`) ||
+    pathname.startsWith(`${basePath}?`) ||
+    pathname.startsWith(`${basePath}#`)
+  );
+}
+
+export function isModeratorDeskPath(pathname: string) {
+  return matchesAppPath(pathname, MODERATOR_DESK_PATH);
+}
+
+export function hasModeratorDeskRole(identity: PostLoginIdentity | null | undefined) {
+  return identity?.role === 'moderator' || identity?.role === 'admin';
+}
+
+export function getPostLoginRedirectPath(
+  identity: PostLoginIdentity | null | undefined,
+  requestedPath: string | null | undefined,
+  fallback = '/dashboard'
+) {
+  const safePath = getSafeNextPath(requestedPath, fallback);
+
+  if (!hasModeratorDeskRole(identity)) {
+    return safePath;
+  }
+
+  if (identity?.role === 'admin' && matchesAppPath(safePath, '/admin')) {
+    return safePath;
+  }
+
+  if (isModeratorDeskPath(safePath)) {
+    return safePath;
+  }
+
+  return MODERATOR_DESK_PATH;
 }
 
 export function withQuery(

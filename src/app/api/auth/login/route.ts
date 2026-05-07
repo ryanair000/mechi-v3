@@ -5,7 +5,11 @@ import {
   parseLoginMethod,
   type LoginMethod,
 } from '@/lib/auth-identifiers';
-import { getSafeNextPath } from '@/lib/navigation';
+import {
+  getPostLoginRedirectPath,
+  getSafeNextPath,
+  isModeratorDeskPath,
+} from '@/lib/navigation';
 import { checkPersistentRateLimit, getClientIp, rateLimitResponse } from '@/lib/rateLimit';
 import type { CountryKey, Plan, UserRole } from '@/types';
 
@@ -135,7 +139,10 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: result.error }, { status: result.status });
       }
 
-      const loginUrl = new URL('/login', requestOrigin);
+      const loginUrl = new URL(
+        isModeratorDeskPath(redirectTo) ? '/moderator-login' : '/login',
+        requestOrigin
+      );
       loginUrl.searchParams.set('auth_error', result.error);
       if (redirectTo !== '/dashboard') {
         loginUrl.searchParams.set('next', redirectTo);
@@ -146,9 +153,10 @@ export async function POST(request: NextRequest) {
     const { token, user } = createSessionForProfile(
       result.profile as unknown as Record<string, unknown>
     );
+    const finalRedirectTo = getPostLoginRedirectPath(result.profile, redirectTo);
     const response = isJsonRequest
-      ? NextResponse.json({ token, user })
-      : NextResponse.redirect(new URL(redirectTo, requestOrigin), { status: 303 });
+      ? NextResponse.json({ token, user, redirect_to: finalRedirectTo })
+      : NextResponse.redirect(new URL(finalRedirectTo, requestOrigin), { status: 303 });
 
     applyAuthCookie(response, token);
     return response;

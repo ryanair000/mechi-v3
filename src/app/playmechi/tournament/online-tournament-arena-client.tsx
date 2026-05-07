@@ -24,6 +24,8 @@ import {
   ONLINE_TOURNAMENT_CHECK_IN_PATH,
   ONLINE_TOURNAMENT_GAME_BY_KEY,
   ONLINE_TOURNAMENT_REGISTRATION_PATH,
+  isValidTournamentDeviceSerialLast6,
+  normalizeTournamentDeviceSerialLast6,
   type OnlineTournamentGameKey,
 } from '@/lib/online-tournament';
 import {
@@ -155,7 +157,7 @@ function hasCompletedCheckInDetails(
       registration.game_uid?.trim() &&
       registration.device_model?.trim() &&
       registration.whatsapp_number?.trim() &&
-      /^\d{6}$/.test(registration.device_serial_last6 ?? '')
+      isValidTournamentDeviceSerialLast6(registration.device_serial_last6)
   );
 }
 
@@ -646,20 +648,22 @@ function PlayerGameStatus({
             </label>
             <label className="block">
               <span className="text-xs font-bold text-[var(--text-soft)]">
-                Serial number last 6 digits
+                Serial number last 6 characters
               </span>
               <input
                 required
-                inputMode="numeric"
+                inputMode="text"
                 maxLength={6}
-                pattern="[0-9]{6}"
+                pattern="[A-Za-z0-9]{6}"
                 value={checkInDetails.deviceSerialLast6}
                 onChange={(event) =>
                   onCheckInDetailsChange({
                     ...checkInDetails,
-                    deviceSerialLast6: event.target.value.replace(/\D/g, '').slice(0, 6),
+                    deviceSerialLast6: normalizeTournamentDeviceSerialLast6(event.target.value),
                   })
                 }
+                placeholder="A1B2C3"
+                style={{ textTransform: 'uppercase' }}
                 className="input mt-1"
               />
             </label>

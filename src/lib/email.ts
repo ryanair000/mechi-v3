@@ -559,6 +559,7 @@ function statusLabel(value: string): string {
 
 function baseLayout(title: string, content: string): string {
   const escapedTitle = escapeHtml(title);
+  const logoUrl = escapeUrl(`${APP_URL}/mechi-logo.png`);
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -568,36 +569,38 @@ function baseLayout(title: string, content: string): string {
   <meta name="supported-color-schemes" content="light only" />
   <title>${escapedTitle}</title>
   <style>
-    body { margin: 0; padding: 0; background: #e9f0f7; font-family: Arial, Helvetica, sans-serif; color: #111827; }
+    body { margin: 0; padding: 0; background: #e2e8f0; font-family: Arial, Helvetica, sans-serif; color: #0b1121; }
     table { border-collapse: collapse; }
     a { color: inherit; }
+    img { border: 0; line-height: 100%; outline: none; text-decoration: none; }
     .preheader { display: none !important; max-height: 0; max-width: 0; opacity: 0; overflow: hidden; visibility: hidden; }
-    .wrapper { width: 100%; background: #e9f0f7; padding: 32px 12px; }
+    .wrapper { width: 100%; background: #e2e8f0; padding: 32px 12px; }
     .shell { width: 100%; max-width: 680px; margin: 0 auto; }
-    .card { background: #ffffff; border: 1px solid #d6e0ea; border-radius: 22px; overflow: hidden; box-shadow: 0 22px 50px rgba(15, 23, 42, 0.12); }
-    .topline { height: 6px; background: linear-gradient(90deg, #ff6b4a 0%, #34d399 48%, #38bdf8 100%); }
+    .card { background: #ffffff; border: 1px solid #d8e0ea; border-radius: 22px; overflow: hidden; box-shadow: 0 24px 54px rgba(11, 17, 33, 0.16); }
+    .topline { height: 7px; background: linear-gradient(90deg, #32e0c4 0%, #32e0c4 38%, #ff6b6b 62%, #ff6b6b 100%); }
     .header { background: #0b1121; padding: 30px 30px 28px; }
     .brand-row { width: 100%; }
-    .brand { color: #ffffff; font-size: 28px; font-weight: 900; margin: 0; line-height: 1; }
-    .brand-mark { color: #ff6b4a; }
-    .eyebrow { color: #a7f3d0; font-size: 11px; font-weight: 800; margin: 0; letter-spacing: 0.12em; text-transform: uppercase; text-align: right; }
-    .tagline { color: #cbd5e1; margin: 16px 0 0; font-size: 14px; line-height: 1.6; max-width: 500px; }
+    .logo { display: inline-block; height: 44px; width: 44px; border-radius: 14px; vertical-align: middle; }
+    .brand { color: #ffffff; display: inline-block; font-size: 28px; font-weight: 900; line-height: 1; margin: 0 0 0 12px; vertical-align: middle; }
+    .brand-mark { color: #ff6b6b; }
+    .eyebrow { color: #32e0c4; font-size: 11px; font-weight: 900; margin: 0; letter-spacing: 0.12em; text-transform: uppercase; text-align: right; }
+    .tagline { color: #e2e8f0; margin: 16px 0 0; font-size: 14px; line-height: 1.6; max-width: 500px; }
     .body { padding: 34px 30px 30px; }
-    .body h2 { color: #0f172a; margin: 0 0 12px; font-size: 26px; font-weight: 900; line-height: 1.18; }
-    .body p { color: #475569; line-height: 1.72; margin: 0 0 16px; font-size: 15px; }
-    .body strong { color: #0f172a; }
-    .info-box { background: #f8fafc; border: 1px solid #dbe5ef; border-radius: 16px; padding: 4px 18px; margin: 24px 0; }
+    .body h2 { color: #0b1121; margin: 0 0 12px; font-size: 27px; font-weight: 900; line-height: 1.16; }
+    .body p { color: #465366; line-height: 1.72; margin: 0 0 16px; font-size: 15px; }
+    .body strong { color: #0b1121; }
+    .info-box { background: #f8fafc; border: 1px solid #d8e0ea; border-radius: 16px; padding: 4px 18px; margin: 24px 0; }
     .info-row { display: table; width: 100%; padding: 13px 0; border-bottom: 1px solid #e2e8f0; }
     .info-row:last-child { border-bottom: none; }
     .info-label { display: table-cell; color: #64748b; font-size: 13px; line-height: 1.45; padding-right: 16px; vertical-align: top; }
-    .info-value { display: table-cell; color: #0f172a; font-size: 13px; font-weight: 800; line-height: 1.45; text-align: right; vertical-align: top; }
-    .note { background: #fff7ed; border: 1px solid #fed7aa; border-radius: 14px; color: #7c2d12; font-size: 13px; line-height: 1.65; margin: 20px 0; padding: 14px 16px; }
+    .info-value { display: table-cell; color: #0b1121; font-size: 13px; font-weight: 900; line-height: 1.45; text-align: right; vertical-align: top; }
+    .note { background: #fff3f3; border: 1px solid #ffd4d4; border-radius: 14px; color: #8f2626; font-size: 13px; line-height: 1.65; margin: 20px 0; padding: 14px 16px; }
     .mini-grid { width: 100%; margin: 20px 0 4px; }
     .mini-cell { background: #f1f5f9; border: 1px solid #dbe5ef; border-radius: 14px; padding: 14px; }
     .mini-label { color: #64748b; display: block; font-size: 11px; font-weight: 800; letter-spacing: 0.08em; line-height: 1.2; text-transform: uppercase; }
-    .mini-value { color: #0f172a; display: block; font-size: 16px; font-weight: 900; line-height: 1.35; margin-top: 5px; }
-    .btn { display: inline-block; background: #ff5a3d; color: #ffffff !important; text-decoration: none; padding: 14px 24px; border-radius: 12px; font-weight: 900; font-size: 14px; margin-top: 8px; }
-    .secondary-link { color: #0f766e !important; font-size: 13px; font-weight: 800; text-decoration: none; }
+    .mini-value { color: #0b1121; display: block; font-size: 16px; font-weight: 900; line-height: 1.35; margin-top: 5px; }
+    .btn { display: inline-block; background: #ff6b6b; color: #ffffff !important; text-decoration: none; padding: 14px 24px; border-radius: 12px; font-weight: 900; font-size: 14px; margin-top: 8px; }
+    .secondary-link { color: #138f80 !important; font-size: 13px; font-weight: 900; text-decoration: none; }
     .footer { padding: 24px 30px 30px; border-top: 1px solid #e2e8f0; background: #fbfdff; }
     .footer p { color: #64748b; font-size: 12px; margin: 0 0 6px; line-height: 1.6; }
     .badge { display: inline-block; padding: 5px 11px; border-radius: 999px; font-size: 11px; font-weight: 900; letter-spacing: 0.04em; text-transform: uppercase; }
@@ -629,6 +632,7 @@ function baseLayout(title: string, content: string): string {
                 <table role="presentation" class="brand-row" cellpadding="0" cellspacing="0">
                   <tr>
                     <td>
+                      <img src="${logoUrl}" width="44" height="44" alt="Mechi" class="logo" />
                       <p class="brand">MECHI<span class="brand-mark">.</span></p>
                     </td>
                     <td align="right">

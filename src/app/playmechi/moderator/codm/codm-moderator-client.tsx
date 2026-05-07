@@ -1,6 +1,8 @@
 'use client';
 
+import Image from 'next/image';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import toast from 'react-hot-toast';
 import {
@@ -21,23 +23,31 @@ import {
   UserX,
   XCircle,
 } from 'lucide-react';
-import { useAuthFetch } from '@/components/AuthProvider';
+import { useAuth, useAuthFetch } from '@/components/AuthProvider';
 import {
-  filterCodmModeratorRoster,
-  getCodmModeratorRosterCounts,
-  isCodmReadyCheckedIn,
-  needsCodmRosterAttention,
-  type CodmModeratorRosterMode,
+  filterTournamentModeratorRoster,
+  getTournamentModeratorRosterCounts,
+  isTournamentReadyCheckedIn,
+  needsTournamentRosterAttention,
+  type TournamentModeratorRosterMode,
 } from '@/lib/codm-moderator-roster';
+import {
+  DEFAULT_MODERATOR_TOURNAMENT_KEY,
+  getModeratorTournamentByKey,
+  isModeratorTournamentKey,
+} from '@/lib/moderator-tournaments';
 import {
   ONLINE_TOURNAMENT_CHECK_IN_PATH,
   ONLINE_TOURNAMENT_GAME_BY_KEY,
+  ONLINE_TOURNAMENT_GAMES,
+  type OnlineTournamentGameKey,
   type OnlineTournamentCheckInStatus,
   type OnlineTournamentEligibilityStatus,
 } from '@/lib/online-tournament';
 import {
   ONLINE_TOURNAMENT_BR_MATCH_NUMBERS,
   formatOnlineTournamentLobby,
+  isBattleRoyaleTournamentGame,
   type OnlineTournamentBattleRoyaleStanding,
   type OnlineTournamentRegistrationOpsRow,
   type OnlineTournamentResultStatus,
@@ -46,11 +56,9 @@ import {
   type OnlineTournamentRoomStatus,
 } from '@/lib/online-tournament-ops';
 
-const GAME = 'codm' as const;
 const OPS_API_PATH = '/api/moderators/online-tournament-ops';
 const REGISTRATION_API_PATH = '/api/moderators/online-tournament-registrations';
 const USER_API_BASE_PATH = '/api/moderators/users';
-const CHECK_IN_PATH = `${ONLINE_TOURNAMENT_CHECK_IN_PATH}?game=${GAME}`;
 const ROOM_STATUSES: OnlineTournamentRoomStatus[] = [
   'draft',
   'released',
@@ -70,6 +78,11 @@ type TournamentOpsState = {
   rooms: OnlineTournamentRoom[];
   submissions: OnlineTournamentResultSubmission[];
   standings: Record<'pubgm' | 'codm', OnlineTournamentBattleRoyaleStanding[]>;
+};
+
+type TournamentOpsResponse = TournamentOpsState & {
+  error?: string;
+  ocr_scan_error?: string | null;
 };
 
 type RoomDraft = {
@@ -94,8 +107,8 @@ function getEmptyRoomDraft(): RoomDraft {
   };
 }
 
-function getRoomKey(matchNumber: number) {
-  return `${GAME}-${matchNumber}`;
+function getRoomKey(game: OnlineTournamentGameKey, matchNumber: number) {
+  return `${game}-${matchNumber}`;
 }
 
 function formatStatus(value: string | null | undefined) {
@@ -145,17 +158,42 @@ function getPlayerLabel(registration: OnlineTournamentRegistrationOpsRow | null 
 
 function getSubmissionTitle(submission: OnlineTournamentResultSubmission) {
   const player = submission.registration?.in_game_username ?? 'Unknown player';
+  if (submission.game === 'efootball') {
+    const score =
+      submission.player1_score !== null && submission.player2_score !== null
+        ? `${submission.player1_score}-${submission.player2_score}`
+        : 'score pending';
+    return `${player} | eFootball | ${score}`;
+  }
+
   return `${player} | Match ${submission.match_number ?? '-'} | ${submission.kills ?? 0} kills | #${
     submission.placement ?? '-'
   }`;
 }
 
-function buildRoomDrafts(state: TournamentOpsState) {
+function getOcrStatusLabel(status: OnlineTournamentResultSubmission['ocr_status']) {
+  switch (status) {
+    case 'complete':
+      return 'OCR ready';
+    case 'failed':
+      return 'OCR failed';
+    case 'pending':
+      return 'OCR pending';
+    default:
+      return 'OCR not run';
+  }
+}
+
+function buildRoomDrafts(state: TournamentOpsState, game: OnlineTournamentGameKey) {
   const drafts: Record<string, RoomDraft> = {};
 
+  if (!isBattleRoyaleTournamentGame(game)) {
+    return drafts;
+  }
+
   for (const matchNumber of ONLINE_TOURNAMENT_BR_MATCH_NUMBERS) {
-    const room = state.rooms.find((item) => item.game === GAME && item.match_number === matchNumber);
-    drafts[getRoomKey(matchNumber)] = {
+    const room = state.rooms.find((item) => item.game === game && item.match_number === matchNumber);
+    drafts[getRoomKey(game, matchNumber)] = {
       map_name: room?.map_name ?? '',
       room_id: room?.room_id ?? '',
       room_password: room?.room_password ?? '',
@@ -180,6 +218,22 @@ function buildLobbyClipboard(registrations: OnlineTournamentRegistrationOpsRow[]
       ].join(' | ')
     )
     .join('\n');
+}
+
+function getGameFromSearch(value: string | null, fallback: OnlineTournamentGameKey) {
+  if (value === 'pubgm' || value === 'codm' || value === 'efootball') {
+    return value;
+  }
+
+  return fallback;
+}
+
+function getAssignedModeratorGame(value: unknown): OnlineTournamentGameKey {
+  if (isModeratorTournamentKey(value)) {
+    return getModeratorTournamentByKey(value).game;
+  }
+
+  return getModeratorTournamentByKey(DEFAULT_MODERATOR_TOURNAMENT_KEY).game;
 }
 
 function StatusPill({ status }: { status: string | null | undefined }) {
@@ -214,22 +268,30 @@ function MetaPill({
 }
 
 export function CodmModeratorClient() {
+  const searchParams = useSearchParams();
+  const { user, loading: authLoading } = useAuth();
   const authFetch = useAuthFetch();
+  const assignedGame = getAssignedModeratorGame(user?.game_ids?.moderator_tournament_key);
+  const activeGame = getGameFromSearch(searchParams.get('game'), assignedGame);
+  const activeConfig = ONLINE_TOURNAMENT_GAME_BY_KEY[activeGame];
+  const activeGameParam = encodeURIComponent(activeGame);
+  const checkInPath = `${ONLINE_TOURNAMENT_CHECK_IN_PATH}?game=${activeGameParam}`;
+  const activeGameIsBattleRoyale = isBattleRoyaleTournamentGame(activeGame);
   const [state, setState] = useState<TournamentOpsState | null>(null);
   const [roomDrafts, setRoomDrafts] = useState<Record<string, RoomDraft>>({});
   const [loading, setLoading] = useState(true);
   const [actingOn, setActingOn] = useState<string | null>(null);
   const [query, setQuery] = useState('');
-  const [rosterMode, setRosterMode] = useState<CodmModeratorRosterMode>('checked_in');
+  const [rosterMode, setRosterMode] = useState<TournamentModeratorRosterMode>('checked_in');
   const [registrationNotes, setRegistrationNotes] = useState<Record<string, string>>({});
   const [submissionNotes, setSubmissionNotes] = useState<Record<string, string>>({});
 
   const applyState = useCallback((nextState: TournamentOpsState) => {
     setState(nextState);
-    setRoomDrafts(buildRoomDrafts(nextState));
+    setRoomDrafts(buildRoomDrafts(nextState, activeGame));
     setRegistrationNotes((current) => ({
       ...nextState.registrations.reduce<Record<string, string>>((notes, registration) => {
-        if (registration.game === GAME) {
+        if (registration.game === activeGame) {
           notes[registration.id] = current[registration.id] ?? registration.admin_note ?? '';
         }
         return notes;
@@ -237,64 +299,73 @@ export function CodmModeratorClient() {
     }));
     setSubmissionNotes((current) => ({
       ...nextState.submissions.reduce<Record<string, string>>((notes, submission) => {
-        if (submission.game === GAME) {
+        if (submission.game === activeGame) {
           notes[submission.id] = current[submission.id] ?? submission.admin_note ?? '';
         }
         return notes;
       }, {}),
     }));
-  }, []);
+  }, [activeGame]);
 
   const loadState = useCallback(async () => {
     setLoading(true);
     try {
       const res = await authFetch(OPS_API_PATH);
-      const data = (await res.json()) as TournamentOpsState & { error?: string };
+      const data = (await res.json()) as TournamentOpsResponse;
 
       if (!res.ok) {
-        toast.error(data.error ?? 'Could not load CODM desk');
+        toast.error(data.error ?? `Could not load ${activeConfig.shortLabel} desk`);
         setState(null);
         return;
       }
 
       applyState(data);
     } catch {
-      toast.error('Network error while loading CODM desk');
+      toast.error(`Network error while loading ${activeConfig.shortLabel} desk`);
     } finally {
       setLoading(false);
     }
-  }, [applyState, authFetch]);
+  }, [activeConfig.shortLabel, applyState, authFetch]);
 
   useEffect(() => {
+    if (authLoading) {
+      return;
+    }
+
     void loadState();
-  }, [loadState]);
+  }, [authLoading, loadState]);
 
   const registrations = useMemo(
-    () => (state?.registrations ?? []).filter((registration) => registration.game === GAME),
-    [state]
+    () => (state?.registrations ?? []).filter((registration) => registration.game === activeGame),
+    [activeGame, state]
   );
   const submissions = useMemo(
-    () => (state?.submissions ?? []).filter((submission) => submission.game === GAME),
-    [state]
+    () => (state?.submissions ?? []).filter((submission) => submission.game === activeGame),
+    [activeGame, state]
   );
   const pendingSubmissions = useMemo(
     () => submissions.filter((submission) => submission.status === 'pending'),
     [submissions]
   );
   const rooms = useMemo(
-    () => (state?.rooms ?? []).filter((room) => room.game === GAME),
-    [state]
+    () =>
+      activeGameIsBattleRoyale
+        ? (state?.rooms ?? []).filter((room) => room.game === activeGame)
+        : [],
+    [activeGame, activeGameIsBattleRoyale, state]
   );
-  const standings = state?.standings.codm ?? [];
+  const standings = isBattleRoyaleTournamentGame(activeGame)
+    ? state?.standings[activeGame] ?? []
+    : [];
   const checkedInRoster = registrations.filter(
     (registration) => registration.check_in_status === 'checked_in'
   );
-  const readyCheckedInRoster = registrations.filter(isCodmReadyCheckedIn);
-  const attentionRoster = registrations.filter(needsCodmRosterAttention);
-  const rosterCounts = getCodmModeratorRosterCounts(registrations);
+  const readyCheckedInRoster = registrations.filter(isTournamentReadyCheckedIn);
+  const attentionRoster = registrations.filter(needsTournamentRosterAttention);
+  const rosterCounts = getTournamentModeratorRosterCounts(registrations);
   const rosterFilterOptions: Array<{
     label: string;
-    mode: CodmModeratorRosterMode;
+    mode: TournamentModeratorRosterMode;
     count: number;
   }> = [
     { label: 'Checked In', mode: 'checked_in', count: rosterCounts.checked_in },
@@ -302,10 +373,9 @@ export function CodmModeratorClient() {
     { label: 'Registered', mode: 'registered', count: rosterCounts.registered },
     { label: 'All', mode: 'all', count: rosterCounts.all },
   ];
-  const activeConfig = ONLINE_TOURNAMENT_GAME_BY_KEY[GAME];
 
   const filteredRoster = useMemo(() => {
-    return filterCodmModeratorRoster(registrations, rosterMode, query);
+    return filterTournamentModeratorRoster(registrations, rosterMode, query);
   }, [query, registrations, rosterMode]);
 
   const patchOps = async (
@@ -319,17 +389,55 @@ export function CodmModeratorClient() {
         method: 'PATCH',
         body: JSON.stringify(body),
       });
-      const data = (await res.json()) as TournamentOpsState & { error?: string };
+      const data = (await res.json()) as TournamentOpsResponse;
 
       if (!res.ok) {
-        toast.error(data.error ?? 'Could not update CODM desk');
+        toast.error(data.error ?? `Could not update ${activeConfig.shortLabel} desk`);
         return;
       }
 
       applyState(data);
       toast.success(successMessage);
     } catch {
-      toast.error('Network error while updating CODM desk');
+      toast.error(`Network error while updating ${activeConfig.shortLabel} desk`);
+    } finally {
+      setActingOn(null);
+    }
+  };
+
+  const scanSubmissionOcr = async (submission: OnlineTournamentResultSubmission) => {
+    if (!submission.screenshot_url) {
+      toast.error('This submission has no screenshot to scan');
+      return;
+    }
+
+    const actionKey = `ocr-${submission.id}`;
+    setActingOn(actionKey);
+    try {
+      const res = await authFetch(OPS_API_PATH, {
+        method: 'PATCH',
+        body: JSON.stringify({
+          action: 'scan_codm_submission_ocr',
+          submission_id: submission.id,
+        }),
+      });
+      const data = (await res.json()) as TournamentOpsResponse;
+
+      if (!res.ok) {
+        await loadState();
+        toast.error(data.error ?? `Could not read ${activeConfig.shortLabel} screenshot`);
+        return;
+      }
+
+      applyState(data);
+      if (data.ocr_scan_error) {
+        toast.error(data.ocr_scan_error);
+        return;
+      }
+
+      toast.success('Screenshot OCR updated');
+    } catch {
+      toast.error(`Network error while reading ${activeConfig.shortLabel} screenshot`);
     } finally {
       setActingOn(null);
     }
@@ -402,7 +510,7 @@ export function CodmModeratorClient() {
       action === 'ban'
         ? window.prompt(
             `Ban reason for ${playerLabel}`,
-            'Moderator action from CODM desk'
+            `Moderator action from ${activeConfig.shortLabel} desk`
           )?.trim() ?? ''
         : '';
 
@@ -412,7 +520,10 @@ export function CodmModeratorClient() {
         method: 'PATCH',
         body: JSON.stringify({
           action,
-          reason: action === 'ban' ? reason || 'Moderator action from CODM desk' : undefined,
+          reason:
+            action === 'ban'
+              ? reason || `Moderator action from ${activeConfig.shortLabel} desk`
+              : undefined,
         }),
       });
       const data = (await res.json()) as { error?: string };
@@ -432,7 +543,7 @@ export function CodmModeratorClient() {
   };
 
   const updateRoomDraft = (matchNumber: number, updates: Partial<RoomDraft>) => {
-    const key = getRoomKey(matchNumber);
+    const key = getRoomKey(activeGame, matchNumber);
     setRoomDrafts((current) => ({
       ...current,
       [key]: {
@@ -443,13 +554,18 @@ export function CodmModeratorClient() {
   };
 
   const saveRoom = (matchNumber: number) => {
-    const key = getRoomKey(matchNumber);
+    if (!activeGameIsBattleRoyale) {
+      toast.error('Room credentials only apply to PUBG and CODM');
+      return;
+    }
+
+    const key = getRoomKey(activeGame, matchNumber);
     const draft = roomDrafts[key] ?? getEmptyRoomDraft();
     void patchOps(
       `room-${matchNumber}`,
       {
         action: 'upsert_room',
-        game: GAME,
+        game: activeGame,
         match_number: matchNumber,
         map_name: draft.map_name,
         room_id: draft.room_id,
@@ -466,13 +582,13 @@ export function CodmModeratorClient() {
   const copyLobby = async () => {
     const text = buildLobbyClipboard(readyCheckedInRoster);
     if (!text) {
-      toast.error('No lobby-ready CODM players to copy');
+      toast.error(`No lobby-ready ${activeConfig.shortLabel} players to copy`);
       return;
     }
 
     try {
       await navigator.clipboard.writeText(text);
-      toast.success('CODM lobby list copied');
+      toast.success(`${activeConfig.shortLabel} lobby list copied`);
     } catch {
       toast.error('Could not copy lobby list');
     }
@@ -483,17 +599,33 @@ export function CodmModeratorClient() {
       <section className="border-b border-[var(--border-color)] pb-4">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
           <div>
-            <p className="section-title">CODM moderator</p>
+            <p className="section-title">{activeConfig.shortLabel} moderator</p>
             <h1 className="mt-2 text-[1.45rem] font-black leading-tight text-[var(--text-primary)] sm:text-[1.9rem]">
               {activeConfig.label} desk
             </h1>
             <p className="mt-2 max-w-2xl text-sm text-[var(--text-secondary)]">
-              Check-ins, lobby slots, room credentials, result review, and standings.
+              Check-ins, lobby slots, result review, standings, and match data for this game.
             </p>
+            <div className="mt-3 flex flex-wrap gap-2">
+              {ONLINE_TOURNAMENT_GAMES.map((game) => (
+                <Link
+                  key={game.game}
+                  href={`/moderators?game=${encodeURIComponent(game.game)}`}
+                  aria-current={game.game === activeGame ? 'page' : undefined}
+                  className={`inline-flex min-h-9 items-center rounded-md border px-3 text-xs font-bold ${
+                    game.game === activeGame
+                      ? 'border-[rgba(50,224,196,0.24)] bg-[rgba(50,224,196,0.12)] text-[var(--accent-secondary-text)]'
+                      : 'border-[var(--border-color)] bg-[var(--surface-elevated)] text-[var(--text-secondary)]'
+                  }`}
+                >
+                  {game.shortLabel}
+                </Link>
+              ))}
+            </div>
           </div>
 
           <div className="flex flex-wrap gap-2">
-            <Link href={CHECK_IN_PATH} className="btn-ghost">
+            <Link href={checkInPath} className="btn-ghost">
               <ClipboardCheck size={14} />
               Player check-in
             </Link>
@@ -574,7 +706,7 @@ export function CodmModeratorClient() {
                       type="button"
                       onClick={() => setRosterMode(mode)}
                       aria-pressed={rosterMode === mode}
-                      data-testid={`codm-roster-filter-${mode}`}
+                      data-testid={`tournament-roster-filter-${activeGame}-${mode}`}
                       className={`min-h-9 rounded-md px-2 text-xs font-bold capitalize ${
                         rosterMode === mode
                           ? 'bg-[rgba(50,224,196,0.12)] text-[var(--accent-secondary-text)]'
@@ -604,7 +736,7 @@ export function CodmModeratorClient() {
                   {filteredRoster.length === 0 ? (
                     <tr>
                       <td colSpan={5} className="px-3 py-8 text-center text-sm text-[var(--text-secondary)]">
-                        No CODM players match this view.
+                        No {activeConfig.shortLabel} players match this view.
                       </td>
                     </tr>
                   ) : (
@@ -756,6 +888,7 @@ export function CodmModeratorClient() {
             </div>
           </section>
 
+          {activeGameIsBattleRoyale ? (
           <section className="card p-4 sm:p-5">
             <div className="flex items-center justify-between gap-3">
               <div>
@@ -769,7 +902,7 @@ export function CodmModeratorClient() {
 
             <div className="mt-4 grid gap-3 xl:grid-cols-3">
               {ONLINE_TOURNAMENT_BR_MATCH_NUMBERS.map((matchNumber) => {
-                const key = getRoomKey(matchNumber);
+                const key = getRoomKey(activeGame, matchNumber);
                 const draft = roomDrafts[key] ?? getEmptyRoomDraft();
                 const actionKey = `room-${matchNumber}`;
 
@@ -864,6 +997,7 @@ export function CodmModeratorClient() {
               })}
             </div>
           </section>
+          ) : null}
 
           <div className="grid gap-4 xl:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
             <section className="card p-4 sm:p-5">
@@ -883,10 +1017,13 @@ export function CodmModeratorClient() {
                 {(pendingSubmissions.length > 0 ? pendingSubmissions : submissions.slice(0, 8)).map(
                   (submission) => {
                     const actionBase = `submission-${submission.id}`;
+                    const ocrActionKey = `ocr-${submission.id}`;
+                    const isCodmSubmission = submission.game === 'codm';
+                    const isBattleRoyaleSubmission = submission.game !== 'efootball';
                     return (
                       <div
                         key={submission.id}
-                        className="rounded-lg border border-[var(--border-color)] bg-[var(--surface)] p-4"
+                        className="rounded-[var(--radius-card)] border border-[var(--border-color)] bg-[var(--surface)] p-4"
                       >
                         <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
                           <div className="min-w-0">
@@ -898,21 +1035,26 @@ export function CodmModeratorClient() {
                             </p>
                             <div className="mt-2 flex flex-wrap gap-2">
                               <StatusPill status={submission.status} />
-                              {submission.screenshot_url ? (
-                                <a
-                                  href={submission.screenshot_url}
-                                  target="_blank"
-                                  rel="noreferrer"
-                                  className="inline-flex min-h-7 items-center gap-1 rounded-full border border-[rgba(50,224,196,0.2)] px-2.5 py-1 text-xs font-bold text-[var(--accent-secondary-text)]"
-                                >
-                                  <ExternalLink size={12} />
-                                  Screenshot
-                                </a>
-                              ) : null}
+                              <MetaPill label={getOcrStatusLabel(submission.ocr_status)} />
                             </div>
                           </div>
 
                           <div className="flex flex-wrap gap-2">
+                            {isCodmSubmission && submission.screenshot_url ? (
+                              <button
+                                type="button"
+                                disabled={actingOn === ocrActionKey}
+                                onClick={() => void scanSubmissionOcr(submission)}
+                                className="btn-ghost min-h-9 px-3 py-2 text-xs"
+                              >
+                                {actingOn === ocrActionKey ? (
+                                  <Loader2 size={13} className="animate-spin" />
+                                ) : (
+                                  <Search size={13} />
+                                )}
+                                {submission.ocr_status === 'complete' ? 'Re-read screenshot' : 'Read screenshot'}
+                              </button>
+                            ) : null}
                             {RESULT_STATUSES.filter((status) => status !== 'pending').map((status) => (
                               <button
                                 key={status}
@@ -950,6 +1092,150 @@ export function CodmModeratorClient() {
                             ))}
                           </div>
                         </div>
+                        <div className="mt-4 grid gap-4 xl:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)]">
+                          <div className="space-y-3">
+                            {isBattleRoyaleSubmission ? (
+                              <div className="grid gap-3 sm:grid-cols-3">
+                                <div className="rounded-[var(--radius-card)] border border-[var(--border-color)] bg-[var(--surface-elevated)] px-3 py-3">
+                                  <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-[var(--text-soft)]">
+                                    Match
+                                  </p>
+                                  <p className="mt-2 text-lg font-black text-[var(--text-primary)]">
+                                    {submission.match_number ?? '-'}
+                                  </p>
+                                </div>
+                                <div className="rounded-[var(--radius-card)] border border-[var(--border-color)] bg-[var(--surface-elevated)] px-3 py-3">
+                                  <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-[var(--text-soft)]">
+                                    Submitted kills
+                                  </p>
+                                  <p className="mt-2 text-lg font-black text-[var(--text-primary)]">
+                                    {submission.kills ?? '-'}
+                                  </p>
+                                </div>
+                                <div className="rounded-[var(--radius-card)] border border-[var(--border-color)] bg-[var(--surface-elevated)] px-3 py-3">
+                                  <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-[var(--text-soft)]">
+                                    Submitted placement
+                                  </p>
+                                  <p className="mt-2 text-lg font-black text-[var(--text-primary)]">
+                                    {submission.placement ? `#${submission.placement}` : '-'}
+                                  </p>
+                                </div>
+                              </div>
+                            ) : (
+                              <div className="grid gap-3 sm:grid-cols-2">
+                                <div className="rounded-[var(--radius-card)] border border-[var(--border-color)] bg-[var(--surface-elevated)] px-3 py-3">
+                                  <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-[var(--text-soft)]">
+                                    Player 1 score
+                                  </p>
+                                  <p className="mt-2 text-lg font-black text-[var(--text-primary)]">
+                                    {submission.player1_score ?? '-'}
+                                  </p>
+                                </div>
+                                <div className="rounded-[var(--radius-card)] border border-[var(--border-color)] bg-[var(--surface-elevated)] px-3 py-3">
+                                  <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-[var(--text-soft)]">
+                                    Player 2 score
+                                  </p>
+                                  <p className="mt-2 text-lg font-black text-[var(--text-primary)]">
+                                    {submission.player2_score ?? '-'}
+                                  </p>
+                                </div>
+                              </div>
+                            )}
+
+                            {isCodmSubmission ? (
+                              <div className="rounded-[var(--radius-card)] border border-[var(--border-color)] bg-[var(--surface-elevated)] px-3 py-3">
+                                <div className="flex flex-wrap items-center justify-between gap-2">
+                                  <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-[var(--text-soft)]">
+                                    CODM OCR read
+                                  </p>
+                                  {typeof submission.ocr_confidence === 'number' ? (
+                                    <MetaPill label={`${Math.round(submission.ocr_confidence)}% confidence`} />
+                                  ) : null}
+                                </div>
+                                <div className="mt-3 flex flex-wrap gap-2">
+                                  <MetaPill
+                                    label={`OCR kills ${submission.ocr_kills ?? '-'}`}
+                                    tone={
+                                      submission.ocr_kills !== null &&
+                                      submission.kills !== null &&
+                                      submission.ocr_kills !== submission.kills
+                                        ? 'danger'
+                                        : 'default'
+                                    }
+                                  />
+                                  <MetaPill
+                                    label={`OCR placement ${submission.ocr_placement ? `#${submission.ocr_placement}` : '-'}`}
+                                    tone={
+                                      submission.ocr_placement !== null &&
+                                      submission.placement !== null &&
+                                      submission.ocr_placement !== submission.placement
+                                        ? 'danger'
+                                        : 'default'
+                                    }
+                                  />
+                                </div>
+                                {submission.ocr_error ? (
+                                  <p className="mt-3 text-sm leading-6 text-red-300">{submission.ocr_error}</p>
+                                ) : submission.ocr_text ? (
+                                  <div className="mt-3 rounded-[var(--radius-card)] border border-[var(--border-color)] bg-[rgba(6,18,32,0.52)] px-3 py-3">
+                                    <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-[var(--text-soft)]">
+                                      OCR text
+                                    </p>
+                                    <p className="mt-2 max-h-32 overflow-y-auto whitespace-pre-wrap text-sm leading-6 text-[var(--text-secondary)]">
+                                      {submission.ocr_text}
+                                    </p>
+                                  </div>
+                                ) : (
+                                  <p className="mt-3 text-sm leading-6 text-[var(--text-secondary)]">
+                                    {submission.ocr_status === 'pending'
+                                      ? 'OCR is queued for this screenshot.'
+                                      : 'Use Read screenshot to extract CODM score text.'}
+                                  </p>
+                                )}
+                              </div>
+                            ) : null}
+                          </div>
+
+                          <div className="space-y-3">
+                            <div className="flex items-center justify-between gap-2">
+                              <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-[var(--text-soft)]">
+                                Screenshot evidence
+                              </p>
+                              {submission.screenshot_url ? (
+                                <a
+                                  href={submission.screenshot_url}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="inline-flex min-h-7 items-center gap-1 rounded-full border border-[rgba(50,224,196,0.2)] px-2.5 py-1 text-xs font-bold text-[var(--accent-secondary-text)]"
+                                >
+                                  <ExternalLink size={12} />
+                                  Open full
+                                </a>
+                              ) : null}
+                            </div>
+                            {submission.screenshot_url ? (
+                              <a
+                                href={submission.screenshot_url}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="block overflow-hidden rounded-[var(--radius-card)] border border-[var(--border-color)] bg-[var(--surface-elevated)]"
+                              >
+                                <Image
+                                  src={submission.screenshot_url}
+                                  alt={`${getSubmissionTitle(submission)} screenshot`}
+                                  width={960}
+                                  height={640}
+                                  unoptimized
+                                  className="h-auto w-full object-cover"
+                                />
+                              </a>
+                            ) : (
+                              <div className="rounded-[var(--radius-card)] border border-dashed border-[var(--border-color)] bg-[var(--surface-elevated)] px-4 py-8 text-center text-sm text-[var(--text-secondary)]">
+                                Screenshot missing for this submission.
+                              </div>
+                            )}
+                          </div>
+                        </div>
                         <input
                           value={submissionNotes[submission.id] ?? ''}
                           onChange={(event) =>
@@ -967,12 +1253,13 @@ export function CodmModeratorClient() {
                 )}
                 {submissions.length === 0 ? (
                   <p className="rounded-lg border border-[var(--border-color)] bg-[var(--surface)] px-4 py-6 text-center text-sm text-[var(--text-secondary)]">
-                    No CODM submissions yet.
+                    No {activeConfig.shortLabel} submissions yet.
                   </p>
                 ) : null}
               </div>
             </section>
 
+            {activeGameIsBattleRoyale ? (
             <section className="card p-4 sm:p-5">
               <div className="flex items-center justify-between gap-3">
                 <div>
@@ -1016,7 +1303,7 @@ export function CodmModeratorClient() {
                     {standings.length === 0 ? (
                       <tr>
                         <td colSpan={4} className="py-8 text-center text-sm text-[var(--text-secondary)]">
-                          No verified CODM results yet.
+                          No verified {activeConfig.shortLabel} results yet.
                         </td>
                       </tr>
                     ) : null}
@@ -1024,6 +1311,23 @@ export function CodmModeratorClient() {
                 </table>
               </div>
             </section>
+            ) : (
+              <section className="card p-4 sm:p-5">
+                <p className="section-title">Fixtures</p>
+                <h2 className="mt-2 text-xl font-black text-[var(--text-primary)]">
+                  eFootball bracket
+                </h2>
+                <p className="mt-3 text-sm leading-6 text-[var(--text-secondary)]">
+                  Fixture seeding, score review, and bracket movement are available in the tournament view.
+                </p>
+                <Link
+                  href={`/moderators/tournament?game=${activeGameParam}`}
+                  className="btn-ghost mt-4"
+                >
+                  Open tournament view
+                </Link>
+              </section>
+            )}
           </div>
         </>
       )}

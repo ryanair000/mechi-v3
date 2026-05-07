@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { hasModeratorAccess, requireActiveAccessProfile } from '@/lib/access';
 import { writeAuditLog } from '@/lib/audit';
+import { scanAndStoreCodmSubmissionOcr } from '@/lib/codm-result-ocr';
 import {
   ONLINE_TOURNAMENT_SLUG,
   isOnlineTournamentGame,
@@ -502,6 +503,65 @@ export async function PATCH(request: NextRequest) {
       });
 
       return NextResponse.json(await getAdminState());
+    }
+
+    if (action === 'scan_codm_submission_ocr') {
+      const submissionId = cleanText(body.submission_id, 80);
+      if (!submissionId) {
+        return NextResponse.json({ error: 'Submission is required' }, { status: 400 });
+      }
+
+      const { data: submissionRaw, error: submissionError } = await supabase
+        .from('online_tournament_result_submissions')
+        .select('id, game, screenshot_url')
+        .eq('id', submissionId)
+        .eq('event_slug', ONLINE_TOURNAMENT_SLUG)
+        .maybeSingle();
+
+      const submission = submissionRaw as
+        | {
+            id: string;
+            game: string;
+            screenshot_url: string | null;
+          }
+        | null;
+
+      if (submissionError || !submission) {
+        return NextResponse.json({ error: 'Submission not found' }, { status: 404 });
+      }
+
+      if (submission.game !== 'codm') {
+        return NextResponse.json({ error: 'OCR is currently available for CODM only' }, { status: 400 });
+      }
+
+      if (!submission.screenshot_url) {
+        return NextResponse.json({ error: 'This submission has no screenshot to scan' }, { status: 400 });
+      }
+
+      const scanResult = await scanAndStoreCodmSubmissionOcr({
+        submissionId: submission.id,
+        screenshotUrl: submission.screenshot_url,
+        supabase,
+      });
+
+      await writeAuditLog({
+        adminId: access.profile.id,
+        action: 'system_note',
+        targetType: 'tournament',
+        targetId: submissionId,
+        details: {
+          action,
+          ok: scanResult.ok,
+          error: scanResult.ok ? null : scanResult.error,
+        },
+        ipAddress: getClientIp(request),
+      });
+
+      const nextState = await getAdminState();
+      return NextResponse.json({
+        ...nextState,
+        ocr_scan_error: scanResult.ok ? null : scanResult.error,
+      });
     }
 
     if (action === 'record_fixture_result') {

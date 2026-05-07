@@ -8,6 +8,7 @@ import { Eye, EyeOff, Loader2, UserCheck } from 'lucide-react';
 import { ActionFeedback, type ActionFeedbackState } from '@/components/ActionFeedback';
 import { useAuth } from '@/components/AuthProvider';
 import { FullScreenSignup } from '@/components/ui/full-screen-signup';
+import { getPostLoginRedirectPath } from '@/lib/navigation';
 
 type LoginMethod = 'phone' | 'username' | 'email';
 
@@ -74,7 +75,7 @@ export function AuthLoginScreen({
 
   useEffect(() => {
     if (!authLoading && user) {
-      router.replace(nextPath);
+      router.replace(getPostLoginRedirectPath(user, nextPath));
     }
   }, [authLoading, nextPath, router, user]);
 
@@ -124,14 +125,19 @@ export function AuthLoginScreen({
         return;
       }
 
+      const redirectPath = getPostLoginRedirectPath(
+        data.user,
+        typeof data.redirect_to === 'string' ? data.redirect_to : nextPath
+      );
+
       login(data.token, data.user);
       setFeedback({
         tone: 'success',
         title: `Welcome back, ${data.user.username}.`,
-        detail: 'Taking you back into Mechi now.',
+        detail: 'Taking you into Mechi now.',
       });
       toast.success(`Welcome back, ${data.user.username}!`);
-      window.location.assign(nextPath);
+      window.location.assign(redirectPath);
     } catch {
       setFeedback({
         tone: 'error',

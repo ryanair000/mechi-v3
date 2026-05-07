@@ -9,6 +9,7 @@ import {
 import {
   ONLINE_TOURNAMENT_SLUG,
   ONLINE_TOURNAMENT_TITLE,
+  normalizeTournamentDeviceSerialLast6,
   isOnlineTournamentGame,
   type OnlineTournamentGameKey,
 } from '@/lib/online-tournament';
@@ -24,10 +25,6 @@ import type { GameKey, PlatformKey } from '@/types';
 
 function cleanText(value: unknown, maxLength: number) {
   return String(value ?? '').trim().replace(/\s+/g, ' ').slice(0, maxLength);
-}
-
-function cleanSerialLast6(value: unknown) {
-  return String(value ?? '').replace(/\D/g, '').slice(-6);
 }
 
 function normalizeProfileGameIds(value: unknown): Record<string, string> {
@@ -170,7 +167,7 @@ export async function POST(request: NextRequest) {
     const gameUid = cleanText(body.game_uid, 80);
     const deviceModel = cleanText(body.device_model, 100);
     const whatsappNumber = cleanText(body.whatsapp_number, 40);
-    const deviceSerialLast6 = cleanSerialLast6(body.device_serial_last6);
+    const deviceSerialLast6 = normalizeTournamentDeviceSerialLast6(body.device_serial_last6);
 
     if (inGameUsername.length < 2) {
       return NextResponse.json({ error: 'Add your IGN' }, { status: 400 });
@@ -190,7 +187,7 @@ export async function POST(request: NextRequest) {
 
     if (deviceSerialLast6.length !== 6) {
       return NextResponse.json(
-        { error: 'Add the last 6 digits of your device serial number' },
+        { error: 'Add the last 6 characters of your device serial number' },
         { status: 400 }
       );
     }

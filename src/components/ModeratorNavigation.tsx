@@ -27,15 +27,11 @@ function getModeratorNavItems(assignedGame: OnlineTournamentGameKey): ModeratorN
   const gameParam = encodeURIComponent(assignedGame);
 
   return [
-    ...(assignedGame === 'codm'
-      ? [
-          {
-            href: '/moderators',
-            label: 'CODM Desk',
-            icon: ShieldCheck,
-          },
-        ]
-      : []),
+    {
+      href: `/moderators?game=${gameParam}`,
+      label: `${game.shortLabel} Desk`,
+      icon: ShieldCheck,
+    },
     {
       href: `/moderators/check-in?game=${gameParam}`,
       label: `${game.shortLabel} Check-in`,

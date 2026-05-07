@@ -8,6 +8,7 @@ import {
   normalizeEmailAddress,
 } from '@/lib/auth-actions';
 import { applyAuthCookie, createSessionForProfile } from '@/lib/auth';
+import { getPostLoginRedirectPath } from '@/lib/navigation';
 import { createServiceClient } from '@/lib/supabase';
 
 export async function GET(request: NextRequest) {
@@ -67,8 +68,12 @@ export async function GET(request: NextRequest) {
     }
 
     const { token: sessionToken } = createSessionForProfile(profile as Record<string, unknown>);
+    const finalRedirectPath = appendAuthNotice(
+      getPostLoginRedirectPath(profile, nextPath),
+      'magic_link_success'
+    );
     const response = NextResponse.redirect(
-      new URL(appendAuthNotice(nextPath, 'magic_link_success'), request.url),
+      new URL(finalRedirectPath, request.url),
       { status: 303 }
     );
 

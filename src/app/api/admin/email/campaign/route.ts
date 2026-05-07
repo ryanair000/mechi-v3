@@ -12,6 +12,7 @@ import {
   getUnsubscribedEmailSet,
   normalizePreferenceEmail,
 } from '@/lib/email-preferences';
+import { getEmailCampaignTemplate } from '@/lib/email-campaign-templates';
 import { isTransactionalEmailReady, sendClientMarketingEmail } from '@/lib/email';
 import { checkPersistentRateLimit, getClientIp, rateLimitResponse } from '@/lib/rateLimit';
 import { createServiceClient } from '@/lib/supabase';
@@ -179,6 +180,8 @@ export async function POST(request: NextRequest) {
     const bodyText = getString(body.body_text);
     const ctaLabel = getString(body.cta_label) || null;
     const ctaUrl = getString(body.cta_url) || null;
+    const templateId = getString(body.template_id) || null;
+    const template = getEmailCampaignTemplate(templateId);
     const dryRun = body.dry_run === true;
     const confirmText = getString(body.confirm_text);
     const sendLimit = getSendLimit();
@@ -201,6 +204,10 @@ export async function POST(request: NextRequest) {
 
     if (ctaUrl && !ctaLabel) {
       return NextResponse.json({ error: 'CTA label is required when a CTA URL is set.' }, { status: 400 });
+    }
+
+    if (templateId && !template) {
+      return NextResponse.json({ error: 'Unknown email template.' }, { status: 400 });
     }
 
     const allRecipients = await loadAudienceRecipients(audienceType, body.recipients);
@@ -254,6 +261,8 @@ export async function POST(request: NextRequest) {
       recipient_count: recipients.length,
       metadata: {
         skipped_by_unsubscribe: allRecipients.length - recipients.length,
+        template_id: template?.id ?? null,
+        template_name: template?.name ?? null,
       },
       created_at: nowIso,
       updated_at: nowIso,
@@ -293,6 +302,7 @@ export async function POST(request: NextRequest) {
         campaign_id: campaignId,
         audience_type: audienceType,
         subject,
+        template_id: template?.id ?? null,
       };
       const didClaim = await claimDeliveryEvent(supabase, {
         eventKey,
@@ -372,6 +382,7 @@ export async function POST(request: NextRequest) {
       details: {
         audience_type: audienceType,
         subject,
+        template_id: template?.id ?? null,
         recipient_count: recipients.length,
         sent_count: sentCount,
         failed_count: failedCount,

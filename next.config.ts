@@ -40,6 +40,26 @@ const localActionOrigins = Array.from(
 const distDir = process.env.MECHI_NEXT_DIST_DIR;
 const isProductionBuild = process.env.NODE_ENV === "production";
 const sentryAuthToken = process.env.SENTRY_AUTH_TOKEN?.trim();
+const postHogRegion = process.env.NEXT_PUBLIC_POSTHOG_REGION?.trim().toLowerCase() === "eu" ? "eu" : "us";
+const postHogProxyPath = normalizePostHogProxyPath(
+  process.env.NEXT_PUBLIC_POSTHOG_PROXY_PATH
+);
+const postHogIngestOrigin =
+  postHogRegion === "eu" ? "https://eu.i.posthog.com" : "https://us.i.posthog.com";
+const postHogAssetOrigin =
+  postHogRegion === "eu"
+    ? "https://eu-assets.i.posthog.com"
+    : "https://us-assets.i.posthog.com";
+
+function normalizePostHogProxyPath(value: string | undefined) {
+  const cleaned = value?.trim();
+  if (!cleaned) {
+    return "/_mhq";
+  }
+
+  const path = cleaned.startsWith("/") ? cleaned : `/${cleaned}`;
+  return path.replace(/\/+$/, "") || "/_mhq";
+}
 
 const nextConfig: NextConfig = {
   ...(distDir ? { distDir } : {}),
@@ -87,6 +107,22 @@ const nextConfig: NextConfig = {
       },
     ];
   },
+  async rewrites() {
+    return [
+      {
+        source: `${postHogProxyPath}/static/:path*`,
+        destination: `${postHogAssetOrigin}/static/:path*`,
+      },
+      {
+        source: `${postHogProxyPath}/array/:path*`,
+        destination: `${postHogAssetOrigin}/array/:path*`,
+      },
+      {
+        source: `${postHogProxyPath}/:path*`,
+        destination: `${postHogIngestOrigin}/:path*`,
+      },
+    ];
+  },
   async headers() {
     return [
       {
@@ -100,11 +136,11 @@ const nextConfig: NextConfig = {
             key: "Content-Security-Policy",
             value: [
               "default-src 'self'",
-              "script-src 'self' 'unsafe-eval' 'unsafe-inline' https://www.googletagmanager.com",
+              "script-src 'self' 'unsafe-eval' 'unsafe-inline' https://www.googletagmanager.com https://us-assets.i.posthog.com https://eu-assets.i.posthog.com",
               "style-src 'self' 'unsafe-inline'",
-              "img-src 'self' data: blob: https://cdn.cloudflare.steamstatic.com https://res.cloudinary.com https://shared.cloudflare.steamstatic.com https://www.google-analytics.com https://region1.google-analytics.com",
+              "img-src 'self' data: blob: https://cdn.cloudflare.steamstatic.com https://res.cloudinary.com https://shared.cloudflare.steamstatic.com https://www.google-analytics.com https://region1.google-analytics.com https://us.i.posthog.com https://eu.i.posthog.com https://us-assets.i.posthog.com https://eu-assets.i.posthog.com",
               "font-src 'self' data:",
-              "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.paystack.co https://www.googletagmanager.com https://www.google-analytics.com https://region1.google-analytics.com",
+              "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.paystack.co https://www.googletagmanager.com https://www.google-analytics.com https://region1.google-analytics.com https://us.i.posthog.com https://eu.i.posthog.com https://us-assets.i.posthog.com https://eu-assets.i.posthog.com",
               "frame-ancestors 'none'",
             ].join("; "),
           },

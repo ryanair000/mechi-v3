@@ -1,6 +1,7 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { after, NextRequest, NextResponse } from 'next/server';
 import { requireActiveAccessProfile } from '@/lib/access';
 import { uploadImageDataUri } from '@/lib/cloudinary';
+import { scanAndStoreCodmSubmissionOcr } from '@/lib/codm-result-ocr';
 import {
   ONLINE_TOURNAMENT_SLUG,
   isOnlineTournamentGame,
@@ -131,10 +132,13 @@ export async function POST(request: NextRequest) {
       user_id: access.profile.id,
       screenshot_url: uploaded.secureUrl,
       screenshot_public_id: uploaded.publicId,
+      ocr_status: game === 'codm' ? 'pending' : null,
       status: 'pending',
       submitted_by: access.profile.id,
       updated_at: new Date().toISOString(),
     };
+
+    let createdSubmissionId: string | null = null;
 
     if (isBattleRoyaleTournamentGame(game)) {
       const matchNumber = readStrictPositiveInteger(formData.get('match_number'));
@@ -156,7 +160,7 @@ export async function POST(request: NextRequest) {
         .eq('match_number', matchNumber)
         .maybeSingle();
 
-      const { error } = await supabase
+      const { data: createdSubmission, error } = await supabase
         .from('online_tournament_result_submissions')
         .insert({
           ...basePayload,
@@ -164,11 +168,15 @@ export async function POST(request: NextRequest) {
           match_number: matchNumber,
           kills,
           placement,
-        });
+        })
+        .select('id')
+        .maybeSingle();
 
       if (error) {
         return NextResponse.json({ error: 'Could not save result' }, { status: 500 });
       }
+
+      createdSubmissionId = (createdSubmission as { id?: string } | null)?.id ?? null;
     } else {
       const fixtureId = String(formData.get('fixture_id') ?? '').trim();
       const player1Score = readPositiveInteger(formData.get('player1_score'));
@@ -220,6 +228,16 @@ export async function POST(request: NextRequest) {
       if (error) {
         return NextResponse.json({ error: 'Could not save result' }, { status: 500 });
       }
+    }
+
+    if (game === 'codm' && createdSubmissionId && uploaded.secureUrl) {
+      after(async () => {
+        await scanAndStoreCodmSubmissionOcr({
+          submissionId: createdSubmissionId!,
+          screenshotUrl: uploaded.secureUrl,
+          supabase,
+        });
+      });
     }
 
     const state = await loadOnlineTournamentOpsState(supabase);

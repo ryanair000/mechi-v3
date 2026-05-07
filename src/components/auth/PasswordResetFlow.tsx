@@ -6,6 +6,7 @@ import toast from 'react-hot-toast';
 import { Eye, EyeOff, KeyRound, Loader2, UserCheck } from 'lucide-react';
 import { ActionFeedback, type ActionFeedbackState } from '@/components/ActionFeedback';
 import { useAuth } from '@/components/AuthProvider';
+import { getPostLoginRedirectPath } from '@/lib/navigation';
 
 const MIN_PASSWORD_LENGTH = 9;
 
@@ -187,6 +188,11 @@ export function PasswordResetFlow({ loginHref, nextPath, token }: PasswordResetF
         return;
       }
 
+      const redirectPath = getPostLoginRedirectPath(
+        data.user,
+        typeof data.redirect_to === 'string' ? data.redirect_to : nextPath
+      );
+
       login(data.token, data.user);
       setFeedback({
         tone: 'success',
@@ -194,9 +200,7 @@ export function PasswordResetFlow({ loginHref, nextPath, token }: PasswordResetF
         detail: 'You are signed in now. Opening Mechi for you.',
       });
       toast.success('Password reset complete. You are signed in now.');
-      window.location.assign(
-        typeof data.redirect_to === 'string' ? data.redirect_to : nextPath
-      );
+      window.location.assign(redirectPath);
     } catch {
       setFeedback({
         tone: 'error',

@@ -1,50 +1,54 @@
 import type { OnlineTournamentRegistrationOpsRow } from '@/lib/online-tournament-ops';
+import { isValidTournamentDeviceSerialLast6 } from '@/lib/online-tournament';
 
-export type CodmModeratorRosterMode = 'checked_in' | 'needs_attention' | 'registered' | 'all';
+export type TournamentModeratorRosterMode = 'checked_in' | 'needs_attention' | 'registered' | 'all';
 
-export type CodmModeratorRosterCounts = Record<CodmModeratorRosterMode, number>;
+export type TournamentModeratorRosterCounts = Record<TournamentModeratorRosterMode, number>;
 
-export function hasCompleteCodmCheckInDetails(registration: OnlineTournamentRegistrationOpsRow) {
+export type CodmModeratorRosterMode = TournamentModeratorRosterMode;
+export type CodmModeratorRosterCounts = TournamentModeratorRosterCounts;
+
+export function hasCompleteTournamentCheckInDetails(registration: OnlineTournamentRegistrationOpsRow) {
   return Boolean(
     registration.check_in_status === 'checked_in' &&
       registration.in_game_username?.trim() &&
       registration.game_uid?.trim() &&
       registration.device_model?.trim() &&
       registration.whatsapp_number?.trim() &&
-      /^\d{6}$/.test(registration.device_serial_last6 ?? '')
+      isValidTournamentDeviceSerialLast6(registration.device_serial_last6)
   );
 }
 
-export function hasCodmLobby(registration: OnlineTournamentRegistrationOpsRow) {
+export function hasTournamentLobby(registration: OnlineTournamentRegistrationOpsRow) {
   return Boolean(registration.tournament_lobby_number && registration.tournament_lobby_slot);
 }
 
-export function needsCodmRosterAttention(registration: OnlineTournamentRegistrationOpsRow) {
+export function needsTournamentRosterAttention(registration: OnlineTournamentRegistrationOpsRow) {
   return (
     Boolean(registration.user?.is_banned) ||
     registration.eligibility_status === 'ineligible' ||
     registration.eligibility_status === 'disqualified' ||
     registration.check_in_status === 'no_show' ||
     (registration.check_in_status === 'checked_in' &&
-      (!hasCompleteCodmCheckInDetails(registration) || !hasCodmLobby(registration))) ||
+      (!hasCompleteTournamentCheckInDetails(registration) || !hasTournamentLobby(registration))) ||
     (registration.check_in_status === 'checked_in' &&
       registration.eligibility_status !== 'verified')
   );
 }
 
-export function isCodmReadyCheckedIn(registration: OnlineTournamentRegistrationOpsRow) {
-  return registration.check_in_status === 'checked_in' && !needsCodmRosterAttention(registration);
+export function isTournamentReadyCheckedIn(registration: OnlineTournamentRegistrationOpsRow) {
+  return registration.check_in_status === 'checked_in' && !needsTournamentRosterAttention(registration);
 }
 
-export function matchesCodmRosterMode(
+export function matchesTournamentRosterMode(
   registration: OnlineTournamentRegistrationOpsRow,
-  mode: CodmModeratorRosterMode
+  mode: TournamentModeratorRosterMode
 ) {
   switch (mode) {
     case 'checked_in':
-      return isCodmReadyCheckedIn(registration);
+      return registration.check_in_status === 'checked_in';
     case 'needs_attention':
-      return needsCodmRosterAttention(registration);
+      return needsTournamentRosterAttention(registration);
     case 'registered':
       return registration.check_in_status === 'registered';
     case 'all':
@@ -53,7 +57,7 @@ export function matchesCodmRosterMode(
   }
 }
 
-export function matchesCodmRosterSearch(
+export function matchesTournamentRosterSearch(
   registration: OnlineTournamentRegistrationOpsRow,
   query: string
 ) {
@@ -81,26 +85,36 @@ export function matchesCodmRosterSearch(
     .some((value) => String(value).toLowerCase().includes(normalizedQuery));
 }
 
-export function filterCodmModeratorRoster(
+export function filterTournamentModeratorRoster(
   registrations: OnlineTournamentRegistrationOpsRow[],
-  mode: CodmModeratorRosterMode,
+  mode: TournamentModeratorRosterMode,
   query: string
 ) {
   return registrations.filter(
     (registration) =>
-      matchesCodmRosterMode(registration, mode) &&
-      matchesCodmRosterSearch(registration, query)
+      matchesTournamentRosterMode(registration, mode) &&
+      matchesTournamentRosterSearch(registration, query)
   );
 }
 
-export function getCodmModeratorRosterCounts(
+export function getTournamentModeratorRosterCounts(
   registrations: OnlineTournamentRegistrationOpsRow[]
-): CodmModeratorRosterCounts {
+): TournamentModeratorRosterCounts {
   return {
-    checked_in: registrations.filter(isCodmReadyCheckedIn).length,
-    needs_attention: registrations.filter(needsCodmRosterAttention).length,
+    checked_in: registrations.filter((registration) => registration.check_in_status === 'checked_in')
+      .length,
+    needs_attention: registrations.filter(needsTournamentRosterAttention).length,
     registered: registrations.filter((registration) => registration.check_in_status === 'registered')
       .length,
     all: registrations.length,
   };
 }
+
+export const hasCompleteCodmCheckInDetails = hasCompleteTournamentCheckInDetails;
+export const hasCodmLobby = hasTournamentLobby;
+export const needsCodmRosterAttention = needsTournamentRosterAttention;
+export const isCodmReadyCheckedIn = isTournamentReadyCheckedIn;
+export const matchesCodmRosterMode = matchesTournamentRosterMode;
+export const matchesCodmRosterSearch = matchesTournamentRosterSearch;
+export const filterCodmModeratorRoster = filterTournamentModeratorRoster;
+export const getCodmModeratorRosterCounts = getTournamentModeratorRosterCounts;

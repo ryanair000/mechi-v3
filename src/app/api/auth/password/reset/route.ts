@@ -10,6 +10,7 @@ import {
   normalizeEmailAddress,
 } from '@/lib/auth-actions';
 import { applyAuthCookie, createSessionForProfile, hashPassword } from '@/lib/auth';
+import { getPostLoginRedirectPath } from '@/lib/navigation';
 import { checkPersistentRateLimit, getClientIp, rateLimitResponse } from '@/lib/rateLimit';
 import { createServiceClient } from '@/lib/supabase';
 
@@ -37,10 +38,14 @@ async function completePasswordReset(params: {
   const { token: sessionToken, user } = createSessionForProfile(
     updatedProfile as Record<string, unknown>
   );
+  const finalRedirectTo = appendAuthNotice(
+    getPostLoginRedirectPath(updatedProfile, params.redirectTo),
+    'password_reset_success'
+  );
   const response = NextResponse.json({
     token: sessionToken,
     user,
-    redirect_to: params.redirectTo,
+    redirect_to: finalRedirectTo,
   });
   applyAuthCookie(response, sessionToken);
   return response;
@@ -62,7 +67,7 @@ export async function POST(request: NextRequest) {
     const password = typeof body.password === 'string' ? body.password : '';
     const submittedRedirect = typeof body.redirect_to === 'string' ? body.redirect_to : '/dashboard';
     const redirectFallback = getAuthActionSafeNextPath(submittedRedirect);
-    const redirectTo = appendAuthNotice(redirectFallback, 'password_reset_success');
+    const redirectTo = redirectFallback;
 
     if (password.length < MIN_PASSWORD_LENGTH) {
       return NextResponse.json(
@@ -115,10 +120,7 @@ export async function POST(request: NextRequest) {
 
     const tokenRow = await getAuthActionToken(resetToken);
     const tokenState = getAuthActionTokenState(tokenRow);
-    const tokenRedirectTo = appendAuthNotice(
-      getAuthActionSafeNextPath(tokenRow?.next_path ?? redirectFallback),
-      'password_reset_success'
-    );
+    const tokenRedirectTo = getAuthActionSafeNextPath(tokenRow?.next_path ?? redirectFallback);
 
     if (!tokenRow || tokenRow.purpose !== 'password_reset') {
       return NextResponse.json({ error: 'That reset link is invalid or already used.' }, { status: 400 });

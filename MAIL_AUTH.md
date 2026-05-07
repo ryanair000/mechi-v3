@@ -2,7 +2,7 @@
 
 ## What Already Exists (do not recreate)
 
-- `src/lib/email.ts` — Resend client, `sendWelcomeEmail`, `sendMatchFoundEmail`, `sendResultConfirmedEmail` — all with branded HTML templates, FROM `noreply@mechi.club`
+- `src/lib/email.ts` — AWS SES HTTPS API sender, `sendWelcomeEmail`, `sendMatchFoundEmail`, `sendResultConfirmedEmail` — all with branded HTML templates, FROM `noreply@mechi.club`
 - `src/app/api/auth/register/route.ts` — calls `sendWelcomeEmail` on signup (email optional)
 - `src/app/api/matches/[id]/report/route.ts` — calls `sendResultConfirmedEmail` on match complete
 - `src/lib/whatsapp.ts` — exists, imports used in report route
@@ -18,53 +18,59 @@ Read these files fully before touching anything:
 
 ---
 
-## Part 1 — DNS & Resend Domain Verification
+## Part 1 — SES Domain Verification & Delivery Path
 
 > This is a checklist, not code. Complete before running any email tests.
 
-Mechi's sending domain is `mechi.club`. MX and A records are already on Truehost. For Resend to send *from* mechi.club, these additional DNS records must be added on Truehost:
+Mechi's sending domain is `mechi.club`. MX and A records are already on Truehost. For Amazon SES to send *from* `mechi.club`, verify the domain identity in the active SES Region and add the DKIM records SES provides.
 
 ### Records to add on Truehost DNS panel
 
 | Type | Name | Value |
 |---|---|---|
-| TXT | `@` (root) | `v=spf1 include:_spf.resend.com ~all` |
+| TXT | `@` (root) | `v=spf1 include:amazonses.com ~all` |
 | TXT | `_dmarc` | `v=DMARC1; p=none; rua=mailto:admin@mechi.club` |
-| TXT | `resend._domainkey` | *(copy exact value from Resend dashboard → Domains → mechi.club → DKIM)* |
+| CNAME | SES DKIM names | *(copy exact CNAME names and values from SES domain identity DKIM records)* |
 
 **Steps:**
-1. Go to [resend.com](https://resend.com) → Domains → Add Domain → enter `mechi.club`
-2. Copy the three DNS records Resend shows (SPF, DKIM, DMARC)
+1. Go to Amazon SES in the active Region, add/verify the `mechi.club` domain identity
+2. Copy the DKIM CNAME records SES shows
 3. Add them on Truehost DNS manager
-4. Back in Resend, click "Verify DNS Records"
+4. Back in SES, confirm the domain identity becomes verified
 5. Verification usually takes 5–30 minutes
 
 ### Required env vars (`.env.local` and Vercel project settings)
 
 ```
-RESEND_API_KEY=re_xxxxxxxxxxxx
+AWS_SES_REGION=us-east-2
+AWS_SES_FROM_EMAIL=noreply@mechi.club
+AWS_SES_USE_INSTANCE_ROLE=true
+EMAIL_UNSUBSCRIBE_SECRET=replace-with-random-secret
 NEXT_PUBLIC_APP_URL=https://mechi.club
 NEXT_PUBLIC_BASE_URL=https://mechi.club
 ```
 
+Use `AWS_SES_USE_INSTANCE_ROLE=true` on EC2 when the instance role has `ses:SendEmail`. If no instance role is attached, use `AWS_SES_ACCESS_KEY_ID` and `AWS_SES_SECRET_ACCESS_KEY` instead.
+
+### Delivery path
+
+Best long-term app path: the Mechi app sends through the SES HTTPS API over port `443`.
+
+If SMTP is needed outside the app, use the SES SMTP endpoint only:
+
+- Host: `email-smtp.<region>.amazonaws.com`
+- Port `587` with STARTTLS, or port `465` with TLS wrapper
+- Auth: SES SMTP credentials, not normal AWS access keys
+
+If a legacy local process can only send to `localhost:25`, run Postfix/Exim locally and relay outbound to SES on port `587`. The app/process uses `localhost:25`; the server relays to SES `587`.
+
 ### Test send (run once after DNS verifies)
 
-Create a temporary test script `scripts/test-email.ts`:
+Run:
 
-```typescript
-import { Resend } from 'resend';
-const resend = new Resend(process.env.RESEND_API_KEY);
-resend.emails.send({
-  from: 'noreply@mechi.club',
-  to: 'delivered@resend.dev', // Resend test address — always succeeds
-  subject: 'Mechi email test',
-  html: '<p>Email service working ✅</p>',
-}).then(console.log).catch(console.error);
+```bash
+npm run ops:ses:smoke -- --region us-east-2 --from noreply@mechi.club --to you@example.com
 ```
-
-Run: `npx tsx scripts/test-email.ts`
-
-Delete `scripts/test-email.ts` after confirming it works.
 
 ---
 
@@ -118,7 +124,7 @@ export async function sendMatchDisputeEmail(params: {
     <a href="${APP_URL}/match/${params.matchId}" class="btn">Upload Screenshot →</a>
   `;
   try {
-    await resend.emails.send({
+    await sendEmail({
       from: FROM,
       to: params.to,
       subject: `Match disputed — upload screenshot to resolve`,
@@ -547,7 +553,7 @@ body: JSON.stringify({
 
 ## Implementation Order
 
-1. Add DNS records on Truehost, verify domain in Resend dashboard
+1. Add SES DNS records on Truehost, verify the domain in Amazon SES
 2. Set env vars in Vercel project settings
 3. Run `supabase/migrations/20260414_whatsapp_notifications.sql` via Supabase dashboard SQL editor
 4. Update `src/lib/email.ts` (FROM format + `sendMatchDisputeEmail`)

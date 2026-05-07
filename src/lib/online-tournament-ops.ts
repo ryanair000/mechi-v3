@@ -23,6 +23,8 @@ export type OnlineTournamentResultStatus =
   | 'rejected'
   | 'disputed';
 
+export type OnlineTournamentSubmissionOcrStatus = 'pending' | 'complete' | 'failed';
+
 export type OnlineTournamentFixtureStatus =
   | 'pending'
   | 'ready'
@@ -132,6 +134,13 @@ export type OnlineTournamentResultSubmission = {
   reported_winner_registration_id: string | null;
   screenshot_url: string | null;
   screenshot_public_id: string | null;
+  ocr_status: OnlineTournamentSubmissionOcrStatus | null;
+  ocr_text: string | null;
+  ocr_confidence: number | null;
+  ocr_kills: number | null;
+  ocr_placement: number | null;
+  ocr_error: string | null;
+  ocr_scanned_at: string | null;
   status: OnlineTournamentResultStatus;
   admin_note: string | null;
   submitted_by: string | null;

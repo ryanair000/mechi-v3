@@ -1,0 +1,8 @@
+{
+  "commands": [
+    "date -u",
+    "timeout 12 bash -lc '</dev/tcp/gmail-smtp-in.l.google.com/25' && echo OUTBOUND_25_OK || echo OUTBOUND_25_BLOCKED_OR_TIMEOUT",
+    "postqueue -p",
+    "journalctl -u postfix --since '24 hours ago' --no-pager | grep -E '0413B8105D|gmail|status=sent|status=deferred|Connection timed out' | tail -n 120"
+  ]
+}

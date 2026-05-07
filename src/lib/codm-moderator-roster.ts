@@ -1,7 +1,12 @@
 import type { OnlineTournamentRegistrationOpsRow } from '@/lib/online-tournament-ops';
 import { isValidTournamentDeviceSerialLast6 } from '@/lib/online-tournament';
 
-export type TournamentModeratorRosterMode = 'checked_in' | 'needs_attention' | 'registered' | 'all';
+export type TournamentModeratorRosterMode =
+  | 'checked_in'
+  | 'ready'
+  | 'needs_attention'
+  | 'registered'
+  | 'all';
 
 export type TournamentModeratorRosterCounts = Record<TournamentModeratorRosterMode, number>;
 
@@ -47,6 +52,8 @@ export function matchesTournamentRosterMode(
   switch (mode) {
     case 'checked_in':
       return registration.check_in_status === 'checked_in';
+    case 'ready':
+      return isTournamentReadyCheckedIn(registration);
     case 'needs_attention':
       return needsTournamentRosterAttention(registration);
     case 'registered':
@@ -71,6 +78,8 @@ export function matchesTournamentRosterSearch(
     registration.user?.username,
     registration.in_game_username,
     registration.game_uid,
+    registration.phone,
+    registration.whatsapp_number,
     registration.device_model,
     registration.device_serial_last6,
     registration.admin_note,
@@ -103,6 +112,7 @@ export function getTournamentModeratorRosterCounts(
   return {
     checked_in: registrations.filter((registration) => registration.check_in_status === 'checked_in')
       .length,
+    ready: registrations.filter(isTournamentReadyCheckedIn).length,
     needs_attention: registrations.filter(needsTournamentRosterAttention).length,
     registered: registrations.filter((registration) => registration.check_in_status === 'registered')
       .length,

@@ -369,6 +369,7 @@ export function CodmModeratorClient() {
     count: number;
   }> = [
     { label: 'Checked In', mode: 'checked_in', count: rosterCounts.checked_in },
+    { label: 'Ready', mode: 'ready', count: rosterCounts.ready },
     { label: 'Needs Attention', mode: 'needs_attention', count: rosterCounts.needs_attention },
     { label: 'Registered', mode: 'registered', count: rosterCounts.registered },
     { label: 'All', mode: 'all', count: rosterCounts.all },
@@ -696,10 +697,10 @@ export function CodmModeratorClient() {
                     value={query}
                     onChange={(event) => setQuery(event.target.value)}
                     className="input pl-9"
-                    placeholder="Search player, UID, device"
+                    placeholder="Search player, UID, WhatsApp, device"
                   />
                 </label>
-                <div className="grid grid-cols-4 gap-1 rounded-lg border border-[var(--border-color)] bg-[var(--surface)] p-1">
+                <div className="grid grid-cols-2 gap-1 rounded-lg border border-[var(--border-color)] bg-[var(--surface)] p-1 sm:grid-cols-5">
                   {rosterFilterOptions.map(({ label, mode, count }) => (
                     <button
                       key={mode}
@@ -722,12 +723,13 @@ export function CodmModeratorClient() {
             </div>
 
             <div className="mt-4 overflow-x-auto">
-              <table className="w-full min-w-[820px] border-separate border-spacing-y-2 text-left">
+              <table className="w-full min-w-[980px] border-separate border-spacing-y-2 text-left">
                 <thead>
                   <tr className="text-xs uppercase tracking-[0.12em] text-[var(--text-soft)]">
                     <th className="px-3 py-2">Player</th>
                     <th className="px-3 py-2">Lobby</th>
                     <th className="px-3 py-2">Device</th>
+                    <th className="px-3 py-2">WhatsApp</th>
                     <th className="px-3 py-2">Status</th>
                     <th className="px-3 py-2">Actions</th>
                   </tr>
@@ -735,7 +737,7 @@ export function CodmModeratorClient() {
                 <tbody>
                   {filteredRoster.length === 0 ? (
                     <tr>
-                      <td colSpan={5} className="px-3 py-8 text-center text-sm text-[var(--text-secondary)]">
+                      <td colSpan={6} className="px-3 py-8 text-center text-sm text-[var(--text-secondary)]">
                         No {activeConfig.shortLabel} players match this view.
                       </td>
                     </tr>
@@ -775,9 +777,17 @@ export function CodmModeratorClient() {
                             </p>
                           </td>
                           <td className="border-y border-[var(--border-color)] px-3 py-3 align-top">
+                            <p className="text-sm font-semibold text-[var(--text-primary)]">
+                              {registration.whatsapp_number || registration.phone || 'n/a'}
+                            </p>
+                          </td>
+                          <td className="border-y border-[var(--border-color)] px-3 py-3 align-top">
                             <div className="flex flex-wrap gap-1.5">
                               <StatusPill status={registration.check_in_status} />
                               <StatusPill status={registration.eligibility_status} />
+                              {isTournamentReadyCheckedIn(registration) ? (
+                                <MetaPill label="ready" />
+                              ) : null}
                               {isBanned ? <MetaPill label="banned" tone="danger" /> : null}
                               {isProtectedAccount ? (
                                 <MetaPill label={registration.user?.role ?? 'staff'} />

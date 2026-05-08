@@ -16,6 +16,7 @@ import { getLoginPath, getRegisterPath, getSafeNextPath, withQuery } from '@/lib
 import {
   ONLINE_TOURNAMENT_GAMES,
   ONLINE_TOURNAMENT_ARENA_PATH,
+  ONLINE_TOURNAMENT_CHECK_IN_PATH,
   ONLINE_TOURNAMENT_GAME_BY_KEY,
   ONLINE_TOURNAMENT_PUBLIC_PATH,
   ONLINE_TOURNAMENT_REGISTRATION_PATH,
@@ -106,6 +107,14 @@ function isGameKey(value: string): value is OnlineTournamentGameKey {
   return Object.prototype.hasOwnProperty.call(ONLINE_TOURNAMENT_GAME_BY_KEY, value);
 }
 
+function normalizeRegistrationText(value: string | null | undefined) {
+  return value?.trim() ?? '';
+}
+
+function normalizeRegistrationHandle(value: string | null | undefined) {
+  return normalizeRegistrationText(value).replace(/^@+/, '');
+}
+
 export function OnlineTournamentRegistrationClient() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -145,6 +154,30 @@ export function OnlineTournamentRegistrationClient() {
   const signInHref = getLoginPath(returnPath);
   const tournamentArenaHref =
     requestedNextPath || `${ONLINE_TOURNAMENT_ARENA_PATH}?game=${encodeURIComponent(selectedGame)}`;
+  const tournamentCheckInHref =
+    requestedNextPath ||
+    withQuery(ONLINE_TOURNAMENT_CHECK_IN_PATH, {
+      game: selectedGame,
+    });
+  const hasRegistrationEdits = Boolean(
+    currentRegistration &&
+      (
+        normalizeRegistrationText(inGameUsername) !==
+          normalizeRegistrationText(currentRegistration.in_game_username) ||
+        followedInstagram !== currentRegistration.followed_instagram ||
+        normalizeRegistrationHandle(instagramUsername) !==
+          normalizeRegistrationHandle(currentRegistration.instagram_username) ||
+        subscribedYoutube !== currentRegistration.subscribed_youtube ||
+        normalizeRegistrationText(youtubeName) !==
+          normalizeRegistrationText(currentRegistration.youtube_name)
+      )
+  );
+  const registrationPrimaryHref =
+    currentRegistration?.check_in_status === 'checked_in'
+      ? tournamentArenaHref
+      : tournamentCheckInHref;
+  const detailFieldsDisabled =
+    submitting || (Boolean(currentRegistration) && !selectedGameRegistrationOpen);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -266,8 +299,13 @@ export function OnlineTournamentRegistrationClient() {
   };
 
   const handlePrimaryAction = () => {
+    if (currentRegistration && hasRegistrationEdits) {
+      void handleSubmit();
+      return;
+    }
+
     if (currentRegistration) {
-      router.push(tournamentArenaHref);
+      router.push(registrationPrimaryHref);
       return;
     }
 
@@ -354,11 +392,22 @@ export function OnlineTournamentRegistrationClient() {
                           You are already registered for this game.
                         </p>
                         <p className="mt-1 text-sm leading-6 text-[var(--text-secondary)]">
-                          Status: {currentRegistration.eligibility_status}.{' '}
+                          Reward review: {currentRegistration.eligibility_status}. Check-in:{' '}
+                          {currentRegistration.check_in_status === 'checked_in'
+                            ? 'done'
+                            : 'still needed'}.{' '}
                           {selectedGameRegistrationOpen
                             ? 'You can update your tag or social proof before registration closes.'
                             : 'Registration is now closed for this game. Your saved slot stays on the list.'}
                         </p>
+                        <div className="mt-3 flex flex-wrap gap-2">
+                          <span className="brand-chip px-3 py-1">
+                            Registration saved
+                          </span>
+                          <span className="rounded-full border border-[var(--border-color)] bg-[var(--surface-elevated)] px-3 py-1 text-xs font-bold uppercase tracking-[0.12em] text-[var(--text-secondary)]">
+                            Check-in {currentRegistration.check_in_status === 'checked_in' ? 'done' : 'pending'}
+                          </span>
+                        </div>
                         <Button asChild size="sm" className="mt-3">
                           <a
                             href={selectedGameConfig.whatsappGroupUrl}
@@ -381,6 +430,7 @@ export function OnlineTournamentRegistrationClient() {
                     <select
                       value={selectedGame}
                       onChange={(event) => handleGameChange(event.target.value)}
+                      disabled={submitting}
                       className="input"
                     >
                       {ONLINE_TOURNAMENT_GAMES.map((game) => (
@@ -397,6 +447,7 @@ export function OnlineTournamentRegistrationClient() {
                     <input
                       value={inGameUsername}
                       onChange={(event) => setInGameUsername(event.target.value)}
+                      disabled={detailFieldsDisabled}
                       className="input"
                       placeholder="Your exact game username"
                     />
@@ -408,6 +459,7 @@ export function OnlineTournamentRegistrationClient() {
                         type="checkbox"
                         checked={followedInstagram}
                         onChange={(event) => setFollowedInstagram(event.target.checked)}
+                        disabled={detailFieldsDisabled}
                         className="mt-1"
                       />
                       <span>
@@ -425,6 +477,7 @@ export function OnlineTournamentRegistrationClient() {
                         type="checkbox"
                         checked={subscribedYoutube}
                         onChange={(event) => setSubscribedYoutube(event.target.checked)}
+                        disabled={detailFieldsDisabled}
                         className="mt-1"
                       />
                       <span>
@@ -470,6 +523,7 @@ export function OnlineTournamentRegistrationClient() {
                           onChange={(event) =>
                             setInstagramUsername(event.target.value.replace(/^@+/, ''))
                           }
+                          disabled={detailFieldsDisabled}
                           className="input pl-8"
                           placeholder="yourhandle"
                         />
@@ -480,6 +534,7 @@ export function OnlineTournamentRegistrationClient() {
                       <input
                         value={youtubeName}
                         onChange={(event) => setYoutubeName(event.target.value)}
+                        disabled={detailFieldsDisabled}
                         className="input"
                         placeholder="Email or channel name"
                       />
@@ -491,6 +546,7 @@ export function OnlineTournamentRegistrationClient() {
                       type="checkbox"
                       checked={availableAt8pm}
                       onChange={(event) => setAvailableAt8pm(event.target.checked)}
+                      disabled={detailFieldsDisabled}
                       className="mt-1"
                     />
                     <span className="text-sm leading-6 text-[var(--text-secondary)]">
@@ -503,6 +559,7 @@ export function OnlineTournamentRegistrationClient() {
                       type="checkbox"
                       checked={acceptedRules}
                       onChange={(event) => setAcceptedRules(event.target.checked)}
+                      disabled={detailFieldsDisabled}
                       className="mt-1"
                     />
                     <span className="text-sm leading-6 text-[var(--text-secondary)]">
@@ -523,7 +580,11 @@ export function OnlineTournamentRegistrationClient() {
                   <Button type="button" size="lg" disabled={!canUsePrimaryAction} onClick={handlePrimaryAction}>
                     {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trophy className="h-4 w-4" />}
                     {currentRegistration
-                      ? 'Confirm Registration'
+                      ? hasRegistrationEdits
+                        ? 'Save registration'
+                        : currentRegistration.check_in_status === 'checked_in'
+                          ? 'Open tournament desk'
+                          : 'Open check-in'
                       : !selectedGameRegistrationOpen
                       ? 'Registration closed'
                       : 'Lock my slot'}

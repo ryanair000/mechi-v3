@@ -52,6 +52,34 @@ type PlayerCheckInDetails = {
   deviceSerialLast6: string;
 };
 
+function buildPlayerCheckInDetails(params: {
+  registration: OnlineTournamentPlayerState['myRegistrations'][number] | null;
+  fallbackWhatsappNumber: string;
+}): PlayerCheckInDetails {
+  const { registration, fallbackWhatsappNumber } = params;
+
+  return {
+    ign: registration?.in_game_username ?? '',
+    uid: registration?.game_uid ?? '',
+    device: registration?.device_model ?? '',
+    whatsappNumber: registration?.whatsapp_number ?? fallbackWhatsappNumber,
+    deviceSerialLast6: registration?.device_serial_last6 ?? '',
+  };
+}
+
+function arePlayerCheckInDetailsEqual(
+  left: PlayerCheckInDetails,
+  right: PlayerCheckInDetails
+) {
+  return (
+    left.ign === right.ign &&
+    left.uid === right.uid &&
+    left.device === right.device &&
+    left.whatsappNumber === right.whatsappNumber &&
+    left.deviceSerialLast6 === right.deviceSerialLast6
+  );
+}
+
 const STATE_API_PATH = '/api/events/mechi-online-gaming-tournament/state';
 const RESULTS_API_PATH = '/api/events/mechi-online-gaming-tournament/results';
 const PLAYER_STATE_POLL_INTERVAL_MS = 15000;
@@ -300,6 +328,8 @@ export function OnlineTournamentArenaClient({
   const { user, loading: authLoading } = useAuth();
   const authFetch = useAuthFetch();
   const redirectedToRegistrationRef = useRef(false);
+  const hydratedCheckInSourceRef = useRef<string | null>(null);
+  const hydratedCheckInDetailsRef = useRef<PlayerCheckInDetails | null>(null);
   const [state, setState] = useState<OnlineTournamentPlayerState | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -409,14 +439,29 @@ export function OnlineTournamentArenaClient({
   );
 
   useEffect(() => {
-    setCheckInForm({
-      ign: myRegistration?.in_game_username ?? '',
-      uid: myRegistration?.game_uid ?? '',
-      device: myRegistration?.device_model ?? '',
-      whatsappNumber: myRegistration?.whatsapp_number ?? user?.whatsapp_number ?? user?.phone ?? '',
-      deviceSerialLast6: myRegistration?.device_serial_last6 ?? '',
+    const fallbackWhatsappNumber = user?.whatsapp_number ?? user?.phone ?? '';
+    const nextCheckInForm = buildPlayerCheckInDetails({
+      registration: myRegistration,
+      fallbackWhatsappNumber,
     });
-  }, [myRegistration, user?.phone, user?.whatsapp_number]);
+    const nextSourceKey = `${activeGame}:${myRegistration?.id ?? 'none'}:${fallbackWhatsappNumber}`;
+
+    setCheckInForm((currentForm) => {
+      const currentHydratedSource = hydratedCheckInSourceRef.current;
+      const currentHydratedDetails = hydratedCheckInDetailsRef.current;
+      const hasLocalDraftChanges = currentHydratedDetails
+        ? !arePlayerCheckInDetailsEqual(currentForm, currentHydratedDetails)
+        : false;
+
+      if (currentHydratedSource === nextSourceKey && hasLocalDraftChanges) {
+        return currentForm;
+      }
+
+      hydratedCheckInSourceRef.current = nextSourceKey;
+      hydratedCheckInDetailsRef.current = nextCheckInForm;
+      return nextCheckInForm;
+    });
+  }, [activeGame, myRegistration, user?.phone, user?.whatsapp_number]);
 
   useEffect(() => {
     if (

@@ -1,5 +1,6 @@
 import { getStorageStatePath } from '../helpers/storage-state';
 import { test, expect } from '../fixtures';
+import { SEEDED_PERSONAS } from '../helpers/personas';
 import { createApiContextAs } from './support';
 
 test.use({ storageState: getStorageStatePath('playerFree') });
@@ -115,5 +116,94 @@ test.describe('Player Pages', () => {
     await page.goto('/t/e2e-live-cup/live');
     await expect(page.locator('body')).toContainText(/E2E Live Cup Broadcast/i);
     await expect(page.locator('body')).toContainText(/Streamer: e2e-elite-player/i);
+  });
+
+  test('playmechi check-in preserves unsaved UID edits across refreshes @core', async ({
+    page,
+  }) => {
+    let stateRequests = 0;
+    const player = SEEDED_PERSONAS.playerFree;
+    const mockState = {
+      roster: [],
+      myRegistrations: [
+        {
+          id: 'codm-registration-e2e',
+          event_slug: 'mechi-online-gaming-tournament',
+          user_id: player.id,
+          game: 'codm',
+          in_game_username: 'E2E Free CODM',
+          game_uid: '',
+          phone: player.phone,
+          whatsapp_number: '254788454985',
+          device_model: 'Samsung A15',
+          device_serial_last6: '',
+          tournament_lobby_number: null,
+          tournament_lobby_slot: null,
+          tournament_lobby_assigned_at: null,
+          email: player.email,
+          instagram_username: 'e2e-free-player',
+          youtube_name: 'e2e-free-player',
+          followed_instagram: true,
+          subscribed_youtube: true,
+          available_at_8pm: true,
+          accepted_rules: true,
+          reward_eligible: true,
+          eligibility_status: 'eligible',
+          check_in_status: 'checked_in',
+          checked_in_at: '2026-05-08T11:00:00.000Z',
+          admin_note: null,
+          created_at: '2026-05-08T10:00:00.000Z',
+          updated_at: '2026-05-08T10:00:00.000Z',
+          user: {
+            id: player.id,
+            username: player.username,
+            phone: player.phone,
+            email: player.email,
+            role: 'user',
+            is_banned: false,
+          },
+        },
+      ],
+      rooms: [],
+      fixtures: [],
+      standings: {
+        codm: [],
+      },
+      mySubmissions: [],
+      disputes: [],
+      payouts: [],
+    };
+
+    await page.route('**/api/events/mechi-online-gaming-tournament/state', async (route) => {
+      if (route.request().method() === 'GET') {
+        stateRequests += 1;
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify(mockState),
+        });
+        return;
+      }
+
+      await route.continue();
+    });
+
+    await page.goto('/playmechi/check-in?game=codm');
+    await expect(page.getByRole('button', { name: /save details/i })).toBeVisible();
+
+    const uidInput = page.getByLabel(/^UID$/i);
+    await uidInput.fill('5203');
+
+    await Promise.all([
+      page.waitForResponse(
+        (response) =>
+          response.url().includes('/api/events/mechi-online-gaming-tournament/state') &&
+          response.request().method() === 'GET' &&
+          stateRequests >= 2
+      ),
+      page.getByRole('button', { name: /refresh/i }).click(),
+    ]);
+
+    await expect(uidInput).toHaveValue('5203');
   });
 });

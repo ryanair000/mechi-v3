@@ -33,7 +33,9 @@ type AwsSesCredentials = {
 type EmailTransportKind = 'smtp' | 'aws-ses';
 
 const FROM_ADDRESS =
-  process.env.EMAIL_FROM_ADDRESS ?? process.env.AWS_SES_FROM_EMAIL ?? 'noreply@mechi.club';
+  process.env.EMAIL_FROM_ADDRESS?.trim() ??
+  process.env.AWS_SES_FROM_EMAIL?.trim() ??
+  'noreply@mechi.club';
 const FROM = `Mechi <${FROM_ADDRESS}>`;
 const SUPPORT_ADDRESS = 'support@mechi.club';
 let cachedInstanceCredentials: AwsSesCredentials | null = null;

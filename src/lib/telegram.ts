@@ -317,7 +317,7 @@ export async function sendOnlineTournamentCheckInTelegramNotification(params: {
     formatField('UID', params.gameUid),
     formatField('WhatsApp', params.whatsappNumber),
     formatField('Device', params.deviceModel),
-    formatField('Serial last 6', params.deviceSerialLast6),
+    params.deviceSerialLast6 ? formatField('Serial last 6', params.deviceSerialLast6) : null,
     formatField('Lobby', lobbyLabel),
     formatField('Checked in at', params.checkedInAt),
     params.registrationId ? formatField('Registration', params.registrationId.slice(0, 8)) : null,

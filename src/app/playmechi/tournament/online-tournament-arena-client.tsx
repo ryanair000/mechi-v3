@@ -25,6 +25,7 @@ import {
   ONLINE_TOURNAMENT_GAME_BY_KEY,
   ONLINE_TOURNAMENT_REGISTRATION_PATH,
   normalizeTournamentDeviceSerialLast6,
+  requiresTournamentDeviceSerialLast6,
   type OnlineTournamentGameKey,
 } from '@/lib/online-tournament';
 import {
@@ -179,7 +180,10 @@ function getMissingCheckInFields(
     missingFields.push('WhatsApp number');
   }
 
-  if (normalizeTournamentDeviceSerialLast6(registration.device_serial_last6).length !== 6) {
+  if (
+    requiresTournamentDeviceSerialLast6(registration.game) &&
+    normalizeTournamentDeviceSerialLast6(registration.device_serial_last6).length !== 6
+  ) {
     missingFields.push('serial last 6');
   }
 
@@ -402,7 +406,9 @@ export function OnlineTournamentArenaClient({
           game_uid: details.uid,
           device_model: details.device,
           whatsapp_number: details.whatsappNumber,
-          device_serial_last6: details.deviceSerialLast6,
+          ...(requiresTournamentDeviceSerialLast6(activeGame)
+            ? { device_serial_last6: details.deviceSerialLast6 }
+            : {}),
         }),
       });
       const data = (await res.json()) as OnlineTournamentPlayerState & {
@@ -608,6 +614,7 @@ function PlayerGameStatus({
     registration && !isDisqualified && (!isCheckedIn || shouldShowRecoveryForm)
   );
   const shouldShowCheckInSummary = Boolean(registration && isCheckedIn && !shouldShowRecoveryForm);
+  const requiresDeviceSerial = requiresTournamentDeviceSerialLast6(activeGame);
   const shouldShowCodmDetailHelp =
     shouldShowRecoveryForm &&
     activeGame === 'codm' &&
@@ -704,7 +711,11 @@ function PlayerGameStatus({
 
       {shouldShowCheckInForm ? (
         <form onSubmit={handleSubmit} className="mt-5 space-y-4">
-          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
+          <div
+            className={`grid gap-3 md:grid-cols-2 ${
+              requiresDeviceSerial ? 'xl:grid-cols-5' : 'xl:grid-cols-4'
+            }`}
+          >
             <label className="block">
               <span className="text-xs font-bold text-[var(--text-soft)]">IGN</span>
               <input
@@ -755,27 +766,29 @@ function PlayerGameStatus({
                 className="input mt-1"
               />
             </label>
-            <label className="block">
-              <span className="text-xs font-bold text-[var(--text-soft)]">
-                Serial number last 6 characters
-              </span>
-              <input
-                required
-                inputMode="text"
-                maxLength={6}
-                pattern="[A-Za-z0-9]{6}"
-                value={checkInDetails.deviceSerialLast6}
-                onChange={(event) =>
-                  onCheckInDetailsChange({
-                    ...checkInDetails,
-                    deviceSerialLast6: normalizeTournamentDeviceSerialLast6(event.target.value),
-                  })
-                }
-                placeholder="A1B2C3"
-                style={{ textTransform: 'uppercase' }}
-                className="input mt-1"
-              />
-            </label>
+            {requiresDeviceSerial ? (
+              <label className="block">
+                <span className="text-xs font-bold text-[var(--text-soft)]">
+                  Serial number last 6 characters
+                </span>
+                <input
+                  required
+                  inputMode="text"
+                  maxLength={6}
+                  pattern="[A-Za-z0-9]{6}"
+                  value={checkInDetails.deviceSerialLast6}
+                  onChange={(event) =>
+                    onCheckInDetailsChange({
+                      ...checkInDetails,
+                      deviceSerialLast6: normalizeTournamentDeviceSerialLast6(event.target.value),
+                    })
+                  }
+                  placeholder="A1B2C3"
+                  style={{ textTransform: 'uppercase' }}
+                  className="input mt-1"
+                />
+              </label>
+            ) : null}
           </div>
 
           <button
@@ -790,12 +803,18 @@ function PlayerGameStatus({
       ) : null}
 
       {registration && shouldShowCheckInSummary ? (
-        <div className="mt-5 grid gap-2 md:grid-cols-2 xl:grid-cols-6">
+        <div
+          className={`mt-5 grid gap-2 md:grid-cols-2 ${
+            requiresDeviceSerial ? 'xl:grid-cols-6' : 'xl:grid-cols-5'
+          }`}
+        >
           <CheckInDetail label="IGN" value={registration.in_game_username} />
           <CheckInDetail label="UID" value={registration.game_uid} />
           <CheckInDetail label="Device model" value={registration.device_model} />
           <CheckInDetail label="WhatsApp number" value={registration.whatsapp_number} />
-          <CheckInDetail label="Serial last 6" value={registration.device_serial_last6} />
+          {requiresDeviceSerial ? (
+            <CheckInDetail label="Serial last 6" value={registration.device_serial_last6} />
+          ) : null}
           <CheckInDetail label="Tournament lobby" value={formatOnlineTournamentLobby(registration)} />
         </div>
       ) : null}

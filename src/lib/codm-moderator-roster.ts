@@ -1,5 +1,8 @@
 import type { OnlineTournamentRegistrationOpsRow } from '@/lib/online-tournament-ops';
-import { isValidTournamentDeviceSerialLast6 } from '@/lib/online-tournament';
+import {
+  isValidTournamentDeviceSerialLast6,
+  requiresTournamentDeviceSerialLast6,
+} from '@/lib/online-tournament';
 
 export type TournamentModeratorRosterMode =
   | 'checked_in'
@@ -14,13 +17,16 @@ export type CodmModeratorRosterMode = TournamentModeratorRosterMode;
 export type CodmModeratorRosterCounts = TournamentModeratorRosterCounts;
 
 export function hasCompleteTournamentCheckInDetails(registration: OnlineTournamentRegistrationOpsRow) {
+  const hasRequiredDeviceSerial = !requiresTournamentDeviceSerialLast6(registration.game) ||
+    isValidTournamentDeviceSerialLast6(registration.device_serial_last6);
+
   return Boolean(
     registration.check_in_status === 'checked_in' &&
       registration.in_game_username?.trim() &&
       registration.game_uid?.trim() &&
       registration.device_model?.trim() &&
       registration.whatsapp_number?.trim() &&
-      isValidTournamentDeviceSerialLast6(registration.device_serial_last6)
+      hasRequiredDeviceSerial
   );
 }
 

@@ -11,6 +11,7 @@ import {
   ONLINE_TOURNAMENT_TITLE,
   normalizeTournamentDeviceSerialLast6,
   isOnlineTournamentGame,
+  requiresTournamentDeviceSerialLast6,
   type OnlineTournamentGameKey,
 } from '@/lib/online-tournament';
 import {
@@ -150,6 +151,7 @@ async function updateRegistrationForCheckIn(params: {
   whatsappNumber: string;
   deviceModel: string;
   deviceSerialLast6: string;
+  includeDeviceSerial: boolean;
   checkedInAt: string;
 }) {
   const {
@@ -161,6 +163,7 @@ async function updateRegistrationForCheckIn(params: {
     whatsappNumber,
     deviceModel,
     deviceSerialLast6,
+    includeDeviceSerial,
     checkedInAt,
   } = params;
 
@@ -183,6 +186,15 @@ async function updateRegistrationForCheckIn(params: {
       .neq('eligibility_status', 'disqualified')
       .select(CHECK_IN_REGISTRATION_SELECT)
       .maybeSingle();
+
+  if (!includeDeviceSerial) {
+    const updateWithoutSerial = await runUpdate(false);
+    return {
+      registration: updateWithoutSerial.data,
+      registrationError: updateWithoutSerial.error,
+      serialPersisted: true,
+    };
+  }
 
   const primary = await runUpdate(true);
   if (!primary.error) {
@@ -270,6 +282,7 @@ export async function POST(request: NextRequest) {
     const gameUid = cleanText(body.game_uid, 80);
     const deviceModel = cleanText(body.device_model, 100);
     const whatsappNumber = cleanText(body.whatsapp_number, 40);
+    const requiresDeviceSerial = requiresTournamentDeviceSerialLast6(game);
     const deviceSerialLast6 = normalizeTournamentDeviceSerialLast6(body.device_serial_last6);
 
     if (inGameUsername.length < 2) {
@@ -288,7 +301,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Add your WhatsApp number' }, { status: 400 });
     }
 
-    if (deviceSerialLast6.length !== 6) {
+    if (requiresDeviceSerial && deviceSerialLast6.length !== 6) {
       return NextResponse.json(
         { error: 'Add the last 6 characters of your device serial number' },
         { status: 400 }
@@ -310,6 +323,7 @@ export async function POST(request: NextRequest) {
       whatsappNumber,
       deviceModel,
       deviceSerialLast6,
+      includeDeviceSerial: requiresDeviceSerial,
       checkedInAt,
     });
 
@@ -360,7 +374,7 @@ export async function POST(request: NextRequest) {
           gameUid,
           whatsappNumber,
           deviceModel,
-          deviceSerialLast6,
+          deviceSerialLast6: requiresDeviceSerial ? deviceSerialLast6 : null,
           tournamentLobbyNumber,
           tournamentLobbySlot,
           checkedInAt,

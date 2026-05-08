@@ -58,6 +58,7 @@ export type NotificationType =
   | 'tournament_joined'
   | 'tournament_player_joined'
   | 'tournament_started'
+  | 'tournament_registration_verified'
   | 'match_found'
   | 'match_chat_message'
   | 'match_reported'

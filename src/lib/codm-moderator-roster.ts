@@ -5,6 +5,7 @@ import {
 } from '@/lib/online-tournament';
 
 export type TournamentModeratorRosterMode =
+  | 'unverified'
   | 'checked_in'
   | 'ready'
   | 'needs_attention'
@@ -56,6 +57,12 @@ export function matchesTournamentRosterMode(
   mode: TournamentModeratorRosterMode
 ) {
   switch (mode) {
+    case 'unverified':
+      return (
+        registration.check_in_status === 'checked_in' &&
+        registration.eligibility_status !== 'verified' &&
+        registration.eligibility_status !== 'disqualified'
+      );
     case 'checked_in':
       return registration.check_in_status === 'checked_in';
     case 'ready':
@@ -116,6 +123,9 @@ export function getTournamentModeratorRosterCounts(
   registrations: OnlineTournamentRegistrationOpsRow[]
 ): TournamentModeratorRosterCounts {
   return {
+    unverified: registrations.filter((registration) =>
+      matchesTournamentRosterMode(registration, 'unverified')
+    ).length,
     checked_in: registrations.filter((registration) => registration.check_in_status === 'checked_in')
       .length,
     ready: registrations.filter(isTournamentReadyCheckedIn).length,

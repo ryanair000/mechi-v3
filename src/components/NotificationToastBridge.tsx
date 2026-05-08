@@ -15,6 +15,7 @@ const HIGH_SIGNAL_NOTIFICATION_TYPES = new Set<NotificationType>([
   'match_completed',
   'match_disputed',
   'tournament_started',
+  'tournament_registration_verified',
 ]);
 
 const NOTIFICATION_TOAST_STORAGE_PREFIX = 'mechi-toast-notifications';

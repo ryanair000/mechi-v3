@@ -54,6 +54,7 @@ type PlayerCheckInDetails = {
 
 const STATE_API_PATH = '/api/events/mechi-online-gaming-tournament/state';
 const RESULTS_API_PATH = '/api/events/mechi-online-gaming-tournament/results';
+const PLAYER_STATE_POLL_INTERVAL_MS = 15000;
 const MODERATOR_TOURNAMENT_ARENA_PATH = '/moderators/tournament';
 const MODERATOR_TOURNAMENT_CHECK_IN_PATH = '/moderators/check-in';
 
@@ -280,27 +281,39 @@ export function OnlineTournamentArenaClient({
   const [screenshot, setScreenshot] = useState<File | null>(null);
 
   const loadState = useCallback(
-    async (mode: 'initial' | 'refresh' = 'refresh') => {
+    async (mode: 'initial' | 'refresh' | 'poll' = 'refresh') => {
       if (!user) return;
-      if (mode === 'initial') setLoading(true);
-      setRefreshing(true);
+      if (mode === 'initial') {
+        setLoading(true);
+      }
+      if (mode !== 'poll') {
+        setRefreshing(true);
+      }
 
       try {
         const res = await authFetch(STATE_API_PATH);
         const data = (await res.json()) as OnlineTournamentPlayerState & { error?: string };
 
         if (!res.ok) {
-          toast.error(data.error ?? 'Could not load tournament');
-          setState(null);
+          if (mode !== 'poll') {
+            toast.error(data.error ?? 'Could not load tournament');
+            setState(null);
+          }
           return;
         }
 
         setState(data);
       } catch {
-        toast.error('Network error while loading tournament');
+        if (mode !== 'poll') {
+          toast.error('Network error while loading tournament');
+        }
       } finally {
-        setLoading(false);
-        setRefreshing(false);
+        if (mode === 'initial') {
+          setLoading(false);
+        }
+        if (mode !== 'poll') {
+          setRefreshing(false);
+        }
       }
     },
     [authFetch, user]
@@ -315,6 +328,32 @@ export function OnlineTournamentArenaClient({
 
     void loadState('initial');
   }, [authLoading, loadState, user]);
+
+  useEffect(() => {
+    if (surface !== 'player' || authLoading || !user) {
+      return;
+    }
+
+    const refreshState = () => {
+      if (document.visibilityState === 'visible') {
+        void loadState('poll');
+      }
+    };
+
+    const handleVisibilityChange = () => {
+      refreshState();
+    };
+
+    const intervalId = window.setInterval(refreshState, PLAYER_STATE_POLL_INTERVAL_MS);
+    window.addEventListener('focus', refreshState);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      window.clearInterval(intervalId);
+      window.removeEventListener('focus', refreshState);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [authLoading, loadState, surface, user]);
 
   const myRegistration = useMemo(
     () => state?.myRegistrations.find((registration) => registration.game === activeGame) ?? null,

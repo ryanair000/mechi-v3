@@ -85,6 +85,11 @@ type TournamentOpsResponse = TournamentOpsState & {
   ocr_scan_error?: string | null;
 };
 
+type RegistrationUpdateResponse = {
+  error?: string;
+  registrations?: OnlineTournamentRegistrationOpsRow[];
+};
+
 type RoomDraft = {
   map_name: string;
   room_id: string;
@@ -282,7 +287,7 @@ export function CodmModeratorClient() {
   const [loading, setLoading] = useState(true);
   const [actingOn, setActingOn] = useState<string | null>(null);
   const [query, setQuery] = useState('');
-  const [rosterMode, setRosterMode] = useState<TournamentModeratorRosterMode>('checked_in');
+  const [rosterMode, setRosterMode] = useState<TournamentModeratorRosterMode>('unverified');
   const [registrationNotes, setRegistrationNotes] = useState<Record<string, string>>({});
   const [submissionNotes, setSubmissionNotes] = useState<Record<string, string>>({});
 
@@ -368,6 +373,7 @@ export function CodmModeratorClient() {
     mode: TournamentModeratorRosterMode;
     count: number;
   }> = [
+    { label: 'Unverified', mode: 'unverified', count: rosterCounts.unverified },
     { label: 'Checked In', mode: 'checked_in', count: rosterCounts.checked_in },
     { label: 'Ready', mode: 'ready', count: rosterCounts.ready },
     { label: 'Needs Attention', mode: 'needs_attention', count: rosterCounts.needs_attention },
@@ -461,15 +467,33 @@ export function CodmModeratorClient() {
           ...updates,
         }),
       });
-      const data = (await res.json()) as { error?: string };
+      const data = (await res.json()) as RegistrationUpdateResponse;
 
       if (!res.ok) {
         toast.error(data.error ?? 'Could not update player');
         return;
       }
 
-      await loadState();
-      toast.success('Player updated');
+      if (data.registrations && state) {
+        applyState({
+          ...state,
+          registrations: data.registrations,
+        });
+      } else {
+        await loadState();
+      }
+
+      if (updates.eligibility_status === 'verified') {
+        toast.success(`${getPlayerLabel(registration)} verified`);
+      } else if (updates.check_in_status === 'no_show') {
+        toast.success(`${getPlayerLabel(registration)} marked no-show`);
+      } else if (updates.check_in_status === 'registered') {
+        toast.success(`${getPlayerLabel(registration)} restored`);
+      } else if (Object.prototype.hasOwnProperty.call(updates, 'admin_note')) {
+        toast.success('Moderator note saved');
+      } else {
+        toast.success('Player updated');
+      }
     } catch {
       toast.error('Network error while updating player');
     } finally {
@@ -700,7 +724,7 @@ export function CodmModeratorClient() {
                     placeholder="Search player, UID, WhatsApp, device"
                   />
                 </label>
-                <div className="grid grid-cols-2 gap-1 rounded-lg border border-[var(--border-color)] bg-[var(--surface)] p-1 sm:grid-cols-5">
+                <div className="grid grid-cols-2 gap-1 rounded-lg border border-[var(--border-color)] bg-[var(--surface)] p-1 sm:grid-cols-6">
                   {rosterFilterOptions.map(({ label, mode, count }) => (
                     <button
                       key={mode}
@@ -746,6 +770,7 @@ export function CodmModeratorClient() {
                       const isActingRegistration = actingOn === registration.id;
                       const isActingAccount = actingOn === `account-${registration.id}`;
                       const isActing = isActingRegistration || isActingAccount;
+                      const isVerified = registration.eligibility_status === 'verified';
                       const isProtectedAccount =
                         registration.user?.role === 'moderator' ||
                         registration.user?.role === 'admin';
@@ -796,23 +821,30 @@ export function CodmModeratorClient() {
                           </td>
                           <td className="rounded-r-lg border-y border-r border-[var(--border-color)] px-3 py-3 align-top">
                             <div className="flex flex-wrap gap-2">
-                              <button
-                                type="button"
-                                disabled={isActing}
-                                onClick={() =>
-                                  void patchRegistration(registration, {
-                                    eligibility_status: 'verified',
-                                  })
-                                }
-                                className="btn-primary min-h-9 px-3 py-2 text-xs"
-                              >
-                                {isActing ? (
-                                  <Loader2 size={13} className="animate-spin" />
-                                ) : (
+                              {isVerified ? (
+                                <span className="inline-flex min-h-9 items-center gap-2 rounded-md border border-[rgba(50,224,196,0.2)] bg-[rgba(50,224,196,0.1)] px-3 py-2 text-xs font-bold text-[var(--accent-secondary-text)]">
                                   <CheckCircle2 size={13} />
-                                )}
-                                Verify
-                              </button>
+                                  Verified
+                                </span>
+                              ) : (
+                                <button
+                                  type="button"
+                                  disabled={isActing}
+                                  onClick={() =>
+                                    void patchRegistration(registration, {
+                                      eligibility_status: 'verified',
+                                    })
+                                  }
+                                  className="btn-primary min-h-9 px-3 py-2 text-xs"
+                                >
+                                  {isActing ? (
+                                    <Loader2 size={13} className="animate-spin" />
+                                  ) : (
+                                    <CheckCircle2 size={13} />
+                                  )}
+                                  Verify
+                                </button>
+                              )}
                               <button
                                 type="button"
                                 disabled={isActing}

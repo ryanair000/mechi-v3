@@ -1,9 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { hasModeratorAccess, requireActiveAccessProfile } from '@/lib/access';
 import { writeAuditLog } from '@/lib/audit';
+import { createNotification } from '@/lib/notifications';
 import {
+  ONLINE_TOURNAMENT_ARENA_PATH,
   ONLINE_TOURNAMENT_CHECK_IN_STATUSES,
   ONLINE_TOURNAMENT_ELIGIBILITY_STATUSES,
+  ONLINE_TOURNAMENT_GAME_BY_KEY,
   ONLINE_TOURNAMENT_SLUG,
   isOnlineTournamentGame,
   type OnlineTournamentCheckInStatus,
@@ -82,6 +85,28 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ error: 'Registration id is required' }, { status: 400 });
     }
 
+    const supabase = createServiceClient();
+    const { data: currentRaw, error: currentError } = await supabase
+      .from('online_tournament_registrations')
+      .select('id, user_id, game, in_game_username, eligibility_status')
+      .eq('id', registrationId)
+      .eq('event_slug', ONLINE_TOURNAMENT_SLUG)
+      .maybeSingle();
+
+    const currentRegistration = currentRaw as
+      | {
+          id: string;
+          user_id: string;
+          game: string;
+          in_game_username: string | null;
+          eligibility_status: OnlineTournamentEligibilityStatus;
+        }
+      | null;
+
+    if (currentError || !currentRegistration) {
+      return NextResponse.json({ error: 'Registration not found' }, { status: 404 });
+    }
+
     const updates: Record<string, unknown> = {
       updated_at: new Date().toISOString(),
     };
@@ -120,7 +145,6 @@ export async function PATCH(request: NextRequest) {
       updates.admin_note = String(body.admin_note ?? '').trim().slice(0, 500) || null;
     }
 
-    const supabase = createServiceClient();
     const { data: updated, error } = await supabase
       .from('online_tournament_registrations')
       .update(updates)
@@ -164,6 +188,31 @@ export async function PATCH(request: NextRequest) {
         updates,
       },
     });
+
+    if (
+      currentRegistration.user_id &&
+      isOnlineTournamentGame(updatedGame) &&
+      currentRegistration.eligibility_status !== 'verified' &&
+      (updated as { eligibility_status?: unknown }).eligibility_status === 'verified'
+    ) {
+      const config = ONLINE_TOURNAMENT_GAME_BY_KEY[updatedGame];
+      const playerLabel = currentRegistration.in_game_username?.trim() || 'Your slot';
+      await createNotification(
+        {
+          user_id: currentRegistration.user_id,
+          type: 'tournament_registration_verified',
+          title: `${config.shortLabel} verification confirmed`,
+          body: `${playerLabel} is now verified for ${config.label}. Open the tournament desk for room and result updates.`,
+          href: `${ONLINE_TOURNAMENT_ARENA_PATH}?game=${encodeURIComponent(updatedGame)}`,
+          metadata: {
+            event_slug: ONLINE_TOURNAMENT_SLUG,
+            registration_id: registrationId,
+            game: updatedGame,
+          },
+        },
+        supabase
+      );
+    }
 
     const registrations = await loadRegistrations();
     return NextResponse.json({ registration: updated, registrations });

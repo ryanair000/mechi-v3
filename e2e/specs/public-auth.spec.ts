@@ -4,6 +4,7 @@ import {
   createApiContextAs,
   createUniqueAccount,
   expectNoConsoleErrors,
+  extractFirstLinkFromHtml,
   trackConsoleErrors,
 } from './support';
 
@@ -53,16 +54,41 @@ test.describe('Public and Auth Flows', () => {
     await expect(page).toHaveURL(/\/dashboard/);
   });
 
-  test('username/email magic sign-in and username/contact password reset recovery work @core', async ({
+  test('email magic sign-in and username/contact password reset recovery work @core', async ({
     page,
     playwright,
     appUrl,
+    providerTranscripts,
   }) => {
     await page.goto('/login');
     await page.getByRole('button', { name: /email/i }).click();
     await page.getByLabel('Email').fill(SEEDED_PERSONAS.playerElite.email);
-    await page.getByLabel('Username').fill(SEEDED_PERSONAS.playerElite.username);
-    await page.getByRole('button', { name: /sign in with username and email/i }).click();
+    await page.getByRole('button', { name: /email me a sign-in link/i }).click();
+    await expect(page.locator('body')).toContainText(/check your email/i);
+
+    const magicLinkEmail = await providerTranscripts.waitFor('email', (entry) => {
+      const requestPayload = entry.request as
+        | { to?: string; subject?: string; html?: string }
+        | undefined;
+
+      return (
+        entry.operation === 'send' &&
+        requestPayload?.to === SEEDED_PERSONAS.playerElite.email &&
+        requestPayload.subject === 'Your Mechi sign-in link'
+      );
+    });
+
+    const magicLink = extractFirstLinkFromHtml(
+      String(
+        (
+          magicLinkEmail.request as { html?: string } | undefined
+        )?.html ?? ''
+      ),
+      /\/api\/auth\/magic-link\/consume\?token=/
+    );
+    expect(magicLink).toBeTruthy();
+
+    await page.goto(magicLink!);
     await expect(page).toHaveURL(/\/dashboard/);
 
     await page.evaluate(() => localStorage.clear());

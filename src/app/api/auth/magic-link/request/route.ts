@@ -4,9 +4,8 @@ import {
   buildMagicLinkConsumeUrl,
   createAuthActionToken,
   getAuthActionSafeNextPath,
-  getProfileForUsernameEmail,
+  getProfileForEmail,
   normalizeEmailAddress,
-  normalizeAuthUsername,
 } from '@/lib/auth-actions';
 import { isTransactionalEmailReady, sendMagicLinkEmail } from '@/lib/email';
 import { checkPersistentRateLimit, getClientIp, rateLimitResponse } from '@/lib/rateLimit';
@@ -28,19 +27,14 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json();
     const email = normalizeEmailAddress(body.email);
-    const username = normalizeAuthUsername(body.username);
     const nextPath = getAuthActionSafeNextPath(String(body.redirect_to ?? '/dashboard'));
 
     if (!isValidEmail(email)) {
       return NextResponse.json({ error: 'Enter a valid email address' }, { status: 400 });
     }
 
-    if (!username) {
-      return NextResponse.json({ error: 'Enter your username' }, { status: 400 });
-    }
-
     const emailRateLimit = await checkPersistentRateLimit(
-      `magic-link-identity:${username}:${email}`,
+      `magic-link-identity:${email}`,
       3,
       60 * 60 * 1000
     );
@@ -50,10 +44,10 @@ export async function POST(request: NextRequest) {
 
     const genericResponse = {
       success: true,
-      message: 'If that account exists, we sent a secure sign-in link to the email address.',
+      message: 'If that email matches a Mechi account, we sent a secure sign-in link.',
     };
 
-    const profile = await getProfileForUsernameEmail({ username, email });
+    const profile = await getProfileForEmail(email);
     if (!profile) {
       return NextResponse.json(genericResponse);
     }

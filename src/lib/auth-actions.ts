@@ -152,6 +152,33 @@ export async function createAuthActionToken(params: {
   };
 }
 
+async function getProfilesForExactEmail(email: string) {
+  const supabase = createServiceClient();
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('*')
+    .ilike('email', email)
+    .limit(20);
+
+  if (error) {
+    throw error;
+  }
+
+  return ((data ?? []) as AuthIdentityProfile[]).filter((profile) => {
+    return normalizeEmailAddress(profile.email) === email;
+  });
+}
+
+export async function getProfileForEmail(email: string) {
+  const normalizedEmail = normalizeEmailAddress(email);
+  if (!normalizedEmail) {
+    return null;
+  }
+
+  const profiles = await getProfilesForExactEmail(normalizedEmail);
+  return profiles.length === 1 ? profiles[0] : null;
+}
+
 export async function getProfileForUsernameEmail(params: {
   username: string;
   email: string;
@@ -163,20 +190,8 @@ export async function getProfileForUsernameEmail(params: {
     return null;
   }
 
-  const supabase = createServiceClient();
-  const { data, error } = await supabase
-    .from('profiles')
-    .select('*')
-    .ilike('email', normalizedEmail)
-    .limit(20);
-
-  if (error) {
-    throw error;
-  }
-
-  const profiles = ((data ?? []) as AuthIdentityProfile[]).filter((profile) => {
+  const profiles = (await getProfilesForExactEmail(normalizedEmail)).filter((profile) => {
     return (
-      normalizeEmailAddress(profile.email) === normalizedEmail &&
       isRecoveryUsernameMatch(profile.username, normalizedUsername)
     );
   });

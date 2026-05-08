@@ -7,11 +7,11 @@ import toast from 'react-hot-toast';
 const AUTH_NOTICE_COPY: Record<string, { tone: 'success' | 'error'; message: string }> = {
   magic_link_success: {
     tone: 'success',
-    message: 'Signed in with your username and email.',
+    message: 'Signed in from your email link.',
   },
   magic_link_sent: {
     tone: 'success',
-    message: 'Account matched. Signing you in now.',
+    message: 'Check your email for the Mechi sign-in link.',
   },
   reset_email_sent: {
     tone: 'success',

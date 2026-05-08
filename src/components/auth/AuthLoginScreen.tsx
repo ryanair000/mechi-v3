@@ -34,7 +34,7 @@ const LOGIN_METHODS: Array<{
     key: 'email',
     label: 'Email',
     placeholder: 'you@mail.com',
-    helper: 'Use your email with a password or match it with your username.',
+    helper: 'Use your email with a password, or get a secure sign-in link.',
   },
 ];
 
@@ -65,7 +65,6 @@ export function AuthLoginScreen({
     [loginMethod]
   );
   const [identifier, setIdentifier] = useState('');
-  const [magicUsername, setMagicUsername] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -152,17 +151,6 @@ export function AuthLoginScreen({
 
   const handleMagicLinkRequest = async () => {
     const email = identifier.trim();
-    const username = magicUsername.trim();
-    if (!username) {
-      toast.error('Enter your username first');
-      setFeedback({
-        tone: 'error',
-        title: 'Your username is required.',
-        detail: 'Enter the username and email on the same Mechi profile.',
-      });
-      return;
-    }
-
     if (!isValidEmail(email)) {
       toast.error('Enter a valid email address first');
       setFeedback({
@@ -177,24 +165,24 @@ export function AuthLoginScreen({
     setFeedback({
       tone: 'loading',
       title: 'Sending a secure sign-in link...',
-      detail: 'If the details match, Mechi will email a one-time link.',
+      detail: 'If that email matches a Mechi account, the link is on the way.',
     });
 
     try {
       const res = await fetch('/api/auth/magic-link/request', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, email, redirect_to: nextPath }),
+        body: JSON.stringify({ email, redirect_to: nextPath }),
       });
       const data = await res.json();
 
       if (!res.ok) {
         setFeedback({
           tone: 'error',
-          title: 'Those details did not match.',
-          detail: data.error ?? 'Check the username and email, then try again.',
+          title: 'We could not send that sign-in link.',
+          detail: data.error ?? 'Check the email address and try again.',
         });
-        toast.error(data.error ?? 'Those account details did not match.');
+        toast.error(data.error ?? 'We could not send that sign-in link.');
         return;
       }
 
@@ -321,21 +309,12 @@ export function AuthLoginScreen({
 
           {loginMethod === 'email' ? (
             <div className="rounded-xl border border-[var(--border-color)] bg-[var(--surface-elevated)] p-3">
-              <label className="label" htmlFor="login-magic-username">
-                Username
-              </label>
-              <input
-                id="login-magic-username"
-                type="text"
-                value={magicUsername}
-                onChange={(event) => setMagicUsername(event.target.value)}
-                onBlur={() => setMagicUsername((current) => current.trim())}
-                placeholder="Your Mechi username"
-                className="input"
-                autoComplete="username"
-                autoCapitalize="none"
-                spellCheck={false}
-              />
+              <p className="text-sm font-semibold text-[var(--text-primary)]">
+                No password right now?
+              </p>
+              <p className="mt-1 text-xs leading-5 text-[var(--text-soft)]">
+                Enter your email above and Mechi will send a one-time sign-in link.
+              </p>
               <button
                 type="button"
                 onClick={() => void handleMagicLinkRequest()}

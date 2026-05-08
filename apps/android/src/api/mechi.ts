@@ -54,6 +54,15 @@ export type TournamentRegistrationPayload = {
   accepted_rules: boolean;
 };
 
+export type TournamentCheckInPayload = {
+  game: OnlineTournamentGameKey;
+  in_game_username: string;
+  game_uid: string;
+  device_model: string;
+  whatsapp_number: string;
+  device_serial_last6?: string | null;
+};
+
 export type TournamentResultPayload =
   | {
       game: Extract<OnlineTournamentGameKey, 'pubgm' | 'codm'>;
@@ -80,6 +89,10 @@ export type PushTokenPayload = {
   device_name?: string | null;
   app_version?: string | null;
   experience_id?: string | null;
+};
+
+export type TournamentStateResponse = OnlineTournamentPlayerState & {
+  warning?: string;
 };
 
 export function login(payload: LoginPayload) {
@@ -147,19 +160,19 @@ export function registerForTournament(payload: TournamentRegistrationPayload) {
 }
 
 export function getTournamentState() {
-  return apiRequest<OnlineTournamentPlayerState>(
+  return apiRequest<TournamentStateResponse>(
     '/api/events/mechi-online-gaming-tournament/state'
   );
 }
 
-export function checkInTournament(game: OnlineTournamentGameKey) {
-  return apiRequest<OnlineTournamentPlayerState>(
+export function checkInTournament(payload: TournamentCheckInPayload) {
+  return apiRequest<TournamentStateResponse>(
     '/api/events/mechi-online-gaming-tournament/state',
     {
       method: 'POST',
       body: {
         action: 'check_in',
-        game,
+        ...payload,
       },
     }
   );
@@ -184,7 +197,7 @@ export function submitTournamentResult(payload: TournamentResultPayload) {
     form.append('placement', String(payload.placement));
   }
 
-  return apiRequest<OnlineTournamentPlayerState>(
+  return apiRequest<TournamentStateResponse>(
     '/api/events/mechi-online-gaming-tournament/results',
     {
       method: 'POST',

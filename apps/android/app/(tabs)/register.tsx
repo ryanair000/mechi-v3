@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { Link, useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import { Linking, StyleSheet, Switch, Text, View } from 'react-native';
 import {
@@ -27,9 +27,11 @@ import {
   PLAYMECHI_YOUTUBE_URL,
   TOURNAMENT_GAME_BY_KEY,
   TOURNAMENT_GAMES,
+  formatEatDateTime,
   formatStatus,
   getFallbackTournamentSummary,
   getGameFromParam,
+  getTournamentWindowState,
 } from '../../src/config/tournament';
 import { getConfiguredGameId } from '../../src/config/games';
 import { colors, spacing } from '../../src/theme';
@@ -80,9 +82,11 @@ export default function RegisterTab() {
   const registered = selectedSummary?.registered ?? 0;
   const slots = selectedSummary?.slots ?? selectedConfig.slots;
   const spotsLeft = selectedSummary?.spotsLeft ?? Math.max(0, slots - registered);
+  const registrationWindow = getTournamentWindowState(selectedConfig);
   const registrationClosed = Boolean(
-    selectedConfig.registrationClosed || (selectedSummary?.full && !currentRegistration)
+    !registrationWindow.isRegistrationOpen || (selectedSummary?.full && !currentRegistration)
   );
+  const canEditRegistration = Boolean(currentRegistration ? registrationWindow.isRegistrationOpen : !registrationClosed);
   const formKey = useMemo(
     () =>
       getFormKey({
@@ -148,12 +152,21 @@ export default function RegisterTab() {
   });
 
   const canSubmit =
-    !registrationClosed &&
+    canEditRegistration &&
     inGameUsername.trim().length >= 2 &&
     availableAt8pm &&
     acceptedRules &&
     (!followedInstagram || instagramUsername.trim().replace(/^@+/, '').length >= 2) &&
     (!subscribedYoutube || youtubeName.trim().length >= 2);
+
+  function handlePrimaryAction() {
+    if (currentRegistration && !canEditRegistration) {
+      router.push(`/(tabs)/arena?game=${selectedGame}`);
+      return;
+    }
+
+    mutation.mutate();
+  }
 
   async function openExternal(url: string) {
     await Linking.openURL(url);
@@ -182,6 +195,7 @@ export default function RegisterTab() {
         </View>
         <ProgressBar value={slots > 0 ? Math.round((registered / slots) * 100) : 0} />
         <InfoRow label="Match day" value={`${selectedConfig.dateLabel}, ${selectedConfig.timeLabel}`} />
+        <InfoRow label="Registration closes" value={formatEatDateTime(selectedConfig.registrationClosesAt)} />
         <InfoRow label="Format" value={selectedConfig.format} />
       </Card>
 
@@ -197,12 +211,22 @@ export default function RegisterTab() {
           <InfoRow label="Gamer tag" value={currentRegistration.in_game_username} selectable />
           <InfoRow label="Reward review" value={formatStatus(currentRegistration.eligibility_status)} />
           <InfoRow label="Check-in" value={formatStatus(currentRegistration.check_in_status)} />
-          <Button
-            label={`Join ${selectedConfig.shortLabel} WhatsApp group`}
-            icon="logo-whatsapp"
-            variant="secondary"
-            onPress={() => void openExternal(selectedConfig.whatsappGroupUrl)}
-          />
+          <Text style={textStyles.muted}>
+            {canEditRegistration
+              ? 'Your slot is saved. You can still update your gamer tag and reward proof before the registration window closes.'
+              : 'Your slot is locked for match night. Use the tournament desk for check-in, rooms, screenshots, and reward tracking.'}
+          </Text>
+          <View style={styles.linkRow}>
+            <Button
+              label={`Join ${selectedConfig.shortLabel} WhatsApp group`}
+              icon="logo-whatsapp"
+              variant="secondary"
+              onPress={() => void openExternal(selectedConfig.whatsappGroupUrl)}
+            />
+            <Link href={`/(tabs)/arena?game=${selectedGame}`} asChild>
+              <Button label="Open tournament desk" icon="clipboard" variant="secondary" />
+            </Link>
+          </View>
         </Card>
       ) : null}
 
@@ -285,15 +309,17 @@ export default function RegisterTab() {
       <Button
         label={
           currentRegistration
-            ? 'Update registration'
+            ? canEditRegistration
+              ? 'Update registration'
+              : 'Open tournament desk'
             : registrationClosed
               ? 'Registration closed'
               : 'Lock my slot'
         }
         icon="ticket"
-        onPress={() => mutation.mutate()}
+        onPress={handlePrimaryAction}
         loading={mutation.isPending}
-        disabled={!canSubmit}
+        disabled={currentRegistration && !canEditRegistration ? false : !canSubmit}
       />
     </Screen>
   );

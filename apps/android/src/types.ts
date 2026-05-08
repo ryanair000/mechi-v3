@@ -83,6 +83,7 @@ export type OnlineTournamentRegistration = {
   id: string;
   game: OnlineTournamentGameKey;
   in_game_username: string;
+  game_uid?: string | null;
   instagram_username: string | null;
   youtube_name: string | null;
   followed_instagram: boolean;
@@ -90,6 +91,14 @@ export type OnlineTournamentRegistration = {
   reward_eligible: boolean;
   eligibility_status: string;
   check_in_status: string;
+  whatsapp_number?: string | null;
+  device_model?: string | null;
+  device_serial_last6?: string | null;
+  tournament_lobby_number?: number | null;
+  tournament_lobby_slot?: number | null;
+  tournament_lobby_assigned_at?: string | null;
+  checked_in_at?: string | null;
+  admin_note?: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -175,7 +184,7 @@ export type OnlineTournamentPayout = {
   prize_value_kes: number | null;
   reward_type: 'cash' | 'uc' | 'cp' | 'coins';
   eligibility_status: string;
-  payout_status: string;
+  payout_status: 'pending' | 'approved' | 'paid' | 'failed' | 'ineligible' | string;
   payout_ref: string | null;
   admin_note: string | null;
 };

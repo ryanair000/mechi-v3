@@ -26,12 +26,19 @@ import {
   TOURNAMENT_RULES,
   TOURNAMENT_TIME,
   TOURNAMENT_TITLE,
+  formatEatDateTime,
   formatStatus,
   getFallbackTournamentSummary,
+  getTournamentDisplayStatus,
   getTournamentTotals,
+  getTournamentWindowState,
 } from '../../src/config/tournament';
 import { colors, spacing } from '../../src/theme';
-import type { OnlineTournamentGameKey, OnlineTournamentRegistrationSummary } from '../../src/types';
+import type {
+  OnlineTournamentGameKey,
+  OnlineTournamentRegistration,
+  OnlineTournamentRegistrationSummary,
+} from '../../src/types';
 
 function getStatusTone(status: string | null | undefined): 'good' | 'warn' | 'danger' | 'neutral' {
   if (status === 'verified' || status === 'checked_in') return 'good';
@@ -43,6 +50,34 @@ function getStatusTone(status: string | null | undefined): 'good' | 'warn' | 'da
 function getSummaryProgress(summary: OnlineTournamentRegistrationSummary) {
   const totals = getTournamentTotals(summary);
   return totals.slots > 0 ? Math.round((totals.registered / totals.slots) * 100) : 0;
+}
+
+function getWeekendStatusBadge() {
+  const status = getTournamentDisplayStatus();
+
+  if (status === 'open') {
+    return { label: 'Registration live', tone: 'good' as const };
+  }
+
+  if (status === 'active') {
+    return { label: 'Tournament live', tone: 'info' as const };
+  }
+
+  return { label: 'Weekend complete', tone: 'neutral' as const };
+}
+
+function getHeroBody() {
+  const status = getTournamentDisplayStatus();
+
+  if (status === 'open') {
+    return 'PUBG kicks off tonight at 8:00 PM EAT, CODM follows on Saturday, and the eFootball bracket is already locked.';
+  }
+
+  if (status === 'active') {
+    return 'Rooms, check-in, standings, screenshots, and prize review are live inside the PlayMechi tournament desk.';
+  }
+
+  return 'Use the tournament desk to review your registrations, results, and reward status after the weekend closes.';
 }
 
 export default function OverviewTab() {
@@ -59,6 +94,7 @@ export default function OverviewTab() {
   const totals = getTournamentTotals(summary);
   const registrations = summary.registrations ?? [];
   const primaryRegistration = registrations[0];
+  const weekendBadge = getWeekendStatusBadge();
 
   async function openSupport() {
     await Linking.openURL(PLAYMECHI_SUPPORT_URL);
@@ -72,10 +108,10 @@ export default function OverviewTab() {
       <Card style={styles.heroCard}>
         <View style={styles.heroTop}>
           <View style={styles.heroCopy}>
-            <StatusBadge label="Registration live" tone="good" />
+            <StatusBadge label={weekendBadge.label} tone={weekendBadge.tone} />
             <Text style={styles.heroTitle}>Claim your PlayMechi slot</Text>
             <Text style={textStyles.muted}>
-              PUBG Mobile, CODM, and eFootball players compete online for {TOURNAMENT_PRIZE_POOL}.
+              {getHeroBody()}
             </Text>
           </View>
           <View style={styles.scoreBadge}>
@@ -101,6 +137,14 @@ export default function OverviewTab() {
         <Card>
           <SectionTitle title={`Your slot: ${TOURNAMENT_GAME_BY_KEY[primaryRegistration.game].label}`} />
           <InfoRow label="Gamer tag" value={primaryRegistration.in_game_username} selectable />
+          <InfoRow
+            label="Tournament lobby"
+            value={
+              primaryRegistration.tournament_lobby_number && primaryRegistration.tournament_lobby_slot
+                ? `${TOURNAMENT_GAME_BY_KEY[primaryRegistration.game].shortLabel} Lobby ${primaryRegistration.tournament_lobby_number} | Slot ${primaryRegistration.tournament_lobby_slot}`
+                : 'Assigned after check-in'
+            }
+          />
           <View style={styles.badgeRow}>
             <StatusBadge
               label={formatStatus(primaryRegistration.check_in_status)}
@@ -128,10 +172,24 @@ export default function OverviewTab() {
         </Card>
       )}
 
+      <Card>
+        <SectionTitle title="Weekend state" />
+        <View style={styles.weekendList}>
+          {TOURNAMENT_GAMES.map((game) => (
+            <WeekendStateRow key={game.game} game={game.game} summary={summary} />
+          ))}
+        </View>
+      </Card>
+
       <SectionTitle title="Games" />
       <View style={styles.gameList}>
         {TOURNAMENT_GAMES.map((game) => (
-          <GameOverviewCard key={game.game} game={game.game} summary={summary} />
+          <GameOverviewCard
+            key={game.game}
+            game={game.game}
+            summary={summary}
+            registration={registrations.find((registration) => registration.game === game.game) ?? null}
+          />
         ))}
       </View>
 
@@ -160,6 +218,78 @@ export default function OverviewTab() {
 function GameOverviewCard({
   game,
   summary,
+  registration,
+}: {
+  game: OnlineTournamentGameKey;
+  summary: OnlineTournamentRegistrationSummary;
+  registration: OnlineTournamentRegistration | null;
+}) {
+  const config = TOURNAMENT_GAME_BY_KEY[game];
+  const count = summary.games[game];
+  const registered = count?.registered ?? 0;
+  const slots = count?.slots ?? config.slots;
+  const spotsLeft = count?.spotsLeft ?? Math.max(0, slots - registered);
+  const windowState = getTournamentWindowState(config);
+  const full = Boolean(count?.full || config.registrationClosed);
+  const locked = full || !windowState.isRegistrationOpen;
+  const progress = slots > 0 ? Math.round((registered / slots) * 100) : 0;
+  const href = registration ? `/(tabs)/arena?game=${game}` : `/(tabs)/register?game=${game}`;
+  const badgeLabel = registration
+    ? registration.check_in_status === 'checked_in'
+      ? 'desk live'
+      : 'check in'
+    : full
+      ? 'closed'
+      : windowState.isRegistrationOpen
+        ? `${spotsLeft} left`
+        : 'closed';
+  const badgeTone = registration
+    ? registration.check_in_status === 'checked_in'
+      ? 'good'
+      : 'warn'
+    : full
+      ? 'danger'
+      : windowState.isRegistrationOpen
+        ? spotsLeft <= 10
+          ? 'warn'
+          : 'good'
+        : 'neutral';
+
+  return (
+    <Link href={href} asChild>
+      <Pressable style={({ pressed }) => [styles.gameCard, pressed && styles.pressed]}>
+        <View style={styles.gameHeader}>
+          <View style={styles.gameTitleWrap}>
+            <Text style={styles.gameTitle}>{config.label}</Text>
+            <Text style={styles.gameMeta}>
+              {config.dateLabel} . {config.timeLabel}
+            </Text>
+          </View>
+          <StatusBadge label={badgeLabel} tone={badgeTone} />
+        </View>
+        <ProgressBar value={progress} />
+        <View style={styles.gameDetails}>
+          <InfoRow label="Format" value={config.matchCount} />
+          <InfoRow label="Prize" value={`${config.firstPrize} / ${config.secondPrize}`} />
+          <InfoRow
+            label="Registration"
+            value={
+              registration
+                ? 'Slot saved'
+                : locked
+                  ? 'Closed for new players'
+                  : `Closes ${formatEatDateTime(config.registrationClosesAt)}`
+            }
+          />
+        </View>
+      </Pressable>
+    </Link>
+  );
+}
+
+function WeekendStateRow({
+  game,
+  summary,
 }: {
   game: OnlineTournamentGameKey;
   summary: OnlineTournamentRegistrationSummary;
@@ -170,27 +300,32 @@ function GameOverviewCard({
   const slots = count?.slots ?? config.slots;
   const spotsLeft = count?.spotsLeft ?? Math.max(0, slots - registered);
   const full = Boolean(count?.full || config.registrationClosed);
-  const progress = slots > 0 ? Math.round((registered / slots) * 100) : 0;
+  const windowState = getTournamentWindowState(config);
+  const badgeLabel = full
+    ? 'closed'
+    : windowState.isRegistrationOpen
+      ? `${spotsLeft} left`
+      : 'desk window';
+  const badgeTone = full ? 'danger' : windowState.isRegistrationOpen ? 'good' : 'info';
 
   return (
-    <Link href={`/(tabs)/register?game=${game}`} asChild>
-      <Pressable style={({ pressed }) => [styles.gameCard, pressed && styles.pressed]}>
-        <View style={styles.gameHeader}>
-          <View style={styles.gameTitleWrap}>
-            <Text style={styles.gameTitle}>{config.label}</Text>
-            <Text style={styles.gameMeta}>
-              {config.dateLabel} . {config.timeLabel}
-            </Text>
-          </View>
-          <StatusBadge label={full ? 'closed' : `${spotsLeft} left`} tone={full ? 'danger' : 'good'} />
-        </View>
-        <ProgressBar value={progress} />
-        <View style={styles.gameDetails}>
-          <InfoRow label="Format" value={config.matchCount} />
-          <InfoRow label="Prize" value={`${config.firstPrize} / ${config.secondPrize}`} />
-        </View>
-      </Pressable>
-    </Link>
+    <View style={styles.weekendRow}>
+      <View style={styles.weekendCopy}>
+        <Text style={styles.weekendTitle}>{config.label}</Text>
+        <Text style={styles.weekendMeta}>
+          {config.dateLabel} . {config.timeLabel}
+        </Text>
+        <Text style={styles.weekendMeta}>
+          {full ? 'Bracket locked' : `Registration closes ${formatEatDateTime(config.registrationClosesAt)}`}
+        </Text>
+      </View>
+      <View style={styles.weekendStats}>
+        <StatusBadge label={badgeLabel} tone={badgeTone} />
+        <Text style={styles.weekendCount}>
+          {registered}/{slots}
+        </Text>
+      </View>
+    </View>
   );
 }
 
@@ -244,6 +379,44 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: spacing.sm,
+  },
+  weekendList: {
+    gap: spacing.sm,
+  },
+  weekendRow: {
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 8,
+    backgroundColor: colors.panel2,
+    padding: spacing.md,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.md,
+  },
+  weekendCopy: {
+    flex: 1,
+    gap: 4,
+  },
+  weekendTitle: {
+    color: colors.text,
+    fontSize: 15,
+    fontWeight: '900',
+  },
+  weekendMeta: {
+    color: colors.muted,
+    fontSize: 12,
+    lineHeight: 17,
+  },
+  weekendStats: {
+    alignItems: 'flex-end',
+    gap: spacing.xs,
+  },
+  weekendCount: {
+    color: colors.text,
+    fontSize: 13,
+    fontWeight: '900',
+    fontVariant: ['tabular-nums'],
   },
   gameList: {
     gap: spacing.md,

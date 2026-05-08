@@ -1,5 +1,13 @@
 import type { OnlineTournamentGameKey, OnlineTournamentRegistrationSummary } from '../types';
 
+type TournamentDeskRules = {
+  heading: string;
+  sections: Array<{
+    title: string;
+    items: string[];
+  }>;
+};
+
 export type TournamentGameConfig = {
   game: OnlineTournamentGameKey;
   label: string;
@@ -17,9 +25,12 @@ export type TournamentGameConfig = {
   secondPrize: string;
   thirdPrize: string;
   whatsappGroupUrl: string;
+  deskRules?: TournamentDeskRules;
 };
 
-export const TOURNAMENT_TITLE = 'PlayMechi Launch';
+const DEVICE_SERIAL_LAST6_REGEX = /^[A-Z0-9]{6}$/;
+
+export const TOURNAMENT_TITLE = 'Playmechi Launch';
 export const TOURNAMENT_PUBLIC_URL = 'https://mechi.club/playmechi';
 export const TOURNAMENT_REGISTER_URL = 'https://mechi.club/playmechi/register';
 export const TOURNAMENT_DATES = '8-10 May 2026';
@@ -42,13 +53,13 @@ export const TOURNAMENT_GAMES: TournamentGameConfig[] = [
     matchStartsAt: '2026-05-08T20:00:00+03:00',
     registrationClosesAt: '2026-05-08T19:30:00+03:00',
     slots: 100,
-    format: 'Individual Battle Royale room',
+    format: 'Individual Battle Royale tournament room',
     matchCount: '3 matches',
     scoring: '1 kill = 1 point. No placement points.',
     firstPrize: 'KSh 1,500',
     secondPrize: 'KSh 1,000',
     thirdPrize: '60 UC',
-    whatsappGroupUrl: 'https://chat.whatsapp.com/Cf9R0k2dPeP683wpNnib1N',
+    whatsappGroupUrl: 'https://chat.whatsapp.com/HDZwDyft00kIVHb6vYVbJv',
   },
   {
     game: 'codm',
@@ -59,13 +70,46 @@ export const TOURNAMENT_GAMES: TournamentGameConfig[] = [
     matchStartsAt: '2026-05-09T20:00:00+03:00',
     registrationClosesAt: '2026-05-09T19:30:00+03:00',
     slots: 100,
-    format: 'Individual Battle Royale room',
+    format: 'Individual Battle Royale tournament room',
     matchCount: '3 matches',
-    scoring: '1 kill = 1 point. No placement points.',
+    scoring: '1 kill = 3 points. Placement: #1 20, #2 15, #3 10, #4 5, #5-25 3.',
     firstPrize: 'KSh 1,200',
     secondPrize: 'KSh 800',
     thirdPrize: '80 CP',
     whatsappGroupUrl: 'https://chat.whatsapp.com/JmizQcphVYR2LiRYcrHEaC',
+    deskRules: {
+      heading: 'CODM Battle Royale rules',
+      sections: [
+        {
+          title: 'Restricted loadout',
+          items: [
+            'Banned guns: none.',
+            'Banned attachments: all thermite and concussion mags.',
+            'Banned classes: Igniter, Quick Strike, Trap Master, Shockwave, Desperado, Spotter, Clown, and Ravager Launcher.',
+            'Banned vehicles: tanks, Jackal, and hoverbike.',
+            'Banned items: SMRS, Thumper, and all ballistic items.',
+          ],
+        },
+        {
+          title: 'Placement and points',
+          items: [
+            '#1 = 20 points',
+            '#2 = 15 points',
+            '#3 = 10 points',
+            '#4 = 5 points',
+            '#5-25 = 3 points',
+            '1 kill = 3 points',
+          ],
+        },
+        {
+          title: 'Penalties',
+          items: [
+            'Rule break: no kill points, regardless of placement or kills scored.',
+            'Repeated rule break: 1 season ban (4 weeks).',
+          ],
+        },
+      ],
+    },
   },
   {
     game: 'efootball',
@@ -77,7 +121,7 @@ export const TOURNAMENT_GAMES: TournamentGameConfig[] = [
     registrationClosesAt: '2026-05-10T19:30:00+03:00',
     registrationClosed: true,
     slots: 16,
-    format: '1v1 knockout bracket',
+    format: '1v1 knockout bracket with bronze match',
     matchCount: 'Round of 16 to final',
     scoring: 'One leg per fixture. Draws go to extra time, penalties, or golden goal replay.',
     firstPrize: 'KSh 1,000',
@@ -111,6 +155,70 @@ export function isTournamentGame(value: unknown): value is OnlineTournamentGameK
 
 export function getTournamentGame(value: OnlineTournamentGameKey) {
   return TOURNAMENT_GAME_BY_KEY[value];
+}
+
+export function normalizeTournamentDeviceSerialLast6(value: unknown) {
+  return String(value ?? '')
+    .replace(/[^a-z0-9]/gi, '')
+    .toUpperCase()
+    .slice(-6);
+}
+
+export function isValidTournamentDeviceSerialLast6(value: unknown) {
+  return DEVICE_SERIAL_LAST6_REGEX.test(normalizeTournamentDeviceSerialLast6(value));
+}
+
+export function requiresTournamentDeviceSerialLast6(game: OnlineTournamentGameKey) {
+  return game === 'codm';
+}
+
+export function getTournamentWindowState(game: TournamentGameConfig, now = new Date()) {
+  const closesAt = new Date(game.registrationClosesAt);
+  const startsAt = new Date(game.matchStartsAt);
+
+  return {
+    isRegistrationOpen: !Boolean(game.registrationClosed) && now.getTime() < closesAt.getTime(),
+    closesAt,
+    startsAt,
+  };
+}
+
+export function getTournamentDisplayStatus(now = new Date()): 'open' | 'active' | 'completed' {
+  if (TOURNAMENT_GAMES.some((game) => getTournamentWindowState(game, now).isRegistrationOpen)) {
+    return 'open';
+  }
+
+  const latestMatchWindowEnd = Math.max(
+    ...TOURNAMENT_GAMES.map((game) => new Date(game.matchStartsAt).getTime() + 6 * 60 * 60 * 1000)
+  );
+
+  return now.getTime() <= latestMatchWindowEnd ? 'active' : 'completed';
+}
+
+export function formatEatDateTime(value: string | Date) {
+  const date = typeof value === 'string' ? new Date(value) : value;
+
+  try {
+    return new Intl.DateTimeFormat('en-KE', {
+      dateStyle: 'medium',
+      timeStyle: 'short',
+      timeZone: 'Africa/Nairobi',
+    }).format(date);
+  } catch {
+    return typeof value === 'string' ? value : date.toISOString();
+  }
+}
+
+export function formatTournamentLobby(registration: {
+  game: OnlineTournamentGameKey;
+  tournament_lobby_number?: number | null;
+  tournament_lobby_slot?: number | null;
+}) {
+  if (!registration.tournament_lobby_number || !registration.tournament_lobby_slot) {
+    return 'Not assigned';
+  }
+
+  return `${TOURNAMENT_GAME_BY_KEY[registration.game].shortLabel} Lobby ${registration.tournament_lobby_number} | Slot ${registration.tournament_lobby_slot}`;
 }
 
 export function getFallbackTournamentSummary(): OnlineTournamentRegistrationSummary {

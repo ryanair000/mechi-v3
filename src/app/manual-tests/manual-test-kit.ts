@@ -242,16 +242,16 @@ export const manualTestSections = [
       },
       {
         id: 'AUTH-03',
-        title: 'Username/email magic sign-in and password reset recovery lanes still work.',
+        title: 'Username/email magic sign-in and username/contact password reset recovery lanes still work.',
         account: 'Pro or Elite player',
         timing: 'Run last',
         instructions: [
           'Use email sign-in, enter the matching username and email, and confirm the player signs in without a password or email link.',
-          'Use forgot-password or reset-password, enter the matching username and email, then complete the inline password reset flow.',
+          'Use forgot-password or reset-password, enter the matching username and either the account email or phone number, then complete the inline password reset flow.',
         ],
         passIf: [
           'Magic-link email still lands with a working Mechi link.',
-          'The password reset flow unlocks the new-password step only after the username and email match, then signs the player in or lets them log in with the new password.',
+          'The password reset flow unlocks the new-password step only after the username and account contact match, then signs the player in or lets them log in with the new password.',
         ],
         watchFor: [
           'No disposable inbox is needed for this recovery flow.',

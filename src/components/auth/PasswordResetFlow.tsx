@@ -7,6 +7,10 @@ import { Eye, EyeOff, KeyRound, Loader2, UserCheck } from 'lucide-react';
 import { ActionFeedback, type ActionFeedbackState } from '@/components/ActionFeedback';
 import { useAuth } from '@/components/AuthProvider';
 import { getPostLoginRedirectPath } from '@/lib/navigation';
+import {
+  normalizeRecoveryContactInput,
+  parseRecoveryContact,
+} from '@/lib/recovery-contact';
 
 const MIN_PASSWORD_LENGTH = 9;
 
@@ -18,18 +22,14 @@ interface PasswordResetFlowProps {
 
 interface VerifiedIdentity {
   username: string;
-  email: string;
-}
-
-function isValidEmail(value: string) {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+  contact: string;
 }
 
 export function PasswordResetFlow({ loginHref, nextPath, token }: PasswordResetFlowProps) {
   const { login } = useAuth();
   const [resetToken] = useState(token ?? '');
   const [username, setUsername] = useState('');
-  const [email, setEmail] = useState('');
+  const [contact, setContact] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -44,8 +44,9 @@ export function PasswordResetFlow({ loginHref, nextPath, token }: PasswordResetF
   const handleVerifyIdentity = async (event: React.FormEvent) => {
     event.preventDefault();
 
-    const submittedEmail = email.trim().toLowerCase();
     const submittedUsername = username.trim();
+    const submittedContact = normalizeRecoveryContactInput(contact);
+    const parsedContact = parseRecoveryContact(submittedContact);
     if (!submittedUsername) {
       setFeedback({
         tone: 'error',
@@ -56,13 +57,13 @@ export function PasswordResetFlow({ loginHref, nextPath, token }: PasswordResetF
       return;
     }
 
-    if (!isValidEmail(submittedEmail)) {
+    if (!parsedContact) {
       setFeedback({
         tone: 'error',
-        title: 'A valid email is required.',
-        detail: 'Use the email connected to the same Mechi profile.',
+        title: 'A valid email or phone number is required.',
+        detail: 'Use the email address or phone number connected to the same Mechi profile.',
       });
-      toast.error('Enter a valid email address.');
+      toast.error('Enter a valid email address or phone number.');
       return;
     }
 
@@ -70,7 +71,7 @@ export function PasswordResetFlow({ loginHref, nextPath, token }: PasswordResetF
     setFeedback({
       tone: 'loading',
       title: 'Checking your account...',
-      detail: 'Matching the username and email on your Mechi profile.',
+      detail: 'Matching the username and account contact on your Mechi profile.',
     });
 
     try {
@@ -79,7 +80,7 @@ export function PasswordResetFlow({ loginHref, nextPath, token }: PasswordResetF
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           username: submittedUsername,
-          email: submittedEmail,
+          contact: submittedContact,
           redirect_to: nextPath,
         }),
       });
@@ -89,15 +90,15 @@ export function PasswordResetFlow({ loginHref, nextPath, token }: PasswordResetF
         setFeedback({
           tone: 'error',
           title: 'Those details did not match.',
-          detail: data.error ?? 'Check the username and email, then try again.',
+          detail: data.error ?? 'Check the username and email or phone, then try again.',
         });
         toast.error(data.error ?? 'Those account details did not match.');
         return;
       }
 
-      setVerifiedIdentity({ username: submittedUsername, email: submittedEmail });
+      setVerifiedIdentity({ username: submittedUsername, contact: submittedContact });
       setUsername(submittedUsername);
-      setEmail(submittedEmail);
+      setContact(submittedContact);
       setPassword('');
       setConfirmPassword('');
       setFeedback({
@@ -125,9 +126,9 @@ export function PasswordResetFlow({ loginHref, nextPath, token }: PasswordResetF
       setFeedback({
         tone: 'error',
         title: 'Confirm your account first.',
-        detail: 'Enter the username and email on your Mechi profile before choosing a new password.',
+        detail: 'Enter the username and email or phone on your Mechi profile before choosing a new password.',
       });
-      toast.error('Confirm your username and email first.');
+      toast.error('Confirm your username and email or phone first.');
       return;
     }
 
@@ -168,7 +169,7 @@ export function PasswordResetFlow({ loginHref, nextPath, token }: PasswordResetF
         payload.token = resetToken;
       } else if (verifiedIdentity) {
         payload.username = verifiedIdentity.username;
-        payload.email = verifiedIdentity.email;
+        payload.contact = verifiedIdentity.contact;
       }
 
       const res = await fetch('/api/auth/password/reset', {
@@ -224,7 +225,7 @@ export function PasswordResetFlow({ loginHref, nextPath, token }: PasswordResetF
             ? 'Set a new password and Mechi will sign you in right away.'
             : canSetPassword
               ? 'Account matched. Choose a new password and Mechi will sign you in right away.'
-              : 'Enter your username and email. If they match, you can set a new password.'}
+              : 'Enter your username and email or phone. If they match, you can set a new password.'}
         </p>
       </div>
 
@@ -249,16 +250,16 @@ export function PasswordResetFlow({ loginHref, nextPath, token }: PasswordResetF
           </div>
 
           <div>
-            <label htmlFor="password-reset-email" className="label">
-              Email
+            <label htmlFor="password-reset-contact" className="label">
+              Email or phone
             </label>
             <input
-              id="password-reset-email"
-              type="email"
-              value={email}
-              onChange={(event) => setEmail(event.target.value)}
-              onBlur={() => setEmail((current) => current.trim().toLowerCase())}
-              placeholder="you@mail.com"
+              id="password-reset-contact"
+              type="text"
+              value={contact}
+              onChange={(event) => setContact(event.target.value)}
+              onBlur={() => setContact((current) => normalizeRecoveryContactInput(current))}
+              placeholder="you@mail.com or 0712 345 678"
               className="input"
               autoComplete="email"
               autoCapitalize="none"

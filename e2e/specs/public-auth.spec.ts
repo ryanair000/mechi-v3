@@ -53,7 +53,7 @@ test.describe('Public and Auth Flows', () => {
     await expect(page).toHaveURL(/\/dashboard/);
   });
 
-  test('username and email recovery completes magic sign-in and password reset @core', async ({
+  test('username/email magic sign-in and username/contact password reset recovery work @core', async ({
     page,
     playwright,
     appUrl,
@@ -82,7 +82,7 @@ test.describe('Public and Auth Flows', () => {
 
     await page.goto('/forgot-password');
     await page.getByLabel('Username').fill(throwaway.username);
-    await page.getByLabel('Email').fill(throwaway.email);
+    await page.getByLabel(/email or phone/i).fill(throwaway.phone);
     await page.getByRole('button', { name: /continue/i }).click();
     await expect(page.locator('body')).toContainText(/account matched/i);
     await page.getByLabel('New password').fill('MechiReset!456');

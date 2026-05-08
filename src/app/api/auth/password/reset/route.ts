@@ -5,12 +5,13 @@ import {
   getAuthActionSafeNextPath,
   getAuthActionToken,
   getAuthActionTokenState,
-  getProfileForUsernameEmail,
+  getProfileForUsernameContact,
   normalizeAuthUsername,
   normalizeEmailAddress,
 } from '@/lib/auth-actions';
 import { applyAuthCookie, createSessionForProfile, hashPassword } from '@/lib/auth';
 import { getPostLoginRedirectPath } from '@/lib/navigation';
+import { parseRecoveryContact } from '@/lib/recovery-contact';
 import { checkPersistentRateLimit, getClientIp, rateLimitResponse } from '@/lib/rateLimit';
 import { createServiceClient } from '@/lib/supabase';
 
@@ -77,18 +78,26 @@ export async function POST(request: NextRequest) {
     }
 
     if (!resetToken) {
-      const email = normalizeEmailAddress(typeof body.email === 'string' ? body.email : null);
+      const rawContact =
+        typeof body.contact === 'string'
+          ? body.contact
+          : typeof body.email === 'string'
+            ? body.email
+            : typeof body.phone === 'string'
+              ? body.phone
+              : null;
+      const parsedContact = parseRecoveryContact(rawContact);
       const username = normalizeAuthUsername(typeof body.username === 'string' ? body.username : null);
 
-      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || !username) {
+      if (!parsedContact || !username) {
         return NextResponse.json(
-          { error: 'Enter the matching username and email first.' },
+          { error: 'Enter the matching username and email or phone first.' },
           { status: 400 }
         );
       }
 
       const identityRateLimit = await checkPersistentRateLimit(
-        `password-reset-identity:${username}:${email}`,
+        `password-reset-identity:${username}:${parsedContact.rateLimitKey}`,
         3,
         60 * 60 * 1000
       );
@@ -96,7 +105,10 @@ export async function POST(request: NextRequest) {
         return rateLimitResponse(identityRateLimit.retryAfterSeconds);
       }
 
-      const profile = await getProfileForUsernameEmail({ username, email });
+      const profile = await getProfileForUsernameContact({
+        username,
+        contact: parsedContact.normalized,
+      });
       if (!profile) {
         return NextResponse.json(
           { error: 'Those details did not match.' },

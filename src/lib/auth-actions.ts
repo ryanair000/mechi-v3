@@ -1,5 +1,7 @@
 import { createHash, randomBytes } from 'node:crypto';
 import { getSafeNextPath } from '@/lib/navigation';
+import { normalizePhoneNumber } from '@/lib/phone';
+import { parseRecoveryContact } from '@/lib/recovery-contact';
 import { createServiceClient } from '@/lib/supabase';
 import { APP_URL } from '@/lib/urls';
 
@@ -21,6 +23,7 @@ export interface AuthIdentityProfile extends Record<string, unknown> {
   id: string;
   username?: string | null;
   email?: string | null;
+  phone?: string | null;
   is_banned?: boolean | null;
   ban_reason?: string | null;
 }
@@ -59,7 +62,7 @@ export function isRecoveryUsernameMatch(
     return true;
   }
 
-  // Imported feeds suffix colliding usernames, so allow the source username when email also matches.
+  // Imported feeds suffix colliding usernames, so allow the source username when the account contact also matches.
   return getCollisionUsernameBase(normalizedProfileUsername) === normalizedSubmittedUsername;
 }
 
@@ -176,6 +179,58 @@ export async function getProfileForUsernameEmail(params: {
       normalizeEmailAddress(profile.email) === normalizedEmail &&
       isRecoveryUsernameMatch(profile.username, normalizedUsername)
     );
+  });
+
+  return profiles.length === 1 ? profiles[0] : null;
+}
+
+export async function getProfileForUsernameContact(params: {
+  username: string;
+  contact: string;
+}) {
+  const normalizedUsername = normalizeAuthUsername(params.username);
+  const parsedContact = parseRecoveryContact(params.contact);
+
+  if (!parsedContact || !normalizedUsername) {
+    return null;
+  }
+
+  const supabase = createServiceClient();
+  const lookup =
+    parsedContact.kind === 'email'
+      ? await supabase
+          .from('profiles')
+          .select('*')
+          .ilike('email', parsedContact.normalized)
+          .limit(20)
+      : await supabase
+          .from('profiles')
+          .select('*')
+          .in('phone', parsedContact.lookupVariants)
+          .limit(20);
+
+  if (lookup.error) {
+    throw lookup.error;
+  }
+
+  const submittedPhoneVariants = new Set(parsedContact.lookupVariants);
+  const profiles = ((lookup.data ?? []) as AuthIdentityProfile[]).filter((profile) => {
+    const matchesContact =
+      parsedContact.kind === 'email'
+        ? normalizeEmailAddress(profile.email) === parsedContact.normalized
+        : (() => {
+            const profilePhone = String(profile.phone ?? '').trim();
+            if (!profilePhone) {
+              return false;
+            }
+
+            return (
+              submittedPhoneVariants.has(profilePhone) ||
+              submittedPhoneVariants.has(normalizePhoneNumber(profilePhone))
+            );
+          })();
+
+    return matchesContact && isRecoveryUsernameMatch(profile.username, normalizedUsername);
   });
 
   return profiles.length === 1 ? profiles[0] : null;

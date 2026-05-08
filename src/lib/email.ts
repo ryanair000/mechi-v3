@@ -2,6 +2,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { createHash, createHmac } from 'node:crypto';
+import nodemailer, { type Transporter } from 'nodemailer';
 import { DEFAULT_RATING } from '@/lib/config';
 import { getRankDivision } from '@/lib/gamification';
 import { shouldHideOpponentPlatformIds, usesEfootballRoomCodeFlow } from '@/lib/match-room';
@@ -29,12 +30,49 @@ type AwsSesCredentials = {
   expiration?: number;
 };
 
+type EmailTransportKind = 'smtp' | 'aws-ses';
+
 const FROM_ADDRESS =
-  process.env.AWS_SES_FROM_EMAIL ?? process.env.EMAIL_FROM_ADDRESS ?? 'noreply@mechi.club';
+  process.env.EMAIL_FROM_ADDRESS ?? process.env.AWS_SES_FROM_EMAIL ?? 'noreply@mechi.club';
 const FROM = `Mechi <${FROM_ADDRESS}>`;
 const SUPPORT_ADDRESS = 'support@mechi.club';
 let cachedInstanceCredentials: AwsSesCredentials | null = null;
 let cachedSharedCredentials: AwsSesCredentials | null | undefined;
+let cachedSmtpTransporter: Transporter | null = null;
+
+function getEmailTransportPreference() {
+  return process.env.EMAIL_TRANSPORT?.trim().toLowerCase() || 'auto';
+}
+
+function getSmtpHost() {
+  return process.env.SMTP_HOST?.trim() || '';
+}
+
+function getSmtpPort() {
+  const parsed = Number(process.env.SMTP_PORT?.trim() || '587');
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : 587;
+}
+
+function getSmtpSecure() {
+  const configured = process.env.SMTP_SECURE?.trim().toLowerCase();
+  if (!configured) {
+    return getSmtpPort() === 465;
+  }
+
+  return ['1', 'true', 'yes', 'on'].includes(configured);
+}
+
+function getSmtpUser() {
+  return process.env.SMTP_USER?.trim() || '';
+}
+
+function getSmtpPassword() {
+  return process.env.SMTP_PASS?.trim() || '';
+}
+
+function isSmtpConfigured() {
+  return Boolean(FROM_ADDRESS && getSmtpHost() && getSmtpUser() && getSmtpPassword());
+}
 
 function getAwsSesRegion() {
   return (
@@ -60,6 +98,37 @@ function getAwsSesSessionToken() {
 
 function shouldUseInstanceRoleCredentials() {
   return process.env.AWS_SES_USE_INSTANCE_ROLE === 'true';
+}
+
+function isAwsSesConfigured() {
+  return Boolean(
+    FROM_ADDRESS &&
+      ((getAwsSesAccessKeyId() && getAwsSesSecretAccessKey()) ||
+        getSharedAwsCredentials() ||
+        shouldUseInstanceRoleCredentials())
+  );
+}
+
+function getConfiguredEmailTransport(): EmailTransportKind | null {
+  const preferred = getEmailTransportPreference();
+
+  if (preferred === 'smtp') {
+    return isSmtpConfigured() ? 'smtp' : null;
+  }
+
+  if (preferred === 'ses' || preferred === 'aws-ses') {
+    return isAwsSesConfigured() ? 'aws-ses' : null;
+  }
+
+  if (isSmtpConfigured()) {
+    return 'smtp';
+  }
+
+  if (isAwsSesConfigured()) {
+    return 'aws-ses';
+  }
+
+  return null;
 }
 
 function getAwsProfileName() {
@@ -142,12 +211,7 @@ export function isTransactionalEmailReady(): boolean {
     return true;
   }
 
-  return Boolean(
-    FROM_ADDRESS &&
-      ((getAwsSesAccessKeyId() && getAwsSesSecretAccessKey()) ||
-        getSharedAwsCredentials() ||
-        shouldUseInstanceRoleCredentials())
-  );
+  return Boolean(getConfiguredEmailTransport());
 }
 
 async function sendEmail(
@@ -168,31 +232,39 @@ async function sendEmail(
     return;
   }
 
-  if (!isTransactionalEmailReady()) {
-    console.warn('[Email] Send skipped - AWS SES credentials are not configured');
+  const transport = getConfiguredEmailTransport();
+  if (!transport) {
+    console.warn('[Email] Send skipped - no SMTP or AWS SES transport is configured');
     if (shouldCaptureProviderTranscripts()) {
       await captureProviderTranscript({
         provider: 'email',
         operation: 'send',
         request: payload,
-        error: 'AWS SES credentials are not configured',
+        error: 'No SMTP or AWS SES transport is configured',
       });
     }
     if (options.requireConfigured) {
-      throw new Error('AWS SES credentials are not configured');
+      throw new Error('No SMTP or AWS SES transport is configured');
     }
     return;
   }
 
-  const response = await sendEmailWithAwsSes(payload);
-  console.info('[Email] AWS SES accepted email', { id: response.messageId });
+  const response =
+    transport === 'smtp' ? await sendEmailWithSmtp(payload) : await sendEmailWithAwsSes(payload);
+  console.info(
+    transport === 'smtp' ? '[Email] SMTP accepted email' : '[Email] AWS SES accepted email',
+    { id: response.messageId }
+  );
 
   if (shouldCaptureProviderTranscripts()) {
     await captureProviderTranscript({
       provider: 'email',
       operation: 'send',
       request: payload,
-      response,
+      response: {
+        ...response,
+        transport,
+      },
     });
   }
 }
@@ -397,6 +469,46 @@ async function resolveAwsSesCredentials(): Promise<AwsSesCredentials> {
   };
 
   return cachedInstanceCredentials;
+}
+
+function getSmtpTransporter(): Transporter {
+  if (cachedSmtpTransporter) {
+    return cachedSmtpTransporter;
+  }
+
+  const transporter = nodemailer.createTransport({
+    pool: true,
+    host: getSmtpHost(),
+    port: getSmtpPort(),
+    secure: getSmtpSecure(),
+    requireTLS: !getSmtpSecure(),
+    auth: {
+      user: getSmtpUser(),
+      pass: getSmtpPassword(),
+    },
+    connectionTimeout: 15_000,
+    greetingTimeout: 15_000,
+    socketTimeout: 20_000,
+  });
+
+  cachedSmtpTransporter = transporter;
+  return transporter;
+}
+
+async function sendEmailWithSmtp(payload: EmailPayload): Promise<{ messageId: string | null }> {
+  const transport = getSmtpTransporter();
+  const info = await transport.sendMail({
+    from: payload.from,
+    to: toAddressArray(payload.to),
+    ...(payload.bcc ? { bcc: toAddressArray(payload.bcc) } : {}),
+    ...(payload.replyTo ? { replyTo: toAddressArray(payload.replyTo) } : {}),
+    subject: payload.subject,
+    html: payload.html,
+    text: payload.text ?? htmlToText(payload.html),
+    ...(payload.headers ? { headers: payload.headers } : {}),
+  });
+
+  return { messageId: info.messageId ?? null };
 }
 
 async function sendEmailWithAwsSes(payload: EmailPayload): Promise<{ messageId: string | null }> {
@@ -702,6 +814,50 @@ export async function sendWelcomeEmail(params: {
   } catch (err) {
     console.error('[Email] Welcome send error:', err);
   }
+}
+
+export async function sendSmokeTestEmail(params: {
+  to: string;
+  requestedBy?: string | null;
+}): Promise<void> {
+  const recipientEmail = escapeHtml(params.to);
+  const dashboardUrl = escapeUrl(`${APP_URL}/dashboard`);
+  const requestedBy = escapeHtml(params.requestedBy?.trim() || 'the Boss');
+  const sentAt = escapeHtml(new Date().toISOString());
+  const content = `
+    <h2>Mechi email smoke test</h2>
+    <p>This is a live delivery check from Mechi's production email transport.</p>
+    <div class="info-box">
+      <div class="info-row">
+        <span class="info-label">Recipient</span>
+        <span class="info-value">${recipientEmail}</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">Requested by</span>
+        <span class="info-value">${requestedBy}</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">Sent at</span>
+        <span class="info-value">${sentAt}</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">Transport</span>
+        <span class="info-value">SMTP / Mechi live runtime</span>
+      </div>
+    </div>
+    <p>If you received this, the Mechi production email path is working.</p>
+    <a href="${dashboardUrl}" class="btn">Open Mechi</a>
+  `;
+
+  await sendEmail(
+    {
+      from: FROM,
+      to: params.to,
+      subject: 'Mechi production email smoke test',
+      html: baseLayout('Mechi production email smoke test', content),
+    },
+    { requireConfigured: true }
+  );
 }
 
 export async function sendMagicLinkEmail(params: {

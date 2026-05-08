@@ -10,7 +10,14 @@ import {
 } from '@/lib/config';
 import { isMissingColumnError } from '@/lib/db-compat';
 import { getRankDivision } from '@/lib/gamification';
-import { CONFIRMED_PAYMENT_STATUSES } from '@/lib/tournament-metrics';
+import {
+  ONLINE_TOURNAMENT_GAME_BY_KEY,
+  ONLINE_TOURNAMENT_GAMES,
+  ONLINE_TOURNAMENT_SLUG,
+  isOnlineTournamentGame,
+  type OnlineTournamentGameKey,
+} from '@/lib/online-tournament';
+import { ONLINE_TOURNAMENT_BR_MATCH_NUMBERS } from '@/lib/online-tournament-ops';
 import type { GameKey } from '@/types';
 
 type LeaderboardPlayerRow = Record<string, unknown>;
@@ -20,54 +27,81 @@ type DrawMatchRow = {
   player2_id?: string | null;
 };
 type Relation<T> = T | T[] | null | undefined;
-type TournamentLeaderboardProfile = {
+type PublicTournamentProfile = {
   avatar_url?: string | null;
   id?: string | null;
   username?: string | null;
 };
-type TournamentLeaderboardTournament = {
+type PublicTournamentRegistrationRow = {
+  check_in_status?: string | null;
+  checked_in_at?: string | null;
   created_at?: string | null;
-  ended_at?: string | null;
+  eligibility_status?: string | null;
   game?: string | null;
   id?: string | null;
-  scheduled_for?: string | null;
-  slug?: string | null;
-  started_at?: string | null;
+  in_game_username?: string | null;
+  user?: Relation<PublicTournamentProfile>;
+};
+type PublicTournamentSubmissionRow = {
+  created_at?: string | null;
+  game?: string | null;
+  kills?: number | null;
+  match_number?: number | null;
+  placement?: number | null;
+  registration_id?: string | null;
   status?: string | null;
-  title?: string | null;
-  winner_id?: string | null;
 };
-type TournamentLeaderboardPlayerRow = {
-  joined_at?: string | null;
-  payment_status?: string | null;
-  tournament?: Relation<TournamentLeaderboardTournament>;
-  user?: Relation<TournamentLeaderboardProfile>;
-  user_id?: string | null;
-};
-type TournamentLeaderboardMatchRow = {
-  player1?: Relation<TournamentLeaderboardProfile>;
-  player1_id?: string | null;
-  player2?: Relation<TournamentLeaderboardProfile>;
-  player2_id?: string | null;
+type PublicTournamentFixtureRow = {
+  player1_registration_id?: string | null;
+  player1_score?: number | null;
+  player2_registration_id?: string | null;
+  player2_score?: number | null;
+  round?: string | null;
+  round_label?: string | null;
   status?: string | null;
-  tournament?: Relation<TournamentLeaderboardTournament>;
-  winner?: Relation<TournamentLeaderboardProfile>;
-  winner_id?: string | null;
+  updated_at?: string | null;
+  winner_registration_id?: string | null;
 };
-type TournamentWinnerRow = TournamentLeaderboardTournament & {
-  winner?: Relation<TournamentLeaderboardProfile>;
-};
-type TournamentLeaderboardStat = {
+type TournamentLeaderboardEntry = {
   avatarUrl: string | null;
+  checkedInAt: string | null;
+  detailText: string;
   id: string;
-  latestDate: string | null;
   latestLabel: string | null;
-  matchWins: number;
-  matchesPlayed: number;
   name: string;
-  points: number;
-  tournamentWins: number;
-  tournamentsPlayed: number;
+  rank: number;
+  score: number;
+  scoreText: string;
+  verifiedCount: number;
+  verifiedText: string;
+};
+type TournamentLeaderboardGame = {
+  game: OnlineTournamentGameKey;
+  label: string;
+  leaderboard: TournamentLeaderboardEntry[];
+  players: number;
+  scoreLabel: string;
+  shortLabel: string;
+  verifiedLabel: string;
+  verifiedResults: number;
+};
+type VerifiedTournamentRegistrationRow = PublicTournamentRegistrationRow & {
+  game: OnlineTournamentGameKey;
+  id: string;
+};
+type BattleRoyaleLeaderboardRow = TournamentLeaderboardEntry & {
+  bestSingleMatchKills: number;
+  finalMatchPlacement: number | null;
+  matchKills: Record<1 | 2 | 3, number>;
+  submittedMatches: Set<1 | 2 | 3>;
+};
+type EfootballLeaderboardRow = TournamentLeaderboardEntry & {
+  goalDifference: number;
+  goalsAgainst: number;
+  goalsFor: number;
+  latestRoundWeight: number;
+  matchesPlayed: number;
+  wins: number;
 };
 
 function firstRelation<T>(value: Relation<T>): T | null {
@@ -75,154 +109,376 @@ function firstRelation<T>(value: Relation<T>): T | null {
   return value ?? null;
 }
 
-function getTournamentMoment(tournament?: TournamentLeaderboardTournament | null, fallback?: string | null) {
-  return tournament?.ended_at ?? tournament?.started_at ?? tournament?.scheduled_for ?? fallback ?? tournament?.created_at ?? null;
+function getTimeValue(value: string | null | undefined, fallback = Number.MAX_SAFE_INTEGER) {
+  if (!value) return fallback;
+
+  const time = new Date(value).getTime();
+  return Number.isNaN(time) ? fallback : time;
 }
 
-function touchTournamentStat(
-  statsByPlayer: Map<string, TournamentLeaderboardStat>,
-  profile: TournamentLeaderboardProfile | null | undefined,
-  tournament?: TournamentLeaderboardTournament | null,
-  fallbackDate?: string | null
-) {
-  const id = String(profile?.id ?? '').trim();
-  if (!id) return null;
+function formatCount(value: number, singular: string, plural = `${singular}s`) {
+  return `${value} ${value === 1 ? singular : plural}`;
+}
 
-  const current = statsByPlayer.get(id) ?? {
+function formatSignedNumber(value: number) {
+  return value > 0 ? `+${value}` : String(value);
+}
+
+function getPlayerName(registration: PublicTournamentRegistrationRow) {
+  const profile = firstRelation(registration.user);
+  const inGameName = registration.in_game_username?.trim();
+  const username = profile?.username?.trim();
+  return inGameName || username || 'Player';
+}
+
+function isVerifiedCheckedInRegistration(
+  registration: PublicTournamentRegistrationRow
+): registration is VerifiedTournamentRegistrationRow {
+  return (
+    registration.eligibility_status === 'verified' &&
+    registration.check_in_status === 'checked_in' &&
+    typeof registration.id === 'string' &&
+    Boolean(registration.id) &&
+    isOnlineTournamentGame(registration.game)
+  );
+}
+
+function createBaseLeaderboardEntry(
+  registration: VerifiedTournamentRegistrationRow
+): TournamentLeaderboardEntry {
+  const profile = firstRelation(registration.user);
+
+  return {
     avatarUrl: profile?.avatar_url ?? null,
-    id,
-    latestDate: null,
-    latestLabel: null,
-    matchWins: 0,
-    matchesPlayed: 0,
-    name: profile?.username?.trim() || 'Player',
-    points: 0,
-    tournamentWins: 0,
-    tournamentsPlayed: 0,
+    checkedInAt: registration.checked_in_at ?? registration.created_at ?? null,
+    detailText: 'Verified check-in',
+    id: registration.id,
+    latestLabel: 'Verified check-in',
+    name: getPlayerName(registration),
+    rank: 0,
+    score: 0,
+    scoreText: '0',
+    verifiedCount: 0,
+    verifiedText: '0',
   };
-  const latestDate = getTournamentMoment(tournament, fallbackDate);
+}
 
-  if (
-    latestDate &&
-    (!current.latestDate || new Date(latestDate).getTime() > new Date(current.latestDate).getTime())
-  ) {
-    current.latestDate = latestDate;
-    current.latestLabel = tournament?.title ?? current.latestLabel;
+function getEfootballRoundWeight(round: string | null | undefined) {
+  switch (round) {
+    case 'round_of_16':
+      return 1;
+    case 'quarterfinal':
+      return 2;
+    case 'semifinal':
+      return 3;
+    case 'bronze':
+      return 4;
+    case 'final':
+      return 5;
+    default:
+      return 0;
+  }
+}
+
+function buildBattleRoyaleLeaderboard(params: {
+  game: Extract<OnlineTournamentGameKey, 'pubgm' | 'codm'>;
+  registrations: VerifiedTournamentRegistrationRow[];
+  submissions: PublicTournamentSubmissionRow[];
+}): TournamentLeaderboardGame {
+  const config = ONLINE_TOURNAMENT_GAME_BY_KEY[params.game];
+  const rows = params.registrations
+    .filter((registration) => registration.game === params.game)
+    .map((registration): BattleRoyaleLeaderboardRow => ({
+      ...createBaseLeaderboardEntry(registration),
+      bestSingleMatchKills: 0,
+      finalMatchPlacement: null,
+      matchKills: { 1: 0, 2: 0, 3: 0 },
+      scoreText: '0 kills',
+      submittedMatches: new Set<1 | 2 | 3>(),
+      verifiedText: '0/3 results',
+    }));
+
+  const rowByRegistrationId = new Map(rows.map((row) => [row.id, row]));
+  const verifiedSubmissions = params.submissions
+    .filter(
+      (submission) =>
+        submission.game === params.game &&
+        submission.status === 'verified' &&
+        typeof submission.registration_id === 'string' &&
+        Boolean(submission.registration_id) &&
+        ONLINE_TOURNAMENT_BR_MATCH_NUMBERS.includes(
+          submission.match_number as (typeof ONLINE_TOURNAMENT_BR_MATCH_NUMBERS)[number]
+        )
+    )
+    .sort((left, right) => getTimeValue(left.created_at, 0) - getTimeValue(right.created_at, 0));
+
+  for (const submission of verifiedSubmissions) {
+    const registrationId = submission.registration_id as string;
+    const matchNumber = submission.match_number as 1 | 2 | 3;
+    const row = rowByRegistrationId.get(registrationId);
+    if (!row) continue;
+
+    row.matchKills[matchNumber] = Number(submission.kills ?? 0);
+    row.submittedMatches.add(matchNumber);
+    if (matchNumber === 3) {
+      row.finalMatchPlacement = submission.placement ?? null;
+    }
   }
 
-  if (!current.avatarUrl && profile?.avatar_url) {
-    current.avatarUrl = profile.avatar_url;
-  }
-  if (profile?.username?.trim()) {
-    current.name = profile.username.trim();
+  const leaderboard = rows
+    .map((row) => {
+      row.score = row.matchKills[1] + row.matchKills[2] + row.matchKills[3];
+      row.bestSingleMatchKills = Math.max(
+        row.matchKills[1],
+        row.matchKills[2],
+        row.matchKills[3]
+      );
+      row.detailText = `M1 ${row.matchKills[1]} | M2 ${row.matchKills[2]} | M3 ${row.matchKills[3]}`;
+      row.scoreText = formatCount(row.score, 'kill');
+      row.verifiedCount = row.submittedMatches.size;
+      row.verifiedText = `${row.verifiedCount}/3 results`;
+      row.latestLabel =
+        row.finalMatchPlacement !== null
+          ? `Final match placement #${row.finalMatchPlacement}`
+          : 'Verified check-in';
+      return row;
+    })
+    .sort((left, right) => {
+      if (left.score !== right.score) {
+        return right.score - left.score;
+      }
+
+      if (left.bestSingleMatchKills !== right.bestSingleMatchKills) {
+        return right.bestSingleMatchKills - left.bestSingleMatchKills;
+      }
+
+      const leftFinalPlacement = left.finalMatchPlacement ?? Number.POSITIVE_INFINITY;
+      const rightFinalPlacement = right.finalMatchPlacement ?? Number.POSITIVE_INFINITY;
+      if (leftFinalPlacement !== rightFinalPlacement) {
+        return leftFinalPlacement - rightFinalPlacement;
+      }
+
+      const checkInDelta = getTimeValue(left.checkedInAt) - getTimeValue(right.checkedInAt);
+      if (checkInDelta !== 0) {
+        return checkInDelta;
+      }
+
+      return left.name.localeCompare(right.name);
+    })
+    .map((row, index) => ({
+      avatarUrl: row.avatarUrl,
+      checkedInAt: row.checkedInAt,
+      detailText: row.detailText,
+      id: row.id,
+      latestLabel: row.latestLabel,
+      name: row.name,
+      rank: index + 1,
+      score: row.score,
+      scoreText: row.scoreText,
+      verifiedCount: row.verifiedCount,
+      verifiedText: row.verifiedText,
+    }));
+
+  return {
+    game: params.game,
+    label: config.label,
+    leaderboard,
+    players: leaderboard.length,
+    scoreLabel: 'Kills',
+    shortLabel: config.shortLabel,
+    verifiedLabel: 'Results',
+    verifiedResults: leaderboard.reduce((total, entry) => total + entry.verifiedCount, 0),
+  };
+}
+
+function buildEfootballLeaderboard(params: {
+  fixtures: PublicTournamentFixtureRow[];
+  registrations: VerifiedTournamentRegistrationRow[];
+}): TournamentLeaderboardGame {
+  const config = ONLINE_TOURNAMENT_GAME_BY_KEY.efootball;
+  const rows = params.registrations
+    .filter((registration) => registration.game === 'efootball')
+    .map((registration): EfootballLeaderboardRow => ({
+      ...createBaseLeaderboardEntry(registration),
+      detailText: 'Verified check-in',
+      goalDifference: 0,
+      goalsAgainst: 0,
+      goalsFor: 0,
+      latestRoundWeight: 0,
+      matchesPlayed: 0,
+      scoreText: '0 wins',
+      verifiedText: '0 matches',
+      wins: 0,
+    }));
+
+  const rowByRegistrationId = new Map(rows.map((row) => [row.id, row]));
+  const completedFixtures = params.fixtures.sort(
+    (left, right) => getTimeValue(left.updated_at, 0) - getTimeValue(right.updated_at, 0)
+  );
+
+  for (const fixture of completedFixtures) {
+    const player1RegistrationId = String(fixture.player1_registration_id ?? '');
+    const player2RegistrationId = String(fixture.player2_registration_id ?? '');
+    const player1 = rowByRegistrationId.get(player1RegistrationId);
+    const player2 = rowByRegistrationId.get(player2RegistrationId);
+    const player1Score = Number(fixture.player1_score ?? 0);
+    const player2Score = Number(fixture.player2_score ?? 0);
+    const roundWeight = getEfootballRoundWeight(fixture.round);
+    const roundLabel = fixture.round_label ?? 'Completed fixture';
+
+    if (player1) {
+      player1.matchesPlayed += 1;
+      player1.goalsFor += player1Score;
+      player1.goalsAgainst += player2Score;
+      player1.latestRoundWeight = Math.max(player1.latestRoundWeight, roundWeight);
+      player1.latestLabel = roundLabel;
+      if (fixture.winner_registration_id === player1RegistrationId) {
+        player1.wins += 1;
+      }
+    }
+
+    if (player2) {
+      player2.matchesPlayed += 1;
+      player2.goalsFor += player2Score;
+      player2.goalsAgainst += player1Score;
+      player2.latestRoundWeight = Math.max(player2.latestRoundWeight, roundWeight);
+      player2.latestLabel = roundLabel;
+      if (fixture.winner_registration_id === player2RegistrationId) {
+        player2.wins += 1;
+      }
+    }
   }
 
-  statsByPlayer.set(id, current);
-  return current;
+  const leaderboard = rows
+    .map((row) => {
+      row.goalDifference = row.goalsFor - row.goalsAgainst;
+      row.score = row.wins;
+      row.scoreText = formatCount(row.wins, 'win');
+      row.verifiedCount = row.matchesPlayed;
+      row.verifiedText = formatCount(row.matchesPlayed, 'match');
+      row.detailText =
+        row.matchesPlayed > 0
+          ? `GF ${row.goalsFor} | GA ${row.goalsAgainst} | GD ${formatSignedNumber(row.goalDifference)}`
+          : 'Verified check-in';
+      row.latestLabel = row.matchesPlayed > 0 ? row.latestLabel : 'Verified check-in';
+      return row;
+    })
+    .sort((left, right) => {
+      if (left.wins !== right.wins) {
+        return right.wins - left.wins;
+      }
+
+      if (left.goalDifference !== right.goalDifference) {
+        return right.goalDifference - left.goalDifference;
+      }
+
+      if (left.goalsFor !== right.goalsFor) {
+        return right.goalsFor - left.goalsFor;
+      }
+
+      if (left.latestRoundWeight !== right.latestRoundWeight) {
+        return right.latestRoundWeight - left.latestRoundWeight;
+      }
+
+      const checkInDelta = getTimeValue(left.checkedInAt) - getTimeValue(right.checkedInAt);
+      if (checkInDelta !== 0) {
+        return checkInDelta;
+      }
+
+      return left.name.localeCompare(right.name);
+    })
+    .map((row, index) => ({
+      avatarUrl: row.avatarUrl,
+      checkedInAt: row.checkedInAt,
+      detailText: row.detailText,
+      id: row.id,
+      latestLabel: row.latestLabel,
+      name: row.name,
+      rank: index + 1,
+      score: row.score,
+      scoreText: row.scoreText,
+      verifiedCount: row.verifiedCount,
+      verifiedText: row.verifiedText,
+    }));
+
+  return {
+    game: 'efootball',
+    label: config.label,
+    leaderboard,
+    players: leaderboard.length,
+    scoreLabel: 'Wins',
+    shortLabel: config.shortLabel,
+    verifiedLabel: 'Matches',
+    verifiedResults: completedFixtures.length,
+  };
 }
 
 async function getTournamentLeaderboard() {
   const supabase = createServiceClient();
-  const statsByPlayer = new Map<string, TournamentLeaderboardStat>();
-  const tournamentParticipation = new Set<string>();
-
-  const [playersResult, matchesResult, winnersResult] = await Promise.all([
+  const [registrationsResult, submissionsResult, fixturesResult] = await Promise.all([
     supabase
-      .from('tournament_players')
+      .from('online_tournament_registrations')
       .select(
-        'user_id, joined_at, payment_status, user:user_id(id, username, avatar_url), tournament:tournament_id(id, title, slug, game, status, winner_id, scheduled_for, started_at, ended_at, created_at)'
+        'id, game, in_game_username, eligibility_status, check_in_status, checked_in_at, created_at, user:user_id(id, username, avatar_url)'
       )
-      .in('payment_status', [...CONFIRMED_PAYMENT_STATUSES])
-      .order('joined_at', { ascending: false })
-      .limit(1000),
+      .eq('event_slug', ONLINE_TOURNAMENT_SLUG)
+      .order('created_at', { ascending: true }),
     supabase
-      .from('tournament_matches')
+      .from('online_tournament_result_submissions')
       .select(
-        'player1_id, player2_id, winner_id, status, player1:player1_id(id, username, avatar_url), player2:player2_id(id, username, avatar_url), winner:winner_id(id, username, avatar_url), tournament:tournament_id(id, title, slug, game, status, winner_id, scheduled_for, started_at, ended_at, created_at)'
+        'registration_id, game, match_number, kills, placement, status, created_at'
       )
-      .eq('status', 'completed')
-      .limit(1000),
+      .eq('event_slug', ONLINE_TOURNAMENT_SLUG)
+      .eq('status', 'verified')
+      .order('created_at', { ascending: true }),
     supabase
-      .from('tournaments')
-      .select('id, title, slug, game, status, winner_id, scheduled_for, started_at, ended_at, created_at, winner:winner_id(id, username, avatar_url)')
+      .from('online_tournament_fixtures')
+      .select(
+        'round, round_label, player1_registration_id, player2_registration_id, player1_score, player2_score, winner_registration_id, status, updated_at'
+      )
+      .eq('event_slug', ONLINE_TOURNAMENT_SLUG)
+      .eq('game', 'efootball')
       .eq('status', 'completed')
-      .not('winner_id', 'is', null)
-      .limit(500),
+      .order('updated_at', { ascending: true }),
   ]);
 
-  if (playersResult.error || matchesResult.error || winnersResult.error) {
-    console.error(
-      '[Leaderboard] Tournament-only query error:',
-      playersResult.error ?? matchesResult.error ?? winnersResult.error
-    );
+  if (registrationsResult.error) {
+    console.error('[Leaderboard] PlayMechi registration query error:', registrationsResult.error);
     return NextResponse.json({ error: 'Failed to fetch leaderboard' }, { status: 500 });
   }
 
-  for (const row of ((playersResult.data ?? []) as TournamentLeaderboardPlayerRow[])) {
-    const profile = firstRelation(row.user);
-    const tournament = firstRelation(row.tournament);
-    const stat = touchTournamentStat(statsByPlayer, profile, tournament, row.joined_at);
-    if (!stat || !tournament?.id) continue;
-
-    const participationKey = `${stat.id}:${tournament.id}`;
-    if (!tournamentParticipation.has(participationKey)) {
-      tournamentParticipation.add(participationKey);
-      stat.tournamentsPlayed += 1;
-      stat.points += 1;
-    }
+  if (submissionsResult.error) {
+    console.error('[Leaderboard] PlayMechi submission query error:', submissionsResult.error);
   }
 
-  for (const row of ((matchesResult.data ?? []) as TournamentLeaderboardMatchRow[])) {
-    const tournament = firstRelation(row.tournament);
-    const player1 = firstRelation(row.player1);
-    const player2 = firstRelation(row.player2);
-    const winner = firstRelation(row.winner);
-
-    for (const player of [player1, player2]) {
-      const stat = touchTournamentStat(statsByPlayer, player, tournament);
-      if (stat) {
-        stat.matchesPlayed += 1;
-      }
-    }
-
-    const winnerStat = touchTournamentStat(statsByPlayer, winner, tournament);
-    if (winnerStat) {
-      winnerStat.matchWins += 1;
-      winnerStat.points += 3;
-    }
+  if (fixturesResult.error) {
+    console.error('[Leaderboard] PlayMechi fixture query error:', fixturesResult.error);
   }
 
-  for (const row of ((winnersResult.data ?? []) as TournamentWinnerRow[])) {
-    const winner = firstRelation(row.winner);
-    const winnerStat = touchTournamentStat(statsByPlayer, winner, row);
-    if (winnerStat) {
-      winnerStat.tournamentWins += 1;
-      winnerStat.points += 10;
-    }
-  }
+  const registrations = ((registrationsResult.data ?? []) as PublicTournamentRegistrationRow[]).filter(
+    isVerifiedCheckedInRegistration
+  );
+  const submissions = (submissionsResult.data ?? []) as PublicTournamentSubmissionRow[];
+  const fixtures = (fixturesResult.data ?? []) as PublicTournamentFixtureRow[];
 
-  const leaderboard = Array.from(statsByPlayer.values())
-    .filter((entry) => entry.tournamentsPlayed > 0 || entry.matchWins > 0 || entry.tournamentWins > 0)
-    .sort((a, b) => {
-      const pointsDelta = b.points - a.points;
-      if (pointsDelta !== 0) return pointsDelta;
-      const tournamentWinDelta = b.tournamentWins - a.tournamentWins;
-      if (tournamentWinDelta !== 0) return tournamentWinDelta;
-      const matchWinDelta = b.matchWins - a.matchWins;
-      if (matchWinDelta !== 0) return matchWinDelta;
-      return a.name.localeCompare(b.name);
-    })
-    .slice(0, 100)
-    .map((entry, index) => ({
-      ...entry,
-      rank: index + 1,
-      subtitle:
-        entry.tournamentWins > 0
-          ? `${entry.tournamentWins} tournament win${entry.tournamentWins === 1 ? '' : 's'}`
-          : `${entry.matchWins} bracket match win${entry.matchWins === 1 ? '' : 's'}`,
-    }));
+  const leaderboards: TournamentLeaderboardGame[] = [
+    buildBattleRoyaleLeaderboard({ game: 'pubgm', registrations, submissions }),
+    buildBattleRoyaleLeaderboard({ game: 'codm', registrations, submissions }),
+    buildEfootballLeaderboard({ fixtures, registrations }),
+  ];
 
-  return NextResponse.json({ leaderboard, source: 'tournaments' });
+  return NextResponse.json({
+    leaderboards,
+    source: 'playmechi',
+    summary: {
+      games: ONLINE_TOURNAMENT_GAMES.length,
+      players: leaderboards.reduce((total, leaderboard) => total + leaderboard.players, 0),
+      verifiedResults: leaderboards.reduce(
+        (total, leaderboard) => total + leaderboard.verifiedResults,
+        0
+      ),
+    },
+  });
 }
 
 function getLeaderboardLookupGames(game: GameKey): GameKey[] {

@@ -789,7 +789,7 @@ function PlayerGameStatus({
         </form>
       ) : null}
 
-      {shouldShowCheckInSummary ? (
+      {registration && shouldShowCheckInSummary ? (
         <div className="mt-5 grid gap-2 md:grid-cols-2 xl:grid-cols-6">
           <CheckInDetail label="IGN" value={registration.in_game_username} />
           <CheckInDetail label="UID" value={registration.game_uid} />

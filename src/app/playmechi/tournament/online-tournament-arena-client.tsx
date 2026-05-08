@@ -150,6 +150,58 @@ function hasSubmittedCheckIn(
   );
 }
 
+function getSavedCheckInLength(value: string | null | undefined) {
+  return value?.trim().length ?? 0;
+}
+
+function getMissingCheckInFields(
+  registration: OnlineTournamentPlayerState['myRegistrations'][number] | null
+) {
+  if (!registration) {
+    return [];
+  }
+
+  const missingFields: string[] = [];
+
+  if (getSavedCheckInLength(registration.in_game_username) < 2) {
+    missingFields.push('IGN');
+  }
+
+  if (getSavedCheckInLength(registration.game_uid) < 2) {
+    missingFields.push('UID');
+  }
+
+  if (getSavedCheckInLength(registration.device_model) < 2) {
+    missingFields.push('device model');
+  }
+
+  if (getSavedCheckInLength(registration.whatsapp_number) < 7) {
+    missingFields.push('WhatsApp number');
+  }
+
+  if (normalizeTournamentDeviceSerialLast6(registration.device_serial_last6).length !== 6) {
+    missingFields.push('serial last 6');
+  }
+
+  return missingFields;
+}
+
+function formatFieldList(fields: string[]) {
+  if (fields.length === 0) {
+    return '';
+  }
+
+  if (fields.length === 1) {
+    return fields[0];
+  }
+
+  if (fields.length === 2) {
+    return `${fields[0]} and ${fields[1]}`;
+  }
+
+  return `${fields.slice(0, -1).join(', ')}, and ${fields.at(-1)}`;
+}
+
 function PlayerGate({ nextPath }: { nextPath: string }) {
   return (
     <div className="page-container py-8">
@@ -338,6 +390,7 @@ export function OnlineTournamentArenaClient({
     efootballForm.fixtureId || selectableEfootballFixtures[0]?.id || myEfootballFixtures[0]?.id || '';
 
   const handleCheckIn = async (details: PlayerCheckInDetails) => {
+    const alreadyCheckedIn = hasSubmittedCheckIn(myRegistration);
     setActing(`check-in-${activeGame}`);
     try {
       const res = await authFetch(STATE_API_PATH, {
@@ -363,7 +416,7 @@ export function OnlineTournamentArenaClient({
       }
 
       setState(data);
-      toast.success('Checked in');
+      toast.success(alreadyCheckedIn ? 'Details updated' : 'Checked in');
       if (data.warning) {
         toast(data.warning);
       }
@@ -479,6 +532,8 @@ export function OnlineTournamentArenaClient({
         onCheckInDetailsChange={setCheckInForm}
         onCheckIn={handleCheckIn}
         acting={acting}
+        isCheckInRoute={isCheckInRoute}
+        checkInHref={checkInHref}
         registrationHref={registrationHref}
       />
 
@@ -528,6 +583,8 @@ function PlayerGameStatus({
   onCheckInDetailsChange,
   onCheckIn,
   acting,
+  isCheckInRoute,
+  checkInHref,
   registrationHref,
 }: {
   activeGame: OnlineTournamentGameKey;
@@ -536,12 +593,27 @@ function PlayerGameStatus({
   onCheckInDetailsChange: (value: PlayerCheckInDetails) => void;
   onCheckIn: (details: PlayerCheckInDetails) => Promise<void>;
   acting: string | null;
+  isCheckInRoute: boolean;
+  checkInHref: string;
   registrationHref: string;
 }) {
   const config = ONLINE_TOURNAMENT_GAME_BY_KEY[activeGame];
   const isCheckingIn = acting === `check-in-${activeGame}`;
   const isCheckedIn = hasSubmittedCheckIn(registration);
   const isDisqualified = registration?.eligibility_status === 'disqualified';
+  const missingCheckInFields = getMissingCheckInFields(registration);
+  const needsDetailCompletion = isCheckedIn && missingCheckInFields.length > 0;
+  const shouldShowRecoveryForm = isCheckInRoute && needsDetailCompletion;
+  const shouldShowCheckInForm = Boolean(
+    registration && !isDisqualified && (!isCheckedIn || shouldShowRecoveryForm)
+  );
+  const shouldShowCheckInSummary = Boolean(registration && isCheckedIn && !shouldShowRecoveryForm);
+  const shouldShowCodmDetailHelp =
+    shouldShowRecoveryForm &&
+    activeGame === 'codm' &&
+    missingCheckInFields.some(
+      (field) => field === 'IGN' || field === 'UID' || field === 'serial last 6'
+    );
 
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -554,7 +626,7 @@ function PlayerGameStatus({
         <div>
           <p className="section-title">{config.label}</p>
           <h2 className="mt-2 text-xl font-black text-[var(--text-primary)]">
-            {registration ? registration.in_game_username : 'No slot yet'}
+            {registration?.in_game_username || (registration ? 'Complete your check-in' : 'No slot yet')}
           </h2>
           <div className="mt-3 flex flex-wrap gap-2">
             {registration ? statusPill(registration.check_in_status) : null}
@@ -565,7 +637,7 @@ function PlayerGameStatus({
           </div>
         </div>
 
-        {registration && isCheckedIn ? (
+        {registration && isCheckedIn && !needsDetailCompletion ? (
           <button
             type="button"
             disabled
@@ -574,6 +646,20 @@ function PlayerGameStatus({
             <ClipboardCheck size={14} />
             Checked in
           </button>
+        ) : null}
+
+        {registration && needsDetailCompletion && !isCheckInRoute ? (
+          <Link href={checkInHref} className="btn-primary justify-center">
+            <AlertCircle size={14} />
+            Finish details
+          </Link>
+        ) : null}
+
+        {registration && needsDetailCompletion && isCheckInRoute ? (
+          <span className="inline-flex items-center gap-2 rounded-full border border-amber-400/25 bg-amber-500/10 px-3 py-2 text-xs font-bold uppercase tracking-[0.12em] text-amber-100">
+            <AlertCircle size={14} />
+            Finish details
+          </span>
         ) : null}
 
         {!registration ? (
@@ -589,7 +675,34 @@ function PlayerGameStatus({
         </div>
       ) : null}
 
-      {registration && !isCheckedIn && !isDisqualified ? (
+      {shouldShowRecoveryForm ? (
+        <div className="mt-5 rounded-[var(--radius-card)] border border-amber-400/20 bg-amber-500/10 px-4 py-4 text-sm text-amber-100">
+          <p className="leading-6">
+            Check-in already went through, but we still need your {formatFieldList(missingCheckInFields)} to complete your player details.
+          </p>
+
+          {shouldShowCodmDetailHelp ? (
+            <details className="mt-3 rounded-lg border border-amber-300/15 bg-black/10 px-3 py-2">
+              <summary className="cursor-pointer text-xs font-bold uppercase tracking-[0.12em] text-amber-50">
+                How to find your CODM details
+              </summary>
+              <div className="mt-3 space-y-2 text-xs leading-5 text-amber-50/90">
+                <p>
+                  <span className="font-semibold text-amber-50">IGN and UID:</span> Open Call of Duty:
+                  Mobile, tap your profile, use the name at the top, and copy the UID shown below it.
+                </p>
+                <p>
+                  <span className="font-semibold text-amber-50">Serial last 6:</span> Open your phone
+                  Settings, then About phone and Status or Device information. Find Serial Number and
+                  enter the last 6 characters only.
+                </p>
+              </div>
+            </details>
+          ) : null}
+        </div>
+      ) : null}
+
+      {shouldShowCheckInForm ? (
         <form onSubmit={handleSubmit} className="mt-5 space-y-4">
           <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
             <label className="block">
@@ -615,13 +728,14 @@ function PlayerGameStatus({
               />
             </label>
             <label className="block">
-              <span className="text-xs font-bold text-[var(--text-soft)]">DEVICE</span>
+              <span className="text-xs font-bold text-[var(--text-soft)]">Device model</span>
               <input
                 required
                 value={checkInDetails.device}
                 onChange={(event) =>
                   onCheckInDetailsChange({ ...checkInDetails, device: event.target.value })
                 }
+                placeholder="Samsung A15"
                 className="input mt-1"
               />
             </label>
@@ -670,16 +784,16 @@ function PlayerGameStatus({
             className="btn-primary w-full justify-center md:w-auto"
           >
             {isCheckingIn ? <Loader2 size={14} className="animate-spin" /> : <ClipboardCheck size={14} />}
-            Check in
+            {isCheckedIn ? 'Save details' : 'Check in'}
           </button>
         </form>
       ) : null}
 
-      {registration && isCheckedIn ? (
+      {shouldShowCheckInSummary ? (
         <div className="mt-5 grid gap-2 md:grid-cols-2 xl:grid-cols-6">
           <CheckInDetail label="IGN" value={registration.in_game_username} />
           <CheckInDetail label="UID" value={registration.game_uid} />
-          <CheckInDetail label="DEVICE" value={registration.device_model} />
+          <CheckInDetail label="Device model" value={registration.device_model} />
           <CheckInDetail label="WhatsApp number" value={registration.whatsapp_number} />
           <CheckInDetail label="Serial last 6" value={registration.device_serial_last6} />
           <CheckInDetail label="Tournament lobby" value={formatOnlineTournamentLobby(registration)} />

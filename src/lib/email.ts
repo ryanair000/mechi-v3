@@ -673,7 +673,11 @@ function statusLabel(value: string): string {
 
 function baseLayout(title: string, content: string): string {
   const escapedTitle = escapeHtml(title);
-  const logoUrl = escapeUrl(`${APP_URL}/mechi-logo.png`);
+  const logoUrl = escapeUrl(`${APP_URL}/mechi-logo-shield.png`);
+  const dashboardUrl = escapeUrl(`${APP_URL}/dashboard`);
+  const rewardsUrl = escapeUrl(`${APP_URL}/rewards`);
+  const playMechiUrl = escapeUrl(`${APP_URL}/playmechi`);
+  const supportMailto = escapeHtml(`mailto:${SUPPORT_ADDRESS}`);
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -683,40 +687,50 @@ function baseLayout(title: string, content: string): string {
   <meta name="supported-color-schemes" content="light only" />
   <title>${escapedTitle}</title>
   <style>
-    body { margin: 0; padding: 0; background: #e2e8f0; font-family: Arial, Helvetica, sans-serif; color: #0b1121; }
+    body { margin: 0; padding: 0; background: #e2e8f0; font-family: 'Segoe UI', Arial, Helvetica, sans-serif; color: #0b1121; }
     table { border-collapse: collapse; }
     a { color: inherit; }
     img { border: 0; line-height: 100%; outline: none; text-decoration: none; }
     .preheader { display: none !important; max-height: 0; max-width: 0; opacity: 0; overflow: hidden; visibility: hidden; }
-    .wrapper { width: 100%; background: #e2e8f0; padding: 32px 12px; }
-    .shell { width: 100%; max-width: 680px; margin: 0 auto; }
-    .card { background: #ffffff; border: 1px solid #d8e0ea; border-radius: 22px; overflow: hidden; box-shadow: 0 24px 54px rgba(11, 17, 33, 0.16); }
-    .topline { height: 7px; background: linear-gradient(90deg, #32e0c4 0%, #32e0c4 38%, #ff6b6b 62%, #ff6b6b 100%); }
-    .header { background: #0b1121; padding: 30px 30px 28px; }
+    .wrapper { width: 100%; background: radial-gradient(circle at top left, rgba(50, 224, 196, 0.26), transparent 32%), radial-gradient(circle at top right, rgba(255, 107, 107, 0.18), transparent 28%), linear-gradient(180deg, #eff4fa 0%, #e2e8f0 58%, #d9e3ee 100%); padding: 36px 12px 44px; }
+    .shell { width: 100%; max-width: 700px; margin: 0 auto; }
+    .card { background: #ffffff; border: 1px solid #d4deea; border-radius: 28px; overflow: hidden; box-shadow: 0 30px 74px rgba(11, 17, 33, 0.18); }
+    .topline { height: 8px; background: linear-gradient(90deg, #32e0c4 0%, #32e0c4 42%, #ff6b6b 58%, #ff6b6b 100%); }
+    .header { background: radial-gradient(circle at top left, rgba(50, 224, 196, 0.18), transparent 34%), radial-gradient(circle at top right, rgba(255, 107, 107, 0.16), transparent 30%), linear-gradient(135deg, #10182c 0%, #0b1121 64%, #17233b 100%); padding: 28px 30px 30px; }
     .brand-row { width: 100%; }
-    .logo { display: inline-block; height: 44px; width: 44px; border-radius: 14px; vertical-align: middle; }
-    .brand { color: #ffffff; display: inline-block; font-size: 28px; font-weight: 900; line-height: 1; margin: 0 0 0 12px; vertical-align: middle; }
+    .label-pill { display: inline-block; padding: 6px 12px; border-radius: 999px; background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(255, 255, 255, 0.12); color: #d8e6f6; font-size: 11px; font-weight: 900; letter-spacing: 0.12em; text-transform: uppercase; }
+    .logo { display: inline-block; height: 52px; width: 52px; border-radius: 18px; vertical-align: middle; }
+    .brand-wrap { padding-top: 16px; }
+    .brand { color: #ffffff; display: inline-block; font-size: 31px; font-weight: 900; letter-spacing: -0.03em; line-height: 1; margin: 0 0 0 12px; vertical-align: middle; }
     .brand-mark { color: #ff6b6b; }
     .eyebrow { color: #32e0c4; font-size: 11px; font-weight: 900; margin: 0; letter-spacing: 0.12em; text-transform: uppercase; text-align: right; }
-    .tagline { color: #e2e8f0; margin: 16px 0 0; font-size: 14px; line-height: 1.6; max-width: 500px; }
-    .body { padding: 34px 30px 30px; }
-    .body h2 { color: #0b1121; margin: 0 0 12px; font-size: 27px; font-weight: 900; line-height: 1.16; }
-    .body p { color: #465366; line-height: 1.72; margin: 0 0 16px; font-size: 15px; }
+    .header-metas { padding-top: 12px; }
+    .meta-pill { display: inline-block; padding: 6px 11px; border-radius: 999px; font-size: 11px; font-weight: 900; letter-spacing: 0.08em; text-transform: uppercase; }
+    .meta-pill-teal { background: rgba(50, 224, 196, 0.12); border: 1px solid rgba(50, 224, 196, 0.25); color: #7ef5e2; }
+    .meta-pill-coral { background: rgba(255, 107, 107, 0.12); border: 1px solid rgba(255, 107, 107, 0.24); color: #ffc3c3; margin-top: 8px; }
+    .tagline { color: #d8e6f6; margin: 18px 0 0; font-size: 14px; line-height: 1.72; max-width: 520px; }
+    .body { padding: 34px 30px 30px; background: linear-gradient(180deg, #ffffff 0%, #fbfdff 100%); }
+    .body h2 { color: #0b1121; margin: 0 0 12px; font-size: 31px; font-weight: 900; letter-spacing: -0.03em; line-height: 1.12; }
+    .body p { color: #465366; line-height: 1.76; margin: 0 0 16px; font-size: 15px; }
     .body strong { color: #0b1121; }
-    .info-box { background: #f8fafc; border: 1px solid #d8e0ea; border-radius: 16px; padding: 4px 18px; margin: 24px 0; }
-    .info-row { display: table; width: 100%; padding: 13px 0; border-bottom: 1px solid #e2e8f0; }
+    .info-box { background: linear-gradient(180deg, #f8fbff 0%, #f3f8fc 100%); border: 1px solid #d8e4ef; border-radius: 20px; padding: 6px 18px; margin: 24px 0; box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8); }
+    .info-row { display: table; width: 100%; padding: 14px 0; border-bottom: 1px solid #e2e8f0; }
     .info-row:last-child { border-bottom: none; }
-    .info-label { display: table-cell; color: #64748b; font-size: 13px; line-height: 1.45; padding-right: 16px; vertical-align: top; }
-    .info-value { display: table-cell; color: #0b1121; font-size: 13px; font-weight: 900; line-height: 1.45; text-align: right; vertical-align: top; }
-    .note { background: #fff3f3; border: 1px solid #ffd4d4; border-radius: 14px; color: #8f2626; font-size: 13px; line-height: 1.65; margin: 20px 0; padding: 14px 16px; }
+    .info-label { display: table-cell; color: #64748b; font-size: 11px; font-weight: 900; letter-spacing: 0.08em; line-height: 1.45; padding-right: 16px; text-transform: uppercase; vertical-align: top; }
+    .info-value { display: table-cell; color: #0b1121; font-size: 14px; font-weight: 900; line-height: 1.45; text-align: right; vertical-align: top; }
+    .note { background: rgba(255, 107, 107, 0.08); border: 1px solid rgba(255, 107, 107, 0.22); border-radius: 16px; color: #7c2d2d; font-size: 13px; line-height: 1.7; margin: 20px 0; padding: 14px 16px; }
     .mini-grid { width: 100%; margin: 20px 0 4px; }
-    .mini-cell { background: #f1f5f9; border: 1px solid #dbe5ef; border-radius: 14px; padding: 14px; }
-    .mini-label { color: #64748b; display: block; font-size: 11px; font-weight: 800; letter-spacing: 0.08em; line-height: 1.2; text-transform: uppercase; }
-    .mini-value { color: #0b1121; display: block; font-size: 16px; font-weight: 900; line-height: 1.35; margin-top: 5px; }
-    .btn { display: inline-block; background: #ff6b6b; color: #ffffff !important; text-decoration: none; padding: 14px 24px; border-radius: 12px; font-weight: 900; font-size: 14px; margin-top: 8px; }
+    .mini-cell { background: linear-gradient(180deg, #10182c 0%, #17243a 100%); border: 1px solid rgba(50, 224, 196, 0.18); border-radius: 18px; padding: 16px; box-shadow: 0 18px 30px rgba(11, 17, 33, 0.14); }
+    .mini-label { color: #9fb0c7; display: block; font-size: 11px; font-weight: 800; letter-spacing: 0.08em; line-height: 1.2; text-transform: uppercase; }
+    .mini-value { color: #ffffff; display: block; font-size: 17px; font-weight: 900; line-height: 1.35; margin-top: 6px; }
+    .btn { display: inline-block; background: #ff6b6b; color: #ffffff !important; text-decoration: none; padding: 15px 24px; border-radius: 14px; font-weight: 900; font-size: 14px; margin-top: 8px; box-shadow: 0 14px 28px rgba(255, 107, 107, 0.24); }
     .secondary-link { color: #138f80 !important; font-size: 13px; font-weight: 900; text-decoration: none; }
-    .footer { padding: 24px 30px 30px; border-top: 1px solid #e2e8f0; background: #fbfdff; }
+    .campaign-kicker { color: #ff6b6b; display: inline-block; font-size: 11px; font-weight: 900; letter-spacing: 0.12em; margin: 0 0 12px; text-transform: uppercase; }
+    .cta-wrap { margin: 24px 0 8px; }
+    .footer { padding: 24px 30px 30px; border-top: 1px solid #e2e8f0; background: linear-gradient(180deg, #f7fbff 0%, #f2f7fb 100%); }
     .footer p { color: #64748b; font-size: 12px; margin: 0 0 6px; line-height: 1.6; }
+    .footer-nav { margin: 0 0 12px; }
+    .footer-nav a { color: #0b1121 !important; font-size: 12px; font-weight: 900; text-decoration: none; margin-right: 14px; }
     .badge { display: inline-block; padding: 5px 11px; border-radius: 999px; font-size: 11px; font-weight: 900; letter-spacing: 0.04em; text-transform: uppercase; }
     .badge-win { background: #dcfce7; color: #166534; }
     .badge-loss { background: #fee2e2; color: #991b1b; }
@@ -726,8 +740,8 @@ function baseLayout(title: string, content: string): string {
     @media only screen and (max-width: 520px) {
       .wrapper { padding: 18px 8px; }
       .header, .body, .footer { padding-left: 20px; padding-right: 20px; }
-      .body h2 { font-size: 23px; }
-      .eyebrow { text-align: left; padding-top: 12px; }
+      .body h2 { font-size: 25px; }
+      .eyebrow, .header-metas { text-align: left; padding-top: 12px; }
       .info-label, .info-value { display: block; text-align: left; padding-right: 0; }
       .info-value { padding-top: 4px; }
     }
@@ -746,20 +760,33 @@ function baseLayout(title: string, content: string): string {
                 <table role="presentation" class="brand-row" cellpadding="0" cellspacing="0">
                   <tr>
                     <td>
-                      <img src="${logoUrl}" width="44" height="44" alt="Mechi" class="logo" />
-                      <p class="brand">MECHI<span class="brand-mark">.</span></p>
+                      <span class="label-pill">Mechi mail</span>
+                      <div class="brand-wrap">
+                        <img src="${logoUrl}" width="52" height="52" alt="Mechi" class="logo" />
+                        <p class="brand">MECHI<span class="brand-mark">.</span></p>
+                      </div>
                     </td>
                     <td align="right">
                       <p class="eyebrow">Kenya gaming ops</p>
+                      <div class="header-metas">
+                        <span class="meta-pill meta-pill-teal">Matchmaking live</span><br />
+                        <span class="meta-pill meta-pill-coral">Rewards + tournaments</span>
+                      </div>
                     </td>
                   </tr>
                 </table>
-                <p class="tagline">Matchmaking, tournaments, rewards, and player support built for competitive Kenyan gamers.</p>
+                <p class="tagline">Competitive Kenyan gaming, cleaned up into one fast platform for matches, tournaments, rewards, and real support when the room gets noisy.</p>
               </div>
               <div class="body">
                 ${content}
               </div>
               <div class="footer">
+                <p class="footer-nav">
+                  <a href="${dashboardUrl}">Dashboard</a>
+                  <a href="${rewardsUrl}">Rewards</a>
+                  <a href="${playMechiUrl}">PlayMechi</a>
+                  <a href="${supportMailto}">Support</a>
+                </p>
                 <p><strong>mechi.club</strong></p>
                 <p>You are receiving this because your email is linked to a Mechi account or tournament registration.</p>
                 <p>Need help? Reply here or contact ${SUPPORT_ADDRESS}.</p>
@@ -781,29 +808,47 @@ export async function sendWelcomeEmail(params: {
   const starterRank = getRankDivision(DEFAULT_RATING);
   const username = escapeHtml(params.username);
   const dashboardUrl = escapeUrl(`${APP_URL}/dashboard`);
+  const profileUrl = escapeUrl(`${APP_URL}/profile/settings`);
+  const rewardsUrl = escapeUrl(`${APP_URL}/rewards`);
   const content = `
-    <h2>Registration confirmed</h2>
-    <p>Hey ${username}, your Mechi profile is live and your starter Pro trial is ready. Pick your focus games, lock in your IDs, and start climbing through clean competitive matches.</p>
+    <p class="campaign-kicker">Welcome to the arena</p>
+    <h2>Your Mechi profile is live.</h2>
+    <p>Hey ${username}, your starter Pro trial is already unlocked. Mechi is now your clean lane into queues, direct challenges, tournaments, rewards, and faster support when a match gets messy.</p>
+    <table role="presentation" class="mini-grid" cellpadding="0" cellspacing="0">
+      <tr>
+        <td class="mini-cell" width="33%">
+          <span class="mini-label">Starting rank</span>
+          <span class="mini-value">${escapeHtml(starterRank.label)}</span>
+        </td>
+        <td width="10"></td>
+        <td class="mini-cell" width="33%">
+          <span class="mini-label">Level</span>
+          <span class="mini-value">Lv. 1</span>
+        </td>
+        <td width="10"></td>
+        <td class="mini-cell" width="33%">
+          <span class="mini-label">Starter boost</span>
+          <span class="mini-value">Pro Trial</span>
+        </td>
+      </tr>
+    </table>
     <div class="info-box">
       <div class="info-row">
-        <span class="info-label">Starting Rank</span>
-        <span class="info-value">${escapeHtml(starterRank.label)}</span>
+        <span class="info-label">First move</span>
+        <span class="info-value">Finish your loadout</span>
       </div>
       <div class="info-row">
-        <span class="info-label">Level</span>
-        <span class="info-value">Lv. 1</span>
+        <span class="info-label">Best setup win</span>
+        <span class="info-value">Add your exact game tags</span>
       </div>
       <div class="info-row">
-        <span class="info-label">Trial</span>
-        <span class="info-value">1-month Pro trial</span>
-      </div>
-      <div class="info-row">
-        <span class="info-label">Platform</span>
-        <span class="info-value">mechi.club</span>
+        <span class="info-label">Fastest momentum</span>
+        <span class="info-value">Join your first queue today</span>
       </div>
     </div>
-    <p>Head to your dashboard, finish setup, and get into your first queue when you are ready.</p>
+    <p>Dial in your profile before the next run catches you half-ready, then check rewards and open your dashboard when you want the first real match.</p>
     <a href="${dashboardUrl}" class="btn">Open Dashboard</a>
+    <p><a href="${profileUrl}" class="secondary-link">Finish profile setup</a> &nbsp;·&nbsp; <a href="${rewardsUrl}" class="secondary-link">See rewards</a></p>
   `;
 
   try {
@@ -1466,9 +1511,24 @@ export async function sendClientMarketingEmail(params: {
       ? `<a href="${escapeUrl(params.ctaUrl)}" class="btn">${escapeHtml(params.ctaLabel)}</a>`
       : '';
   const content = `
+    <p class="campaign-kicker">Player update</p>
     <h2>${escapeHtml(params.title)}</h2>
     ${plainTextToHtml(params.bodyText)}
-    ${cta}
+    ${cta ? `<div class="cta-wrap">${cta}</div>` : ''}
+    <div class="info-box">
+      <div class="info-row">
+        <span class="info-label">From</span>
+        <span class="info-value">Mechi platform ops</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">Platform</span>
+        <span class="info-value">mechi.club</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">Why you received this</span>
+        <span class="info-value">Your email is linked to Mechi</span>
+      </div>
+    </div>
     <p class="note">You received this because your email is linked to Mechi.</p>
     <p><a href="${unsubscribeUrl}" class="secondary-link">Unsubscribe from client emails</a></p>
   `;

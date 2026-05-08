@@ -27,9 +27,15 @@ type Recipient = {
   userId?: string | null;
 };
 
+type AudienceLoadResult = {
+  recipients: Recipient[];
+  invalidCount: number;
+};
+
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const DEFAULT_SEND_LIMIT = 200;
 const PROFILE_PAGE_SIZE = 500;
+const RESERVED_EMAIL_DOMAINS = new Set(['example.com', 'mechi.test', 'localhost', 'invalid']);
 
 function getSendLimit() {
   const parsed = Number.parseInt(process.env.ADMIN_EMAIL_SEND_LIMIT ?? '', 10);
@@ -58,15 +64,41 @@ function parseManualRecipients(value: unknown) {
     .filter(Boolean);
 }
 
-function dedupeRecipients(recipients: Recipient[]) {
+function isDeliverableCampaignEmail(normalizedEmail: string) {
+  if (!EMAIL_PATTERN.test(normalizedEmail)) {
+    return false;
+  }
+
+  const domain = normalizedEmail.split('@')[1] ?? '';
+  if (!domain) {
+    return false;
+  }
+
+  if (RESERVED_EMAIL_DOMAINS.has(domain)) {
+    return false;
+  }
+
+  return !domain.endsWith('.test') && !domain.endsWith('.example') && !domain.endsWith('.invalid');
+}
+
+function dedupeRecipients(recipients: Recipient[]): AudienceLoadResult {
   const deduped = new Map<string, Recipient>();
+  let invalidCount = 0;
   for (const recipient of recipients) {
-    if (EMAIL_PATTERN.test(recipient.normalizedEmail) && !deduped.has(recipient.normalizedEmail)) {
+    if (!isDeliverableCampaignEmail(recipient.normalizedEmail)) {
+      invalidCount += 1;
+      continue;
+    }
+
+    if (!deduped.has(recipient.normalizedEmail)) {
       deduped.set(recipient.normalizedEmail, recipient);
     }
   }
 
-  return Array.from(deduped.values());
+  return {
+    recipients: Array.from(deduped.values()),
+    invalidCount,
+  };
 }
 
 function hashRecipientForKey(email: string) {
@@ -119,7 +151,7 @@ async function loadAudienceRecipients(audienceType: AudienceType, manualRecipien
     offset += PROFILE_PAGE_SIZE;
   }
 
-  return Array.from(recipients.values());
+  return dedupeRecipients(Array.from(recipients.values()));
 }
 
 async function filterOptedInRecipients(recipients: Recipient[]) {
@@ -210,7 +242,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unknown email template.' }, { status: 400 });
     }
 
-    const allRecipients = await loadAudienceRecipients(audienceType, body.recipients);
+    const audience = await loadAudienceRecipients(audienceType, body.recipients);
+    const allRecipients = audience.recipients;
     const recipients = await filterOptedInRecipients(allRecipients);
 
     if (recipients.length === 0) {
@@ -224,6 +257,7 @@ export async function POST(request: NextRequest) {
         audienceType,
         recipientCount: recipients.length,
         skippedByUnsubscribe: allRecipients.length - recipients.length,
+        skippedInvalid: audience.invalidCount,
         overLimit: recipients.length > sendLimit,
         sendLimit,
         sample: recipients.slice(0, 10).map((recipient) => recipient.email),
@@ -261,6 +295,7 @@ export async function POST(request: NextRequest) {
       recipient_count: recipients.length,
       metadata: {
         skipped_by_unsubscribe: allRecipients.length - recipients.length,
+        skipped_by_invalid: audience.invalidCount,
         template_id: template?.id ?? null,
         template_name: template?.name ?? null,
       },
@@ -398,6 +433,7 @@ export async function POST(request: NextRequest) {
       sentCount,
       failedCount,
       skippedByUnsubscribe: allRecipients.length - recipients.length,
+      skippedInvalid: audience.invalidCount,
     });
   } catch (error) {
     console.error('[Admin Email Campaign] Error:', error);

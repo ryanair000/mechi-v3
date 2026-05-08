@@ -24,7 +24,6 @@ import {
   ONLINE_TOURNAMENT_CHECK_IN_PATH,
   ONLINE_TOURNAMENT_GAME_BY_KEY,
   ONLINE_TOURNAMENT_REGISTRATION_PATH,
-  isValidTournamentDeviceSerialLast6,
   normalizeTournamentDeviceSerialLast6,
   type OnlineTournamentGameKey,
 } from '@/lib/online-tournament';
@@ -141,23 +140,13 @@ function statusPill(status: string) {
   );
 }
 
-function hasCompletedCheckInDetails(
+function hasSubmittedCheckIn(
   registration: OnlineTournamentPlayerState['myRegistrations'][number] | null
 ) {
-  if (
-    !registration ||
-    registration.check_in_status !== 'checked_in' ||
-    registration.eligibility_status === 'disqualified'
-  ) {
-    return false;
-  }
-
   return Boolean(
-    registration.in_game_username?.trim() &&
-      registration.game_uid?.trim() &&
-      registration.device_model?.trim() &&
-      registration.whatsapp_number?.trim() &&
-      isValidTournamentDeviceSerialLast6(registration.device_serial_last6)
+    registration &&
+      registration.check_in_status === 'checked_in' &&
+      registration.eligibility_status !== 'disqualified'
   );
 }
 
@@ -363,7 +352,10 @@ export function OnlineTournamentArenaClient({
           device_serial_last6: details.deviceSerialLast6,
         }),
       });
-      const data = (await res.json()) as OnlineTournamentPlayerState & { error?: string };
+      const data = (await res.json()) as OnlineTournamentPlayerState & {
+        error?: string;
+        warning?: string;
+      };
 
       if (!res.ok) {
         toast.error(data.error ?? 'Could not check in');
@@ -372,6 +364,9 @@ export function OnlineTournamentArenaClient({
 
       setState(data);
       toast.success('Checked in');
+      if (data.warning) {
+        toast(data.warning);
+      }
     } catch {
       toast.error('Network error while checking in');
     } finally {
@@ -443,7 +438,7 @@ export function OnlineTournamentArenaClient({
     return <PlayerGate nextPath={authNextPath} />;
   }
 
-  const hasCheckedIn = hasCompletedCheckInDetails(myRegistration);
+  const hasCheckedIn = hasSubmittedCheckIn(myRegistration);
 
   return (
     <div className="playmechi-tournament-desk page-container space-y-4 py-4">
@@ -545,7 +540,7 @@ function PlayerGameStatus({
 }) {
   const config = ONLINE_TOURNAMENT_GAME_BY_KEY[activeGame];
   const isCheckingIn = acting === `check-in-${activeGame}`;
-  const isCheckedIn = hasCompletedCheckInDetails(registration);
+  const isCheckedIn = hasSubmittedCheckIn(registration);
   const isDisqualified = registration?.eligibility_status === 'disqualified';
 
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {

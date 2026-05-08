@@ -1,7 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import {
   ONLINE_TOURNAMENT_SLUG,
-  isValidTournamentDeviceSerialLast6,
   type OnlineTournamentGameKey,
 } from '@/lib/online-tournament';
 import {
@@ -173,18 +172,17 @@ function isUniqueViolation(error: unknown) {
   );
 }
 
-function hasCompleteTournamentCheckInDetails(
+function hasTournamentCheckInIdentity(
   registration: Pick<
     OnlineTournamentRegistrationOpsRow,
-    'in_game_username' | 'game_uid' | 'device_model' | 'whatsapp_number' | 'device_serial_last6'
+    'in_game_username' | 'game_uid' | 'device_model' | 'whatsapp_number'
   >
 ) {
   return Boolean(
     registration.in_game_username?.trim() &&
       registration.game_uid?.trim() &&
       registration.device_model?.trim() &&
-      registration.whatsapp_number?.trim() &&
-      isValidTournamentDeviceSerialLast6(registration.device_serial_last6)
+      registration.whatsapp_number?.trim()
   );
 }
 
@@ -240,7 +238,7 @@ export async function assignOnlineTournamentLobbySlot(params: {
       !current ||
       current.check_in_status !== 'checked_in' ||
       current.eligibility_status === 'disqualified' ||
-      !hasCompleteTournamentCheckInDetails(current)
+      !hasTournamentCheckInIdentity(current)
     ) {
       return current;
     }

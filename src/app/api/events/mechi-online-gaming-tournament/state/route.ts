@@ -23,6 +23,9 @@ import { createServiceClient } from '@/lib/supabase';
 import { sendOnlineTournamentCheckInTelegramNotification } from '@/lib/telegram';
 import type { GameKey, PlatformKey } from '@/types';
 
+const CHECK_IN_REGISTRATION_SELECT =
+  'id, event_slug, user_id, game, in_game_username, game_uid, whatsapp_number, device_model, device_serial_last6, check_in_status, tournament_lobby_number, tournament_lobby_slot, tournament_lobby_assigned_at';
+
 function cleanText(value: unknown, maxLength: number) {
   return String(value ?? '').trim().replace(/\s+/g, ' ').slice(0, maxLength);
 }
@@ -36,6 +39,34 @@ function normalizeProfileGameIds(value: unknown): Record<string, string> {
     Object.fromEntries(
       Object.entries(value).map(([key, gameId]) => [key, String(gameId ?? '').trim()])
     )
+  );
+}
+
+function hasAlphabeticSerialCharacters(value: string) {
+  return /[A-Z]/.test(value);
+}
+
+function isLegacyDeviceSerialConstraintError(error: unknown, deviceSerialLast6: string) {
+  if (!hasAlphabeticSerialCharacters(deviceSerialLast6) || !error || typeof error !== 'object') {
+    return false;
+  }
+
+  const candidate = error as {
+    code?: string;
+    details?: string;
+    hint?: string;
+    message?: string;
+  };
+  const text = [candidate.code, candidate.details, candidate.hint, candidate.message]
+    .filter(Boolean)
+    .join(' ')
+    .toLowerCase();
+
+  return (
+    text.includes('23514') &&
+    text.includes('device_serial_last6')
+  ) || (
+    text.includes('online_tournament_registrations_device_serial_last6_check')
   );
 }
 
@@ -108,6 +139,78 @@ async function syncCheckInDetailsToProfile(params: {
   if (updateError) {
     throw updateError;
   }
+}
+
+async function updateRegistrationForCheckIn(params: {
+  supabase: ReturnType<typeof createServiceClient>;
+  userId: string;
+  game: OnlineTournamentGameKey;
+  inGameUsername: string;
+  gameUid: string;
+  whatsappNumber: string;
+  deviceModel: string;
+  deviceSerialLast6: string;
+  checkedInAt: string;
+}) {
+  const {
+    supabase,
+    userId,
+    game,
+    inGameUsername,
+    gameUid,
+    whatsappNumber,
+    deviceModel,
+    deviceSerialLast6,
+    checkedInAt,
+  } = params;
+
+  const runUpdate = (includeDeviceSerial: boolean) =>
+    supabase
+      .from('online_tournament_registrations')
+      .update({
+        in_game_username: inGameUsername,
+        game_uid: gameUid,
+        whatsapp_number: whatsappNumber,
+        device_model: deviceModel,
+        ...(includeDeviceSerial ? { device_serial_last6: deviceSerialLast6 } : {}),
+        check_in_status: 'checked_in',
+        checked_in_at: checkedInAt,
+        updated_at: checkedInAt,
+      })
+      .eq('event_slug', ONLINE_TOURNAMENT_SLUG)
+      .eq('user_id', userId)
+      .eq('game', game)
+      .neq('eligibility_status', 'disqualified')
+      .select(CHECK_IN_REGISTRATION_SELECT)
+      .maybeSingle();
+
+  const primary = await runUpdate(true);
+  if (!primary.error) {
+    return {
+      registration: primary.data,
+      registrationError: null,
+      serialPersisted: true,
+    };
+  }
+
+  if (!isLegacyDeviceSerialConstraintError(primary.error, deviceSerialLast6)) {
+    return {
+      registration: primary.data,
+      registrationError: primary.error,
+      serialPersisted: true,
+    };
+  }
+
+  console.warn(
+    '[OnlineTournamentState POST] Falling back after legacy device serial constraint rejected an alphanumeric serial.'
+  );
+
+  const fallback = await runUpdate(false);
+  return {
+    registration: fallback.data,
+    registrationError: fallback.error,
+    serialPersisted: false,
+  };
 }
 
 export async function GET(request: NextRequest) {
@@ -194,26 +297,21 @@ export async function POST(request: NextRequest) {
 
     const checkedInAt = new Date().toISOString();
     const supabase = createServiceClient();
-    const { data: registration, error: registrationError } = await supabase
-      .from('online_tournament_registrations')
-      .update({
-        in_game_username: inGameUsername,
-        game_uid: gameUid,
-        whatsapp_number: whatsappNumber,
-        device_model: deviceModel,
-        device_serial_last6: deviceSerialLast6,
-        check_in_status: 'checked_in',
-        checked_in_at: checkedInAt,
-        updated_at: checkedInAt,
-      })
-      .eq('event_slug', ONLINE_TOURNAMENT_SLUG)
-      .eq('user_id', access.profile.id)
-      .eq('game', game)
-      .neq('eligibility_status', 'disqualified')
-      .select(
-        'id, event_slug, user_id, game, in_game_username, game_uid, whatsapp_number, device_model, device_serial_last6, check_in_status, tournament_lobby_number, tournament_lobby_slot, tournament_lobby_assigned_at'
-      )
-      .maybeSingle();
+    const {
+      registration,
+      registrationError,
+      serialPersisted,
+    } = await updateRegistrationForCheckIn({
+      supabase,
+      userId: access.profile.id,
+      game,
+      inGameUsername,
+      gameUid,
+      whatsappNumber,
+      deviceModel,
+      deviceSerialLast6,
+      checkedInAt,
+    });
 
     if (registrationError) {
       console.error('[OnlineTournamentState POST] Check-in update error:', registrationError);
@@ -275,10 +373,15 @@ export async function POST(request: NextRequest) {
 
     const state = await loadOnlineTournamentOpsState(supabase);
     return NextResponse.json(
-      buildPlayerTournamentState({
-        state,
-        userId: access.profile.id,
-      })
+      {
+        ...buildPlayerTournamentState({
+          state,
+          userId: access.profile.id,
+        }),
+        warning: serialPersisted
+          ? undefined
+          : 'Checked in. We saved your desk access, but your serial last 6 still needs a database sync.',
+      }
     );
   } catch (error) {
     console.error('[OnlineTournamentState POST] Error:', error);

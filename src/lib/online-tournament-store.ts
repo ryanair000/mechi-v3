@@ -1,5 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import {
+  ONLINE_TOURNAMENT_GAME_BY_KEY,
   ONLINE_TOURNAMENT_SLUG,
   type OnlineTournamentGameKey,
 } from '@/lib/online-tournament';
@@ -113,6 +114,57 @@ function optionalOpsArray<T>(result: { data: unknown; error: unknown }): T[] {
   }
 
   return ensureArray(result.data as T[] | null);
+}
+
+const FALLBACK_PUBGM_MATCH_1_UPDATED_AT = '2026-05-08T17:15:00.000Z';
+
+function getTournamentRoomKey(
+  room: Pick<OnlineTournamentRoom, 'game' | 'match_number'>
+) {
+  return `${room.game}:${room.match_number}`;
+}
+
+function buildFallbackOnlineTournamentRooms(): OnlineTournamentRoom[] {
+  return [
+    {
+      id: 'fallback-pubgm-match-1',
+      event_slug: ONLINE_TOURNAMENT_SLUG,
+      game: 'pubgm',
+      match_number: 1,
+      title: null,
+      map_name: null,
+      room_id: '2809862',
+      room_password: 'mechi',
+      instructions: 'Use the published Mechi room credentials for PUBG Match 1.',
+      starts_at: ONLINE_TOURNAMENT_GAME_BY_KEY.pubgm.matchStartsAt,
+      release_at: null,
+      status: 'released',
+      created_by: null,
+      updated_by: null,
+      created_at: FALLBACK_PUBGM_MATCH_1_UPDATED_AT,
+      updated_at: FALLBACK_PUBGM_MATCH_1_UPDATED_AT,
+    },
+  ];
+}
+
+function withFallbackOnlineTournamentRooms(rooms: OnlineTournamentRoom[]) {
+  // Keep the player desk usable while the live ops rooms table is still absent.
+  const mergedRooms = new Map(
+    buildFallbackOnlineTournamentRooms().map((room) => [getTournamentRoomKey(room), room])
+  );
+
+  for (const room of rooms) {
+    mergedRooms.set(getTournamentRoomKey(room), room);
+  }
+
+  return [...mergedRooms.values()].sort((left, right) => {
+    const gameDiff = left.game.localeCompare(right.game);
+    if (gameDiff !== 0) {
+      return gameDiff;
+    }
+
+    return left.match_number - right.match_number;
+  });
 }
 
 export function toSafeRegistration(
@@ -362,7 +414,7 @@ export async function loadOnlineTournamentOpsState(
     registrations: ensureArray(
       registrationsResult.data as unknown as OnlineTournamentRegistrationOpsRow[] | null
     ),
-    rooms: optionalOpsArray<OnlineTournamentRoom>(roomsResult),
+    rooms: withFallbackOnlineTournamentRooms(optionalOpsArray<OnlineTournamentRoom>(roomsResult)),
     fixtures: optionalOpsArray<OnlineTournamentFixture>(fixturesResult),
     submissions: optionalOpsArray<OnlineTournamentResultSubmission>(submissionsResult),
     disputes: optionalOpsArray<OnlineTournamentDispute>(disputesResult),

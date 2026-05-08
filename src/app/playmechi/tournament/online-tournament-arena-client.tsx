@@ -156,6 +156,49 @@ function getSavedCheckInLength(value: string | null | undefined) {
   return value?.trim().length ?? 0;
 }
 
+function hasRequiredCheckInDetailsExcludingSerial(
+  registration: OnlineTournamentPlayerState['myRegistrations'][number] | null
+) {
+  if (!registration) {
+    return false;
+  }
+
+  return (
+    getSavedCheckInLength(registration.in_game_username) >= 2 &&
+    getSavedCheckInLength(registration.game_uid) >= 2 &&
+    getSavedCheckInLength(registration.device_model) >= 2 &&
+    getSavedCheckInLength(registration.whatsapp_number) >= 7
+  );
+}
+
+function hasLegacySerialSyncGap(
+  registration: OnlineTournamentPlayerState['myRegistrations'][number] | null
+) {
+  if (!registration || !requiresTournamentDeviceSerialLast6(registration.game)) {
+    return false;
+  }
+
+  if (
+    registration.check_in_status !== 'checked_in' ||
+    registration.eligibility_status === 'disqualified'
+  ) {
+    return false;
+  }
+
+  if (!hasRequiredCheckInDetailsExcludingSerial(registration)) {
+    return false;
+  }
+
+  if (normalizeTournamentDeviceSerialLast6(registration.device_serial_last6).length === 6) {
+    return false;
+  }
+
+  return Boolean(
+    registration.checked_in_at ||
+      (registration.tournament_lobby_number && registration.tournament_lobby_slot)
+  );
+}
+
 function getMissingCheckInFields(
   registration: OnlineTournamentPlayerState['myRegistrations'][number] | null
 ) {
@@ -183,7 +226,8 @@ function getMissingCheckInFields(
 
   if (
     requiresTournamentDeviceSerialLast6(registration.game) &&
-    normalizeTournamentDeviceSerialLast6(registration.device_serial_last6).length !== 6
+    normalizeTournamentDeviceSerialLast6(registration.device_serial_last6).length !== 6 &&
+    !hasLegacySerialSyncGap(registration)
   ) {
     missingFields.push('serial last 6');
   }
@@ -646,6 +690,7 @@ function PlayerGameStatus({
   const isCheckingIn = acting === `check-in-${activeGame}`;
   const isCheckedIn = hasSubmittedCheckIn(registration);
   const isDisqualified = registration?.eligibility_status === 'disqualified';
+  const hasLegacySerialSyncIssue = hasLegacySerialSyncGap(registration);
   const missingCheckInFields = getMissingCheckInFields(registration);
   const needsDetailCompletion = isCheckedIn && missingCheckInFields.length > 0;
   const shouldShowRecoveryForm = isCheckInRoute && needsDetailCompletion;
@@ -745,6 +790,14 @@ function PlayerGameStatus({
               </div>
             </details>
           ) : null}
+        </div>
+      ) : null}
+
+      {hasLegacySerialSyncIssue ? (
+        <div className="mt-5 rounded-[var(--radius-card)] border border-sky-400/20 bg-sky-500/10 px-4 py-4 text-sm text-sky-100">
+          <p className="leading-6">
+            Check-in is confirmed and your lobby access is live. Your serial last 6 hit a live sync issue, so you do not need to submit again.
+          </p>
         </div>
       ) : null}
 
@@ -852,7 +905,10 @@ function PlayerGameStatus({
           <CheckInDetail label="Device model" value={registration.device_model} />
           <CheckInDetail label="WhatsApp number" value={registration.whatsapp_number} />
           {requiresDeviceSerial ? (
-            <CheckInDetail label="Serial last 6" value={registration.device_serial_last6} />
+            <CheckInDetail
+              label="Serial last 6"
+              value={hasLegacySerialSyncIssue ? 'Sync pending' : registration.device_serial_last6}
+            />
           ) : null}
           <CheckInDetail label="Tournament lobby" value={formatOnlineTournamentLobby(registration)} />
         </div>

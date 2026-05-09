@@ -45,9 +45,10 @@ export async function POST(request: NextRequest) {
     }
 
     const player = access.profile;
+    const clientIp = getClientIp(request);
     const rateLimit = await checkPersistentRateLimit(
-      `android-testers:${getClientIp(request)}`,
-      4,
+      `android-testers:${player.id}:${clientIp}`,
+      8,
       60 * 60 * 1000
     );
 

@@ -8,19 +8,20 @@ import {
 } from '@/lib/online-tournament';
 import {
   ONLINE_TOURNAMENT_EFOOTBALL_ROUNDS,
-  buildBattleRoyaleStandings,
   isBattleRoyaleTournamentGame,
+  type OnlineTournamentDisputeStatus,
   type OnlineTournamentFixture,
   type OnlineTournamentFixtureRound,
   type OnlineTournamentFixtureStatus,
+  type OnlineTournamentPayoutStatus,
   type OnlineTournamentRegistrationOpsRow,
   type OnlineTournamentResultStatus,
   type OnlineTournamentRoomStatus,
 } from '@/lib/online-tournament-ops';
+import { buildOnlineTournamentOpsDashboardState } from '@/lib/online-tournament-moderation';
 import {
   getBronzeEfootballPosition,
   getNextEfootballPosition,
-  loadOnlineTournamentOpsState,
 } from '@/lib/online-tournament-store';
 import { getClientIp } from '@/lib/rateLimit';
 import { createServiceClient } from '@/lib/supabase';
@@ -38,7 +39,14 @@ const RESULT_STATUSES: OnlineTournamentResultStatus[] = [
   'rejected',
   'disputed',
 ];
-const PAYOUT_STATUSES = ['pending', 'approved', 'paid', 'failed', 'ineligible'] as const;
+const DISPUTE_STATUSES: OnlineTournamentDisputeStatus[] = ['open', 'resolved', 'dismissed'];
+const PAYOUT_STATUSES: OnlineTournamentPayoutStatus[] = [
+  'pending',
+  'approved',
+  'paid',
+  'failed',
+  'ineligible',
+];
 
 type EfootballSeedRow = {
   event_slug: string;
@@ -76,25 +84,17 @@ function isResultStatus(value: unknown): value is OnlineTournamentResultStatus {
   return typeof value === 'string' && RESULT_STATUSES.includes(value as OnlineTournamentResultStatus);
 }
 
+function isDisputeStatus(value: unknown): value is OnlineTournamentDisputeStatus {
+  return typeof value === 'string' && DISPUTE_STATUSES.includes(value as OnlineTournamentDisputeStatus);
+}
+
+function isPayoutStatus(value: unknown): value is OnlineTournamentPayoutStatus {
+  return typeof value === 'string' && PAYOUT_STATUSES.includes(value as OnlineTournamentPayoutStatus);
+}
+
 async function getAdminState() {
   const supabase = createServiceClient();
-  const state = await loadOnlineTournamentOpsState(supabase);
-
-  return {
-    ...state,
-    standings: {
-      pubgm: buildBattleRoyaleStandings({
-        game: 'pubgm',
-        registrations: state.registrations,
-        submissions: state.submissions,
-      }),
-      codm: buildBattleRoyaleStandings({
-        game: 'codm',
-        registrations: state.registrations,
-        submissions: state.submissions,
-      }),
-    },
-  };
+  return buildOnlineTournamentOpsDashboardState(supabase);
 }
 
 async function markFixtureReadyIfFilled(fixtureId: string) {
@@ -123,6 +123,36 @@ async function markFixtureReadyIfFilled(fixtureId: string) {
       .from('online_tournament_fixtures')
       .update({ status: 'ready', updated_at: new Date().toISOString() })
       .eq('id', fixtureId);
+  }
+}
+
+async function updateOtherFixtureSubmissions(params: {
+  fixtureId: string;
+  keepSubmissionId?: string | null;
+  status: Extract<OnlineTournamentResultStatus, 'rejected' | 'disputed'>;
+  note: string;
+}) {
+  const supabase = createServiceClient();
+  let query = supabase
+    .from('online_tournament_result_submissions')
+    .update({
+      status: params.status,
+      admin_note: params.note,
+      verified_by: null,
+      verified_at: null,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('event_slug', ONLINE_TOURNAMENT_SLUG)
+    .eq('fixture_id', params.fixtureId)
+    .in('status', ['pending', 'verified', 'disputed']);
+
+  if (params.keepSubmissionId) {
+    query = query.neq('id', params.keepSubmissionId);
+  }
+
+  const { error } = await query;
+  if (error) {
+    console.error('[OnlineTournamentOps] Could not update related fixture submissions:', error);
   }
 }
 
@@ -206,6 +236,13 @@ async function applyFixtureResult(params: {
     return { ok: false, error: 'Fixture not found' };
   }
 
+  if (fixture.status === 'completed') {
+    return {
+      ok: false,
+      error: 'Fixture is already completed. Reset it before recording another result.',
+    };
+  }
+
   const winnerRegistrationId =
     params.winnerRegistrationId ??
     (params.player1Score > params.player2Score
@@ -245,15 +282,17 @@ async function applyFixtureResult(params: {
 
 async function seedEfootballFixtures(registrations: OnlineTournamentRegistrationOpsRow[]) {
   const supabase = createServiceClient();
-  const { count: completedCount } = await supabase
+  const { count: existingCount } = await supabase
     .from('online_tournament_fixtures')
     .select('id', { count: 'exact', head: true })
     .eq('event_slug', ONLINE_TOURNAMENT_SLUG)
-    .eq('game', 'efootball')
-    .eq('status', 'completed');
+    .eq('game', 'efootball');
 
-  if ((completedCount ?? 0) > 0) {
-    return { ok: false, error: 'Completed eFootball fixtures already exist' };
+  if ((existingCount ?? 0) > 0) {
+    return {
+      ok: false,
+      error: 'The eFootball bracket is already seeded. Resetting or reseeding a live bracket is blocked.',
+    };
   }
 
   const players = registrations
@@ -271,11 +310,12 @@ async function seedEfootballFixtures(registrations: OnlineTournamentRegistration
     })
     .slice(0, 16);
 
-  await supabase
-    .from('online_tournament_fixtures')
-    .delete()
-    .eq('event_slug', ONLINE_TOURNAMENT_SLUG)
-    .eq('game', 'efootball');
+  if (players.length < 2) {
+    return {
+      ok: false,
+      error: 'At least two checked-in eFootball players are needed to seed the bracket',
+    };
+  }
 
   const rows: EfootballSeedRow[] = ONLINE_TOURNAMENT_EFOOTBALL_ROUNDS.flatMap((round) =>
     Array.from({ length: round.slots }).map((_, slot) => {
@@ -331,6 +371,171 @@ async function seedEfootballFixtures(registrations: OnlineTournamentRegistration
   if (error) {
     return { ok: false, error: 'Could not seed eFootball fixtures' };
   }
+
+  return { ok: true };
+}
+
+async function resetFixtureResult(params: { fixtureId: string; adminNote?: string | null }) {
+  const supabase = createServiceClient();
+  const { data: fixtureRaw, error: fixtureError } = await supabase
+    .from('online_tournament_fixtures')
+    .select('*')
+    .eq('id', params.fixtureId)
+    .eq('event_slug', ONLINE_TOURNAMENT_SLUG)
+    .maybeSingle();
+
+  const fixture = fixtureRaw as OnlineTournamentFixture | null;
+  if (fixtureError || !fixture) {
+    return { ok: false, error: 'Fixture not found' };
+  }
+
+  if (fixture.status !== 'completed' || !fixture.winner_registration_id) {
+    return { ok: false, error: 'Only completed fixtures can be reset' };
+  }
+
+  const loserRegistrationId =
+    fixture.winner_registration_id === fixture.player1_registration_id
+      ? fixture.player2_registration_id
+      : fixture.player1_registration_id;
+  const dependentFixtureIds: string[] = [];
+  const dependentUpdates: Array<{
+    fixtureId: string;
+    side: 'player1_registration_id' | 'player2_registration_id';
+    expectedRegistrationId: string;
+  }> = [];
+
+  const nextPosition = getNextEfootballPosition(fixture);
+  if (nextPosition) {
+    const { data: nextFixtureRaw, error: nextFixtureError } = await supabase
+      .from('online_tournament_fixtures')
+      .select('*')
+      .eq('event_slug', ONLINE_TOURNAMENT_SLUG)
+      .eq('game', 'efootball')
+      .eq('round', nextPosition.round)
+      .eq('slot', nextPosition.slot)
+      .maybeSingle();
+
+    const nextFixture = nextFixtureRaw as OnlineTournamentFixture | null;
+    if (nextFixtureError || !nextFixture) {
+      return { ok: false, error: 'Could not load the downstream fixture' };
+    }
+
+    if (
+      nextFixture.status === 'completed' ||
+      nextFixture.player1_score !== null ||
+      nextFixture.player2_score !== null ||
+      nextFixture.winner_registration_id
+    ) {
+      return {
+        ok: false,
+        error: 'Reset the later eFootball round first before clearing this result.',
+      };
+    }
+
+    dependentFixtureIds.push(nextFixture.id);
+    dependentUpdates.push({
+      fixtureId: nextFixture.id,
+      side: nextPosition.side,
+      expectedRegistrationId: fixture.winner_registration_id,
+    });
+  }
+
+  const bronzePosition = getBronzeEfootballPosition(fixture);
+  if (bronzePosition && loserRegistrationId) {
+    const { data: bronzeFixtureRaw, error: bronzeFixtureError } = await supabase
+      .from('online_tournament_fixtures')
+      .select('*')
+      .eq('event_slug', ONLINE_TOURNAMENT_SLUG)
+      .eq('game', 'efootball')
+      .eq('round', 'bronze')
+      .eq('slot', bronzePosition.slot)
+      .maybeSingle();
+
+    const bronzeFixture = bronzeFixtureRaw as OnlineTournamentFixture | null;
+    if (bronzeFixtureError || !bronzeFixture) {
+      return { ok: false, error: 'Could not load the bronze fixture' };
+    }
+
+    if (
+      bronzeFixture.status === 'completed' ||
+      bronzeFixture.player1_score !== null ||
+      bronzeFixture.player2_score !== null ||
+      bronzeFixture.winner_registration_id
+    ) {
+      return {
+        ok: false,
+        error: 'Reset the bronze match first before clearing this semifinal result.',
+      };
+    }
+
+    dependentFixtureIds.push(bronzeFixture.id);
+    dependentUpdates.push({
+      fixtureId: bronzeFixture.id,
+      side: bronzePosition.side,
+      expectedRegistrationId: loserRegistrationId,
+    });
+  }
+
+  if (dependentFixtureIds.length > 0) {
+    const { data: relatedSubmissionsRaw, error: relatedSubmissionsError } = await supabase
+      .from('online_tournament_result_submissions')
+      .select('id')
+      .eq('event_slug', ONLINE_TOURNAMENT_SLUG)
+      .in('fixture_id', dependentFixtureIds)
+      .in('status', ['pending', 'verified', 'disputed']);
+
+    if (relatedSubmissionsError) {
+      return { ok: false, error: 'Could not inspect downstream fixture review state' };
+    }
+
+    if ((relatedSubmissionsRaw ?? []).length > 0) {
+      return {
+        ok: false,
+        error: 'A downstream fixture already has result review activity. Clear that fixture first.',
+      };
+    }
+  }
+
+  for (const dependentUpdate of dependentUpdates) {
+    const { error } = await supabase
+      .from('online_tournament_fixtures')
+      .update({
+        [dependentUpdate.side]: null,
+        status: 'pending',
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', dependentUpdate.fixtureId)
+      .eq(dependentUpdate.side, dependentUpdate.expectedRegistrationId);
+
+    if (error) {
+      return { ok: false, error: 'Could not clear the downstream bracket slot' };
+    }
+  }
+
+  const { error: resetError } = await supabase
+    .from('online_tournament_fixtures')
+    .update({
+      player1_score: null,
+      player2_score: null,
+      winner_registration_id: null,
+      status:
+        fixture.player1_registration_id && fixture.player2_registration_id ? 'ready' : 'pending',
+      screenshot_url: null,
+      screenshot_public_id: null,
+      admin_note: params.adminNote ?? null,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', fixture.id);
+
+  if (resetError) {
+    return { ok: false, error: 'Could not reset fixture' };
+  }
+
+  await updateOtherFixtureSubmissions({
+    fixtureId: fixture.id,
+    status: 'disputed',
+    note: 'Fixture result was reset by tournament ops. Review the evidence again before verifying.',
+  });
 
   return { ok: true };
 }
@@ -417,7 +622,7 @@ export async function PATCH(request: NextRequest) {
     }
 
     if (action === 'seed_efootball') {
-      const state = await loadOnlineTournamentOpsState(supabase);
+      const state = await getAdminState();
       const seeded = await seedEfootballFixtures(state.registrations);
       if (!seeded.ok) {
         return NextResponse.json({ error: seeded.error }, { status: 400 });
@@ -441,11 +646,73 @@ export async function PATCH(request: NextRequest) {
         return NextResponse.json({ error: 'Submission and status are required' }, { status: 400 });
       }
 
+      const nextAdminNote = cleanOptionalText(body.admin_note, 500);
+      const { data: currentSubmissionRaw, error: currentSubmissionError } = await supabase
+        .from('online_tournament_result_submissions')
+        .select('*')
+        .eq('id', submissionId)
+        .eq('event_slug', ONLINE_TOURNAMENT_SLUG)
+        .maybeSingle();
+
+      const currentSubmission = currentSubmissionRaw as
+        | {
+            id: string;
+            fixture_id: string | null;
+            player1_score: number | null;
+            player2_score: number | null;
+            reported_winner_registration_id: string | null;
+            screenshot_url: string | null;
+            screenshot_public_id: string | null;
+            status: OnlineTournamentResultStatus;
+            admin_note: string | null;
+            verified_by: string | null;
+            verified_at: string | null;
+          }
+        | null;
+
+      if (currentSubmissionError || !currentSubmission) {
+        return NextResponse.json({ error: 'Submission not found' }, { status: 404 });
+      }
+
+      let currentFixture: Pick<OnlineTournamentFixture, 'id' | 'status'> | null = null;
+      if (currentSubmission.fixture_id) {
+        const { data: fixtureRaw, error: fixtureError } = await supabase
+          .from('online_tournament_fixtures')
+          .select('id, status')
+          .eq('id', currentSubmission.fixture_id)
+          .eq('event_slug', ONLINE_TOURNAMENT_SLUG)
+          .maybeSingle();
+
+        currentFixture = (fixtureRaw as Pick<OnlineTournamentFixture, 'id' | 'status'> | null) ?? null;
+
+        if (fixtureError || !currentFixture) {
+          return NextResponse.json({ error: 'Fixture not found' }, { status: 404 });
+        }
+
+        if (status === 'verified' && currentFixture.status === 'completed') {
+          return NextResponse.json(
+            { error: 'This fixture is already completed. Reset it before verifying another result.' },
+            { status: 400 }
+          );
+        }
+
+        if (
+          currentSubmission.status === 'verified' &&
+          status !== 'verified' &&
+          currentFixture.status === 'completed'
+        ) {
+          return NextResponse.json(
+            { error: 'Reset the completed fixture before changing this verified submission.' },
+            { status: 400 }
+          );
+        }
+      }
+
       const { data: submissionRaw, error: submissionError } = await supabase
         .from('online_tournament_result_submissions')
         .update({
           status,
-          admin_note: cleanOptionalText(body.admin_note, 500),
+          admin_note: nextAdminNote,
           verified_by: status === 'verified' ? access.profile.id : null,
           verified_at: status === 'verified' ? new Date().toISOString() : null,
           updated_at: new Date().toISOString(),
@@ -489,8 +756,25 @@ export async function PATCH(request: NextRequest) {
         });
 
         if (!applied.ok) {
+          await supabase
+            .from('online_tournament_result_submissions')
+            .update({
+              status: currentSubmission.status,
+              admin_note: currentSubmission.admin_note,
+              verified_by: currentSubmission.verified_by,
+              verified_at: currentSubmission.verified_at,
+              updated_at: new Date().toISOString(),
+            })
+            .eq('id', submission.id);
           return NextResponse.json({ error: applied.error }, { status: 400 });
         }
+
+        await updateOtherFixtureSubmissions({
+          fixtureId: submission.fixture_id,
+          keepSubmissionId: submission.id,
+          status: 'rejected',
+          note: 'A different eFootball result was verified as the official fixture outcome.',
+        });
       }
 
       await writeAuditLog({
@@ -586,12 +870,81 @@ export async function PATCH(request: NextRequest) {
         return NextResponse.json({ error: applied.error }, { status: 400 });
       }
 
+      await updateOtherFixtureSubmissions({
+        fixtureId,
+        status: 'rejected',
+        note: 'Tournament ops recorded the official fixture result directly.',
+      });
+
       await writeAuditLog({
         adminId: access.profile.id,
         action: 'system_note',
         targetType: 'tournament',
         targetId: fixtureId,
         details: { action, player1Score, player2Score, winnerRegistrationId },
+        ipAddress: getClientIp(request),
+      });
+
+      return NextResponse.json(await getAdminState());
+    }
+
+    if (action === 'reset_fixture_result') {
+      const fixtureId = cleanText(body.fixture_id, 80);
+      if (!fixtureId) {
+        return NextResponse.json({ error: 'Fixture is required' }, { status: 400 });
+      }
+
+      const reset = await resetFixtureResult({
+        fixtureId,
+        adminNote: cleanOptionalText(body.admin_note, 500),
+      });
+
+      if (!reset.ok) {
+        return NextResponse.json({ error: reset.error }, { status: 400 });
+      }
+
+      await writeAuditLog({
+        adminId: access.profile.id,
+        action: 'system_note',
+        targetType: 'tournament',
+        targetId: fixtureId,
+        details: { action },
+        ipAddress: getClientIp(request),
+      });
+
+      return NextResponse.json(await getAdminState());
+    }
+
+    if (action === 'update_dispute_status') {
+      const disputeId = cleanText(body.dispute_id, 80);
+      const status = body.status;
+      if (!disputeId || !isDisputeStatus(status)) {
+        return NextResponse.json({ error: 'Dispute and status are required' }, { status: 400 });
+      }
+
+      const terminalStatus = status === 'resolved' || status === 'dismissed';
+      const { error } = await supabase
+        .from('online_tournament_disputes')
+        .update({
+          status,
+          resolution_note: cleanOptionalText(body.resolution_note, 1000),
+          resolved_by: terminalStatus ? access.profile.id : null,
+          resolved_at: terminalStatus ? new Date().toISOString() : null,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', disputeId)
+        .eq('event_slug', ONLINE_TOURNAMENT_SLUG);
+
+      if (error) {
+        return NextResponse.json({ error: 'Could not update dispute' }, { status: 500 });
+      }
+
+      await writeAuditLog({
+        adminId: access.profile.id,
+        action: 'system_note',
+        targetType: 'tournament',
+        targetId: disputeId,
+        details: { action, status },
         ipAddress: getClientIp(request),
       });
 
@@ -608,7 +961,7 @@ export async function PATCH(request: NextRequest) {
         !placement ||
         placement < 1 ||
         placement > 3 ||
-        !PAYOUT_STATUSES.includes(payoutStatus as (typeof PAYOUT_STATUSES)[number])
+        !isPayoutStatus(payoutStatus)
       ) {
         return NextResponse.json({ error: 'Game, placement, and payout status are required' }, { status: 400 });
       }

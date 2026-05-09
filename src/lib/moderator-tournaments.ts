@@ -39,6 +39,22 @@ export function isModeratorTournamentKey(value: unknown): value is ModeratorTour
   return MODERATOR_TOURNAMENTS.some((tournament) => tournament.key === value);
 }
 
+export function readModeratorTournamentKeyFromGameIds(
+  value: unknown
+): ModeratorTournamentKey | null {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    return null;
+  }
+
+  const rawKey = (value as Record<string, unknown>).moderator_tournament_key;
+  return isModeratorTournamentKey(rawKey) ? rawKey : null;
+}
+
 export function getModeratorTournamentByKey(key: ModeratorTournamentKey) {
   return MODERATOR_TOURNAMENTS.find((tournament) => tournament.key === key) ?? MODERATOR_TOURNAMENTS[0];
+}
+
+export function getModeratorTournamentFromGameIds(value: unknown) {
+  const key = readModeratorTournamentKeyFromGameIds(value);
+  return key ? getModeratorTournamentByKey(key) : null;
 }

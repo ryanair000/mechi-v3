@@ -3,6 +3,14 @@ import { PLAYMECHI_WHATSAPP_GROUP_URL } from '@/lib/social-links';
 
 export type OnlineTournamentGameKey = Extract<GameKey, 'pubgm' | 'codm' | 'efootball'>;
 
+export type OnlineTournamentDisputeCategory =
+  | 'wrongdoing'
+  | 'rule_break'
+  | 'score_issue'
+  | 'room_issue'
+  | 'technical_issue'
+  | 'other';
+
 export type OnlineTournamentEligibilityStatus =
   | 'pending'
   | 'verified'
@@ -46,8 +54,11 @@ export const ONLINE_TOURNAMENT_ARENA_PATH = `${ONLINE_TOURNAMENT_PUBLIC_PATH}/to
 export const ONLINE_TOURNAMENT_CHECK_IN_PATH = `${ONLINE_TOURNAMENT_PUBLIC_PATH}/check-in`;
 export const ONLINE_TOURNAMENT_CODM_MODERATOR_PATH = '/moderators';
 export const ONLINE_TOURNAMENT_REGISTRATION_PATH = `${ONLINE_TOURNAMENT_PUBLIC_PATH}/register`;
+export const ONLINE_TOURNAMENT_DISPUTE_PATH = `${ONLINE_TOURNAMENT_PUBLIC_PATH}/createdispute`;
 export const ONLINE_TOURNAMENT_REGISTRATION_API_PATH =
   '/api/events/mechi-online-gaming-tournament/register';
+export const ONLINE_TOURNAMENT_DISPUTE_API_PATH =
+  '/api/events/mechi-online-gaming-tournament/disputes';
 export const ONLINE_TOURNAMENT_EVENT_DATES = '8-10 May 2026';
 export const ONLINE_TOURNAMENT_GAME_LIST_LABEL = 'PUBG Mobile, CODM, and eFootball';
 export const ONLINE_TOURNAMENT_CASH_PRIZE_POOL = 6000;
@@ -85,6 +96,18 @@ export const ONLINE_TOURNAMENT_STREAM_PLATFORMS = [
     role: 'Main long-form stream and replays',
   },
 ] as const;
+
+export const ONLINE_TOURNAMENT_DISPUTE_CATEGORIES = [
+  { value: 'wrongdoing', label: 'Wrongdoing or cheating' },
+  { value: 'rule_break', label: 'Rule break or unfair conduct' },
+  { value: 'score_issue', label: 'Score or result issue' },
+  { value: 'room_issue', label: 'Room, lobby, or match access issue' },
+  { value: 'technical_issue', label: 'Technical issue' },
+  { value: 'other', label: 'Other tournament issue' },
+] as const satisfies ReadonlyArray<{
+  value: OnlineTournamentDisputeCategory;
+  label: string;
+}>;
 
 function cleanPublicEnv(value: string | undefined) {
   return value?.trim() ?? '';
@@ -330,6 +353,15 @@ export function isOnlineTournamentGame(value: unknown): value is OnlineTournamen
   return (
     typeof value === 'string' &&
     Object.prototype.hasOwnProperty.call(ONLINE_TOURNAMENT_GAME_BY_KEY, value)
+  );
+}
+
+export function isOnlineTournamentDisputeCategory(
+  value: unknown
+): value is OnlineTournamentDisputeCategory {
+  return (
+    typeof value === 'string' &&
+    ONLINE_TOURNAMENT_DISPUTE_CATEGORIES.some((category) => category.value === value)
   );
 }
 

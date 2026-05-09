@@ -13,6 +13,7 @@ import { TestimonialCarousel } from '@/components/ui/profile-card-testimonial-ca
 import { getGameImage } from '@/lib/config';
 import { getLoginPath, getRegisterPath } from '@/lib/navigation';
 import {
+  ONLINE_TOURNAMENT_DISPUTE_PATH,
   ONLINE_TOURNAMENT_EVENT_DATES,
   ONLINE_TOURNAMENT_GAMES,
   ONLINE_TOURNAMENT_REGISTRATION_PATH,
@@ -44,6 +45,7 @@ const TOURNAMENT_NAV_ITEMS = [
   { href: '#prizes', label: 'PRIZES' },
   { href: '#rules', label: 'RULES' },
   { href: '#stream', label: 'STREAM' },
+  { href: ONLINE_TOURNAMENT_DISPUTE_PATH, label: 'REPORT' },
   { href: '/blog', label: 'BLOG' },
   { href: '/android-testers', label: 'ANDROID' },
   { href: '/platform', label: 'PLATFORM' },

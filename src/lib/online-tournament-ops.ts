@@ -1,6 +1,7 @@
 import {
   ONLINE_TOURNAMENT_CHECK_IN_PATH,
   ONLINE_TOURNAMENT_GAME_BY_KEY,
+  type OnlineTournamentDisputeCategory,
   type OnlineTournamentEligibilityStatus,
   type OnlineTournamentGameKey,
 } from '@/lib/online-tournament';
@@ -158,14 +159,19 @@ export type OnlineTournamentDispute = {
   id: string;
   event_slug: string;
   game: OnlineTournamentGameKey;
+  category: OnlineTournamentDisputeCategory;
+  title: string | null;
   result_submission_id: string | null;
   fixture_id: string | null;
   opened_by: string | null;
   reason: string | null;
+  reporter_contact: string | null;
+  evidence_url: string | null;
   status: OnlineTournamentDisputeStatus;
   resolution_note: string | null;
   resolved_by: string | null;
   resolved_at: string | null;
+  metadata: Record<string, unknown> | null;
   created_at: string;
   updated_at: string;
 };

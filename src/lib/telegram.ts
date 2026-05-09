@@ -3,7 +3,9 @@ import 'server-only';
 import { GAMES } from '@/lib/config';
 import {
   ONLINE_TOURNAMENT_CHECK_IN_PATH,
+  ONLINE_TOURNAMENT_DISPUTE_CATEGORIES,
   ONLINE_TOURNAMENT_GAME_BY_KEY,
+  type OnlineTournamentDisputeCategory,
   type OnlineTournamentGameKey,
 } from '@/lib/online-tournament';
 import { formatOnlineTournamentLobby } from '@/lib/online-tournament-ops';
@@ -330,6 +332,48 @@ export async function sendOnlineTournamentCheckInTelegramNotification(params: {
 
   await sendTelegramMessage(message, {
     operation: 'online-tournament-check-in',
+    threadKey: 'registration',
+  });
+}
+
+export async function sendOnlineTournamentDisputeTelegramNotification(params: {
+  username: string;
+  game: OnlineTournamentGameKey;
+  category: OnlineTournamentDisputeCategory;
+  title: string;
+  reason: string;
+  reporterContact: string;
+  evidenceUrl?: string | null;
+  disputeId: string;
+  relatedReference?: string | null;
+}): Promise<void> {
+  const gameConfig = ONLINE_TOURNAMENT_GAME_BY_KEY[params.game];
+  const adminUrl = `${ADMIN_URL}/admin/online-tournament`;
+  const categoryLabel =
+    ONLINE_TOURNAMENT_DISPUTE_CATEGORIES.find(
+      (category) => category.value === params.category
+    )?.label ?? params.category;
+  const message = [
+    '<b>New PlayMechi dispute report</b>',
+    '',
+    formatField('Player', params.username),
+    formatField('Game', gameConfig.label),
+    formatField('Issue type', categoryLabel),
+    formatField('Title', params.title),
+    formatField('Contact', params.reporterContact),
+    params.relatedReference ? formatField('Related item', params.relatedReference) : null,
+    params.evidenceUrl ? formatField('Evidence link', params.evidenceUrl) : null,
+    formatField('Dispute', params.disputeId.slice(0, 8)),
+    '',
+    formatBlockField('What happened', params.reason, 1200),
+    '',
+    formatTelegramLink('Open tournament admin', adminUrl),
+  ]
+    .filter((line): line is string => Boolean(line))
+    .join('\n');
+
+  await sendTelegramMessage(message, {
+    operation: 'online-tournament-dispute',
     threadKey: 'registration',
   });
 }

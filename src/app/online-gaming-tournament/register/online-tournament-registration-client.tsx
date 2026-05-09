@@ -14,6 +14,7 @@ import {
 } from '@/lib/config';
 import { getLoginPath, getRegisterPath, getSafeNextPath, withQuery } from '@/lib/navigation';
 import {
+  ONLINE_TOURNAMENT_DISPUTE_PATH,
   ONLINE_TOURNAMENT_GAMES,
   ONLINE_TOURNAMENT_ARENA_PATH,
   ONLINE_TOURNAMENT_CHECK_IN_PATH,
@@ -323,6 +324,7 @@ export function OnlineTournamentRegistrationClient() {
           { href: '/#prizes', label: 'PRIZES' },
           { href: '/#rules', label: 'RULES' },
           { href: '/#stream', label: 'STREAM' },
+          { href: ONLINE_TOURNAMENT_DISPUTE_PATH, label: 'REPORT' },
         ]}
         signInHref={signInHref}
         joinHref={createAccountHref}
@@ -357,6 +359,9 @@ export function OnlineTournamentRegistrationClient() {
                   WhatsApp support: {CUSTOMER_WHATSAPP_SUPPORT_NUMBER_LABEL}
                 </span>
                 <ExternalLink className="h-3.5 w-3.5 shrink-0" />
+              </a>
+              <a href={ONLINE_TOURNAMENT_DISPUTE_PATH} className="mt-3 inline-flex btn-ghost">
+                Report tournament issue
               </a>
             </div>
           </div>

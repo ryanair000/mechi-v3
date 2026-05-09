@@ -3,6 +3,7 @@ import { hasModeratorAccess, requireActiveAccessProfile } from '@/lib/access';
 import { writeAuditLog } from '@/lib/audit';
 import { createNotification } from '@/lib/notifications';
 import {
+  getOnlineTournamentCapacityErrorType,
   ONLINE_TOURNAMENT_ARENA_PATH,
   ONLINE_TOURNAMENT_CHECK_IN_STATUSES,
   ONLINE_TOURNAMENT_ELIGIBILITY_STATUSES,
@@ -11,6 +12,7 @@ import {
   isOnlineTournamentGame,
   type OnlineTournamentCheckInStatus,
   type OnlineTournamentEligibilityStatus,
+  type OnlineTournamentGameKey,
 } from '@/lib/online-tournament';
 import { getClientIp } from '@/lib/rateLimit';
 import { createServiceClient } from '@/lib/supabase';
@@ -28,6 +30,21 @@ function isCheckInStatus(value: unknown): value is OnlineTournamentCheckInStatus
     typeof value === 'string' &&
     ONLINE_TOURNAMENT_CHECK_IN_STATUSES.includes(value as OnlineTournamentCheckInStatus)
   );
+}
+
+function getTournamentCapacityErrorMessage(
+  game: OnlineTournamentGameKey,
+  error: unknown
+) {
+  const errorType = getOnlineTournamentCapacityErrorType(error);
+  if (!errorType) {
+    return null;
+  }
+
+  const config = ONLINE_TOURNAMENT_GAME_BY_KEY[game];
+  return errorType === 'registration_cap'
+    ? `${config.label} registration is full`
+    : `${config.label} check-in is full`;
 }
 
 async function loadRegistrations() {
@@ -88,7 +105,7 @@ export async function PATCH(request: NextRequest) {
     const supabase = createServiceClient();
     const { data: currentRaw, error: currentError } = await supabase
       .from('online_tournament_registrations')
-      .select('id, user_id, game, in_game_username, eligibility_status')
+      .select('id, user_id, game, in_game_username, eligibility_status, check_in_status')
       .eq('id', registrationId)
       .eq('event_slug', ONLINE_TOURNAMENT_SLUG)
       .maybeSingle();
@@ -100,6 +117,7 @@ export async function PATCH(request: NextRequest) {
           game: string;
           in_game_username: string | null;
           eligibility_status: OnlineTournamentEligibilityStatus;
+          check_in_status: OnlineTournamentCheckInStatus;
         }
       | null;
 
@@ -130,6 +148,38 @@ export async function PATCH(request: NextRequest) {
         return NextResponse.json({ error: 'Invalid check-in status' }, { status: 400 });
       }
 
+      const nextCheckInStatus = body.check_in_status;
+      const currentGame = currentRegistration.game;
+      if (
+        currentGame &&
+        isOnlineTournamentGame(currentGame) &&
+        nextCheckInStatus === 'checked_in' &&
+        currentRegistration.check_in_status !== 'checked_in'
+      ) {
+        const gameConfig = ONLINE_TOURNAMENT_GAME_BY_KEY[currentGame];
+        const { count: checkedInCount, error: checkedInCountError } = await supabase
+          .from('online_tournament_registrations')
+          .select('id', { count: 'exact', head: true })
+          .eq('event_slug', ONLINE_TOURNAMENT_SLUG)
+          .eq('game', currentGame)
+          .eq('check_in_status', 'checked_in')
+          .neq('eligibility_status', 'disqualified');
+
+        if (checkedInCountError) {
+          return NextResponse.json(
+            { error: 'Could not verify check-in capacity' },
+            { status: 500 }
+          );
+        }
+
+        if ((checkedInCount ?? 0) >= gameConfig.checkInCap) {
+          return NextResponse.json(
+            { error: `${gameConfig.label} check-in is full` },
+            { status: 400 }
+          );
+        }
+      }
+
       updates.check_in_status = body.check_in_status;
       if (body.check_in_status === 'checked_in') {
         updates.checked_in_at = updates.updated_at;
@@ -156,6 +206,14 @@ export async function PATCH(request: NextRequest) {
       .single();
 
     if (error || !updated) {
+      const updatedGame = String(currentRegistration.game ?? '').trim();
+      if (isOnlineTournamentGame(updatedGame)) {
+        const capacityErrorMessage = getTournamentCapacityErrorMessage(updatedGame, error);
+        if (capacityErrorMessage) {
+          return NextResponse.json({ error: capacityErrorMessage }, { status: 400 });
+        }
+      }
+
       return NextResponse.json({ error: 'Could not update registration' }, { status: 500 });
     }
 

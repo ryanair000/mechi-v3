@@ -7,9 +7,9 @@ import {
   ONLINE_TOURNAMENT_REGISTRATION_PATH,
   ONLINE_TOURNAMENT_STREAM_PLATFORMS,
   ONLINE_TOURNAMENT_STREAMER,
+  ONLINE_TOURNAMENT_TOTAL_CHECK_IN_CAP,
   ONLINE_TOURNAMENT_TITLE,
   ONLINE_TOURNAMENT_TOTAL_SLOTS,
-  isOnlineTournamentRegistrationClosed,
 } from '@/lib/online-tournament';
 import { PLANS } from '@/lib/plans';
 import { APP_URL } from '@/lib/urls';
@@ -277,9 +277,7 @@ function summarizeGames(mode: '1v1' | 'lobby') {
 function summarizePlayMechiTournament() {
   const schedule = ONLINE_TOURNAMENT_GAMES.map(
     (game) =>
-      `${game.label}: ${game.dateLabel} at ${game.timeLabel}, ${game.slots} slots${
-        isOnlineTournamentRegistrationClosed(game) ? ' (registration full)' : ''
-      }, ${game.format}, ${game.matchCount}, prizes ${game.firstPrize}, ${game.secondPrize}, ${game.thirdPrize}.`
+      `${game.label}: ${game.dateLabel} at ${game.timeLabel}, registration cap ${game.slots}, check-in cap ${game.checkInCap}, ${game.format}, ${game.matchCount}, prizes ${game.firstPrize}, ${game.secondPrize}, ${game.thirdPrize}.`
   ).join('\n');
   const streamLinks = ONLINE_TOURNAMENT_STREAM_PLATFORMS.map(
     (platform) => `${platform.label}: ${platform.href}`
@@ -288,7 +286,7 @@ function summarizePlayMechiTournament() {
   return [
     `${ONLINE_TOURNAMENT_TITLE}: free online tournament for ${ONLINE_TOURNAMENT_GAME_LIST_LABEL}.`,
     `Registration: ${APP_URL}${ONLINE_TOURNAMENT_REGISTRATION_PATH}. Public page: ${APP_URL}${ONLINE_TOURNAMENT_PUBLIC_PATH}.`,
-    `Total slots: ${ONLINE_TOURNAMENT_TOTAL_SLOTS}. Cash prize pool: KSh ${ONLINE_TOURNAMENT_CASH_PRIZE_POOL.toLocaleString('en-KE')}.`,
+    `Total registration cap: ${ONLINE_TOURNAMENT_TOTAL_SLOTS}. Total check-in cap: ${ONLINE_TOURNAMENT_TOTAL_CHECK_IN_CAP}. Cash prize pool: KSh ${ONLINE_TOURNAMENT_CASH_PRIZE_POOL.toLocaleString('en-KE')}.`,
     `Stream: PlayMechi on Instagram, TikTok, and YouTube. Streamer: ${ONLINE_TOURNAMENT_STREAMER}. Links: ${streamLinks}.`,
     `Schedule:\n${schedule}`,
     'Reward eligibility: players must follow PlayMechi on Instagram and subscribe to PlayMechi on YouTube before match day. Do not confirm eligibility, payouts, winners, disqualifications, or disputes from support chat.',

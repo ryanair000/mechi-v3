@@ -9,6 +9,7 @@ import {
   ONLINE_TOURNAMENT_REGISTRATION_PATH,
   ONLINE_TOURNAMENT_STREAM_PLATFORMS,
   ONLINE_TOURNAMENT_STREAMER,
+  ONLINE_TOURNAMENT_TOTAL_CHECK_IN_CAP,
   ONLINE_TOURNAMENT_TITLE,
   ONLINE_TOURNAMENT_TOTAL_SLOTS,
   isOnlineTournamentGame,
@@ -339,15 +340,15 @@ function formatPlayMechiInfoMessage(game: GameKey | null) {
   const gameLines = getTournamentGamesForReply(game)
     .map(
       (config) =>
-        `${config.label}: ${config.dateLabel}, ${config.timeLabel}, ${config.slots} slots${
+        `${config.label}: ${config.dateLabel}, ${config.timeLabel}, ${config.slots} registrations${
           isOnlineTournamentRegistrationClosed(config) ? ' (full)' : ''
-        }`
+        }, check-in cap ${config.checkInCap}`
     )
     .join('\n');
 
   return [
     `${ONLINE_TOURNAMENT_TITLE} is free to enter.`,
-    `${ONLINE_TOURNAMENT_TOTAL_SLOTS} slots for ${ONLINE_TOURNAMENT_GAME_LIST_LABEL}. Prize pool: KSh ${ONLINE_TOURNAMENT_CASH_PRIZE_POOL.toLocaleString('en-KE')}.`,
+    `${ONLINE_TOURNAMENT_TOTAL_SLOTS} total registrations for ${ONLINE_TOURNAMENT_GAME_LIST_LABEL}. Match-day check-in cap stays at ${ONLINE_TOURNAMENT_TOTAL_CHECK_IN_CAP}. Prize pool: KSh ${ONLINE_TOURNAMENT_CASH_PRIZE_POOL.toLocaleString('en-KE')}.`,
     '',
     gameLines,
     '',

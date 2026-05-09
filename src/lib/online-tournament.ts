@@ -29,6 +29,7 @@ export type OnlineTournamentGameConfig = {
   registrationClosesAt: string;
   registrationClosed?: boolean;
   slots: number;
+  checkInCap: number;
   format: string;
   matchCount: string;
   scoring: string;
@@ -163,7 +164,8 @@ export const ONLINE_TOURNAMENT_GAMES: OnlineTournamentGameConfig[] = [
     timeLabel: '8:00 PM EAT',
     matchStartsAt: '2026-05-08T20:00:00+03:00',
     registrationClosesAt: '2026-05-08T19:30:00+03:00',
-    slots: 100,
+    slots: 200,
+    checkInCap: 100,
     format: 'Individual Battle Royale tournament room',
     matchCount: '3 matches',
     scoring: '1 kill = 1 point. Placement has no points.',
@@ -180,7 +182,8 @@ export const ONLINE_TOURNAMENT_GAMES: OnlineTournamentGameConfig[] = [
     timeLabel: '8:00 PM EAT',
     matchStartsAt: '2026-05-09T20:00:00+03:00',
     registrationClosesAt: '2026-05-09T19:30:00+03:00',
-    slots: 100,
+    slots: 200,
+    checkInCap: 100,
     format: 'Individual Battle Royale tournament room',
     matchCount: '3 matches',
     scoring: '1 kill = 3 points. Placement: #1 20, #2 15, #3 10, #4 5, #5-25 3.',
@@ -230,8 +233,8 @@ export const ONLINE_TOURNAMENT_GAMES: OnlineTournamentGameConfig[] = [
     timeLabel: '8:00 PM EAT',
     matchStartsAt: '2026-05-10T20:00:00+03:00',
     registrationClosesAt: '2026-05-10T19:30:00+03:00',
-    registrationClosed: true,
-    slots: 16,
+    slots: 200,
+    checkInCap: 16,
     format: '1v1 knockout bracket with bronze match',
     matchCount: 'Round of 16 to final',
     scoring: 'One leg per fixture. Draws go to extra time, penalties, or golden goal replay.',
@@ -247,11 +250,20 @@ export const ONLINE_TOURNAMENT_TOTAL_SLOTS = ONLINE_TOURNAMENT_GAMES.reduce(
   0
 );
 
+export const ONLINE_TOURNAMENT_TOTAL_CHECK_IN_CAP = ONLINE_TOURNAMENT_GAMES.reduce(
+  (total, game) => total + game.checkInCap,
+  0
+);
+
 export type OnlineTournamentGameRegistrationCount = {
   registered: number;
   slots: number;
   spotsLeft: number;
   full: boolean;
+  checkedIn: number;
+  checkInCap: number;
+  checkInSpotsLeft: number;
+  checkInFull: boolean;
 };
 
 export type OnlineTournamentRegistrationSummary = {
@@ -275,6 +287,10 @@ export function getFallbackOnlineTournamentSummary(): OnlineTournamentRegistrati
           slots: game.slots,
           spotsLeft: registrationClosed ? 0 : game.slots,
           full: registrationClosed,
+          checkedIn: 0,
+          checkInCap: game.checkInCap,
+          checkInSpotsLeft: game.checkInCap,
+          checkInFull: false,
         };
         return counts;
       },
@@ -290,20 +306,39 @@ export function getOnlineTournamentTotals(summary: OnlineTournamentRegistrationS
       const gameSummary = summary.games?.[game.game];
       const slots = Number(gameSummary?.slots ?? game.slots);
       const registered = Number(gameSummary?.registered ?? 0);
+      const checkedIn = Number(gameSummary?.checkedIn ?? 0);
       const fallbackSpotsLeft = isOnlineTournamentRegistrationClosed(game)
         ? 0
         : Math.max(0, slots - registered);
       const spotsLeft = Number(gameSummary?.spotsLeft ?? fallbackSpotsLeft);
+      const checkInCap = Number(gameSummary?.checkInCap ?? game.checkInCap);
+      const fallbackCheckInSpotsLeft = Math.max(0, checkInCap - checkedIn);
+      const checkInSpotsLeft = Number(
+        gameSummary?.checkInSpotsLeft ?? fallbackCheckInSpotsLeft
+      );
 
       totals.registered += registered;
       totals.slots += slots;
       totals.spotsLeft += Math.max(0, spotsLeft);
+      totals.checkedIn += checkedIn;
+      totals.checkInCap += checkInCap;
+      totals.checkInSpotsLeft += Math.max(0, checkInSpotsLeft);
       return totals;
     },
-    { registered: 0, slots: 0, spotsLeft: 0, full: false }
+    {
+      registered: 0,
+      slots: 0,
+      spotsLeft: 0,
+      checkedIn: 0,
+      checkInCap: 0,
+      checkInSpotsLeft: 0,
+      full: false,
+      checkInFull: false,
+    }
   );
 
   totals.full = totals.spotsLeft <= 0;
+  totals.checkInFull = totals.checkInSpotsLeft <= 0;
   return totals;
 }
 
@@ -382,6 +417,35 @@ export function getOnlineTournamentWindowState(
     closesAt,
     startsAt,
   };
+}
+
+export function getOnlineTournamentCapacityErrorType(
+  error: unknown
+): 'registration_cap' | 'check_in_cap' | null {
+  if (!error || typeof error !== 'object') {
+    return null;
+  }
+
+  const candidate = error as {
+    code?: string;
+    details?: string;
+    hint?: string;
+    message?: string;
+  };
+  const text = [candidate.code, candidate.details, candidate.hint, candidate.message]
+    .filter(Boolean)
+    .join(' ')
+    .toLowerCase();
+
+  if (text.includes('online_tournament_registration_cap_reached')) {
+    return 'registration_cap';
+  }
+
+  if (text.includes('online_tournament_check_in_cap_reached')) {
+    return 'check_in_cap';
+  }
+
+  return null;
 }
 
 export function formatEatDateTime(value: string | Date) {

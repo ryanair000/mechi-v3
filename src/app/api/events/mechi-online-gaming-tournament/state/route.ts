@@ -7,6 +7,8 @@ import {
   normalizeSelectedGameKeys,
 } from '@/lib/config';
 import {
+  getOnlineTournamentCapacityErrorType,
+  ONLINE_TOURNAMENT_GAME_BY_KEY,
   ONLINE_TOURNAMENT_SLUG,
   ONLINE_TOURNAMENT_TITLE,
   normalizeTournamentDeviceSerialLast6,
@@ -69,6 +71,21 @@ function isLegacyDeviceSerialConstraintError(error: unknown, deviceSerialLast6: 
   ) || (
     text.includes('online_tournament_registrations_device_serial_last6_check')
   );
+}
+
+function getTournamentCapacityErrorMessage(
+  game: OnlineTournamentGameKey,
+  error: unknown
+) {
+  const errorType = getOnlineTournamentCapacityErrorType(error);
+  if (!errorType) {
+    return null;
+  }
+
+  const config = ONLINE_TOURNAMENT_GAME_BY_KEY[game];
+  return errorType === 'registration_cap'
+    ? `${config.label} registration is full`
+    : `${config.label} check-in is full`;
 }
 
 async function syncCheckInDetailsToProfile(params: {
@@ -310,6 +327,59 @@ export async function POST(request: NextRequest) {
 
     const checkedInAt = new Date().toISOString();
     const supabase = createServiceClient();
+    const { data: currentRegistration, error: currentRegistrationError } = await supabase
+      .from('online_tournament_registrations')
+      .select('id, check_in_status, eligibility_status')
+      .eq('event_slug', ONLINE_TOURNAMENT_SLUG)
+      .eq('user_id', access.profile.id)
+      .eq('game', game)
+      .maybeSingle();
+
+    if (currentRegistrationError) {
+      console.error(
+        '[OnlineTournamentState POST] Current registration query error:',
+        currentRegistrationError
+      );
+      return NextResponse.json({ error: 'Could not load your registration' }, { status: 500 });
+    }
+
+    if (!currentRegistration) {
+      return NextResponse.json(
+        { error: 'Register for this game before checking in' },
+        { status: 404 }
+      );
+    }
+
+    const alreadyCheckedIn =
+      currentRegistration.check_in_status === 'checked_in' &&
+      currentRegistration.eligibility_status !== 'disqualified';
+
+    if (!alreadyCheckedIn) {
+      const gameConfig = ONLINE_TOURNAMENT_GAME_BY_KEY[game];
+      const { count: checkedInCount, error: checkedInCountError } = await supabase
+        .from('online_tournament_registrations')
+        .select('id', { count: 'exact', head: true })
+        .eq('event_slug', ONLINE_TOURNAMENT_SLUG)
+        .eq('game', game)
+        .eq('check_in_status', 'checked_in')
+        .neq('eligibility_status', 'disqualified');
+
+      if (checkedInCountError) {
+        console.error(
+          '[OnlineTournamentState POST] Check-in count query error:',
+          checkedInCountError
+        );
+        return NextResponse.json({ error: 'Could not verify check-in capacity' }, { status: 500 });
+      }
+
+      if ((checkedInCount ?? 0) >= gameConfig.checkInCap) {
+        return NextResponse.json(
+          { error: `${gameConfig.label} check-in is full` },
+          { status: 400 }
+        );
+      }
+    }
+
     const {
       registration,
       registrationError,
@@ -328,15 +398,17 @@ export async function POST(request: NextRequest) {
     });
 
     if (registrationError) {
+      const capacityErrorMessage = getTournamentCapacityErrorMessage(game, registrationError);
+      if (capacityErrorMessage) {
+        return NextResponse.json({ error: capacityErrorMessage }, { status: 400 });
+      }
+
       console.error('[OnlineTournamentState POST] Check-in update error:', registrationError);
       return NextResponse.json({ error: 'Could not check you in' }, { status: 500 });
     }
 
     if (!registration) {
-      return NextResponse.json(
-        { error: 'Register for this game before checking in' },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: 'Could not check you in' }, { status: 500 });
     }
 
     try {

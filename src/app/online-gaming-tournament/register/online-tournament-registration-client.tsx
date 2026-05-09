@@ -21,7 +21,6 @@ import {
   ONLINE_TOURNAMENT_GAME_BY_KEY,
   ONLINE_TOURNAMENT_PUBLIC_PATH,
   ONLINE_TOURNAMENT_REGISTRATION_PATH,
-  ONLINE_TOURNAMENT_TOTAL_SLOTS,
   ONLINE_TOURNAMENT_YOUTUBE_URL,
   formatEatDateTime,
   getOnlineTournamentWindowState,
@@ -39,6 +38,10 @@ type GameRegistrationCount = {
   slots: number;
   spotsLeft: number;
   full: boolean;
+  checkedIn: number;
+  checkInCap: number;
+  checkInSpotsLeft: number;
+  checkInFull: boolean;
 };
 
 type UserTournamentRegistration = {
@@ -77,6 +80,10 @@ function getFallbackSummary(): RegistrationSummary {
           slots: game.slots,
           spotsLeft: registrationClosed ? 0 : game.slots,
           full: registrationClosed,
+          checkedIn: 0,
+          checkInCap: game.checkInCap,
+          checkInSpotsLeft: game.checkInCap,
+          checkInFull: false,
         };
         return counts;
       },
@@ -339,8 +346,10 @@ export function OnlineTournamentRegistrationClient() {
                 Pull up and claim your slot.
               </h1>
               <p className="mt-4 text-sm leading-7 text-[var(--text-secondary)] sm:text-base">
-                {ONLINE_TOURNAMENT_TOTAL_SLOTS} spots, real players, and prizes on the line. Pick
-                your game, drop your gamer tag, and show PlayMechi some love to stay reward-ready.
+                Up to {selectedGameConfig.slots} registrations per game, real players, and prizes
+                on the line. Match-day check-in still caps at {selectedGameConfig.checkInCap} for{' '}
+                {selectedGameConfig.shortLabel}. Pick your game, drop your gamer tag, and show
+                PlayMechi some love to stay reward-ready.
               </p>
               {summaryError ? (
                 <div className="mt-4 rounded-[var(--radius-card)] border border-amber-400/20 bg-amber-400/10 p-4 text-sm leading-6 text-amber-100">
@@ -381,6 +390,8 @@ export function OnlineTournamentRegistrationClient() {
                     </h2>
                     <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">
                       Closes {formatEatDateTime(selectedGameConfig.registrationClosesAt)}.
+                      {' '}Registration cap {selectedGameConfig.slots}. Check-in cap{' '}
+                      {selectedGameConfig.checkInCap}.
                     </p>
                   </div>
                   <span className="brand-chip px-3 py-1">

@@ -18,6 +18,7 @@ export type TournamentGameConfig = {
   registrationClosesAt: string;
   registrationClosed?: boolean;
   slots: number;
+  checkInCap: number;
   format: string;
   matchCount: string;
   scoring: string;
@@ -35,7 +36,8 @@ export const TOURNAMENT_PUBLIC_URL = 'https://mechi.club/playmechi';
 export const TOURNAMENT_REGISTER_URL = 'https://mechi.club/playmechi/register';
 export const TOURNAMENT_DATES = '8-10 May 2026';
 export const TOURNAMENT_TIME = '8:00 PM EAT';
-export const TOURNAMENT_TOTAL_SLOTS = 216;
+export const TOURNAMENT_TOTAL_SLOTS = 600;
+export const TOURNAMENT_TOTAL_CHECK_IN_CAP = 216;
 export const TOURNAMENT_PRIZE_POOL = 'KSh 6,000';
 export const PLAYMECHI_INSTAGRAM_URL = 'https://www.instagram.com/playmechi/';
 export const PLAYMECHI_YOUTUBE_URL = 'https://www.youtube.com/@playmechi';
@@ -52,7 +54,8 @@ export const TOURNAMENT_GAMES: TournamentGameConfig[] = [
     timeLabel: TOURNAMENT_TIME,
     matchStartsAt: '2026-05-08T20:00:00+03:00',
     registrationClosesAt: '2026-05-08T19:30:00+03:00',
-    slots: 100,
+    slots: 200,
+    checkInCap: 100,
     format: 'Individual Battle Royale tournament room',
     matchCount: '3 matches',
     scoring: '1 kill = 1 point. No placement points.',
@@ -69,7 +72,8 @@ export const TOURNAMENT_GAMES: TournamentGameConfig[] = [
     timeLabel: TOURNAMENT_TIME,
     matchStartsAt: '2026-05-09T20:00:00+03:00',
     registrationClosesAt: '2026-05-09T19:30:00+03:00',
-    slots: 100,
+    slots: 200,
+    checkInCap: 100,
     format: 'Individual Battle Royale tournament room',
     matchCount: '3 matches',
     scoring: '1 kill = 3 points. Placement: #1 20, #2 15, #3 10, #4 5, #5-25 3.',
@@ -119,8 +123,8 @@ export const TOURNAMENT_GAMES: TournamentGameConfig[] = [
     timeLabel: TOURNAMENT_TIME,
     matchStartsAt: '2026-05-10T20:00:00+03:00',
     registrationClosesAt: '2026-05-10T19:30:00+03:00',
-    registrationClosed: true,
-    slots: 16,
+    slots: 200,
+    checkInCap: 16,
     format: '1v1 knockout bracket with bronze match',
     matchCount: 'Round of 16 to final',
     scoring: 'One leg per fixture. Draws go to extra time, penalties, or golden goal replay.',
@@ -231,6 +235,10 @@ export function getFallbackTournamentSummary(): OnlineTournamentRegistrationSumm
           slots: game.slots,
           spotsLeft: closed ? 0 : game.slots,
           full: closed,
+          checkedIn: 0,
+          checkInCap: game.checkInCap,
+          checkInSpotsLeft: game.checkInCap,
+          checkInFull: false,
         };
         return counts;
       },
@@ -241,22 +249,44 @@ export function getFallbackTournamentSummary(): OnlineTournamentRegistrationSumm
 }
 
 export function getTournamentTotals(summary: OnlineTournamentRegistrationSummary) {
-  return TOURNAMENT_GAMES.reduce(
+  const totals = TOURNAMENT_GAMES.reduce(
     (totals, game) => {
       const gameSummary = summary.games[game.game];
       const slots = gameSummary?.slots ?? game.slots;
       const registered = gameSummary?.registered ?? 0;
+      const checkedIn = gameSummary?.checkedIn ?? 0;
       const spotsLeft =
         gameSummary?.spotsLeft ?? (game.registrationClosed ? 0 : Math.max(0, slots - registered));
+      const checkInCap = gameSummary?.checkInCap ?? game.checkInCap;
+      const checkInSpotsLeft =
+        gameSummary?.checkInSpotsLeft ?? Math.max(0, checkInCap - checkedIn);
 
       return {
         registered: totals.registered + registered,
         slots: totals.slots + slots,
         spotsLeft: totals.spotsLeft + Math.max(0, spotsLeft),
+        checkedIn: totals.checkedIn + checkedIn,
+        checkInCap: totals.checkInCap + checkInCap,
+        checkInSpotsLeft: totals.checkInSpotsLeft + Math.max(0, checkInSpotsLeft),
+        full: false,
+        checkInFull: false,
       };
     },
-    { registered: 0, slots: 0, spotsLeft: 0 }
+    {
+      registered: 0,
+      slots: 0,
+      spotsLeft: 0,
+      checkedIn: 0,
+      checkInCap: 0,
+      checkInSpotsLeft: 0,
+      full: false,
+      checkInFull: false,
+    }
   );
+
+  totals.full = totals.spotsLeft <= 0;
+  totals.checkInFull = totals.checkInSpotsLeft <= 0;
+  return totals;
 }
 
 export function formatStatus(value: string | null | undefined) {

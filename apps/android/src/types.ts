@@ -77,6 +77,10 @@ export type OnlineTournamentGameRegistrationCount = {
   slots: number;
   spotsLeft: number;
   full: boolean;
+  checkedIn: number;
+  checkInCap: number;
+  checkInSpotsLeft: number;
+  checkInFull: boolean;
 };
 
 export type OnlineTournamentRegistration = {

@@ -539,7 +539,7 @@ export function OnlineTournamentAdminClient() {
               <div className="flex items-center justify-between gap-3">
                 <p className="text-sm font-black text-[var(--text-primary)]">{game.label}</p>
                 <span className="brand-chip px-2.5 py-1">
-                  {game.registered}/{game.slots}
+                  {game.registered}/{game.slots} regs
                 </span>
               </div>
               <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-[var(--border-color)]">
@@ -549,7 +549,7 @@ export function OnlineTournamentAdminClient() {
                 />
               </div>
               <p className="mt-2 text-xs text-[var(--text-secondary)]">
-                {game.checkedIn} checked in, {game.verified} verified, {game.pending} pending
+                {game.checkedIn}/{game.checkInCap} checked in, {game.verified} verified, {game.pending} pending
               </p>
             </div>
           ))}

@@ -244,6 +244,9 @@ export async function sendOnlineTournamentRegistrationTelegramNotification(param
   registered: number;
   slots: number;
   spotsLeft: number;
+  checkedIn?: number;
+  checkInCap?: number;
+  checkInSpotsLeft?: number;
   registrationId?: string | null;
 }): Promise<void> {
   const adminUrl = `${ADMIN_URL}/admin/online-tournament`;
@@ -273,7 +276,18 @@ export async function sendOnlineTournamentRegistrationTelegramNotification(param
       }`
     ),
     formatField('Eligibility', formatStatusLabel(params.eligibilityStatus)),
-    formatField('Slots', `${params.registered}/${params.slots} registered, ${params.spotsLeft} left`),
+    formatField(
+      'Registrations',
+      `${params.registered}/${params.slots} registered, ${params.spotsLeft} left`
+    ),
+    typeof params.checkInCap === 'number'
+      ? formatField(
+          'Check-ins',
+          `${params.checkedIn ?? 0}/${params.checkInCap} checked in, ${
+            params.checkInSpotsLeft ?? Math.max(0, params.checkInCap - (params.checkedIn ?? 0))
+          } left`
+        )
+      : null,
     params.registrationId ? formatField('Registration', params.registrationId.slice(0, 8)) : null,
     '',
     formatTelegramLink('Open tournament admin', adminUrl),

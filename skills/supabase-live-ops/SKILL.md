@@ -51,10 +51,11 @@ The registration helper includes an `onlineTournament` object for the Mechi.club
 Read these fields before answering PlayMechi live-count questions:
 
 - `onlineTournament.storageReady`: whether `public.online_tournament_registrations` exists in live Supabase
-- `onlineTournament.slots`: total PlayMechi tournament capacity, expected `216`
+- `onlineTournament.slots`: total PlayMechi tournament registration capacity, expected `600`
+- `onlineTournament.checkInCap`: total PlayMechi match-day check-in capacity, expected `216`
 - `onlineTournament.registered`: total PlayMechi entries
 - `onlineTournament.spotsLeft`: remaining PlayMechi slots
-- `onlineTournament.games[]`: per-game counts for PUBG Mobile, CODM, and eFootball
+- `onlineTournament.games[]`: per-game registration and check-in counts for PUBG Mobile, CODM, and eFootball
 
 If `storageReady` is `false`, answer that the PlayMechi tournament registration storage is not ready yet and that the Supabase migration must be applied before live tournament signups can be trusted. Do not substitute the old beta profile cap for tournament capacity.
 

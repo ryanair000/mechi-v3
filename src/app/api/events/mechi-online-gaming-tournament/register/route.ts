@@ -9,6 +9,7 @@ import {
   normalizeSelectedGameKeys,
 } from '@/lib/config';
 import {
+  getOnlineTournamentCapacityErrorType,
   ONLINE_TOURNAMENT_GAME_BY_KEY,
   ONLINE_TOURNAMENT_GAMES,
   ONLINE_TOURNAMENT_REGISTRATION_PATH,
@@ -55,12 +56,25 @@ function emptyGameCounts() {
         slots: game.slots,
         spotsLeft: registrationClosed ? 0 : game.slots,
         full: registrationClosed,
+        checkedIn: 0,
+        checkInCap: game.checkInCap,
+        checkInSpotsLeft: game.checkInCap,
+        checkInFull: false,
       };
       return counts;
     },
     {} as Record<
       OnlineTournamentGameKey,
-      { registered: number; slots: number; spotsLeft: number; full: boolean }
+      {
+        registered: number;
+        slots: number;
+        spotsLeft: number;
+        full: boolean;
+        checkedIn: number;
+        checkInCap: number;
+        checkInSpotsLeft: number;
+        checkInFull: boolean;
+      }
     >
   );
 }
@@ -78,6 +92,21 @@ function getProfileGameId(params: {
   if (!platform) return '';
 
   return getGameIdValue(params.gameIds, params.game, platform).trim();
+}
+
+function getTournamentCapacityErrorMessage(
+  game: OnlineTournamentGameKey,
+  error: unknown
+) {
+  const errorType = getOnlineTournamentCapacityErrorType(error);
+  if (!errorType) {
+    return null;
+  }
+
+  const config = ONLINE_TOURNAMENT_GAME_BY_KEY[game];
+  return errorType === 'registration_cap'
+    ? `${config.label} registration is full`
+    : `${config.label} check-in is full`;
 }
 
 async function getRegistrationSummary(userId?: string | null) {
@@ -102,15 +131,22 @@ async function getRegistrationSummary(userId?: string | null) {
     if (registration.eligibility_status === 'disqualified') continue;
 
     gameCounts[registration.game].registered += 1;
+    if (registration.check_in_status === 'checked_in') {
+      gameCounts[registration.game].checkedIn += 1;
+    }
   }
 
   for (const game of ONLINE_TOURNAMENT_GAMES) {
     const registered = gameCounts[game.game].registered;
+    const checkedIn = gameCounts[game.game].checkedIn;
     const registrationClosed = isOnlineTournamentRegistrationClosed(game);
     gameCounts[game.game].spotsLeft = registrationClosed
       ? 0
       : Math.max(0, game.slots - registered);
     gameCounts[game.game].full = registrationClosed || registered >= game.slots;
+    gameCounts[game.game].checkInCap = game.checkInCap;
+    gameCounts[game.game].checkInSpotsLeft = Math.max(0, game.checkInCap - checkedIn);
+    gameCounts[game.game].checkInFull = checkedIn >= game.checkInCap;
   }
 
   return {
@@ -345,6 +381,11 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (registrationError || !registration) {
+      const capacityErrorMessage = getTournamentCapacityErrorMessage(game, registrationError);
+      if (capacityErrorMessage) {
+        return NextResponse.json({ error: capacityErrorMessage }, { status: 400 });
+      }
+
       return NextResponse.json({ error: 'Could not save tournament registration' }, { status: 500 });
     }
 
@@ -417,6 +458,10 @@ export async function POST(request: NextRequest) {
             registered: gameSummary?.registered ?? 0,
             slots: gameSummary?.slots ?? gameConfig.slots,
             spotsLeft: gameSummary?.spotsLeft ?? Math.max(0, gameConfig.slots - 1),
+            checkedIn: gameSummary?.checkedIn ?? 0,
+            checkInCap: gameSummary?.checkInCap ?? gameConfig.checkInCap,
+            checkInSpotsLeft:
+              gameSummary?.checkInSpotsLeft ?? gameConfig.checkInCap,
             registrationId: registration.id,
           });
         } catch (error) {

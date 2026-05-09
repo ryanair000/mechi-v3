@@ -10,15 +10,82 @@ import nodemailer from 'nodemailer';
 dotenv.config({ path: '.env.local' });
 
 const RESERVED_DOMAINS = new Set(['example.com', 'mechi.test', 'localhost', 'invalid']);
-const SUBJECT = 'Welcome to Mechi. Your arena is live.';
-const TITLE = 'The platform is live. Your player card is ready.';
-const CTA_LABEL = 'Open Mechi';
 const APP_URL = normalizeEnvValue(process.env.NEXT_PUBLIC_APP_URL) || 'https://mechi.club';
 const FROM_ADDRESS =
   normalizeEnvValue(process.env.EMAIL_FROM_ADDRESS) ||
   normalizeEnvValue(process.env.AWS_SES_FROM_EMAIL) ||
   'chezahub@gmail.com';
 const FROM = `Mechi <${FROM_ADDRESS}>`;
+const CAMPAIGNS = {
+  welcome: {
+    subject: 'Welcome to Mechi. Your arena is live.',
+    title: 'The platform is live. Your player card is ready.',
+    previewTitle: 'Welcome to the arena',
+    ctaLabel: 'Open Mechi',
+    render: (username) => {
+      const dashboardUrl = escapeUrl(`${APP_URL}/dashboard`);
+      const profileUrl = escapeUrl(`${APP_URL}/profile/settings`);
+      const rewardsUrl = escapeUrl(`${APP_URL}/rewards`);
+      return {
+        bodyIntro: `Hey ${escapeHtml(username || 'Player')}, you are officially inside Mechi, the home base for Kenyan gamers who want cleaner matches, louder wins, and real rewards.`,
+        bodyExtra:
+          'Finish your profile loadout, add your exact game IDs, and start using queues, lobbies, tournaments, rewards, and support from one place instead of scattered chats.',
+        bodyClose:
+          'This is your player card, your match hub, and your route into the next PlayMechi run.',
+        ctaUrl: dashboardUrl,
+        infoRows: [
+          ['First move', 'Finish your profile loadout'],
+          ['Best setup win', 'Add your exact game tags'],
+          ['Fastest momentum', 'Join your first queue today'],
+        ],
+        miniCards: [
+          ['Platform', 'mechi.club'],
+          ['Focus', 'Queues + Tournaments'],
+          ['Next run', 'PlayMechi ready'],
+        ],
+        secondaryLinks: [
+          ['Finish profile setup', profileUrl],
+          ['See rewards', rewardsUrl],
+        ],
+      };
+    },
+  },
+  tournament_live: {
+    subject: 'PlayMechi goes live at 8:30 PM. Check in now.',
+    title: 'Tournament night is live at 8:30 PM EAT.',
+    previewTitle: 'Tournament live alert',
+    ctaLabel: 'Check In Now',
+    render: (username) => {
+      const checkInUrl = escapeUrl(`${APP_URL}/playmechi/check-in`);
+      const tournamentDeskUrl = escapeUrl(`${APP_URL}/playmechi/tournament`);
+      const instagramUrl = 'https://www.instagram.com/playmechi/';
+      const youtubeUrl = 'https://www.youtube.com/@playmechi';
+      return {
+        bodyIntro: `Hey ${escapeHtml(username || 'Player')}, PlayMechi tournament night goes live at <strong>8:30 PM EAT</strong>. If you are playing tonight, move now, not later.`,
+        bodyExtra:
+          'Check in before the desk gets busy, keep your registered in-game name ready, and make sure your phone, data, and game account are locked in before rooms and fixtures start moving.',
+        bodyClose:
+          'To stay eligible for rewards, follow PlayMechi on Instagram and subscribe on YouTube before match time. Admin verification is the final check.',
+        ctaUrl: checkInUrl,
+        infoRows: [
+          ['Tournament start', '8:30 PM EAT'],
+          ['Player action', 'Check in now'],
+          ['Reward rule', 'Follow Instagram + Subscribe YouTube'],
+        ],
+        miniCards: [
+          ['Check-in', 'Live now'],
+          ['Stream brand', '@playmechi'],
+          ['Tonight', 'Tournament desk'],
+        ],
+        secondaryLinks: [
+          ['Open tournament desk', tournamentDeskUrl],
+          ['Follow on Instagram', instagramUrl],
+          ['Subscribe on YouTube', youtubeUrl],
+        ],
+      };
+    },
+  },
+};
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const RESULTS_DIR = path.join(__dirname, '..', 'tmp');
@@ -29,6 +96,7 @@ function normalizeEnvValue(value) {
 
 function parseArgs(argv) {
   const options = {
+    campaign: 'welcome',
     dryRun: false,
     delayMs: 350,
     limit: null,
@@ -39,6 +107,15 @@ function parseArgs(argv) {
     const arg = argv[index];
     if (arg === '--dry-run') {
       options.dryRun = true;
+      continue;
+    }
+
+    if (arg === '--campaign') {
+      const next = argv[index + 1];
+      if (next && CAMPAIGNS[next]) {
+        options.campaign = next;
+        index += 1;
+      }
       continue;
     }
 
@@ -129,12 +206,36 @@ function escapeUrl(value) {
   return escapeHtml(APP_URL);
 }
 
-function buildWelcomeHtml(username) {
-  const safeUsername = escapeHtml(username || 'Player');
-  const logoUrl = escapeUrl(`${APP_URL}/mechi-logo-shield.png`);
+function buildCampaignHtml(campaignKey, username) {
+  const campaign = CAMPAIGNS[campaignKey] ?? CAMPAIGNS.welcome;
   const dashboardUrl = escapeUrl(`${APP_URL}/dashboard`);
-  const profileUrl = escapeUrl(`${APP_URL}/profile/settings`);
-  const rewardsUrl = escapeUrl(`${APP_URL}/rewards`);
+  const playMechiUrl = escapeUrl(`${APP_URL}/playmechi`);
+  const logoUrl = escapeUrl(`${APP_URL}/mechi-logo-shield.png`);
+  const view = campaign.render(username || 'Player');
+  const miniCards = view.miniCards
+    .map(
+      ([label, value], index) => `
+                    <td class="mini-cell" width="33%">
+                      <span class="mini-label">${escapeHtml(label)}</span>
+                      <span class="mini-value">${escapeHtml(value)}</span>
+                    </td>${index < view.miniCards.length - 1 ? '\n                    <td width="10"></td>' : ''}`
+    )
+    .join('');
+  const infoRows = view.infoRows
+    .map(
+      ([label, value]) => `
+                  <div class="info-row">
+                    <span class="info-label">${escapeHtml(label)}</span>
+                    <span class="info-value">${escapeHtml(value)}</span>
+                  </div>`
+    )
+    .join('');
+  const secondaryLinks = view.secondaryLinks
+    .map(([label, href], index) => {
+      const separator = index < view.secondaryLinks.length - 1 ? ' &nbsp;·&nbsp; ' : '';
+      return `<a href="${escapeUrl(href)}" class="secondary-link">${escapeHtml(label)}</a>${separator}`;
+    })
+    .join('');
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -143,7 +244,7 @@ function buildWelcomeHtml(username) {
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="color-scheme" content="light only" />
   <meta name="supported-color-schemes" content="light only" />
-  <title>${escapeHtml(TITLE)}</title>
+  <title>${escapeHtml(campaign.title)}</title>
   <style>
     body { margin: 0; padding: 0; background: #e2e8f0; font-family: 'Segoe UI', Arial, Helvetica, sans-serif; color: #0b1121; }
     table { border-collapse: collapse; }
@@ -197,51 +298,27 @@ function buildWelcomeHtml(username) {
                 <p class="tagline">Competitive Kenyan gaming, cleaned up into one fast platform for matches, tournaments, rewards, and real support when the room gets noisy.</p>
               </div>
               <div class="body">
-                <p class="campaign-kicker">Welcome to the arena</p>
-                <h2>${escapeHtml(TITLE)}</h2>
-                <p>Hey ${safeUsername}, you are officially inside Mechi, the home base for Kenyan gamers who want cleaner matches, louder wins, and real rewards.</p>
-                <p>Finish your profile loadout, add your exact game IDs, and start using queues, lobbies, tournaments, rewards, and support from one place instead of scattered chats.</p>
+                <p class="campaign-kicker">${escapeHtml(campaign.previewTitle)}</p>
+                <h2>${escapeHtml(campaign.title)}</h2>
+                <p>${view.bodyIntro}</p>
+                <p>${view.bodyExtra}</p>
                 <table role="presentation" class="mini-grid" cellpadding="0" cellspacing="0">
                   <tr>
-                    <td class="mini-cell" width="33%">
-                      <span class="mini-label">Platform</span>
-                      <span class="mini-value">mechi.club</span>
-                    </td>
-                    <td width="10"></td>
-                    <td class="mini-cell" width="33%">
-                      <span class="mini-label">Focus</span>
-                      <span class="mini-value">Queues + Tournaments</span>
-                    </td>
-                    <td width="10"></td>
-                    <td class="mini-cell" width="33%">
-                      <span class="mini-label">Next run</span>
-                      <span class="mini-value">PlayMechi ready</span>
-                    </td>
+                    ${miniCards}
                   </tr>
                 </table>
                 <div class="info-box">
-                  <div class="info-row">
-                    <span class="info-label">First move</span>
-                    <span class="info-value">Finish your profile loadout</span>
-                  </div>
-                  <div class="info-row">
-                    <span class="info-label">Best setup win</span>
-                    <span class="info-value">Add your exact game tags</span>
-                  </div>
-                  <div class="info-row">
-                    <span class="info-label">Fastest momentum</span>
-                    <span class="info-value">Join your first queue today</span>
-                  </div>
+                  ${infoRows}
                 </div>
-                <p>This is your player card, your match hub, and your route into the next PlayMechi run.</p>
-                <a href="${dashboardUrl}" class="btn">${escapeHtml(CTA_LABEL)}</a>
-                <p><a href="${profileUrl}" class="secondary-link">Finish profile setup</a> &nbsp;·&nbsp; <a href="${rewardsUrl}" class="secondary-link">See rewards</a></p>
+                <p>${view.bodyClose}</p>
+                <a href="${view.ctaUrl}" class="btn">${escapeHtml(campaign.ctaLabel)}</a>
+                <p>${secondaryLinks}</p>
               </div>
               <div class="footer">
                 <p class="footer-nav">
                   <a href="${dashboardUrl}">Dashboard</a>
-                  <a href="${rewardsUrl}">Rewards</a>
-                  <a href="${escapeUrl(`${APP_URL}/playmechi`)}">PlayMechi</a>
+                  <a href="${escapeUrl(`${APP_URL}/rewards`)}">Rewards</a>
+                  <a href="${playMechiUrl}">PlayMechi</a>
                 </p>
                 <p><strong>mechi.club</strong></p>
                 <p>You are receiving this because your email is linked to a Mechi account.</p>
@@ -363,6 +440,7 @@ function timestampLabel() {
 
 async function main() {
   const options = parseArgs(process.argv.slice(2));
+  const campaign = CAMPAIGNS[options.campaign] ?? CAMPAIGNS.welcome;
   const recipients = await loadRecipients(options);
 
   if (recipients.length === 0) {
@@ -372,7 +450,8 @@ async function main() {
 
   const summary = {
     ok: true,
-    subject: SUBJECT,
+    campaign: options.campaign,
+    subject: campaign.subject,
     recipientCount: recipients.length,
     dryRun: options.dryRun,
     sample: recipients.slice(0, 10).map((recipient) => recipient.email),
@@ -395,8 +474,8 @@ async function main() {
       const info = await transporter.sendMail({
         from: FROM,
         to: recipient.email,
-        subject: SUBJECT,
-        html: buildWelcomeHtml(recipient.username),
+        subject: campaign.subject,
+        html: buildCampaignHtml(options.campaign, recipient.username),
       });
       summary.sent.push({
         email: recipient.email,

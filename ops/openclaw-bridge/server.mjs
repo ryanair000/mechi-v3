@@ -23,7 +23,7 @@ const SUPPORT_MODEL =
 const INSTAGRAM_MODEL =
   process.env.MECHI_OPENCLAW_INSTAGRAM_MODEL?.trim() || SUPPORT_MODEL;
 const EMAIL_MODEL = process.env.MECHI_OPENCLAW_EMAIL_MODEL?.trim() || SUPPORT_MODEL;
-const OPENCLAW_THINKING = process.env.MECHI_OPENCLAW_THINKING?.trim() || 'fast';
+const OPENCLAW_THINKING = normalizeThinkingLevel(process.env.MECHI_OPENCLAW_THINKING?.trim());
 const OPENCLAW_TIMEOUT_SECONDS = toPositiveInt(process.env.MECHI_OPENCLAW_TIMEOUT_SECONDS, 120);
 const MAX_BODY_BYTES = toPositiveInt(process.env.MECHI_OPENCLAW_MAX_BODY_BYTES, 256_000);
 const MAX_EMAIL_TEXT_CHARS = toPositiveInt(process.env.MECHI_OPENCLAW_MAX_EMAIL_TEXT_CHARS, 16_000);
@@ -31,6 +31,24 @@ const MAX_EMAIL_TEXT_CHARS = toPositiveInt(process.env.MECHI_OPENCLAW_MAX_EMAIL_
 function toPositiveInt(value, fallback) {
   const parsed = Number.parseInt(String(value ?? ''), 10);
   return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+}
+
+function normalizeThinkingLevel(value) {
+  const normalized = String(value || '').trim().toLowerCase();
+
+  if (!normalized || normalized === 'fast' || normalized === 'minimal') {
+    return 'low';
+  }
+
+  if (normalized === 'off') {
+    return 'none';
+  }
+
+  if (['none', 'low', 'medium', 'high', 'xhigh'].includes(normalized)) {
+    return normalized;
+  }
+
+  return 'low';
 }
 
 function json(response, statusCode, payload) {
@@ -209,6 +227,7 @@ function conversationToText(conversation) {
 }
 
 function buildSupportPrompt(input) {
+  const currentMessage = firstString(input.message, input.text, input.body, input.message_text);
   const systemPrompt = input.system_prompt || buildMechiBridgeSystemPrompt('support');
   const mechiContext =
     typeof input.mechi_context === 'string' && input.mechi_context.trim()
@@ -251,6 +270,9 @@ function buildSupportPrompt(input) {
     '',
     `THREAD ID: ${String(input.thread_id || '')}`,
     `PHONE OR CHANNEL HANDLE: ${String(input.phone || '')}`,
+    '',
+    'CURRENT MESSAGE:',
+    currentMessage || '[no current message supplied]',
     '',
     'CONVERSATION WINDOW:',
     conversationToText(input.conversation),
@@ -497,6 +519,25 @@ function parseCliPayload(stdout) {
   };
 }
 
+function extractAssistantTextFromCliJson(value) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    return '';
+  }
+
+  const result = value.result && typeof value.result === 'object' ? value.result : {};
+  const payloadTexts = Array.isArray(result.payloads)
+    ? result.payloads
+        .map((payload) => (typeof payload?.text === 'string' ? payload.text.trim() : ''))
+        .filter(Boolean)
+    : [];
+
+  return firstString(
+    result.finalAssistantVisibleText,
+    result.finalAssistantRawText,
+    ...payloadTexts
+  );
+}
+
 function runOpenClawAgent({ agent, sessionId, prompt, timeoutSeconds, model }) {
   return new Promise((resolve, reject) => {
     const child = spawn(
@@ -557,10 +598,17 @@ function clampConfidence(value) {
 }
 
 function normalizeSupportResponse(cliResult) {
+  const assistantText = firstString(extractAssistantTextFromCliJson(cliResult.json), cliResult.text);
+  const parsedAssistantText = parseJsonCandidate(assistantText);
   const parsedObject =
-    cliResult.json && typeof cliResult.json === 'object' && !Array.isArray(cliResult.json)
-      ? cliResult.json
-      : parseJsonCandidate(cliResult.text);
+    parsedAssistantText && typeof parsedAssistantText === 'object' && !Array.isArray(parsedAssistantText)
+      ? parsedAssistantText
+      : cliResult.json &&
+          typeof cliResult.json === 'object' &&
+          !Array.isArray(cliResult.json) &&
+          ('disposition' in cliResult.json || 'reply_text' in cliResult.json)
+        ? cliResult.json
+        : null;
 
   if (parsedObject && typeof parsedObject === 'object' && !Array.isArray(parsedObject)) {
     const disposition = normalizeDisposition(parsedObject.disposition, parsedObject.reply_text);
@@ -588,11 +636,11 @@ function normalizeSupportResponse(cliResult) {
   }
 
   return {
-    disposition: cliResult.text ? 'reply' : 'escalate',
-    reply_text: cliResult.text || null,
-    confidence: cliResult.text ? 0.55 : null,
-    tags: cliResult.text ? ['bridge-fallback'] : [],
-    escalation_reason: cliResult.text ? null : 'empty_openclaw_response',
+    disposition: assistantText ? 'reply' : 'escalate',
+    reply_text: assistantText || null,
+    confidence: assistantText ? 0.55 : null,
+    tags: assistantText ? ['bridge-fallback'] : [],
+    escalation_reason: assistantText ? null : 'empty_openclaw_response',
   };
 }
 

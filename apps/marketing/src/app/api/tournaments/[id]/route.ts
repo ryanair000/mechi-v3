@@ -53,7 +53,10 @@ function buildTournamentUpdates(body: Record<string, unknown>) {
   return updates;
 }
 
-export async function PATCH(request: NextRequest, ctx: RouteContext<"/api/tournaments/[id]">) {
+export async function PATCH(
+  request: NextRequest,
+  ctx: { params: Promise<{ id: string }> },
+) {
   const auth = await requireApiSession(request);
   if (auth.error) return auth.error;
 
@@ -76,7 +79,10 @@ export async function PATCH(request: NextRequest, ctx: RouteContext<"/api/tourna
   return NextResponse.json(data);
 }
 
-export async function DELETE(request: NextRequest, ctx: RouteContext<"/api/tournaments/[id]">) {
+export async function DELETE(
+  request: NextRequest,
+  ctx: { params: Promise<{ id: string }> },
+) {
   const auth = await requireApiSession(request);
   if (auth.error) return auth.error;
 

@@ -82,6 +82,11 @@ export interface ContentItem {
   posted_twitter: boolean;
   posted_whatsapp: boolean;
   notes: string | null;
+  twitter_post_text: string | null;
+  twitter_post_id: string | null;
+  twitter_post_url: string | null;
+  twitter_last_error: string | null;
+  twitter_posted_at: string | null;
   created_at?: string;
   updated_at?: string;
 }

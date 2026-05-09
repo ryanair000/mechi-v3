@@ -7,6 +7,7 @@ import { requestJson } from "@/lib/api-client";
 import { formatDayTypeLabel, formatLongDate } from "@/lib/format";
 import type { ContentItem, ContentPageData } from "@/lib/types";
 import { addDays, cn } from "@/lib/utils";
+import { buildXPostText, MAX_X_POST_LENGTH } from "@/lib/x-post";
 
 const CHANNELS = [
   ["posted_tiktok", "TikTok"],
@@ -66,14 +67,31 @@ export function ContentClient({
 
   const saveItem = async (nextDraft: ContentItem) => {
     try {
-      await requestJson(`/api/content/${nextDraft.id}`, {
+      const updated = await requestJson<ContentItem>(`/api/content/${nextDraft.id}`, {
         method: "PATCH",
         json: nextDraft,
       });
+      setDraft(updated);
       setNotice("Content item updated.");
       startTransition(() => router.refresh());
     } catch (error) {
       setNotice(error instanceof Error ? error.message : "Failed to save content item");
+    }
+  };
+
+  const publishToX = async (item: ContentItem) => {
+    try {
+      const response = await requestJson<{
+        item: ContentItem;
+        post: { id: string; text: string; url: string };
+      }>(`/api/content/${item.id}/publish/x`, {
+        method: "POST",
+      });
+      setDraft(response.item);
+      setNotice("Posted to X successfully.");
+      startTransition(() => router.refresh());
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : "Failed to publish to X");
     }
   };
 
@@ -89,6 +107,9 @@ export function ContentClient({
       week,
     })),
   );
+
+  const draftXPreview = draft ? buildXPostText(draft) : "";
+  const draftXPreviewTooLong = draftXPreview.length > MAX_X_POST_LENGTH;
 
   return (
     <div className="space-y-6">
@@ -297,6 +318,27 @@ export function ContentClient({
                   }
                 />
               </div>
+              <div>
+                <label className="input-label">X post copy</label>
+                <textarea
+                  className="field-base min-h-28"
+                  value={draft.twitter_post_text ?? ""}
+                  onChange={(event) =>
+                    setDraft((current) =>
+                      current
+                        ? {
+                            ...current,
+                            twitter_post_text: event.target.value,
+                          }
+                        : current,
+                    )
+                  }
+                  placeholder="Leave blank to auto-generate from the title and description."
+                />
+                <p className="mt-2 text-xs text-[var(--text-soft)]">
+                  Leave this empty to generate PlayMechi tweet copy automatically.
+                </p>
+              </div>
             </div>
 
             <div className="mt-5 flex flex-wrap gap-2">
@@ -320,7 +362,55 @@ export function ContentClient({
               ))}
             </div>
 
+            <div className="mt-5 rounded-2xl border border-[var(--border)] bg-white/[0.03] p-4">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <p className="eyebrow">X preview</p>
+                <div className="flex flex-wrap items-center gap-2 text-xs text-[var(--text-soft)]">
+                  <span
+                    className={draftXPreviewTooLong ? "text-[var(--coral)]" : undefined}
+                  >
+                    {draftXPreview.length}/{MAX_X_POST_LENGTH} chars
+                  </span>
+                  {draft.twitter_post_url ? (
+                    <a
+                      href={draft.twitter_post_url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-[var(--accent)] underline-offset-2 hover:underline"
+                    >
+                      Open post
+                    </a>
+                  ) : null}
+                </div>
+              </div>
+              <pre className="mt-3 whitespace-pre-wrap break-words text-sm leading-7 text-white">
+                {draftXPreview || "Add a title or custom X copy to preview the post."}
+              </pre>
+              {draft.twitter_posted_at ? (
+                <p className="mt-3 text-xs text-[var(--text-soft)]">
+                  Posted on {new Date(draft.twitter_posted_at).toLocaleString("en-US")}
+                </p>
+              ) : null}
+              {draft.twitter_last_error ? (
+                <p className="mt-3 text-sm text-[var(--coral)]">{draft.twitter_last_error}</p>
+              ) : null}
+              {draftXPreviewTooLong ? (
+                <p className="mt-3 text-xs text-[var(--coral)]">
+                  This preview is over 280 raw characters. X may still accept it if a URL is present,
+                  but review it before posting.
+                </p>
+              ) : null}
+            </div>
+
             <div className="mt-5 flex flex-wrap gap-3">
+              <button
+                type="button"
+                className={draft.twitter_post_id ? "btn-ghost" : "btn-outline"}
+                onClick={() => publishToX(draft)}
+                disabled={isPending || Boolean(draft.twitter_post_id)}
+              >
+                {draft.twitter_post_id ? "Posted to X" : "Post to X now"}
+              </button>
               <button
                 type="button"
                 className="btn-secondary"

@@ -576,15 +576,30 @@ CREATE TABLE IF NOT EXISTS online_tournament_disputes (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   event_slug text NOT NULL,
   game text NOT NULL CHECK (game IN ('pubgm', 'codm', 'efootball')),
+  category text NOT NULL DEFAULT 'other'
+    CHECK (
+      category IN (
+        'wrongdoing',
+        'rule_break',
+        'score_issue',
+        'room_issue',
+        'technical_issue',
+        'other'
+      )
+    ),
+  title text,
   result_submission_id uuid REFERENCES online_tournament_result_submissions(id) ON DELETE SET NULL,
   fixture_id uuid REFERENCES online_tournament_fixtures(id) ON DELETE SET NULL,
   opened_by uuid REFERENCES profiles(id) ON DELETE SET NULL,
   reason text,
+  reporter_contact text,
+  evidence_url text,
   status text NOT NULL DEFAULT 'open'
     CHECK (status IN ('open', 'resolved', 'dismissed')),
   resolution_note text,
   resolved_by uuid REFERENCES profiles(id) ON DELETE SET NULL,
   resolved_at timestamptz,
+  metadata jsonb NOT NULL DEFAULT '{}'::jsonb,
   created_at timestamptz NOT NULL DEFAULT timezone('utc', now()),
   updated_at timestamptz NOT NULL DEFAULT timezone('utc', now())
 );

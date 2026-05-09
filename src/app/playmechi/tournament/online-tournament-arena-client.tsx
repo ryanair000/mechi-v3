@@ -747,9 +747,7 @@ function PlayerGameStatus({
   const shouldShowCodmDetailHelp =
     shouldShowRecoveryForm &&
     activeGame === 'codm' &&
-    missingCheckInFields.some(
-      (field) => field === 'IGN' || field === 'UID' || field === 'serial last 6'
-    );
+    missingCheckInFields.some((field) => field === 'IGN' || field === 'UID');
 
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -826,11 +824,6 @@ function PlayerGameStatus({
                 <p>
                   <span className="font-semibold text-amber-50">IGN and UID:</span> Open Call of Duty:
                   Mobile, tap your profile, use the name at the top, and copy the UID shown below it.
-                </p>
-                <p>
-                  <span className="font-semibold text-amber-50">Serial last 6:</span> Open your phone
-                  Settings, then About phone and Status or Device information. Find Serial Number and
-                  enter the last 6 characters only.
                 </p>
               </div>
             </details>

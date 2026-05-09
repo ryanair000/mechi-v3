@@ -152,7 +152,10 @@ export function isValidTournamentDeviceSerialLast6(value: unknown) {
 }
 
 export function requiresTournamentDeviceSerialLast6(game: OnlineTournamentGameKey) {
-  return game === 'codm';
+  switch (game) {
+    default:
+      return false;
+  }
 }
 
 export const ONLINE_TOURNAMENT_GAMES: OnlineTournamentGameConfig[] = [

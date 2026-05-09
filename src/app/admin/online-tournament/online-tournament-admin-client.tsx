@@ -20,6 +20,7 @@ import {
   ONLINE_TOURNAMENT_GAME_BY_KEY,
   ONLINE_TOURNAMENT_GAMES,
   ONLINE_TOURNAMENT_TITLE,
+  requiresTournamentDeviceSerialLast6,
   type OnlineTournamentCheckInStatus,
   type OnlineTournamentEligibilityStatus,
   type OnlineTournamentGameKey,
@@ -647,7 +648,9 @@ export function OnlineTournamentAdminClient() {
                         ['UID', registration.game_uid ?? 'Not provided'],
                         ['Phone', registration.whatsapp_number ?? registration.phone ?? 'No phone'],
                         ['Device', registration.device_model ?? 'Not provided'],
-                        ['Serial last 6', registration.device_serial_last6 ?? 'Not provided'],
+                        ...(requiresTournamentDeviceSerialLast6(registration.game)
+                          ? [['Serial last 6', registration.device_serial_last6 ?? 'Not provided']]
+                          : []),
                         ['Tournament lobby', formatOnlineTournamentLobby(registration)],
                         ['Email', registration.email ?? registration.user?.email ?? 'No email'],
                         [

@@ -40,6 +40,7 @@ import {
   ONLINE_TOURNAMENT_CHECK_IN_PATH,
   ONLINE_TOURNAMENT_GAME_BY_KEY,
   ONLINE_TOURNAMENT_GAMES,
+  requiresTournamentDeviceSerialLast6,
   type OnlineTournamentGameKey,
   type OnlineTournamentCheckInStatus,
   type OnlineTournamentEligibilityStatus,
@@ -778,6 +779,7 @@ export function CodmModeratorClient() {
                         registration.user?.role === 'moderator' ||
                         registration.user?.role === 'admin';
                       const isBanned = Boolean(registration.user?.is_banned);
+                      const showDeviceSerial = requiresTournamentDeviceSerialLast6(registration.game);
                       return (
                         <tr key={registration.id} className="bg-[var(--surface)]">
                           <td className="rounded-l-lg border-y border-l border-[var(--border-color)] px-3 py-3 align-top">
@@ -785,8 +787,10 @@ export function CodmModeratorClient() {
                               {getPlayerLabel(registration)}
                             </p>
                             <p className="mt-1 text-xs text-[var(--text-soft)]">
-                              UID {registration.game_uid || 'n/a'} | Serial{' '}
-                              {registration.device_serial_last6 || 'n/a'}
+                              UID {registration.game_uid || 'n/a'}
+                              {showDeviceSerial
+                                ? ` | Serial ${registration.device_serial_last6 || 'n/a'}`
+                                : ''}
                             </p>
                           </td>
                           <td className="border-y border-[var(--border-color)] px-3 py-3 align-top">

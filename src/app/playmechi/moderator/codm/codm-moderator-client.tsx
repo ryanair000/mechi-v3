@@ -277,7 +277,10 @@ export function CodmModeratorClient() {
   const { user, loading: authLoading } = useAuth();
   const authFetch = useAuthFetch();
   const assignedGame = getAssignedModeratorGame(user?.game_ids?.moderator_tournament_key);
-  const activeGame = getGameFromSearch(searchParams.get('game'), assignedGame);
+  const activeGame =
+    user?.role === 'admin'
+      ? getGameFromSearch(searchParams.get('game'), assignedGame)
+      : assignedGame;
   const activeConfig = ONLINE_TOURNAMENT_GAME_BY_KEY[activeGame];
   const activeGameParam = encodeURIComponent(activeGame);
   const checkInPath = `${ONLINE_TOURNAMENT_CHECK_IN_PATH}?game=${activeGameParam}`;
@@ -1360,7 +1363,8 @@ export function CodmModeratorClient() {
                   eFootball bracket
                 </h2>
                 <p className="mt-3 text-sm leading-6 text-[var(--text-secondary)]">
-                  Fixture seeding, score review, and bracket movement are available in the tournament view.
+                  Seed the bracket, score fixtures, reset bad results, clear disputes, and prep
+                  payouts from the tournament control view.
                 </p>
                 <Link
                   href={`/moderators/tournament?game=${activeGameParam}`}

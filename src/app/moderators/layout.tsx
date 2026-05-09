@@ -7,8 +7,8 @@ import { verifyToken } from '@/lib/auth';
 import {
   DEFAULT_MODERATOR_TOURNAMENT_KEY,
   getModeratorTournamentByKey,
-  isModeratorTournamentKey,
-  type ModeratorTournamentKey,
+  getModeratorTournamentFromGameIds,
+  type ModeratorTournamentOption,
 } from '@/lib/moderator-tournaments';
 import { getModeratorLoginPath } from '@/lib/navigation';
 import { createServiceClient } from '@/lib/supabase';
@@ -20,17 +20,8 @@ type ModeratorShellProfile = {
   phone: string;
   role: UserRole;
   is_banned: boolean;
-  moderatorTournamentKey: ModeratorTournamentKey;
+  moderatorTournament: ModeratorTournamentOption | null;
 };
-
-function readModeratorTournamentKeyFromGameIds(value: unknown) {
-  if (!value || typeof value !== 'object' || Array.isArray(value)) {
-    return DEFAULT_MODERATOR_TOURNAMENT_KEY;
-  }
-
-  const rawKey = (value as Record<string, unknown>).moderator_tournament_key;
-  return isModeratorTournamentKey(rawKey) ? rawKey : DEFAULT_MODERATOR_TOURNAMENT_KEY;
-}
 
 async function getModeratorProfile(): Promise<ModeratorShellProfile | null> {
   const cookieStore = await cookies();
@@ -58,7 +49,11 @@ async function getModeratorProfile(): Promise<ModeratorShellProfile | null> {
     phone: (data.phone as string | null | undefined) ?? '',
     role: ((data.role as UserRole | null) ?? 'user') as UserRole,
     is_banned: Boolean(data.is_banned),
-    moderatorTournamentKey: readModeratorTournamentKeyFromGameIds(data.game_ids),
+    moderatorTournament:
+      ((data.role as UserRole | null) ?? 'user') === 'admin'
+        ? getModeratorTournamentFromGameIds(data.game_ids) ??
+          getModeratorTournamentByKey(DEFAULT_MODERATOR_TOURNAMENT_KEY)
+        : getModeratorTournamentFromGameIds(data.game_ids),
   };
 }
 
@@ -98,7 +93,38 @@ export default async function ModeratorsLayout({ children }: { children: React.R
     );
   }
 
-  const moderatorTournament = getModeratorTournamentByKey(profile.moderatorTournamentKey);
+  if (profile.role === 'moderator' && !profile.moderatorTournament) {
+    return (
+      <div
+        className="page-base app-prototype-shell min-h-screen"
+        data-theme="dark"
+        style={{ colorScheme: 'dark' }}
+      >
+        <main className="mx-auto flex min-h-screen w-full max-w-3xl items-center px-4 py-8">
+          <section className="card p-6 sm:p-8">
+            <div className="flex max-w-2xl flex-col gap-4 sm:flex-row sm:items-start">
+              <span className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-amber-400/20 bg-amber-500/10 text-amber-200">
+                <ShieldAlert size={20} />
+              </span>
+              <div>
+                <p className="section-title">Moderators</p>
+                <h1 className="mt-2 text-2xl font-black text-[var(--text-primary)]">
+                  Tournament assignment missing
+                </h1>
+                <p className="mt-2 text-sm leading-7 text-[var(--text-secondary)]">
+                  This moderator account is active, but no PlayMechi tournament has been assigned
+                  yet. Ask an admin to set the moderator tournament before using this workspace.
+                </p>
+              </div>
+            </div>
+          </section>
+        </main>
+      </div>
+    );
+  }
+
+  const moderatorTournament =
+    profile.moderatorTournament ?? getModeratorTournamentByKey(DEFAULT_MODERATOR_TOURNAMENT_KEY);
 
   return (
     <ModeratorShellClient

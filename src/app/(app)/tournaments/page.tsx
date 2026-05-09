@@ -27,7 +27,7 @@ import {
   type OnlineTournamentRegistrationSummary,
 } from '@/lib/online-tournament';
 import { getOnlineTournamentArenaHref } from '@/lib/online-tournament-ops';
-import { resolvePlan } from '@/lib/plans';
+import { canProfileHostTournaments } from '@/lib/tournament-hosting';
 import { getTournamentPrizePoolLabel } from '@/lib/tournament-metrics';
 import { formatTournamentDateTime } from '@/lib/tournament-schedule';
 import type { GameKey, Tournament } from '@/types';
@@ -131,7 +131,11 @@ export default function TournamentsPage() {
   );
   const [status, setStatus] = useState<(typeof STATUS_FILTERS)[number]>('all');
   const [loading, setLoading] = useState(true);
-  const canHostTournaments = resolvePlan(user?.plan, user?.plan_expires_at) !== 'free';
+  const canHostTournaments = canProfileHostTournaments({
+    plan: user?.plan,
+    planExpiresAt: user?.plan_expires_at,
+    role: user?.role ?? null,
+  });
   const hostHref = canHostTournaments ? '/tournaments/create' : '/pricing';
   const hostLabel = canHostTournaments ? 'Host tournament' : 'Upgrade to host';
 

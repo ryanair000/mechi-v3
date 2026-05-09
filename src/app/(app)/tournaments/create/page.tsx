@@ -10,6 +10,7 @@ import { useAuth, useAuthFetch } from '@/components/AuthProvider';
 import { GAMES, PLATFORMS, getSelectableGameKeys } from '@/lib/config';
 import { COUNTRY_OPTIONS, getRegionsForCountry, resolveProfileLocation } from '@/lib/location';
 import { getPlan, resolvePlan } from '@/lib/plans';
+import { canProfileHostTournaments } from '@/lib/tournament-hosting';
 import { getTournamentPrize } from '@/lib/tournament-metrics';
 import {
   formatTournamentDateTime,
@@ -65,7 +66,13 @@ export default function CreateTournamentPage() {
   const platforms = GAMES[form.game]?.platforms ?? [];
   const availableRegions = getRegionsForCountry(form.country || null);
   const currentPlan = getPlan(resolvePlan(user?.plan, user?.plan_expires_at));
-  const canHostTournaments = hostAccess?.can_host ?? currentPlan.id !== 'free';
+  const canHostTournaments =
+    hostAccess?.can_host ??
+    canProfileHostTournaments({
+      plan: user?.plan,
+      planExpiresAt: user?.plan_expires_at,
+      role: user?.role ?? null,
+    });
   const effectivePlatformFeePercent =
     hostAccess?.platform_fee_percent ?? currentPlan.tournamentFeePercent;
   const effectiveEntryFee = form.entry_type === 'free' ? 0 : form.entry_fee;
@@ -140,10 +147,10 @@ export default function CreateTournamentPage() {
     if (!canHostTournaments) {
       setCreateFeedback({
         tone: 'error',
-        title: 'Pro or Elite is required to host tournaments.',
-        detail: 'Upgrade from Free to start hosting. Free players can still join tournaments.',
+        title: 'Elite or admin access is required to host tournaments.',
+        detail: 'Upgrade to Elite to start hosting. Free and Pro players can still join tournaments.',
       });
-      toast.error('Upgrade to Pro or Elite to host tournaments');
+      toast.error('Upgrade to Elite to host tournaments');
       return;
     }
 
@@ -290,42 +297,42 @@ export default function CreateTournamentPage() {
           <div className="card circuit-panel p-6">
             <p className="brand-kicker">Tournament Hosting</p>
             <h1 className="mt-3 text-3xl font-black tracking-normal text-[var(--text-primary)]">
-              Pro and Elite members host tournaments
+              Elite players and admins host tournaments
             </h1>
             <p className="mt-3 text-sm leading-6 text-[var(--text-secondary)]">
-              Free players can still join brackets, but hosting now starts on Pro. Elite adds
-              three fee-free tournaments each month plus streaming-ready tools when you want the
-              full event lane.
+              Free and Pro players can still join brackets, but hosting now stays locked to Elite
+              and admin accounts. Elite adds three fee-free tournaments each month plus
+              streaming-ready tools when you want the full event lane.
             </p>
 
             <div className="mt-5 grid gap-3 sm:grid-cols-3">
               <div className="rounded-2xl border border-[var(--border-color)] bg-[var(--surface-elevated)] p-4">
                 <p className="text-sm font-black text-[var(--text-primary)]">
-                  Pro hosting
+                  Elite hosting
                 </p>
                 <p className="mt-2 text-xs leading-5 text-[var(--text-secondary)]">
-                  Create brackets, set the game rules, and choose auto or specified prize pools.
+                  Create brackets, set the rules, and run prize-backed tournaments from the Elite lane.
                 </p>
               </div>
               <div className="rounded-2xl border border-[var(--border-color)] bg-[var(--surface-elevated)] p-4">
                 <p className="text-sm font-black text-[var(--text-primary)]">
-                  Elite allowance
+                  Admin override
                 </p>
                 <p className="mt-2 text-xs leading-5 text-[var(--text-secondary)]">
-                  Elite covers your first three tournaments each month without platform cost.
+                  Admin accounts can still host operational or featured brackets without upgrading the profile plan.
                 </p>
               </div>
               <div className="rounded-2xl border border-[var(--border-color)] bg-[var(--surface-elevated)] p-4">
-                <p className="text-sm font-black text-[var(--text-primary)]">Free plan</p>
+                <p className="text-sm font-black text-[var(--text-primary)]">Free and Pro</p>
                 <p className="mt-2 text-xs leading-5 text-[var(--text-secondary)]">
-                  Stay in the mix by joining open brackets even before you start hosting.
+                  Stay in the mix by joining open brackets even before you unlock Elite hosting.
                 </p>
               </div>
             </div>
 
             <div className="mt-6 flex flex-col gap-3 sm:flex-row">
               <Link href="/pricing" className="btn-primary justify-center">
-                Upgrade to Pro
+                Upgrade to Elite
               </Link>
               <Link href="/tournaments" className="btn-ghost justify-center">
                 Browse tournaments

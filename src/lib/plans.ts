@@ -60,8 +60,7 @@ export const PLANS: Record<Plan, PlanConfig> = {
       '1-month Pro trial for new players',
       'Unlimited ranked matches',
       'Up to 3 selected games',
-      'Tournament hosting on Mechi',
-      '5% tournament platform fee',
+      'Tournament joins',
       '1-on-1 direct challenges',
       '100-match history window',
       'Pro profile badge',
@@ -83,6 +82,7 @@ export const PLANS: Record<Plan, PlanConfig> = {
     earlyAccess: true,
     features: [
       'Everything in Pro',
+      'Tournament hosting on Mechi',
       '3 fee-free tournaments each month',
       'Auto or specified prize pools',
       'Priority matchmaking',

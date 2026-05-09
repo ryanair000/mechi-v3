@@ -7,6 +7,8 @@ import { GAMES, PLATFORMS } from '@/lib/config';
 import { isE2ETournamentFixture, shouldHideE2EFixtures } from '@/lib/e2e-fixtures';
 import { getLoginPath, getRegisterPath } from '@/lib/navigation';
 import { createServiceClient } from '@/lib/supabase';
+import { canProfileHostTournaments } from '@/lib/tournament-hosting';
+import { firstRelation } from '@/lib/tournaments';
 import {
   getTournamentPaymentMetrics,
   getTournamentPrizePoolLabel,
@@ -18,11 +20,31 @@ type Props = {
   params: Promise<{ slug: string }>;
 };
 
+type PublicTournamentOrganizerRelation =
+  | {
+      id: string;
+      username?: string | null;
+      plan?: string | null;
+      plan_expires_at?: string | null;
+      role?: 'user' | 'moderator' | 'admin' | null;
+    }
+  | Array<{
+      id: string;
+      username?: string | null;
+      plan?: string | null;
+      plan_expires_at?: string | null;
+      role?: 'user' | 'moderator' | 'admin' | null;
+    }>
+  | null
+  | undefined;
+
 async function getTournament(slug: string) {
   const supabase = createServiceClient();
   let tournamentQuery = supabase
     .from('tournaments')
-    .select('*, organizer:organizer_id(id, username), winner:winner_id(id, username)')
+    .select(
+      '*, organizer:organizer_id(id, username, plan, plan_expires_at, role), winner:winner_id(id, username)'
+    )
     .eq('slug', slug);
 
   if (shouldHideE2EFixtures()) {
@@ -32,6 +54,19 @@ async function getTournament(slug: string) {
   const { data: tournament } = await tournamentQuery.single();
 
   if (!tournament || isE2ETournamentFixture(tournament)) return null;
+
+  const organizer = firstRelation(
+    tournament.organizer as PublicTournamentOrganizerRelation
+  );
+  if (
+    !canProfileHostTournaments({
+      plan: organizer?.plan,
+      planExpiresAt: organizer?.plan_expires_at,
+      role: organizer?.role,
+    })
+  ) {
+    return null;
+  }
 
   const { data: players } = await supabase
     .from('tournament_players')

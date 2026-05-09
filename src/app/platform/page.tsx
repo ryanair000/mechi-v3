@@ -77,7 +77,7 @@ const PRICING_PLANS = [
     key: 'pro',
     kicker: 'MOST POPULAR',
     description:
-      'KES 299/month after the 1-month trial. Unlimited ranked play, 3 saved games, tournament hosting, and a deeper grind lane.',
+      'KES 299/month after the 1-month trial. Unlimited ranked play, 3 saved games, and a deeper grind lane.',
     href: '/pricing',
     cta: 'SEE PRO',
     featured: true,

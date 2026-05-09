@@ -10,16 +10,36 @@ import { makeSlug } from '@/lib/slug';
 import { maybeExpireProfilePlan } from '@/lib/subscription';
 import { createServiceClient } from '@/lib/supabase';
 import {
+  canProfileHostTournaments,
   getTournamentHostingAccess,
   getTournamentHostingMonthWindow,
 } from '@/lib/tournament-hosting';
 import {
+  firstRelation,
   getPlatformForTournament,
   getTournamentPaymentMetrics,
   getTournamentPrizeSnapshot,
   resolveTournamentPrizePoolMode,
 } from '@/lib/tournaments';
 import type { GameKey, PlatformKey } from '@/types';
+
+type TournamentOrganizerRelation =
+  | {
+      id: string;
+      username?: string | null;
+      plan?: string | null;
+      plan_expires_at?: string | null;
+      role?: 'user' | 'moderator' | 'admin' | null;
+    }
+  | Array<{
+      id: string;
+      username?: string | null;
+      plan?: string | null;
+      plan_expires_at?: string | null;
+      role?: 'user' | 'moderator' | 'admin' | null;
+    }>
+  | null
+  | undefined;
 
 export async function GET(request: NextRequest) {
   try {
@@ -32,7 +52,9 @@ export async function GET(request: NextRequest) {
 
     let query = supabase
       .from('tournaments')
-      .select('*, organizer:organizer_id(id, username), winner:winner_id(id, username)')
+      .select(
+        '*, organizer:organizer_id(id, username, plan, plan_expires_at, role), winner:winner_id(id, username)'
+      )
       .order('is_featured', { ascending: false })
       .order('created_at', { ascending: false })
       .range(offset, offset + limit - 1);
@@ -56,7 +78,17 @@ export async function GET(request: NextRequest) {
 
     const tournaments = filterVisibleTournaments(
       (data ?? []) as Array<Record<string, unknown> & { id: string }>
-    );
+    ).filter((tournament) => {
+      const organizer = firstRelation(
+        tournament.organizer as TournamentOrganizerRelation
+      );
+
+      return canProfileHostTournaments({
+        plan: organizer?.plan,
+        planExpiresAt: organizer?.plan_expires_at,
+        role: organizer?.role,
+      });
+    });
     if (!tournaments.length) {
       return NextResponse.json({ tournaments: [] });
     }
@@ -230,7 +262,10 @@ export async function POST(request: NextRequest) {
     const organizerPlan = await maybeExpireProfilePlan(organizerProfile, supabase);
     let hostedThisMonth = 0;
 
-    if (organizerPlan === 'elite') {
+    const organizerRole =
+      (organizerProfile.role as 'user' | 'moderator' | 'admin' | null | undefined) ?? null;
+
+    if (organizerPlan === 'elite' && organizerRole !== 'admin') {
       const { startIso, endIso } = getTournamentHostingMonthWindow();
       const { count, error: monthlyCountError } = await supabase
         .from('tournaments')
@@ -249,14 +284,16 @@ export async function POST(request: NextRequest) {
       hostedThisMonth = count ?? 0;
     }
 
-    const hostingAccess = getTournamentHostingAccess(organizerPlan, hostedThisMonth);
+    const hostingAccess = getTournamentHostingAccess(organizerPlan, hostedThisMonth, {
+      role: organizerRole,
+    });
 
     if (!hostingAccess.canHost) {
       return NextResponse.json(
         {
-          error: 'Tournament hosting requires Pro or Elite.',
+          error: 'Tournament hosting requires Elite or admin access.',
           upgrade_url: '/pricing',
-          required_plan: 'pro',
+          required_plan: 'elite',
         },
         { status: 403 }
       );

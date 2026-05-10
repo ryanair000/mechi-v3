@@ -295,6 +295,7 @@ async function seedEfootballFixtures(registrations: OnlineTournamentRegistration
     };
   }
 
+  // PlayMechi Launch seeding is based on checked-in players only. Payment is not part of this event.
   const players = registrations
     .filter(
       (registration) =>

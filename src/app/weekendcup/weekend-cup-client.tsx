@@ -14,7 +14,6 @@ import {
 import { useAuth, useAuthFetch } from '@/components/AuthProvider';
 import FooterSection from '@/components/footer';
 import { WeekendCupHeader } from '@/components/WeekendCupHeader';
-import { Stories, StoriesContent, Story } from '@/components/ui/stories-carousel';
 import { getGameImage } from '@/lib/config';
 import { getLoginPath } from '@/lib/navigation';
 import { cn } from '@/lib/utils';
@@ -24,6 +23,7 @@ import {
   WEEKEND_CUP_EVENT_DATES,
   WEEKEND_CUP_MAX_VOTE_SELECTIONS,
   WEEKEND_CUP_PRIZE_POOL_LABEL,
+  WEEKEND_CUP_PROMO_IMAGE,
   WEEKEND_CUP_PUBLIC_PATH,
   WEEKEND_CUP_STREAM_LABEL,
   WEEKEND_CUP_TITLE,
@@ -65,11 +65,11 @@ const VISIBLE_BALLOT_SLUGS = new Set(['weekend-cup-1-mobile']);
 const FIXED_SEASON_ONE_GAME_SLUGS = new Set(['pubgm', 'codm', 'efootball']);
 
 const DASHBOARD_RADIUS_STYLE: CSSProperties & Record<string, string> = {
-  '--radius': '0.5rem',
-  '--radius-control': '0.55rem',
-  '--radius-panel': '0.65rem',
-  '--radius-card': '0.75rem',
-  '--radius-hero': '0.8rem',
+  '--radius': '0.95rem',
+  '--radius-control': '1rem',
+  '--radius-panel': '1.35rem',
+  '--radius-card': '1.7rem',
+  '--radius-hero': '1.95rem',
 };
 
 const OPTION_IMAGE_KEY_BY_SLUG = {
@@ -267,7 +267,7 @@ export function WeekendCupClient() {
     }
 
     if (!alreadySelected && selectedCount >= WEEKEND_CUP_MAX_VOTE_SELECTIONS) {
-      toast.error(`Pick up to ${WEEKEND_CUP_MAX_VOTE_SELECTIONS} games for Weekend 1.`);
+      toast.error(`Pick up to ${WEEKEND_CUP_MAX_VOTE_SELECTIONS} games for the mystery slot.`);
       return;
     }
 
@@ -337,7 +337,7 @@ export function WeekendCupClient() {
         return;
       }
 
-      toast.success('Game added to the ballot.');
+      toast.success('Game added to the vote.');
       setSuggestionDrafts((current) => ({
         ...current,
         [ballotSlug]: { label: '', description: '' },
@@ -357,19 +357,34 @@ export function WeekendCupClient() {
     >
       <WeekendCupHeader />
 
-      <main className="page-container max-w-7xl space-y-8 pb-8 pt-7 sm:pt-9">
-        <section id="overview" className="px-1 py-2 sm:px-2">
-          <div className="max-w-4xl">
+      <main className="page-container max-w-[1200px] space-y-10 pb-10 pt-6 sm:pt-8">
+        <section id="overview" className="space-y-6 px-1 sm:px-2">
+          <div className="overflow-hidden rounded-[var(--radius-card)] border border-[var(--border-color)] bg-[rgba(12,20,34,0.82)] shadow-[var(--shadow-soft)]">
+            <div className="relative aspect-[16/9] w-full sm:aspect-[16/7] lg:aspect-[16/5]">
+              <Image
+                src={WEEKEND_CUP_PROMO_IMAGE}
+                alt="PlayMechi Weekend Cup Season 1 promo artwork"
+                fill
+                priority
+                sizes="(min-width: 1280px) 1200px, (min-width: 768px) 92vw, 100vw"
+                className="object-cover object-center"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-[#07111e]/36 via-transparent to-transparent" />
+            </div>
+          </div>
+
+          <div className="max-w-4xl space-y-4">
             <p className="section-title">Weekend Cup preview</p>
-            <h1 className="mt-3 max-w-5xl text-4xl font-black leading-[0.98] text-[var(--text-primary)] sm:text-5xl lg:text-6xl">
+            <h1 className="max-w-[11ch] text-[clamp(2.8rem,5.3vw,5rem)] font-black leading-[0.94] text-[var(--text-primary)]">
               {WEEKEND_CUP_TITLE}
             </h1>
-            <p className="mt-5 max-w-3xl text-base leading-7 text-[var(--text-secondary)] sm:text-lg sm:leading-8">
-              Season 1 lands on <strong>{WEEKEND_CUP_EVENT_DATES}</strong>. CODM, PUBG Mobile,
-              and eFootball are locked in. Vote for the mystery-game slot, then register to
-              lock your place.
+            <p className="max-w-3xl text-[1rem] leading-8 text-[var(--text-secondary)] sm:text-[1.12rem]">
+              Season 1 runs on <strong>{WEEKEND_CUP_EVENT_DATES}</strong>. PUBG Mobile lands on
+              Friday, CODM takes Saturday, eFootball closes Sunday, and players are deciding the
+              final mystery slot before the lineup locks.
             </p>
-            <div className="mt-5 flex flex-wrap gap-2">
+
+            <div className="flex flex-wrap gap-2">
               {[
                 WEEKEND_CUP_EVENT_DATES,
                 WEEKEND_CUP_PRIZE_POOL_LABEL,
@@ -382,7 +397,7 @@ export function WeekendCupClient() {
               ))}
             </div>
 
-            <div className="mt-5 flex flex-wrap gap-3">
+            <div className="flex flex-wrap gap-3">
               <Link href={user ? '#vote' : signInHref} className="btn-primary">
                 {user ? 'Vote Mystery Game' : 'Sign in to vote'}
               </Link>
@@ -393,80 +408,75 @@ export function WeekendCupClient() {
           </div>
         </section>
 
-        <section id="vote" className="scroll-mt-24 px-1 py-6 sm:px-2">
-          <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
-            <div className="max-w-3xl">
-              <p className="section-title">Player vote</p>
-              <h2 className="mt-2 text-3xl font-black leading-tight text-[var(--text-primary)] sm:text-4xl">
-                Vote the mystery game.
-              </h2>
-              <p className="mt-3 max-w-3xl text-sm leading-7 text-[var(--text-secondary)] sm:text-base">
-                The fixed games are already set. Pick up to {WEEKEND_CUP_MAX_VOTE_SELECTIONS} mystery-game
-                choices, or suggest the title you want added to the vote.
-              </p>
-            </div>
+        <section id="vote" className="scroll-mt-24 space-y-6 px-1 pb-2 sm:px-2">
+          {visibleBallots.map((ballot) => {
+            const selectedCount = ballot.options.filter((option) => option.userVoted).length;
 
-            <div className="flex items-center gap-3 lg:justify-end">
-              {!user ? (
-                <Link href={signInHref} className="btn-outline">
-                  Sign in to vote
-                </Link>
-              ) : null}
-            </div>
-          </div>
-
-          <div className="mt-5 space-y-4">
-            {visibleBallots.map((ballot) => {
-              const selectedCount = ballot.options.filter((option) => option.userVoted).length;
-
-              return (
-              <div key={ballot.slug} className="space-y-5">
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  <p className="text-sm font-bold uppercase tracking-[0.16em] text-[var(--text-soft)]">
-                    {selectedCount}/{WEEKEND_CUP_MAX_VOTE_SELECTIONS} selected / {ballot.totalVotes} votes cast
+            return (
+              <div key={ballot.slug} className="space-y-6">
+                <div className="max-w-4xl space-y-4">
+                  <p className="section-title">Player vote</p>
+                  <h2 className="text-[clamp(2rem,4.2vw,3.5rem)] font-black leading-[0.98] text-[var(--text-primary)]">
+                    Pick the mystery slot.
+                  </h2>
+                  <p className="max-w-3xl text-[0.98rem] leading-8 text-[var(--text-secondary)] sm:text-base">
+                    CODM, PUBG Mobile, and eFootball are already locked for Season 1. Choose up to{' '}
+                    {WEEKEND_CUP_MAX_VOTE_SELECTIONS} extra game picks. If your title is missing,
+                    drop it below and we add it to the vote.
                   </p>
+
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="brand-chip">
+                      {selectedCount}/{WEEKEND_CUP_MAX_VOTE_SELECTIONS} selected
+                    </span>
+                    <span className="brand-chip">{ballot.totalVotes} votes cast</span>
+                    <span className="brand-chip">Mystery slot voting only</span>
+                    {!user ? (
+                      <Link href={signInHref} className="btn-outline min-h-11 px-4 py-2 text-sm">
+                        Sign in to vote
+                      </Link>
+                    ) : null}
+                  </div>
                 </div>
 
-                <Stories id="options" className="scroll-mt-28">
-                  <StoriesContent className="-ml-2 md:-ml-4">
-                    {ballot.options.map((option) => {
-                      const isVoting = actingOptionId === option.id;
-                      return (
-                        <Story
-                          key={option.id}
-                          onClick={() => {
-                            if (!isVoting) {
-                              void handleVote(option.id, option.userVoted, selectedCount);
-                            }
-                          }}
-                          onKeyDown={(event) => {
-                            if ((event.key === 'Enter' || event.key === ' ') && !isVoting) {
-                              event.preventDefault();
-                              void handleVote(option.id, option.userVoted, selectedCount);
-                            }
-                          }}
-                          aria-label={`${option.userVoted ? 'Remove vote for' : 'Vote for'} ${option.label}`}
-                          aria-pressed={option.userVoted}
-                          itemClassName="!w-[min(78vw,236px)] sm:!w-[224px] lg:!w-[236px]"
-                          className={cn(
-                            'group relative aspect-[3/4] min-h-[214px] overflow-hidden rounded-[var(--radius-panel)] border bg-[rgba(7,14,25,0.94)] text-left shadow-[var(--shadow-soft)] transition-all duration-200 sm:min-h-[242px]',
-                            option.userVoted
-                              ? 'border-[rgba(50,224,196,0.34)] ring-1 ring-[rgba(50,224,196,0.2)]'
-                              : 'border-white/10 hover:-translate-y-0.5 hover:border-white/18'
-                          )}
-                        >
-                          <WeekendCupOptionCard
-                            option={option}
-                            isVoting={isVoting}
-                          />
-                        </Story>
-                      );
-                    })}
-                  </StoriesContent>
-                </Stories>
+                <div
+                  id="options"
+                  className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3"
+                >
+                  {ballot.options.map((option) => {
+                    const isVoting = actingOptionId === option.id;
 
-                <div className="mt-5 border-t border-[var(--border-color)] pt-4">
-                  <label className="label">Suggest a game</label>
+                    return (
+                      <button
+                        key={option.id}
+                        type="button"
+                        onClick={() => {
+                          if (!isVoting) {
+                            void handleVote(option.id, option.userVoted, selectedCount);
+                          }
+                        }}
+                        aria-label={`${option.userVoted ? 'Remove vote for' : 'Vote for'} ${option.label}`}
+                        aria-pressed={option.userVoted}
+                        className={cn(
+                          'group relative min-h-[320px] overflow-hidden rounded-[var(--radius-panel)] border bg-[rgba(7,14,25,0.94)] text-left shadow-[var(--shadow-soft)] transition-all duration-200 hover:-translate-y-0.5 sm:min-h-[340px]',
+                          option.userVoted
+                            ? 'border-[rgba(50,224,196,0.34)] ring-1 ring-[rgba(50,224,196,0.2)]'
+                            : 'border-white/10 hover:border-white/18'
+                        )}
+                      >
+                        <WeekendCupOptionCard option={option} isVoting={isVoting} />
+                      </button>
+                    );
+                  })}
+                </div>
+
+                <div className="grid gap-3 rounded-[var(--radius-panel)] border border-[var(--border-color)] bg-[rgba(17,26,44,0.68)] p-4 shadow-[var(--shadow-soft)] sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] sm:items-end">
+                  <div className="sm:col-span-3">
+                    <label className="label">Suggest a game</label>
+                    <p className="mt-1 text-sm text-[var(--text-secondary)]">
+                      Missing your pick? Drop it here and we can add it to the mystery-game vote.
+                    </p>
+                  </div>
                   <input
                     type="text"
                     value={suggestionDrafts[ballot.slug]?.label ?? ''}
@@ -480,51 +490,48 @@ export function WeekendCupClient() {
                         },
                       }))
                     }
-                    placeholder="Drop a title"
+                    placeholder="Game title"
                     className="input"
                     maxLength={80}
                   />
-                  <div className="mt-2 grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto]">
-                    <input
-                      type="text"
-                      value={suggestionDrafts[ballot.slug]?.description ?? ''}
-                      onChange={(event) =>
-                        setSuggestionDrafts((current) => ({
-                          ...current,
-                          [ballot.slug]: {
-                            label: current[ballot.slug]?.label ?? '',
-                            description: event.target.value,
-                          },
-                        }))
-                      }
-                      placeholder="Short reason"
-                      className="input"
-                      maxLength={240}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => void handleSuggest(ballot.slug)}
-                      disabled={loading || submittingBallotSlug === ballot.slug}
-                      className="btn-outline"
-                    >
-                      {submittingBallotSlug === ballot.slug ? (
-                        <>
-                          <Loader2 size={14} className="animate-spin" />
-                          Adding
-                        </>
-                      ) : (
-                        <>
-                          Suggest
-                          <ArrowRight size={14} />
-                        </>
-                      )}
-                    </button>
-                  </div>
+                  <input
+                    type="text"
+                    value={suggestionDrafts[ballot.slug]?.description ?? ''}
+                    onChange={(event) =>
+                      setSuggestionDrafts((current) => ({
+                        ...current,
+                        [ballot.slug]: {
+                          label: current[ballot.slug]?.label ?? '',
+                          description: event.target.value,
+                        },
+                      }))
+                    }
+                    placeholder="Why it should be in"
+                    className="input"
+                    maxLength={240}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => void handleSuggest(ballot.slug)}
+                    disabled={loading || submittingBallotSlug === ballot.slug}
+                    className="btn-outline min-h-12 justify-center px-4"
+                  >
+                    {submittingBallotSlug === ballot.slug ? (
+                      <>
+                        <Loader2 size={14} className="animate-spin" />
+                        Adding
+                      </>
+                    ) : (
+                      <>
+                        Suggest
+                        <ArrowRight size={14} />
+                      </>
+                    )}
+                  </button>
                 </div>
               </div>
-              );
-            })}
-          </div>
+            );
+          })}
         </section>
       </main>
 

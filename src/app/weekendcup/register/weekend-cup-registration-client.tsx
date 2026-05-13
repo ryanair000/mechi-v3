@@ -33,11 +33,11 @@ import {
 const API_PATH = '/api/events/playmechi-weekend-cup/register';
 
 const DASHBOARD_RADIUS_STYLE: CSSProperties & Record<string, string> = {
-  '--radius': '0.5rem',
-  '--radius-control': '0.55rem',
-  '--radius-panel': '0.65rem',
-  '--radius-card': '0.75rem',
-  '--radius-hero': '0.8rem',
+  '--radius': '0.95rem',
+  '--radius-control': '1rem',
+  '--radius-panel': '1.35rem',
+  '--radius-card': '1.7rem',
+  '--radius-hero': '1.95rem',
 };
 
 function paymentStatusClasses(status: WeekendCupPlayerRegistration['payment_status']) {

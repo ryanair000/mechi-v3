@@ -24,6 +24,10 @@ function matchesAppPath(pathname: string, basePath: string) {
   );
 }
 
+function isWeekendCupHomeAnchorPath(pathname: string) {
+  return pathname === '/#vote' || pathname === '/#overview' || pathname === '/#options';
+}
+
 export function isModeratorDeskPath(pathname: string) {
   return matchesAppPath(pathname, MODERATOR_DESK_PATH);
 }
@@ -40,6 +44,10 @@ export function getPostLoginRedirectPath(
   const safePath = getSafeNextPath(requestedPath, fallback);
 
   if (!hasModeratorDeskRole(identity)) {
+    return safePath;
+  }
+
+  if (isWeekendCupHomeAnchorPath(safePath)) {
     return safePath;
   }
 

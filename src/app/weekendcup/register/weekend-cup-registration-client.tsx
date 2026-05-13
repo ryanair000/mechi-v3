@@ -340,14 +340,14 @@ export function WeekendCupRegistrationClient() {
     >
       <HeaderSpacing />
 
-      <main className="page-container max-w-5xl pb-10 pt-[1.65rem]">
-        <section className="space-y-6 px-1 py-8 sm:px-2 sm:py-10">
+      <main className="page-container max-w-[920px] pb-10 pt-[1.35rem]">
+        <section className="space-y-5 px-1 py-6 sm:px-2 sm:py-8">
           <div>
             <p className="section-title">Weekend Cup registration</p>
-            <h1 className="mt-2 max-w-3xl text-4xl font-black leading-tight text-[var(--text-primary)] sm:text-5xl">
+            <h1 className="mt-2 max-w-3xl text-[clamp(2rem,3.6vw,3.4rem)] font-black leading-tight text-[var(--text-primary)]">
               Lock your slot. Pay to confirm.
             </h1>
-            <p className="mt-4 max-w-2xl text-base leading-7 text-[var(--text-secondary)]">
+            <p className="mt-3 max-w-2xl text-[0.95rem] leading-7 text-[var(--text-secondary)]">
               Pick your game, confirm your details, then pay now. If you played PlayMechi
               before, we prefill what we can.
             </p>
@@ -356,15 +356,15 @@ export function WeekendCupRegistrationClient() {
                 WEEKEND_CUP_ENTRY_PRICING.earlyBirdLimitLabel,
                 WEEKEND_CUP_REGISTRATION_OPENS_LABEL,
               ].map((item) => (
-                <span key={item} className="brand-chip">
+                <span key={item} className="brand-chip !px-3 !py-1 !text-[0.78rem]">
                   {item}
                 </span>
               ))}
             </div>
           </div>
 
-          <div className="rounded-[var(--radius-panel)] border border-[var(--border-color)] bg-[rgba(17,26,44,0.76)] p-4 shadow-[var(--shadow-soft)] backdrop-blur sm:p-5">
-            <div className="grid gap-6 lg:grid-cols-[0.78fr_1.22fr]">
+          <div className="card p-4 sm:p-5">
+            <div className="grid gap-5 lg:grid-cols-[0.78fr_1.22fr]">
               <div className="space-y-4">
                 <div>
                   <p className="text-xs font-black uppercase tracking-[0.16em] text-[var(--text-soft)]">
@@ -384,7 +384,7 @@ export function WeekendCupRegistrationClient() {
                         key={game.game}
                         type="button"
                         onClick={() => setSelectedGame(game.game)}
-                        className={`rounded-[var(--radius-control)] border px-4 py-3 text-left transition ${
+                        className={`rounded-[1.1rem] border px-4 py-3 text-left transition ${
                           selected
                             ? 'border-[rgba(50,224,196,0.42)] bg-[rgba(50,224,196,0.13)]'
                             : 'border-white/10 bg-black/10 hover:border-white/20'
@@ -407,7 +407,7 @@ export function WeekendCupRegistrationClient() {
                         <button
                           type="button"
                           onClick={() => setSelectedGame('mystery')}
-                          className="btn-primary min-h-full justify-center whitespace-nowrap px-4 text-sm"
+                          className="btn-primary min-h-full justify-center whitespace-nowrap !rounded-[1.1rem] px-4 text-sm"
                         >
                           Register Now
                         </button>
@@ -416,14 +416,14 @@ export function WeekendCupRegistrationClient() {
                   })}
                 </div>
 
-                <div className="rounded-[var(--radius-control)] border border-white/10 bg-black/10 p-4">
+                <div className="rounded-[1.1rem] border border-white/10 bg-black/10 p-4">
                   <p className="text-xs font-black uppercase tracking-[0.14em] text-[var(--text-soft)]">
                     Payment status
                   </p>
                   {currentRegistration ? (
                     <div className="mt-3 space-y-2 text-sm text-[var(--text-secondary)]">
                       <span
-                        className={`inline-flex rounded-[var(--radius-control)] px-3 py-1 text-xs font-bold uppercase tracking-[0.14em] ${paymentStatusClasses(
+                        className={`inline-flex rounded-full px-3 py-1 text-xs font-bold uppercase tracking-[0.14em] ${paymentStatusClasses(
                           currentRegistration.payment_status
                         )}`}
                       >
@@ -461,7 +461,7 @@ export function WeekendCupRegistrationClient() {
                     </p>
                   </div>
                   {currentRegistration ? (
-                    <span className="inline-flex items-center gap-2 rounded-[var(--radius-control)] bg-[rgba(50,224,196,0.12)] px-3 py-2 text-xs font-black uppercase tracking-[0.12em] text-[var(--accent-secondary-text)]">
+                    <span className="inline-flex items-center gap-2 rounded-full bg-[rgba(50,224,196,0.12)] px-3 py-2 text-xs font-black uppercase tracking-[0.12em] text-[var(--accent-secondary-text)]">
                       <CheckCircle2 size={14} />
                       Saved
                     </span>
@@ -507,7 +507,7 @@ export function WeekendCupRegistrationClient() {
                 </div>
 
                 <div className="grid gap-3 md:grid-cols-2">
-                  <label className="flex items-start gap-3 rounded-[var(--radius-control)] border border-white/10 bg-black/10 px-4 py-3 text-sm text-[var(--text-secondary)]">
+                  <label className="flex items-start gap-3 rounded-[1.1rem] border border-white/10 bg-black/10 px-4 py-3 text-sm text-[var(--text-secondary)]">
                     <input
                       type="checkbox"
                       checked={followedInstagram}
@@ -517,7 +517,7 @@ export function WeekendCupRegistrationClient() {
                     <span>I followed PlayMechi on Instagram.</span>
                   </label>
 
-                  <label className="flex items-start gap-3 rounded-[var(--radius-control)] border border-white/10 bg-black/10 px-4 py-3 text-sm text-[var(--text-secondary)]">
+                  <label className="flex items-start gap-3 rounded-[1.1rem] border border-white/10 bg-black/10 px-4 py-3 text-sm text-[var(--text-secondary)]">
                     <input
                       type="checkbox"
                       checked={subscribedYoutube}
@@ -528,7 +528,7 @@ export function WeekendCupRegistrationClient() {
                   </label>
                 </div>
 
-                <label className="flex items-start gap-3 rounded-[var(--radius-control)] border border-white/10 bg-black/10 px-4 py-3 text-sm text-[var(--text-secondary)]">
+                <label className="flex items-start gap-3 rounded-[1.1rem] border border-white/10 bg-black/10 px-4 py-3 text-sm text-[var(--text-secondary)]">
                   <input
                     type="checkbox"
                     checked={availableAtMatchTime}

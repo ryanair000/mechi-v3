@@ -183,17 +183,17 @@ function WeekendCupOptionCard({
         />
       ) : null}
       <div className="absolute inset-0 bg-gradient-to-t from-black/86 via-black/24 to-black/10" />
-      <div className="absolute inset-x-0 top-0 flex items-center justify-end p-3">
-        <span className="rounded-[var(--radius-control)] border border-white/14 bg-black/32 px-2.5 py-1 text-xs font-black uppercase text-white/88">
+      <div className="absolute inset-x-0 top-0 flex items-center justify-end p-2.5">
+        <span className="rounded-[var(--radius-control)] border border-white/14 bg-black/32 px-2 py-1 text-[0.68rem] font-black uppercase text-white/88">
           {option.votes} votes
         </span>
       </div>
 
-      <div className="relative z-10 space-y-3 p-4">
-        <h4 className="text-[1.45rem] font-black leading-tight text-white sm:text-[1.7rem]">
+      <div className="relative z-10 space-y-2.5 p-3.5">
+        <h4 className="text-[1.1rem] font-black leading-tight text-white sm:text-[1.32rem]">
           {option.label}
         </h4>
-        <div className="inline-flex items-center gap-2 rounded-[var(--radius-control)] bg-white px-3 py-2 text-xs font-black uppercase text-[#07111e]">
+        <div className="inline-flex items-center gap-2 rounded-[var(--radius-control)] bg-white px-3 py-1.5 text-[0.72rem] font-black uppercase text-[#07111e]">
           {isVoting ? (
             <Loader2 size={14} className="animate-spin" />
           ) : option.userVoted ? (
@@ -357,28 +357,28 @@ export function WeekendCupClient() {
     >
       <WeekendCupHeader />
 
-      <main className="page-container max-w-[1200px] space-y-10 pb-10 pt-6 sm:pt-8">
-        <section id="overview" className="space-y-6 px-1 sm:px-2">
+      <main className="page-container max-w-[900px] space-y-8 pb-10 pt-5 sm:pt-7">
+        <section id="overview" className="space-y-4 px-1 sm:px-2">
           <div className="overflow-hidden rounded-[var(--radius-card)] border border-[var(--border-color)] bg-[rgba(12,20,34,0.82)] shadow-[var(--shadow-soft)]">
-            <div className="relative aspect-[16/9] w-full sm:aspect-[16/7] lg:aspect-[16/5]">
+            <div className="relative aspect-[16/9] w-full sm:aspect-[16/7] lg:aspect-[21/5]">
               <Image
                 src={WEEKEND_CUP_PROMO_IMAGE}
                 alt="PlayMechi Weekend Cup Season 1 promo artwork"
                 fill
                 priority
-                sizes="(min-width: 1280px) 1200px, (min-width: 768px) 92vw, 100vw"
+                sizes="(min-width: 1280px) 900px, (min-width: 768px) 86vw, 100vw"
                 className="object-cover object-center"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-[#07111e]/36 via-transparent to-transparent" />
             </div>
           </div>
 
-          <div className="max-w-4xl space-y-4">
+          <div className="max-w-3xl space-y-3">
             <p className="section-title">Weekend Cup preview</p>
-            <h1 className="max-w-[11ch] text-[clamp(2.8rem,5.3vw,5rem)] font-black leading-[0.94] text-[var(--text-primary)]">
+            <h1 className="max-w-[10ch] text-[clamp(2.25rem,4vw,3.6rem)] font-black leading-[0.95] text-[var(--text-primary)]">
               {WEEKEND_CUP_TITLE}
             </h1>
-            <p className="max-w-3xl text-[1rem] leading-8 text-[var(--text-secondary)] sm:text-[1.12rem]">
+            <p className="max-w-2xl text-[0.92rem] leading-7 text-[var(--text-secondary)] sm:text-[1rem]">
               Season 1 runs on <strong>{WEEKEND_CUP_EVENT_DATES}</strong>. PUBG Mobile lands on
               Friday, CODM takes Saturday, eFootball closes Sunday, and players are deciding the
               final mystery slot before the lineup locks.
@@ -391,48 +391,48 @@ export function WeekendCupClient() {
                 WEEKEND_CUP_ENTRY_PRICING.entryFromLabel,
                 WEEKEND_CUP_STREAM_LABEL,
               ].map((item) => (
-                <span key={item} className="brand-chip">
+                <span key={item} className="brand-chip !px-3 !py-1 !text-[0.78rem]">
                   {item}
                 </span>
               ))}
             </div>
 
             <div className="flex flex-wrap gap-3">
-              <Link href={user ? '#vote' : signInHref} className="btn-primary">
+              <Link href={user ? '#vote' : signInHref} className="btn-primary min-h-11 px-4 py-2 text-[0.9rem]">
                 {user ? 'Vote Mystery Game' : 'Sign in to vote'}
               </Link>
-              <Link href="/weekendcup" className="btn-outline">
+              <Link href="/weekendcup" className="btn-outline min-h-11 px-4 py-2 text-[0.9rem]">
                 Register Now
               </Link>
             </div>
           </div>
         </section>
 
-        <section id="vote" className="scroll-mt-24 space-y-6 px-1 pb-2 sm:px-2">
+        <section id="vote" className="scroll-mt-24 space-y-5 px-1 pb-2 sm:px-2">
           {visibleBallots.map((ballot) => {
             const selectedCount = ballot.options.filter((option) => option.userVoted).length;
 
             return (
-              <div key={ballot.slug} className="space-y-6">
-                <div className="max-w-4xl space-y-4">
+              <div key={ballot.slug} className="space-y-5">
+                <div className="max-w-3xl space-y-3">
                   <p className="section-title">Player vote</p>
-                  <h2 className="text-[clamp(2rem,4.2vw,3.5rem)] font-black leading-[0.98] text-[var(--text-primary)]">
+                  <h2 className="text-[clamp(1.7rem,3.4vw,2.7rem)] font-black leading-[0.98] text-[var(--text-primary)]">
                     Pick the mystery slot.
                   </h2>
-                  <p className="max-w-3xl text-[0.98rem] leading-8 text-[var(--text-secondary)] sm:text-base">
+                  <p className="max-w-2xl text-[0.9rem] leading-7 text-[var(--text-secondary)] sm:text-[0.98rem]">
                     CODM, PUBG Mobile, and eFootball are already locked for Season 1. Choose up to{' '}
                     {WEEKEND_CUP_MAX_VOTE_SELECTIONS} extra game picks. If your title is missing,
                     drop it below and we add it to the vote.
                   </p>
 
                   <div className="flex flex-wrap items-center gap-2">
-                    <span className="brand-chip">
+                    <span className="brand-chip !px-3 !py-1 !text-[0.76rem]">
                       {selectedCount}/{WEEKEND_CUP_MAX_VOTE_SELECTIONS} selected
                     </span>
-                    <span className="brand-chip">{ballot.totalVotes} votes cast</span>
-                    <span className="brand-chip">Mystery slot voting only</span>
+                    <span className="brand-chip !px-3 !py-1 !text-[0.76rem]">{ballot.totalVotes} votes cast</span>
+                    <span className="brand-chip !px-3 !py-1 !text-[0.76rem]">Mystery slot voting only</span>
                     {!user ? (
-                      <Link href={signInHref} className="btn-outline min-h-11 px-4 py-2 text-sm">
+                      <Link href={signInHref} className="btn-outline min-h-10 px-4 py-2 text-[0.86rem]">
                         Sign in to vote
                       </Link>
                     ) : null}
@@ -458,7 +458,7 @@ export function WeekendCupClient() {
                         aria-label={`${option.userVoted ? 'Remove vote for' : 'Vote for'} ${option.label}`}
                         aria-pressed={option.userVoted}
                         className={cn(
-                          'group relative min-h-[320px] overflow-hidden rounded-[var(--radius-panel)] border bg-[rgba(7,14,25,0.94)] text-left shadow-[var(--shadow-soft)] transition-all duration-200 hover:-translate-y-0.5 sm:min-h-[340px]',
+                          'group relative min-h-[250px] overflow-hidden rounded-[var(--radius-panel)] border bg-[rgba(7,14,25,0.94)] text-left shadow-[var(--shadow-soft)] transition-all duration-200 hover:-translate-y-0.5 sm:min-h-[270px]',
                           option.userVoted
                             ? 'border-[rgba(50,224,196,0.34)] ring-1 ring-[rgba(50,224,196,0.2)]'
                             : 'border-white/10 hover:border-white/18'
@@ -514,7 +514,7 @@ export function WeekendCupClient() {
                     type="button"
                     onClick={() => void handleSuggest(ballot.slug)}
                     disabled={loading || submittingBallotSlug === ballot.slug}
-                    className="btn-outline min-h-12 justify-center px-4"
+                    className="btn-outline min-h-10 justify-center px-4 text-[0.88rem]"
                   >
                     {submittingBallotSlug === ballot.slug ? (
                       <>

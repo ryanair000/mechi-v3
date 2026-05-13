@@ -66,9 +66,9 @@ const FIXED_SEASON_ONE_GAME_SLUGS = new Set(['pubgm', 'codm', 'efootball']);
 
 const DASHBOARD_RADIUS_STYLE: CSSProperties & Record<string, string> = {
   '--radius': '0.5rem',
-  '--radius-control': '0.4rem',
-  '--radius-panel': '0.5rem',
-  '--radius-card': '0.5rem',
+  '--radius-control': '0.55rem',
+  '--radius-panel': '0.65rem',
+  '--radius-card': '0.75rem',
   '--radius-hero': '0.8rem',
 };
 
@@ -357,17 +357,17 @@ export function WeekendCupClient() {
     >
       <WeekendCupHeader />
 
-      <main className="page-container max-w-5xl space-y-5 pb-6 pt-[1.65rem]">
+      <main className="page-container max-w-7xl space-y-8 pb-8 pt-7 sm:pt-9">
         <section id="overview" className="px-1 py-2 sm:px-2">
-          <div className="max-w-3xl">
+          <div className="max-w-4xl">
             <p className="section-title">Weekend Cup preview</p>
-            <h1 className="mt-2 text-4xl font-black text-[var(--text-primary)] sm:text-5xl">
+            <h1 className="mt-3 max-w-5xl text-4xl font-black leading-[0.98] text-[var(--text-primary)] sm:text-5xl lg:text-6xl">
               {WEEKEND_CUP_TITLE}
             </h1>
-            <p className="mt-4 max-w-2xl text-base leading-7 text-[var(--text-secondary)]">
+            <p className="mt-5 max-w-3xl text-base leading-7 text-[var(--text-secondary)] sm:text-lg sm:leading-8">
               Season 1 lands on <strong>{WEEKEND_CUP_EVENT_DATES}</strong>. CODM, PUBG Mobile,
-              and eFootball are locked in. Vote for the mystery-game slot, then register and
-              pay with Paystack to confirm your place.
+              and eFootball are locked in. Vote for the mystery-game slot, then register to
+              lock your place.
             </p>
             <div className="mt-5 flex flex-wrap gap-2">
               {[
@@ -386,24 +386,27 @@ export function WeekendCupClient() {
               <Link href={user ? '#vote' : signInHref} className="btn-primary">
                 {user ? 'Vote Mystery Game' : 'Sign in to vote'}
               </Link>
+              <Link href="/weekendcup" className="btn-outline">
+                Register Now
+              </Link>
             </div>
           </div>
         </section>
 
         <section id="vote" className="scroll-mt-24 px-1 py-6 sm:px-2">
-          <div className="flex flex-wrap items-start justify-between gap-3">
-            <div>
+          <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
+            <div className="max-w-3xl">
               <p className="section-title">Player vote</p>
-              <h2 className="mt-2 text-3xl font-black text-[var(--text-primary)]">
+              <h2 className="mt-2 text-3xl font-black leading-tight text-[var(--text-primary)] sm:text-4xl">
                 Vote the mystery game.
               </h2>
-              <p className="mt-3 max-w-2xl text-sm leading-7 text-[var(--text-secondary)]">
+              <p className="mt-3 max-w-3xl text-sm leading-7 text-[var(--text-secondary)] sm:text-base">
                 The fixed games are already set. Pick up to {WEEKEND_CUP_MAX_VOTE_SELECTIONS} mystery-game
-                options, or suggest the title you want added to the vote.
+                choices, or suggest the title you want added to the vote.
               </p>
             </div>
 
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 lg:justify-end">
               {!user ? (
                 <Link href={signInHref} className="btn-outline">
                   Sign in to vote
@@ -444,9 +447,9 @@ export function WeekendCupClient() {
                           }}
                           aria-label={`${option.userVoted ? 'Remove vote for' : 'Vote for'} ${option.label}`}
                           aria-pressed={option.userVoted}
-                          itemClassName="!w-[min(78vw,240px)] sm:!w-[240px]"
+                          itemClassName="!w-[min(78vw,236px)] sm:!w-[224px] lg:!w-[236px]"
                           className={cn(
-                            'group relative aspect-[3/4] min-h-[214px] overflow-hidden rounded-[var(--radius-panel)] border bg-[rgba(7,14,25,0.94)] text-left shadow-[var(--shadow-soft)] transition-all duration-200 sm:min-h-[250px]',
+                            'group relative aspect-[3/4] min-h-[214px] overflow-hidden rounded-[var(--radius-panel)] border bg-[rgba(7,14,25,0.94)] text-left shadow-[var(--shadow-soft)] transition-all duration-200 sm:min-h-[242px]',
                             option.userVoted
                               ? 'border-[rgba(50,224,196,0.34)] ring-1 ring-[rgba(50,224,196,0.2)]'
                               : 'border-white/10 hover:-translate-y-0.5 hover:border-white/18'

@@ -121,7 +121,7 @@ export const WEEKEND_CUP_REGISTRATION_DISABLED_MESSAGE =
 export const WEEKEND_CUP_VOTING_DISABLED_MESSAGE =
   'Weekend Cup voting is paused right now. Try again in a bit.';
 export const WEEKEND_CUP_PENDING_PAYMENT_HELP_COPY =
-  'Paystack confirms the slot after payment clears. Pending players do not count as confirmed.';
+  'Payment confirms the slot after it clears. Pending players do not count as confirmed.';
 export const WEEKEND_CUP_SUPPORT_NUMBER_LABEL = CUSTOMER_WHATSAPP_SUPPORT_NUMBER_LABEL;
 export const WEEKEND_CUP_SUPPORT_URL = getCustomerWhatsAppSupportUrl(
   'Hi PlayMechi, I need Weekend Cup payment help.'
@@ -159,10 +159,10 @@ export const WEEKEND_CUP_ENTRY_PRICING = {
   earlyBirdLabel: 'Early Bird',
   regularLabel: 'Phase 2',
   lateLabel: 'Final Rush',
-  pricingLineLabel: 'CODM/PUBG/Mystery: KSh 50, 75, 100. eFootball: KSh 100, 125, 150.',
+  pricingLineLabel: 'Early Bird is active now',
   earlyBirdLimitLabel: 'Early Bird is live now',
-  earlyBirdPolicyLabel: 'Paystack payment confirms the slot automatically.',
-  confirmedAfterPaymentLabel: 'Slots move from pending to confirmed after Paystack clears.',
+  earlyBirdPolicyLabel: 'Payment confirms the slot automatically.',
+  confirmedAfterPaymentLabel: 'Slots move from pending to confirmed after payment clears.',
   pendingPaymentLabel: 'Pending payment',
   pendingPaymentMessage: WEEKEND_CUP_CHECK_IN_BLOCKED_MESSAGE,
 } as const;
@@ -422,7 +422,7 @@ export function getWeekendCupPaymentTierDisplay(
 
 export function getWeekendCupGamePricingLine(game: OnlineTournamentGameKey) {
   const fees = WEEKEND_CUP_GAME_ENTRY_FEES[game] ?? WEEKEND_CUP_GAME_ENTRY_FEES.codm;
-  return `Early Bird KSh ${fees.early_bird} / Phase 2 KSh ${fees.regular} / Final Rush KSh ${fees.late}`;
+  return `Early Bird KSh ${fees.early_bird}`;
 }
 
 export function getWeekendCupDefaultPaymentForConfirmation(

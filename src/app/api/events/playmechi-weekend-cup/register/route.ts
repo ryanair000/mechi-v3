@@ -272,7 +272,7 @@ export async function POST(request: NextRequest) {
     const availableAtMatchTime = Boolean(
       body.available_at_match_time ?? body.available_at_8pm ?? sourcePrefill?.available_at_8pm ?? true
     );
-    const acceptedRules = Boolean(body.accepted_rules);
+    const acceptedRules = true;
 
     if (inGameUsername.length < 2) {
       return NextResponse.json({ error: 'Add your in-game username or gamer tag' }, { status: 400 });
@@ -283,10 +283,6 @@ export async function POST(request: NextRequest) {
         { error: `Confirm that you are free for ${gameConfig.dateLabel} at ${gameConfig.timeLabel}` },
         { status: 400 }
       );
-    }
-
-    if (!acceptedRules) {
-      return NextResponse.json({ error: 'Accept the Weekend Cup rules before registering' }, { status: 400 });
     }
 
     if (followedInstagram && instagramUsername.length < 2) {

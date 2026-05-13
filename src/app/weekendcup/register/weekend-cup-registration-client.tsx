@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useCallback, useEffect, useMemo, useState, type CSSProperties } from 'react';
+import { useCallback, useEffect, useState, type CSSProperties } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import toast from 'react-hot-toast';
 import { CheckCircle2, Loader2, MessageCircle } from 'lucide-react';
@@ -24,7 +24,6 @@ import {
   getWeekendCupFallbackSummary,
   getWeekendCupGamePricingLine,
   getWeekendCupPaymentTierLabel,
-  getWeekendCupSuggestedTierCopy,
   isWeekendCupGame,
   isWeekendCupRegistrationOpen,
   type WeekendCupPlayerRegistration,
@@ -35,9 +34,9 @@ const API_PATH = '/api/events/playmechi-weekend-cup/register';
 
 const DASHBOARD_RADIUS_STYLE: CSSProperties & Record<string, string> = {
   '--radius': '0.5rem',
-  '--radius-control': '0.4rem',
-  '--radius-panel': '0.5rem',
-  '--radius-card': '0.5rem',
+  '--radius-control': '0.55rem',
+  '--radius-panel': '0.65rem',
+  '--radius-card': '0.75rem',
   '--radius-hero': '0.8rem',
 };
 
@@ -59,7 +58,6 @@ function paymentStatusClasses(status: WeekendCupPlayerRegistration['payment_stat
 function HeaderSpacing() {
   return (
     <WeekendCupHeader
-      optionsHref={`${WEEKEND_CUP_PUBLIC_PATH}#options`}
       voteHref={`${WEEKEND_CUP_PUBLIC_PATH}#vote`}
     />
   );
@@ -85,7 +83,6 @@ export function WeekendCupRegistrationClient() {
   const [subscribedYoutube, setSubscribedYoutube] = useState(true);
   const [youtubeName, setYoutubeName] = useState('');
   const [availableAtMatchTime, setAvailableAtMatchTime] = useState(true);
-  const [acceptedRules, setAcceptedRules] = useState(false);
 
   const selectedConfig = WEEKEND_CUP_GAMES.find((game) => game.game === selectedGame) ?? WEEKEND_CUP_GAMES[0];
   const selectedSummary = summary.games[selectedGame];
@@ -99,11 +96,6 @@ export function WeekendCupRegistrationClient() {
   const createAccountHref = getRegisterPath({ next: returnPath });
   const signInHref = getLoginPath(returnPath);
   const dashboardHref = requestedNextPath || `${WEEKEND_CUP_DASHBOARD_PATH}?game=${encodeURIComponent(selectedGame)}`;
-  const pricingHint = useMemo(
-    () => getWeekendCupSuggestedTierCopy(summary.payment.earlyBirdPaidCount),
-    [summary.payment.earlyBirdPaidCount]
-  );
-
   useEffect(() => {
     setRegistrationOpen(WEEKEND_CUP_REGISTRATION_ENABLED && isWeekendCupRegistrationOpen());
   }, []);
@@ -189,7 +181,6 @@ export function WeekendCupRegistrationClient() {
       setInstagramUsername(currentRegistration.instagram_username ?? '');
       setSubscribedYoutube(currentRegistration.subscribed_youtube);
       setYoutubeName(currentRegistration.youtube_name ?? '');
-      setAcceptedRules(true);
       return;
     }
 
@@ -201,7 +192,6 @@ export function WeekendCupRegistrationClient() {
     setSubscribedYoutube(prefill?.subscribed_youtube ?? true);
     setYoutubeName(cleanWeekendCupText(prefill?.youtube_name ?? '', 100));
     setAvailableAtMatchTime(prefill?.available_at_8pm ?? true);
-    setAcceptedRules(false);
   }, [currentRegistration, selectedGame, summary.prefill, user]);
 
   const handleSubmit = async () => {
@@ -227,7 +217,6 @@ export function WeekendCupRegistrationClient() {
           subscribed_youtube: subscribedYoutube,
           youtube_name: youtubeName,
           available_at_match_time: availableAtMatchTime,
-          accepted_rules: acceptedRules,
         }),
       });
       const data = (await res.json()) as
@@ -251,7 +240,7 @@ export function WeekendCupRegistrationClient() {
       }
 
       if ('authorization_url' in data && data.authorization_url) {
-        toast.success(data.paymentLabel ? `Opening Paystack for ${data.paymentLabel}.` : 'Opening Paystack.');
+        toast.success(data.paymentLabel ? `Opening checkout for ${data.paymentLabel}.` : 'Opening checkout.');
         window.location.href = data.authorization_url;
         return;
       }
@@ -356,15 +345,14 @@ export function WeekendCupRegistrationClient() {
           <div>
             <p className="section-title">Weekend Cup registration</p>
             <h1 className="mt-2 max-w-3xl text-4xl font-black leading-tight text-[var(--text-primary)] sm:text-5xl">
-              Lock the request. Pay to confirm.
+              Lock your slot. Pay to confirm.
             </h1>
             <p className="mt-4 max-w-2xl text-base leading-7 text-[var(--text-secondary)]">
-              Save your Weekend Cup entry here, then pay through Paystack. Your PlayMechi
-              registration and latest check-in details are reused where they exist.
+              Pick your game, confirm your details, then pay now. If you played PlayMechi
+              before, we prefill what we can.
             </p>
             <div className="mt-5 flex flex-wrap gap-2">
               {[
-                WEEKEND_CUP_ENTRY_PRICING.pricingLineLabel,
                 WEEKEND_CUP_ENTRY_PRICING.earlyBirdLimitLabel,
                 WEEKEND_CUP_REGISTRATION_OPENS_LABEL,
               ].map((item) => (
@@ -389,23 +377,43 @@ export function WeekendCupRegistrationClient() {
                 </div>
 
                 <div className="grid gap-2">
-                  {WEEKEND_CUP_GAMES.map((game) => (
-                    <button
-                      key={game.game}
-                      type="button"
-                      onClick={() => setSelectedGame(game.game)}
-                      className={`rounded-[var(--radius-control)] border px-4 py-3 text-left transition ${
-                        selectedGame === game.game
-                          ? 'border-[rgba(50,224,196,0.42)] bg-[rgba(50,224,196,0.13)]'
-                          : 'border-white/10 bg-black/10 hover:border-white/20'
-                      }`}
-                    >
-                      <span className="block font-black text-[var(--text-primary)]">{game.label}</span>
-                      <span className="mt-1 block text-sm text-[var(--text-secondary)]">
-                        {game.dateLabel} / {getWeekendCupGamePricingLine(game.game)}
-                      </span>
-                    </button>
-                  ))}
+                  {WEEKEND_CUP_GAMES.map((game) => {
+                    const selected = selectedGame === game.game;
+                    const gameButton = (
+                      <button
+                        key={game.game}
+                        type="button"
+                        onClick={() => setSelectedGame(game.game)}
+                        className={`rounded-[var(--radius-control)] border px-4 py-3 text-left transition ${
+                          selected
+                            ? 'border-[rgba(50,224,196,0.42)] bg-[rgba(50,224,196,0.13)]'
+                            : 'border-white/10 bg-black/10 hover:border-white/20'
+                        }`}
+                      >
+                        <span className="block font-black text-[var(--text-primary)]">{game.label}</span>
+                        <span className="mt-1 block text-sm text-[var(--text-secondary)]">
+                          {game.dateLabel} / {getWeekendCupGamePricingLine(game.game)}
+                        </span>
+                      </button>
+                    );
+
+                    if (game.game !== 'mystery') {
+                      return gameButton;
+                    }
+
+                    return (
+                      <div key={game.game} className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto]">
+                        {gameButton}
+                        <button
+                          type="button"
+                          onClick={() => setSelectedGame('mystery')}
+                          className="btn-primary min-h-full justify-center whitespace-nowrap px-4 text-sm"
+                        >
+                          Register Now
+                        </button>
+                      </div>
+                    );
+                  })}
                 </div>
 
                 <div className="rounded-[var(--radius-control)] border border-white/10 bg-black/10 p-4">
@@ -432,7 +440,7 @@ export function WeekendCupRegistrationClient() {
                     </div>
                   ) : (
                     <p className="mt-3 text-sm leading-6 text-[var(--text-secondary)]">
-                      No saved entry yet. Registration starts pending until Paystack clears.
+                      No saved entry yet. Registration starts pending until payment clears.
                     </p>
                   )}
                 </div>
@@ -448,8 +456,8 @@ export function WeekendCupRegistrationClient() {
                       Player details
                     </h2>
                     <p className="mt-1 text-sm text-[var(--text-secondary)]">
-                      {selectedSummary?.confirmed ?? 0}/{selectedConfig.slots} paid confirmed / {pricingHint}
-                      {' '}Current price: {getWeekendCupGamePricingLine(selectedGame).split(' / ')[0]}
+                      {selectedSummary?.confirmed ?? 0}/{selectedConfig.slots} confirmed.{' '}
+                      {getWeekendCupGamePricingLine(selectedGame)}.
                     </p>
                   </div>
                   {currentRegistration ? (
@@ -530,16 +538,6 @@ export function WeekendCupRegistrationClient() {
                   <span>I will be ready on {selectedConfig.dateLabel} at {selectedConfig.timeLabel}.</span>
                 </label>
 
-                <label className="flex items-start gap-3 rounded-[var(--radius-control)] border border-white/10 bg-black/10 px-4 py-3 text-sm text-[var(--text-secondary)]">
-                  <input
-                    type="checkbox"
-                    checked={acceptedRules}
-                    onChange={(event) => setAcceptedRules(event.target.checked)}
-                    className="mt-1"
-                  />
-                  <span>I understand my slot is only confirmed after Paystack payment succeeds.</span>
-                </label>
-
                 <div className="flex flex-wrap gap-3">
                   <button
                     type="button"
@@ -553,7 +551,7 @@ export function WeekendCupRegistrationClient() {
                         Saving
                       </>
                     ) : (
-                      'Pay with Paystack'
+                      'Pay now'
                     )}
                   </button>
                   <a href={WEEKEND_CUP_SUPPORT_URL} className="btn-outline">

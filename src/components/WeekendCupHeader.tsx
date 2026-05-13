@@ -3,55 +3,60 @@
 import Link from 'next/link';
 import { useState } from 'react';
 import { Menu, X } from 'lucide-react';
+import { useAuth } from '@/components/AuthProvider';
 import { BrandLogo } from '@/components/BrandLogo';
 import { ThemeToggle } from '@/components/ThemeToggle';
+import { getLoginPath } from '@/lib/navigation';
 import {
   WEEKEND_CUP_PUBLIC_PATH,
   WEEKEND_CUP_REGISTRATION_PATH,
 } from '@/lib/weekend-cup';
 
 type WeekendCupHeaderProps = {
-  optionsHref?: string;
   voteHref?: string;
   registerHref?: string;
 };
 
 export function WeekendCupHeader({
-  optionsHref = '#options',
   voteHref = '#vote',
   registerHref = WEEKEND_CUP_REGISTRATION_PATH,
 }: WeekendCupHeaderProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const { user } = useAuth();
+  const signInHref = getLoginPath(
+    voteHref.startsWith('/') ? voteHref : `${WEEKEND_CUP_PUBLIC_PATH}${voteHref}`
+  );
   const navItems = [
-    { href: optionsHref, label: 'OPTIONS' },
     { href: voteHref, label: 'VOTE' },
-    { href: registerHref, label: 'REGISTER' },
+    { href: '/leaderboard', label: 'LEADERBOARD' },
+    { href: '/playmechi', label: 'LAST TOURNAMENT' },
+    { href: '/android-testers', label: 'ANDROID' },
+    { href: '/platform', label: 'PLATFORM' },
   ];
-  const primaryNavItems = navItems.filter((item) => item.label !== 'REGISTER');
 
   return (
-    <header className="sticky top-2 z-50 sm:top-4">
-      <div className="relative mx-auto w-full max-w-[1380px] px-4 sm:px-6">
+    <header className="sticky top-3 z-50 sm:top-5">
+      <div className="relative mx-auto w-full max-w-[1480px] px-3 sm:px-6">
         <div
           aria-hidden="true"
           className="pointer-events-none absolute left-1/2 top-1/2 h-px w-screen -translate-x-1/2 -translate-y-1/2 bg-gradient-to-r from-transparent via-[rgba(50,224,196,0.22)] to-transparent"
         />
-        <nav className="relative rounded-[2rem] border border-[rgba(112,139,174,0.22)] bg-[rgba(17,26,44,0.96)] px-4 py-3 shadow-[0_22px_70px_rgba(0,0,0,0.36)] backdrop-blur-xl sm:px-5">
-          <div className="flex min-h-[56px] items-center gap-5">
+        <nav className="relative rounded-[2.8rem] border border-[rgba(112,139,174,0.22)] bg-[rgba(17,26,44,0.96)] p-2 shadow-[0_22px_70px_rgba(0,0,0,0.36)] backdrop-blur-xl">
+          <div className="flex min-h-[68px] items-center gap-4 lg:gap-5">
             <Link
               href={WEEKEND_CUP_PUBLIC_PATH}
-              className="flex shrink-0 items-center rounded-[1rem] px-1 py-1"
+              className="flex shrink-0 items-center rounded-[1.5rem] px-3 py-2 sm:px-4"
               aria-label="Weekend Cup home"
             >
               <BrandLogo size="sm" variant="symbol" />
             </Link>
 
-            <div className="hidden min-w-0 flex-1 items-center justify-center gap-[2.2rem] lg:flex">
-              {primaryNavItems.map((item) => (
+            <div className="hidden min-w-0 flex-1 items-center justify-center gap-[1.45rem] xl:flex 2xl:gap-[2.2rem]">
+              {navItems.map((item) => (
                 <Link
                   key={item.href}
                   href={item.href}
-                  className="rounded-[var(--radius-control)] px-3 py-2 text-base font-black uppercase tracking-[0.18em] text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)]"
+                  className="rounded-[var(--radius-control)] px-2 py-2 text-[0.9rem] font-black uppercase tracking-[0.18em] text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)] 2xl:text-[0.98rem]"
                 >
                   {item.label}
                 </Link>
@@ -61,15 +66,21 @@ export function WeekendCupHeader({
             <div className="ml-auto flex items-center gap-3">
               <ThemeToggle />
               <Link
+                href={user ? '/dashboard' : signInHref}
+                className="hidden min-h-[56px] items-center justify-center rounded-[1rem] border border-[rgba(50,224,196,0.34)] bg-[rgba(17,35,55,0.88)] px-5 text-[0.95rem] font-black uppercase tracking-[0.18em] text-[var(--accent-secondary-text)] transition-all hover:border-[rgba(50,224,196,0.55)] hover:bg-[rgba(50,224,196,0.12)] hover:text-[var(--text-primary)] sm:inline-flex 2xl:px-6 2xl:text-base"
+              >
+                {user ? 'Dashboard' : 'Sign in'}
+              </Link>
+              <Link
                 href={registerHref}
-                className="hidden min-h-14 items-center justify-center rounded-[1rem] border border-[rgba(50,224,196,0.34)] bg-[rgba(17,35,55,0.88)] px-6 text-base font-black uppercase tracking-[0.18em] text-[var(--accent-secondary-text)] transition-all hover:border-[rgba(50,224,196,0.55)] hover:bg-[rgba(50,224,196,0.12)] hover:text-[var(--text-primary)] sm:inline-flex"
+                className="hidden min-h-[56px] items-center justify-center rounded-[1rem] bg-[#ff6268] px-6 text-[0.95rem] font-black uppercase tracking-[0.18em] text-[#07111e] shadow-[0_20px_48px_rgba(255,98,104,0.28)] transition-all hover:-translate-y-0.5 hover:bg-[#ff7479] sm:inline-flex 2xl:px-7 2xl:text-base"
               >
                 Register
               </Link>
               <button
                 type="button"
                 onClick={() => setIsOpen((current) => !current)}
-                className="icon-button h-11 w-11 lg:hidden"
+                className="icon-button h-11 w-11 xl:hidden"
                 aria-label={isOpen ? 'Close Weekend Cup menu' : 'Open Weekend Cup menu'}
                 aria-expanded={isOpen}
                 aria-controls="weekendcup-mobile-nav"
@@ -82,7 +93,7 @@ export function WeekendCupHeader({
           {isOpen ? (
             <div
               id="weekendcup-mobile-nav"
-              className="mt-3 grid gap-2 border-t border-[rgba(112,139,174,0.2)] pt-3 lg:hidden"
+              className="mt-3 grid gap-2 border-t border-[rgba(112,139,174,0.2)] pt-3 xl:hidden"
             >
               {navItems.map((item) => (
                 <Link
@@ -94,6 +105,22 @@ export function WeekendCupHeader({
                   {item.label}
                 </Link>
               ))}
+              <div className="grid gap-2 pt-2 sm:grid-cols-2">
+                <Link
+                  href={user ? '/dashboard' : signInHref}
+                  onClick={() => setIsOpen(false)}
+                  className="inline-flex min-h-12 items-center justify-center rounded-[var(--radius-panel)] border border-[rgba(50,224,196,0.34)] bg-[rgba(17,35,55,0.88)] px-4 text-sm font-black uppercase tracking-[0.18em] text-[var(--accent-secondary-text)]"
+                >
+                  {user ? 'Dashboard' : 'Sign in'}
+                </Link>
+                <Link
+                  href={registerHref}
+                  onClick={() => setIsOpen(false)}
+                  className="inline-flex min-h-12 items-center justify-center rounded-[var(--radius-panel)] bg-[#ff6268] px-4 text-sm font-black uppercase tracking-[0.18em] text-[#07111e]"
+                >
+                  Register
+                </Link>
+              </div>
             </div>
           ) : null}
         </nav>

@@ -8,7 +8,7 @@ import {
 
 export const metadata: Metadata = {
   title: `Register | ${WEEKEND_CUP_TITLE}`,
-  description: `${WEEKEND_CUP_TITLE} registration is open for ${WEEKEND_CUP_EVENT_DATES}. Pay with Paystack to confirm your Weekend Cup slot.`,
+  description: `${WEEKEND_CUP_TITLE} registration is open for ${WEEKEND_CUP_EVENT_DATES}. Pay now to confirm your Weekend Cup slot.`,
 };
 
 export default function WeekendCupRegisterPage() {

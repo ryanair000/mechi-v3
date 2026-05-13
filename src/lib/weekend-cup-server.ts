@@ -360,26 +360,43 @@ export async function loadWeekendCupBallotState(params?: {
   );
 
   return ballots.map((ballot) => {
-    const ballotOptions = options
-      .filter((option) => option.ballot_id === ballot.id)
-      .map((option) => ({
-        id: option.id,
-        slug: option.slug,
-        label: option.label,
-        platform: option.platform,
-        description: option.description ?? '',
-        isOfficial: option.is_official,
-        votes: votesByOption[option.id] ?? 0,
-        userVoted: userVotes.has(option.id),
-        suggestionNote: option.suggestion_note,
-      }))
-      .sort((left, right) => {
-        if (right.votes !== left.votes) {
-          return right.votes - left.votes;
-        }
+    const seedBallot = WEEKEND_CUP_BALLOTS.find((item) => item.slug === ballot.slug);
+    const storedOptions = options.filter((option) => option.ballot_id === ballot.id);
+    const storedOptionsBySlug = new Map(storedOptions.map((option) => [option.slug, option]));
+    const ballotOptions = (seedBallot
+      ? seedBallot.options.map((option) => {
+          const storedOption = storedOptionsBySlug.get(option.slug);
+          const optionId = storedOption?.id ?? `${ballot.slug}:${option.slug}`;
 
-        return left.label.localeCompare(right.label);
-      });
+          return {
+            id: optionId,
+            slug: option.slug,
+            label: storedOption?.label ?? option.label,
+            platform: storedOption?.platform ?? option.platform,
+            description: storedOption?.description ?? option.description ?? '',
+            isOfficial: storedOption?.is_official ?? option.isOfficial,
+            votes: storedOption ? (votesByOption[storedOption.id] ?? 0) : 0,
+            userVoted: storedOption ? userVotes.has(storedOption.id) : false,
+            suggestionNote: storedOption?.suggestion_note ?? null,
+          };
+        })
+      : storedOptions.map((option) => ({
+          id: option.id,
+          slug: option.slug,
+          label: option.label,
+          platform: option.platform,
+          description: option.description ?? '',
+          isOfficial: option.is_official,
+          votes: votesByOption[option.id] ?? 0,
+          userVoted: userVotes.has(option.id),
+          suggestionNote: option.suggestion_note,
+        }))).sort((left, right) => {
+      if (right.votes !== left.votes) {
+        return right.votes - left.votes;
+      }
+
+      return left.label.localeCompare(right.label);
+    });
 
     return {
       id: ballot.id,

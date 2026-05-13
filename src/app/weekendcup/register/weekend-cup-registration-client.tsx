@@ -40,6 +40,9 @@ const DASHBOARD_RADIUS_STYLE: CSSProperties & Record<string, string> = {
   '--radius-hero': '1.95rem',
 };
 
+const DASHBOARD_INNER_RADIUS_CLASS = 'rounded-[1.1rem]';
+const DASHBOARD_CONTROL_RADIUS_CLASS = '!rounded-[1rem]';
+
 function paymentStatusClasses(status: WeekendCupPlayerRegistration['payment_status']) {
   switch (status) {
     case 'paid':
@@ -85,7 +88,6 @@ export function WeekendCupRegistrationClient() {
   const [availableAtMatchTime, setAvailableAtMatchTime] = useState(true);
 
   const selectedConfig = WEEKEND_CUP_GAMES.find((game) => game.game === selectedGame) ?? WEEKEND_CUP_GAMES[0];
-  const selectedSummary = summary.games[selectedGame];
   const currentRegistration = summary.registrations.find((registration) => registration.game === selectedGame);
   const requestedNextPath = getSafeNextPath(searchParams.get('next'), '');
   const paymentReference = searchParams.get('reference') ?? '';
@@ -281,16 +283,19 @@ export function WeekendCupRegistrationClient() {
                 WEEKEND_CUP_ENTRY_PRICING.earlyBirdLimitLabel,
                 'Payment confirms the slot',
               ].map((item) => (
-                <span key={item} className="brand-chip">
+                <span key={item} className={`brand-chip ${DASHBOARD_CONTROL_RADIUS_CLASS}`}>
                   {item}
                 </span>
               ))}
             </div>
             <div className="mt-6 flex flex-wrap gap-3">
-              <Link href={`${WEEKEND_CUP_PUBLIC_PATH}#vote`} className="btn-primary">
+              <Link
+                href={`${WEEKEND_CUP_PUBLIC_PATH}#vote`}
+                className={`btn-primary ${DASHBOARD_CONTROL_RADIUS_CLASS}`}
+              >
                 Vote first
               </Link>
-              <a href={WEEKEND_CUP_SUPPORT_URL} className="btn-outline">
+              <a href={WEEKEND_CUP_SUPPORT_URL} className={`btn-outline ${DASHBOARD_CONTROL_RADIUS_CLASS}`}>
                 <MessageCircle size={14} />
                 Payment question
               </a>
@@ -320,10 +325,10 @@ export function WeekendCupRegistrationClient() {
               payment status, and check-in all stay tied to the same profile.
             </p>
             <div className="mt-6 flex flex-wrap gap-3">
-              <Link href={createAccountHref} className="btn-primary">
+              <Link href={createAccountHref} className={`btn-primary ${DASHBOARD_CONTROL_RADIUS_CLASS}`}>
                 Create account
               </Link>
-              <Link href={signInHref} className="btn-outline">
+              <Link href={signInHref} className={`btn-outline ${DASHBOARD_CONTROL_RADIUS_CLASS}`}>
                 Sign in
               </Link>
             </div>
@@ -356,7 +361,10 @@ export function WeekendCupRegistrationClient() {
                 WEEKEND_CUP_ENTRY_PRICING.earlyBirdLimitLabel,
                 WEEKEND_CUP_REGISTRATION_OPENS_LABEL,
               ].map((item) => (
-                <span key={item} className="brand-chip !px-3 !py-1 !text-[0.78rem]">
+                <span
+                  key={item}
+                  className={`brand-chip ${DASHBOARD_CONTROL_RADIUS_CLASS} !px-3 !py-1 !text-[0.78rem]`}
+                >
                   {item}
                 </span>
               ))}
@@ -384,7 +392,7 @@ export function WeekendCupRegistrationClient() {
                         key={game.game}
                         type="button"
                         onClick={() => setSelectedGame(game.game)}
-                        className={`rounded-[1.1rem] border px-4 py-3 text-left transition ${
+                        className={`${DASHBOARD_INNER_RADIUS_CLASS} border px-4 py-3 text-left transition ${
                           selected
                             ? 'border-[rgba(50,224,196,0.42)] bg-[rgba(50,224,196,0.13)]'
                             : 'border-white/10 bg-black/10 hover:border-white/20'
@@ -407,7 +415,7 @@ export function WeekendCupRegistrationClient() {
                         <button
                           type="button"
                           onClick={() => setSelectedGame('mystery')}
-                          className="btn-primary min-h-full justify-center whitespace-nowrap !rounded-[1.1rem] px-4 text-sm"
+                          className={`btn-primary min-h-full justify-center whitespace-nowrap ${DASHBOARD_INNER_RADIUS_CLASS} px-4 text-sm`}
                         >
                           Register Now
                         </button>
@@ -416,7 +424,7 @@ export function WeekendCupRegistrationClient() {
                   })}
                 </div>
 
-                <div className="rounded-[1.1rem] border border-white/10 bg-black/10 p-4">
+                <div className={`${DASHBOARD_INNER_RADIUS_CLASS} border border-white/10 bg-black/10 p-4`}>
                   <p className="text-xs font-black uppercase tracking-[0.14em] text-[var(--text-soft)]">
                     Payment status
                   </p>
@@ -434,7 +442,10 @@ export function WeekendCupRegistrationClient() {
                           ? getWeekendCupPaymentTierLabel(currentRegistration.payment_tier)
                           : 'Tier locks when payment is confirmed.'}
                       </p>
-                      <Link href={dashboardHref} className="btn-outline mt-3 w-full justify-center">
+                      <Link
+                        href={dashboardHref}
+                        className={`btn-outline mt-3 w-full justify-center ${DASHBOARD_CONTROL_RADIUS_CLASS}`}
+                      >
                         View status
                       </Link>
                     </div>
@@ -456,8 +467,7 @@ export function WeekendCupRegistrationClient() {
                       Player details
                     </h2>
                     <p className="mt-1 text-sm text-[var(--text-secondary)]">
-                      {selectedSummary?.confirmed ?? 0}/{selectedConfig.slots} confirmed.{' '}
-                      {getWeekendCupGamePricingLine(selectedGame)}.
+                      20% full right now. {getWeekendCupGamePricingLine(selectedGame)}.
                     </p>
                   </div>
                   {currentRegistration ? (
@@ -507,7 +517,7 @@ export function WeekendCupRegistrationClient() {
                 </div>
 
                 <div className="grid gap-3 md:grid-cols-2">
-                  <label className="flex items-start gap-3 rounded-[1.1rem] border border-white/10 bg-black/10 px-4 py-3 text-sm text-[var(--text-secondary)]">
+                  <label className={`flex items-start gap-3 ${DASHBOARD_INNER_RADIUS_CLASS} border border-white/10 bg-black/10 px-4 py-3 text-sm text-[var(--text-secondary)]`}>
                     <input
                       type="checkbox"
                       checked={followedInstagram}
@@ -517,7 +527,7 @@ export function WeekendCupRegistrationClient() {
                     <span>I followed PlayMechi on Instagram.</span>
                   </label>
 
-                  <label className="flex items-start gap-3 rounded-[1.1rem] border border-white/10 bg-black/10 px-4 py-3 text-sm text-[var(--text-secondary)]">
+                  <label className={`flex items-start gap-3 ${DASHBOARD_INNER_RADIUS_CLASS} border border-white/10 bg-black/10 px-4 py-3 text-sm text-[var(--text-secondary)]`}>
                     <input
                       type="checkbox"
                       checked={subscribedYoutube}
@@ -528,7 +538,7 @@ export function WeekendCupRegistrationClient() {
                   </label>
                 </div>
 
-                <label className="flex items-start gap-3 rounded-[1.1rem] border border-white/10 bg-black/10 px-4 py-3 text-sm text-[var(--text-secondary)]">
+                <label className={`flex items-start gap-3 ${DASHBOARD_INNER_RADIUS_CLASS} border border-white/10 bg-black/10 px-4 py-3 text-sm text-[var(--text-secondary)]`}>
                   <input
                     type="checkbox"
                     checked={availableAtMatchTime}
@@ -543,7 +553,7 @@ export function WeekendCupRegistrationClient() {
                     type="button"
                     onClick={() => void handleSubmit()}
                     disabled={submitting || authLoading}
-                    className="btn-primary"
+                    className={`btn-primary ${DASHBOARD_CONTROL_RADIUS_CLASS}`}
                   >
                     {submitting ? (
                       <>
@@ -554,7 +564,7 @@ export function WeekendCupRegistrationClient() {
                       'Pay now'
                     )}
                   </button>
-                  <a href={WEEKEND_CUP_SUPPORT_URL} className="btn-outline">
+                  <a href={WEEKEND_CUP_SUPPORT_URL} className={`btn-outline ${DASHBOARD_CONTROL_RADIUS_CLASS}`}>
                     <MessageCircle size={14} />
                     Payment help
                   </a>

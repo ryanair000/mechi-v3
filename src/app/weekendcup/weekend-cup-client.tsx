@@ -72,18 +72,23 @@ const DASHBOARD_RADIUS_STYLE: CSSProperties & Record<string, string> = {
   '--radius-hero': '1.95rem',
 };
 
-const OPTION_IMAGE_KEY_BY_SLUG = {
-  efootball: 'efootball',
-  'free-fire': 'freefire',
-  ludo: 'ludo',
-  pubgm: 'pubgm',
-  codm: 'codm',
-  fortnite: 'fortnite',
-  'ea-sports-fc-26': 'fc26',
-  'mortal-kombat': 'mk11',
-  'nba-2k26': 'nba2k26',
-  'rocket-league': 'rocketleague',
-} as const;
+const OPTION_IMAGE_BY_SLUG: Partial<Record<string, string | null>> = {
+  bloodstrike: '/game-artwork/codm-header.webp',
+  'fc-mobile': '/game-artwork/fc26-header.webp',
+  efootball: getGameImage('efootball'),
+  'free-fire': getGameImage('freefire'),
+  ludo: getGameImage('ludo'),
+  pubgm: getGameImage('pubgm'),
+  codm: getGameImage('codm'),
+  fortnite: getGameImage('fortnite'),
+  'ea-sports-fc-26': getGameImage('fc26'),
+  'mortal-kombat': getGameImage('mk11'),
+  'nba-2k26': getGameImage('nba2k26'),
+  'rocket-league': getGameImage('rocketleague'),
+};
+
+const DASHBOARD_INNER_RADIUS_CLASS = 'rounded-[1.1rem]';
+const DASHBOARD_CONTROL_RADIUS_CLASS = '!rounded-[1rem]';
 
 function getFallbackBallots() {
   return WEEKEND_CUP_BALLOTS.filter((ballot) => VISIBLE_BALLOT_SLUGS.has(ballot.slug)).map((ballot) => ({
@@ -113,6 +118,10 @@ function getFallbackBallots() {
 
 function getOptionTone(option: WeekendCupBallotOption) {
   switch (option.slug) {
+    case 'bloodstrike':
+      return 'from-orange-300/28 via-rose-400/18 to-slate-950';
+    case 'fc-mobile':
+      return 'from-cyan-300/28 via-sky-400/18 to-slate-950';
     case 'pubgm':
       return 'from-emerald-400/30 via-teal-400/18 to-slate-950';
     case 'codm':
@@ -138,12 +147,15 @@ function getOptionTone(option: WeekendCupBallotOption) {
 }
 
 function getOptionImage(option: WeekendCupBallotOption) {
-  const gameKey = OPTION_IMAGE_KEY_BY_SLUG[option.slug as keyof typeof OPTION_IMAGE_KEY_BY_SLUG];
-  return gameKey ? getGameImage(gameKey) : null;
+  return OPTION_IMAGE_BY_SLUG[option.slug] ?? null;
 }
 
 function getOptionImagePosition(option: WeekendCupBallotOption) {
   switch (option.slug) {
+    case 'bloodstrike':
+      return 'center center';
+    case 'fc-mobile':
+      return 'center top';
     case 'efootball':
       return 'center top';
     case 'pubgm':
@@ -373,35 +385,44 @@ export function WeekendCupClient() {
             </div>
           </div>
 
-          <div className="max-w-3xl space-y-3">
+          <div className="mx-auto max-w-4xl space-y-3 text-center">
             <p className="section-title">Weekend Cup preview</p>
-            <h1 className="max-w-[10ch] text-[clamp(2.25rem,4vw,3.6rem)] font-black leading-[0.95] text-[var(--text-primary)]">
+            <h1 className="mx-auto max-w-[12ch] text-[clamp(2.2rem,4vw,4rem)] font-black leading-[0.95] text-[var(--text-primary)]">
               {WEEKEND_CUP_TITLE}
             </h1>
-            <p className="max-w-2xl text-[0.92rem] leading-7 text-[var(--text-secondary)] sm:text-[1rem]">
+            <p className="mx-auto max-w-3xl text-[0.92rem] leading-7 text-[var(--text-secondary)] sm:text-[1rem]">
               Season 1 runs on <strong>{WEEKEND_CUP_EVENT_DATES}</strong>. PUBG Mobile lands on
               Friday, CODM takes Saturday, eFootball closes Sunday, and players are deciding the
               final mystery slot before the lineup locks.
             </p>
 
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap justify-center gap-2">
               {[
                 WEEKEND_CUP_EVENT_DATES,
                 WEEKEND_CUP_PRIZE_POOL_LABEL,
                 WEEKEND_CUP_ENTRY_PRICING.entryFromLabel,
                 WEEKEND_CUP_STREAM_LABEL,
               ].map((item) => (
-                <span key={item} className="brand-chip !px-3 !py-1 !text-[0.78rem]">
+                <span
+                  key={item}
+                  className={`brand-chip ${DASHBOARD_CONTROL_RADIUS_CLASS} !px-3 !py-1 !text-[0.78rem]`}
+                >
                   {item}
                 </span>
               ))}
             </div>
 
-            <div className="flex flex-wrap gap-3">
-              <Link href={user ? '#vote' : signInHref} className="btn-primary min-h-11 px-4 py-2 text-[0.9rem]">
+            <div className="flex flex-wrap justify-center gap-3">
+              <Link
+                href={user ? '#vote' : signInHref}
+                className={`btn-primary min-h-11 px-4 py-2 text-[0.9rem] ${DASHBOARD_CONTROL_RADIUS_CLASS}`}
+              >
                 {user ? 'Vote Mystery Game' : 'Sign in to vote'}
               </Link>
-              <Link href="/weekendcup" className="btn-outline min-h-11 px-4 py-2 text-[0.9rem]">
+              <Link
+                href="/weekendcup"
+                className={`btn-outline min-h-11 px-4 py-2 text-[0.9rem] ${DASHBOARD_CONTROL_RADIUS_CLASS}`}
+              >
                 Register Now
               </Link>
             </div>
@@ -426,13 +447,26 @@ export function WeekendCupClient() {
                   </p>
 
                   <div className="flex flex-wrap items-center gap-2">
-                    <span className="brand-chip !px-3 !py-1 !text-[0.76rem]">
+                    <span
+                      className={`brand-chip ${DASHBOARD_CONTROL_RADIUS_CLASS} !px-3 !py-1 !text-[0.76rem]`}
+                    >
                       {selectedCount}/{WEEKEND_CUP_MAX_VOTE_SELECTIONS} selected
                     </span>
-                    <span className="brand-chip !px-3 !py-1 !text-[0.76rem]">{ballot.totalVotes} votes cast</span>
-                    <span className="brand-chip !px-3 !py-1 !text-[0.76rem]">Mystery slot voting only</span>
+                    <span
+                      className={`brand-chip ${DASHBOARD_CONTROL_RADIUS_CLASS} !px-3 !py-1 !text-[0.76rem]`}
+                    >
+                      {ballot.totalVotes} votes cast
+                    </span>
+                    <span
+                      className={`brand-chip ${DASHBOARD_CONTROL_RADIUS_CLASS} !px-3 !py-1 !text-[0.76rem]`}
+                    >
+                      Mystery slot voting only
+                    </span>
                     {!user ? (
-                      <Link href={signInHref} className="btn-outline min-h-10 px-4 py-2 text-[0.86rem]">
+                      <Link
+                        href={signInHref}
+                        className={`btn-outline min-h-10 px-4 py-2 text-[0.86rem] ${DASHBOARD_CONTROL_RADIUS_CLASS}`}
+                      >
                         Sign in to vote
                       </Link>
                     ) : null}
@@ -458,7 +492,7 @@ export function WeekendCupClient() {
                         aria-label={`${option.userVoted ? 'Remove vote for' : 'Vote for'} ${option.label}`}
                         aria-pressed={option.userVoted}
                         className={cn(
-                          'group relative min-h-[250px] overflow-hidden rounded-[var(--radius-panel)] border bg-[rgba(7,14,25,0.94)] text-left shadow-[var(--shadow-soft)] transition-all duration-200 hover:-translate-y-0.5 sm:min-h-[270px]',
+                          `group relative min-h-[250px] overflow-hidden border bg-[rgba(7,14,25,0.94)] text-left shadow-[var(--shadow-soft)] transition-all duration-200 hover:-translate-y-0.5 sm:min-h-[270px] ${DASHBOARD_INNER_RADIUS_CLASS}`,
                           option.userVoted
                             ? 'border-[rgba(50,224,196,0.34)] ring-1 ring-[rgba(50,224,196,0.2)]'
                             : 'border-white/10 hover:border-white/18'
@@ -470,7 +504,9 @@ export function WeekendCupClient() {
                   })}
                 </div>
 
-                <div className="grid gap-3 rounded-[var(--radius-panel)] border border-[var(--border-color)] bg-[rgba(17,26,44,0.68)] p-4 shadow-[var(--shadow-soft)] sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] sm:items-end">
+                <div
+                  className={`grid gap-3 border border-[var(--border-color)] bg-[rgba(17,26,44,0.68)] p-4 shadow-[var(--shadow-soft)] sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] sm:items-end ${DASHBOARD_INNER_RADIUS_CLASS}`}
+                >
                   <div className="sm:col-span-3">
                     <label className="label">Suggest a game</label>
                     <p className="mt-1 text-sm text-[var(--text-secondary)]">
@@ -514,7 +550,7 @@ export function WeekendCupClient() {
                     type="button"
                     onClick={() => void handleSuggest(ballot.slug)}
                     disabled={loading || submittingBallotSlug === ballot.slug}
-                    className="btn-outline min-h-10 justify-center px-4 text-[0.88rem]"
+                    className={`btn-outline min-h-10 justify-center px-4 text-[0.88rem] ${DASHBOARD_CONTROL_RADIUS_CLASS}`}
                   >
                     {submittingBallotSlug === ballot.slug ? (
                       <>

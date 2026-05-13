@@ -1,14 +1,19 @@
 import { Component as BlogPosts } from '@/components/blog-posts';
-import { getOnlineTournamentArenaHref } from '@/lib/online-tournament-ops';
+import {
+  WEEKEND_CUP_EVENT_DATES,
+  WEEKEND_CUP_PROMO_IMAGE,
+  WEEKEND_CUP_PUBLIC_PATH,
+  WEEKEND_CUP_TITLE,
+} from '@/lib/weekend-cup';
 
 const dashboardPosts = [
   {
     id: 1,
-    title: 'Playmechi Launch starts 8 May',
-    category: 'upcoming tournament',
-    description: 'PUBG Mobile, CODM, and eFootball go live across three nights at 8:00 PM EAT.',
-    imageUrl: '/dashboard-promos/playmechi-launch-mobile-gaming.jpg',
-    href: getOnlineTournamentArenaHref('pubgm'),
+    title: WEEKEND_CUP_TITLE,
+    category: 'weekend cup live',
+    description: `Vote the mystery slot and lock your entry for ${WEEKEND_CUP_EVENT_DATES}.`,
+    imageUrl: WEEKEND_CUP_PROMO_IMAGE,
+    href: WEEKEND_CUP_PUBLIC_PATH,
   },
   {
     id: 2,

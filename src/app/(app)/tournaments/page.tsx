@@ -2,10 +2,9 @@
 
 import Link from 'next/link';
 import { useCallback, useEffect, useState } from 'react';
-import { Trophy } from 'lucide-react';
+import { CalendarDays, Clock3, Trophy, Users } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useAuthFetch } from '@/components/AuthProvider';
-import { EventCountdownCard } from '@/components/ui/event-countdown-card';
 import {
   TournamentMemberList,
   type TournamentMemberListItem,
@@ -15,13 +14,10 @@ import {
   ONLINE_TOURNAMENT_ARENA_PATH,
   ONLINE_TOURNAMENT_GAMES,
   ONLINE_TOURNAMENT_REGISTRATION_API_PATH,
-  ONLINE_TOURNAMENT_REGISTRATION_PATH,
   ONLINE_TOURNAMENT_TITLE,
   ONLINE_TOURNAMENT_WHATSAPP_GROUP_URL,
   getFallbackOnlineTournamentSummary,
-  getOnlineTournamentDisplayStatus,
   getOnlineTournamentTotals,
-  type OnlineTournamentDisplayStatus,
   type OnlineTournamentGameConfig,
   type OnlineTournamentRegistrationSummary,
 } from '@/lib/online-tournament';
@@ -30,6 +26,12 @@ import {
   PRIMARY_UPCOMING_PLAYMECHI_TOURNAMENT,
   WEEKEND_CUP_ROUTE_ENABLED,
 } from '@/lib/upcoming-playmechi-tournaments';
+import {
+  WEEKEND_CUP_GAMES,
+  WEEKEND_CUP_PUBLIC_PATH,
+  WEEKEND_CUP_REGISTRATION_PATH,
+  WEEKEND_CUP_TITLE,
+} from '@/lib/weekend-cup';
 
 type OnlineTournamentUserRegistration = {
   game?: string | null;
@@ -37,23 +39,7 @@ type OnlineTournamentUserRegistration = {
 };
 
 const STATUS_FILTERS = ['all', 'open', 'active', 'completed'] as const;
-
-function formatTournamentStatus(status: string) {
-  switch (status) {
-    case 'open':
-      return 'Open';
-    case 'full':
-      return 'Ongoing';
-    case 'active':
-      return 'Live';
-    case 'completed':
-      return 'Completed';
-    case 'cancelled':
-      return 'Cancelled';
-    default:
-      return status;
-  }
-}
+const WEEKEND_CUP_FILL_LABEL = '20% full';
 
 function formatTournamentFilterLabel(status: (typeof STATUS_FILTERS)[number]) {
   switch (status) {
@@ -96,7 +82,7 @@ export default function TournamentsPage() {
   const [onlineTournament, setOnlineTournament] = useState<OnlineTournamentRegistrationSummary>(
     () => getFallbackOnlineTournamentSummary()
   );
-  const [status, setStatus] = useState<(typeof STATUS_FILTERS)[number]>('all');
+  const [status, setStatus] = useState<(typeof STATUS_FILTERS)[number]>('open');
   const [loading, setLoading] = useState(true);
 
   const fetchTournaments = useCallback(async () => {
@@ -122,16 +108,41 @@ export default function TournamentsPage() {
     void fetchTournaments();
   }, [fetchTournaments]);
 
-  const onlineTournamentStatus = getOnlineTournamentDisplayStatus();
-  const showOnlineTournament =
-    status === 'all' || status === onlineTournamentStatus;
+  const showOnlineTournament = status === 'all' || status === 'completed';
   const showUpcomingWeekendCup =
     WEEKEND_CUP_ROUTE_ENABLED &&
     PRIMARY_UPCOMING_PLAYMECHI_TOURNAMENT &&
     (status === 'all' || status === 'open');
-  const hasVisibleTournaments = showOnlineTournament || Boolean(showUpcomingWeekendCup);
   const onlineTournamentTotals = getOnlineTournamentTotals(onlineTournament);
-  const firstOnlineTournamentRegistration = getFirstOnlineTournamentRegistration(onlineTournament);
+  const weekendCupItems: TournamentMemberListItem[] = showUpcomingWeekendCup
+    ? WEEKEND_CUP_GAMES.map((game) => {
+        const isMysteryGame = game.game === 'mystery';
+        return {
+          actionHref: isMysteryGame
+            ? `${WEEKEND_CUP_PUBLIC_PATH}#vote`
+            : `${WEEKEND_CUP_REGISTRATION_PATH}?game=${game.game}`,
+          actionLabel: isMysteryGame ? 'Vote' : 'Register',
+          actionVariant: isMysteryGame ? 'muted' : 'primary',
+          anchorId: `weekendcup-${game.game}`,
+          detailHref: isMysteryGame
+            ? `${WEEKEND_CUP_PUBLIC_PATH}#vote`
+            : `${WEEKEND_CUP_REGISTRATION_PATH}?game=${game.game}`,
+          gameLabel: game.label,
+          id: `weekendcup-${game.game}`,
+          metaLabel: isMysteryGame ? 'Mystery vote' : 'Paid entry',
+          prizeLabel: getOnlineTournamentGamePrizeLabel(game),
+          progress: 20,
+          secondaryActionHref: isMysteryGame ? WEEKEND_CUP_PUBLIC_PATH : `${WEEKEND_CUP_REGISTRATION_PATH}?game=${game.game}`,
+          secondaryActionLabel: isMysteryGame ? 'Preview' : 'Open form',
+          slotsLabel: WEEKEND_CUP_FILL_LABEL,
+          startsLabel: `${game.dateLabel.replace(' 2026', '')}, ${game.timeLabel}`,
+          statusClassName: getStatusClasses('open'),
+          statusLabel: 'Open',
+          tagLabel: isMysteryGame ? 'Vote live' : null,
+          title: WEEKEND_CUP_TITLE,
+        };
+      })
+    : [];
   const onlineTournamentItems: TournamentMemberListItem[] = showOnlineTournament
     ? ONLINE_TOURNAMENT_GAMES.map((game) => {
         const gameSummary = onlineTournament.games[game.game];
@@ -139,12 +150,11 @@ export default function TournamentsPage() {
         const slots = Number(gameSummary?.slots ?? game.slots);
         const progress = Math.min(100, (registered / Math.max(1, slots)) * 100);
         const userRegistration = getOnlineTournamentRegistration(onlineTournament, game.game);
-        const action = getOnlineTournamentAction(game, onlineTournamentStatus, userRegistration);
 
         return {
-          actionHref: action.href,
-          actionLabel: action.label,
-          actionVariant: userRegistration ? 'muted' : 'primary',
+          actionHref: getOnlineTournamentArenaHref(game.game),
+          actionLabel: userRegistration ? 'View' : 'Open',
+          actionVariant: 'muted',
           anchorId: `playmechi-${game.game}`,
           detailHref: getOnlineTournamentArenaHref(game.game),
           gameLabel: game.label,
@@ -160,14 +170,15 @@ export default function TournamentsPage() {
           secondaryActionLabel: 'WhatsApp',
           slotsLabel: `${registered}/${slots}`,
           startsLabel: `${game.dateLabel.replace(' 2026', '')}, ${game.timeLabel}`,
-          statusClassName: getStatusClasses(onlineTournamentStatus),
-          statusLabel: formatTournamentStatus(onlineTournamentStatus),
+          statusClassName: getStatusClasses('completed'),
+          statusLabel: 'Previous',
           tagLabel: null,
           title: ONLINE_TOURNAMENT_TITLE,
         };
       })
     : [];
-  const tournamentListItems = onlineTournamentItems;
+  const tournamentListItems = [...weekendCupItems, ...onlineTournamentItems];
+  const hasVisibleTournaments = tournamentListItems.length > 0;
 
   return (
     <div className="page-container space-y-5">
@@ -201,20 +212,6 @@ export default function TournamentsPage() {
         ))}
       </div>
 
-      {showOnlineTournament ? (
-        <EventCountdownCard
-          attendees={onlineTournamentTotals.registered}
-          date={new Date(ONLINE_TOURNAMENT_GAMES[0].matchStartsAt)}
-          ctaLabel={firstOnlineTournamentRegistration ? 'View your slot' : 'Reserve your spot'}
-          href={
-            firstOnlineTournamentRegistration?.game
-              ? getOnlineTournamentArenaHref(firstOnlineTournamentRegistration.game)
-              : `${ONLINE_TOURNAMENT_REGISTRATION_PATH}?game=${ONLINE_TOURNAMENT_GAMES[0].game}`
-          }
-          title={ONLINE_TOURNAMENT_TITLE}
-        />
-      ) : null}
-
       {showUpcomingWeekendCup ? (
         <section className="card circuit-panel p-5 sm:p-6">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
@@ -234,7 +231,7 @@ export default function TournamentsPage() {
 
             <Link
               href={PRIMARY_UPCOMING_PLAYMECHI_TOURNAMENT.publicPath}
-              className="btn-primary w-full justify-center sm:w-auto"
+              className="btn-primary w-full justify-center !rounded-[1rem] sm:w-auto"
             >
               Open Weekend Cup
             </Link>
@@ -244,11 +241,11 @@ export default function TournamentsPage() {
             {PRIMARY_UPCOMING_PLAYMECHI_TOURNAMENT.games.map((game) => (
               <div
                 key={game.key}
-                className="rounded-[var(--radius-card)] border border-[var(--border-color)] bg-[var(--surface-elevated)] px-4 py-4"
+                className="rounded-[1.1rem] border border-[var(--border-color)] bg-[var(--surface-elevated)] px-4 py-4 shadow-[var(--shadow-soft)]"
               >
                 <div className="flex items-center justify-between gap-3">
                   <p className="text-sm font-black text-[var(--text-primary)]">{game.label}</p>
-                  <span className="brand-chip px-2.5 py-1">{game.slots} slots</span>
+                  <span className="brand-chip !rounded-[1rem] px-2.5 py-1">{WEEKEND_CUP_FILL_LABEL}</span>
                 </div>
                 <p className="mt-2 text-xs text-[var(--text-secondary)]">{game.dateLabel}</p>
                 <p className="mt-3 text-xs font-semibold text-[var(--accent-secondary-text)]">
@@ -259,6 +256,65 @@ export default function TournamentsPage() {
           </div>
         </section>
       ) : null}
+
+      <section className="card circuit-panel overflow-hidden p-0">
+        <div className="grid lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)]">
+          <div
+            className="relative min-h-[260px] bg-cover bg-center"
+            style={{ backgroundImage: 'url(/dashboard-promos/playmechi-launch-mobile-gaming.jpg)' }}
+          >
+            <div className="absolute inset-0 bg-gradient-to-t from-black/82 via-black/30 to-transparent" />
+            <div className="absolute bottom-4 left-4 right-4">
+              <p className="section-title text-white/78">Previous Tournament</p>
+              <h2 className="mt-2 text-3xl font-black leading-tight text-white">
+                {ONLINE_TOURNAMENT_TITLE}
+              </h2>
+            </div>
+          </div>
+
+          <div className="space-y-5 p-5 sm:p-6">
+            <div className="flex flex-wrap items-center gap-4 text-sm text-[var(--text-secondary)]">
+              <span className="inline-flex items-center gap-1.5">
+                <CalendarDays size={15} className="text-[var(--brand-teal)]" />
+                8-10 May 2026
+              </span>
+              <span className="inline-flex items-center gap-1.5">
+                <Users size={15} className="text-[var(--brand-teal)]" />
+                {onlineTournamentTotals.registered} registered
+              </span>
+            </div>
+
+            <div className="inline-flex items-center gap-2 rounded-full border border-[rgba(96,165,250,0.24)] bg-[rgba(96,165,250,0.12)] px-3 py-1 text-xs font-black uppercase tracking-[0.14em] text-[#93c5fd]">
+              <Clock3 size={14} />
+              Previous tournament
+            </div>
+
+            <p className="max-w-2xl text-sm leading-7 text-[var(--text-secondary)]">
+              Launch weekend is wrapped, but the rooms, results, and recap trail are still open
+              if you want to revisit the first PlayMechi run.
+            </p>
+
+            <div className="grid gap-3 sm:grid-cols-3">
+              {ONLINE_TOURNAMENT_GAMES.map((game) => (
+                <div
+                  key={game.game}
+                  className="rounded-[1.1rem] border border-[var(--border-color)] bg-[var(--surface-elevated)] px-4 py-4 shadow-[var(--shadow-soft)]"
+                >
+                  <p className="text-sm font-black text-[var(--text-primary)]">{game.label}</p>
+                  <p className="mt-2 text-xs text-[var(--text-secondary)]">{game.dateLabel}</p>
+                  <p className="mt-3 text-xs font-semibold text-[var(--accent-secondary-text)]">
+                    {getOnlineTournamentGamePrizeLabel(game)}
+                  </p>
+                </div>
+              ))}
+            </div>
+
+            <Link href={ONLINE_TOURNAMENT_ARENA_PATH} className="btn-outline inline-flex !rounded-[1rem]">
+              Open last tournament
+            </Link>
+          </div>
+        </div>
+      </section>
 
       {loading ? (
         <div className="card overflow-hidden">
@@ -317,40 +373,4 @@ function getOnlineTournamentRegistration(
     : [];
 
   return registrations.find((registration) => registration.game === gameKey) ?? null;
-}
-
-function getFirstOnlineTournamentRegistration(summary: OnlineTournamentRegistrationSummary) {
-  const registrations = Array.isArray(summary.registrations)
-    ? (summary.registrations as OnlineTournamentUserRegistration[])
-    : [];
-
-  return registrations.find((registration) => Boolean(registration.game)) ?? null;
-}
-
-function getOnlineTournamentAction(
-  game: OnlineTournamentGameConfig,
-  status: OnlineTournamentDisplayStatus,
-  registration: OnlineTournamentUserRegistration | null
-) {
-  if (registration) {
-    return {
-      href: getOnlineTournamentArenaHref(game.game),
-      label: 'View',
-      mobileLabel: 'View',
-    };
-  }
-
-  if (status === 'open') {
-    return {
-      href: `${ONLINE_TOURNAMENT_REGISTRATION_PATH}?game=${game.game}`,
-      label: 'Register',
-      mobileLabel: 'Register free',
-    };
-  }
-
-  return {
-    href: ONLINE_TOURNAMENT_ARENA_PATH,
-    label: 'View',
-    mobileLabel: 'View event',
-  };
 }

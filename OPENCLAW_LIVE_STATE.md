@@ -5,35 +5,31 @@ This file summarizes the current Mechi OpenClaw runtime so fresh agent sessions 
 ## Active agents
 
 - live OpenClaw runtime = EC2 only
-- public bridge base URL = `https://smm-api.lokimax.top`
-- `control` = Mechi COO, repo-capable, operator-facing, workspace `/home/ubuntu/mechi-v3`
-- `support` = Mechi Support, customer-safe, workspace `~/.openclaw/workspace-support`
-- `community` = Mechi Community, public/community-safe, workspace `~/.openclaw/workspace-community`
-- `infra` = Mechi Infra, AWS/OpenClaw/Nginx/incident-safe workspace `~/.openclaw/workspace-infra`
-- `billing` = Mechi Billing, Paystack/subscription-safe workspace `~/.openclaw/workspace-billing`
-- `data` = Mechi Data, analytics/reporting-safe workspace `~/.openclaw/workspace-data`
-- `growth` = Mechi Growth, campaign/media/social-safe workspace `~/.openclaw/workspace-growth`
+- current production posture on EC2 = SMM-only
+- `socio` = the only live agent in `~/.openclaw/openclaw.json`
+- live `socio` workspace = `~/.openclaw/workspace-growth`
+- archived/not-live runtime surfaces = `control`, `support`, `community`, `infra`, `billing`, `data`, `growth`, native WhatsApp, Mechi bridge, and Nginx front door
+- host prune backup root from the 2026-05-10 cleanup = `/home/ubuntu/openclaw-pruned-20260510-212015-smm-only`
 
 ## Current Telegram routing
 
-- approved operator DMs route to `control`
+- approved operator DMs route to `socio`
 - approved operator ids include `6806783421` and `6738706706`
-- internal `MECHI OPS` group `-1003527082714` routes to `control`
-- `MECHI OPS` supports approved-operator no-tag mode
-- broader group/community traffic falls back to `community`
-- customer-safe bridge or inbox-style work should go to `support`
+- Boss private `OPS` group `-1003922946344` is the social media execution room and routes to `socio`
+- Boss private `OPS` forum topic `SMM` (`topicId=7`) is explicitly pinned to `socio`
+- Telegram group policy is allowlist-only; only the private `OPS` room is live
+- `socio` is also the default agent id on the gateway after the prune
+- live prompts now explicitly support:
+  - `socio post chezahub` -> Instagram + Facebook `ChezaHub`
+  - `socio post playmechi` -> Instagram + Facebook `PlayMechi`
+- when the brand is ambiguous, `socio` should ask one short clarification instead of assuming the wrong feed
 
 ## Current ClawHub skill map
 
 OpenClaw native docs say ClawHub skills install into the active workspace `skills/` directory, and per-agent workspaces control which skills each agent sees. Current live install map:
 
-- `control` repo skills: `supabase-live-ops`, `playmechi-tournament-ops`, `github-ops`, `obsidian-ops`
-- `infra`: `aws`, `openclaw-security-scanner`, `incident`, `incident-hotfix`
-- `billing`: `paystack`
-- `data`: `ga4`, `skill-ga4-analytics`, `marketing-analytics`
-- `growth`: `cloudinary`, `openclaw-meta-ads`, `meta-ads-manager`, `instagram-api`, `instagram-content-studio`
-- `support`: `whatsapp-business`, `customer-support-autopilot`; local `playmechi-tournament-ops` for customer-safe tournament FAQ, plus `supabase-live-ops` only when an approved read-only helper runner is exposed
-- `community`: local `playmechi-tournament-ops` for public tournament FAQ and announcement-safe replies, plus `supabase-live-ops` only when an approved read-only helper runner is exposed
+- `socio`: `cloudinary`, `openclaw-meta-ads`, `meta-ads-manager`, `instagram-api`, `instagram-content-studio`, local `mechi-social-exec`, and `MECHI_SOCIAL_PLAYBOOK.md`
+- archived workspaces still exist in the repo, but they are not part of the active host config after the SMM-only prune
 
 The direct ClawHub archives for slugs `meta-ads` and `instagram` were not forced into production because they unpacked without a valid top-level `SKILL.md`. Growth uses the working alternatives listed above.
 
@@ -44,28 +40,43 @@ The direct ClawHub archives for slugs `meta-ads` and `instagram` were not forced
 - GA4/Search Console skills require Google Analytics property/service-account or OAuth credentials.
 - Cloudinary skill requires `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, and `CLOUDINARY_API_SECRET`.
 - Instagram skills require `INSTAGRAM_ACCESS_TOKEN`, `INSTAGRAM_BUSINESS_ACCOUNT_ID`, and media helper credentials such as `IMGUR_CLIENT_ID` where needed.
+- Facebook page publishing requires `FACEBOOK_PAGE_ID` and `FACEBOOK_PAGE_ACCESS_TOKEN`.
+- brand-pair Meta routing also supports:
+  - `CHEZAHUB_INSTAGRAM_ACCESS_TOKEN`, `CHEZAHUB_INSTAGRAM_BUSINESS_ACCOUNT_ID`, `CHEZAHUB_FACEBOOK_PAGE_ID`, `CHEZAHUB_FACEBOOK_PAGE_ACCESS_TOKEN`
+  - `PLAYMECHI_INSTAGRAM_ACCESS_TOKEN`, `PLAYMECHI_INSTAGRAM_BUSINESS_ACCOUNT_ID`, `PLAYMECHI_FACEBOOK_PAGE_ID`, `PLAYMECHI_FACEBOOK_PAGE_ACCESS_TOKEN`
+- On 2026-05-11 EAT, the live EC2 host was updated with the durable Meta page/user credentials for `ChezaHub`, and host-side smoke checks against the Facebook page endpoint plus the Instagram `content_publishing_limit` endpoint both returned HTTP 200.
+- live EC2 readiness on 2026-05-11 EAT:
+  - `ChezaHub` Instagram+Facebook pair = ready
+  - `PlayMechi` Instagram+Facebook pair = ready
+  - current live `PlayMechi` Facebook page object is `Mechi` (`1074864009049646`) and the connected Instagram business account is `@playmechi` (`17841473808871423`)
+- X publishing requires the `xurl` CLI plus authenticated X account state, or another approved X credential bundle.
+- On 2026-05-11 EAT, `PlayMechi` X was bound on the live EC2 host with the real OAuth1 access token pair for `@playmechi`, and the direct signed X API readiness check for `/2/users/me` returned the `playmechi` account successfully.
+- Discord publishing can use either `DISCORD_WEBHOOK_URL` or native Discord channel config backed by `DISCORD_BOT_TOKEN`.
 - Meta Ads skills require the correct Meta account/OAuth context and explicit Boss approval before any write, spend, budget, or campaign-state action.
-- WhatsApp Business skill requires Maton/WhatsApp connection credentials such as `MATON_API_KEY`; customer-visible replies remain high-risk.
-- Meta WhatsApp Cloud API for player/customer traffic is intended for `+254113033475`, but the observed Meta setup on 2026-05-02 is still test-WABA only until a production WABA/number and templates are approved.
-- OpenAI Codex model OAuth was repaired on 2026-05-03 EAT by removing the reused/expired profile, keeping the fresh `openai-codex` OAuth profile, and repointing active sessions to that profile. `openclaw models status --json` reports the profile as `ok`.
-- Native OpenClaw WhatsApp is currently linked and listening on EC2 account `default` (`+254733638841`).
-- The `+254113033475` (`accountId=254113033475`) native WhatsApp account was removed from the active OpenClaw config on 2026-05-04 EAT because EC2 had no linked credentials for it. Do not re-add it until the Boss explicitly asks to relink it and scans a fresh QR on the production EC2 gateway.
+- OpenAI Codex model OAuth was repaired on 2026-05-03 EAT by removing the reused/expired profile, keeping the fresh `openai-codex` OAuth profile, and repointing active sessions to that profile.
+- OpenAI Codex model OAuth was re-seeded again on 2026-05-10 EAT after the EC2 refresh token became invalidated. The live agent auth stores were updated from the current desktop Codex login for `hanhbichhuabich8450@outlook.com`, per-agent auth-state files were normalized to that profile, and the fresh bearer token was validated against `https://chatgpt.com/backend-api/wham/usage` with HTTP 200.
+- OpenAI Codex model OAuth needed another targeted repair on 2026-05-11 EAT after `socio` started failing again with `Your authentication token has been invalidated`. The live `socio` auth profile was re-seeded from the current desktop Codex login, the host-side bearer token was revalidated against `https://chatgpt.com/backend-api/wham/usage` with HTTP 200, and subsequent gateway logs returned `ws res ✓ agent` instead of auth failure.
+- Native OpenClaw WhatsApp is intentionally disabled in the live config after the 2026-05-10 SMM-only prune.
 
-## WhatsApp routing requirement
+## Support restore target
 
-- operator/admin WhatsApp groups such as `MECHI ADMINS` must be pinned by exact WhatsApp group JID to `control`, not the generic support/community prompt
-- customer/community WhatsApp groups such as `MECHI 1v1` and `MECHI BETA` should be pinned by exact WhatsApp group JID to `community` unless the group is a pure support inbox
-- native WhatsApp direct messages are currently open on `+254733638841`; keep replies short, customer-safe, and tournament-focused for non-operator senders
-- `+254113033475` is not active in native OpenClaw WhatsApp for now; it needs a fresh EC2 QR relink before it can be safely restored
-- native WhatsApp direct messages from known Boss/operator senders are the operator path and route to `control`
-- native WhatsApp groups on `+254733638841` are mention-only unless explicitly configured otherwise: respond only when the bot/number is tagged or directly quoted; do not auto-reply to ordinary group chatter
-- customer WhatsApp support DMs should route through the Mechi support inbox/player-action path
-- game purchase enquiries are handled on WhatsApp at `+254104003156`; customer-safe agents should tell clients to DM that number and must not negotiate prices or collect payment details
-- if native OpenClaw WhatsApp is used, it must load the Mechi control workspace for operator/admin groups and use `skills/playmechi-tournament-ops/SKILL.md` for event facts
-- native OpenClaw WhatsApp must not send marketing broadcasts, mass tournament reminders, cold outreach, or repeated unknown-chat automation; non-Boss direct replies must stay customer-safe, tournament-focused, and low-volume
-- Meta Cloud API on `+254113033475` is the player/customer path and must use opt-in, approved templates outside the 24-hour service window, and immediate opt-out handling
-- for live PlayMechi slot counts, storage readiness, or registered-player counts, WhatsApp operator/admin groups must use `skills/supabase-live-ops/SKILL.md` and read the `onlineTournament` object from `npm run ops:registrations -- --json`
-- customer-safe WhatsApp support can answer fixed schedule, prize, rule, and registration-path facts from the PlayMechi skill, but must escalate live counts, disqualifications, payout status, and reward eligibility to `control`
+The repo now carries `scripts/openclaw-restore-mechi-support.sh` for restoring Mechi support on EC2 when approved by the Boss. The target restored posture is:
+
+- `control`: repo-capable operator agent in `/home/ubuntu/mechi-v3`
+- `support`: customer-safe WhatsApp/support agent with current Weekend Cup FAQ
+- `community`: player/community-safe WhatsApp group agent with current Weekend Cup FAQ
+- `socio`: existing SMM lane preserved
+- native WhatsApp: enabled with explicit account/group routing and a requested history window through `MECHI_WHATSAPP_HISTORY_LIMIT`
+
+Until that script is run and verified on EC2, this file's SMM-only live-state lines remain the last verified runtime state.
+
+## Paused surfaces
+
+- `smm-api.lokimax.top` is on break for now and the bridge/Nginx path is disabled on EC2.
+- `mechi-openclaw-bridge.service` is disabled and removed from the active systemd path.
+- `nginx.service` is disabled and inactive on the OpenClaw EC2 host.
+- native WhatsApp credentials were moved out of `~/.openclaw/credentials/whatsapp` during the prune so the 401 restart loop cannot restart itself.
+- old cron notifications and the stale task database were removed from the live hot path during the prune.
 
 ## Current truth paths
 
@@ -86,28 +97,21 @@ The direct ClawHub archives for slugs `meta-ads` and `instagram` were not forced
 - AWS CLI installed for infra work
 - Membrane CLI installed for Paystack skill auth
 - Cloudflared installed for Cloudinary/Instagram content studio local tunnel workflows
-- Nginx fronts the Mechi bridge at `https://smm-api.lokimax.top`
+- the growth workspace now carries `MECHI_SOCIAL_PLAYBOOK.md` plus local `mechi-social-exec` helpers for Facebook/Discord/X readiness checks
+- the growth workspace now also carries direct local Meta publish helpers for explicit brand-pair commands:
+  - `publish-instagram-photo.mjs`
+  - `publish-instagram-video.mjs`
+  - `publish-meta-photo.mjs`
+  - `publish-meta-video.mjs`
 - native OpenClaw Telegram channel is the production Telegram path
-- native OpenClaw WhatsApp on `+254733638841` is the current live native WhatsApp support/operator path; `+254113033475` is disabled pending a fresh EC2 relink
-- OpenClaw gateway defaults are set for fast operation: `agents.defaults.thinkingDefault=minimal`; main agent `thinkingDefault=minimal` and `fastModeDefault=true`
+- live gateway is pruned to one active agent with `agents.defaults.thinkingDefault=minimal`, `socio.thinkingDefault=minimal`, and `socio.fastModeDefault=true`
+- the 2026-05-10 prune cut gateway memory from roughly `847 MB` down to roughly `184 MB` immediately after restart
 - local Windows OpenClaw gateways are not production and should stay stopped for Mechi
 
 ## Guardrails by role
 
-- `control`
-  Can use repo, shell, GitHub, Supabase helper, and Obsidian notes. Must ask before destructive, money-moving, or public-facing actions.
-- `support`
-  Must stay customer-safe. Never invent refunds, account actions, moderation outcomes, or tournament rulings. Escalate risky or admin-only issues.
-- `community`
-  Must stay public-safe. Avoid promises on payouts, bans, refunds, rewards, or support outcomes. Route risky account-specific issues to `support` or `control`.
-- `infra`
-  May inspect AWS, host services, Nginx, logs, and incidents. Must ask before destructive infra actions or public incident messaging.
-- `billing`
-  May investigate Paystack/subscription state when authenticated. Must ask before refunds, reversals, plan changes, or money-moving actions.
-- `data`
-  May summarize analytics and marketing KPIs from read-only sources. Must not write production data or message customers.
-- `growth`
-  May plan campaigns, inspect media/assets, and draft social/ad work. Must ask before publishing, ad spend, budget, or campaign-state changes.
+- `socio`
+  The only live OpenClaw role on EC2 right now. Use it for Boss-approved SMM execution only. Do not use it for support, billing, infrastructure, or public community moderation.
 
 ## Critical reminder
 

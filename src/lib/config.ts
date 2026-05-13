@@ -88,6 +88,14 @@ export const GAMES: Record<GameKey, Game> = {
     maxPlayers: 4,
     hasLobbyScore: true,
   },
+  mystery: {
+    label: 'Mystery Game',
+    platforms: ['mobile'],
+    mode: 'lobby',
+    maxPlayers: 5,
+    hasLobbyScore: true,
+    hidden: true,
+  },
   cs2: {
     label: 'CS2',
     platforms: ['pc'],

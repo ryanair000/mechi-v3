@@ -5,12 +5,34 @@ const APP_URL = normalizeUrl(
 );
 const GAME_ENQUIRIES_WHATSAPP = '+254104003156';
 const EXTERNAL_ENQUIRIES_REPLY = `For games, gift cards, Fortnite, or anything outside Mechi, please DM ${GAME_ENQUIRIES_WHATSAPP}.`;
+const WEEKEND_CUP_REGISTER_URL = `${APP_URL}/weekendcup`;
+const WEEKEND_CUP_PAGE_URL = `${APP_URL}/`;
 const PLAYMECHI_REGISTER_URL = `${APP_URL}/playmechi/register`;
 const PLAYMECHI_PAGE_URL = `${APP_URL}/playmechi`;
 const PLAYMECHI_YOUTUBE_URL = 'https://www.youtube.com/@playmechi';
 
+const WEEKEND_CUP_FACT_LINES = [
+  'Current featured event: PlayMechi Weekend Cup Season 1.',
+  `Registration link: ${WEEKEND_CUP_REGISTER_URL}. Public vote/preview page: ${WEEKEND_CUP_PAGE_URL}.`,
+  'Dates: Friday 29 May 2026 to Sunday 31 May 2026.',
+  'Prize pool: up to KSh 7,500. Stream: live on Mechi.',
+  'Fixed games: PUBG Mobile on Friday 29 May, CODM on Saturday 30 May, eFootball on Sunday 31 May.',
+  'Mystery game: players vote for the fourth Weekend Cup game. Voting options do not include PUBG, CODM, or eFootball because those are already fixed.',
+  'Entry fees via Paystack. Early Bird: CODM KSh 50, PUBG KSh 50, Mystery Game KSh 50, eFootball KSh 100.',
+  'Phase 2: CODM KSh 75, PUBG KSh 75, Mystery Game KSh 75, eFootball KSh 125.',
+  'Final Rush: CODM KSh 100, PUBG KSh 100, Mystery Game KSh 100, eFootball KSh 150.',
+  'Players who registered for PlayMechi can reuse the same details; Weekend Cup registration pre-fills from their latest PlayMechi registration/check-in profile where available.',
+  'Payment state: Paystack payment confirms the slot. Do not tell a player they are confirmed unless payment status is verified.',
+];
+
+const WEEKEND_CUP_REGISTER_REPLY = [
+  `Register for PlayMechi Weekend Cup Season 1 here: ${WEEKEND_CUP_REGISTER_URL}`,
+  'Pick your game, confirm your player details, then pay with Paystack to lock your slot.',
+  'Season 1 runs 29-31 May 2026. PUBG, CODM, and eFootball are fixed; players are voting for the mystery game.',
+].join('\n');
+
 const PLAYMECHI_FACT_LINES = [
-  'PlayMechi tournament: Playmechi Launch / Mechi.club Online Gaming Tournament.',
+  'Previous/ongoing PlayMechi tournament: Playmechi Launch / Mechi.club Online Gaming Tournament.',
   `Registration link: ${PLAYMECHI_REGISTER_URL}. Tournament page: ${PLAYMECHI_PAGE_URL}.`,
   'Registration is free. Total slots: 216 players. Cash prize pool: KSh 6,000.',
   'Games: PUBG Mobile, CODM, and eFootball.',
@@ -24,7 +46,7 @@ const PLAYMECHI_FACT_LINES = [
 ];
 
 const PLAYMECHI_REGISTER_REPLY = [
-  `Yes. Register for the PlayMechi tournament here: ${PLAYMECHI_REGISTER_URL}`,
+  `For the older PlayMechi tournament, register here: ${PLAYMECHI_REGISTER_URL}`,
   'Pick PUBG Mobile, CODM, or eFootball, enter your exact in-game username, then submit your Instagram and YouTube names for reward verification.',
   'Matches start at 8:00 PM EAT from 8-10 May 2026.',
 ].join('\n');
@@ -44,6 +66,10 @@ export const MECHI_ALLOWED_TOPICS = [
   'playmechi_schedule',
   'playmechi_prizes',
   'playmechi_rules',
+  'weekend_cup',
+  'weekend_cup_registration',
+  'weekend_cup_vote',
+  'weekend_cup_payment',
   'lobby_discovery',
   'notifications',
   'profile_setup',
@@ -135,9 +161,13 @@ export function buildMechiBridgeContext(options = {}) {
     '- Pro and Elite organizers can run auto prize pools from paid entries or set a specified prize pool up front.',
     '- FC26 and eFootball score reporting use scorelines; matching reports can confirm a win or draw, mismatches go to dispute review.',
     '- Reward Points are Mechi in-product points; do not promise redemption completion, payout completion, or point restoration without verified state.',
-    'PlayMechi tournament facts:',
+    'Current Weekend Cup facts:',
+    ...WEEKEND_CUP_FACT_LINES.map((line) => `- ${line}`),
+    'Default Weekend Cup registration reply:',
+    WEEKEND_CUP_REGISTER_REPLY,
+    'Older PlayMechi tournament facts:',
     ...PLAYMECHI_FACT_LINES.map((line) => `- ${line}`),
-    'Default PlayMechi registration reply:',
+    'Older PlayMechi registration reply:',
     PLAYMECHI_REGISTER_REPLY,
     `- Games, gift cards, Fortnite, V-Bucks, and other non-Mechi enquiries are handled on WhatsApp at ${GAME_ENQUIRIES_WHATSAPP}. Reply with: "${EXTERNAL_ENQUIRIES_REPLY}" Do not negotiate prices or collect payment details.`,
     '- Never invent payment confirmations, refunds, payouts, ban outcomes, match rulings, or live registration counts.',
@@ -164,8 +194,9 @@ export function buildMechiBridgeSystemPrompt(channel = 'support') {
     `You are the Mechi ${channelLabel} assistant running inside OpenClaw.`,
     'Answer from the supplied Mechi context when possible.',
     'Keep replies concise, practical, brand-safe, and mobile-friendly.',
-    `If someone asks how to register, asks for the registration link, says "register me", or says they want to register, join, enter, or sign up for the tournament, assume they mean PlayMechi and reply with: ${PLAYMECHI_REGISTER_REPLY}`,
-    'For PlayMechi schedule, prize, stream, rule, and registration questions, answer from the supplied PlayMechi facts instead of asking which tournament.',
+    `If someone asks how to register, asks for the registration link, says "register me", or says they want to register, join, enter, or sign up for the tournament without naming an older event, assume they mean Weekend Cup and reply with: ${WEEKEND_CUP_REGISTER_REPLY}`,
+    'For Weekend Cup schedule, pricing, mystery-game vote, payment, stream, rule, and registration questions, answer from the supplied Weekend Cup facts.',
+    'For older PlayMechi Launch / 8-10 May questions, answer from the supplied older PlayMechi facts.',
     `If someone asks about games, gift cards, Fortnite, V-Bucks, or anything outside Mechi, reply exactly: "${EXTERNAL_ENQUIRIES_REPLY}" Do not collect payment details.`,
     'Escalate or ask for one missing detail when the request is account-sensitive, risky, or unsupported by the supplied context.',
     'Do not invent product policy, prices, live counts, payment state, payouts, bans, refunds, tournament rulings, or account changes.',

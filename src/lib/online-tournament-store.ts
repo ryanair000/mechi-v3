@@ -3,6 +3,8 @@ import {
   ONLINE_TOURNAMENT_GAME_BY_KEY,
   ONLINE_TOURNAMENT_SLUG,
   type OnlineTournamentGameKey,
+  type OnlineTournamentPaymentStatus,
+  type OnlineTournamentPaymentTier,
 } from '@/lib/online-tournament';
 import {
   buildBattleRoyaleStandings,
@@ -27,6 +29,13 @@ export type OnlineTournamentSafeRegistration = {
   reward_eligible: boolean;
   eligibility_status: string;
   check_in_status: string;
+  entry_fee_kes: number | null;
+  payment_tier: OnlineTournamentPaymentTier | null;
+  payment_status: OnlineTournamentPaymentStatus;
+  payment_reference: string | null;
+  payment_confirmed_at: string | null;
+  payment_confirmed_by: string | null;
+  payment_note: string | null;
   device_model: string | null;
   device_serial_last6: string | null;
   whatsapp_number: string | null;
@@ -71,6 +80,9 @@ export type OnlineTournamentPlayerState = {
 };
 
 const REGISTRATION_SELECT =
+  'id, event_slug, user_id, game, in_game_username, game_uid, phone, whatsapp_number, device_model, device_serial_last6, tournament_lobby_number, tournament_lobby_slot, tournament_lobby_assigned_at, email, instagram_username, youtube_name, followed_instagram, subscribed_youtube, available_at_8pm, accepted_rules, reward_eligible, eligibility_status, check_in_status, entry_fee_kes, payment_tier, payment_status, payment_reference, payment_confirmed_at, payment_confirmed_by, payment_note, checked_in_at, admin_note, created_at, updated_at, user:user_id(id, username, phone, email, role, is_banned)';
+
+const LEGACY_REGISTRATION_SELECT =
   'id, event_slug, user_id, game, in_game_username, game_uid, phone, whatsapp_number, device_model, device_serial_last6, tournament_lobby_number, tournament_lobby_slot, tournament_lobby_assigned_at, email, instagram_username, youtube_name, followed_instagram, subscribed_youtube, available_at_8pm, accepted_rules, reward_eligible, eligibility_status, check_in_status, checked_in_at, admin_note, created_at, updated_at, user:user_id(id, username, phone, email, role, is_banned)';
 
 const SUBMISSION_SELECT =
@@ -104,6 +116,59 @@ function isMissingOpsTableError(error: unknown) {
   );
 }
 
+export function isMissingOnlineTournamentPaymentSchemaError(error: unknown) {
+  if (!error || typeof error !== 'object') {
+    return false;
+  }
+
+  const candidate = error as {
+    code?: string;
+    details?: string;
+    message?: string;
+  };
+  const text = [candidate.code, candidate.details, candidate.message]
+    .filter(Boolean)
+    .join(' ')
+    .toLowerCase();
+
+  return (
+    text.includes('online_tournament_registrations') &&
+    (text.includes('42703') ||
+      text.includes('entry_fee_kes') ||
+      text.includes('payment_tier') ||
+      text.includes('payment_status') ||
+      text.includes('payment_reference') ||
+      text.includes('payment_confirmed_at') ||
+      text.includes('payment_confirmed_by') ||
+      text.includes('payment_note') ||
+      text.includes('schema cache'))
+  );
+}
+
+export function withLegacyOnlineTournamentPaymentFields<
+  T extends Partial<OnlineTournamentRegistrationOpsRow>,
+>(registration: T): T & Pick<
+  OnlineTournamentRegistrationOpsRow,
+  | 'entry_fee_kes'
+  | 'payment_tier'
+  | 'payment_status'
+  | 'payment_reference'
+  | 'payment_confirmed_at'
+  | 'payment_confirmed_by'
+  | 'payment_note'
+> {
+  return {
+    ...registration,
+    entry_fee_kes: registration.entry_fee_kes ?? null,
+    payment_tier: registration.payment_tier ?? null,
+    payment_status: registration.payment_status ?? 'paid',
+    payment_reference: registration.payment_reference ?? null,
+    payment_confirmed_at: registration.payment_confirmed_at ?? null,
+    payment_confirmed_by: registration.payment_confirmed_by ?? null,
+    payment_note: registration.payment_note ?? null,
+  };
+}
+
 function optionalOpsArray<T>(result: { data: unknown; error: unknown }): T[] {
   if (result.error) {
     if (isMissingOpsTableError(result.error)) {
@@ -114,6 +179,37 @@ function optionalOpsArray<T>(result: { data: unknown; error: unknown }): T[] {
   }
 
   return ensureArray(result.data as T[] | null);
+}
+
+async function loadOnlineTournamentRegistrations(supabase: SupabaseClient) {
+  const runQuery = (selectColumns: string) =>
+    supabase
+      .from('online_tournament_registrations')
+      .select(selectColumns)
+      .eq('event_slug', ONLINE_TOURNAMENT_SLUG)
+      .order('game', { ascending: true })
+      .order('created_at', { ascending: true });
+
+  const registrationsResult = await runQuery(REGISTRATION_SELECT);
+
+  if (!registrationsResult.error) {
+    return ensureArray(
+      registrationsResult.data as unknown as OnlineTournamentRegistrationOpsRow[] | null
+    );
+  }
+
+  if (!isMissingOnlineTournamentPaymentSchemaError(registrationsResult.error)) {
+    throw registrationsResult.error;
+  }
+
+  const legacyRegistrationsResult = await runQuery(LEGACY_REGISTRATION_SELECT);
+  if (legacyRegistrationsResult.error) {
+    throw legacyRegistrationsResult.error;
+  }
+
+  return ensureArray(
+    legacyRegistrationsResult.data as unknown as OnlineTournamentRegistrationOpsRow[] | null
+  ).map(withLegacyOnlineTournamentPaymentFields);
 }
 
 const FALLBACK_PUBGM_MATCH_1_UPDATED_AT = '2026-05-08T17:15:00.000Z';
@@ -182,6 +278,13 @@ export function toSafeRegistration(
     reward_eligible: registration.reward_eligible,
     eligibility_status: registration.eligibility_status,
     check_in_status: registration.check_in_status,
+    entry_fee_kes: registration.entry_fee_kes,
+    payment_tier: registration.payment_tier,
+    payment_status: registration.payment_status,
+    payment_reference: registration.payment_reference,
+    payment_confirmed_at: registration.payment_confirmed_at,
+    payment_confirmed_by: registration.payment_confirmed_by,
+    payment_note: registration.payment_note,
     device_model: registration.device_model,
     device_serial_last6: registration.device_serial_last6,
     whatsapp_number: registration.whatsapp_number,
@@ -206,6 +309,7 @@ type LobbyAssignmentRegistration = Pick<
   | 'device_serial_last6'
   | 'check_in_status'
   | 'eligibility_status'
+  | 'payment_status'
   | 'tournament_lobby_number'
   | 'tournament_lobby_slot'
   | 'tournament_lobby_assigned_at'
@@ -267,39 +371,59 @@ export async function assignOnlineTournamentLobbySlot(params: {
   const { supabase, registrationId, eventSlug, userId, game } = params;
 
   for (let attempt = 0; attempt < 3; attempt += 1) {
-    let currentQuery = supabase
-      .from('online_tournament_registrations')
-      .select(
-        'id, event_slug, user_id, game, in_game_username, game_uid, device_model, whatsapp_number, device_serial_last6, eligibility_status, check_in_status, tournament_lobby_number, tournament_lobby_slot, tournament_lobby_assigned_at'
-      )
-      .eq('id', registrationId)
-      .eq('event_slug', eventSlug)
-      .eq('game', game);
+    const buildCurrentQuery = (selectColumns: string) => {
+      let query = supabase
+        .from('online_tournament_registrations')
+        .select(selectColumns)
+        .eq('id', registrationId)
+        .eq('event_slug', eventSlug)
+        .eq('game', game);
 
-    if (userId) {
-      currentQuery = currentQuery.eq('user_id', userId);
+      if (userId) {
+        query = query.eq('user_id', userId);
+      }
+
+      return query.maybeSingle();
+    };
+
+    const currentSelect =
+      'id, event_slug, user_id, game, in_game_username, game_uid, device_model, whatsapp_number, device_serial_last6, eligibility_status, check_in_status, tournament_lobby_number, tournament_lobby_slot, tournament_lobby_assigned_at, payment_status';
+    const legacyCurrentSelect =
+      'id, event_slug, user_id, game, in_game_username, game_uid, device_model, whatsapp_number, device_serial_last6, eligibility_status, check_in_status, tournament_lobby_number, tournament_lobby_slot, tournament_lobby_assigned_at';
+    let currentResult = await buildCurrentQuery(currentSelect);
+
+    if (
+      currentResult.error &&
+      isMissingOnlineTournamentPaymentSchemaError(currentResult.error)
+    ) {
+      currentResult = await buildCurrentQuery(legacyCurrentSelect);
     }
 
-    const { data: currentRaw, error: currentError } = await currentQuery.maybeSingle();
-    if (currentError) {
-      throw currentError;
+    if (currentResult.error) {
+      throw currentResult.error;
     }
 
-    const current = currentRaw as LobbyAssignmentRegistration | null;
+    const currentRaw = currentResult.data;
+    const current = currentRaw
+      ? withLegacyOnlineTournamentPaymentFields(
+          currentRaw as unknown as LobbyAssignmentRegistration
+        )
+      : null;
+
     if (
       !current ||
       current.check_in_status !== 'checked_in' ||
       current.eligibility_status === 'disqualified' ||
       !hasTournamentCheckInIdentity(current)
     ) {
-      return current;
+      return current as LobbyAssignmentRegistration | null;
     }
 
     if (current.tournament_lobby_number && current.tournament_lobby_slot) {
-      return current;
+      return current as LobbyAssignmentRegistration;
     }
 
-    const { data: assignedRowsRaw, error: assignedRowsError } = await supabase
+    const assignedRowsQuery = supabase
       .from('online_tournament_registrations')
       .select('tournament_lobby_number, tournament_lobby_slot')
       .eq('event_slug', eventSlug)
@@ -313,6 +437,8 @@ export async function assignOnlineTournamentLobbySlot(params: {
       .not('tournament_lobby_slot', 'is', null)
       .order('tournament_lobby_number', { ascending: true })
       .order('tournament_lobby_slot', { ascending: true });
+
+    const { data: assignedRowsRaw, error: assignedRowsError } = await assignedRowsQuery;
 
     if (assignedRowsError) {
       throw assignedRowsError;
@@ -362,20 +488,16 @@ export async function assignOnlineTournamentLobbySlot(params: {
 export async function loadOnlineTournamentOpsState(
   supabase: SupabaseClient
 ): Promise<OnlineTournamentOpsState> {
+  const registrationsPromise = loadOnlineTournamentRegistrations(supabase);
   const [
-    registrationsResult,
+    registrations,
     roomsResult,
     fixturesResult,
     submissionsResult,
     disputesResult,
     payoutsResult,
   ] = await Promise.all([
-    supabase
-      .from('online_tournament_registrations')
-      .select(REGISTRATION_SELECT)
-      .eq('event_slug', ONLINE_TOURNAMENT_SLUG)
-      .order('game', { ascending: true })
-      .order('created_at', { ascending: true }),
+    registrationsPromise,
     supabase
       .from('online_tournament_rooms')
       .select('*')
@@ -406,14 +528,8 @@ export async function loadOnlineTournamentOpsState(
       .order('placement', { ascending: true }),
   ]);
 
-  if (registrationsResult.error) {
-    throw registrationsResult.error;
-  }
-
   return {
-    registrations: ensureArray(
-      registrationsResult.data as unknown as OnlineTournamentRegistrationOpsRow[] | null
-    ),
+    registrations,
     rooms: withFallbackOnlineTournamentRooms(optionalOpsArray<OnlineTournamentRoom>(roomsResult)),
     fixtures: optionalOpsArray<OnlineTournamentFixture>(fixturesResult),
     submissions: optionalOpsArray<OnlineTournamentResultSubmission>(submissionsResult),
@@ -465,6 +581,13 @@ export function buildPlayerTournamentState(params: {
           reward_eligible: false,
           eligibility_status: standing.registration.eligibility_status,
           check_in_status: standing.registration.check_in_status,
+          entry_fee_kes: standing.registration.entry_fee_kes,
+          payment_tier: standing.registration.payment_tier,
+          payment_status: standing.registration.payment_status,
+          payment_reference: standing.registration.payment_reference,
+          payment_confirmed_at: standing.registration.payment_confirmed_at,
+          payment_confirmed_by: standing.registration.payment_confirmed_by,
+          payment_note: standing.registration.payment_note,
           device_model: standing.registration.device_model,
           device_serial_last6: standing.registration.device_serial_last6,
           whatsapp_number: standing.registration.whatsapp_number,

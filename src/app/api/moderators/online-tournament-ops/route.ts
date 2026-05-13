@@ -19,6 +19,7 @@ function cleanText(value: unknown, maxLength = 80) {
 
 async function readScopedGameForRecord(params: {
   table:
+    | 'online_tournament_registrations'
     | 'online_tournament_result_submissions'
     | 'online_tournament_fixtures'
     | 'online_tournament_disputes';
@@ -57,6 +58,24 @@ async function validateModeratorActionScope(params: {
     const game = cleanText(params.body.game, 20);
     if (!isOnlineTournamentGame(game) || game !== params.assignedGame) {
       return NextResponse.json({ error: 'That tournament action is outside your assigned game' }, { status: 403 });
+    }
+
+    return null;
+  }
+
+  if (action === 'update_payment_status' || action === 'confirm_payment') {
+    const registrationId = cleanText(params.body.registration_id, 80);
+    if (!registrationId) {
+      return NextResponse.json({ error: 'Registration is required' }, { status: 400 });
+    }
+
+    const game = await readScopedGameForRecord({
+      table: 'online_tournament_registrations',
+      id: registrationId,
+    });
+
+    if (!isOnlineTournamentGame(game) || game !== params.assignedGame) {
+      return NextResponse.json({ error: 'That player is outside your assigned tournament' }, { status: 403 });
     }
 
     return null;

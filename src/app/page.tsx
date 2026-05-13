@@ -1,13 +1,13 @@
 import type { Metadata } from 'next';
-import { OnlineTournamentClient } from '@/app/online-gaming-tournament/online-tournament-client';
-import { ONLINE_TOURNAMENT_TITLE } from '@/lib/online-tournament';
+import { WeekendCupClient } from '@/app/weekendcup/weekend-cup-client';
+import { WEEKEND_CUP_EVENT_DATES, WEEKEND_CUP_TITLE } from '@/lib/weekend-cup';
 
 export const metadata: Metadata = {
-  title: `${ONLINE_TOURNAMENT_TITLE} | Mechi.club`,
+  title: `${WEEKEND_CUP_TITLE} | Mechi.club`,
   description:
-    'Register for Playmechi Launch featuring PUBG Mobile, Call of Duty Mobile, and eFootball.',
+    `Vote for the mystery game and register for ${WEEKEND_CUP_TITLE}, running ${WEEKEND_CUP_EVENT_DATES}.`,
 };
 
 export default function HomePage() {
-  return <OnlineTournamentClient />;
+  return <WeekendCupClient />;
 }

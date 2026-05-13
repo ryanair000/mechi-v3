@@ -1623,7 +1623,7 @@ export async function sendOnlineTournamentRegistrationEmail(params: {
   scoring: string;
   firstPrize: string;
   secondPrize: string;
-  thirdPrize: string;
+  thirdPrize?: string | null;
   eligibilityStatus: string;
   registrationUrl: string;
   whatsappGroupUrl: string;
@@ -1632,6 +1632,7 @@ export async function sendOnlineTournamentRegistrationEmail(params: {
   const eventTitle = escapeHtml(params.eventTitle);
   const gameLabel = escapeHtml(params.gameLabel);
   const eligibility = statusLabel(params.eligibilityStatus);
+  const thirdPrizeLabel = escapeHtml(params.thirdPrize ?? 'No 3rd prize');
   const content = `
     <h2>PlayMechi registration received</h2>
     <p>Hey ${username}, your <strong>${gameLabel}</strong> registration for <strong>${eventTitle}</strong> is in. Keep this email for the match-day details.</p>
@@ -1676,7 +1677,7 @@ export async function sendOnlineTournamentRegistrationEmail(params: {
         <td width="10"></td>
         <td class="mini-cell" width="33%">
           <span class="mini-label">3rd prize</span>
-          <span class="mini-value">${escapeHtml(params.thirdPrize)}</span>
+          <span class="mini-value">${thirdPrizeLabel}</span>
         </td>
       </tr>
     </table>

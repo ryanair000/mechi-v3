@@ -4,15 +4,21 @@ This file defines the recommended OpenClaw agent roster for Mechi, the skills ea
 
 ## Current live OpenClaw deployment
 
-The EC2 OpenClaw gateway currently has these agents active:
+The EC2 OpenClaw gateway is currently pruned to one live agent:
 
-- `control`: Mechi COO, workspace `/home/ubuntu/mechi-v3`, repo and operator control.
-- `support`: Mechi Support, workspace `~/.openclaw/workspace-support`, installed skills `whatsapp-business` and `customer-support-autopilot`; local `playmechi-tournament-ops` for public tournament FAQ, plus `supabase-live-ops` only when an approved read-only helper runner is exposed.
-- `community`: Mechi Community, workspace `~/.openclaw/workspace-community`, public/community-safe messaging; local `playmechi-tournament-ops` for announcement-safe tournament FAQ, plus `supabase-live-ops` only when an approved read-only helper runner is exposed.
-- `infra`: Mechi Infra, workspace `~/.openclaw/workspace-infra`, installed skills `aws`, `openclaw-security-scanner`, `incident`, and `incident-hotfix`.
-- `billing`: Mechi Billing, workspace `~/.openclaw/workspace-billing`, installed skill `paystack`.
-- `data`: Mechi Data, workspace `~/.openclaw/workspace-data`, installed skills `ga4`, `skill-ga4-analytics`, and `marketing-analytics`.
-- `growth`: Mechi Growth, workspace `~/.openclaw/workspace-growth`, installed skills `cloudinary`, `openclaw-meta-ads`, `meta-ads-manager`, `instagram-api`, and `instagram-content-studio`.
+- `socio`: Boss private SMM/social execution lane, routed from the private `OPS` Telegram group and explicitly pinned on the `SMM` forum topic (`topicId=7`), reusing workspace `~/.openclaw/workspace-growth` for Instagram-first publishing plus named Facebook, X, and Discord cross-posts. Explicit operator commands now include `socio post chezahub` for the `ChezaHub` Instagram+Facebook pair and `socio post playmechi` for the `PlayMechi` Instagram+Facebook pair.
+
+The 2026-05-10 cleanup removed these from the active host config and moved their state out of the hot path:
+
+- `control`
+- `support`
+- `community`
+- `infra`
+- `billing`
+- `data`
+- `growth`
+
+Native OpenClaw WhatsApp, the Mechi bridge, and Nginx were also disabled on the EC2 host so the runtime is focused on Telegram SMM only.
 
 The direct ClawHub slugs `meta-ads` and `instagram` were skipped because their archives unpacked without a valid top-level `SKILL.md`; the growth workspace uses the working alternatives above. Provider credentials/OAuth are still separate from skill install and must be added per tool before live API calls.
 
@@ -187,9 +193,41 @@ Rule: give each role the lowest tier that still lets it do its job.
   - `TELEGRAM_BOT_TOKEN` only if broadcast posting is part of the role
   - analytics read access through `NEXT_PUBLIC_SUPABASE_URL` and safe reporting views
 - Guardrails:
-  - no service-role DB key unless absolutely necessary
-  - no repo write by default
-  - no payment or infra credentials
+- no service-role DB key unless absolutely necessary
+- no repo write by default
+- no payment or infra credentials
+
+### `socio`
+
+- Role: Boss private SMM and cross-channel social execution lane
+- Tool profile: `minimal`
+- Access tier: `Tier 1 - messaging`
+- Primary surfaces: private Telegram `OPS` group, PlayMechi Instagram publishing, named Facebook/X/Discord cross-posting, caption polishing, lightweight content execution
+- Skills:
+  - Instagram feed publishing
+  - Mechi-specific caption drafting and cleanup
+  - image-first social execution
+  - cross-channel adaptation for Facebook, X, and Discord
+  - permalink/report-back discipline
+- Required access:
+  - OpenClaw model auth
+  - `INSTAGRAM_ACCESS_TOKEN`
+  - `INSTAGRAM_BUSINESS_ACCOUNT_ID`
+  - `IMGUR_CLIENT_ID`
+  - `FACEBOOK_USER_ACCESS_TOKEN` when comment or reply flows are needed
+  - `FACEBOOK_APP_ID` and `FACEBOOK_APP_SECRET` when token refresh helpers are used
+  - `FACEBOOK_PAGE_ID`
+  - `FACEBOOK_PAGE_ACCESS_TOKEN`
+  - X auth through `xurl` on the host or `X_OAUTH2_ACCESS_TOKEN`
+  - `DISCORD_WEBHOOK_URL` or native Discord bot config using `DISCORD_BOT_TOKEN`
+  - `cloudflared` plus the `instagram-content-studio` skill for local file uploads
+  - local growth workspace skill `mechi-social-exec`
+  - `MECHI_SOCIAL_PLAYBOOK.md`
+- Guardrails:
+  - only approved operator senders should trigger it
+  - treat a photo dropped in the private SMM room as an execution instruction from the Boss for Instagram only unless extra targets are explicitly named
+  - do not touch ad spend, campaign budgets, or customer accounts
+  - do not publish outside PlayMechi/approved social surfaces
 
 ### `community`
 
@@ -361,6 +399,7 @@ Rule: give each role the lowest tier that still lets it do its job.
 
 - Keep `control` and `infra` as the only `coding` profile agents.
 - Keep `support`, `tournaments`, `billing`, `rewards`, `growth`, `community`, and `data` on `minimal`.
+- Keep `socio` on `minimal`; it should inherit the growth workspace media stack instead of gaining repo or infra access.
 - Do not reuse one secret bundle across all agents.
 - Prefer one OpenClaw agent per operating role rather than one mega-agent with every secret.
 - Rotate messaging and service-role secrets separately.

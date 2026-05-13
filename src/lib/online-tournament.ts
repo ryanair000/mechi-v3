@@ -1,7 +1,7 @@
 import type { GameKey } from '@/types';
 import { PLAYMECHI_WHATSAPP_GROUP_URL } from '@/lib/social-links';
 
-export type OnlineTournamentGameKey = Extract<GameKey, 'pubgm' | 'codm' | 'efootball'>;
+export type OnlineTournamentGameKey = Extract<GameKey, 'pubgm' | 'codm' | 'efootball' | 'mystery'>;
 
 export type OnlineTournamentDisputeCategory =
   | 'wrongdoing'
@@ -18,6 +18,15 @@ export type OnlineTournamentEligibilityStatus =
   | 'disqualified';
 
 export type OnlineTournamentCheckInStatus = 'registered' | 'checked_in' | 'no_show';
+
+export type OnlineTournamentPaymentStatus =
+  | 'pending_payment'
+  | 'paid'
+  | 'failed'
+  | 'refunded'
+  | 'manual_review';
+
+export type OnlineTournamentPaymentTier = 'early_bird' | 'regular' | 'late';
 
 export type OnlineTournamentGameConfig = {
   game: OnlineTournamentGameKey;
@@ -63,6 +72,7 @@ export const ONLINE_TOURNAMENT_DISPUTE_API_PATH =
 export const ONLINE_TOURNAMENT_EVENT_DATES = '8-10 May 2026';
 export const ONLINE_TOURNAMENT_GAME_LIST_LABEL = 'PUBG Mobile, CODM, and eFootball';
 export const ONLINE_TOURNAMENT_CASH_PRIZE_POOL = 6000;
+export const ONLINE_TOURNAMENT_PAYMENT_CONFIRMATION_ENABLED = false;
 export const ONLINE_TOURNAMENT_STREAM_CHANNEL = 'PlayMechi';
 export const ONLINE_TOURNAMENT_STREAMER = 'Kabaka Mwangi';
 export const ONLINE_TOURNAMENT_INSTAGRAM = 'PlayMechi';
@@ -97,6 +107,106 @@ export const ONLINE_TOURNAMENT_STREAM_PLATFORMS = [
     role: 'Main long-form stream and replays',
   },
 ] as const;
+
+export const ONLINE_TOURNAMENT_PAYMENT_STATUSES: OnlineTournamentPaymentStatus[] = [
+  'pending_payment',
+  'paid',
+  'failed',
+  'refunded',
+  'manual_review',
+];
+
+export const ONLINE_TOURNAMENT_PAYMENT_TIERS: OnlineTournamentPaymentTier[] = [
+  'early_bird',
+  'regular',
+  'late',
+];
+
+export const ONLINE_TOURNAMENT_ENTRY_PRICING = {
+  earlyBirdKes: 0,
+  regularKes: 0,
+  lateKes: 0,
+  earlyBirdPaidLimit: 0,
+  entryFromLabel: 'Free entry',
+  earlyBirdLabel: 'Free entry',
+  regularLabel: 'Free entry',
+  lateLabel: 'Free entry',
+  pricingLineLabel: 'Free entry',
+  earlyBirdLimitLabel: 'No payment required',
+  earlyBirdPolicyLabel: 'No payment is required for this tournament.',
+  confirmedAfterPaymentLabel: 'Registration is confirmed once you submit it.',
+  pendingPaymentLabel: 'Registration confirmed',
+  pendingPaymentMessage: 'This tournament is free. Your registration is already confirmed.',
+} as const;
+
+export function formatTournamentKes(value: number) {
+  return `KSh ${value.toLocaleString('en-KE')}`;
+}
+
+export function getOnlineTournamentPaymentTierAmount(
+  tier: OnlineTournamentPaymentTier
+) {
+  switch (tier) {
+    case 'early_bird':
+      return ONLINE_TOURNAMENT_ENTRY_PRICING.earlyBirdKes;
+    case 'late':
+      return ONLINE_TOURNAMENT_ENTRY_PRICING.lateKes;
+    case 'regular':
+    default:
+      return ONLINE_TOURNAMENT_ENTRY_PRICING.regularKes;
+  }
+}
+
+export function getOnlineTournamentPaymentTierLabel(
+  tier: OnlineTournamentPaymentTier
+) {
+  switch (tier) {
+    case 'early_bird':
+      return ONLINE_TOURNAMENT_ENTRY_PRICING.earlyBirdLabel;
+    case 'late':
+      return ONLINE_TOURNAMENT_ENTRY_PRICING.lateLabel;
+    case 'regular':
+    default:
+      return ONLINE_TOURNAMENT_ENTRY_PRICING.regularLabel;
+  }
+}
+
+export function isOnlineTournamentPaymentStatus(
+  value: unknown
+): value is OnlineTournamentPaymentStatus {
+  return (
+    typeof value === 'string' &&
+    ONLINE_TOURNAMENT_PAYMENT_STATUSES.includes(value as OnlineTournamentPaymentStatus)
+  );
+}
+
+export function isOnlineTournamentPaymentTier(
+  value: unknown
+): value is OnlineTournamentPaymentTier {
+  return (
+    typeof value === 'string' &&
+    ONLINE_TOURNAMENT_PAYMENT_TIERS.includes(value as OnlineTournamentPaymentTier)
+  );
+}
+
+export function isOnlineTournamentPaidStatus(value: unknown) {
+  return !ONLINE_TOURNAMENT_PAYMENT_CONFIRMATION_ENABLED || value === 'paid';
+}
+
+export function getOnlineTournamentDefaultPaymentForConfirmation(confirmedPaidCount: number) {
+  const tier =
+    confirmedPaidCount < ONLINE_TOURNAMENT_ENTRY_PRICING.earlyBirdPaidLimit
+      ? 'early_bird'
+      : 'regular';
+
+  return {
+    tier,
+    amountKes: getOnlineTournamentPaymentTierAmount(tier),
+  } satisfies {
+    tier: OnlineTournamentPaymentTier;
+    amountKes: number;
+  };
+}
 
 export const ONLINE_TOURNAMENT_DISPUTE_CATEGORIES = [
   { value: 'wrongdoing', label: 'Wrongdoing or cheating' },
@@ -248,6 +358,23 @@ export const ONLINE_TOURNAMENT_GAMES: OnlineTournamentGameConfig[] = [
   },
 ];
 
+export const ONLINE_TOURNAMENT_CODM_MATCH_DETAILS = {
+  anchorId: 'codm-match',
+  eyebrow: 'CODM match desk',
+  title: 'CODM match details drop on match day.',
+  dateLabel: 'Saturday 9 May 2026',
+  timeLabel: '8:00 PM EAT',
+  inviteHref: `${ONLINE_TOURNAMENT_REGISTRATION_PATH}?game=codm`,
+  inviteLabel: 'Register for CODM',
+  roomCode: 'Shared on match day',
+  password: 'Shared on match day',
+  notes: [
+    'Register first, then wait for the CODM room ID and password to be shared by the moderators.',
+    'Join with the same CODM username you registered with on Mechi.',
+    'Keep WhatsApp open for lobby drops, scoring reminders, and match-day updates from the desk.',
+  ],
+} as const;
+
 export const ONLINE_TOURNAMENT_TOTAL_SLOTS = ONLINE_TOURNAMENT_GAMES.reduce(
   (total, game) => total + game.slots,
   0
@@ -260,6 +387,8 @@ export const ONLINE_TOURNAMENT_TOTAL_CHECK_IN_CAP = ONLINE_TOURNAMENT_GAMES.redu
 
 export type OnlineTournamentGameRegistrationCount = {
   registered: number;
+  confirmed: number;
+  pendingPayment: number;
   slots: number;
   spotsLeft: number;
   full: boolean;
@@ -272,6 +401,11 @@ export type OnlineTournamentGameRegistrationCount = {
 export type OnlineTournamentRegistrationSummary = {
   games: Record<OnlineTournamentGameKey, OnlineTournamentGameRegistrationCount>;
   registrations: unknown[];
+  payment: {
+    earlyBirdPaidCount: number;
+    earlyBirdPaidLimit: number;
+    earlyBirdRemaining: number;
+  };
 };
 
 export type OnlineTournamentDisplayStatus = 'open' | 'active' | 'completed';
@@ -287,6 +421,8 @@ export function getFallbackOnlineTournamentSummary(): OnlineTournamentRegistrati
         const registrationClosed = isOnlineTournamentRegistrationClosed(game);
         counts[game.game] = {
           registered: 0,
+          confirmed: 0,
+          pendingPayment: 0,
           slots: game.slots,
           spotsLeft: registrationClosed ? 0 : game.slots,
           full: registrationClosed,
@@ -300,6 +436,11 @@ export function getFallbackOnlineTournamentSummary(): OnlineTournamentRegistrati
       {} as Record<OnlineTournamentGameKey, OnlineTournamentGameRegistrationCount>
     ),
     registrations: [],
+    payment: {
+      earlyBirdPaidCount: 0,
+      earlyBirdPaidLimit: ONLINE_TOURNAMENT_ENTRY_PRICING.earlyBirdPaidLimit,
+      earlyBirdRemaining: ONLINE_TOURNAMENT_ENTRY_PRICING.earlyBirdPaidLimit,
+    },
   };
 }
 
@@ -309,10 +450,12 @@ export function getOnlineTournamentTotals(summary: OnlineTournamentRegistrationS
       const gameSummary = summary.games?.[game.game];
       const slots = Number(gameSummary?.slots ?? game.slots);
       const registered = Number(gameSummary?.registered ?? 0);
+      const confirmed = Number(gameSummary?.confirmed ?? 0);
+      const pendingPayment = Number(gameSummary?.pendingPayment ?? 0);
       const checkedIn = Number(gameSummary?.checkedIn ?? 0);
       const fallbackSpotsLeft = isOnlineTournamentRegistrationClosed(game)
         ? 0
-        : Math.max(0, slots - registered);
+        : Math.max(0, slots - confirmed);
       const spotsLeft = Number(gameSummary?.spotsLeft ?? fallbackSpotsLeft);
       const checkInCap = Number(gameSummary?.checkInCap ?? game.checkInCap);
       const fallbackCheckInSpotsLeft = Math.max(0, checkInCap - checkedIn);
@@ -321,6 +464,8 @@ export function getOnlineTournamentTotals(summary: OnlineTournamentRegistrationS
       );
 
       totals.registered += registered;
+      totals.confirmed += confirmed;
+      totals.pendingPayment += pendingPayment;
       totals.slots += slots;
       totals.spotsLeft += Math.max(0, spotsLeft);
       totals.checkedIn += checkedIn;
@@ -330,6 +475,8 @@ export function getOnlineTournamentTotals(summary: OnlineTournamentRegistrationS
     },
     {
       registered: 0,
+      confirmed: 0,
+      pendingPayment: 0,
       slots: 0,
       spotsLeft: 0,
       checkedIn: 0,

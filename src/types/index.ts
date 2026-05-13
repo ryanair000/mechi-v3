@@ -12,6 +12,7 @@ export type GameKey =
   | 'sf6'
   | 'codm'
   | 'pubgm'
+  | 'mystery'
   | 'cs2'
   | 'valorant'
   | 'mariokart'

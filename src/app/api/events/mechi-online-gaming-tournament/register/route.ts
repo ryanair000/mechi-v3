@@ -9,6 +9,7 @@ import {
   normalizeSelectedGameKeys,
 } from '@/lib/config';
 import {
+  ONLINE_TOURNAMENT_ENTRY_PRICING,
   getOnlineTournamentCapacityErrorType,
   ONLINE_TOURNAMENT_GAME_BY_KEY,
   ONLINE_TOURNAMENT_GAMES,
@@ -53,6 +54,8 @@ function emptyGameCounts() {
       const registrationClosed = isOnlineTournamentRegistrationClosed(game);
       counts[game.game] = {
         registered: 0,
+        confirmed: 0,
+        pendingPayment: 0,
         slots: game.slots,
         spotsLeft: registrationClosed ? 0 : game.slots,
         full: registrationClosed,
@@ -67,6 +70,8 @@ function emptyGameCounts() {
       OnlineTournamentGameKey,
       {
         registered: number;
+        confirmed: number;
+        pendingPayment: number;
         slots: number;
         spotsLeft: number;
         full: boolean;
@@ -131,23 +136,27 @@ async function getRegistrationSummary(userId?: string | null) {
     if (registration.eligibility_status === 'disqualified') continue;
 
     gameCounts[registration.game].registered += 1;
+    gameCounts[registration.game].confirmed += 1;
+
     if (registration.check_in_status === 'checked_in') {
       gameCounts[registration.game].checkedIn += 1;
     }
   }
 
   for (const game of ONLINE_TOURNAMENT_GAMES) {
-    const registered = gameCounts[game.game].registered;
+    const confirmed = gameCounts[game.game].registered;
     const checkedIn = gameCounts[game.game].checkedIn;
     const registrationClosed = isOnlineTournamentRegistrationClosed(game);
     gameCounts[game.game].spotsLeft = registrationClosed
       ? 0
-      : Math.max(0, game.slots - registered);
-    gameCounts[game.game].full = registrationClosed || registered >= game.slots;
+      : Math.max(0, game.slots - confirmed);
+    gameCounts[game.game].full = registrationClosed || confirmed >= game.slots;
     gameCounts[game.game].checkInCap = game.checkInCap;
     gameCounts[game.game].checkInSpotsLeft = Math.max(0, game.checkInCap - checkedIn);
     gameCounts[game.game].checkInFull = checkedIn >= game.checkInCap;
   }
+
+  const earlyBirdPaidCount = 0;
 
   return {
     games: gameCounts,
@@ -165,10 +174,24 @@ async function getRegistrationSummary(userId?: string | null) {
             reward_eligible: registration.reward_eligible,
             eligibility_status: registration.eligibility_status,
             check_in_status: registration.check_in_status,
+            entry_fee_kes: null,
+            payment_tier: null,
+            payment_status: 'paid',
+            payment_reference: null,
+            payment_confirmed_at: null,
+            payment_note: null,
             created_at: registration.created_at,
             updated_at: registration.updated_at,
           }))
       : [],
+    payment: {
+      earlyBirdPaidCount,
+      earlyBirdPaidLimit: ONLINE_TOURNAMENT_ENTRY_PRICING.earlyBirdPaidLimit,
+      earlyBirdRemaining: Math.max(
+        0,
+        ONLINE_TOURNAMENT_ENTRY_PRICING.earlyBirdPaidLimit - earlyBirdPaidCount
+      ),
+    },
   };
 }
 
@@ -408,7 +431,7 @@ export async function POST(request: NextRequest) {
           scoring: gameConfig.scoring,
           firstPrize: gameConfig.firstPrize,
           secondPrize: gameConfig.secondPrize,
-          thirdPrize: gameConfig.thirdPrize,
+          thirdPrize: gameConfig.thirdPrize ?? 'No 3rd prize',
           eligibilityStatus: nextEligibilityStatus,
           registrationUrl: `${APP_URL}${ONLINE_TOURNAMENT_REGISTRATION_PATH}`,
           whatsappGroupUrl: gameConfig.whatsappGroupUrl,
@@ -456,6 +479,8 @@ export async function POST(request: NextRequest) {
             subscribedYoutube,
             eligibilityStatus: nextEligibilityStatus,
             registered: gameSummary?.registered ?? 0,
+            confirmed: gameSummary?.confirmed ?? 0,
+            pendingPayment: gameSummary?.pendingPayment ?? 0,
             slots: gameSummary?.slots ?? gameConfig.slots,
             spotsLeft: gameSummary?.spotsLeft ?? Math.max(0, gameConfig.slots - 1),
             checkedIn: gameSummary?.checkedIn ?? 0,

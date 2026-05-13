@@ -9,6 +9,10 @@ import {
   markTournamentPaymentFailedByReference,
   markTournamentPaymentPaidByReference,
 } from '@/lib/tournaments';
+import {
+  markWeekendCupPaymentFailedByReference,
+  markWeekendCupPaymentPaidByReference,
+} from '@/lib/weekend-cup-server';
 
 export const runtime = 'nodejs';
 
@@ -70,6 +74,13 @@ function classifyMechiPayment(event: PaystackWebhookEvent) {
     return { kind: 'tournament' as const, reference };
   }
 
+  if (
+    reference.startsWith('mechi_weekendcup') ||
+    (type === 'weekend_cup_registration' && (app === 'mechi' || source === 'mechi'))
+  ) {
+    return { kind: 'weekend_cup' as const, reference };
+  }
+
   return { kind: 'unknown' as const, reference };
 }
 
@@ -101,7 +112,9 @@ export async function POST(request: NextRequest) {
       const result =
         payment.kind === 'subscription'
           ? await activateSubscriptionByReference(payment.reference, supabase)
-          : await markTournamentPaymentPaidByReference(supabase, payment.reference);
+          : payment.kind === 'weekend_cup'
+            ? await markWeekendCupPaymentPaidByReference(supabase, payment.reference)
+            : await markTournamentPaymentPaidByReference(supabase, payment.reference);
 
       if (!result.success) {
         console.error('[Paystack Webhook] Could not process successful payment', {
@@ -127,7 +140,9 @@ export async function POST(request: NextRequest) {
       const result =
         payment.kind === 'subscription'
           ? await markSubscriptionPaymentFailedByReference(payment.reference, supabase)
-          : await markTournamentPaymentFailedByReference(supabase, payment.reference);
+          : payment.kind === 'weekend_cup'
+            ? await markWeekendCupPaymentFailedByReference(supabase, payment.reference)
+            : await markTournamentPaymentFailedByReference(supabase, payment.reference);
 
       if (!result.success) {
         console.error('[Paystack Webhook] Could not mark failed payment', {

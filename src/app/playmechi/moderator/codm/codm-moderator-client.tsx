@@ -40,10 +40,15 @@ import {
   ONLINE_TOURNAMENT_CHECK_IN_PATH,
   ONLINE_TOURNAMENT_GAME_BY_KEY,
   ONLINE_TOURNAMENT_GAMES,
+  ONLINE_TOURNAMENT_PAYMENT_TIERS,
+  getOnlineTournamentPaymentTierLabel,
+  isOnlineTournamentPaidStatus,
   requiresTournamentDeviceSerialLast6,
   type OnlineTournamentGameKey,
   type OnlineTournamentCheckInStatus,
   type OnlineTournamentEligibilityStatus,
+  type OnlineTournamentPaymentStatus,
+  type OnlineTournamentPaymentTier,
 } from '@/lib/online-tournament';
 import {
   ONLINE_TOURNAMENT_BR_MATCH_NUMBERS,
@@ -101,6 +106,14 @@ type RoomDraft = {
   status: OnlineTournamentRoomStatus;
 };
 
+type PaymentDraft = {
+  payment_status: OnlineTournamentPaymentStatus;
+  payment_tier: OnlineTournamentPaymentTier | '';
+  entry_fee_kes: string;
+  payment_reference: string;
+  payment_note: string;
+};
+
 function getEmptyRoomDraft(): RoomDraft {
   return {
     map_name: '',
@@ -138,6 +151,7 @@ function formatDateTime(value: string | null | undefined) {
 
 function getBadgeClass(status: string | null | undefined) {
   switch (status) {
+    case 'paid':
     case 'checked_in':
     case 'verified':
     case 'released':
@@ -155,6 +169,22 @@ function getBadgeClass(status: string | null | undefined) {
     default:
       return 'border-amber-400/20 bg-amber-500/10 text-amber-200';
   }
+}
+
+function buildPaymentDrafts(registrations: OnlineTournamentRegistrationOpsRow[]) {
+  return registrations.reduce<Record<string, PaymentDraft>>((drafts, registration) => {
+    drafts[registration.id] = {
+      payment_status: registration.payment_status,
+      payment_tier: registration.payment_tier ?? '',
+      entry_fee_kes:
+        registration.entry_fee_kes !== null && registration.entry_fee_kes !== undefined
+          ? String(registration.entry_fee_kes)
+          : '',
+      payment_reference: registration.payment_reference ?? '',
+      payment_note: registration.payment_note ?? '',
+    };
+    return drafts;
+  }, {});
 }
 
 function getPlayerLabel(registration: OnlineTournamentRegistrationOpsRow | null | undefined) {
@@ -293,11 +323,13 @@ export function CodmModeratorClient() {
   const [query, setQuery] = useState('');
   const [rosterMode, setRosterMode] = useState<TournamentModeratorRosterMode>('unverified');
   const [registrationNotes, setRegistrationNotes] = useState<Record<string, string>>({});
+  const [paymentDrafts, setPaymentDrafts] = useState<Record<string, PaymentDraft>>({});
   const [submissionNotes, setSubmissionNotes] = useState<Record<string, string>>({});
 
   const applyState = useCallback((nextState: TournamentOpsState) => {
     setState(nextState);
     setRoomDrafts(buildRoomDrafts(nextState, activeGame));
+    setPaymentDrafts(buildPaymentDrafts(nextState.registrations));
     setRegistrationNotes((current) => ({
       ...nextState.registrations.reduce<Record<string, string>>((notes, registration) => {
         if (registration.game === activeGame) {
@@ -367,7 +399,17 @@ export function CodmModeratorClient() {
     ? state?.standings[activeGame] ?? []
     : [];
   const checkedInRoster = registrations.filter(
-    (registration) => registration.check_in_status === 'checked_in'
+    (registration) =>
+      registration.check_in_status === 'checked_in' &&
+      isOnlineTournamentPaidStatus(registration.payment_status)
+  );
+  const paidRoster = registrations.filter((registration) =>
+    isOnlineTournamentPaidStatus(registration.payment_status)
+  );
+  const pendingPaymentRoster = registrations.filter(
+    (registration) =>
+      registration.payment_status === 'pending_payment' ||
+      registration.payment_status === 'manual_review'
   );
   const readyCheckedInRoster = registrations.filter(isTournamentReadyCheckedIn);
   const attentionRoster = registrations.filter(needsTournamentRosterAttention);
@@ -459,6 +501,11 @@ export function CodmModeratorClient() {
     updates: Partial<{
       eligibility_status: OnlineTournamentEligibilityStatus;
       check_in_status: OnlineTournamentCheckInStatus;
+      payment_status: OnlineTournamentPaymentStatus;
+      payment_tier: OnlineTournamentPaymentTier | null;
+      entry_fee_kes: number | null;
+      payment_reference: string | null;
+      payment_note: string | null;
       admin_note: string | null;
     }>
   ) => {
@@ -675,13 +722,15 @@ export function CodmModeratorClient() {
         </div>
       </section>
 
-      <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+      <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-6">
         {[
           { label: 'Registered', value: registrations.length, icon: Trophy },
+          { label: 'Paid confirmed', value: paidRoster.length, icon: CheckCircle2 },
+          { label: 'Pending payment', value: pendingPaymentRoster.length, icon: Clipboard },
           { label: 'Checked in', value: checkedInRoster.length, icon: UserCheck },
           { label: 'Lobby ready', value: readyCheckedInRoster.length, icon: DoorOpen },
-          { label: 'Pending results', value: pendingSubmissions.length, icon: ShieldAlert },
           { label: 'Needs attention', value: attentionRoster.length, icon: ShieldCheck },
+          { label: 'Pending results', value: pendingSubmissions.length, icon: ShieldAlert },
         ].map((item) => {
           const Icon = item.icon;
           return (
@@ -775,6 +824,17 @@ export function CodmModeratorClient() {
                       const isActingAccount = actingOn === `account-${registration.id}`;
                       const isActing = isActingRegistration || isActingAccount;
                       const isVerified = registration.eligibility_status === 'verified';
+                      const paymentDraft = paymentDrafts[registration.id] ?? {
+                        payment_status: registration.payment_status,
+                        payment_tier: registration.payment_tier ?? '',
+                        entry_fee_kes:
+                          registration.entry_fee_kes !== null &&
+                          registration.entry_fee_kes !== undefined
+                            ? String(registration.entry_fee_kes)
+                            : '',
+                        payment_reference: registration.payment_reference ?? '',
+                        payment_note: registration.payment_note ?? '',
+                      };
                       const isProtectedAccount =
                         registration.user?.role === 'moderator' ||
                         registration.user?.role === 'admin';
@@ -817,6 +877,12 @@ export function CodmModeratorClient() {
                             <div className="flex flex-wrap gap-1.5">
                               <StatusPill status={registration.check_in_status} />
                               <StatusPill status={registration.eligibility_status} />
+                              <StatusPill status={registration.payment_status} />
+                              {registration.payment_tier ? (
+                                <MetaPill
+                                  label={getOnlineTournamentPaymentTierLabel(registration.payment_tier)}
+                                />
+                              ) : null}
                               {isTournamentReadyCheckedIn(registration) ? (
                                 <MetaPill label="ready" />
                               ) : null}
@@ -825,9 +891,36 @@ export function CodmModeratorClient() {
                                 <MetaPill label={registration.user?.role ?? 'staff'} />
                               ) : null}
                             </div>
+                            <p className="mt-2 text-xs text-[var(--text-soft)]">
+                              {registration.entry_fee_kes !== null
+                                ? `KSh ${registration.entry_fee_kes}`
+                                : 'Amount pending'}
+                              {registration.payment_reference
+                                ? ` • Ref ${registration.payment_reference}`
+                                : ''}
+                            </p>
                           </td>
                           <td className="rounded-r-lg border-y border-r border-[var(--border-color)] px-3 py-3 align-top">
                             <div className="flex flex-wrap gap-2">
+                              {!isOnlineTournamentPaidStatus(registration.payment_status) ? (
+                                <button
+                                  type="button"
+                                  disabled={isActing}
+                                  onClick={() =>
+                                    void patchRegistration(registration, {
+                                      payment_status: 'paid',
+                                    })
+                                  }
+                                  className="btn-primary min-h-9 px-3 py-2 text-xs"
+                                >
+                                  {isActing ? (
+                                    <Loader2 size={13} className="animate-spin" />
+                                  ) : (
+                                    <CheckCircle2 size={13} />
+                                  )}
+                                  Mark paid
+                                </button>
+                              ) : null}
                               {isVerified ? (
                                 <span className="inline-flex min-h-9 items-center gap-2 rounded-md border border-[rgba(50,224,196,0.2)] bg-[rgba(50,224,196,0.1)] px-3 py-2 text-xs font-bold text-[var(--accent-secondary-text)]">
                                   <CheckCircle2 size={13} />
@@ -900,6 +993,112 @@ export function CodmModeratorClient() {
                                   <Ban size={13} />
                                 )}
                                 {isBanned ? 'Unban' : 'Ban'}
+                              </button>
+                            </div>
+                            <div className="mt-2 grid gap-2 sm:grid-cols-3">
+                              <select
+                                value={paymentDraft.payment_status}
+                                onChange={(event) =>
+                                  setPaymentDrafts((current) => ({
+                                    ...current,
+                                    [registration.id]: {
+                                      ...paymentDraft,
+                                      payment_status: event.target.value as OnlineTournamentPaymentStatus,
+                                    },
+                                  }))
+                                }
+                                className="input min-h-9 text-xs"
+                              >
+                                {['pending_payment', 'paid', 'manual_review', 'failed', 'refunded'].map(
+                                  (status) => (
+                                    <option key={status} value={status}>
+                                      {status.replaceAll('_', ' ')}
+                                    </option>
+                                  )
+                                )}
+                              </select>
+                              <select
+                                value={paymentDraft.payment_tier}
+                                onChange={(event) =>
+                                  setPaymentDrafts((current) => ({
+                                    ...current,
+                                    [registration.id]: {
+                                      ...paymentDraft,
+                                      payment_tier: event.target.value as OnlineTournamentPaymentTier | '',
+                                    },
+                                  }))
+                                }
+                                className="input min-h-9 text-xs"
+                              >
+                                <option value="">Auto / not set</option>
+                                {ONLINE_TOURNAMENT_PAYMENT_TIERS.map((tier) => (
+                                  <option key={tier} value={tier}>
+                                    {getOnlineTournamentPaymentTierLabel(tier)}
+                                  </option>
+                                ))}
+                              </select>
+                              <input
+                                value={paymentDraft.entry_fee_kes}
+                                onChange={(event) =>
+                                  setPaymentDrafts((current) => ({
+                                    ...current,
+                                    [registration.id]: {
+                                      ...paymentDraft,
+                                      entry_fee_kes: event.target.value,
+                                    },
+                                  }))
+                                }
+                                className="input min-h-9 text-xs"
+                                inputMode="numeric"
+                                placeholder="KSh amount"
+                              />
+                            </div>
+                            <div className="mt-2 flex gap-2">
+                              <input
+                                value={paymentDraft.payment_reference}
+                                onChange={(event) =>
+                                  setPaymentDrafts((current) => ({
+                                    ...current,
+                                    [registration.id]: {
+                                      ...paymentDraft,
+                                      payment_reference: event.target.value,
+                                    },
+                                  }))
+                                }
+                                className="input min-h-9 text-xs"
+                                placeholder="Payment reference"
+                              />
+                              <input
+                                value={paymentDraft.payment_note}
+                                onChange={(event) =>
+                                  setPaymentDrafts((current) => ({
+                                    ...current,
+                                    [registration.id]: {
+                                      ...paymentDraft,
+                                      payment_note: event.target.value,
+                                    },
+                                  }))
+                                }
+                                className="input min-h-9 text-xs"
+                                placeholder="Payment note"
+                              />
+                              <button
+                                type="button"
+                                disabled={isActing}
+                                onClick={() =>
+                                  void patchRegistration(registration, {
+                                    payment_status: paymentDraft.payment_status,
+                                    payment_tier: paymentDraft.payment_tier || null,
+                                    entry_fee_kes: paymentDraft.entry_fee_kes
+                                      ? Number(paymentDraft.entry_fee_kes)
+                                      : null,
+                                    payment_reference: paymentDraft.payment_reference || null,
+                                    payment_note: paymentDraft.payment_note || null,
+                                  })
+                                }
+                                className="btn-ghost min-h-9 px-3 py-2 text-xs"
+                              >
+                                Save
                               </button>
                             </div>
                             <div className="mt-2 flex gap-2">

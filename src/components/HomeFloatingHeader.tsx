@@ -29,12 +29,14 @@ interface HomeFloatingHeaderProps {
   navItems?: NavItem[];
   signInHref?: string;
   joinHref?: string;
+  joinLabel?: string;
 }
 
 export function HomeFloatingHeader({
   navItems = DEFAULT_NAV_ITEMS,
   signInHref = '/login',
   joinHref = '/register',
+  joinLabel = 'JOIN FREE',
 }: HomeFloatingHeaderProps) {
   const [isOpen, setIsOpen] = useState(false);
   const { user } = useAuth();
@@ -72,7 +74,7 @@ export function HomeFloatingHeader({
                 </Link>
                 {!user ? (
                   <Link href={joinHref} className="btn-primary shadow-none text-sm uppercase tracking-[0.14em]">
-                    JOIN FREE
+                    {joinLabel}
                   </Link>
                 ) : null}
               </div>
@@ -115,7 +117,7 @@ export function HomeFloatingHeader({
                     onClick={() => setIsOpen(false)}
                     className="btn-primary shadow-none text-sm uppercase tracking-[0.14em]"
                   >
-                    JOIN FREE
+                    {joinLabel}
                   </Link>
                 ) : null}
               </div>

@@ -77,9 +77,38 @@ Default marketing budget split in the campaign app:
 
 Treat tournament results, payouts, and moderation outcomes as high-risk facts that must be verified before being stated publicly.
 
-## PlayMechi Online Gaming Tournament
+## Current Featured PlayMechi Event
 
-The current featured public homepage campaign is the Mechi.club Online Gaming Tournament. The main public page is `/` and `/playmechi`; player registration is `/playmechi/register`; admin control is `/admin/online-tournament`.
+The current public home campaign is PlayMechi Weekend Cup Season 1.
+
+Public paths:
+
+- Weekend Cup vote/preview: `/`
+- Weekend Cup registration: `/weekendcup`
+- Weekend Cup legacy registration alias: `/weekendcup/register`
+- Older PlayMechi event remains isolated at `/playmechi` and `/playmechi/register`
+
+Weekend Cup fixed facts:
+
+- Dates: Friday 29 May 2026 to Sunday 31 May 2026
+- Prize pool: up to KSh 7,500
+- Fixed games: PUBG Mobile, CODM, and eFootball
+- Mystery game: chosen by player vote
+- Registration payment: Paystack
+- Early Bird: CODM KSh 50, PUBG KSh 50, Mystery Game KSh 50, eFootball KSh 100
+- Phase 2: CODM KSh 75, PUBG KSh 75, Mystery Game KSh 75, eFootball KSh 125
+- Final Rush: CODM KSh 100, PUBG KSh 100, Mystery Game KSh 100, eFootball KSh 150
+- Players who registered for the older PlayMechi tournament can reuse synced details where available.
+
+Support default:
+
+- Generic "how do I register for the tournament?" should answer with `https://mechi.club/weekendcup`.
+- If the sender clearly names the older PlayMechi Launch / 8-10 May event, use `https://mechi.club/playmechi/register`.
+- Do not confirm paid status unless Paystack/live data verifies it.
+
+## Older PlayMechi Online Gaming Tournament
+
+The older Mechi.club Online Gaming Tournament remains available at `/playmechi`; player registration is `/playmechi/register`; admin control is `/admin/online-tournament`.
 
 Fixed event facts:
 

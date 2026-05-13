@@ -43,6 +43,10 @@ export function getPostLoginRedirectPath(
     return safePath;
   }
 
+  if (matchesAppPath(safePath, '/weekendcup')) {
+    return safePath;
+  }
+
   if (identity?.role === 'admin' && matchesAppPath(safePath, '/admin')) {
     return safePath;
   }

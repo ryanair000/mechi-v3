@@ -242,6 +242,8 @@ export async function sendOnlineTournamentRegistrationTelegramNotification(param
   subscribedYoutube: boolean;
   eligibilityStatus: string;
   registered: number;
+  confirmed: number;
+  pendingPayment: number;
   slots: number;
   spotsLeft: number;
   checkedIn?: number;

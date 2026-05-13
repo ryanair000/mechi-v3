@@ -19,11 +19,17 @@ import { useAuthFetch } from '@/components/AuthProvider';
 import {
   ONLINE_TOURNAMENT_GAME_BY_KEY,
   ONLINE_TOURNAMENT_GAMES,
+  ONLINE_TOURNAMENT_PAYMENT_CONFIRMATION_ENABLED,
+  ONLINE_TOURNAMENT_PAYMENT_STATUSES,
+  ONLINE_TOURNAMENT_PAYMENT_TIERS,
   ONLINE_TOURNAMENT_TITLE,
+  getOnlineTournamentPaymentTierLabel,
   requiresTournamentDeviceSerialLast6,
   type OnlineTournamentCheckInStatus,
   type OnlineTournamentEligibilityStatus,
   type OnlineTournamentGameKey,
+  type OnlineTournamentPaymentStatus,
+  type OnlineTournamentPaymentTier,
 } from '@/lib/online-tournament';
 import {
   ONLINE_TOURNAMENT_BR_MATCH_NUMBERS,
@@ -57,6 +63,13 @@ type OnlineTournamentRegistration = {
   reward_eligible: boolean;
   eligibility_status: OnlineTournamentEligibilityStatus;
   check_in_status: OnlineTournamentCheckInStatus;
+  entry_fee_kes: number | null;
+  payment_tier: OnlineTournamentPaymentTier | null;
+  payment_status: OnlineTournamentPaymentStatus;
+  payment_reference: string | null;
+  payment_confirmed_at: string | null;
+  payment_confirmed_by: string | null;
+  payment_note: string | null;
   checked_in_at: string | null;
   admin_note: string | null;
   created_at: string;
@@ -167,6 +180,14 @@ type RoomDraft = {
   status: OnlineTournamentRoomStatus;
 };
 
+type PaymentDraft = {
+  payment_status: OnlineTournamentPaymentStatus;
+  payment_tier: OnlineTournamentPaymentTier | '';
+  entry_fee_kes: string;
+  payment_reference: string;
+  payment_note: string;
+};
+
 function getRoomKey(game: OnlineTournamentBattleRoyaleGameKey, matchNumber: number) {
   return `${game}-${matchNumber}`;
 }
@@ -244,6 +265,37 @@ function getCheckInClassName(status: OnlineTournamentCheckInStatus) {
   }
 }
 
+function getPaymentClassName(status: OnlineTournamentPaymentStatus) {
+  switch (status) {
+    case 'paid':
+      return 'bg-[rgba(50,224,196,0.14)] text-[var(--accent-secondary-text)]';
+    case 'failed':
+    case 'refunded':
+      return 'bg-red-500/14 text-red-300';
+    case 'manual_review':
+      return 'bg-sky-500/14 text-sky-300';
+    case 'pending_payment':
+    default:
+      return 'bg-amber-500/14 text-amber-300';
+  }
+}
+
+function buildPaymentDrafts(registrations: OnlineTournamentRegistration[]) {
+  return registrations.reduce<Record<string, PaymentDraft>>((nextDrafts, registration) => {
+    nextDrafts[registration.id] = {
+      payment_status: registration.payment_status,
+      payment_tier: registration.payment_tier ?? '',
+      entry_fee_kes:
+        registration.entry_fee_kes !== null && registration.entry_fee_kes !== undefined
+          ? String(registration.entry_fee_kes)
+          : '',
+      payment_reference: registration.payment_reference ?? '',
+      payment_note: registration.payment_note ?? '',
+    };
+    return nextDrafts;
+  }, {});
+}
+
 export function OnlineTournamentAdminClient() {
   const authFetch = useAuthFetch();
   const [registrations, setRegistrations] = useState<OnlineTournamentRegistration[]>([]);
@@ -254,6 +306,7 @@ export function OnlineTournamentAdminClient() {
   const [query, setQuery] = useState('');
   const [gameFilter, setGameFilter] = useState<(typeof GAME_FILTERS)[number]>('all');
   const [notes, setNotes] = useState<Record<string, string>>({});
+  const [paymentDrafts, setPaymentDrafts] = useState<Record<string, PaymentDraft>>({});
   const [roomDrafts, setRoomDrafts] = useState<Record<string, RoomDraft>>({});
 
   const fetchRegistrations = useCallback(async () => {
@@ -279,6 +332,7 @@ export function OnlineTournamentAdminClient() {
           return nextNotes;
         }, {})
       );
+      setPaymentDrafts(buildPaymentDrafts(nextRegistrations));
     } catch {
       toast.error('Network error while loading registrations');
     } finally {
@@ -375,6 +429,14 @@ export function OnlineTournamentAdminClient() {
       return {
         ...game,
         registered: gameRegistrations.length,
+        paid: gameRegistrations.filter(
+          (registration) => registration.payment_status === 'paid'
+        ).length,
+        pendingPayment: gameRegistrations.filter(
+          (registration) =>
+            registration.payment_status === 'pending_payment' ||
+            registration.payment_status === 'manual_review'
+        ).length,
         verified: gameRegistrations.filter(
           (registration) => registration.eligibility_status === 'verified'
         ).length,
@@ -389,6 +451,8 @@ export function OnlineTournamentAdminClient() {
 
     return {
       total: byGame.reduce((total, game) => total + game.registered, 0),
+      paid: byGame.reduce((total, game) => total + game.paid, 0),
+      pendingPayment: byGame.reduce((total, game) => total + game.pendingPayment, 0),
       verified: byGame.reduce((total, game) => total + game.verified, 0),
       pending: byGame.reduce((total, game) => total + game.pending, 0),
       checkedIn: byGame.reduce((total, game) => total + game.checkedIn, 0),
@@ -406,6 +470,11 @@ export function OnlineTournamentAdminClient() {
     updates: Partial<{
       eligibility_status: OnlineTournamentEligibilityStatus;
       check_in_status: OnlineTournamentCheckInStatus;
+      payment_status: OnlineTournamentPaymentStatus;
+      payment_tier: OnlineTournamentPaymentTier | null;
+      entry_fee_kes: number | null;
+      payment_reference: string | null;
+      payment_note: string | null;
       admin_note: string | null;
     }>
   ) => {
@@ -428,7 +497,9 @@ export function OnlineTournamentAdminClient() {
         return;
       }
 
-      setRegistrations(data.registrations ?? registrations);
+      const nextRegistrations = data.registrations ?? registrations;
+      setRegistrations(nextRegistrations);
+      setPaymentDrafts(buildPaymentDrafts(nextRegistrations));
       void fetchOpsState();
       toast.success('Registration updated');
     } catch {
@@ -509,9 +580,10 @@ export function OnlineTournamentAdminClient() {
         <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
           {[
             { label: 'Registered', value: summary.total, icon: Trophy },
+            { label: 'Paid confirmed', value: summary.paid, icon: CheckCircle2 },
+            { label: 'Pending payment', value: summary.pendingPayment, icon: ShieldAlert },
             { label: 'Checked in', value: summary.checkedIn, icon: UserCheck },
-            { label: 'Verified rewards', value: summary.verified, icon: CheckCircle2 },
-            { label: 'Pending review', value: summary.pending, icon: ShieldAlert },
+            { label: 'Verified rewards', value: summary.verified, icon: Medal },
           ].map((item) => {
             const Icon = item.icon;
             return (
@@ -550,7 +622,9 @@ export function OnlineTournamentAdminClient() {
                 />
               </div>
               <p className="mt-2 text-xs text-[var(--text-secondary)]">
-                {game.checkedIn}/{game.checkInCap} checked in, {game.verified} verified, {game.pending} pending
+                {ONLINE_TOURNAMENT_PAYMENT_CONFIRMATION_ENABLED
+                  ? `${game.paid}/${game.slots} paid, ${game.pendingPayment} pending payment, ${game.checkedIn}/${game.checkInCap} checked in`
+                  : `${game.registered}/${game.slots} registered, ${game.checkedIn}/${game.checkInCap} checked in`}
               </p>
             </div>
           ))}
@@ -616,6 +690,16 @@ export function OnlineTournamentAdminClient() {
             const isActing = actingOn === registration.id;
             const socialComplete =
               registration.followed_instagram && registration.subscribed_youtube;
+            const paymentDraft = paymentDrafts[registration.id] ?? {
+              payment_status: registration.payment_status,
+              payment_tier: registration.payment_tier ?? '',
+              entry_fee_kes:
+                registration.entry_fee_kes !== null && registration.entry_fee_kes !== undefined
+                  ? String(registration.entry_fee_kes)
+                  : '',
+              payment_reference: registration.payment_reference ?? '',
+              payment_note: registration.payment_note ?? '',
+            };
 
             return (
               <div key={registration.id} className="card p-5">
@@ -640,6 +724,13 @@ export function OnlineTournamentAdminClient() {
                       >
                         {registration.check_in_status}
                       </span>
+                      <span
+                        className={`rounded-full px-2.5 py-1 text-xs font-bold ${getPaymentClassName(
+                          registration.payment_status
+                        )}`}
+                      >
+                        {registration.payment_status.replaceAll('_', ' ')}
+                      </span>
                     </div>
 
                     <div className="mt-4 grid gap-2 md:grid-cols-2">
@@ -658,6 +749,25 @@ export function OnlineTournamentAdminClient() {
                           registration.checked_in_at
                             ? new Date(registration.checked_in_at).toLocaleString()
                             : 'Not checked in',
+                        ],
+                        [
+                          'Payment tier',
+                          registration.payment_tier
+                            ? getOnlineTournamentPaymentTierLabel(registration.payment_tier)
+                            : 'Not set',
+                        ],
+                        [
+                          'Amount paid',
+                          registration.entry_fee_kes !== null
+                            ? `KSh ${registration.entry_fee_kes}`
+                            : 'Not set',
+                        ],
+                        ['Payment ref', registration.payment_reference ?? 'Not provided'],
+                        [
+                          'Payment confirmed',
+                          registration.payment_confirmed_at
+                            ? new Date(registration.payment_confirmed_at).toLocaleString()
+                            : 'Not confirmed',
                         ],
                         ['Registered', new Date(registration.created_at).toLocaleString()],
                         [
@@ -685,6 +795,9 @@ export function OnlineTournamentAdminClient() {
                         {socialComplete ? 'Social self-check complete' : 'Social requirement incomplete'}
                       </span>
                       <span className="rounded-full border border-[var(--border-color)] bg-[var(--surface-elevated)] px-2.5 py-1 text-xs text-[var(--text-secondary)]">
+                        Payment note: {registration.payment_note ? 'Saved' : 'Not saved'}
+                      </span>
+                      <span className="rounded-full border border-[var(--border-color)] bg-[var(--surface-elevated)] px-2.5 py-1 text-xs text-[var(--text-secondary)]">
                         Available at 8 PM: {registration.available_at_8pm ? 'Yes' : 'No'}
                       </span>
                       <span className="rounded-full border border-[var(--border-color)] bg-[var(--surface-elevated)] px-2.5 py-1 text-xs text-[var(--text-secondary)]">
@@ -694,6 +807,126 @@ export function OnlineTournamentAdminClient() {
                   </div>
 
                   <div className="space-y-3">
+                    <div className="rounded-[var(--radius-card)] border border-[var(--border-color)] bg-[var(--surface-elevated)] p-4">
+                      <p className="section-title">Payment</p>
+                      <div className="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-1">
+                        <button
+                          type="button"
+                          disabled={isActing || registration.payment_status === 'paid'}
+                          onClick={() =>
+                            void handleUpdate(registration, {
+                              payment_status: 'paid',
+                            })
+                          }
+                          className="btn-primary justify-center"
+                        >
+                          {isActing ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle2 size={14} />}
+                          Mark paid
+                        </button>
+                        <select
+                          value={paymentDraft.payment_status}
+                          onChange={(event) =>
+                            setPaymentDrafts((current) => ({
+                              ...current,
+                              [registration.id]: {
+                                ...paymentDraft,
+                                payment_status: event.target.value as OnlineTournamentPaymentStatus,
+                              },
+                            }))
+                          }
+                          className="input"
+                        >
+                          {ONLINE_TOURNAMENT_PAYMENT_STATUSES.map((status) => (
+                            <option key={status} value={status}>
+                              {status.replaceAll('_', ' ')}
+                            </option>
+                          ))}
+                        </select>
+                        <select
+                          value={paymentDraft.payment_tier}
+                          onChange={(event) =>
+                            setPaymentDrafts((current) => ({
+                              ...current,
+                              [registration.id]: {
+                                ...paymentDraft,
+                                payment_tier: event.target.value as OnlineTournamentPaymentTier | '',
+                              },
+                            }))
+                          }
+                          className="input"
+                        >
+                          <option value="">Auto / not set</option>
+                          {ONLINE_TOURNAMENT_PAYMENT_TIERS.map((tier) => (
+                            <option key={tier} value={tier}>
+                              {getOnlineTournamentPaymentTierLabel(tier)}
+                            </option>
+                          ))}
+                        </select>
+                        <input
+                          value={paymentDraft.entry_fee_kes}
+                          onChange={(event) =>
+                            setPaymentDrafts((current) => ({
+                              ...current,
+                              [registration.id]: {
+                                ...paymentDraft,
+                                entry_fee_kes: event.target.value,
+                              },
+                            }))
+                          }
+                          className="input"
+                          inputMode="numeric"
+                          placeholder="Amount paid in KSh"
+                        />
+                        <input
+                          value={paymentDraft.payment_reference}
+                          onChange={(event) =>
+                            setPaymentDrafts((current) => ({
+                              ...current,
+                              [registration.id]: {
+                                ...paymentDraft,
+                                payment_reference: event.target.value,
+                              },
+                            }))
+                          }
+                          className="input"
+                          placeholder="M-Pesa or payment reference"
+                        />
+                        <textarea
+                          value={paymentDraft.payment_note}
+                          onChange={(event) =>
+                            setPaymentDrafts((current) => ({
+                              ...current,
+                              [registration.id]: {
+                                ...paymentDraft,
+                                payment_note: event.target.value,
+                              },
+                            }))
+                          }
+                          className="input min-h-20 resize-y"
+                          placeholder="Payment note"
+                        />
+                        <button
+                          type="button"
+                          disabled={isActing}
+                          onClick={() =>
+                            void handleUpdate(registration, {
+                              payment_status: paymentDraft.payment_status,
+                              payment_tier: paymentDraft.payment_tier || null,
+                              entry_fee_kes: paymentDraft.entry_fee_kes
+                                ? Number(paymentDraft.entry_fee_kes)
+                                : null,
+                              payment_reference: paymentDraft.payment_reference || null,
+                              payment_note: paymentDraft.payment_note || null,
+                            })
+                          }
+                          className="btn-ghost justify-center"
+                        >
+                          <Save size={14} />
+                          Save payment
+                        </button>
+                      </div>
+                    </div>
+
                     <div className="rounded-[var(--radius-card)] border border-[var(--border-color)] bg-[var(--surface-elevated)] p-4">
                       <p className="section-title">Admin actions</p>
                       <div className="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-1">

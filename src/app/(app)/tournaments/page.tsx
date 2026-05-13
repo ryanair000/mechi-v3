@@ -2,15 +2,14 @@
 
 import Link from 'next/link';
 import { useCallback, useEffect, useState } from 'react';
-import { Plus, Trophy } from 'lucide-react';
+import { Trophy } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { useAuth, useAuthFetch } from '@/components/AuthProvider';
+import { useAuthFetch } from '@/components/AuthProvider';
 import { EventCountdownCard } from '@/components/ui/event-countdown-card';
 import {
   TournamentMemberList,
   type TournamentMemberListItem,
 } from '@/components/ui/tournament-member-list';
-import { GAMES } from '@/lib/config';
 import {
   ONLINE_TOURNAMENT_CASH_PRIZE_POOL,
   ONLINE_TOURNAMENT_ARENA_PATH,
@@ -27,19 +26,10 @@ import {
   type OnlineTournamentRegistrationSummary,
 } from '@/lib/online-tournament';
 import { getOnlineTournamentArenaHref } from '@/lib/online-tournament-ops';
-import { canProfileHostTournaments } from '@/lib/tournament-hosting';
-import { getTournamentPrizePoolLabel } from '@/lib/tournament-metrics';
-import { formatTournamentDateTime } from '@/lib/tournament-schedule';
-import type { GameKey, Tournament } from '@/types';
-
-type TournamentListItem = Tournament & {
-  confirmed_count?: number;
-  player_count?: Array<{ count: number }> | number;
-  active_stream?: {
-    id: string;
-    viewer_count: number;
-  } | null;
-};
+import {
+  PRIMARY_UPCOMING_PLAYMECHI_TOURNAMENT,
+  WEEKEND_CUP_ROUTE_ENABLED,
+} from '@/lib/upcoming-playmechi-tournaments';
 
 type OnlineTournamentUserRegistration = {
   game?: string | null;
@@ -47,12 +37,6 @@ type OnlineTournamentUserRegistration = {
 };
 
 const STATUS_FILTERS = ['all', 'open', 'active', 'completed'] as const;
-
-function getPlayerCount(tournament: TournamentListItem): number {
-  const count = tournament.player_count;
-  if (Array.isArray(count)) return count[0]?.count ?? 0;
-  return typeof count === 'number' ? count : 0;
-}
 
 function formatTournamentStatus(status: string) {
   switch (status) {
@@ -107,58 +91,18 @@ function getStatusClasses(status: string) {
   }
 }
 
-function shouldShowTournamentListItem(tournament: TournamentListItem) {
-  const title = tournament.title.trim().toLowerCase();
-  const prizePool = Number(tournament.prize_pool ?? 0);
-  const entryFee = Number(tournament.entry_fee ?? 0);
-
-  return !(title === 'efootball' && tournament.game === 'efootball' && entryFee === 0 && prizePool === 0);
-}
-
-function formatTournamentDate(tournament: TournamentListItem) {
-  return formatTournamentDateTime(
-    tournament.scheduled_for ?? tournament.started_at ?? tournament.created_at,
-    'TBA'
-  );
-}
-
 export default function TournamentsPage() {
-  const { user } = useAuth();
   const authFetch = useAuthFetch();
-  const [tournaments, setTournaments] = useState<TournamentListItem[]>([]);
   const [onlineTournament, setOnlineTournament] = useState<OnlineTournamentRegistrationSummary>(
     () => getFallbackOnlineTournamentSummary()
   );
   const [status, setStatus] = useState<(typeof STATUS_FILTERS)[number]>('all');
   const [loading, setLoading] = useState(true);
-  const canHostTournaments = canProfileHostTournaments({
-    plan: user?.plan,
-    planExpiresAt: user?.plan_expires_at,
-    role: user?.role ?? null,
-  });
-  const hostHref = canHostTournaments ? '/tournaments/create' : '/pricing';
-  const hostLabel = canHostTournaments ? 'Host tournament' : 'Upgrade to host';
 
   const fetchTournaments = useCallback(async () => {
     setLoading(true);
     try {
-      const [res, onlineTournamentRes] = await Promise.all([
-        authFetch(`/api/tournaments?status=${status}`),
-        authFetch(ONLINE_TOURNAMENT_REGISTRATION_API_PATH),
-      ]);
-      const data = (await res.json()) as {
-        error?: string;
-        tournaments?: TournamentListItem[];
-      };
-
-      if (!res.ok) {
-        toast.error(data.error ?? 'Could not load tournaments');
-        setTournaments([]);
-        return;
-      }
-
-      setTournaments((data.tournaments ?? []).filter(shouldShowTournamentListItem));
-
+      const onlineTournamentRes = await authFetch(ONLINE_TOURNAMENT_REGISTRATION_API_PATH);
       if (onlineTournamentRes.ok) {
         const onlineTournamentData =
           (await onlineTournamentRes.json()) as OnlineTournamentRegistrationSummary;
@@ -168,12 +112,11 @@ export default function TournamentsPage() {
       }
     } catch {
       toast.error('Could not load tournaments');
-      setTournaments([]);
       setOnlineTournament(getFallbackOnlineTournamentSummary());
     } finally {
       setLoading(false);
     }
-  }, [authFetch, status]);
+  }, [authFetch]);
 
   useEffect(() => {
     void fetchTournaments();
@@ -182,7 +125,11 @@ export default function TournamentsPage() {
   const onlineTournamentStatus = getOnlineTournamentDisplayStatus();
   const showOnlineTournament =
     status === 'all' || status === onlineTournamentStatus;
-  const hasVisibleTournaments = showOnlineTournament || tournaments.length > 0;
+  const showUpcomingWeekendCup =
+    WEEKEND_CUP_ROUTE_ENABLED &&
+    PRIMARY_UPCOMING_PLAYMECHI_TOURNAMENT &&
+    (status === 'all' || status === 'open');
+  const hasVisibleTournaments = showOnlineTournament || Boolean(showUpcomingWeekendCup);
   const onlineTournamentTotals = getOnlineTournamentTotals(onlineTournament);
   const firstOnlineTournamentRegistration = getFirstOnlineTournamentRegistration(onlineTournament);
   const onlineTournamentItems: TournamentMemberListItem[] = showOnlineTournament
@@ -220,50 +167,7 @@ export default function TournamentsPage() {
         };
       })
     : [];
-  const tournamentItems: TournamentMemberListItem[] = tournaments.map((tournament) => {
-    const playerCount = getPlayerCount(tournament);
-    const progress = Math.min(100, (playerCount / Math.max(1, tournament.size)) * 100);
-    const game = GAMES[tournament.game as GameKey];
-    const liveHref = tournament.active_stream ? `/t/${tournament.slug}/live` : null;
-    const actionHref = liveHref ?? `/t/${tournament.slug}`;
-    const actionLabel = liveHref
-      ? 'Watch live'
-      : tournament.status === 'open'
-        ? 'Join'
-        : tournament.status === 'full'
-          ? 'Watch'
-          : 'View';
-
-    return {
-      actionHref,
-      actionLabel,
-      actionVariant: tournament.status === 'open' || liveHref ? 'primary' : 'muted',
-      detailHref: `/t/${tournament.slug}`,
-      gameLabel: game?.label ?? tournament.game,
-      id: tournament.id,
-      liveHref,
-      liveLabel: tournament.active_stream
-        ? `${tournament.active_stream.viewer_count.toLocaleString()} live`
-        : null,
-      metaLabel:
-        tournament.entry_fee > 0
-          ? `Entry KES ${tournament.entry_fee.toLocaleString()}`
-          : 'Free entry',
-      prizeLabel: getTournamentPrizePoolLabel({
-        entryFee: tournament.entry_fee,
-        prizePool: tournament.prize_pool,
-        prizePoolMode: tournament.prize_pool_mode,
-      }),
-      progress,
-      slotsLabel: `${playerCount}/${tournament.size}`,
-      startsLabel: formatTournamentDate(tournament),
-      statusClassName: getStatusClasses(tournament.status),
-      statusLabel: formatTournamentStatus(tournament.status),
-      tagLabel: tournament.is_featured ? 'Featured' : null,
-      title: tournament.title,
-    };
-  });
-  const tournamentListItems = [...onlineTournamentItems, ...tournamentItems];
+  const tournamentListItems = onlineTournamentItems;
 
   return (
     <div className="page-container space-y-5">
@@ -272,17 +176,12 @@ export default function TournamentsPage() {
           <div className="max-w-2xl">
             <p className="section-title">Tournaments</p>
             <h1 className="mt-3 text-[1.55rem] font-black leading-[1.05] text-[var(--text-primary)] sm:text-[2rem]">
-              Upcoming competitions
+              PlayMechi competitions
             </h1>
             <p className="mt-3 text-sm leading-6 text-[var(--text-secondary)]">
-              Host a bracket, track filled slots, and move players into the right tournament detail when it is time to join.
+              Official PlayMechi events only: the current tournament flow and Weekend Cup.
             </p>
           </div>
-
-          <Link href={hostHref} className="btn-primary text-sm">
-            <Plus size={14} />
-            {hostLabel}
-          </Link>
         </div>
       </section>
 
@@ -316,6 +215,51 @@ export default function TournamentsPage() {
         />
       ) : null}
 
+      {showUpcomingWeekendCup ? (
+        <section className="card circuit-panel p-5 sm:p-6">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+            <div className="max-w-3xl">
+              <p className="section-title">Next Up</p>
+              <h2 className="mt-3 text-2xl font-black leading-tight text-[var(--text-primary)] sm:text-3xl">
+                {PRIMARY_UPCOMING_PLAYMECHI_TOURNAMENT.title}
+              </h2>
+              <p className="mt-3 text-sm leading-6 text-[var(--text-secondary)]">
+                {PRIMARY_UPCOMING_PLAYMECHI_TOURNAMENT.heroLabel} {PRIMARY_UPCOMING_PLAYMECHI_TOURNAMENT.prizePoolLabel}.{' '}
+                {PRIMARY_UPCOMING_PLAYMECHI_TOURNAMENT.pricingLabel}
+              </p>
+              <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">
+                {PRIMARY_UPCOMING_PLAYMECHI_TOURNAMENT.confirmationLabel}
+              </p>
+            </div>
+
+            <Link
+              href={PRIMARY_UPCOMING_PLAYMECHI_TOURNAMENT.publicPath}
+              className="btn-primary w-full justify-center sm:w-auto"
+            >
+              Open Weekend Cup
+            </Link>
+          </div>
+
+          <div className="mt-5 grid gap-3 lg:grid-cols-3">
+            {PRIMARY_UPCOMING_PLAYMECHI_TOURNAMENT.games.map((game) => (
+              <div
+                key={game.key}
+                className="rounded-[var(--radius-card)] border border-[var(--border-color)] bg-[var(--surface-elevated)] px-4 py-4"
+              >
+                <div className="flex items-center justify-between gap-3">
+                  <p className="text-sm font-black text-[var(--text-primary)]">{game.label}</p>
+                  <span className="brand-chip px-2.5 py-1">{game.slots} slots</span>
+                </div>
+                <p className="mt-2 text-xs text-[var(--text-secondary)]">{game.dateLabel}</p>
+                <p className="mt-3 text-xs font-semibold text-[var(--accent-secondary-text)]">
+                  {game.prizes.join(' | ')}
+                </p>
+              </div>
+            ))}
+          </div>
+        </section>
+      ) : null}
+
       {loading ? (
         <div className="card overflow-hidden">
           <div className="space-y-0">
@@ -336,9 +280,8 @@ export default function TournamentsPage() {
             {getEmptyStateTitle(status)}
           </p>
           <p className="mt-2 text-sm text-[var(--text-soft)]">Start one and bring your scene in.</p>
-          <Link href={hostHref} className="btn-primary mt-5 inline-flex">
-            <Plus size={14} />
-            {canHostTournaments ? 'Create tournament' : 'Upgrade to host'}
+          <Link href={PRIMARY_UPCOMING_PLAYMECHI_TOURNAMENT.publicPath} className="btn-primary mt-5 inline-flex">
+            Weekend Cup
           </Link>
         </div>
       ) : (
@@ -354,6 +297,10 @@ function getOnlineTournamentPrizeLabel() {
 
 function getOnlineTournamentGamePrizeLabel(game: OnlineTournamentGameConfig) {
   const cashTotal = [game.firstPrize, game.secondPrize, game.thirdPrize].reduce((total, prize) => {
+    if (!prize) {
+      return total;
+    }
+
     const match = prize.match(/^KSh\s+([\d,]+)/i);
     return match ? total + Number(match[1].replace(/,/g, '')) : total;
   }, 0);

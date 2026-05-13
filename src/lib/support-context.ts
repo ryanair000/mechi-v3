@@ -277,7 +277,7 @@ function summarizeGames(mode: '1v1' | 'lobby') {
 function summarizePlayMechiTournament() {
   const schedule = ONLINE_TOURNAMENT_GAMES.map(
     (game) =>
-      `${game.label}: ${game.dateLabel} at ${game.timeLabel}, registration cap ${game.slots}, check-in cap ${game.checkInCap}, ${game.format}, ${game.matchCount}, prizes ${game.firstPrize}, ${game.secondPrize}, ${game.thirdPrize}.`
+      `${game.label}: ${game.dateLabel} at ${game.timeLabel}, registration cap ${game.slots}, check-in cap ${game.checkInCap}, ${game.format}, ${game.matchCount}, prizes ${game.firstPrize}, ${game.secondPrize}, ${game.thirdPrize ?? 'No 3rd prize'}.`
   ).join('\n');
   const streamLinks = ONLINE_TOURNAMENT_STREAM_PLATFORMS.map(
     (platform) => `${platform.label}: ${platform.href}`

@@ -70,7 +70,7 @@ function StatusMetaCard({
   value: string;
 }) {
   return (
-    <div className="rounded-[0.5rem] border border-[var(--border-color)] bg-[var(--surface-elevated)] px-4 py-4">
+    <div className="rounded-[var(--radius-panel)] border border-[var(--border-color)] bg-[var(--surface-elevated)] px-4 py-4">
       <div className="flex items-center gap-2 text-[var(--text-soft)]">
         <Icon size={15} />
         <p className="text-[11px] font-bold uppercase tracking-[0.12em]">{label}</p>
@@ -247,7 +247,7 @@ export function WeekendCupDashboardClient() {
     : 'No entry saved';
   const slotStateLabel = !currentRegistration ? 'Not booked yet' : slotBooked ? 'Booked' : 'Pending payment';
   const slotStateCopy = !currentRegistration
-    ? 'No payment request yet for this game.'
+    ? 'No paid booking yet for this game.'
     : slotBooked
       ? 'Payment went through. Your slot is booked.'
       : 'Payment is still pending. Your slot is not booked yet.';
@@ -280,7 +280,7 @@ export function WeekendCupDashboardClient() {
             href={`${WEEKEND_CUP_REGISTRATION_PATH}?game=${encodeURIComponent(selectedConfig.game)}`}
             className="btn-ghost"
           >
-            Edit entry
+            {currentRegistration ? 'Edit entry' : 'Open registration'}
           </Link>
         </div>
       </section>
@@ -296,7 +296,7 @@ export function WeekendCupDashboardClient() {
                 key={game.game}
                 type="button"
                 onClick={() => setSelectedGame(game.game)}
-                className={`rounded-[0.4rem] px-4 py-2 text-sm font-black ${
+                className={`rounded-[var(--radius-control)] px-4 py-2 text-sm font-black ${
                   isActive
                     ? 'bg-[var(--accent-primary)] text-[#04111c]'
                     : 'border border-[var(--border-color)] bg-[var(--surface-elevated)] text-[var(--text-secondary)]'
@@ -342,7 +342,7 @@ export function WeekendCupDashboardClient() {
               <StatusMetaCard icon={MessageCircle} label="Payment ref" value={referenceLabel} />
             </div>
 
-            <div className="rounded-[0.5rem] border border-[var(--border-color)] bg-[var(--surface-elevated)] px-4 py-4">
+            <div className="rounded-[var(--radius-panel)] border border-[var(--border-color)] bg-[var(--surface-elevated)] px-4 py-4">
               <p className="text-sm font-black text-[var(--text-primary)]">{slotStateCopy}</p>
               <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">
                 {nextWindowCopy}
@@ -390,12 +390,6 @@ export function WeekendCupDashboardClient() {
                 </button>
               )}
 
-              <Link
-                href={`${WEEKEND_CUP_REGISTRATION_PATH}?game=${encodeURIComponent(selectedConfig.game)}`}
-                className="btn-outline"
-              >
-                Open registration
-              </Link>
               <a href={WEEKEND_CUP_SUPPORT_URL} className="btn-outline">
                 <MessageCircle size={14} />
                 Payment help

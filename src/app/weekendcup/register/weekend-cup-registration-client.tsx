@@ -40,8 +40,8 @@ const DASHBOARD_FONT_STYLE: CSSProperties & Record<string, string> = {
   '--font-sans': 'var(--font-open-sans), "Open Sans", "Segoe UI", sans-serif',
 };
 
-const DASHBOARD_INNER_RADIUS_CLASS = 'rounded-[0.5rem]';
-const DASHBOARD_CONTROL_RADIUS_CLASS = '!rounded-[0.4rem]';
+const DASHBOARD_INNER_RADIUS_CLASS = 'rounded-[var(--radius-panel)]';
+const DASHBOARD_CONTROL_RADIUS_CLASS = '!rounded-[var(--radius-control)]';
 
 function paymentStatusClasses(status: WeekendCupPlayerRegistration['payment_status']) {
   switch (status) {
@@ -265,7 +265,7 @@ export function WeekendCupRegistrationClient() {
   if (!registrationOpen) {
     return (
       <div
-        className="app-prototype-shell page-base min-h-screen bg-[radial-gradient(circle_at_top,rgba(50,224,196,0.08),transparent_32%),linear-gradient(180deg,#07111e_0%,#050b13_100%)]"
+        className="weekend-cup-shell app-prototype-shell page-base min-h-screen bg-[radial-gradient(circle_at_top,rgba(50,224,196,0.08),transparent_32%),linear-gradient(180deg,#07111e_0%,#050b13_100%)]"
         style={DASHBOARD_FONT_STYLE}
       >
         <HeaderSpacing />
@@ -315,7 +315,7 @@ export function WeekendCupRegistrationClient() {
   if (!authLoading && !user) {
     return (
       <div
-        className="app-prototype-shell page-base min-h-screen bg-[radial-gradient(circle_at_top,rgba(50,224,196,0.08),transparent_32%),linear-gradient(180deg,#07111e_0%,#050b13_100%)]"
+        className="weekend-cup-shell app-prototype-shell page-base min-h-screen bg-[radial-gradient(circle_at_top,rgba(50,224,196,0.08),transparent_32%),linear-gradient(180deg,#07111e_0%,#050b13_100%)]"
         style={DASHBOARD_FONT_STYLE}
       >
         <HeaderSpacing />
@@ -348,7 +348,7 @@ export function WeekendCupRegistrationClient() {
 
   return (
     <div
-      className="app-prototype-shell page-base min-h-screen bg-[radial-gradient(circle_at_top,rgba(50,224,196,0.08),transparent_32%),linear-gradient(180deg,#07111e_0%,#050b13_100%)]"
+      className="weekend-cup-shell app-prototype-shell page-base min-h-screen bg-[radial-gradient(circle_at_top,rgba(50,224,196,0.08),transparent_32%),linear-gradient(180deg,#07111e_0%,#050b13_100%)]"
       style={DASHBOARD_FONT_STYLE}
     >
       <HeaderSpacing />
@@ -358,10 +358,10 @@ export function WeekendCupRegistrationClient() {
           <div>
             <p className="section-title">Weekend Cup registration</p>
             <h1 className="mt-2 max-w-3xl text-[clamp(2rem,3.6vw,3.4rem)] font-black leading-tight text-[var(--text-primary)]">
-              Start the entry. Clear payment to lock the slot.
+              Save the entry. Clear payment to book the slot.
             </h1>
             <p className="mt-3 max-w-2xl text-[0.95rem] leading-7 text-[var(--text-secondary)]">
-              Pick your game, confirm your player details, then jump into checkout. If you played
+              Pick your game, check your player details, then finish checkout. If you played
               PlayMechi before, we pull in the latest details already on file.
             </p>
             <div className="mt-5 flex flex-wrap gap-2">
@@ -442,7 +442,7 @@ export function WeekendCupRegistrationClient() {
                     </div>
                   ) : (
                     <p className="mt-3 text-sm leading-6 text-[var(--text-secondary)]">
-                      No payment record yet. Start checkout here to book this slot.
+                      No payment started yet. Run checkout here and the slot flips to booked after payment clears.
                     </p>
                   )}
                 </div>
@@ -458,7 +458,7 @@ export function WeekendCupRegistrationClient() {
                       Player details
                     </h2>
                     <p className="mt-1 text-sm text-[var(--text-secondary)]">
-                      Current checkout: {getWeekendCupGamePricingLine(selectedGame)}.
+                      Live checkout lane: {getWeekendCupGamePricingLine(selectedGame)}.
                     </p>
                   </div>
                   {currentRegistration ? (

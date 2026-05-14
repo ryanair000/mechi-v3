@@ -232,25 +232,34 @@ export default function TournamentsPage() {
 
             <Link
               href={PRIMARY_UPCOMING_PLAYMECHI_TOURNAMENT.publicPath}
-              className="btn-primary w-full justify-center !rounded-[0.4rem] sm:w-auto"
+              className="btn-primary w-full justify-center !rounded-[var(--radius-control)] sm:w-auto"
             >
               Open Weekend Cup
             </Link>
+          </div>
+
+          <div className="mt-4 flex flex-wrap gap-2">
+            <span className="brand-chip !rounded-[var(--radius-control)] px-3 py-1">
+              {WEEKEND_CUP_PRIZE_POOL_LABEL}
+            </span>
+            <span className="brand-chip !rounded-[var(--radius-control)] px-3 py-1">
+              Entry from KSh 50
+            </span>
           </div>
 
           <div className="mt-5 grid gap-3 lg:grid-cols-3">
             {PRIMARY_UPCOMING_PLAYMECHI_TOURNAMENT.games.map((game) => (
               <div
                 key={game.key}
-                className="rounded-[0.5rem] border border-[var(--border-color)] bg-[var(--surface-elevated)] px-4 py-4 shadow-[var(--shadow-soft)]"
+                className="rounded-[var(--radius-panel)] border border-[var(--border-color)] bg-[var(--surface-elevated)] px-4 py-4 shadow-[var(--shadow-soft)]"
               >
                 <div className="flex items-center justify-between gap-3">
                   <p className="text-sm font-black text-[var(--text-primary)]">{game.label}</p>
-                  <span className="brand-chip !rounded-[0.4rem] px-2.5 py-1">{WEEKEND_CUP_FILL_LABEL}</span>
+                  <span className="brand-chip !rounded-[var(--radius-control)] px-2.5 py-1">{WEEKEND_CUP_FILL_LABEL}</span>
                 </div>
                 <p className="mt-2 text-xs text-[var(--text-secondary)]">{game.dateLabel}</p>
                 <p className="mt-3 text-xs font-semibold text-[var(--accent-secondary-text)]">
-                  {WEEKEND_CUP_PRIZE_POOL_LABEL}
+                  {game.key === 'mystery' ? 'Vote decides the final slot' : 'Season 1 locked'}
                 </p>
               </div>
             ))}
@@ -299,7 +308,7 @@ export default function TournamentsPage() {
               {ONLINE_TOURNAMENT_GAMES.map((game) => (
                 <div
                   key={game.game}
-                  className="rounded-[0.5rem] border border-[var(--border-color)] bg-[var(--surface-elevated)] px-4 py-4 shadow-[var(--shadow-soft)]"
+                  className="rounded-[var(--radius-panel)] border border-[var(--border-color)] bg-[var(--surface-elevated)] px-4 py-4 shadow-[var(--shadow-soft)]"
                 >
                   <p className="text-sm font-black text-[var(--text-primary)]">{game.label}</p>
                   <p className="mt-2 text-xs text-[var(--text-secondary)]">{game.dateLabel}</p>
@@ -310,7 +319,7 @@ export default function TournamentsPage() {
               ))}
             </div>
 
-            <Link href={ONLINE_TOURNAMENT_ARENA_PATH} className="btn-outline inline-flex !rounded-[0.4rem]">
+            <Link href={ONLINE_TOURNAMENT_ARENA_PATH} className="btn-outline inline-flex !rounded-[var(--radius-control)]">
               Open last tournament
             </Link>
           </div>

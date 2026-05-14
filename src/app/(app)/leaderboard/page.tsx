@@ -70,7 +70,7 @@ function SummaryCard({
   value: number;
 }) {
   return (
-    <div className="rounded-[0.5rem] border border-[var(--border-color)] bg-[var(--surface)] px-4 py-4">
+    <div className="rounded-[var(--radius-panel)] border border-[var(--border-color)] bg-[var(--surface)] px-4 py-4">
       <div className="flex items-center gap-2 text-[var(--text-soft)]">
         <Icon size={15} />
         <p className="text-xs font-bold uppercase tracking-[0.12em]">{label}</p>
@@ -144,8 +144,8 @@ export default function LeaderboardPage() {
               Verified tournament check-ins
             </h1>
             <p className="mt-3 text-sm leading-6 text-[var(--text-secondary)]">
-              Only players whose tournament check-in was cleared by the desk show up here. Switch
-              between PUBG Mobile, CODM, and eFootball to view each PlayMechi board.
+              Only players who checked in and were verified by the tournament desk appear here.
+              Switch between PUBG Mobile, CODM, and eFootball for the three PlayMechi game boards.
             </p>
             <p className="mt-2 text-xs font-semibold uppercase tracking-[0.12em] text-[var(--text-soft)]">
               Tap a player to open the profile card.
@@ -153,19 +153,19 @@ export default function LeaderboardPage() {
           </div>
 
           <div className="grid grid-cols-3 gap-2 text-center sm:min-w-80">
-            <div className="rounded-[0.5rem] border border-[var(--border-color)] bg-[var(--surface-elevated)] px-3 py-2">
+            <div className="rounded-[var(--radius-panel)] border border-[var(--border-color)] bg-[var(--surface-elevated)] px-3 py-2">
               <p className="text-lg font-black text-[var(--text-primary)]">{totalCheckIns}</p>
               <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--text-soft)]">
                 Verified Check-ins
               </p>
             </div>
-            <div className="rounded-[0.5rem] border border-[var(--border-color)] bg-[var(--surface-elevated)] px-3 py-2">
+            <div className="rounded-[var(--radius-panel)] border border-[var(--border-color)] bg-[var(--surface-elevated)] px-3 py-2">
               <p className="text-lg font-black text-[var(--text-primary)]">{totalGames}</p>
               <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--text-soft)]">
                 Games
               </p>
             </div>
-            <div className="rounded-[0.5rem] border border-[var(--border-color)] bg-[var(--surface-elevated)] px-3 py-2">
+            <div className="rounded-[var(--radius-panel)] border border-[var(--border-color)] bg-[var(--surface-elevated)] px-3 py-2">
               <p className="text-lg font-black text-[var(--text-primary)]">{totalVerifiedResults}</p>
               <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--text-soft)]">
                 Verified Results
@@ -184,7 +184,7 @@ export default function LeaderboardPage() {
                 key={game.game}
                 type="button"
                 onClick={() => setActiveGame(game.game)}
-                className={`inline-flex min-h-9 items-center rounded-[0.4rem] border px-3 text-xs font-bold ${
+                className={`inline-flex min-h-9 items-center rounded-[var(--radius-control)] border px-3 text-xs font-bold ${
                   isActive
                     ? 'border-[rgba(50,224,196,0.24)] bg-[rgba(50,224,196,0.12)] text-[var(--accent-secondary-text)]'
                     : 'border-[var(--border-color)] bg-[var(--surface-elevated)] text-[var(--text-secondary)]'
@@ -243,7 +243,7 @@ export default function LeaderboardPage() {
                   screenshots or bracket results are verified.
                 </p>
               </div>
-              <div className="rounded-[0.5rem] border border-[var(--border-color)] bg-[var(--surface-elevated)] px-4 py-3 text-right">
+              <div className="rounded-[var(--radius-panel)] border border-[var(--border-color)] bg-[var(--surface-elevated)] px-4 py-3 text-right">
                 <p className="text-xs font-bold uppercase tracking-[0.12em] text-[var(--text-soft)]">
                   Live board
                 </p>

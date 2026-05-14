@@ -53,7 +53,7 @@ export function WeekendCupHeader({
                 <Link
                   key={item.href}
                   href={item.href}
-                  className="rounded-[var(--radius-control)] px-1.5 py-1 font-[var(--font-body)] text-[0.7rem] font-bold uppercase tracking-[0.12em] text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)]"
+                  className="rounded-[var(--radius-control)] px-1.5 py-1 font-[var(--font-display)] text-[0.72rem] font-black uppercase tracking-[0.14em] text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)]"
                 >
                   {item.label}
                 </Link>
@@ -64,13 +64,13 @@ export function WeekendCupHeader({
               <ThemeToggle />
               <Link
                 href={user ? '/dashboard' : signInHref}
-                className="inline-flex min-h-[32px] items-center justify-center rounded-[var(--radius-control)] border border-[rgba(50,224,196,0.34)] bg-[rgba(17,35,55,0.88)] px-3 font-[var(--font-body)] text-[0.7rem] font-bold uppercase tracking-[0.12em] text-[var(--accent-secondary-text)] transition-all hover:border-[rgba(50,224,196,0.55)] hover:bg-[rgba(50,224,196,0.12)] hover:text-[var(--text-primary)]"
+                className="inline-flex min-h-[32px] items-center justify-center rounded-[var(--radius-control)] border border-[rgba(50,224,196,0.34)] bg-[rgba(17,35,55,0.88)] px-3 font-[var(--font-display)] text-[0.72rem] font-black uppercase tracking-[0.14em] text-[var(--accent-secondary-text)] transition-all hover:border-[rgba(50,224,196,0.55)] hover:bg-[rgba(50,224,196,0.12)] hover:text-[var(--text-primary)]"
               >
                 {user ? 'Dashboard' : 'Sign in'}
               </Link>
               <Link
                 href={registerHref}
-                className="inline-flex min-h-[32px] items-center justify-center rounded-[var(--radius-control)] bg-[#ff6268] px-3.5 font-[var(--font-body)] text-[0.7rem] font-bold uppercase tracking-[0.12em] text-[#07111e] shadow-[0_12px_28px_rgba(255,98,104,0.22)] transition-all hover:-translate-y-0.5 hover:bg-[#ff7479]"
+                className="inline-flex min-h-[32px] items-center justify-center rounded-[var(--radius-control)] bg-[#ff6268] px-3.5 font-[var(--font-display)] text-[0.72rem] font-black uppercase tracking-[0.14em] text-[#07111e] shadow-[0_12px_28px_rgba(255,98,104,0.22)] transition-all hover:-translate-y-0.5 hover:bg-[#ff7479]"
               >
                 Register
               </Link>
@@ -83,7 +83,7 @@ export function WeekendCupHeader({
                 <Link
                   key={item.href}
                   href={item.href}
-                  className="shrink-0 rounded-[var(--radius-control)] px-3 py-1.5 font-[var(--font-body)] text-[0.7rem] font-bold uppercase tracking-[0.12em] text-[var(--text-secondary)] transition-colors hover:bg-[rgba(255,255,255,0.05)] hover:text-[var(--text-primary)]"
+                  className="shrink-0 rounded-[var(--radius-control)] px-3 py-1.5 font-[var(--font-display)] text-[0.72rem] font-black uppercase tracking-[0.14em] text-[var(--text-secondary)] transition-colors hover:bg-[rgba(255,255,255,0.05)] hover:text-[var(--text-primary)]"
                 >
                   {item.label}
                 </Link>

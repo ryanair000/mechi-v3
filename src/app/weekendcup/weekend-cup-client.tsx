@@ -2,7 +2,6 @@
 
 import Link from 'next/link';
 import Image from 'next/image';
-import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useState, type CSSProperties } from 'react';
 import toast from 'react-hot-toast';
 import {
@@ -85,8 +84,8 @@ const OPTION_IMAGE_BY_SLUG: Partial<Record<string, string | null>> = {
   'rocket-league': getGameImage('rocketleague'),
 };
 
-const DASHBOARD_INNER_RADIUS_CLASS = 'rounded-[0.5rem]';
-const DASHBOARD_CONTROL_RADIUS_CLASS = '!rounded-[0.4rem]';
+const DASHBOARD_INNER_RADIUS_CLASS = 'rounded-[var(--radius-panel)]';
+const DASHBOARD_CONTROL_RADIUS_CLASS = '!rounded-[var(--radius-control)]';
 
 function isAuthFailure(status: number, error?: string | null) {
   if (status === 401 || status === 403) {
@@ -219,7 +218,7 @@ function WeekendCupOptionCard({
           ) : (
             <Vote size={14} />
           )}
-          {option.userVoted ? 'Selected' : 'Pick this game'}
+          {option.userVoted ? 'Picked' : 'Vote now'}
         </div>
       </div>
     </div>
@@ -227,7 +226,6 @@ function WeekendCupOptionCard({
 }
 
 export function WeekendCupClient() {
-  const router = useRouter();
   const { user } = useAuth();
   const authFetch = useAuthFetch();
   const [ballots, setBallots] = useState<WeekendCupBallot[]>([]);
@@ -275,8 +273,36 @@ export function WeekendCupClient() {
   }, [loadState]);
 
   const handleAuthFailure = useCallback(() => {
-    router.replace(signInHref);
-  }, [router, signInHref]);
+    window.location.href = signInHref;
+  }, [signInHref]);
+
+  const ensureLiveSession = useCallback(async () => {
+    if (!user) {
+      window.location.href = signInHref;
+      return false;
+    }
+
+    try {
+      const res = await authFetch('/api/auth/me', { method: 'GET' });
+      if (!res.ok) {
+        handleAuthFailure();
+        return false;
+      }
+    } catch {
+      handleAuthFailure();
+      return false;
+    }
+
+    return true;
+  }, [authFetch, handleAuthFailure, signInHref, user]);
+
+  useEffect(() => {
+    if (!user) {
+      return;
+    }
+
+    void ensureLiveSession();
+  }, [ensureLiveSession, user]);
 
   const handleVote = useCallback(async (optionId: string, alreadySelected: boolean, selectedCount: number) => {
     if (!WEEKEND_CUP_VOTING_ENABLED) {
@@ -284,8 +310,7 @@ export function WeekendCupClient() {
       return;
     }
 
-    if (!user) {
-      router.push(signInHref);
+    if (!(await ensureLiveSession())) {
       return;
     }
 
@@ -321,11 +346,10 @@ export function WeekendCupClient() {
     } finally {
       setActingOptionId(null);
     }
-  }, [authFetch, handleAuthFailure, router, signInHref, user]);
+  }, [authFetch, ensureLiveSession, handleAuthFailure]);
 
   const handleClearVotes = useCallback(async (ballotSlug: string) => {
-    if (!user) {
-      router.push(signInHref);
+    if (!(await ensureLiveSession())) {
       return;
     }
 
@@ -357,7 +381,7 @@ export function WeekendCupClient() {
     } finally {
       setClearingBallotSlug(null);
     }
-  }, [authFetch, handleAuthFailure, router, signInHref, user]);
+  }, [authFetch, ensureLiveSession, handleAuthFailure]);
 
   const handleSuggest = async (ballotSlug: string) => {
     if (!WEEKEND_CUP_VOTING_ENABLED) {
@@ -365,8 +389,7 @@ export function WeekendCupClient() {
       return;
     }
 
-    if (!user) {
-      router.push(signInHref);
+    if (!(await ensureLiveSession())) {
       return;
     }
 
@@ -421,7 +444,7 @@ export function WeekendCupClient() {
 
   return (
     <div
-      className="app-prototype-shell page-base min-h-screen bg-[radial-gradient(circle_at_top,rgba(50,224,196,0.08),transparent_32%),linear-gradient(180deg,#07111e_0%,#050b13_100%)]"
+      className="weekend-cup-shell app-prototype-shell page-base min-h-screen bg-[radial-gradient(circle_at_top,rgba(50,224,196,0.08),transparent_32%),linear-gradient(180deg,#07111e_0%,#050b13_100%)]"
       style={DASHBOARD_FONT_STYLE}
     >
       <WeekendCupHeader />
@@ -533,7 +556,7 @@ export function WeekendCupClient() {
                         type="button"
                         onClick={() => void handleClearVotes(ballot.slug)}
                         disabled={clearingBallotSlug === ballot.slug}
-                        className={`btn-outline min-h-10 px-4 py-2 text-[0.86rem] ${DASHBOARD_CONTROL_RADIUS_CLASS}`}
+                        className={`btn-ghost min-h-10 px-4 py-2 text-[0.86rem] ${DASHBOARD_CONTROL_RADIUS_CLASS}`}
                       >
                         {clearingBallotSlug === ballot.slug ? (
                           <>
@@ -543,7 +566,7 @@ export function WeekendCupClient() {
                         ) : (
                           <>
                             <RotateCcw size={14} />
-                            Change my vote
+                            Clear my pick
                           </>
                         )}
                       </button>

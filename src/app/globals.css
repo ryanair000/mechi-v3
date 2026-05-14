@@ -1137,6 +1137,30 @@ html[data-theme='dark'] {
     color: var(--text-primary);
   }
 
+  .weekend-cup-shell {
+    --radius-panel: 1.35rem;
+    --radius-card: 1.35rem;
+    --radius-control: 1rem;
+  }
+
+  .weekend-cup-shell .nav-panel,
+  .weekend-cup-shell .card,
+  .weekend-cup-shell .card-hover,
+  .weekend-cup-shell .subtle-card {
+    border-radius: var(--radius-panel);
+  }
+
+  .weekend-cup-shell .btn-primary,
+  .weekend-cup-shell .btn-ghost,
+  .weekend-cup-shell .btn-danger,
+  .weekend-cup-shell .btn-outline,
+  .weekend-cup-shell .icon-button,
+  .weekend-cup-shell .theme-toggle,
+  .weekend-cup-shell .input,
+  .weekend-cup-shell .input-field {
+    border-radius: var(--radius-control);
+  }
+
   .app-prototype-shell .btn-outline,
   .app-prototype-shell .icon-button {
     border-color: var(--border-color);

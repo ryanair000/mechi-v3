@@ -1,0 +1,262 @@
+"use client";
+
+import * as React from "react";
+import { MotionConfig, motion, type HTMLMotionProps } from "motion/react";
+import { cn } from "@/lib/utils";
+
+interface TextStaggerHoverProps {
+  text: string;
+  index: number;
+}
+
+interface HoverSliderImageProps {
+  index: number;
+  imageUrl: string;
+}
+
+interface HoverSliderContextValue {
+  activeSlide: number;
+  changeSlide: (index: number) => void;
+}
+
+type Slide = {
+  id: string;
+  title: string;
+  imageUrl: string;
+};
+
+const LEADERBOARD_SLIDES: Slide[] = [
+  {
+    id: "slide-1",
+    title: "pubg mobile",
+    imageUrl:
+      "https://images.unsplash.com/photo-1654618977232-a6c6dea9d1e8?q=80&w=2486&auto=format&fit=crop",
+  },
+  {
+    id: "slide-2",
+    title: "codm",
+    imageUrl:
+      "https://images.unsplash.com/photo-1624996752380-8ec242e0f85d?q=80&w=2487&auto=format&fit=crop",
+  },
+  {
+    id: "slide-3",
+    title: "efootball",
+    imageUrl:
+      "https://images.unsplash.com/photo-1688733720228-4f7a18681c4f?q=80&w=2487&auto=format&fit=crop",
+  },
+  {
+    id: "slide-4",
+    title: "weekend cup",
+    imageUrl:
+      "https://images.unsplash.com/photo-1574717025058-2f8737d2e2b7?q=80&w=2487&auto=format&fit=crop",
+  },
+  {
+    id: "slide-5",
+    title: "weka mawe",
+    imageUrl:
+      "https://images.unsplash.com/photo-1726066012698-bb7a3abce786?q=80&w=2487&auto=format&fit=crop",
+  },
+];
+
+function splitText(text: string) {
+  const words = text.split(" ").map((word) => word.concat(" "));
+  const characters = words.map((word) => word.split("")).flat(1);
+
+  return {
+    words,
+    characters,
+  };
+}
+
+const HoverSliderContext = React.createContext<
+  HoverSliderContextValue | undefined
+>(undefined);
+
+function useHoverSliderContext() {
+  const context = React.useContext(HoverSliderContext);
+  if (context === undefined) {
+    throw new Error(
+      "useHoverSliderContext must be used within a HoverSliderProvider"
+    );
+  }
+  return context;
+}
+
+export const HoverSlider = React.forwardRef<
+  HTMLDivElement,
+  React.HTMLAttributes<HTMLDivElement>
+>(({ children, className, ...props }, ref) => {
+  const [activeSlide, setActiveSlide] = React.useState<number>(0);
+  const changeSlide = React.useCallback(
+    (index: number) => setActiveSlide(index),
+    []
+  );
+
+  return (
+    <HoverSliderContext.Provider value={{ activeSlide, changeSlide }}>
+      <div ref={ref} className={className} {...props}>
+        {children}
+      </div>
+    </HoverSliderContext.Provider>
+  );
+});
+HoverSlider.displayName = "HoverSlider";
+
+export const WordStaggerHover = React.forwardRef<
+  HTMLSpanElement,
+  React.HTMLAttributes<HTMLSpanElement>
+>(({ children, className, ...props }, ref) => {
+  return (
+    <span
+      ref={ref}
+      className={cn(
+        "relative inline-block origin-bottom overflow-hidden",
+        className
+      )}
+      {...props}
+    >
+      {children}
+    </span>
+  );
+});
+WordStaggerHover.displayName = "WordStaggerHover";
+
+export const TextStaggerHover = React.forwardRef<
+  HTMLSpanElement,
+  React.HTMLAttributes<HTMLSpanElement> & TextStaggerHoverProps
+>(({ text, index, className, ...props }, ref) => {
+  const { activeSlide, changeSlide } = useHoverSliderContext();
+  const { characters } = splitText(text);
+  const isActive = activeSlide === index;
+  const handleMouse = () => changeSlide(index);
+
+  return (
+    <span
+      className={cn(
+        "relative inline-block origin-bottom overflow-hidden",
+        className
+      )}
+      {...props}
+      ref={ref}
+      onMouseEnter={handleMouse}
+    >
+      {characters.map((char, charIndex) => (
+        <span
+          key={`${char}-${charIndex}`}
+          className="relative inline-block overflow-hidden"
+        >
+          <MotionConfig
+            transition={{
+              delay: charIndex * 0.025,
+              duration: 0.3,
+              ease: [0.25, 0.46, 0.45, 0.94],
+            }}
+          >
+            <motion.span
+              className="inline-block opacity-20"
+              initial={{ y: "0%" }}
+              animate={isActive ? { y: "-110%" } : { y: "0%" }}
+            >
+              {char}
+              {char === " " && charIndex < characters.length - 1 ? (
+                <>&nbsp;</>
+              ) : null}
+            </motion.span>
+
+            <motion.span
+              className="absolute left-0 top-0 inline-block opacity-100"
+              initial={{ y: "110%" }}
+              animate={isActive ? { y: "0%" } : { y: "110%" }}
+            >
+              {char}
+            </motion.span>
+          </MotionConfig>
+        </span>
+      ))}
+    </span>
+  );
+});
+TextStaggerHover.displayName = "TextStaggerHover";
+
+export const clipPathVariants = {
+  visible: {
+    clipPath: "polygon(0% 0%, 100% 0%, 100% 100%, 0% 100%)",
+  },
+  hidden: {
+    clipPath: "polygon(0% 0%, 100% 0%, 100% 0%, 0% 0px)",
+  },
+};
+
+export const HoverSliderImageWrap = React.forwardRef<
+  HTMLDivElement,
+  React.HTMLAttributes<HTMLDivElement>
+>(({ className, ...props }, ref) => {
+  return (
+    <div
+      ref={ref}
+      className={cn(
+        "grid overflow-hidden [&>*]:col-start-1 [&>*]:col-end-1 [&>*]:row-start-1 [&>*]:row-end-1 [&>*]:size-full",
+        className
+      )}
+      {...props}
+    />
+  );
+});
+HoverSliderImageWrap.displayName = "HoverSliderImageWrap";
+
+export const HoverSliderImage = React.forwardRef<
+  HTMLImageElement,
+  Omit<HTMLMotionProps<"img">, "src"> & HoverSliderImageProps
+>(({ index, imageUrl, className, alt, ...props }, ref) => {
+  const { activeSlide } = useHoverSliderContext();
+
+  return (
+    <motion.img
+      className={cn("inline-block align-middle", className)}
+      transition={{ ease: [0.33, 1, 0.68, 1], duration: 0.8 }}
+      variants={clipPathVariants}
+      animate={activeSlide === index ? "visible" : "hidden"}
+      ref={ref}
+      src={imageUrl}
+      alt={alt}
+      {...props}
+    />
+  );
+});
+HoverSliderImage.displayName = "HoverSliderImage";
+
+export function AnimatedSlideshowSection() {
+  return (
+    <HoverSlider className="landing-shell px-4 py-8 text-[var(--text-primary)] md:px-12 md:py-12">
+      <h3 className="mb-6 text-xs font-medium capitalize tracking-wide text-[rgb(201,100,66)]">
+        / Leaderboard
+      </h3>
+      <div className="flex flex-wrap items-center justify-evenly gap-6 md:gap-12">
+        <div className="flex flex-col space-y-2 md:space-y-4">
+          {LEADERBOARD_SLIDES.map((slide, index) => (
+            <TextStaggerHover
+              key={slide.id}
+              index={index}
+              className="cursor-pointer text-4xl font-bold uppercase tracking-tighter sm:text-5xl"
+              text={slide.title}
+            />
+          ))}
+        </div>
+        <HoverSliderImageWrap className="w-full max-w-xl">
+          {LEADERBOARD_SLIDES.map((slide, index) => (
+            <div key={slide.id}>
+              <HoverSliderImage
+                index={index}
+                imageUrl={slide.imageUrl}
+                alt={slide.title}
+                className="size-full max-h-96 rounded-[var(--radius-panel)] object-cover"
+                loading="eager"
+                decoding="async"
+              />
+            </div>
+          ))}
+        </HoverSliderImageWrap>
+      </div>
+    </HoverSlider>
+  );
+}

@@ -27,6 +27,7 @@ export function AndroidTestersClient() {
   const [feedback, setFeedback] = useState<ActionFeedbackState | null>(null);
   const [loading, setLoading] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [redirecting, setRedirecting] = useState(false);
 
   const formIsValid =
     Boolean(user) &&
@@ -60,6 +61,7 @@ export function AndroidTestersClient() {
     }
 
     setLoading(true);
+    setRedirecting(false);
     setFeedback({
       tone: 'loading',
       title: 'Locking in your spot...',
@@ -83,6 +85,7 @@ export function AndroidTestersClient() {
       }
 
       setSaved(true);
+      setRedirecting(true);
       setFeedback({
         tone: 'success',
         title: 'You are on the early list.',
@@ -90,6 +93,9 @@ export function AndroidTestersClient() {
           data.message ??
           'Your Google Play account is saved for the Mechi v4.0.1 tester invite. Open your dashboard for the next move.',
       });
+      window.setTimeout(() => {
+        router.push('/dashboard?androidTester=saved');
+      }, 700);
     } catch {
       setFeedback({
         tone: 'error',
@@ -195,18 +201,20 @@ export function AndroidTestersClient() {
           <div className="grid gap-3 sm:grid-cols-2">
             <button
               type="button"
-              onClick={() => router.push('/dashboard')}
+              onClick={() => router.push('/dashboard?androidTester=saved')}
               className="btn-primary w-full"
             >
-              Open dashboard
+              {redirecting ? 'Opening dashboard...' : 'Open dashboard'}
             </button>
             <button
               type="button"
               onClick={() => {
                 setSaved(false);
+                setRedirecting(false);
                 setFeedback(null);
               }}
               className="btn-ghost w-full"
+              disabled={redirecting}
             >
               Update Play email
             </button>

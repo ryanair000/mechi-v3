@@ -16,8 +16,7 @@ export const blocksDesign = [
     id: "weekend-cup",
     name: "Weekend Cup",
     url: "/weekendcup",
-    imgSrc:
-      "https://images.unsplash.com/photo-1755543041886-41944f3e08c8?q=80&w=687&auto=format&fit=crop",
+    imgSrc: "/images/playmechi/weekend-cup-poster.png",
   },
   {
     id: "weka-mawe-weekly",

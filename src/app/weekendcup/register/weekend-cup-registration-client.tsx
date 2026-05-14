@@ -18,14 +18,12 @@ import {
   WEEKEND_CUP_REGISTERABLE_GAMES,
   WEEKEND_CUP_REGISTRATION_DISABLED_MESSAGE,
   WEEKEND_CUP_REGISTRATION_ENABLED,
-  WEEKEND_CUP_REGISTRATION_OPENS_LABEL,
   WEEKEND_CUP_REGISTRATION_PATH,
   WEEKEND_CUP_SUPPORT_URL,
   cleanWeekendCupText,
   formatWeekendCupPaymentStatus,
   getWeekendCupFallbackSummary,
   getWeekendCupGamePricingLine,
-  getWeekendCupPaymentTierLabel,
   isWeekendCupRegisterableGame,
   isWeekendCupRegistrationOpen,
   type WeekendCupPlayerRegistration,
@@ -40,7 +38,6 @@ const DASHBOARD_FONT_STYLE: CSSProperties & Record<string, string> = {
   '--font-sans': 'var(--font-open-sans), "Open Sans", "Segoe UI", sans-serif',
 };
 
-const DASHBOARD_INNER_RADIUS_CLASS = 'rounded-[var(--radius-panel)]';
 const DASHBOARD_CONTROL_RADIUS_CLASS = '!rounded-[var(--radius-control)]';
 
 function paymentStatusClasses(status: WeekendCupPlayerRegistration['payment_status']) {
@@ -90,7 +87,6 @@ export function WeekendCupRegistrationClient() {
   const selectedConfig = WEEKEND_CUP_GAMES.find((game) => game.game === selectedGame) ?? WEEKEND_CUP_GAMES[0];
   const currentRegistration = summary.registrations.find((registration) => registration.game === selectedGame);
   const requestedNextPath = getSafeNextPath(searchParams.get('next'), '');
-  const paymentReference = searchParams.get('reference') ?? '';
   const returnPath = withQuery(WEEKEND_CUP_REGISTRATION_PATH, {
     game: isWeekendCupRegisterableGame(requestedGame) ? requestedGame : null,
     next: requestedNextPath || null,
@@ -130,49 +126,6 @@ export function WeekendCupRegistrationClient() {
 
     void loadSummary();
   }, [authLoading, loadSummary, registrationOpen]);
-
-  useEffect(() => {
-    if (!registrationOpen || authLoading || !user || !paymentReference) {
-      return;
-    }
-
-    const verifyPayment = async () => {
-      try {
-        const res = await authFetch(API_PATH, {
-          method: 'POST',
-          body: JSON.stringify({
-            action: 'verify_payment',
-            reference: paymentReference,
-          }),
-        });
-        const data = (await res.json()) as WeekendCupRegistrationSummary & { error?: string };
-
-        if (!res.ok) {
-          toast.error(data.error ?? 'Payment is not complete yet');
-          return;
-        }
-
-        setSummary(data);
-        toast.success('Payment confirmed. Your Weekend Cup slot is locked.');
-        router.replace(withQuery(WEEKEND_CUP_REGISTRATION_PATH, {
-          game: isWeekendCupRegisterableGame(requestedGame) ? requestedGame : selectedGame,
-        }));
-      } catch {
-        toast.error('Could not verify payment');
-      }
-    };
-
-    void verifyPayment();
-  }, [
-    authFetch,
-    authLoading,
-    paymentReference,
-    registrationOpen,
-    requestedGame,
-    router,
-    selectedGame,
-    user,
-  ]);
 
   useEffect(() => {
     const prefill = summary.prefill?.[selectedGame] ?? null;
@@ -353,103 +306,80 @@ export function WeekendCupRegistrationClient() {
     >
       <HeaderSpacing />
 
-      <main className="page-container max-w-[920px] pb-10 pt-[1.35rem]">
-        <section className="space-y-5 px-1 py-6 sm:px-2 sm:py-8">
-          <div>
+      <main className="page-container max-w-4xl pb-10 pt-5">
+        <section className="px-1 py-6 sm:px-2">
+          <div className="mb-6">
             <p className="section-title">Weekend Cup registration</p>
-            <h1 className="mt-2 max-w-3xl text-[clamp(2rem,3.6vw,3.4rem)] font-black leading-tight text-[var(--text-primary)]">
-              Save the entry. Clear payment to book the slot.
+            <h1 className="mt-2 max-w-2xl text-[clamp(2rem,4vw,3.25rem)] font-black leading-tight text-[var(--text-primary)]">
+              Pick game. Add details. Pay to book.
             </h1>
-            <p className="mt-3 max-w-2xl text-[0.95rem] leading-7 text-[var(--text-secondary)]">
-              Pick your game, check your player details, then finish checkout. If you played
-              PlayMechi before, we pull in the latest details already on file.
+            <p className="mt-3 max-w-xl text-sm leading-6 text-[var(--text-secondary)]">
+              One entry per game. Payment is the only thing that locks the slot.
             </p>
-            <div className="mt-5 flex flex-wrap gap-2">
-              {[
-                WEEKEND_CUP_ENTRY_PRICING.earlyBirdLimitLabel,
-                WEEKEND_CUP_REGISTRATION_OPENS_LABEL,
-              ].map((item) => (
-                <span
-                  key={item}
-                  className={`brand-chip ${DASHBOARD_CONTROL_RADIUS_CLASS} !px-3 !py-1 !text-[0.78rem]`}
-                >
-                  {item}
-                </span>
-              ))}
-            </div>
           </div>
 
-          <div className="card p-4 sm:p-5">
-            <div className="grid gap-5 lg:grid-cols-[0.78fr_1.22fr]">
-              <div className="space-y-4">
-                <div>
+          <div className="rounded-[var(--radius-panel)] border border-white/10 bg-[rgba(10,18,32,0.72)] p-4 shadow-[0_18px_70px_rgba(0,0,0,0.22)] sm:p-5">
+            <div className="grid gap-6 lg:grid-cols-[260px_1fr]">
+              <aside className="space-y-3">
+                <div className="flex items-center justify-between gap-3">
                   <p className="text-xs font-black uppercase tracking-[0.16em] text-[var(--text-soft)]">
-                    Choose game
+                    Game
                   </p>
-                  <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">
-                    Pick the title you are entering. Final comms still run through PlayMechi
-                    before match day.
-                  </p>
+                  <span className="text-xs font-bold text-[var(--accent-secondary-text)]">
+                    {WEEKEND_CUP_ENTRY_PRICING.entryFromLabel}
+                  </span>
                 </div>
 
                 <div className="grid gap-2">
                   {WEEKEND_CUP_REGISTERABLE_GAMES.map((game) => {
                     const selected = selectedGame === game.game;
                     return (
-                      <button
+                    <button
                         key={game.game}
                         type="button"
                         onClick={() => setSelectedGame(game.game)}
-                        className={`${DASHBOARD_INNER_RADIUS_CLASS} border px-4 py-3 text-left transition ${
+                        className={`rounded-[var(--radius-panel)] border px-4 py-3 text-left transition ${
                           selected
-                            ? 'border-[rgba(50,224,196,0.42)] bg-[rgba(50,224,196,0.13)]'
-                            : 'border-white/10 bg-black/10 hover:border-white/20'
+                            ? 'border-[rgba(50,224,196,0.48)] bg-[rgba(50,224,196,0.12)]'
+                            : 'border-white/10 bg-transparent hover:border-white/25'
                         }`}
                       >
-                        <span className="block font-black text-[var(--text-primary)]">{game.label}</span>
-                        <span className="mt-1 block text-sm text-[var(--text-secondary)]">
-                          {game.dateLabel} / {getWeekendCupGamePricingLine(game.game)}
+                        <span className="block text-sm font-black text-[var(--text-primary)]">
+                          {game.label}
+                        </span>
+                        <span className="mt-1 block text-xs leading-5 text-[var(--text-secondary)]">
+                          {game.dateLabel} · {getWeekendCupGamePricingLine(game.game)}
                         </span>
                       </button>
                     );
                   })}
                 </div>
 
-                <div className={`${DASHBOARD_INNER_RADIUS_CLASS} border border-white/10 bg-black/10 p-4`}>
+                <div className="rounded-[var(--radius-panel)] border border-white/10 px-4 py-3">
                   <p className="text-xs font-black uppercase tracking-[0.14em] text-[var(--text-soft)]">
-                    Payment status
+                    Status
                   </p>
-                  {currentRegistration ? (
-                    <div className="mt-3 space-y-2 text-sm text-[var(--text-secondary)]">
-                      <span
-                        className={`inline-flex rounded-full px-3 py-1 text-xs font-bold uppercase tracking-[0.14em] ${paymentStatusClasses(
-                          currentRegistration.payment_status
-                        )}`}
-                      >
-                        {formatWeekendCupPaymentStatus(currentRegistration.payment_status)}
-                      </span>
-                      <p>
-                        {currentRegistration.payment_tier
-                          ? getWeekendCupPaymentTierLabel(currentRegistration.payment_tier)
-                          : 'Tier locks when payment is confirmed.'}
-                      </p>
-                      <Link
-                        href={dashboardHref}
-                        className={`btn-outline mt-3 w-full justify-center ${DASHBOARD_CONTROL_RADIUS_CLASS}`}
-                      >
-                        View status
+                  <div className="mt-2 flex flex-wrap items-center gap-2">
+                    <span
+                      className={`inline-flex rounded-full px-3 py-1 text-[11px] font-bold uppercase tracking-[0.12em] ${paymentStatusClasses(
+                        currentRegistration?.payment_status ?? 'pending_payment'
+                      )}`}
+                    >
+                      {currentRegistration
+                        ? formatWeekendCupPaymentStatus(currentRegistration.payment_status)
+                        : 'Not started'}
+                    </span>
+                    {currentRegistration ? (
+                      <Link href={dashboardHref} className="text-xs font-bold text-[var(--accent-secondary-text)]">
+                        View
                       </Link>
-                    </div>
-                  ) : (
-                    <p className="mt-3 text-sm leading-6 text-[var(--text-secondary)]">
-                      No payment started yet. Run checkout here and the slot flips to booked after payment clears.
-                    </p>
-                  )}
+                    ) : null}
+                  </div>
                 </div>
-              </div>
+              </aside>
 
               <div className="space-y-4">
-                <div className="flex flex-wrap items-start justify-between gap-3">
+                <div className="flex flex-wrap items-start justify-between gap-3 border-b border-white/10 pb-4">
                   <div>
                     <p className="text-xs font-black uppercase tracking-[0.16em] text-[var(--text-soft)]">
                       {selectedConfig.label}
@@ -458,25 +388,25 @@ export function WeekendCupRegistrationClient() {
                       Player details
                     </h2>
                     <p className="mt-1 text-sm text-[var(--text-secondary)]">
-                      Live checkout lane: {getWeekendCupGamePricingLine(selectedGame)}.
+                      {selectedConfig.dateLabel} at {selectedConfig.timeLabel}
                     </p>
                   </div>
-                  {currentRegistration ? (
+                  {currentRegistration?.payment_status === 'paid' ? (
                     <span className="inline-flex items-center gap-2 rounded-full bg-[rgba(50,224,196,0.12)] px-3 py-2 text-xs font-black uppercase tracking-[0.12em] text-[var(--accent-secondary-text)]">
                       <CheckCircle2 size={14} />
-                      {currentRegistration.payment_status === 'paid' ? 'Confirmed' : 'Pending payment'}
+                      Booked
                     </span>
                   ) : null}
                 </div>
 
-                <div className="grid gap-4 md:grid-cols-2">
+                <div className="grid gap-3 md:grid-cols-2">
                   <div>
                     <label className="label">IGN / gamer tag</label>
                     <input
                       type="text"
                       value={inGameUsername}
                       onChange={(event) => setInGameUsername(event.target.value)}
-                      placeholder="Your exact match-day name"
+                      placeholder="Exact match-day name"
                       className="input"
                       maxLength={80}
                     />
@@ -507,39 +437,39 @@ export function WeekendCupRegistrationClient() {
                   />
                 </div>
 
-                <div className="grid gap-3 md:grid-cols-2">
-                  <label className={`flex items-start gap-3 ${DASHBOARD_INNER_RADIUS_CLASS} border border-white/10 bg-black/10 px-4 py-3 text-sm text-[var(--text-secondary)]`}>
+                <div className="grid gap-2 text-sm text-[var(--text-secondary)]">
+                  <label className="flex items-start gap-3 rounded-[var(--radius-panel)] border border-white/10 px-4 py-3">
                     <input
                       type="checkbox"
                       checked={followedInstagram}
                       onChange={(event) => setFollowedInstagram(event.target.checked)}
                       className="mt-1"
                     />
-                    <span>I followed PlayMechi on Instagram.</span>
+                    <span>Followed PlayMechi on Instagram.</span>
                   </label>
 
-                  <label className={`flex items-start gap-3 ${DASHBOARD_INNER_RADIUS_CLASS} border border-white/10 bg-black/10 px-4 py-3 text-sm text-[var(--text-secondary)]`}>
+                  <label className="flex items-start gap-3 rounded-[var(--radius-panel)] border border-white/10 px-4 py-3">
                     <input
                       type="checkbox"
                       checked={subscribedYoutube}
                       onChange={(event) => setSubscribedYoutube(event.target.checked)}
                       className="mt-1"
                     />
-                    <span>I subscribed to PlayMechi on YouTube.</span>
+                    <span>Subscribed to PlayMechi on YouTube.</span>
+                  </label>
+
+                  <label className="flex items-start gap-3 rounded-[var(--radius-panel)] border border-white/10 px-4 py-3">
+                    <input
+                      type="checkbox"
+                      checked={availableAtMatchTime}
+                      onChange={(event) => setAvailableAtMatchTime(event.target.checked)}
+                      className="mt-1"
+                    />
+                    <span>Ready on {selectedConfig.dateLabel} at {selectedConfig.timeLabel}.</span>
                   </label>
                 </div>
 
-                <label className={`flex items-start gap-3 ${DASHBOARD_INNER_RADIUS_CLASS} border border-white/10 bg-black/10 px-4 py-3 text-sm text-[var(--text-secondary)]`}>
-                  <input
-                    type="checkbox"
-                    checked={availableAtMatchTime}
-                    onChange={(event) => setAvailableAtMatchTime(event.target.checked)}
-                    className="mt-1"
-                  />
-                  <span>I will be ready on {selectedConfig.dateLabel} at {selectedConfig.timeLabel}.</span>
-                </label>
-
-                <div className="flex flex-wrap gap-3">
+                <div className="flex flex-wrap items-center gap-3 pt-1">
                   <button
                     type="button"
                     onClick={() => void handleSubmit()}
@@ -555,8 +485,7 @@ export function WeekendCupRegistrationClient() {
                       currentRegistration?.payment_status === 'paid' ? 'Update entry' : 'Pay now'
                     )}
                   </button>
-                  <a href={WEEKEND_CUP_SUPPORT_URL} className={`btn-outline ${DASHBOARD_CONTROL_RADIUS_CLASS}`}>
-                    <MessageCircle size={14} />
+                  <a href={WEEKEND_CUP_SUPPORT_URL} className="text-sm font-bold text-[var(--text-secondary)] hover:text-[var(--text-primary)]">
                     Payment help
                   </a>
                 </div>

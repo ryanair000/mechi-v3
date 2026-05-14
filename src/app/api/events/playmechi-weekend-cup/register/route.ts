@@ -421,9 +421,7 @@ export async function POST(request: NextRequest) {
 
     if (registration.payment_status !== 'paid') {
       const email = profile.email || `${profile.username}@mechi.club`;
-      const callbackUrl = `${APP_URL}${WEEKEND_CUP_REGISTRATION_PATH}?reference=${encodeURIComponent(
-        paymentReference
-      )}&game=${encodeURIComponent(game)}`;
+      const callbackUrl = `${APP_URL}/weekendcup/payment/complete`;
       const initialized = await initializeTournamentPayment({
         amountKes: entryFeeKes,
         email,

@@ -5,6 +5,7 @@ import { cn } from '@/lib/utils';
 type Logo = {
   src: string;
   alt: string;
+  className?: string;
   width?: number;
   height?: number;
 };
@@ -15,31 +16,34 @@ type LogoCloudProps = ComponentProps<'div'> & {
 
 const LOGOS: Logo[] = [
   {
-    src: '/game-artwork/pubgm-header.svg',
+    src: 'https://commons.wikimedia.org/wiki/Special:Redirect/file/PUBG_Mobile_simple_logo_black.svg',
     alt: 'PUBG Mobile Logo',
+    className: 'brightness-0 invert',
   },
   {
-    src: '/game-artwork/codm-header.svg',
+    src: 'https://commons.wikimedia.org/wiki/Special:Redirect/file/Call_of_Duty_Mobile_2023_logo.svg',
     alt: 'Call of Duty Mobile Logo',
+    className: 'brightness-0 invert',
   },
   {
-    src: '/game-artwork/efootball-header.svg',
+    src: 'https://commons.wikimedia.org/wiki/Special:Redirect/file/EFootball_logo.svg',
     alt: 'eFootball Logo',
+    className: 'brightness-0 invert',
   },
   {
-    src: '/game-artwork/freefire-header.svg',
+    src: 'https://commons.wikimedia.org/wiki/Special:Redirect/file/Freefirelogo.png',
     alt: 'Free Fire Logo',
   },
   {
-    src: '/game-artwork/fc26-header.svg',
+    src: 'https://fifauteam.com/images/fc26/logo/long-white.png',
     alt: 'FC 26 Logo',
   },
   {
-    src: '/game-artwork/mk11-header.svg',
+    src: 'https://upload.wikimedia.org/wikipedia/commons/4/45/Mortal-kombat-11-logo.png',
     alt: 'Mortal Kombat 11 Logo',
   },
   {
-    src: 'https://upload.wikimedia.org/wikipedia/commons/9/92/UFC_Logo.svg',
+    src: 'https://drop-assets.ea.com/images/7Dx4nROmD8Iy61CuHhUdbo/99a1ebf0a07247e13debb95efa0002a4/ufc5-logo-reveal-white-1.png',
     alt: 'UFC 5 Logo',
   },
 ];
@@ -57,7 +61,10 @@ export function LogoCloud({ className, logos, ...props }: LogoCloudProps) {
         {logos.map((logo) => (
           <img
             alt={logo.alt}
-            className="pointer-events-none h-12 w-auto select-none rounded-[var(--radius-control)] border border-white/10 object-contain md:h-14"
+            className={cn(
+              'pointer-events-none h-12 w-auto select-none rounded-[var(--radius-control)] border border-white/10 object-contain md:h-14',
+              logo.className
+            )}
             height={logo.height || 'auto'}
             key={`logo-${logo.alt}`}
             loading="lazy"

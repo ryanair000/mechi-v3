@@ -35,8 +35,9 @@ import {
   getWeekendCupPaymentTierAmount,
   getWeekendCupPaymentTierDisplay,
   getWeekendCupWindowState,
-  isWeekendCupRegistrationOpen,
   isWeekendCupGame,
+  isWeekendCupRegisterableGame,
+  isWeekendCupRegistrationOpen,
 } from '@/lib/weekend-cup';
 import {
   buildWeekendCupRegisterPayload,
@@ -160,6 +161,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Pick a valid Weekend Cup game' }, { status: 400 });
     }
 
+    if (!isWeekendCupRegisterableGame(gameInput)) {
+      return NextResponse.json(
+        { error: 'Mystery game registration opens after the vote locks.' },
+        { status: 400 }
+      );
+    }
+
     const game = gameInput;
     const gameConfig = WEEKEND_CUP_GAME_BY_KEY[game];
     const windowState = getWeekendCupWindowState(gameConfig);
@@ -216,7 +224,7 @@ export async function POST(request: NextRequest) {
       supabase,
       userId: access.profile.id,
     });
-    const sourcePrefill = game === 'mystery' ? null : (playmechiPrefill[game] ?? null);
+    const sourcePrefill = playmechiPrefill[game] ?? null;
 
     const { data: existingRegistrationRaw } = await supabase
       .from('online_tournament_registrations')

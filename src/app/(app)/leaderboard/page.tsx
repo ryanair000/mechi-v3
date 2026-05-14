@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { ShieldCheck, Swords, Trophy, type LucideIcon } from 'lucide-react';
 import { useAuthFetch } from '@/components/AuthProvider';
@@ -69,7 +70,7 @@ function SummaryCard({
   value: number;
 }) {
   return (
-    <div className="rounded-[var(--radius-card)] border border-[var(--border-color)] bg-[var(--surface)] px-4 py-4">
+    <div className="rounded-[0.5rem] border border-[var(--border-color)] bg-[var(--surface)] px-4 py-4">
       <div className="flex items-center gap-2 text-[var(--text-soft)]">
         <Icon size={15} />
         <p className="text-xs font-bold uppercase tracking-[0.12em]">{label}</p>
@@ -82,6 +83,7 @@ function SummaryCard({
 }
 
 export default function LeaderboardPage() {
+  const router = useRouter();
   const authFetch = useAuthFetch();
   const [payload, setPayload] = useState<TournamentLeaderboardResponse | null>(null);
   const [loading, setLoading] = useState(true);
@@ -145,22 +147,25 @@ export default function LeaderboardPage() {
               Only players whose tournament check-in was cleared by the desk show up here. Switch
               between PUBG Mobile, CODM, and eFootball to view each PlayMechi board.
             </p>
+            <p className="mt-2 text-xs font-semibold uppercase tracking-[0.12em] text-[var(--text-soft)]">
+              Tap a player to open the profile card.
+            </p>
           </div>
 
           <div className="grid grid-cols-3 gap-2 text-center sm:min-w-80">
-            <div className="rounded-[var(--radius-card)] border border-[var(--border-color)] bg-[var(--surface-elevated)] px-3 py-2">
+            <div className="rounded-[0.5rem] border border-[var(--border-color)] bg-[var(--surface-elevated)] px-3 py-2">
               <p className="text-lg font-black text-[var(--text-primary)]">{totalCheckIns}</p>
               <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--text-soft)]">
                 Verified Check-ins
               </p>
             </div>
-            <div className="rounded-[var(--radius-card)] border border-[var(--border-color)] bg-[var(--surface-elevated)] px-3 py-2">
+            <div className="rounded-[0.5rem] border border-[var(--border-color)] bg-[var(--surface-elevated)] px-3 py-2">
               <p className="text-lg font-black text-[var(--text-primary)]">{totalGames}</p>
               <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--text-soft)]">
                 Games
               </p>
             </div>
-            <div className="rounded-[var(--radius-card)] border border-[var(--border-color)] bg-[var(--surface-elevated)] px-3 py-2">
+            <div className="rounded-[0.5rem] border border-[var(--border-color)] bg-[var(--surface-elevated)] px-3 py-2">
               <p className="text-lg font-black text-[var(--text-primary)]">{totalVerifiedResults}</p>
               <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--text-soft)]">
                 Verified Results
@@ -179,7 +184,7 @@ export default function LeaderboardPage() {
                 key={game.game}
                 type="button"
                 onClick={() => setActiveGame(game.game)}
-                className={`inline-flex min-h-9 items-center rounded-md border px-3 text-xs font-bold ${
+                className={`inline-flex min-h-9 items-center rounded-[0.4rem] border px-3 text-xs font-bold ${
                   isActive
                     ? 'border-[rgba(50,224,196,0.24)] bg-[rgba(50,224,196,0.12)] text-[var(--accent-secondary-text)]'
                     : 'border-[var(--border-color)] bg-[var(--surface-elevated)] text-[var(--text-secondary)]'
@@ -238,7 +243,7 @@ export default function LeaderboardPage() {
                   screenshots or bracket results are verified.
                 </p>
               </div>
-              <div className="rounded-[var(--radius-card)] border border-[var(--border-color)] bg-[var(--surface-elevated)] px-4 py-3 text-right">
+              <div className="rounded-[0.5rem] border border-[var(--border-color)] bg-[var(--surface-elevated)] px-4 py-3 text-right">
                 <p className="text-xs font-bold uppercase tracking-[0.12em] text-[var(--text-soft)]">
                   Live board
                 </p>
@@ -260,15 +265,43 @@ export default function LeaderboardPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {activeBoard.leaderboard.map((entry) => (
-                    <tr key={entry.id} className="border-b border-[var(--border-color)] last:border-b-0">
+                  {activeBoard.leaderboard.map((entry) => {
+                    const profileHref = entry.username
+                      ? `/s/${encodeURIComponent(entry.username)}`
+                      : null;
+
+                    return (
+                    <tr
+                      key={entry.id}
+                      className={`border-b border-[var(--border-color)] last:border-b-0 ${
+                        profileHref ? 'cursor-pointer transition hover:bg-[rgba(255,255,255,0.02)]' : ''
+                      }`}
+                      onClick={() => {
+                        if (profileHref) {
+                          router.push(profileHref);
+                        }
+                      }}
+                      onKeyDown={(event) => {
+                        if (!profileHref) {
+                          return;
+                        }
+
+                        if (event.key === 'Enter' || event.key === ' ') {
+                          event.preventDefault();
+                          router.push(profileHref);
+                        }
+                      }}
+                      role={profileHref ? 'link' : undefined}
+                      tabIndex={profileHref ? 0 : undefined}
+                    >
                       <td className="py-3 pr-3 text-sm font-black text-[var(--accent-secondary-text)]">
                         #{entry.rank}
                       </td>
                       <td className="px-3 py-3">
-                        {entry.username ? (
+                        {profileHref ? (
                           <Link
-                            href={`/s/${encodeURIComponent(entry.username)}`}
+                            href={profileHref}
+                            onClick={(event) => event.stopPropagation()}
                             className="group flex items-center gap-3 rounded-[var(--radius-card)] px-1 py-1 transition hover:bg-[rgba(255,255,255,0.03)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(50,224,196,0.35)]"
                           >
                             <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full border border-[var(--border-color)] bg-[var(--surface-elevated)] text-xs font-black text-[var(--text-primary)]">
@@ -284,7 +317,7 @@ export default function LeaderboardPage() {
                                 {entry.name}
                               </p>
                               <p className="truncate text-xs text-[var(--text-secondary)]">
-                                {entry.detailText} | View profile
+                                {entry.detailText} | Open profile
                               </p>
                             </div>
                           </Link>
@@ -324,7 +357,7 @@ export default function LeaderboardPage() {
                         {formatCheckInTime(entry.checkedInAt)}
                       </td>
                     </tr>
-                  ))}
+                  )})}
                   {activeBoard.leaderboard.length === 0 ? (
                     <tr>
                       <td colSpan={5} className="py-12 text-center text-sm text-[var(--text-secondary)]">

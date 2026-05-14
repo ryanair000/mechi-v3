@@ -85,8 +85,8 @@ const OPTION_IMAGE_BY_SLUG: Partial<Record<string, string | null>> = {
   'rocket-league': getGameImage('rocketleague'),
 };
 
-const DASHBOARD_INNER_RADIUS_CLASS = 'rounded-[var(--radius-card)]';
-const DASHBOARD_CONTROL_RADIUS_CLASS = '!rounded-[var(--radius-control)]';
+const DASHBOARD_INNER_RADIUS_CLASS = 'rounded-[0.5rem]';
+const DASHBOARD_CONTROL_RADIUS_CLASS = '!rounded-[0.4rem]';
 
 function isAuthFailure(status: number, error?: string | null) {
   if (status === 401 || status === 403) {
@@ -219,7 +219,7 @@ function WeekendCupOptionCard({
           ) : (
             <Vote size={14} />
           )}
-          {option.userVoted ? 'Picked' : 'Vote now'}
+          {option.userVoted ? 'Selected' : 'Pick this game'}
         </div>
       </div>
     </div>
@@ -350,7 +350,7 @@ export function WeekendCupClient() {
         return;
       }
 
-      toast.success('Mystery pick cleared.');
+      toast.success('Mystery pick cleared. Choose the next one.');
       setBallots((data.ballots ?? []).filter((ballot) => VISIBLE_BALLOT_SLUGS.has(ballot.slug)));
     } catch {
       toast.error('Network error while clearing your picks');
@@ -508,7 +508,7 @@ export function WeekendCupClient() {
                     <span
                       className={`brand-chip ${DASHBOARD_CONTROL_RADIUS_CLASS} !px-3 !py-1 !text-[0.76rem]`}
                     >
-                      {selectedCount}/{WEEKEND_CUP_MAX_VOTE_SELECTIONS} selected
+                      {selectedCount === 0 ? 'No pick yet' : '1 pick locked'}
                     </span>
                     <span
                       className={`brand-chip ${DASHBOARD_CONTROL_RADIUS_CLASS} !px-3 !py-1 !text-[0.76rem]`}
@@ -525,7 +525,7 @@ export function WeekendCupClient() {
                         href={signInHref}
                         className={`btn-outline min-h-10 px-4 py-2 text-[0.86rem] ${DASHBOARD_CONTROL_RADIUS_CLASS}`}
                       >
-                        Sign in to choose
+                        Sign in to vote
                       </Link>
                     ) : null}
                     {user && selectedCount > 0 ? (
@@ -543,7 +543,7 @@ export function WeekendCupClient() {
                         ) : (
                           <>
                             <RotateCcw size={14} />
-                            Clear my pick
+                            Change my vote
                           </>
                         )}
                       </button>

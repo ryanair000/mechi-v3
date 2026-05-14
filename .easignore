@@ -10,6 +10,13 @@ test-results
 .playwright-cli
 .codex*
 .claude
+.gradle-temp-android-install
+.jdk17
+g
+ops/openclaw-growth-workspace/tmp
+openclaw-doc-sync.tar
+openclaw-sync.tar
+openclaw-x-sync.tar
 *.log
 *.err.log
 *.out.log

@@ -4,13 +4,21 @@ import Link from 'next/link';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import toast from 'react-hot-toast';
-import { CheckCircle2, Clock3, CreditCard, Loader2, MessageCircle, type LucideIcon } from 'lucide-react';
+import {
+  CheckCircle2,
+  Clock3,
+  CreditCard,
+  Loader2,
+  MessageCircle,
+  type LucideIcon,
+} from 'lucide-react';
 import { useAuth, useAuthFetch } from '@/components/AuthProvider';
 import { getLoginPath } from '@/lib/navigation';
 import {
   WEEKEND_CUP_DASHBOARD_PATH,
   WEEKEND_CUP_GAMES,
   WEEKEND_CUP_PUBLIC_PATH,
+  WEEKEND_CUP_REGISTERABLE_GAMES,
   WEEKEND_CUP_REGISTRATION_DISABLED_MESSAGE,
   WEEKEND_CUP_REGISTRATION_ENABLED,
   WEEKEND_CUP_REGISTRATION_PATH,
@@ -21,6 +29,7 @@ import {
   getWeekendCupPaymentTierLabel,
   getWeekendCupWindowState,
   isWeekendCupGame,
+  isWeekendCupRegisterableGame,
   isWeekendCupRegistrationOpen,
   type WeekendCupPlayerRegistration,
   type WeekendCupRegistrationSummary,
@@ -61,7 +70,7 @@ function StatusMetaCard({
   value: string;
 }) {
   return (
-    <div className="rounded-[var(--radius-card)] border border-[var(--border-color)] bg-[var(--surface-elevated)] px-4 py-4">
+    <div className="rounded-[0.5rem] border border-[var(--border-color)] bg-[var(--surface-elevated)] px-4 py-4">
       <div className="flex items-center gap-2 text-[var(--text-soft)]">
         <Icon size={15} />
         <p className="text-[11px] font-bold uppercase tracking-[0.12em]">{label}</p>
@@ -82,37 +91,45 @@ export function WeekendCupDashboardClient() {
   const [loading, setLoading] = useState(true);
   const [retryingPayment, setRetryingPayment] = useState(false);
   const requestedGame = searchParams.get('game') ?? '';
-  const [selectedGame, setSelectedGame] = useState(() =>
-    isWeekendCupGame(requestedGame) ? requestedGame : 'pubgm'
+  const [selectedGame, setSelectedGame] = useState<WeekendCupPlayerRegistration['game']>(() =>
+    isWeekendCupRegisterableGame(requestedGame) ? requestedGame : 'pubgm'
   );
 
   const registrationOpen = WEEKEND_CUP_REGISTRATION_ENABLED && isWeekendCupRegistrationOpen();
+  const dashboardGames = useMemo(() => {
+    const hasMysteryEntry = summary.registrations.some((registration) => registration.game === 'mystery');
+    return hasMysteryEntry ? WEEKEND_CUP_GAMES : WEEKEND_CUP_REGISTERABLE_GAMES;
+  }, [summary.registrations]);
   const selectedConfig = useMemo(
-    () => WEEKEND_CUP_GAMES.find((game) => game.game === selectedGame) ?? WEEKEND_CUP_GAMES[0],
-    [selectedGame]
+    () => dashboardGames.find((game) => game.game === selectedGame) ?? dashboardGames[0] ?? WEEKEND_CUP_REGISTERABLE_GAMES[0],
+    [dashboardGames, selectedGame]
   );
   const currentRegistration =
-    summary.registrations.find((registration) => registration.game === selectedGame) ?? null;
-  const currentCounts = summary.games[selectedGame];
+    summary.registrations.find((registration) => registration.game === selectedConfig.game) ?? null;
+  const currentCounts = summary.games[selectedConfig.game];
   const signInHref = getLoginPath(
-    `${WEEKEND_CUP_DASHBOARD_PATH}?game=${encodeURIComponent(selectedGame)}`
+    `${WEEKEND_CUP_DASHBOARD_PATH}?game=${encodeURIComponent(selectedConfig.game)}`
   );
   const slotBooked = currentRegistration?.payment_status === 'paid';
-  const fallbackEntryAmount = formatKes(getWeekendCupPaymentTierAmount('early_bird', selectedGame)) ?? 'KSh 50';
+  const fallbackEntryAmount =
+    formatKes(getWeekendCupPaymentTierAmount('early_bird', selectedConfig.game)) ?? 'KSh 50';
   const paymentLabel = currentRegistration?.payment_tier
     ? `${getWeekendCupPaymentTierLabel(currentRegistration.payment_tier)} ${formatKes(
         getWeekendCupPaymentTierAmount(currentRegistration.payment_tier, currentRegistration.game)
       ) ?? fallbackEntryAmount}`
     : `Early Bird ${fallbackEntryAmount}`;
-  const paymentAmountLabel =
-    formatKes(currentRegistration?.entry_fee_kes) ??
-    fallbackEntryAmount;
+  const paymentAmountLabel = formatKes(currentRegistration?.entry_fee_kes) ?? fallbackEntryAmount;
 
   useEffect(() => {
-    if (isWeekendCupGame(requestedGame)) {
+    if (isWeekendCupGame(requestedGame) && dashboardGames.some((game) => game.game === requestedGame)) {
       setSelectedGame(requestedGame);
+      return;
     }
-  }, [requestedGame]);
+
+    if (!dashboardGames.some((game) => game.game === selectedGame)) {
+      setSelectedGame(dashboardGames[0]?.game ?? 'pubgm');
+    }
+  }, [dashboardGames, requestedGame, selectedGame]);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -230,10 +247,10 @@ export function WeekendCupDashboardClient() {
     : 'No entry saved';
   const slotStateLabel = !currentRegistration ? 'Not booked yet' : slotBooked ? 'Booked' : 'Pending payment';
   const slotStateCopy = !currentRegistration
-    ? 'No entry is saved for this game yet.'
+    ? 'No payment request yet for this game.'
     : slotBooked
       ? 'Payment went through. Your slot is booked.'
-      : 'Your entry is saved, but the slot is not booked until payment clears.';
+      : 'Payment is still pending. Your slot is not booked yet.';
   const nextWindowCopy = slotBooked
     ? `Match-day check-in unlocks on ${selectedConfig.dateLabel} at ${selectedConfig.timeLabel}.`
     : 'Retry payment here if you still need to lock this slot.';
@@ -244,7 +261,7 @@ export function WeekendCupDashboardClient() {
   const windowState = getWeekendCupWindowState(selectedConfig);
   const matchWindowLabel = !windowState.isRegistrationOpen
     ? 'Registration closed'
-    : `${selectedConfig.dateLabel} • ${selectedConfig.timeLabel}`;
+    : `${selectedConfig.dateLabel} | ${selectedConfig.timeLabel}`;
 
   return (
     <main className="dashboard-page-container space-y-4 py-6">
@@ -252,14 +269,17 @@ export function WeekendCupDashboardClient() {
         <p className="section-title">Weekend Cup dashboard</p>
         <h1 className="mt-2 text-3xl font-black text-[var(--text-primary)]">Check your slot</h1>
         <p className="mt-3 max-w-2xl text-sm leading-7 text-[var(--text-secondary)]">
-          Check whether payment cleared and whether your slot is booked. If it is still pending,
-          retry payment here.
+          Check if payment cleared and if your slot is booked. If it is still pending, retry
+          payment here.
         </p>
         <div className="mt-4 flex flex-wrap gap-3">
           <Link href={WEEKEND_CUP_PUBLIC_PATH} className="btn-outline">
             Back to preview
           </Link>
-          <Link href={`${WEEKEND_CUP_REGISTRATION_PATH}?game=${encodeURIComponent(selectedGame)}`} className="btn-ghost">
+          <Link
+            href={`${WEEKEND_CUP_REGISTRATION_PATH}?game=${encodeURIComponent(selectedConfig.game)}`}
+            className="btn-ghost"
+          >
             Edit entry
           </Link>
         </div>
@@ -267,23 +287,23 @@ export function WeekendCupDashboardClient() {
 
       <section className="card p-4 sm:p-5">
         <div className="flex flex-wrap gap-2">
-          {WEEKEND_CUP_GAMES.map((game) => {
+          {dashboardGames.map((game) => {
             const registration = summary.registrations.find((row) => row.game === game.game);
-            const isActive = selectedGame === game.game;
+            const isActive = selectedConfig.game === game.game;
 
             return (
               <button
                 key={game.game}
                 type="button"
                 onClick={() => setSelectedGame(game.game)}
-                className={`rounded-[var(--radius-control)] px-4 py-2 text-sm font-black ${
+                className={`rounded-[0.4rem] px-4 py-2 text-sm font-black ${
                   isActive
                     ? 'bg-[var(--accent-primary)] text-[#04111c]'
                     : 'border border-[var(--border-color)] bg-[var(--surface-elevated)] text-[var(--text-secondary)]'
                 }`}
               >
                 {game.shortLabel}
-                {registration ? ' • saved' : ''}
+                {registration ? ' | saved' : ''}
               </button>
             );
           })}
@@ -322,13 +342,13 @@ export function WeekendCupDashboardClient() {
               <StatusMetaCard icon={MessageCircle} label="Payment ref" value={referenceLabel} />
             </div>
 
-            <div className="rounded-[var(--radius-card)] border border-[var(--border-color)] bg-[var(--surface-elevated)] px-4 py-4">
+            <div className="rounded-[0.5rem] border border-[var(--border-color)] bg-[var(--surface-elevated)] px-4 py-4">
               <p className="text-sm font-black text-[var(--text-primary)]">{slotStateCopy}</p>
               <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">
                 {nextWindowCopy}
               </p>
               <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">
-                {availabilityLabel} • {paymentLabel}
+                {availabilityLabel} | {paymentLabel}
               </p>
               {currentRegistration?.payment_note ? (
                 <p className="mt-2 text-sm leading-6 text-[var(--text-soft)]">
@@ -340,14 +360,14 @@ export function WeekendCupDashboardClient() {
             <div className="flex flex-wrap gap-3">
               {!currentRegistration ? (
                 <Link
-                  href={`${WEEKEND_CUP_REGISTRATION_PATH}?game=${encodeURIComponent(selectedGame)}`}
+                  href={`${WEEKEND_CUP_REGISTRATION_PATH}?game=${encodeURIComponent(selectedConfig.game)}`}
                   className="btn-primary"
                 >
                   Start registration
                 </Link>
               ) : slotBooked ? (
                 <Link
-                  href={`${WEEKEND_CUP_REGISTRATION_PATH}?game=${encodeURIComponent(selectedGame)}`}
+                  href={`${WEEKEND_CUP_REGISTRATION_PATH}?game=${encodeURIComponent(selectedConfig.game)}`}
                   className="btn-ghost"
                 >
                   Update entry
@@ -371,7 +391,7 @@ export function WeekendCupDashboardClient() {
               )}
 
               <Link
-                href={`${WEEKEND_CUP_REGISTRATION_PATH}?game=${encodeURIComponent(selectedGame)}`}
+                href={`${WEEKEND_CUP_REGISTRATION_PATH}?game=${encodeURIComponent(selectedConfig.game)}`}
                 className="btn-outline"
               >
                 Open registration

@@ -15,6 +15,7 @@ import {
   WEEKEND_CUP_EVENT_DATES,
   WEEKEND_CUP_GAMES,
   WEEKEND_CUP_PUBLIC_PATH,
+  WEEKEND_CUP_REGISTERABLE_GAMES,
   WEEKEND_CUP_REGISTRATION_DISABLED_MESSAGE,
   WEEKEND_CUP_REGISTRATION_ENABLED,
   WEEKEND_CUP_REGISTRATION_OPENS_LABEL,
@@ -25,7 +26,7 @@ import {
   getWeekendCupFallbackSummary,
   getWeekendCupGamePricingLine,
   getWeekendCupPaymentTierLabel,
-  isWeekendCupGame,
+  isWeekendCupRegisterableGame,
   isWeekendCupRegistrationOpen,
   type WeekendCupPlayerRegistration,
   type WeekendCupRegistrationSummary,
@@ -39,8 +40,8 @@ const DASHBOARD_FONT_STYLE: CSSProperties & Record<string, string> = {
   '--font-sans': 'var(--font-open-sans), "Open Sans", "Segoe UI", sans-serif',
 };
 
-const DASHBOARD_INNER_RADIUS_CLASS = 'rounded-[var(--radius-card)]';
-const DASHBOARD_CONTROL_RADIUS_CLASS = '!rounded-[var(--radius-control)]';
+const DASHBOARD_INNER_RADIUS_CLASS = 'rounded-[0.5rem]';
+const DASHBOARD_CONTROL_RADIUS_CLASS = '!rounded-[0.4rem]';
 
 function paymentStatusClasses(status: WeekendCupPlayerRegistration['payment_status']) {
   switch (status) {
@@ -76,8 +77,8 @@ export function WeekendCupRegistrationClient() {
   );
   const [submitting, setSubmitting] = useState(false);
   const requestedGame = searchParams.get('game') ?? '';
-  const [selectedGame, setSelectedGame] = useState(() =>
-    isWeekendCupGame(requestedGame) ? requestedGame : 'pubgm'
+  const [selectedGame, setSelectedGame] = useState<WeekendCupPlayerRegistration['game']>(() =>
+    isWeekendCupRegisterableGame(requestedGame) ? requestedGame : 'pubgm'
   );
   const [inGameUsername, setInGameUsername] = useState('');
   const [followedInstagram, setFollowedInstagram] = useState(true);
@@ -91,7 +92,7 @@ export function WeekendCupRegistrationClient() {
   const requestedNextPath = getSafeNextPath(searchParams.get('next'), '');
   const paymentReference = searchParams.get('reference') ?? '';
   const returnPath = withQuery(WEEKEND_CUP_REGISTRATION_PATH, {
-    game: isWeekendCupGame(requestedGame) ? requestedGame : null,
+    game: isWeekendCupRegisterableGame(requestedGame) ? requestedGame : null,
     next: requestedNextPath || null,
   });
   const createAccountHref = getRegisterPath({ next: returnPath });
@@ -102,7 +103,7 @@ export function WeekendCupRegistrationClient() {
   }, []);
 
   useEffect(() => {
-    if (isWeekendCupGame(requestedGame)) {
+    if (isWeekendCupRegisterableGame(requestedGame)) {
       setSelectedGame(requestedGame);
     }
   }, [requestedGame]);
@@ -154,7 +155,7 @@ export function WeekendCupRegistrationClient() {
         setSummary(data);
         toast.success('Payment confirmed. Your Weekend Cup slot is locked.');
         router.replace(withQuery(WEEKEND_CUP_REGISTRATION_PATH, {
-          game: isWeekendCupGame(requestedGame) ? requestedGame : selectedGame,
+          game: isWeekendCupRegisterableGame(requestedGame) ? requestedGame : selectedGame,
         }));
       } catch {
         toast.error('Could not verify payment');
@@ -357,11 +358,11 @@ export function WeekendCupRegistrationClient() {
           <div>
             <p className="section-title">Weekend Cup registration</p>
             <h1 className="mt-2 max-w-3xl text-[clamp(2rem,3.6vw,3.4rem)] font-black leading-tight text-[var(--text-primary)]">
-              Save your entry. Pay to lock the slot.
+              Start the entry. Clear payment to lock the slot.
             </h1>
             <p className="mt-3 max-w-2xl text-[0.95rem] leading-7 text-[var(--text-secondary)]">
-              Choose your game, confirm your player details, then head to payment. If you played
-              PlayMechi before, we pull in the latest details we already have.
+              Pick your game, confirm your player details, then jump into checkout. If you played
+              PlayMechi before, we pull in the latest details already on file.
             </p>
             <div className="mt-5 flex flex-wrap gap-2">
               {[
@@ -392,7 +393,7 @@ export function WeekendCupRegistrationClient() {
                 </div>
 
                 <div className="grid gap-2">
-                  {WEEKEND_CUP_GAMES.map((game) => {
+                  {WEEKEND_CUP_REGISTERABLE_GAMES.map((game) => {
                     const selected = selectedGame === game.game;
                     return (
                       <button
@@ -441,7 +442,7 @@ export function WeekendCupRegistrationClient() {
                     </div>
                   ) : (
                     <p className="mt-3 text-sm leading-6 text-[var(--text-secondary)]">
-                      No saved entry yet. Every entry starts as pending until payment clears.
+                      No payment record yet. Start checkout here to book this slot.
                     </p>
                   )}
                 </div>
@@ -457,7 +458,7 @@ export function WeekendCupRegistrationClient() {
                       Player details
                     </h2>
                     <p className="mt-1 text-sm text-[var(--text-secondary)]">
-                      20% full right now. {getWeekendCupGamePricingLine(selectedGame)}.
+                      Current checkout: {getWeekendCupGamePricingLine(selectedGame)}.
                     </p>
                   </div>
                   {currentRegistration ? (

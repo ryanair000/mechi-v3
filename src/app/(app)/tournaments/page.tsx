@@ -232,7 +232,7 @@ export default function TournamentsPage() {
 
             <Link
               href={PRIMARY_UPCOMING_PLAYMECHI_TOURNAMENT.publicPath}
-              className="btn-primary w-full justify-center !rounded-[var(--radius-control)] sm:w-auto"
+              className="btn-primary w-full justify-center !rounded-[0.4rem] sm:w-auto"
             >
               Open Weekend Cup
             </Link>
@@ -242,11 +242,11 @@ export default function TournamentsPage() {
             {PRIMARY_UPCOMING_PLAYMECHI_TOURNAMENT.games.map((game) => (
               <div
                 key={game.key}
-                className="rounded-[var(--radius-card)] border border-[var(--border-color)] bg-[var(--surface-elevated)] px-4 py-4 shadow-[var(--shadow-soft)]"
+                className="rounded-[0.5rem] border border-[var(--border-color)] bg-[var(--surface-elevated)] px-4 py-4 shadow-[var(--shadow-soft)]"
               >
                 <div className="flex items-center justify-between gap-3">
                   <p className="text-sm font-black text-[var(--text-primary)]">{game.label}</p>
-                  <span className="brand-chip !rounded-[var(--radius-control)] px-2.5 py-1">{WEEKEND_CUP_FILL_LABEL}</span>
+                  <span className="brand-chip !rounded-[0.4rem] px-2.5 py-1">{WEEKEND_CUP_FILL_LABEL}</span>
                 </div>
                 <p className="mt-2 text-xs text-[var(--text-secondary)]">{game.dateLabel}</p>
                 <p className="mt-3 text-xs font-semibold text-[var(--accent-secondary-text)]">
@@ -299,7 +299,7 @@ export default function TournamentsPage() {
               {ONLINE_TOURNAMENT_GAMES.map((game) => (
                 <div
                   key={game.game}
-                  className="rounded-[var(--radius-card)] border border-[var(--border-color)] bg-[var(--surface-elevated)] px-4 py-4 shadow-[var(--shadow-soft)]"
+                  className="rounded-[0.5rem] border border-[var(--border-color)] bg-[var(--surface-elevated)] px-4 py-4 shadow-[var(--shadow-soft)]"
                 >
                   <p className="text-sm font-black text-[var(--text-primary)]">{game.label}</p>
                   <p className="mt-2 text-xs text-[var(--text-secondary)]">{game.dateLabel}</p>
@@ -310,7 +310,7 @@ export default function TournamentsPage() {
               ))}
             </div>
 
-            <Link href={ONLINE_TOURNAMENT_ARENA_PATH} className="btn-outline inline-flex !rounded-[var(--radius-control)]">
+            <Link href={ONLINE_TOURNAMENT_ARENA_PATH} className="btn-outline inline-flex !rounded-[0.4rem]">
               Open last tournament
             </Link>
           </div>

@@ -42,7 +42,7 @@ function getInitial(value: string) {
 function TournamentLine({ item }: { item: TournamentMemberListItem }) {
   const actionIsMuted = item.actionVariant === 'muted';
   const secondaryActionClassName =
-    'inline-flex min-h-9 w-full items-center justify-center gap-1.5 rounded-md border border-[var(--border-color)] bg-[var(--surface-elevated)] px-3 py-2 text-xs font-black text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)] sm:w-auto';
+    'inline-flex min-h-9 w-full items-center justify-center gap-1.5 rounded-[0.4rem] border border-[var(--border-color)] bg-[var(--surface-elevated)] px-3 py-2 text-xs font-black text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)] sm:w-auto';
 
   return (
     <div
@@ -131,7 +131,7 @@ function TournamentLine({ item }: { item: TournamentMemberListItem }) {
         <Link
           href={item.actionHref}
           className={cn(
-            'inline-flex min-h-9 w-full items-center justify-center rounded-md border px-3 py-2 text-xs font-black transition-colors sm:w-auto',
+            'inline-flex min-h-9 w-full items-center justify-center rounded-[0.4rem] border px-3 py-2 text-xs font-black transition-colors sm:w-auto',
             actionIsMuted
               ? 'border-[var(--border-color)] bg-[var(--surface-elevated)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
               : 'border-[rgba(50,224,196,0.22)] bg-[rgba(50,224,196,0.1)] text-[var(--accent-secondary-text)] hover:bg-[rgba(50,224,196,0.16)]'
@@ -170,7 +170,7 @@ export function TournamentMemberList({
     <div
       data-slot="tournament-member-list"
       className={cn(
-        'w-full overflow-hidden rounded-[var(--radius-panel)] border border-[var(--border-color)] bg-[var(--surface)] text-[var(--text-primary)] shadow-[var(--shadow-soft)]',
+        'w-full overflow-hidden rounded-[0.5rem] border border-[var(--border-color)] bg-[var(--surface)] text-[var(--text-primary)] shadow-[var(--shadow-soft)]',
         className
       )}
     >

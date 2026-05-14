@@ -243,6 +243,10 @@ export const WEEKEND_CUP_GAMES: OnlineTournamentGameConfig[] = [
   },
 ];
 
+export const WEEKEND_CUP_REGISTERABLE_GAMES = WEEKEND_CUP_GAMES.filter(
+  (game) => game.game !== 'mystery'
+);
+
 export const WEEKEND_CUP_GAME_BY_KEY = WEEKEND_CUP_GAMES.reduce(
   (games, game) => {
     games[game.game] = game;
@@ -354,6 +358,12 @@ export const WEEKEND_CUP_BALLOTS: WeekendCupBallotSeed[] = [
 
 export function isWeekendCupGame(value: unknown): value is OnlineTournamentGameKey {
   return typeof value === 'string' && Object.prototype.hasOwnProperty.call(WEEKEND_CUP_GAME_BY_KEY, value);
+}
+
+export function isWeekendCupRegisterableGame(
+  value: unknown
+): value is Exclude<OnlineTournamentGameKey, 'mystery'> {
+  return isWeekendCupGame(value) && value !== 'mystery';
 }
 
 export function isWeekendCupPaymentStatus(

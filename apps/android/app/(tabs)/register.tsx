@@ -1,397 +1,42 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Link, useLocalSearchParams, useRouter } from 'expo-router';
-import { useEffect, useMemo, useState } from 'react';
-import { Linking, StyleSheet, Switch, Text, View } from 'react-native';
-import {
-  getProfile,
-  getTournamentRegistrationSummary,
-  registerForTournament,
-} from '../../src/api/mechi';
-import { ApiError } from '../../src/api/client';
-import {
-  Button,
-  Card,
-  ChipGroup,
-  ErrorBanner,
-  Field,
-  InfoRow,
-  LoadingState,
-  ProgressBar,
-  Screen,
-  SectionTitle,
-  StatusBadge,
-  textStyles,
-} from '../../src/components/ui';
-import {
-  PLAYMECHI_INSTAGRAM_URL,
-  PLAYMECHI_YOUTUBE_URL,
-  TOURNAMENT_GAME_BY_KEY,
-  TOURNAMENT_GAMES,
-  formatEatDateTime,
-  formatStatus,
-  getFallbackTournamentSummary,
-  getGameFromParam,
-  getTournamentWindowState,
-} from '../../src/config/tournament';
-import { getConfiguredGameId } from '../../src/config/games';
+import { Linking, StyleSheet, Text, View } from 'react-native';
+import { Button, Card, Screen, SectionTitle, textStyles } from '../../src/components/ui';
+import { TOURNAMENT_PUBLIC_URL, TOURNAMENT_REGISTER_URL } from '../../src/config/tournament';
 import { colors, spacing } from '../../src/theme';
-import type { OnlineTournamentGameKey, Profile } from '../../src/types';
 
-function getProfileGameId(profile: Profile | null | undefined, game: OnlineTournamentGameKey) {
-  return getConfiguredGameId(game, 'mobile', profile?.game_ids ?? {});
-}
-
-function getFormKey(params: {
-  game: OnlineTournamentGameKey;
-  registrationId?: string;
-  profileId?: string;
-}) {
-  return `${params.game}:${params.registrationId ?? 'new'}:${params.profileId ?? 'no-profile'}`;
-}
-
-export default function RegisterTab() {
-  const router = useRouter();
-  const params = useLocalSearchParams<{ game?: string }>();
-  const queryClient = useQueryClient();
-  const [selectedGame, setSelectedGame] = useState<OnlineTournamentGameKey>(() =>
-    getGameFromParam(params.game)
-  );
-  const [inGameUsername, setInGameUsername] = useState('');
-  const [followedInstagram, setFollowedInstagram] = useState(true);
-  const [instagramUsername, setInstagramUsername] = useState('');
-  const [subscribedYoutube, setSubscribedYoutube] = useState(true);
-  const [youtubeName, setYoutubeName] = useState('');
-  const [availableAt8pm, setAvailableAt8pm] = useState(true);
-  const [acceptedRules, setAcceptedRules] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const profileQuery = useQuery({ queryKey: ['profile'], queryFn: getProfile });
-  const summaryQuery = useQuery({
-    queryKey: ['tournament-registration'],
-    queryFn: getTournamentRegistrationSummary,
-    refetchInterval: 25_000,
-  });
-
-  const profile = profileQuery.data?.profile;
-  const summary = summaryQuery.data ?? getFallbackTournamentSummary();
-  const currentRegistration = summary.registrations.find(
-    (registration) => registration.game === selectedGame
-  );
-  const selectedConfig = TOURNAMENT_GAME_BY_KEY[selectedGame];
-  const selectedSummary = summary.games[selectedGame];
-  const registered = selectedSummary?.registered ?? 0;
-  const slots = selectedSummary?.slots ?? selectedConfig.slots;
-  const spotsLeft = selectedSummary?.spotsLeft ?? Math.max(0, slots - registered);
-  const registrationWindow = getTournamentWindowState(selectedConfig);
-  const registrationClosed = Boolean(
-    !registrationWindow.isRegistrationOpen || (selectedSummary?.full && !currentRegistration)
-  );
-  const canEditRegistration = Boolean(currentRegistration ? registrationWindow.isRegistrationOpen : !registrationClosed);
-  const formKey = useMemo(
-    () =>
-      getFormKey({
-        game: selectedGame,
-        registrationId: currentRegistration?.id,
-        profileId: profile?.id,
-      }),
-    [currentRegistration?.id, profile?.id, selectedGame]
-  );
-
-  useEffect(() => {
-    const nextGame = getGameFromParam(params.game, selectedGame);
-    if (nextGame !== selectedGame) {
-      setSelectedGame(nextGame);
-    }
-  }, [params.game, selectedGame]);
-
-  useEffect(() => {
-    if (currentRegistration) {
-      setInGameUsername(currentRegistration.in_game_username);
-      setFollowedInstagram(currentRegistration.followed_instagram);
-      setInstagramUsername(currentRegistration.instagram_username ?? '');
-      setSubscribedYoutube(currentRegistration.subscribed_youtube);
-      setYoutubeName(currentRegistration.youtube_name ?? '');
-      setAvailableAt8pm(true);
-      setAcceptedRules(true);
-      return;
-    }
-
-    setInGameUsername(getProfileGameId(profile, selectedGame));
-    setFollowedInstagram(true);
-    setInstagramUsername('');
-    setSubscribedYoutube(true);
-    setYoutubeName('');
-    setAvailableAt8pm(true);
-    setAcceptedRules(false);
-  }, [currentRegistration, formKey, profile, selectedGame]);
-
-  const mutation = useMutation({
-    mutationFn: () =>
-      registerForTournament({
-        game: selectedGame,
-        in_game_username: inGameUsername.trim(),
-        followed_instagram: followedInstagram,
-        instagram_username: instagramUsername.trim().replace(/^@+/, ''),
-        subscribed_youtube: subscribedYoutube,
-        youtube_name: youtubeName.trim(),
-        available_at_8pm: availableAt8pm,
-        accepted_rules: acceptedRules,
-      }),
-    onSuccess: async () => {
-      setError(null);
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ['tournament-registration'] }),
-        queryClient.invalidateQueries({ queryKey: ['tournament-state'] }),
-        queryClient.invalidateQueries({ queryKey: ['profile'] }),
-      ]);
-      router.push(`/(tabs)/arena?game=${selectedGame}`);
-    },
-    onError: (err) => {
-      setError(err instanceof ApiError ? err.message : 'Could not save tournament registration.');
-    },
-  });
-
-  const canSubmit =
-    canEditRegistration &&
-    inGameUsername.trim().length >= 2 &&
-    availableAt8pm &&
-    acceptedRules &&
-    (!followedInstagram || instagramUsername.trim().replace(/^@+/, '').length >= 2) &&
-    (!subscribedYoutube || youtubeName.trim().length >= 2);
-
-  function handlePrimaryAction() {
-    if (currentRegistration && !canEditRegistration) {
-      router.push(`/(tabs)/arena?game=${selectedGame}`);
-      return;
-    }
-
-    mutation.mutate();
+export default function RegisterRedirectTab() {
+  async function openRegisterPage() {
+    await Linking.openURL(TOURNAMENT_REGISTER_URL);
   }
 
-  async function openExternal(url: string) {
-    await Linking.openURL(url);
+  async function openTournamentHome() {
+    await Linking.openURL(TOURNAMENT_PUBLIC_URL);
   }
 
   return (
-    <Screen title="Register" subtitle="Lock one PlayMechi tournament slot with your exact gamer tag.">
+    <Screen title="Register on the website" subtitle="Tournament slot registration now happens on mechi.club only.">
       <Card>
-        <SectionTitle title="Choose game" />
-        <ChipGroup
-          options={TOURNAMENT_GAMES.map((game) => ({
-            label: game.shortLabel,
-            value: game.game,
-          }))}
-          value={selectedGame}
-          onChange={setSelectedGame}
-        />
-        <View style={styles.slotHeader}>
-          <Text style={styles.slotText}>
-            {registered}/{slots} registered
-          </Text>
-          <StatusBadge
-            label={registrationClosed ? 'closed' : `${spotsLeft} slots left`}
-            tone={registrationClosed ? 'danger' : 'good'}
-          />
-        </View>
-        <ProgressBar value={slots > 0 ? Math.round((registered / slots) * 100) : 0} />
-        <InfoRow label="Match day" value={`${selectedConfig.dateLabel}, ${selectedConfig.timeLabel}`} />
-        <InfoRow label="Registration closes" value={formatEatDateTime(selectedConfig.registrationClosesAt)} />
-        <InfoRow label="Format" value={selectedConfig.format} />
-      </Card>
-
-      {summaryQuery.isLoading ? <LoadingState label="Checking available slots" /> : null}
-      {summaryQuery.isError ? (
-        <ErrorBanner message="Live slot sync is unavailable. Try again once the API connection is healthy." />
-      ) : null}
-      <ErrorBanner message={error} />
-
-      {currentRegistration ? (
-        <Card>
-          <SectionTitle title="Saved slot" />
-          <InfoRow label="Gamer tag" value={currentRegistration.in_game_username} selectable />
-          <InfoRow label="Reward review" value={formatStatus(currentRegistration.eligibility_status)} />
-          <InfoRow label="Check-in" value={formatStatus(currentRegistration.check_in_status)} />
-          <Text style={textStyles.muted}>
-            {canEditRegistration
-              ? 'Your slot is saved. You can still update your gamer tag and reward proof before the registration window closes.'
-              : 'Your slot is locked for match night. Use the tournament desk for check-in, rooms, screenshots, and reward tracking.'}
-          </Text>
-          <View style={styles.linkRow}>
-            <Button
-              label={`Join ${selectedConfig.shortLabel} WhatsApp group`}
-              icon="logo-whatsapp"
-              variant="secondary"
-              onPress={() => void openExternal(selectedConfig.whatsappGroupUrl)}
-            />
-            <Link href={`/(tabs)/arena?game=${selectedGame}`} asChild>
-              <Button label="Open tournament desk" icon="clipboard" variant="secondary" />
-            </Link>
-          </View>
-        </Card>
-      ) : null}
-
-      <Card>
-        <SectionTitle title="Player details" />
-        <Field
-          label={`${selectedConfig.shortLabel} gamer tag`}
-          value={inGameUsername}
-          onChangeText={setInGameUsername}
-          placeholder="Exact in-game username"
-        />
+        <SectionTitle title="Website-only registration" />
         <Text style={textStyles.muted}>
-          This is the name admins and opponents will use to verify you. Do not use a different
-          account on match night.
+          Use the website to pick your game, lock your slot, and submit your exact in-game details.
+          Once your registration is saved, come back to the app for community chat, check-in,
+          rooms, fixtures, uploads, and prize status.
         </Text>
-      </Card>
-
-      <Card>
-        <SectionTitle title="Reward verification" />
-        <ToggleRow
-          title="Followed PlayMechi on Instagram"
-          subtitle="Required before match day to qualify for rewards."
-          value={followedInstagram}
-          onValueChange={setFollowedInstagram}
-        />
-        {followedInstagram ? (
-          <Field
-            label="Instagram username"
-            value={instagramUsername}
-            onChangeText={(value) => setInstagramUsername(value.replace(/^@+/, ''))}
-            placeholder="yourhandle"
-          />
-        ) : null}
-        <ToggleRow
-          title="Subscribed to PlayMechi on YouTube"
-          subtitle="Required before match day to qualify for rewards."
-          value={subscribedYoutube}
-          onValueChange={setSubscribedYoutube}
-        />
-        {subscribedYoutube ? (
-          <Field
-            label="YouTube email or channel"
-            value={youtubeName}
-            onChangeText={setYoutubeName}
-            placeholder="Email or channel name"
-          />
-        ) : null}
-        <View style={styles.linkRow}>
+        <View style={styles.buttonStack}>
+          <Button label="Open registration website" icon="globe-outline" onPress={() => void openRegisterPage()} />
           <Button
-            label="Open Instagram"
-            icon="logo-instagram"
+            label="Open tournament website"
+            icon="open-outline"
             variant="secondary"
-            onPress={() => void openExternal(PLAYMECHI_INSTAGRAM_URL)}
-          />
-          <Button
-            label="Open YouTube"
-            icon="logo-youtube"
-            variant="secondary"
-            onPress={() => void openExternal(PLAYMECHI_YOUTUBE_URL)}
+            onPress={() => void openTournamentHome()}
           />
         </View>
       </Card>
-
-      <Card>
-        <SectionTitle title="Confirm rules" />
-        <ToggleRow
-          title={`Available at ${selectedConfig.timeLabel}`}
-          subtitle={selectedConfig.dateLabel}
-          value={availableAt8pm}
-          onValueChange={setAvailableAt8pm}
-        />
-        <ToggleRow
-          title="I accept tournament rules"
-          subtitle="Admins verify results, reward eligibility, disputes, and final standings."
-          value={acceptedRules}
-          onValueChange={setAcceptedRules}
-        />
-      </Card>
-
-      <Button
-        label={
-          currentRegistration
-            ? canEditRegistration
-              ? 'Update registration'
-              : 'Open tournament desk'
-            : registrationClosed
-              ? 'Registration closed'
-              : 'Lock my slot'
-        }
-        icon="ticket"
-        onPress={handlePrimaryAction}
-        loading={mutation.isPending}
-        disabled={currentRegistration && !canEditRegistration ? false : !canSubmit}
-      />
     </Screen>
   );
 }
 
-function ToggleRow({
-  title,
-  subtitle,
-  value,
-  onValueChange,
-}: {
-  title: string;
-  subtitle: string;
-  value: boolean;
-  onValueChange: (value: boolean) => void;
-}) {
-  return (
-    <View style={styles.toggleRow}>
-      <View style={styles.toggleCopy}>
-        <Text style={styles.toggleTitle}>{title}</Text>
-        <Text style={styles.toggleSubtitle}>{subtitle}</Text>
-      </View>
-      <Switch
-        value={value}
-        onValueChange={onValueChange}
-        trackColor={{ false: colors.border, true: colors.primaryDark }}
-        thumbColor={value ? colors.primary : colors.faint}
-      />
-    </View>
-  );
-}
-
 const styles = StyleSheet.create({
-  slotHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: spacing.md,
-  },
-  slotText: {
-    color: colors.text,
-    fontSize: 15,
-    fontWeight: '900',
-    fontVariant: ['tabular-nums'],
-  },
-  linkRow: {
+  buttonStack: {
     gap: spacing.sm,
-  },
-  toggleRow: {
-    minHeight: 68,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: 8,
-    backgroundColor: colors.panel2,
-    padding: spacing.md,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: spacing.md,
-  },
-  toggleCopy: {
-    flex: 1,
-    gap: 3,
-  },
-  toggleTitle: {
-    color: colors.text,
-    fontSize: 14,
-    fontWeight: '900',
-  },
-  toggleSubtitle: {
-    color: colors.muted,
-    fontSize: 12,
-    lineHeight: 17,
   },
 });

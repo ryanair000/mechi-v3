@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import toast from 'react-hot-toast';
 import { CheckCircle2, Loader2, MessageCircle } from 'lucide-react';
 import { useAuth, useAuthFetch } from '@/components/AuthProvider';
+import FooterSection from '@/components/footer';
 import { WeekendCupHeader } from '@/components/WeekendCupHeader';
 import { getLoginPath, getRegisterPath, getSafeNextPath, withQuery } from '@/lib/navigation';
 import {
@@ -32,16 +33,14 @@ import {
 
 const API_PATH = '/api/events/playmechi-weekend-cup/register';
 
-const DASHBOARD_RADIUS_STYLE: CSSProperties & Record<string, string> = {
-  '--radius': '0.95rem',
-  '--radius-control': '1rem',
-  '--radius-panel': '1.35rem',
-  '--radius-card': '1.7rem',
-  '--radius-hero': '1.95rem',
+const DASHBOARD_FONT_STYLE: CSSProperties & Record<string, string> = {
+  '--font-display': 'var(--font-montserrat), "Montserrat", "Segoe UI Semibold", sans-serif',
+  '--font-body': 'var(--font-open-sans), "Open Sans", "Segoe UI", sans-serif',
+  '--font-sans': 'var(--font-open-sans), "Open Sans", "Segoe UI", sans-serif',
 };
 
-const DASHBOARD_INNER_RADIUS_CLASS = 'rounded-[1.1rem]';
-const DASHBOARD_CONTROL_RADIUS_CLASS = '!rounded-[1rem]';
+const DASHBOARD_INNER_RADIUS_CLASS = 'rounded-[var(--radius-card)]';
+const DASHBOARD_CONTROL_RADIUS_CLASS = '!rounded-[var(--radius-control)]';
 
 function paymentStatusClasses(status: WeekendCupPlayerRegistration['payment_status']) {
   switch (status) {
@@ -242,12 +241,16 @@ export function WeekendCupRegistrationClient() {
       }
 
       if ('authorization_url' in data && data.authorization_url) {
-        toast.success(data.paymentLabel ? `Opening checkout for ${data.paymentLabel}.` : 'Opening checkout.');
+        toast.success(
+          data.paymentLabel
+            ? `Entry request saved. Finish ${data.paymentLabel} payment in Paystack to lock your slot.`
+            : 'Entry request saved. Finish payment in Paystack to lock your slot.'
+        );
         window.location.href = data.authorization_url;
         return;
       }
 
-      toast.success('Registration saved. Payment is already confirmed.');
+      toast.success('Payment already confirmed. Your slot is locked.');
       if (requestedNextPath) {
         router.push(requestedNextPath);
       }
@@ -261,8 +264,8 @@ export function WeekendCupRegistrationClient() {
   if (!registrationOpen) {
     return (
       <div
-        className="page-base min-h-screen bg-[radial-gradient(circle_at_top,rgba(50,224,196,0.08),transparent_32%),linear-gradient(180deg,#07111e_0%,#050b13_100%)]"
-        style={DASHBOARD_RADIUS_STYLE}
+        className="app-prototype-shell page-base min-h-screen bg-[radial-gradient(circle_at_top,rgba(50,224,196,0.08),transparent_32%),linear-gradient(180deg,#07111e_0%,#050b13_100%)]"
+        style={DASHBOARD_FONT_STYLE}
       >
         <HeaderSpacing />
 
@@ -302,6 +305,8 @@ export function WeekendCupRegistrationClient() {
             </div>
           </section>
         </main>
+
+        <FooterSection className="!pt-4 md:!pt-8" />
       </div>
     );
   }
@@ -309,8 +314,8 @@ export function WeekendCupRegistrationClient() {
   if (!authLoading && !user) {
     return (
       <div
-        className="page-base min-h-screen bg-[radial-gradient(circle_at_top,rgba(50,224,196,0.08),transparent_32%),linear-gradient(180deg,#07111e_0%,#050b13_100%)]"
-        style={DASHBOARD_RADIUS_STYLE}
+        className="app-prototype-shell page-base min-h-screen bg-[radial-gradient(circle_at_top,rgba(50,224,196,0.08),transparent_32%),linear-gradient(180deg,#07111e_0%,#050b13_100%)]"
+        style={DASHBOARD_FONT_STYLE}
       >
         <HeaderSpacing />
 
@@ -334,14 +339,16 @@ export function WeekendCupRegistrationClient() {
             </div>
           </section>
         </main>
+
+        <FooterSection className="!pt-4 md:!pt-8" />
       </div>
     );
   }
 
   return (
     <div
-      className="page-base min-h-screen bg-[radial-gradient(circle_at_top,rgba(50,224,196,0.08),transparent_32%),linear-gradient(180deg,#07111e_0%,#050b13_100%)]"
-      style={DASHBOARD_RADIUS_STYLE}
+      className="app-prototype-shell page-base min-h-screen bg-[radial-gradient(circle_at_top,rgba(50,224,196,0.08),transparent_32%),linear-gradient(180deg,#07111e_0%,#050b13_100%)]"
+      style={DASHBOARD_FONT_STYLE}
     >
       <HeaderSpacing />
 
@@ -350,11 +357,11 @@ export function WeekendCupRegistrationClient() {
           <div>
             <p className="section-title">Weekend Cup registration</p>
             <h1 className="mt-2 max-w-3xl text-[clamp(2rem,3.6vw,3.4rem)] font-black leading-tight text-[var(--text-primary)]">
-              Lock your slot. Pay to confirm.
+              Save your entry. Pay to lock the slot.
             </h1>
             <p className="mt-3 max-w-2xl text-[0.95rem] leading-7 text-[var(--text-secondary)]">
-              Pick your game, confirm your details, then pay now. If you played PlayMechi
-              before, we prefill what we can.
+              Choose your game, confirm your player details, then head to payment. If you played
+              PlayMechi before, we pull in the latest details we already have.
             </p>
             <div className="mt-5 flex flex-wrap gap-2">
               {[
@@ -387,7 +394,7 @@ export function WeekendCupRegistrationClient() {
                 <div className="grid gap-2">
                   {WEEKEND_CUP_GAMES.map((game) => {
                     const selected = selectedGame === game.game;
-                    const gameButton = (
+                    return (
                       <button
                         key={game.game}
                         type="button"
@@ -403,23 +410,6 @@ export function WeekendCupRegistrationClient() {
                           {game.dateLabel} / {getWeekendCupGamePricingLine(game.game)}
                         </span>
                       </button>
-                    );
-
-                    if (game.game !== 'mystery') {
-                      return gameButton;
-                    }
-
-                    return (
-                      <div key={game.game} className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto]">
-                        {gameButton}
-                        <button
-                          type="button"
-                          onClick={() => setSelectedGame('mystery')}
-                          className={`btn-primary min-h-full justify-center whitespace-nowrap ${DASHBOARD_INNER_RADIUS_CLASS} px-4 text-sm`}
-                        >
-                          Register Now
-                        </button>
-                      </div>
                     );
                   })}
                 </div>
@@ -451,7 +441,7 @@ export function WeekendCupRegistrationClient() {
                     </div>
                   ) : (
                     <p className="mt-3 text-sm leading-6 text-[var(--text-secondary)]">
-                      No saved entry yet. Registration starts pending until payment clears.
+                      No saved entry yet. Every entry starts as pending until payment clears.
                     </p>
                   )}
                 </div>
@@ -473,7 +463,7 @@ export function WeekendCupRegistrationClient() {
                   {currentRegistration ? (
                     <span className="inline-flex items-center gap-2 rounded-full bg-[rgba(50,224,196,0.12)] px-3 py-2 text-xs font-black uppercase tracking-[0.12em] text-[var(--accent-secondary-text)]">
                       <CheckCircle2 size={14} />
-                      Saved
+                      {currentRegistration.payment_status === 'paid' ? 'Confirmed' : 'Pending payment'}
                     </span>
                   ) : null}
                 </div>
@@ -558,10 +548,10 @@ export function WeekendCupRegistrationClient() {
                     {submitting ? (
                       <>
                         <Loader2 size={14} className="animate-spin" />
-                        Saving
+                        {currentRegistration?.payment_status === 'paid' ? 'Saving' : 'Opening checkout'}
                       </>
                     ) : (
-                      'Pay now'
+                      currentRegistration?.payment_status === 'paid' ? 'Update entry' : 'Pay now'
                     )}
                   </button>
                   <a href={WEEKEND_CUP_SUPPORT_URL} className={`btn-outline ${DASHBOARD_CONTROL_RADIUS_CLASS}`}>
@@ -574,6 +564,8 @@ export function WeekendCupRegistrationClient() {
           </div>
         </section>
       </main>
+
+      <FooterSection className="!pt-4 md:!pt-8" />
     </div>
   );
 }

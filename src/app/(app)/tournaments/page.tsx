@@ -28,6 +28,7 @@ import {
 } from '@/lib/upcoming-playmechi-tournaments';
 import {
   WEEKEND_CUP_GAMES,
+  WEEKEND_CUP_PRIZE_POOL_LABEL,
   WEEKEND_CUP_PUBLIC_PATH,
   WEEKEND_CUP_REGISTRATION_PATH,
   WEEKEND_CUP_TITLE,
@@ -130,7 +131,7 @@ export default function TournamentsPage() {
           gameLabel: game.label,
           id: `weekendcup-${game.game}`,
           metaLabel: isMysteryGame ? 'Mystery vote' : 'Paid entry',
-          prizeLabel: getOnlineTournamentGamePrizeLabel(game),
+          prizeLabel: getWeekendCupGamePrizeLabel(game),
           progress: 20,
           secondaryActionHref: isMysteryGame ? WEEKEND_CUP_PUBLIC_PATH : `${WEEKEND_CUP_REGISTRATION_PATH}?game=${game.game}`,
           secondaryActionLabel: isMysteryGame ? 'Preview' : 'Open form',
@@ -231,7 +232,7 @@ export default function TournamentsPage() {
 
             <Link
               href={PRIMARY_UPCOMING_PLAYMECHI_TOURNAMENT.publicPath}
-              className="btn-primary w-full justify-center !rounded-[1rem] sm:w-auto"
+              className="btn-primary w-full justify-center !rounded-[var(--radius-control)] sm:w-auto"
             >
               Open Weekend Cup
             </Link>
@@ -241,15 +242,15 @@ export default function TournamentsPage() {
             {PRIMARY_UPCOMING_PLAYMECHI_TOURNAMENT.games.map((game) => (
               <div
                 key={game.key}
-                className="rounded-[1.1rem] border border-[var(--border-color)] bg-[var(--surface-elevated)] px-4 py-4 shadow-[var(--shadow-soft)]"
+                className="rounded-[var(--radius-card)] border border-[var(--border-color)] bg-[var(--surface-elevated)] px-4 py-4 shadow-[var(--shadow-soft)]"
               >
                 <div className="flex items-center justify-between gap-3">
                   <p className="text-sm font-black text-[var(--text-primary)]">{game.label}</p>
-                  <span className="brand-chip !rounded-[1rem] px-2.5 py-1">{WEEKEND_CUP_FILL_LABEL}</span>
+                  <span className="brand-chip !rounded-[var(--radius-control)] px-2.5 py-1">{WEEKEND_CUP_FILL_LABEL}</span>
                 </div>
                 <p className="mt-2 text-xs text-[var(--text-secondary)]">{game.dateLabel}</p>
                 <p className="mt-3 text-xs font-semibold text-[var(--accent-secondary-text)]">
-                  {game.prizes.join(' | ')}
+                  {WEEKEND_CUP_PRIZE_POOL_LABEL}
                 </p>
               </div>
             ))}
@@ -298,7 +299,7 @@ export default function TournamentsPage() {
               {ONLINE_TOURNAMENT_GAMES.map((game) => (
                 <div
                   key={game.game}
-                  className="rounded-[1.1rem] border border-[var(--border-color)] bg-[var(--surface-elevated)] px-4 py-4 shadow-[var(--shadow-soft)]"
+                  className="rounded-[var(--radius-card)] border border-[var(--border-color)] bg-[var(--surface-elevated)] px-4 py-4 shadow-[var(--shadow-soft)]"
                 >
                   <p className="text-sm font-black text-[var(--text-primary)]">{game.label}</p>
                   <p className="mt-2 text-xs text-[var(--text-secondary)]">{game.dateLabel}</p>
@@ -309,7 +310,7 @@ export default function TournamentsPage() {
               ))}
             </div>
 
-            <Link href={ONLINE_TOURNAMENT_ARENA_PATH} className="btn-outline inline-flex !rounded-[1rem]">
+            <Link href={ONLINE_TOURNAMENT_ARENA_PATH} className="btn-outline inline-flex !rounded-[var(--radius-control)]">
               Open last tournament
             </Link>
           </div>
@@ -362,6 +363,23 @@ function getOnlineTournamentGamePrizeLabel(game: OnlineTournamentGameConfig) {
   }, 0);
 
   return cashTotal > 0 ? `KSh ${cashTotal.toLocaleString('en-KE')}` : getOnlineTournamentPrizeLabel();
+}
+
+function getWeekendCupGamePrizeLabel(
+  game: OnlineTournamentGameConfig | { prizes: string[] }
+) {
+  const prizes =
+    'prizes' in game
+      ? game.prizes
+      : [game.firstPrize, game.secondPrize, game.thirdPrize].filter(
+          (prize): prize is string => Boolean(prize)
+        );
+  const cashTotal = prizes.reduce((total, prize) => {
+    const match = prize.match(/^KSh\s+([\d,]+)/i);
+    return match ? total + Number(match[1].replace(/,/g, '')) : total;
+  }, 0);
+
+  return cashTotal > 0 ? `KSh ${cashTotal.toLocaleString('en-KE')}` : 'TBA';
 }
 
 function getOnlineTournamentRegistration(

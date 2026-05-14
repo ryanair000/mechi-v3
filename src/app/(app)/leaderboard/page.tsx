@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { ShieldCheck, Swords, Trophy, type LucideIcon } from 'lucide-react';
 import { useAuthFetch } from '@/components/AuthProvider';
@@ -18,6 +19,7 @@ type TournamentLeaderboardEntry = {
   rank: number;
   score: number;
   scoreText: string;
+  username: string | null;
   verifiedCount: number;
   verifiedText: string;
 };
@@ -140,8 +142,8 @@ export default function LeaderboardPage() {
               Verified tournament check-ins
             </h1>
             <p className="mt-3 text-sm leading-6 text-[var(--text-secondary)]">
-              Only players who checked in and were verified by the tournament desk appear here.
-              Switch between PUBG Mobile, CODM, and eFootball for the three PlayMechi game boards.
+              Only players whose tournament check-in was cleared by the desk show up here. Switch
+              between PUBG Mobile, CODM, and eFootball to view each PlayMechi board.
             </p>
           </div>
 
@@ -264,24 +266,48 @@ export default function LeaderboardPage() {
                         #{entry.rank}
                       </td>
                       <td className="px-3 py-3">
-                        <div className="flex items-center gap-3">
-                          <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full border border-[var(--border-color)] bg-[var(--surface-elevated)] text-xs font-black text-[var(--text-primary)]">
-                            {entry.avatarUrl ? (
-                              // eslint-disable-next-line @next/next/no-img-element
-                              <img src={entry.avatarUrl} alt="" className="h-full w-full object-cover" />
-                            ) : (
-                              entry.name.charAt(0).toUpperCase()
-                            )}
+                        {entry.username ? (
+                          <Link
+                            href={`/s/${encodeURIComponent(entry.username)}`}
+                            className="group flex items-center gap-3 rounded-[var(--radius-card)] px-1 py-1 transition hover:bg-[rgba(255,255,255,0.03)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(50,224,196,0.35)]"
+                          >
+                            <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full border border-[var(--border-color)] bg-[var(--surface-elevated)] text-xs font-black text-[var(--text-primary)]">
+                              {entry.avatarUrl ? (
+                                // eslint-disable-next-line @next/next/no-img-element
+                                <img src={entry.avatarUrl} alt="" className="h-full w-full object-cover" />
+                              ) : (
+                                entry.name.charAt(0).toUpperCase()
+                              )}
+                            </div>
+                            <div className="min-w-0">
+                              <p className="truncate text-sm font-black text-[var(--text-primary)] transition group-hover:text-[var(--accent-secondary-text)]">
+                                {entry.name}
+                              </p>
+                              <p className="truncate text-xs text-[var(--text-secondary)]">
+                                {entry.detailText} | View profile
+                              </p>
+                            </div>
+                          </Link>
+                        ) : (
+                          <div className="flex items-center gap-3">
+                            <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full border border-[var(--border-color)] bg-[var(--surface-elevated)] text-xs font-black text-[var(--text-primary)]">
+                              {entry.avatarUrl ? (
+                                // eslint-disable-next-line @next/next/no-img-element
+                                <img src={entry.avatarUrl} alt="" className="h-full w-full object-cover" />
+                              ) : (
+                                entry.name.charAt(0).toUpperCase()
+                              )}
+                            </div>
+                            <div className="min-w-0">
+                              <p className="truncate text-sm font-black text-[var(--text-primary)]">
+                                {entry.name}
+                              </p>
+                              <p className="truncate text-xs text-[var(--text-secondary)]">
+                                {entry.detailText}
+                              </p>
+                            </div>
                           </div>
-                          <div className="min-w-0">
-                            <p className="truncate text-sm font-black text-[var(--text-primary)]">
-                              {entry.name}
-                            </p>
-                            <p className="truncate text-xs text-[var(--text-secondary)]">
-                              {entry.detailText}
-                            </p>
-                          </div>
-                        </div>
+                        )}
                       </td>
                       <td className="px-3 py-3 text-sm font-black text-[var(--text-primary)]">
                         {entry.scoreText}

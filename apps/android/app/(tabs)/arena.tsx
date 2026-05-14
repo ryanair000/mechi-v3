@@ -1,6 +1,6 @@
 import * as ImagePicker from 'expo-image-picker';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Link, useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams } from 'expo-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 import {
@@ -24,8 +24,10 @@ import {
   textStyles,
 } from '../../src/components/ui';
 import {
+  TOURNAMENT_PUBLIC_URL,
   TOURNAMENT_GAME_BY_KEY,
   TOURNAMENT_GAMES,
+  TOURNAMENT_REGISTER_URL,
   formatEatDateTime,
   formatStatus,
   formatTournamentLobby,
@@ -443,6 +445,14 @@ export default function ArenaTab() {
     await Linking.openURL(config.whatsappGroupUrl);
   }
 
+  async function openTournamentRegistration() {
+    await Linking.openURL(TOURNAMENT_REGISTER_URL);
+  }
+
+  async function openTournamentHome() {
+    await Linking.openURL(TOURNAMENT_PUBLIC_URL);
+  }
+
   const canSubmitCheckIn = Boolean(myRegistration) &&
     checkInDetails.ign.trim().length >= 2 &&
     checkInDetails.uid.trim().length >= 2 &&
@@ -464,7 +474,10 @@ export default function ArenaTab() {
     player2Score.trim() !== '';
 
   return (
-    <Screen title="Tournament Desk" subtitle="Check in, view rooms or fixtures, and upload results.">
+    <Screen
+      title="Tournaments"
+      subtitle="Register on the website, then use the app for check-in, rooms, fixtures, uploads, and payout status."
+    >
       <Card>
         <SectionTitle title="Game desk" />
         <ChipGroup
@@ -483,6 +496,27 @@ export default function ArenaTab() {
         <InfoRow label="Match day" value={`${config.dateLabel}, ${config.timeLabel}`} />
         <InfoRow label="Format" value={config.format} />
         <InfoRow label="Registration closes" value={formatEatDateTime(config.registrationClosesAt)} />
+      </Card>
+
+      <Card>
+        <SectionTitle title="Website registration" />
+        <Text style={textStyles.muted}>
+          Tournament slots are now locked on the website only. Use the website to register, then
+          come back here when you need match-night desk access.
+        </Text>
+        <View style={styles.actionGrid}>
+          <Button
+            label="Open registration website"
+            icon="globe-outline"
+            onPress={() => void openTournamentRegistration()}
+          />
+          <Button
+            label="Open tournament website"
+            icon="open-outline"
+            variant="secondary"
+            onPress={() => void openTournamentHome()}
+          />
+        </View>
       </Card>
 
       {stateQuery.isLoading ? <LoadingState label="Loading tournament desk" /> : null}
@@ -505,6 +539,7 @@ export default function ArenaTab() {
         onCheckIn={() => checkInMutation.mutate()}
         onCheckInDetailsChange={setCheckInDetails}
         onOpenGroup={() => void openWhatsAppGroup()}
+        onOpenRegistration={() => void openTournamentRegistration()}
       />
 
       <TournamentRulesPanel activeGame={activeGame} />
@@ -556,6 +591,7 @@ function PlayerDeskCard({
   onCheckIn,
   onCheckInDetailsChange,
   onOpenGroup,
+  onOpenRegistration,
 }: {
   activeGame: OnlineTournamentGameKey;
   registration: OnlineTournamentRegistration | null;
@@ -565,6 +601,7 @@ function PlayerDeskCard({
   onCheckIn: () => void;
   onCheckInDetailsChange: (value: PlayerCheckInDetails) => void;
   onOpenGroup: () => void;
+  onOpenRegistration: () => void;
 }) {
   const config = TOURNAMENT_GAME_BY_KEY[activeGame];
   const isCheckedIn = hasSubmittedCheckIn(registration);
@@ -583,11 +620,14 @@ function PlayerDeskCard({
       <Card>
         <SectionTitle title="No slot yet" />
         <Text style={textStyles.muted}>
-          Register for {config.label} before room credentials, fixtures, and result uploads unlock.
+          Register for {config.label} on the website before room credentials, fixtures, and result
+          uploads unlock here in the app.
         </Text>
-        <Link href={`/(tabs)/register?game=${activeGame}`} asChild>
-          <Button label={`Register for ${config.shortLabel}`} icon="ticket" />
-        </Link>
+        <Button
+          label={`Register for ${config.shortLabel}`}
+          icon="globe-outline"
+          onPress={onOpenRegistration}
+        />
       </Card>
     );
   }
@@ -965,7 +1005,9 @@ function ResultUploadCard({
     <Card>
       <SectionTitle title="Upload result" />
       {!registration ? (
-        <Text style={textStyles.muted}>Register for this game before uploading screenshots.</Text>
+        <Text style={textStyles.muted}>
+          Register on the website before uploading screenshots for this game.
+        </Text>
       ) : activeGame === 'efootball' ? (
         <>
           {fixtures.length ? (

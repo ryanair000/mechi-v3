@@ -110,7 +110,7 @@ export const WEEKEND_CUP_REGISTRATION_OPENS_LABEL = 'Open now';
 export const WEEKEND_CUP_CASH_PRIZE_POOL = 7500;
 export const WEEKEND_CUP_PRIZE_POOL_LABEL = 'Prize Pool Upto Ksh.7500';
 export const WEEKEND_CUP_STREAM_LABEL = 'Live on Mechi';
-export const WEEKEND_CUP_MAX_VOTE_SELECTIONS = 3;
+export const WEEKEND_CUP_MAX_VOTE_SELECTIONS = 1;
 export const WEEKEND_CUP_ACTIVE_PAYMENT_TIER: OnlineTournamentPaymentTier = 'early_bird';
 export const WEEKEND_CUP_HERO_LINE =
   'Register for the fixed games now, then vote for the mystery slot.';

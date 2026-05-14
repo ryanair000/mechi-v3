@@ -1,5 +1,5 @@
 import { CommunityChatPage } from '@/components/CommunityChatPage';
 
-export default function InboxPage() {
+export default function CommunityPage() {
   return <CommunityChatPage />;
 }

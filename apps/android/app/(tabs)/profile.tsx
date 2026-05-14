@@ -18,6 +18,7 @@ import {
   PLAYMECHI_SUPPORT_LABEL,
   PLAYMECHI_SUPPORT_URL,
   TOURNAMENT_GAME_BY_KEY,
+  TOURNAMENT_REGISTER_URL,
   formatStatus,
 } from '../../src/config/tournament';
 import {
@@ -77,6 +78,10 @@ export default function AccountTab() {
     await Linking.openURL(PLAYMECHI_SUPPORT_URL);
   }
 
+  async function openTournamentRegistration() {
+    await Linking.openURL(TOURNAMENT_REGISTER_URL);
+  }
+
   async function enableNotifications() {
     try {
       setEnablingNotifications(true);
@@ -90,7 +95,7 @@ export default function AccountTab() {
   }
 
   return (
-    <Screen title="Account" subtitle="Your PlayMechi tournament profile, support, and policy links.">
+    <Screen title="Profile" subtitle="Your Mechi account, tournament access, support, and notification settings.">
       {profileQuery.isLoading && !profile ? (
         <LoadingState label="Loading account" />
       ) : (
@@ -134,7 +139,7 @@ export default function AccountTab() {
                       </View>
                     </View>
                     <Link href={`/(tabs)/arena?game=${registration.game}`} asChild>
-                      <Button label="Desk" icon="clipboard" variant="ghost" />
+                      <Button label="Tournaments" icon="trophy" variant="ghost" />
                     </Link>
                   </View>
                 ))}
@@ -142,11 +147,14 @@ export default function AccountTab() {
             ) : (
               <>
                 <Text style={textStyles.muted}>
-                  You have not locked a PlayMechi slot yet.
+                  You do not have a saved tournament slot yet. Registration now happens on the
+                  website.
                 </Text>
-                <Link href="/(tabs)/register" asChild>
-                  <Button label="Register now" icon="ticket" />
-                </Link>
+                <Button
+                  label="Open registration website"
+                  icon="globe-outline"
+                  onPress={() => void openTournamentRegistration()}
+                />
               </>
             )}
           </Card>

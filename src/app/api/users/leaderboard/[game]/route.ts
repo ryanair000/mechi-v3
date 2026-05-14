@@ -72,6 +72,7 @@ type TournamentLeaderboardEntry = {
   rank: number;
   score: number;
   scoreText: string;
+  username: string | null;
   verifiedCount: number;
   verifiedText: string;
 };
@@ -158,6 +159,7 @@ function createBaseLeaderboardEntry(
     rank: 0,
     score: 0,
     scoreText: '0',
+    username: profile?.username?.trim() || null,
     verifiedCount: 0,
     verifiedText: '0',
   };
@@ -275,6 +277,7 @@ function buildBattleRoyaleLeaderboard(params: {
       rank: index + 1,
       score: row.score,
       scoreText: row.scoreText,
+      username: row.username,
       verifiedCount: row.verifiedCount,
       verifiedText: row.verifiedText,
     }));
@@ -397,6 +400,7 @@ function buildEfootballLeaderboard(params: {
       rank: index + 1,
       score: row.score,
       scoreText: row.scoreText,
+      username: row.username,
       verifiedCount: row.verifiedCount,
       verifiedText: row.verifiedText,
     }));

@@ -1,4 +1,5 @@
 import { Component as BlogPosts } from '@/components/blog-posts';
+import { PlayMechiFeedPage } from '@/components/PlayMechiFeedPage';
 import {
   WEEKEND_CUP_EVENT_DATES,
   WEEKEND_CUP_PROMO_IMAGE,
@@ -35,13 +36,21 @@ const dashboardPosts = [
 
 export default function DashboardPage() {
   return (
-    <div className="flex min-h-screen items-start overflow-hidden px-3 pb-8 pt-12 sm:px-5 sm:pt-14 md:items-center md:pt-16 lg:px-7 lg:pt-20">
-      <BlogPosts
-        backgroundLabel="MECHI"
-        backgroundPosition="left"
-        posts={dashboardPosts}
-        className="my-0 w-full max-w-7xl py-0"
-      />
-    </div>
+    <>
+      <div className="lg:hidden">
+        <PlayMechiFeedPage />
+      </div>
+
+      <div className="hidden lg:block">
+        <div className="flex min-h-screen items-start overflow-hidden px-3 pb-8 pt-12 sm:px-5 sm:pt-14 md:items-center md:pt-16 lg:px-7 lg:pt-20">
+          <BlogPosts
+            backgroundLabel="MECHI"
+            backgroundPosition="left"
+            posts={dashboardPosts}
+            className="my-0 w-full max-w-7xl py-0"
+          />
+        </div>
+      </div>
+    </>
   );
 }

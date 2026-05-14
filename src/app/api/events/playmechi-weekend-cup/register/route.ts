@@ -8,6 +8,7 @@ import {
   normalizeGameIdKeys,
   normalizeSelectedGameKeys,
 } from '@/lib/config';
+import { sendWeekendCupPaymentReminderEmail } from '@/lib/email';
 import {
   initializeTournamentPayment,
   isPaystackConfigured,
@@ -381,7 +382,7 @@ export async function POST(request: NextRequest) {
           payment_note:
             existingRegistration?.payment_status === 'paid'
               ? existingRegistration.payment_note
-              : 'Paystack checkout initialized.',
+              : 'Waiting for Paystack confirmation. Slot is not locked yet.',
           updated_at: now,
         },
         { onConflict: 'event_slug,user_id,game' }
@@ -472,6 +473,9 @@ export async function POST(request: NextRequest) {
           pendingPayment: gameSummary?.pendingPayment ?? 0,
           slots: gameSummary?.slots ?? gameConfig.slots,
           spotsLeft: gameSummary?.spotsLeft ?? Math.max(0, gameConfig.slots - 1),
+          paymentStatus: registration.payment_status,
+          paymentLabel: getWeekendCupPaymentTierDisplay(paymentTier, game),
+          entryFeeKes,
           checkedIn: gameSummary?.checkedIn ?? 0,
           checkInCap: gameSummary?.checkInCap ?? gameConfig.checkInCap,
           checkInSpotsLeft: gameSummary?.checkInSpotsLeft ?? gameConfig.checkInCap,
@@ -479,6 +483,27 @@ export async function POST(request: NextRequest) {
         });
       } catch (error) {
         console.error('[WeekendCupRegistration Telegram] Notification error:', error);
+      }
+
+      const reminderRecipient = (profile.email ?? '').trim();
+      if (authorizationUrl && reminderRecipient) {
+        try {
+          await sendWeekendCupPaymentReminderEmail({
+            to: reminderRecipient,
+            username: profile.username,
+            eventTitle: WEEKEND_CUP_TITLE,
+            gameLabel: gameConfig.label,
+            dateLabel: gameConfig.dateLabel,
+            timeLabel: gameConfig.timeLabel,
+            inGameUsername,
+            paymentLabel: getWeekendCupPaymentTierDisplay(paymentTier, game),
+            paymentReference,
+            checkoutUrl: authorizationUrl,
+            registrationUrl: `${APP_URL}${WEEKEND_CUP_REGISTRATION_PATH}?game=${encodeURIComponent(game)}`,
+          });
+        } catch (error) {
+          console.error('[WeekendCupRegistration Email] Reminder error:', error);
+        }
       }
     });
 

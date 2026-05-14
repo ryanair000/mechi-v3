@@ -2,6 +2,7 @@
 
 import { useState, type FormEvent } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { CheckCircle2, Loader2, ShieldCheck } from 'lucide-react';
 import { ActionFeedback, type ActionFeedbackState } from '@/components/ActionFeedback';
 import { useAuth, useAuthFetch } from '@/components/AuthProvider';
@@ -19,11 +20,13 @@ function isValidEmail(value: string) {
 }
 
 export function AndroidTestersClient() {
+  const router = useRouter();
   const { user, loading: authLoading } = useAuth();
   const authFetch = useAuthFetch();
   const [form, setForm] = useState<TesterForm>(initialForm);
   const [feedback, setFeedback] = useState<ActionFeedbackState | null>(null);
   const [loading, setLoading] = useState(false);
+  const [saved, setSaved] = useState(false);
 
   const formIsValid =
     Boolean(user) &&
@@ -32,6 +35,7 @@ export function AndroidTestersClient() {
   const setField = <Key extends keyof TesterForm>(field: Key, value: TesterForm[Key]) => {
     setForm((current) => ({ ...current, [field]: value }));
     setFeedback(null);
+    setSaved(false);
   };
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
@@ -78,13 +82,13 @@ export function AndroidTestersClient() {
         return;
       }
 
-      setForm(initialForm);
+      setSaved(true);
       setFeedback({
         tone: 'success',
         title: 'You are on the early list.',
         detail:
           data.message ??
-          'Your Google Play account is saved for the Mechi v4.0.1 tester invite.',
+          'Your Google Play account is saved for the Mechi v4.0.1 tester invite. Open your dashboard for the next move.',
       });
     } catch {
       setFeedback({
@@ -187,19 +191,41 @@ export function AndroidTestersClient() {
 
         {feedback ? <ActionFeedback {...feedback} /> : null}
 
-        <button type="submit" className="btn-primary w-full" disabled={loading || !formIsValid}>
-          {loading ? (
-            <>
-              <Loader2 size={14} className="animate-spin" />
-              Saving...
-            </>
-          ) : (
-            <>
-              <CheckCircle2 size={16} />
-              Join tester list
-            </>
-          )}
-        </button>
+        {saved ? (
+          <div className="grid gap-3 sm:grid-cols-2">
+            <button
+              type="button"
+              onClick={() => router.push('/dashboard')}
+              className="btn-primary w-full"
+            >
+              Open dashboard
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setSaved(false);
+                setFeedback(null);
+              }}
+              className="btn-ghost w-full"
+            >
+              Update Play email
+            </button>
+          </div>
+        ) : (
+          <button type="submit" className="btn-primary w-full" disabled={loading || !formIsValid}>
+            {loading ? (
+              <>
+                <Loader2 size={14} className="animate-spin" />
+                Saving...
+              </>
+            ) : (
+              <>
+                <CheckCircle2 size={16} />
+                Join tester list
+              </>
+            )}
+          </button>
+        )}
       </div>
     </form>
   );

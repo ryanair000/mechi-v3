@@ -248,7 +248,7 @@ export async function POST(request: NextRequest) {
         );
         if (selectedCount >= WEEKEND_CUP_MAX_VOTE_SELECTIONS) {
           return NextResponse.json(
-            { error: `Pick up to ${WEEKEND_CUP_MAX_VOTE_SELECTIONS} games for Weekend 1.` },
+            { error: 'Pick one game only for the mystery slot.' },
             { status: 400 }
           );
         }
@@ -264,6 +264,26 @@ export async function POST(request: NextRequest) {
         if (insertError) {
           throw insertError;
         }
+      }
+    } else if (action === 'clear_votes') {
+      const ballotSlug = cleanWeekendCupText(body.ballot_slug, 80);
+      if (!ballotSlug) {
+        return NextResponse.json({ error: 'Pick the mystery vote you want to reset.' }, { status: 400 });
+      }
+
+      const ballot = await ensureSeedBallot(supabase, ballotSlug);
+      if (!ballot) {
+        return NextResponse.json({ error: 'That Weekend Cup ballot was not found' }, { status: 404 });
+      }
+
+      const { error: clearError } = await supabase
+        .from('weekend_cup_ballot_votes')
+        .delete()
+        .eq('ballot_id', ballot.id)
+        .eq('user_id', access.profile.id);
+
+      if (clearError) {
+        throw clearError;
       }
     } else if (action === 'suggest_game') {
       const ballotSlug = cleanWeekendCupText(body.ballot_slug, 80);
@@ -311,7 +331,7 @@ export async function POST(request: NextRequest) {
       if (!optionId) {
         if (selectedCount >= WEEKEND_CUP_MAX_VOTE_SELECTIONS) {
           return NextResponse.json(
-            { error: `Remove one vote first. Max is ${WEEKEND_CUP_MAX_VOTE_SELECTIONS} games.` },
+            { error: 'Clear your current pick first. One mystery vote only.' },
             { status: 400 }
           );
         }
@@ -348,7 +368,7 @@ export async function POST(request: NextRequest) {
       if (!existingVote?.id) {
         if (selectedCount >= WEEKEND_CUP_MAX_VOTE_SELECTIONS) {
           return NextResponse.json(
-            { error: `Pick up to ${WEEKEND_CUP_MAX_VOTE_SELECTIONS} games for Weekend 1.` },
+            { error: 'Pick one game only for the mystery slot.' },
             { status: 400 }
           );
         }

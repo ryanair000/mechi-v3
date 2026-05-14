@@ -246,14 +246,26 @@ export async function sendOnlineTournamentRegistrationTelegramNotification(param
   pendingPayment: number;
   slots: number;
   spotsLeft: number;
+  paymentStatus?: string | null;
+  paymentLabel?: string | null;
+  entryFeeKes?: number | null;
   checkedIn?: number;
   checkInCap?: number;
   checkInSpotsLeft?: number;
   registrationId?: string | null;
 }): Promise<void> {
   const adminUrl = `${ADMIN_URL}/admin/online-tournament`;
+  const paymentStatusLabel = params.paymentStatus
+    ? params.paymentStatus.replaceAll('_', ' ')
+    : null;
+  const heading =
+    params.paymentStatus === 'paid'
+      ? '<b>PlayMechi tournament payment confirmed</b>'
+      : params.paymentStatus === 'pending_payment' || params.paymentStatus === 'manual_review'
+        ? '<b>PlayMechi tournament registration pending payment</b>'
+        : '<b>New PlayMechi tournament registration</b>';
   const message = [
-    '<b>New PlayMechi tournament registration</b>',
+    heading,
     '',
     formatField('Event', params.eventTitle),
     formatField('Player', params.username),
@@ -278,9 +290,27 @@ export async function sendOnlineTournamentRegistrationTelegramNotification(param
       }`
     ),
     formatField('Eligibility', formatStatusLabel(params.eligibilityStatus)),
+    paymentStatusLabel
+      ? formatField(
+          'Payment',
+          [
+            paymentStatusLabel,
+            params.paymentLabel?.trim() || null,
+            typeof params.entryFeeKes === 'number'
+              ? `KSh ${params.entryFeeKes.toLocaleString()}`
+              : null,
+          ]
+            .filter(Boolean)
+            .join(' / ')
+        )
+      : null,
     formatField(
-      'Registrations',
-      `${params.registered}/${params.slots} registered, ${params.spotsLeft} left`
+      'Requests',
+      `${params.registered} saved / ${params.confirmed} confirmed / ${params.pendingPayment} pending payment`
+    ),
+    formatField(
+      'Confirmed slots',
+      `${params.confirmed}/${params.slots} confirmed, ${params.spotsLeft} left`
     ),
     typeof params.checkInCap === 'number'
       ? formatField(

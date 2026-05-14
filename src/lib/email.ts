@@ -1634,8 +1634,8 @@ export async function sendOnlineTournamentRegistrationEmail(params: {
   const eligibility = statusLabel(params.eligibilityStatus);
   const thirdPrizeLabel = escapeHtml(params.thirdPrize ?? 'No 3rd prize');
   const content = `
-    <h2>PlayMechi registration received</h2>
-    <p>Hey ${username}, your <strong>${gameLabel}</strong> registration for <strong>${eventTitle}</strong> is in. Keep this email for the match-day details.</p>
+    <h2>Payment confirmed. Slot locked.</h2>
+    <p>Hey ${username}, your <strong>${gameLabel}</strong> payment for <strong>${eventTitle}</strong> is confirmed. Your slot is now locked in for match day.</p>
     <div class="info-box">
       <div class="info-row">
         <span class="info-label">Game</span>
@@ -1677,7 +1677,7 @@ export async function sendOnlineTournamentRegistrationEmail(params: {
         <td width="10"></td>
         <td class="mini-cell" width="33%">
           <span class="mini-label">3rd prize</span>
-          <span class="mini-value">${thirdPrizeLabel}</span>
+        <span class="mini-value">${thirdPrizeLabel}</span>
         </td>
       </tr>
     </table>
@@ -1690,11 +1690,72 @@ export async function sendOnlineTournamentRegistrationEmail(params: {
     await sendEmail({
       from: FROM,
       to: params.to,
-      subject: `${params.gameLabel} registration confirmed for ${params.eventTitle}`,
-      html: baseLayout(`${params.gameLabel} registration confirmed`, content),
+      subject: `${params.gameLabel} payment confirmed for ${params.eventTitle}`,
+      html: baseLayout(`${params.gameLabel} payment confirmed`, content),
     });
   } catch (err) {
     console.error('[Email] Online tournament registration send error:', err);
+  }
+}
+
+export async function sendWeekendCupPaymentReminderEmail(params: {
+  to: string;
+  username: string;
+  eventTitle: string;
+  gameLabel: string;
+  dateLabel: string;
+  timeLabel: string;
+  inGameUsername: string;
+  paymentLabel: string;
+  paymentReference: string;
+  checkoutUrl: string;
+  registrationUrl: string;
+}): Promise<void> {
+  const username = escapeHtml(params.username);
+  const eventTitle = escapeHtml(params.eventTitle);
+  const gameLabel = escapeHtml(params.gameLabel);
+  const content = `
+    <h2>Finish payment to lock your slot</h2>
+    <p>Hey ${username}, your <strong>${gameLabel}</strong> request for <strong>${eventTitle}</strong> is saved, but your slot is not confirmed yet.</p>
+    <div class="info-box">
+      <div class="info-row">
+        <span class="info-label">Game</span>
+        <span class="info-value">${gameLabel}</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">Game tag</span>
+        <span class="info-value">${escapeHtml(params.inGameUsername)}</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">Starts</span>
+        <span class="info-value">${escapeHtml(params.dateLabel)}, ${escapeHtml(params.timeLabel)}</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">Payment</span>
+        <span class="info-value">${escapeHtml(params.paymentLabel)}</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">Reference</span>
+        <span class="info-value">${escapeHtml(params.paymentReference)}</span>
+      </div>
+    </div>
+    <p class="note">Your registration only becomes successful after Paystack confirms the payment.</p>
+    <a href="${escapeUrl(params.checkoutUrl)}" class="btn">Complete payment</a>
+    <p><a href="${escapeUrl(params.registrationUrl)}" class="secondary-link">Open registration page</a></p>
+  `;
+
+  try {
+    await sendEmail(
+      {
+        from: FROM,
+        to: params.to,
+        subject: `Complete your ${params.gameLabel} payment for ${params.eventTitle}`,
+        html: baseLayout(`Complete your ${params.gameLabel} payment`, content),
+      },
+      { requireConfigured: true }
+    );
+  } catch (err) {
+    console.error('[Email] Weekend Cup payment reminder send error:', err);
   }
 }
 

@@ -12,6 +12,8 @@ const HIGH_SIGNAL_NOTIFICATION_TYPES = new Set<NotificationType>([
   'challenge_received',
   'challenge_accepted',
   'match_chat_message',
+  'community_chat_message',
+  'community_announcement',
   'match_completed',
   'match_disputed',
   'tournament_started',
@@ -26,7 +28,7 @@ function normalizeNotificationHref(href: string | null | undefined) {
     return null;
   }
 
-  return href === '/feed' ? '/notifications' : href;
+  return href;
 }
 
 function getStorageKey(userId: string) {

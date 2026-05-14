@@ -9,6 +9,7 @@ import {
   ArrowRight,
   CheckCircle2,
   Loader2,
+  RotateCcw,
   Vote,
 } from 'lucide-react';
 import { useAuth, useAuthFetch } from '@/components/AuthProvider';
@@ -26,7 +27,6 @@ import {
   WEEKEND_CUP_PROMO_IMAGE,
   WEEKEND_CUP_PUBLIC_PATH,
   WEEKEND_CUP_STREAM_LABEL,
-  WEEKEND_CUP_TITLE,
   WEEKEND_CUP_VOTING_DISABLED_MESSAGE,
   WEEKEND_CUP_VOTING_ENABLED,
 } from '@/lib/weekend-cup';
@@ -64,16 +64,14 @@ const API_PATH = '/api/weekendcup/series';
 const VISIBLE_BALLOT_SLUGS = new Set(['weekend-cup-1-mobile']);
 const FIXED_SEASON_ONE_GAME_SLUGS = new Set(['pubgm', 'codm', 'efootball']);
 
-const DASHBOARD_RADIUS_STYLE: CSSProperties & Record<string, string> = {
-  '--radius': '0.95rem',
-  '--radius-control': '1rem',
-  '--radius-panel': '1.35rem',
-  '--radius-card': '1.7rem',
-  '--radius-hero': '1.95rem',
+const DASHBOARD_FONT_STYLE: CSSProperties & Record<string, string> = {
+  '--font-display': 'var(--font-montserrat), "Montserrat", "Segoe UI Semibold", sans-serif',
+  '--font-body': 'var(--font-open-sans), "Open Sans", "Segoe UI", sans-serif',
+  '--font-sans': 'var(--font-open-sans), "Open Sans", "Segoe UI", sans-serif',
 };
 
 const OPTION_IMAGE_BY_SLUG: Partial<Record<string, string | null>> = {
-  bloodstrike: '/game-artwork/codm-header.webp',
+  bloodstrike: 'https://cdn.cloudflare.steamstatic.com/steam/apps/3199170/capsule_616x353.jpg',
   'fc-mobile': '/game-artwork/fc26-header.webp',
   efootball: getGameImage('efootball'),
   'free-fire': getGameImage('freefire'),
@@ -87,8 +85,16 @@ const OPTION_IMAGE_BY_SLUG: Partial<Record<string, string | null>> = {
   'rocket-league': getGameImage('rocketleague'),
 };
 
-const DASHBOARD_INNER_RADIUS_CLASS = 'rounded-[1.1rem]';
-const DASHBOARD_CONTROL_RADIUS_CLASS = '!rounded-[1rem]';
+const DASHBOARD_INNER_RADIUS_CLASS = 'rounded-[var(--radius-card)]';
+const DASHBOARD_CONTROL_RADIUS_CLASS = '!rounded-[var(--radius-control)]';
+
+function isAuthFailure(status: number, error?: string | null) {
+  if (status === 401 || status === 403) {
+    return true;
+  }
+
+  return Boolean(error && error.toLowerCase().includes('unauthorized'));
+}
 
 function getFallbackBallots() {
   return WEEKEND_CUP_BALLOTS.filter((ballot) => VISIBLE_BALLOT_SLUGS.has(ballot.slug)).map((ballot) => ({
@@ -213,7 +219,7 @@ function WeekendCupOptionCard({
           ) : (
             <Vote size={14} />
           )}
-          {option.userVoted ? 'Voted' : 'Vote'}
+          {option.userVoted ? 'Picked' : 'Vote now'}
         </div>
       </div>
     </div>
@@ -227,6 +233,7 @@ export function WeekendCupClient() {
   const [ballots, setBallots] = useState<WeekendCupBallot[]>([]);
   const [loading, setLoading] = useState(true);
   const [actingOptionId, setActingOptionId] = useState<string | null>(null);
+  const [clearingBallotSlug, setClearingBallotSlug] = useState<string | null>(null);
   const [submittingBallotSlug, setSubmittingBallotSlug] = useState<string | null>(null);
   const [suggestionDrafts, setSuggestionDrafts] = useState<
     Record<string, { label: string; description: string }>
@@ -267,7 +274,11 @@ export function WeekendCupClient() {
     void loadState();
   }, [loadState]);
 
-  const handleVote = async (optionId: string, alreadySelected: boolean, selectedCount: number) => {
+  const handleAuthFailure = useCallback(() => {
+    router.replace(signInHref);
+  }, [router, signInHref]);
+
+  const handleVote = useCallback(async (optionId: string, alreadySelected: boolean, selectedCount: number) => {
     if (!WEEKEND_CUP_VOTING_ENABLED) {
       toast.error(WEEKEND_CUP_VOTING_DISABLED_MESSAGE);
       return;
@@ -279,7 +290,7 @@ export function WeekendCupClient() {
     }
 
     if (!alreadySelected && selectedCount >= WEEKEND_CUP_MAX_VOTE_SELECTIONS) {
-      toast.error(`Pick up to ${WEEKEND_CUP_MAX_VOTE_SELECTIONS} games for the mystery slot.`);
+      toast.error('Pick one game only for the mystery slot.');
       return;
     }
 
@@ -294,6 +305,11 @@ export function WeekendCupClient() {
       });
       const data = (await res.json()) as WeekendCupSeriesResponse;
 
+      if (isAuthFailure(res.status, data.error)) {
+        handleAuthFailure();
+        return;
+      }
+
       if (!res.ok) {
         toast.error(data.error ?? 'Could not save vote');
         return;
@@ -305,7 +321,43 @@ export function WeekendCupClient() {
     } finally {
       setActingOptionId(null);
     }
-  };
+  }, [authFetch, handleAuthFailure, router, signInHref, user]);
+
+  const handleClearVotes = useCallback(async (ballotSlug: string) => {
+    if (!user) {
+      router.push(signInHref);
+      return;
+    }
+
+    setClearingBallotSlug(ballotSlug);
+    try {
+      const res = await authFetch(API_PATH, {
+        method: 'POST',
+        body: JSON.stringify({
+          action: 'clear_votes',
+          ballot_slug: ballotSlug,
+        }),
+      });
+      const data = (await res.json()) as WeekendCupSeriesResponse;
+
+      if (isAuthFailure(res.status, data.error)) {
+        handleAuthFailure();
+        return;
+      }
+
+      if (!res.ok) {
+        toast.error(data.error ?? 'Could not clear your picks');
+        return;
+      }
+
+      toast.success('Mystery pick cleared.');
+      setBallots((data.ballots ?? []).filter((ballot) => VISIBLE_BALLOT_SLUGS.has(ballot.slug)));
+    } catch {
+      toast.error('Network error while clearing your picks');
+    } finally {
+      setClearingBallotSlug(null);
+    }
+  }, [authFetch, handleAuthFailure, router, signInHref, user]);
 
   const handleSuggest = async (ballotSlug: string) => {
     if (!WEEKEND_CUP_VOTING_ENABLED) {
@@ -327,7 +379,7 @@ export function WeekendCupClient() {
     const ballot = visibleBallots.find((item) => item.slug === ballotSlug);
     const selectedCount = ballot?.options.filter((option) => option.userVoted).length ?? 0;
     if (selectedCount >= WEEKEND_CUP_MAX_VOTE_SELECTIONS) {
-      toast.error(`Remove one vote first. Max is ${WEEKEND_CUP_MAX_VOTE_SELECTIONS} games.`);
+      toast.error('Clear your current pick first. Only one mystery-game vote is allowed.');
       return;
     }
 
@@ -343,6 +395,11 @@ export function WeekendCupClient() {
         }),
       });
       const data = (await res.json()) as WeekendCupSeriesResponse;
+
+      if (isAuthFailure(res.status, data.error)) {
+        handleAuthFailure();
+        return;
+      }
 
       if (!res.ok) {
         toast.error(data.error ?? 'Could not add that game');
@@ -364,15 +421,15 @@ export function WeekendCupClient() {
 
   return (
     <div
-      className="page-base min-h-screen bg-[radial-gradient(circle_at_top,rgba(50,224,196,0.08),transparent_32%),linear-gradient(180deg,#07111e_0%,#050b13_100%)]"
-      style={DASHBOARD_RADIUS_STYLE}
+      className="app-prototype-shell page-base min-h-screen bg-[radial-gradient(circle_at_top,rgba(50,224,196,0.08),transparent_32%),linear-gradient(180deg,#07111e_0%,#050b13_100%)]"
+      style={DASHBOARD_FONT_STYLE}
     >
       <WeekendCupHeader />
 
-      <main className="page-container max-w-[900px] space-y-8 pb-10 pt-5 sm:pt-7">
+      <main className="page-container max-w-[940px] space-y-7 pb-10 pt-4 sm:pt-6">
         <section id="overview" className="space-y-4 px-1 sm:px-2">
           <div className="overflow-hidden rounded-[var(--radius-card)] border border-[var(--border-color)] bg-[rgba(12,20,34,0.82)] shadow-[var(--shadow-soft)]">
-            <div className="relative aspect-[16/9] w-full sm:aspect-[16/7] lg:aspect-[21/5]">
+            <div className="relative aspect-[16/9] w-full sm:aspect-[16/7] lg:aspect-[21/6]">
               <Image
                 src={WEEKEND_CUP_PROMO_IMAGE}
                 alt="PlayMechi Weekend Cup Season 1 promo artwork"
@@ -385,15 +442,16 @@ export function WeekendCupClient() {
             </div>
           </div>
 
-          <div className="mx-auto max-w-4xl space-y-3 text-center">
+          <div className="mx-auto flex max-w-[760px] flex-col items-center space-y-3 text-center">
             <p className="section-title">Weekend Cup preview</p>
-            <h1 className="mx-auto max-w-[12ch] text-[clamp(2.2rem,4vw,4rem)] font-black leading-[0.95] text-[var(--text-primary)]">
-              {WEEKEND_CUP_TITLE}
+            <h1 className="mx-auto font-[var(--font-display)] text-[clamp(1.9rem,5.4vw,3.55rem)] font-black leading-[0.94] tracking-[-0.03em] text-[var(--text-primary)]">
+              <span className="block whitespace-nowrap">PlayMechi Weekend Cup</span>
+              <span className="block">Season 1</span>
             </h1>
             <p className="mx-auto max-w-3xl text-[0.92rem] leading-7 text-[var(--text-secondary)] sm:text-[1rem]">
-              Season 1 runs on <strong>{WEEKEND_CUP_EVENT_DATES}</strong>. PUBG Mobile lands on
-              Friday, CODM takes Saturday, eFootball closes Sunday, and players are deciding the
-              final mystery slot before the lineup locks.
+              Season 1 runs on <strong>{WEEKEND_CUP_EVENT_DATES}</strong>. PUBG Mobile locks Friday,
+              CODM runs Saturday, eFootball closes Sunday, and players are deciding the one final
+              mystery slot before the lineup closes.
             </p>
 
             <div className="flex flex-wrap justify-center gap-2">
@@ -417,13 +475,13 @@ export function WeekendCupClient() {
                 href={user ? '#vote' : signInHref}
                 className={`btn-primary min-h-11 px-4 py-2 text-[0.9rem] ${DASHBOARD_CONTROL_RADIUS_CLASS}`}
               >
-                {user ? 'Vote Mystery Game' : 'Sign in to vote'}
+                {user ? 'Vote mystery slot' : 'Sign in to vote'}
               </Link>
               <Link
                 href="/weekendcup"
                 className={`btn-outline min-h-11 px-4 py-2 text-[0.9rem] ${DASHBOARD_CONTROL_RADIUS_CLASS}`}
               >
-                Register Now
+                Open registration
               </Link>
             </div>
           </div>
@@ -441,9 +499,9 @@ export function WeekendCupClient() {
                     Pick the mystery slot.
                   </h2>
                   <p className="max-w-2xl text-[0.9rem] leading-7 text-[var(--text-secondary)] sm:text-[0.98rem]">
-                    CODM, PUBG Mobile, and eFootball are already locked for Season 1. Choose up to{' '}
-                    {WEEKEND_CUP_MAX_VOTE_SELECTIONS} extra game picks. If your title is missing,
-                    drop it below and we add it to the vote.
+                    CODM, PUBG Mobile, and eFootball are already locked for Season 1. Choose one
+                    mystery game only. If your title is missing, drop it below and we can add it
+                    to the vote.
                   </p>
 
                   <div className="flex flex-wrap items-center gap-2">
@@ -467,8 +525,28 @@ export function WeekendCupClient() {
                         href={signInHref}
                         className={`btn-outline min-h-10 px-4 py-2 text-[0.86rem] ${DASHBOARD_CONTROL_RADIUS_CLASS}`}
                       >
-                        Sign in to vote
+                        Sign in to choose
                       </Link>
+                    ) : null}
+                    {user && selectedCount > 0 ? (
+                      <button
+                        type="button"
+                        onClick={() => void handleClearVotes(ballot.slug)}
+                        disabled={clearingBallotSlug === ballot.slug}
+                        className={`btn-outline min-h-10 px-4 py-2 text-[0.86rem] ${DASHBOARD_CONTROL_RADIUS_CLASS}`}
+                      >
+                        {clearingBallotSlug === ballot.slug ? (
+                          <>
+                            <Loader2 size={14} className="animate-spin" />
+                            Clearing pick
+                          </>
+                        ) : (
+                          <>
+                            <RotateCcw size={14} />
+                            Clear my pick
+                          </>
+                        )}
+                      </button>
                     ) : null}
                   </div>
                 </div>

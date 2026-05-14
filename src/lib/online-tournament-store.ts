@@ -18,6 +18,11 @@ import {
   type OnlineTournamentPayout,
   getOnlineTournamentLobbySize,
 } from '@/lib/online-tournament-ops';
+import {
+  buildFallbackEfootballFixtures,
+  buildFallbackPubgmStandings,
+  hasFallbackPubgmLeaderboard,
+} from '@/lib/online-tournament-fallback-results';
 
 export type OnlineTournamentSafeRegistration = {
   id: string;
@@ -543,6 +548,10 @@ export function buildPlayerTournamentState(params: {
   userId: string;
 }): OnlineTournamentPlayerState {
   const { state, userId } = params;
+  const fixturesSource =
+    state.fixtures.length > 0
+      ? state.fixtures
+      : buildFallbackEfootballFixtures(state.registrations);
   const roster = state.registrations
     .filter(
       (registration) =>
@@ -561,13 +570,24 @@ export function buildPlayerTournamentState(params: {
   );
   const myRegistrationIds = new Set(myRegistrations.map((registration) => registration.id));
   const standings: Partial<Record<'pubgm' | 'codm', OnlineTournamentSafeStanding[]>> = {};
+  const pubgmStandingsSource = hasFallbackPubgmLeaderboard(state.submissions)
+    ? buildFallbackPubgmStandings()
+    : buildBattleRoyaleStandings({
+        game: 'pubgm',
+        registrations: state.registrations,
+        submissions: state.submissions,
+      });
+  const codmStandingsSource = buildBattleRoyaleStandings({
+    game: 'codm',
+    registrations: state.registrations,
+    submissions: state.submissions,
+  });
 
-  for (const game of ['pubgm', 'codm'] as const) {
-    standings[game] = buildBattleRoyaleStandings({
-      game,
-      registrations: state.registrations,
-      submissions: state.submissions,
-    }).map((standing) => ({
+  for (const [game, standingsSource] of [
+    ['pubgm', pubgmStandingsSource],
+    ['codm', codmStandingsSource],
+  ] as const) {
+    standings[game] = standingsSource.map((standing) => ({
       ...standing,
       registration:
         toSafeRegistration(standing.registration) ??
@@ -600,7 +620,7 @@ export function buildPlayerTournamentState(params: {
     }));
   }
 
-  const fixtures = state.fixtures.map((fixture) => ({
+  const fixtures = fixturesSource.map((fixture) => ({
     ...fixture,
     player1: toSafeRegistration(registrationById.get(fixture.player1_registration_id ?? '')),
     player2: toSafeRegistration(registrationById.get(fixture.player2_registration_id ?? '')),
@@ -622,7 +642,7 @@ export function buildPlayerTournamentState(params: {
     ),
     disputes: state.disputes.filter((dispute) => {
       if (dispute.fixture_id) {
-        const fixture = state.fixtures.find((item) => item.id === dispute.fixture_id);
+        const fixture = fixturesSource.find((item) => item.id === dispute.fixture_id);
         return Boolean(
           fixture?.player1_registration_id &&
             myRegistrationIds.has(fixture.player1_registration_id)

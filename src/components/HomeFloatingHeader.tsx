@@ -30,6 +30,7 @@ interface HomeFloatingHeaderProps {
   signInHref?: string;
   joinHref?: string;
   joinLabel?: string;
+  showLogo?: boolean;
 }
 
 export function HomeFloatingHeader({
@@ -37,6 +38,7 @@ export function HomeFloatingHeader({
   signInHref = '/login',
   joinHref = '/register',
   joinLabel = 'JOIN FREE',
+  showLogo = true,
 }: HomeFloatingHeaderProps) {
   const [isOpen, setIsOpen] = useState(false);
   const { user } = useAuth();
@@ -50,9 +52,11 @@ export function HomeFloatingHeader({
         />
         <div className="rounded-[var(--radius-nav-shell)] border border-[var(--border-color)] bg-[var(--surface-soft)] p-1.5 shadow-[var(--shadow-soft)] backdrop-blur-xl sm:p-2">
           <div className="flex items-center gap-3">
-            <Link href="/" className="flex shrink-0 items-center rounded-[var(--radius-panel)] px-1.5 py-1">
-              <BrandLogo size="sm" variant="symbol" />
-            </Link>
+            {showLogo ? (
+              <Link href="/" className="flex shrink-0 items-center rounded-[var(--radius-panel)] px-1.5 py-1">
+                <BrandLogo size="sm" variant="symbol" />
+              </Link>
+            ) : null}
 
             <div className="hidden min-w-0 flex-1 items-center justify-center gap-1 md:flex">
               {navItems.map((item) => (

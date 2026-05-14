@@ -4,18 +4,14 @@ import { useAuth } from '@/components/AuthProvider';
 import { HomeFloatingHeader } from '@/components/HomeFloatingHeader';
 import { getLoginPath, getRegisterPath } from '@/lib/navigation';
 import {
-  ONLINE_TOURNAMENT_DISPUTE_PATH,
-  ONLINE_TOURNAMENT_PUBLIC_PATH,
   ONLINE_TOURNAMENT_REGISTRATION_PATH,
 } from '@/lib/online-tournament';
+import { WEEKEND_CUP_REGISTRATION_PATH } from '@/lib/weekend-cup';
 
 const PLAYMECHI_HOME_NAV_ITEMS = [
-  { href: `${ONLINE_TOURNAMENT_PUBLIC_PATH}#prizes`, label: 'PRIZES' },
-  { href: `${ONLINE_TOURNAMENT_PUBLIC_PATH}#rules`, label: 'RULES' },
-  { href: `${ONLINE_TOURNAMENT_PUBLIC_PATH}#stream`, label: 'STREAM' },
-  { href: ONLINE_TOURNAMENT_DISPUTE_PATH, label: 'REPORT' },
-  { href: '/blog', label: 'BLOG' },
+  { href: WEEKEND_CUP_REGISTRATION_PATH, label: 'WEEKEND CUP' },
   { href: '/android-testers', label: 'ANDROID' },
+  { href: '/leaderboard', label: 'WEKA MAWE' },
   { href: '/platform', label: 'PLATFORM' },
 ];
 
@@ -32,6 +28,7 @@ export function PlayMechiHomeHeader() {
       navItems={PLAYMECHI_HOME_NAV_ITEMS}
       signInHref={PLAYMECHI_SIGN_IN_PATH}
       joinHref={joinHref}
+      showLogo={false}
     />
   );
 }

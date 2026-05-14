@@ -231,8 +231,8 @@ export function AnimatedSlideshowSection() {
       <h3 className="mb-6 text-xs font-medium capitalize tracking-wide text-[rgb(201,100,66)]">
         / Leaderboard
       </h3>
-      <div className="flex flex-wrap items-center justify-evenly gap-6 md:gap-12">
-        <div className="flex flex-col space-y-2 md:space-y-4">
+      <div className="flex flex-col items-center justify-center gap-5 lg:flex-row lg:items-center lg:gap-8">
+        <div className="flex shrink-0 flex-col space-y-2 md:space-y-4">
           {LEADERBOARD_SLIDES.map((slide, index) => (
             <TextStaggerHover
               key={slide.id}
@@ -242,7 +242,7 @@ export function AnimatedSlideshowSection() {
             />
           ))}
         </div>
-        <HoverSliderImageWrap className="w-full max-w-xl">
+        <HoverSliderImageWrap className="w-full max-w-xl lg:w-[42vw]">
           {LEADERBOARD_SLIDES.map((slide, index) => (
             <div key={slide.id}>
               <HoverSliderImage

@@ -4,6 +4,7 @@ import Image from "next/image";
 import { ProgressiveBlur } from "@/components/ui/progressive-blur";
 import { TimelineContent } from "@/components/ui/timeline-animation";
 import { cn } from "@/lib/utils";
+import { WEEKEND_CUP_REGISTRATION_PATH } from "@/lib/weekend-cup";
 
 export const blocksDesign = [
   {
@@ -23,7 +24,7 @@ export const blocksDesign = [
   {
     id: "weka-mawe-weekly",
     name: "Weka Mawe Weekly",
-    url: "/feed",
+    url: "/leaderboard",
     imgSrc:
       "https://images.unsplash.com/photo-1750688650387-48fbdc7399b3?q=80&w=687&auto=format&fit=crop",
   },
@@ -36,9 +37,7 @@ export default function HeroSection() {
         <article className="mx-auto w-fit max-w-2xl space-y-6 text-center xl:max-w-4xl 2xl:max-w-5xl">
           <TimelineContent
             as="a"
-            href="https://pro.ui-layouts.com/blocks"
-            target="_blank"
-            rel="noreferrer"
+            href={WEEKEND_CUP_REGISTRATION_PATH}
             className="mx-auto flex w-fit items-center gap-1 rounded-full border-4 border-blue-200 bg-blue-600 py-0.5 pl-0.5 pr-3 text-xs"
           >
             <div className="rounded-full bg-[var(--surface-strong)] px-2 py-1 text-xs text-[var(--text-primary)]">
@@ -93,10 +92,8 @@ export default function HeroSection() {
             <TimelineContent
               as="a"
               key={component.id}
-              target="_blank"
               href={component.url}
               className="aspect-video overflow-hidden rounded-lg backdrop-blur-sm"
-              rel="noreferrer"
             >
               <figure className="relative h-full w-full">
                 {component.imgSrc ? (

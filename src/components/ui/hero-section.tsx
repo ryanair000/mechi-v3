@@ -10,8 +10,7 @@ export const blocksDesign = [
     id: "playmechi-launch",
     name: "PlayMechi Launch",
     url: "/playmechi",
-    imgSrc:
-      "https://images.unsplash.com/photo-1754630551378-e1ecffe9da6b?q=80&w=687&auto=format&fit=crop",
+    imgSrc: "/images/playmechi/playmechi-tournament-poster.png",
   },
   {
     id: "weekend-cup",

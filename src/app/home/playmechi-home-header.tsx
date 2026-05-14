@@ -28,6 +28,7 @@ export function PlayMechiHomeHeader() {
       navItems={PLAYMECHI_HOME_NAV_ITEMS}
       signInHref={PLAYMECHI_SIGN_IN_PATH}
       joinHref={joinHref}
+      joinLabel="JOIN"
       showLogo={false}
     />
   );

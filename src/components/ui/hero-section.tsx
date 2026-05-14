@@ -1,7 +1,6 @@
 "use client";
 
 import Image from "next/image";
-import { ProgressiveBlur } from "@/components/ui/progressive-blur";
 import { TimelineContent } from "@/components/ui/timeline-animation";
 import { cn } from "@/lib/utils";
 import { WEEKEND_CUP_REGISTRATION_PATH } from "@/lib/weekend-cup";
@@ -33,7 +32,7 @@ export const blocksDesign = [
 export default function HeroSection() {
   return (
     <section className="page-base relative overflow-hidden bg-transparent px-4 pb-5 pt-16 text-[var(--text-primary)] sm:pt-20">
-      <div className="mx-auto min-h-screen max-w-screen-2xl">
+      <div className="mx-auto min-h-[60vh] max-w-screen-2xl">
         <article className="mx-auto w-fit max-w-2xl space-y-6 text-center xl:max-w-4xl 2xl:max-w-5xl">
           <TimelineContent
             as="a"
@@ -106,10 +105,7 @@ export default function HeroSection() {
                   />
                 ) : null}
               </figure>
-              <ProgressiveBlur
-                className="pointer-events-none absolute bottom-0 left-0 h-[25%] w-full"
-                blurIntensity={0.5}
-              />
+              <div className="pointer-events-none absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-black/75 via-black/35 to-transparent" />
               <div className="absolute bottom-2 left-2 px-2 py-1 sm:px-4 sm:py-2">
                 <h2 className="text-sm font-medium capitalize leading-[140%] text-white md:text-lg xl:text-xl 2xl:text-xl">
                   {component.name}

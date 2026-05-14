@@ -16,31 +16,41 @@ export interface Faq5Props {
 
 const defaultFaqs: FaqItem[] = [
   {
-    question: 'What is a FAQ and why is it important?',
+    question: 'Is registration free?',
     answer:
-      'FAQ stands for Frequently Asked Questions. It is a list that provides answers to common questions people may have about a specific product, service, or topic.',
+      'Yes. Registration is free on Mechi.club. Pick your game, submit your correct gamer tag, and make sure you are available at 8:00 PM on match day.',
   },
   {
-    question: 'Why should I use a FAQ on my website or app?',
+    question: 'Which games are in the tournament?',
     answer:
-      'Utilizing a FAQ section on your website or app is a practical way to offer instant assistance to your users or customers. Instead of waiting for customer support responses, they can find quick answers to commonly asked questions.',
+      'The tournament has PUBG Mobile, Call of Duty Mobile, and eFootball. PUBG plays Friday 8 May, CODM plays Saturday 9 May, and eFootball plays Sunday 10 May.',
   },
   {
-    question: 'How do I effectively create a FAQ section?',
+    question: 'How do I qualify for rewards?',
     answer:
-      'Creating a FAQ section starts with gathering the most frequent questions you receive from your users or customers. Once you have a list, you need to write clear, detailed, and helpful answers to each question.',
+      'Register with accurate details, use the same in-game account, follow the rules, and complete the PlayMechi follow and YouTube subscription requirement before your match day.',
   },
   {
-    question: 'What are the benefits of having a well-maintained FAQ section?',
+    question: 'How are PUBG Mobile and CODM winners decided?',
     answer:
-      'There are numerous advantages to maintaining a robust FAQ section. Firstly, it provides immediate answers to common queries, which improves the user experience.',
+      'PUBG Mobile uses kill-race scoring across three Battle Royale matches. CODM also runs three Battle Royale matches, but uses kill and placement points based on the published tournament desk rules.',
+  },
+  {
+    question: 'How does eFootball work?',
+    answer:
+      'eFootball is a 16-player 1v1 knockout bracket. Win and you move forward. If there is a dispute, send a clear screenshot immediately so admins can review it.',
+  },
+  {
+    question: 'Where can I watch the matches?',
+    answer:
+      'The tournament streams live on YouTube through PlayMechi. PUBG Mobile and CODM use a short stream delay to keep the games fair.',
   },
 ];
 
 export const Faq5 = ({
   badge = 'FAQ',
-  heading = 'Common Questions & Answers',
-  description = 'Find out all the essential details about our platform and how it can serve your needs.',
+  heading = 'Quick answers before match day.',
+  description = 'Everything players usually ask before joining Playmechi Launch.',
   faqs = defaultFaqs,
   className,
 }: Faq5Props) => {

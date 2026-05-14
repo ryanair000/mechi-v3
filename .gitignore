@@ -66,6 +66,11 @@ supabase/.temp/
 # design assets (binary artifacts)
 /Mechi\ Design\ System/
 /Mechi\ Design\ System.zip
+/openclaw-doc-sync.tar
+/openclaw-sync.tar
+/openclaw-x-sync.tar
+/ops/openclaw-growth-workspace/tmp/
+/scripts/__pycache__/
 
 # env files (can opt-in for committing if needed)
 .env*

@@ -22,8 +22,7 @@ export const blocksDesign = [
     id: "weka-mawe-weekly",
     name: "Weka Mawe Weekly",
     url: "/leaderboard",
-    imgSrc:
-      "https://images.unsplash.com/photo-1750688650387-48fbdc7399b3?q=80&w=687&auto=format&fit=crop",
+    imgSrc: "/images/playmechi/weka-mawe-weekly-poster.png",
   },
 ];
 

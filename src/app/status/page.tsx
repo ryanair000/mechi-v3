@@ -1,5 +1,2 @@
-import { permanentRedirect } from 'next/navigation';
-
-export default function StatusPage() {
-  permanentRedirect('/support');
-}
+export { metadata } from '@/app/support/page';
+export { default } from '@/app/support/page';

@@ -25,9 +25,12 @@ const HEADER_CONFIGS: Array<{
       backLabel: 'Back to lobbies',
     },
   },
-  { matches: (pathname) => pathname.startsWith('/dashboard'), config: { eyebrow: 'Home', title: 'Dashboard' } },
+  { matches: (pathname) => pathname.startsWith('/feed'), config: { eyebrow: 'PlayMechi', title: 'Feed' } },
+  { matches: (pathname) => pathname.startsWith('/dashboard'), config: { eyebrow: 'App', title: 'Dashboard' } },
   { matches: (pathname) => pathname.startsWith('/leaderboard'), config: { eyebrow: 'Compete', title: 'Leaderboard' } },
   { matches: (pathname) => pathname.startsWith('/tournaments'), config: { eyebrow: 'Compete', title: 'Tournaments' } },
+  { matches: (pathname) => pathname.startsWith('/community'), config: { eyebrow: 'Community', title: 'Community Chat' } },
+  { matches: (pathname) => pathname.startsWith('/inbox'), config: { eyebrow: 'Community', title: 'Community Chat' } },
   { matches: (pathname) => pathname.startsWith('/lobbies'), config: { eyebrow: 'Compete', title: 'Lobbies' } },
   { matches: (pathname) => pathname.startsWith('/games'), config: { eyebrow: 'Library', title: 'Games' } },
   {

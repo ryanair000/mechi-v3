@@ -8,6 +8,7 @@ export interface PlanConfig {
   badgeColor: string | null;
   monthlyKes: number;
   annualKes: number;
+  weeklyKes: number;
   dailyMatchLimit: number;
   maxGames: number;
   tournamentFeePercent: number;
@@ -26,6 +27,7 @@ export const PLANS: Record<Plan, PlanConfig> = {
     badgeColor: null,
     monthlyKes: 0,
     annualKes: 0,
+    weeklyKes: 0,
     dailyMatchLimit: 5,
     maxGames: 1,
     tournamentFeePercent: 5,
@@ -47,8 +49,9 @@ export const PLANS: Record<Plan, PlanConfig> = {
     name: 'Pro',
     badge: 'Pro',
     badgeColor: '#FF6B6B',
-    monthlyKes: 299,
-    annualKes: 2990,
+    monthlyKes: 199,
+    annualKes: 1990,
+    weeklyKes: 49,
     dailyMatchLimit: -1,
     maxGames: 3,
     tournamentFeePercent: 5,
@@ -60,8 +63,7 @@ export const PLANS: Record<Plan, PlanConfig> = {
       '1-month Pro trial for new players',
       'Unlimited ranked matches',
       'Up to 3 selected games',
-      'Tournament hosting on Mechi',
-      '5% tournament platform fee',
+      'Tournament joins',
       '1-on-1 direct challenges',
       '100-match history window',
       'Pro profile badge',
@@ -72,8 +74,9 @@ export const PLANS: Record<Plan, PlanConfig> = {
     name: 'Elite',
     badge: 'Elite',
     badgeColor: '#F6C453',
-    monthlyKes: 999,
-    annualKes: 9990,
+    monthlyKes: 699,
+    annualKes: 6990,
+    weeklyKes: 175,
     dailyMatchLimit: -1,
     maxGames: 3,
     tournamentFeePercent: 0,
@@ -83,6 +86,7 @@ export const PLANS: Record<Plan, PlanConfig> = {
     earlyAccess: true,
     features: [
       'Everything in Pro',
+      'Tournament hosting on Mechi',
       '3 fee-free tournaments each month',
       'Auto or specified prize pools',
       'Priority matchmaking',
@@ -120,6 +124,12 @@ export function canSelectGames(plan: Plan, count: number): boolean {
 export function getPlanPrice(plan: Plan, billingCycle: BillingCycle): number {
   const config = getPlan(plan);
   return billingCycle === 'annual' ? config.annualKes : config.monthlyKes;
+}
+
+export function getPlanWeeklyPrice(plan: Plan, billingCycle: BillingCycle): number {
+  const config = getPlan(plan);
+  if (plan === 'free') return 0;
+  return billingCycle === 'annual' ? Math.floor(config.annualKes / 52) : config.weeklyKes;
 }
 
 export function getPlanRenewalLabel(plan: Plan, billingCycle: BillingCycle): string {

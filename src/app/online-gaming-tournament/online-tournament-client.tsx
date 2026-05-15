@@ -29,6 +29,10 @@ type GameRegistrationCount = {
   slots: number;
   spotsLeft: number;
   full: boolean;
+  checkedIn: number;
+  checkInCap: number;
+  checkInSpotsLeft: number;
+  checkInFull: boolean;
 };
 
 type RegistrationSummary = {
@@ -61,6 +65,10 @@ function getFallbackSummary(): RegistrationSummary {
           slots: game.slots,
           spotsLeft: registrationClosed ? 0 : game.slots,
           full: registrationClosed,
+          checkedIn: 0,
+          checkInCap: game.checkInCap,
+          checkInSpotsLeft: game.checkInCap,
+          checkInFull: false,
         };
         return counts;
       },
@@ -114,9 +122,9 @@ export function OnlineTournamentClient() {
       <main className="landing-shell pb-8 pt-3 sm:pb-10 sm:pt-5">
         <section>
           <Hero1
-            badgeLabel={`Free entry | ${ONLINE_TOURNAMENT_TOTAL_SLOTS} slots | ${ONLINE_TOURNAMENT_EVENT_DATES}`}
+            badgeLabel={`Free entry | ${ONLINE_TOURNAMENT_TOTAL_SLOTS} registrations max | ${ONLINE_TOURNAMENT_EVENT_DATES}`}
             title="Pull up. Lock in. Win on Mechi."
-            description="Free online tournament for PUBG Mobile, Call of Duty Mobile, and eFootball. Register on Mechi.club, show up at 8:00 PM, and fight for the KSh 6,000 cash prize pool plus game currency live on PlayMechi."
+            description="Free online tournament for PUBG Mobile, Call of Duty Mobile, and eFootball. Each game accepts up to 200 registrations, while match-day check-in caps stay locked at PUBG 100, CODM 100, and eFootball 16. Register on Mechi.club, show up at 8:00 PM, and fight for the KSh 6,000 cash prize pool plus game currency live on PlayMechi."
             secondaryLabel="See The Prizes"
             secondaryHref="#prizes"
             primaryLabel="Register Now!"

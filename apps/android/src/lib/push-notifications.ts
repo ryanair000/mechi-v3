@@ -182,7 +182,24 @@ export function resolveNotificationRoute(data: Record<string, unknown> | undefin
     return target;
   }
 
+  if (target.startsWith('/community')) {
+    return '/(tabs)';
+  }
+
+  if (target.startsWith('/feed')) {
+    return '/(tabs)/feed';
+  }
+
   if (target.startsWith('/match/') || target.startsWith('/matches') || target.startsWith('/inbox')) {
+    return '/(tabs)/arena';
+  }
+
+  if (
+    target.startsWith('/playmechi') ||
+    target.startsWith('/online-gaming-tournament') ||
+    target.startsWith('/tournaments') ||
+    target.startsWith('/arena')
+  ) {
     return '/(tabs)/arena';
   }
 
@@ -190,7 +207,7 @@ export function resolveNotificationRoute(data: Record<string, unknown> | undefin
     return '/(tabs)/profile';
   }
 
-  return '/(tabs)/index';
+  return '/(tabs)';
 }
 
 export async function unregisterStoredPushToken(): Promise<void> {

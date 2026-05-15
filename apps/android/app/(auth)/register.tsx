@@ -73,7 +73,7 @@ export default function RegisterScreen() {
         whatsapp_number: phone.trim(),
         whatsapp_notifications: whatsappNotifications,
       });
-      router.replace(`/(tabs)/register?game=${game}`);
+      router.replace('/(tabs)');
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Could not create account. Try again.');
     } finally {
@@ -90,7 +90,10 @@ export default function RegisterScreen() {
     gameId.trim();
 
   return (
-    <Screen title="Create account" subtitle="Set up your PlayMechi tournament account and continue to slot registration.">
+    <Screen
+      title="Create account"
+      subtitle="Set up your PlayMechi account for community, tournament tracking, and match-night updates. Tournament slot registration happens on the website."
+    >
       <Card>
         <Text style={textStyles.h2}>Account</Text>
         <Field label="Username" value={username} onChangeText={setUsername} placeholder="playmechiwarrior" />
@@ -127,7 +130,7 @@ export default function RegisterScreen() {
       </Card>
 
       <Card>
-        <SectionTitle title="Tournament game" />
+        <SectionTitle title="Primary game" />
         <ChipGroup
           options={TOURNAMENT_GAMES.map((item) => ({
             value: item.game,
@@ -137,7 +140,8 @@ export default function RegisterScreen() {
           onChange={handleGameChange}
         />
         <Text style={textStyles.muted}>
-          {TOURNAMENT_GAME_BY_KEY[game].label} plays on mobile for this PlayMechi event.
+          {TOURNAMENT_GAME_BY_KEY[game].label} plays on mobile for this PlayMechi event. Tournament
+          slots are registered on mechi.club, not inside the app.
         </Text>
         <Field
           label={getGameIdLabel(game, 'mobile')}

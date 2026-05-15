@@ -15,6 +15,7 @@ WHATSAPP_CUSTOMER_GROUP_MENTION_REQUIRED="${MECHI_WHATSAPP_CUSTOMER_GROUP_MENTIO
 WHATSAPP_CONTROL_DIRECT_IDS="${MECHI_WHATSAPP_CONTROL_DIRECT_IDS:-+254708355692}"
 WHATSAPP_DEFAULT_DM_AGENT="${MECHI_WHATSAPP_DEFAULT_DM_AGENT:-support}"
 WHATSAPP_DM_SCOPE="${MECHI_OPENCLAW_WHATSAPP_DM_SCOPE:-per-account-channel-peer}"
+WHATSAPP_HISTORY_LIMIT="${MECHI_WHATSAPP_HISTORY_LIMIT:-200}"
 RESTART_SERVICES="${1:---restart}"
 
 case "$WHATSAPP_DEFAULT_DM_AGENT" in
@@ -122,7 +123,7 @@ copy_workspace \
   "$MECHI_REPO/ops/openclaw-community-workspace" \
   "$OPENCLAW_HOME/workspace-community"
 
-node - "$OPENCLAW_HOME" "$PRIMARY_WHATSAPP_NUMBER" "$PRIMARY_WHATSAPP_ACCOUNT_ID" "$SECONDARY_WHATSAPP_NUMBER" "$SECONDARY_WHATSAPP_ACCOUNT_ID" "$WHATSAPP_CONTROL_GROUP_IDS" "$WHATSAPP_CUSTOMER_GROUP_IDS" "$WHATSAPP_CUSTOMER_GROUP_AGENT" "$WHATSAPP_CUSTOMER_GROUP_MENTION_REQUIRED" "$WHATSAPP_CONTROL_DIRECT_IDS" "$WHATSAPP_DEFAULT_DM_AGENT" "$WHATSAPP_DM_SCOPE" <<'NODE'
+node - "$OPENCLAW_HOME" "$PRIMARY_WHATSAPP_NUMBER" "$PRIMARY_WHATSAPP_ACCOUNT_ID" "$SECONDARY_WHATSAPP_NUMBER" "$SECONDARY_WHATSAPP_ACCOUNT_ID" "$WHATSAPP_CONTROL_GROUP_IDS" "$WHATSAPP_CUSTOMER_GROUP_IDS" "$WHATSAPP_CUSTOMER_GROUP_AGENT" "$WHATSAPP_CUSTOMER_GROUP_MENTION_REQUIRED" "$WHATSAPP_CONTROL_DIRECT_IDS" "$WHATSAPP_DEFAULT_DM_AGENT" "$WHATSAPP_DM_SCOPE" "$WHATSAPP_HISTORY_LIMIT" <<'NODE'
 const fs = require('node:fs');
 const path = require('node:path');
 
@@ -139,6 +140,7 @@ const [
   controlDirectIdsRaw,
   defaultDmAgentRaw,
   dmScopeRaw,
+  historyLimitRaw,
 ] = process.argv.slice(2);
 const configPath = path.join(openclawHome, 'openclaw.json');
 const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
@@ -176,6 +178,7 @@ const controlDirectIds = normalizeDirectPeerIds(parseCsv(controlDirectIdsRaw));
 const managedDirectIds = new Set(controlDirectIds);
 const defaultDmAgent = normalizeRouteAgent(defaultDmAgentRaw, 'support');
 const dmScope = normalizeDmScope(dmScopeRaw);
+const historyLimit = normalizeHistoryLimit(historyLimitRaw);
 
 function objectOrEmpty(value) {
   return value && typeof value === 'object' && !Array.isArray(value) ? value : {};
@@ -202,6 +205,14 @@ function normalizeDmScope(value) {
   return ['main', 'per-peer', 'per-channel-peer', 'per-account-channel-peer'].includes(scope)
     ? scope
     : 'per-account-channel-peer';
+}
+
+function normalizeHistoryLimit(value) {
+  const parsed = Number.parseInt(String(value || ''), 10);
+  if (!Number.isFinite(parsed) || parsed < 20) {
+    return 200;
+  }
+  return Math.min(parsed, 500);
 }
 
 function normalizeDirectPeerIds(values) {
@@ -235,12 +246,14 @@ function mentionGatedGroups(existingGroups, mentionRequiredByGroup = new Map()) 
   groups['*'] = {
     ...objectOrEmpty(groups['*']),
     requireMention: true,
+    historyLimit,
   };
 
   for (const groupId of managedGroupIds) {
     groups[groupId] = {
       ...objectOrEmpty(groups[groupId]),
       requireMention: mentionRequiredByGroup.get(groupId) ?? true,
+      historyLimit,
     };
   }
 
@@ -341,6 +354,7 @@ if (primaryAccountId) {
     allowFrom: ['*'],
     groupPolicy: 'open',
     groupAllowFrom: ['*'],
+    historyLimit,
     groups: mentionGatedGroups(previousAccount.groups, mentionRequiredByGroup),
   };
 }
@@ -357,6 +371,7 @@ if (secondaryAccountId) {
     allowFrom: ['*'],
     groupPolicy: 'open',
     groupAllowFrom: ['*'],
+    historyLimit,
     groups: mentionGatedGroups(previousAccount.groups, mentionRequiredByGroup),
   };
 }
@@ -370,6 +385,7 @@ config.channels.whatsapp = {
   allowFrom: ['*'],
   groupPolicy: 'open',
   groupAllowFrom: ['*'],
+  historyLimit,
   groups: mentionGatedGroups(current.groups, mentionRequiredByGroup),
   accounts,
 };
@@ -412,6 +428,7 @@ if [ -n "$WHATSAPP_CONTROL_DIRECT_IDS" ]; then
   echo "- control direct senders pinned to control: $WHATSAPP_CONTROL_DIRECT_IDS"
 fi
 echo "- DM session scope: $WHATSAPP_DM_SCOPE"
+echo "- WhatsApp history limit requested: $WHATSAPP_HISTORY_LIMIT"
 
 if [ "$RESTART_SERVICES" = "--no-restart" ]; then
   echo "Skipped service restart."

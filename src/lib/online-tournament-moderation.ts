@@ -4,6 +4,11 @@ import {
   isBattleRoyaleTournamentGame,
   type OnlineTournamentBattleRoyaleStanding,
 } from '@/lib/online-tournament-ops';
+import {
+  buildFallbackEfootballFixtures,
+  buildFallbackPubgmStandings,
+  hasFallbackPubgmLeaderboard,
+} from '@/lib/online-tournament-fallback-results';
 import { type OnlineTournamentGameKey } from '@/lib/online-tournament';
 import {
   loadOnlineTournamentOpsState,
@@ -18,20 +23,29 @@ export async function buildOnlineTournamentOpsDashboardState(
   supabase: SupabaseClient
 ): Promise<OnlineTournamentOpsDashboardState> {
   const state = await loadOnlineTournamentOpsState(supabase);
-
-  return {
-    ...state,
-    standings: {
-      pubgm: buildBattleRoyaleStandings({
+  const fixtures =
+    state.fixtures.length > 0
+      ? state.fixtures
+      : buildFallbackEfootballFixtures(state.registrations);
+  const pubgmStandings = hasFallbackPubgmLeaderboard(state.submissions)
+    ? buildFallbackPubgmStandings()
+    : buildBattleRoyaleStandings({
         game: 'pubgm',
         registrations: state.registrations,
         submissions: state.submissions,
-      }),
-      codm: buildBattleRoyaleStandings({
-        game: 'codm',
-        registrations: state.registrations,
-        submissions: state.submissions,
-      }),
+      });
+  const codmStandings = buildBattleRoyaleStandings({
+    game: 'codm',
+    registrations: state.registrations,
+    submissions: state.submissions,
+  });
+
+  return {
+    ...state,
+    fixtures,
+    standings: {
+      pubgm: pubgmStandings,
+      codm: codmStandings,
     },
   };
 }

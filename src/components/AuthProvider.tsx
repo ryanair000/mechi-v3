@@ -21,6 +21,10 @@ const PUBLIC_AUTH_REFRESH_SKIP_PREFIXES = [
   '/s/',
 ];
 
+function isExplicitAuthFailure(status: number) {
+  return status === 401 || status === 403;
+}
+
 function shouldSkipAnonymousRefresh(pathname: string): boolean {
   if (pathname === '/') {
     return true;
@@ -121,7 +125,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setUser(nextUser);
         setToken(null);
         localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(nextUser));
-      } else {
+      } else if (isExplicitAuthFailure(res.status)) {
         clearStoredAuth();
         setUser(null);
         setToken(null);

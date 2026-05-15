@@ -1,4 +1,4 @@
-import type { OnlineTournamentGameKey } from '@/lib/online-tournament';
+export type ModeratorTournamentGameKey = 'pubgm' | 'codm' | 'efootball';
 
 export type ModeratorTournamentKey =
   | 'playmechi_codm'
@@ -6,7 +6,7 @@ export type ModeratorTournamentKey =
   | 'playmechi_efootball';
 
 export type ModeratorTournamentOption = {
-  game: OnlineTournamentGameKey;
+  game: ModeratorTournamentGameKey;
   key: ModeratorTournamentKey;
   label: string;
   shortLabel: string;

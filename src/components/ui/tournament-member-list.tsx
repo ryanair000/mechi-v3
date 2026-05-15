@@ -42,7 +42,7 @@ function getInitial(value: string) {
 function TournamentLine({ item }: { item: TournamentMemberListItem }) {
   const actionIsMuted = item.actionVariant === 'muted';
   const secondaryActionClassName =
-    'inline-flex min-h-9 w-full items-center justify-center gap-1.5 rounded-md border border-[var(--border-color)] bg-[var(--surface-elevated)] px-3 py-2 text-xs font-black text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)] sm:w-auto';
+    'inline-flex min-h-9 w-full items-center justify-center gap-1.5 rounded-[var(--radius-control)] border border-[var(--border-color)] bg-[var(--surface-elevated)] px-3 py-2 text-xs font-black text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)] sm:w-auto';
 
   return (
     <div
@@ -131,7 +131,7 @@ function TournamentLine({ item }: { item: TournamentMemberListItem }) {
         <Link
           href={item.actionHref}
           className={cn(
-            'inline-flex min-h-9 w-full items-center justify-center rounded-md border px-3 py-2 text-xs font-black transition-colors sm:w-auto',
+            'inline-flex min-h-9 w-full items-center justify-center rounded-[var(--radius-control)] border px-3 py-2 text-xs font-black transition-colors sm:w-auto',
             actionIsMuted
               ? 'border-[var(--border-color)] bg-[var(--surface-elevated)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
               : 'border-[rgba(50,224,196,0.22)] bg-[rgba(50,224,196,0.1)] text-[var(--accent-secondary-text)] hover:bg-[rgba(50,224,196,0.16)]'

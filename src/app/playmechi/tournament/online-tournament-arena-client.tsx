@@ -22,8 +22,12 @@ import { getLoginPath, getRegisterPath } from '@/lib/navigation';
 import {
   ONLINE_TOURNAMENT_ARENA_PATH,
   ONLINE_TOURNAMENT_CHECK_IN_PATH,
+  ONLINE_TOURNAMENT_PAYMENT_CONFIRMATION_ENABLED,
+  ONLINE_TOURNAMENT_ENTRY_PRICING,
   ONLINE_TOURNAMENT_GAME_BY_KEY,
   ONLINE_TOURNAMENT_REGISTRATION_PATH,
+  getOnlineTournamentPaymentTierLabel,
+  isOnlineTournamentPaidStatus,
   normalizeTournamentDeviceSerialLast6,
   requiresTournamentDeviceSerialLast6,
   type OnlineTournamentGameKey,
@@ -437,6 +441,9 @@ export function OnlineTournamentArenaClient({
     () => new Set(state?.myRegistrations.map((registration) => registration.id) ?? []),
     [state]
   );
+  const hasConfirmedPayment =
+    !ONLINE_TOURNAMENT_PAYMENT_CONFIRMATION_ENABLED ||
+    isOnlineTournamentPaidStatus(myRegistration?.payment_status);
 
   useEffect(() => {
     const fallbackWhatsappNumber = user?.whatsapp_number ?? user?.phone ?? '';
@@ -626,6 +633,7 @@ export function OnlineTournamentArenaClient({
   }
 
   const hasCheckedIn = hasSubmittedCheckIn(myRegistration);
+  const canAccessDesk = hasConfirmedPayment && hasCheckedIn;
 
   return (
     <div className="playmechi-tournament-desk page-container space-y-4 py-4">
@@ -637,7 +645,9 @@ export function OnlineTournamentArenaClient({
               {activeConfig.label}
             </h1>
             <p className="mt-2 max-w-2xl text-sm text-[var(--text-secondary)]">
-              Check in first. Rooms, standings, screenshots, scores, and rewards unlock after check-in.
+              {ONLINE_TOURNAMENT_PAYMENT_CONFIRMATION_ENABLED
+                ? 'Payment confirmation and check-in unlock rooms, standings, screenshots, scores, and rewards for this game.'
+                : 'Check in first. Rooms, standings, screenshots, scores, and rewards unlock after check-in.'}
             </p>
           </div>
 
@@ -673,7 +683,7 @@ export function OnlineTournamentArenaClient({
 
       <TournamentRulesPanel activeGame={activeGame} />
 
-      {hasCheckedIn ? (
+      {canAccessDesk ? (
         <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_340px]">
           <div className="space-y-4">
             {isBattleRoyaleTournamentGame(activeGame) ? (
@@ -733,6 +743,13 @@ function PlayerGameStatus({
 }) {
   const config = ONLINE_TOURNAMENT_GAME_BY_KEY[activeGame];
   const isCheckingIn = acting === `check-in-${activeGame}`;
+  const isPaymentConfirmed =
+    !ONLINE_TOURNAMENT_PAYMENT_CONFIRMATION_ENABLED ||
+    isOnlineTournamentPaidStatus(registration?.payment_status);
+  const paymentTierLabel =
+    ONLINE_TOURNAMENT_PAYMENT_CONFIRMATION_ENABLED && registration?.payment_tier
+      ? getOnlineTournamentPaymentTierLabel(registration.payment_tier)
+      : null;
   const isCheckedIn = hasSubmittedCheckIn(registration);
   const isDisqualified = registration?.eligibility_status === 'disqualified';
   const hasLegacySerialSyncIssue = hasLegacySerialSyncGap(registration);
@@ -740,16 +757,19 @@ function PlayerGameStatus({
   const needsDetailCompletion = isCheckedIn && missingCheckInFields.length > 0;
   const shouldShowRecoveryForm = isCheckInRoute && needsDetailCompletion;
   const shouldShowCheckInForm = Boolean(
-    registration && !isDisqualified && (!isCheckedIn || shouldShowRecoveryForm)
+    registration &&
+      isPaymentConfirmed &&
+      !isDisqualified &&
+      (!isCheckedIn || shouldShowRecoveryForm)
   );
-  const shouldShowCheckInSummary = Boolean(registration && isCheckedIn && !shouldShowRecoveryForm);
+  const shouldShowCheckInSummary = Boolean(
+    registration && isPaymentConfirmed && isCheckedIn && !shouldShowRecoveryForm
+  );
   const requiresDeviceSerial = requiresTournamentDeviceSerialLast6(activeGame);
   const shouldShowCodmDetailHelp =
     shouldShowRecoveryForm &&
     activeGame === 'codm' &&
-    missingCheckInFields.some(
-      (field) => field === 'IGN' || field === 'UID' || field === 'serial last 6'
-    );
+    missingCheckInFields.some((field) => field === 'IGN' || field === 'UID');
 
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -767,13 +787,21 @@ function PlayerGameStatus({
           <div className="mt-3 flex flex-wrap gap-2">
             {registration ? statusPill(registration.check_in_status) : null}
             {registration ? statusPill(registration.eligibility_status) : null}
+            {registration && ONLINE_TOURNAMENT_PAYMENT_CONFIRMATION_ENABLED
+              ? statusPill(registration.payment_status)
+              : null}
+            {ONLINE_TOURNAMENT_PAYMENT_CONFIRMATION_ENABLED && paymentTierLabel ? (
+              <span className="rounded-full border border-[var(--border-color)] bg-[var(--surface-elevated)] px-2.5 py-1 text-xs font-bold text-[var(--text-secondary)]">
+                {paymentTierLabel}
+              </span>
+            ) : null}
             <span className="rounded-full border border-[var(--border-color)] bg-[var(--surface-elevated)] px-2.5 py-1 text-xs font-bold text-[var(--text-secondary)]">
               {config.format}
             </span>
           </div>
         </div>
 
-        {registration && isCheckedIn && !needsDetailCompletion ? (
+        {registration && isPaymentConfirmed && isCheckedIn && !needsDetailCompletion ? (
           <button
             type="button"
             disabled
@@ -811,6 +839,29 @@ function PlayerGameStatus({
         </div>
       ) : null}
 
+      {registration &&
+      ONLINE_TOURNAMENT_PAYMENT_CONFIRMATION_ENABLED &&
+      !isDisqualified &&
+      !isPaymentConfirmed ? (
+        <div className="mt-5 rounded-[var(--radius-card)] border border-amber-400/20 bg-amber-500/10 px-4 py-4 text-sm text-amber-100">
+          <p className="leading-6">
+            {ONLINE_TOURNAMENT_ENTRY_PRICING.pendingPaymentMessage}
+          </p>
+          <p className="mt-2 leading-6">
+            {ONLINE_TOURNAMENT_ENTRY_PRICING.pricingLineLabel}.{' '}
+            {ONLINE_TOURNAMENT_ENTRY_PRICING.earlyBirdPolicyLabel}
+          </p>
+          {registration.payment_reference || registration.payment_note ? (
+            <p className="mt-2 leading-6">
+              {registration.payment_reference
+                ? `Reference: ${registration.payment_reference}. `
+                : ''}
+              {registration.payment_note ?? ''}
+            </p>
+          ) : null}
+        </div>
+      ) : null}
+
       {shouldShowRecoveryForm ? (
         <div className="mt-5 rounded-[var(--radius-card)] border border-amber-400/20 bg-amber-500/10 px-4 py-4 text-sm text-amber-100">
           <p className="leading-6">
@@ -826,11 +877,6 @@ function PlayerGameStatus({
                 <p>
                   <span className="font-semibold text-amber-50">IGN and UID:</span> Open Call of Duty:
                   Mobile, tap your profile, use the name at the top, and copy the UID shown below it.
-                </p>
-                <p>
-                  <span className="font-semibold text-amber-50">Serial last 6:</span> Open your phone
-                  Settings, then About phone and Status or Device information. Find Serial Number and
-                  enter the last 6 characters only.
                 </p>
               </div>
             </details>
@@ -949,6 +995,16 @@ function PlayerGameStatus({
           <CheckInDetail label="UID" value={registration.game_uid} />
           <CheckInDetail label="Device model" value={registration.device_model} />
           <CheckInDetail label="WhatsApp number" value={registration.whatsapp_number} />
+          {ONLINE_TOURNAMENT_PAYMENT_CONFIRMATION_ENABLED ? (
+          <CheckInDetail
+            label="Payment"
+            value={
+              registration.entry_fee_kes
+                ? `${paymentTierLabel ?? 'Confirmed'} • KSh ${registration.entry_fee_kes}`
+                : paymentTierLabel ?? registration.payment_status
+            }
+          />
+          ) : null}
           {requiresDeviceSerial ? (
             <CheckInDetail
               label="Serial last 6"

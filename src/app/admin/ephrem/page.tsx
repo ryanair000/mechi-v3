@@ -49,6 +49,7 @@ type GameDeskRow = {
   checkedIn: number;
   slots: number;
   spotsLeft: number;
+  checkInCap: number;
 };
 
 type EphremDeskData = {
@@ -59,6 +60,7 @@ type EphremDeskData = {
   checkedIn: number;
   slots: number;
   spotsLeft: number;
+  checkInCap: number;
   activeTournaments: number;
   pendingTournaments: number;
   pendingPayouts: number;
@@ -116,6 +118,7 @@ function buildGameRows(registrations: RegistrationRow[]): GameDeskRow[] {
       checkedIn,
       slots: game.slots,
       spotsLeft: registrationClosed ? 0 : Math.max(0, game.slots - rows.length),
+      checkInCap: game.checkInCap,
     };
   });
 }
@@ -131,6 +134,7 @@ function buildDeskData(registrations: RegistrationRow[] = []): EphremDeskData {
     checkedIn: gameRows.reduce((total, game) => total + game.checkedIn, 0),
     slots: gameRows.reduce((total, game) => total + game.slots, 0),
     spotsLeft: gameRows.reduce((total, game) => total + game.spotsLeft, 0),
+    checkInCap: gameRows.reduce((total, game) => total + game.checkInCap, 0),
     activeTournaments: 0,
     pendingTournaments: 0,
     pendingPayouts: 0,
@@ -216,7 +220,8 @@ export default async function AdminEphremDeskPage() {
   const data = await getEphremDeskData();
   const nextGame = getNextGame();
   const nextGameTime = nextGame ? formatEatDateTime(nextGame.matchStartsAt) : ONLINE_TOURNAMENT_EVENT_DATES;
-  const completionRate = data.slots > 0 ? Math.round((data.registered / data.slots) * 100) : 0;
+  const completionRate =
+    data.checkInCap > 0 ? Math.round((data.checkedIn / data.checkInCap) * 100) : 0;
 
   const metrics = [
     {

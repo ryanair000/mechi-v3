@@ -26,7 +26,7 @@ function normalizeNotificationHref(href?: string | null) {
     return null;
   }
 
-  return href === '/feed' ? '/notifications' : href;
+  return href;
 }
 
 export function NotificationsListPage() {
@@ -77,7 +77,7 @@ export function NotificationsListPage() {
               Updates
             </h1>
             <p className="mt-3 text-sm leading-6 text-[var(--text-secondary)]">
-              A simple list of match, tournament, and account alerts.
+              A simple list of match, community, tournament, and account alerts.
             </p>
           </div>
 
@@ -102,7 +102,7 @@ export function NotificationsListPage() {
             <Bell size={34} className="mx-auto text-[var(--text-soft)] opacity-40" />
             <p className="mt-4 font-semibold text-[var(--text-primary)]">No notifications yet</p>
             <p className="mt-1 text-sm text-[var(--text-soft)]">
-              Match and tournament alerts will show up here.
+              Match, community, and tournament alerts will show up here.
             </p>
           </div>
         ) : (

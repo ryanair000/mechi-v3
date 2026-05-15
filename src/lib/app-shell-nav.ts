@@ -5,11 +5,10 @@ import {
   Gamepad2,
   Gift,
   History,
-  Inbox,
   LayoutDashboard,
+  MessageCircle,
   MonitorPlay,
   type LucideIcon,
-  MessageCircle,
   Share2,
   ShieldCheck,
   Swords,
@@ -61,8 +60,8 @@ const STREAM_NAV_ITEM: AppNavItem = {
 
 const INBOX_NAV_ITEM: AppNavItem = {
   href: '/inbox',
-  label: 'Inbox',
-  icon: Inbox,
+  label: 'Community Chat',
+  icon: MessageCircle,
   matchMode: 'prefix',
 };
 

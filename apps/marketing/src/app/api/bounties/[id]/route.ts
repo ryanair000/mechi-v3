@@ -2,7 +2,10 @@ import { NextResponse, type NextRequest } from "next/server";
 import { requireApiSession } from "@/lib/auth";
 import { createServiceClient } from "@/lib/supabase";
 
-export async function PATCH(request: NextRequest, ctx: RouteContext<"/api/bounties/[id]">) {
+export async function PATCH(
+  request: NextRequest,
+  ctx: { params: Promise<{ id: string }> },
+) {
   const auth = await requireApiSession(request);
   if (auth.error) return auth.error;
 

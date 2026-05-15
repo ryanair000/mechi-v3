@@ -1,9 +1,12 @@
 import {
   ONLINE_TOURNAMENT_CHECK_IN_PATH,
   ONLINE_TOURNAMENT_GAME_BY_KEY,
+  isOnlineTournamentPaidStatus,
   type OnlineTournamentDisputeCategory,
   type OnlineTournamentEligibilityStatus,
   type OnlineTournamentGameKey,
+  type OnlineTournamentPaymentStatus,
+  type OnlineTournamentPaymentTier,
 } from '@/lib/online-tournament';
 
 export type OnlineTournamentBattleRoyaleGameKey = Extract<
@@ -66,6 +69,13 @@ export type OnlineTournamentRegistrationOpsRow = {
   reward_eligible: boolean;
   eligibility_status: OnlineTournamentEligibilityStatus;
   check_in_status: 'registered' | 'checked_in' | 'no_show';
+  entry_fee_kes: number | null;
+  payment_tier: OnlineTournamentPaymentTier | null;
+  payment_status: OnlineTournamentPaymentStatus;
+  payment_reference: string | null;
+  payment_confirmed_at: string | null;
+  payment_confirmed_by: string | null;
+  payment_note: string | null;
   checked_in_at: string | null;
   admin_note: string | null;
   created_at: string;
@@ -306,7 +316,8 @@ export function buildBattleRoyaleStandings(params: {
       (registration) =>
         registration.game === params.game &&
         registration.check_in_status === 'checked_in' &&
-        registration.eligibility_status !== 'disqualified'
+        registration.eligibility_status !== 'disqualified' &&
+        isOnlineTournamentPaidStatus(registration.payment_status)
     )
     .map((registration) => ({
       rank: 0,
@@ -388,5 +399,7 @@ export function buildBattleRoyaleStandings(params: {
 
 export function getGamePrizeLabels(game: OnlineTournamentGameKey) {
   const config = ONLINE_TOURNAMENT_GAME_BY_KEY[game];
-  return [config.firstPrize, config.secondPrize, config.thirdPrize];
+  return [config.firstPrize, config.secondPrize, config.thirdPrize].filter(
+    (prize): prize is string => Boolean(prize)
+  );
 }

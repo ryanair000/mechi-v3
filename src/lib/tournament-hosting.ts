@@ -1,4 +1,5 @@
-import type { Plan } from '@/types';
+import { resolvePlan } from '@/lib/plans';
+import type { Plan, UserRole } from '@/types';
 
 export const TOURNAMENT_HOSTING_TIMEZONE = 'Africa/Nairobi';
 export const ELITE_FEE_FREE_TOURNAMENT_LIMIT = 3;
@@ -12,6 +13,12 @@ export type TournamentHostingAccess = {
   eliteFeeFreeUsed: number;
   eliteFeeFreeRemaining: number;
   feeWaived: boolean;
+};
+
+type TournamentHostingProfile = {
+  plan?: string | null;
+  planExpiresAt?: string | null;
+  role?: UserRole | null;
 };
 
 function getTournamentHostingMonthParts(date = new Date()) {
@@ -40,29 +47,38 @@ export function getTournamentHostingMonthWindow(date = new Date()) {
   };
 }
 
+export function canProfileHostTournaments(profile: TournamentHostingProfile): boolean {
+  if (profile.role === 'admin') {
+    return true;
+  }
+
+  return resolvePlan(profile.plan, profile.planExpiresAt) === 'elite';
+}
+
 export function getTournamentHostingAccess(
   plan: Plan,
-  hostedThisMonth = 0
+  hostedThisMonth = 0,
+  options?: { role?: UserRole | null }
 ): TournamentHostingAccess {
   const feeFreeUsed = Math.max(0, Math.min(hostedThisMonth, ELITE_FEE_FREE_TOURNAMENT_LIMIT));
   const feeFreeRemaining = Math.max(0, ELITE_FEE_FREE_TOURNAMENT_LIMIT - hostedThisMonth);
 
-  if (plan === 'free') {
-    return {
-      plan,
-      canHost: false,
-      platformFeePercent: STANDARD_TOURNAMENT_PLATFORM_FEE_PERCENT,
-      eliteFeeFreeLimit: ELITE_FEE_FREE_TOURNAMENT_LIMIT,
-      eliteFeeFreeUsed: feeFreeUsed,
-      eliteFeeFreeRemaining: feeFreeRemaining,
-      feeWaived: false,
-    };
-  }
-
-  if (plan === 'pro') {
+  if (options?.role === 'admin') {
     return {
       plan,
       canHost: true,
+      platformFeePercent: 0,
+      eliteFeeFreeLimit: ELITE_FEE_FREE_TOURNAMENT_LIMIT,
+      eliteFeeFreeUsed: 0,
+      eliteFeeFreeRemaining: ELITE_FEE_FREE_TOURNAMENT_LIMIT,
+      feeWaived: true,
+    };
+  }
+
+  if (plan !== 'elite') {
+    return {
+      plan,
+      canHost: false,
       platformFeePercent: STANDARD_TOURNAMENT_PLATFORM_FEE_PERCENT,
       eliteFeeFreeLimit: ELITE_FEE_FREE_TOURNAMENT_LIMIT,
       eliteFeeFreeUsed: feeFreeUsed,

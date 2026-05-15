@@ -84,6 +84,11 @@ const nextConfig: NextConfig = {
         hostname: "shared.cloudflare.steamstatic.com",
         pathname: "/**",
       },
+      {
+        protocol: "https",
+        hostname: "images.unsplash.com",
+        pathname: "/**",
+      },
     ],
   },
   experimental: {
@@ -138,7 +143,7 @@ const nextConfig: NextConfig = {
               "default-src 'self'",
               "script-src 'self' 'unsafe-eval' 'unsafe-inline' https://www.googletagmanager.com https://us-assets.i.posthog.com https://eu-assets.i.posthog.com",
               "style-src 'self' 'unsafe-inline'",
-              "img-src 'self' data: blob: https://cdn.cloudflare.steamstatic.com https://res.cloudinary.com https://shared.cloudflare.steamstatic.com https://www.google-analytics.com https://region1.google-analytics.com https://us.i.posthog.com https://eu.i.posthog.com https://us-assets.i.posthog.com https://eu-assets.i.posthog.com",
+              "img-src 'self' data: blob: https://cdn.cloudflare.steamstatic.com https://res.cloudinary.com https://shared.cloudflare.steamstatic.com https://images.unsplash.com https://commons.wikimedia.org https://upload.wikimedia.org https://fifauteam.com https://drop-assets.ea.com https://www.google-analytics.com https://region1.google-analytics.com https://us.i.posthog.com https://eu.i.posthog.com https://us-assets.i.posthog.com https://eu-assets.i.posthog.com",
               "font-src 'self' data:",
               "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.paystack.co https://www.googletagmanager.com https://www.google-analytics.com https://region1.google-analytics.com https://us.i.posthog.com https://eu.i.posthog.com https://us-assets.i.posthog.com https://eu-assets.i.posthog.com",
               "frame-ancestors 'none'",

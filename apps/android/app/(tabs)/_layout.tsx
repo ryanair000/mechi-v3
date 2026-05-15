@@ -29,6 +29,7 @@ export default function TabsLayout() {
 
   return (
     <Tabs
+      initialRouteName="index"
       screenOptions={{
         headerShown: false,
         tabBarActiveTintColor: colors.primary,
@@ -55,28 +56,34 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Overview',
-          tabBarIcon: ({ color, size }) => <Ionicons name="trophy" color={color} size={size} />,
-        }}
-      />
-      <Tabs.Screen
-        name="register"
-        options={{
-          title: 'Register',
-          tabBarIcon: ({ color, size }) => <Ionicons name="ticket" color={color} size={size} />,
+          title: 'Community',
+          tabBarIcon: ({ color, size }) => <Ionicons name="chatbubbles" color={color} size={size} />,
         }}
       />
       <Tabs.Screen
         name="arena"
         options={{
-          title: 'Desk',
-          tabBarIcon: ({ color, size }) => <Ionicons name="clipboard" color={color} size={size} />,
+          title: 'Tournaments',
+          tabBarIcon: ({ color, size }) => <Ionicons name="trophy" color={color} size={size} />,
+        }}
+      />
+      <Tabs.Screen
+        name="feed"
+        options={{
+          title: 'Feed',
+          tabBarIcon: ({ color, size }) => <Ionicons name="newspaper" color={color} size={size} />,
+        }}
+      />
+      <Tabs.Screen
+        name="register"
+        options={{
+          href: null,
         }}
       />
       <Tabs.Screen
         name="profile"
         options={{
-          title: 'Account',
+          title: 'Profile',
           tabBarIcon: ({ color, size }) => <Ionicons name="person-circle" color={color} size={size} />,
         }}
       />

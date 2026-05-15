@@ -94,14 +94,20 @@ export async function POST(request: NextRequest) {
     const supabase = createServiceClient();
     const { data: registrationRaw, error: registrationError } = await supabase
       .from('online_tournament_registrations')
-      .select('id, game, user_id, eligibility_status')
+      .select('id, game, user_id, eligibility_status, check_in_status')
       .eq('event_slug', ONLINE_TOURNAMENT_SLUG)
       .eq('user_id', access.profile.id)
       .eq('game', game)
       .maybeSingle();
 
     const registration = registrationRaw as
-      | { id: string; game: string; user_id: string; eligibility_status: string }
+      | {
+          id: string;
+          game: string;
+          user_id: string;
+          eligibility_status: string;
+          check_in_status: string;
+        }
       | null;
 
     if (registrationError) {
@@ -111,6 +117,13 @@ export async function POST(request: NextRequest) {
     if (!registration || registration.eligibility_status === 'disqualified') {
       return NextResponse.json(
         { error: 'Register for this game before uploading results' },
+        { status: 403 }
+      );
+    }
+
+    if (registration.check_in_status !== 'checked_in') {
+      return NextResponse.json(
+        { error: 'Complete check-in before uploading results.' },
         { status: 403 }
       );
     }

@@ -13,7 +13,7 @@ interface PaywallModalProps {
 const COPY = {
   match_limit: {
     title: "You've hit today's match cap",
-    body: 'Free players get 5 ranked matches per day. Go Pro for unlimited runs and direct challenges.',
+    body: 'Free players get 5 ranked matches per day. Go Pro from KES 49/week billed monthly for unlimited runs and direct challenges.',
   },
   game_limit: {
     title: 'Unlock more focus games',
@@ -73,8 +73,9 @@ export function PaywallModal({ reason, featureName, onClose }: PaywallModalProps
                     </p>
                   </div>
                   <div className="text-right">
-                    <p className="text-sm font-black text-[var(--text-primary)]">KSH {plan.monthlyKes}</p>
-                    <p className="text-[11px] text-[var(--text-soft)]">per month</p>
+                    <p className="text-sm font-black text-[var(--text-primary)]">KES {plan.monthlyKes}</p>
+                    <p className="text-[11px] text-[var(--accent-secondary-text)]">from KES {plan.weeklyKes}/week</p>
+                    <p className="text-[11px] text-[var(--text-soft)]">billed monthly</p>
                   </div>
                 </div>
               </div>

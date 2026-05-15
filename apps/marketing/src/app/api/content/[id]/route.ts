@@ -2,7 +2,10 @@ import { NextResponse, type NextRequest } from "next/server";
 import { requireApiSession } from "@/lib/auth";
 import { createServiceClient } from "@/lib/supabase";
 
-export async function PATCH(request: NextRequest, ctx: RouteContext<"/api/content/[id]">) {
+export async function PATCH(
+  request: NextRequest,
+  ctx: { params: Promise<{ id: string }> },
+) {
   const auth = await requireApiSession(request);
   if (auth.error) return auth.error;
 
@@ -18,6 +21,7 @@ export async function PATCH(request: NextRequest, ctx: RouteContext<"/api/conten
     "posted_twitter",
     "posted_whatsapp",
     "notes",
+    "twitter_post_text",
   ] as const;
 
   const updates: Record<string, unknown> = {};
@@ -26,6 +30,11 @@ export async function PATCH(request: NextRequest, ctx: RouteContext<"/api/conten
       updates[key] = body[key];
     }
   });
+
+  if ("twitter_post_text" in updates && typeof updates.twitter_post_text === "string") {
+    const nextValue = updates.twitter_post_text.trim();
+    updates.twitter_post_text = nextValue ? nextValue : null;
+  }
 
   const supabase = createServiceClient();
   const { data, error } = await supabase

@@ -1,5 +1,5 @@
-import { redirect } from 'next/navigation';
+import { PlayMechiFeedPage } from '@/components/PlayMechiFeedPage';
 
 export default function FeedPage() {
-  redirect('/notifications');
+  return <PlayMechiFeedPage />;
 }

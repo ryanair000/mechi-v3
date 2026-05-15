@@ -17,8 +17,14 @@ const INSTAGRAM_APP_SECRET =
   process.env.INSTAGRAM_APP_SECRET?.trim() ||
   '';
 const INSTAGRAM_PAGE_ACCESS_TOKEN = process.env.INSTAGRAM_PAGE_ACCESS_TOKEN ?? '';
-const OPENCLAW_WEBHOOK_URL = process.env.OPENCLAW_WEBHOOK_URL ?? '';
-const OPENCLAW_API_KEY = process.env.OPENCLAW_API_KEY ?? '';
+const OPENCLAW_BRIDGE_URL = process.env.MECHI_OPENCLAW_BRIDGE_URL?.trim() ?? '';
+const OPENCLAW_WEBHOOK_URL = resolveInstagramBridgeUrl(
+  process.env.OPENCLAW_WEBHOOK_URL?.trim() || OPENCLAW_BRIDGE_URL
+);
+const OPENCLAW_API_KEY =
+  process.env.OPENCLAW_API_KEY?.trim() ||
+  process.env.MECHI_OPENCLAW_BRIDGE_TOKEN?.trim() ||
+  '';
 const OPENCLAW_TIMEOUT_MS = Number(process.env.OPENCLAW_TIMEOUT_MS ?? 15000);
 const INSTAGRAM_FALLBACK_REPLY = process.env.INSTAGRAM_FALLBACK_REPLY?.trim() ?? '';
 const INSTAGRAM_ACCESS_TOKEN =
@@ -76,6 +82,24 @@ export interface InstagramSendResult {
   error?: string;
   details?: string;
   responseBody?: unknown;
+}
+
+function resolveInstagramBridgeUrl(value: string): string {
+  if (!value) {
+    return '';
+  }
+
+  try {
+    const url = new URL(value);
+
+    if (url.pathname === '/' || url.pathname === '' || url.pathname === '/v1/mechi-support-reply') {
+      url.pathname = '/webhooks/instagram';
+    }
+
+    return url.toString();
+  } catch {
+    return value;
+  }
 }
 
 function isRecord(value: unknown): value is UnknownRecord {
@@ -372,7 +396,7 @@ function normalizeOpenClawMessages(payload: unknown): string[] {
 
   const messages: string[] = [];
 
-  const directKeys = ['reply', 'text'];
+  const directKeys = ['reply', 'reply_text', 'text'];
   for (const key of directKeys) {
     const value = getString(payload[key]);
     if (value) {

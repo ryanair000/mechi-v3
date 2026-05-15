@@ -2,12 +2,12 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, MonitorPlay, Swords, User } from 'lucide-react';
+import { Home, Swords, Trophy, User } from 'lucide-react';
 
 const NAV_ITEMS = [
-  { href: '/dashboard', label: 'Home', icon: Home },
+  { href: '/feed', label: 'Feed', icon: Home, activeHrefs: ['/dashboard'] },
   { href: '/tournaments', label: 'Tournaments', icon: Swords },
-  { href: '/streams', label: 'Streams', icon: MonitorPlay },
+  { href: '/leaderboard', label: 'Leaderboard', icon: Trophy },
   { href: '/profile', label: 'Profile', icon: User },
 ];
 
@@ -17,8 +17,13 @@ export function BottomNav() {
   return (
     <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-[var(--border-color)] bg-[rgba(14,22,38,0.96)] pb-[env(safe-area-inset-bottom)] backdrop-blur-xl lg:hidden">
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-around px-1.5">
-        {NAV_ITEMS.map(({ href, label, icon: Icon }) => {
-          const isActive = pathname === href || (href !== '/dashboard' && pathname.startsWith(href));
+        {NAV_ITEMS.map(({ href, label, icon: Icon, activeHrefs = [] }) => {
+          const isActive =
+            pathname === href ||
+            pathname.startsWith(`${href}/`) ||
+            activeHrefs.some(
+              (activeHref) => pathname === activeHref || pathname.startsWith(`${activeHref}/`)
+            );
           return (
             <Link
               key={href}

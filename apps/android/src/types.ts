@@ -24,6 +24,8 @@ export type GameKey =
 export type OnlineTournamentGameKey = Extract<GameKey, 'pubgm' | 'codm' | 'efootball'>;
 
 export type UserRole = 'user' | 'moderator' | 'admin';
+export type CommunityMessageType = 'text' | 'announcement' | 'system';
+export type CommunityMessageSenderType = 'user' | 'moderator' | 'admin' | 'system';
 
 export type PlatformDefinition = {
   label: string;
@@ -77,6 +79,10 @@ export type OnlineTournamentGameRegistrationCount = {
   slots: number;
   spotsLeft: number;
   full: boolean;
+  checkedIn: number;
+  checkInCap: number;
+  checkInSpotsLeft: number;
+  checkInFull: boolean;
 };
 
 export type OnlineTournamentRegistration = {
@@ -197,4 +203,56 @@ export type OnlineTournamentPlayerState = {
   standings: Partial<Record<Extract<OnlineTournamentGameKey, 'pubgm' | 'codm'>, OnlineTournamentStanding[]>>;
   mySubmissions: OnlineTournamentResultSubmission[];
   payouts: OnlineTournamentPayout[];
+};
+
+export type CommunityRoom = {
+  id: string;
+  slug: string;
+  name: string;
+  description?: string | null;
+  is_locked: boolean;
+  pinned_message_id?: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type CommunityMessage = {
+  id: string;
+  room_id: string;
+  sender_user_id?: string | null;
+  sender_type: CommunityMessageSenderType;
+  message_type: CommunityMessageType;
+  body?: string | null;
+  meta?: Record<string, unknown> | null;
+  is_deleted: boolean;
+  created_at: string;
+  deleted_at?: string | null;
+  deleted_by?: string | null;
+  sender?: Pick<AuthUser, 'id' | 'username' | 'avatar_url' | 'role'> | null;
+};
+
+export type CommunityMutedMember = {
+  user: Pick<AuthUser, 'id' | 'username' | 'avatar_url' | 'role'>;
+  muted_until: string;
+};
+
+export type CommunityRoomState = {
+  unread_count: number;
+  my_last_read_at?: string | null;
+  latest_message_at?: string | null;
+  latest_message_sender_user_id?: string | null;
+  latest_message_sender_type?: CommunityMessageSenderType | null;
+  mute_until?: string | null;
+  room_locked: boolean;
+};
+
+export type CommunityRoomResponse = {
+  room: CommunityRoom;
+  messages: CommunityMessage[];
+  pinned_message?: CommunityMessage | null;
+  state: CommunityRoomState;
+  member_count: number;
+  muted_members: CommunityMutedMember[];
+  can_moderate: boolean;
+  did_mark_read: boolean;
 };

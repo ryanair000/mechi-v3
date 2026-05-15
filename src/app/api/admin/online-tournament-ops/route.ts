@@ -3,8 +3,15 @@ import { hasModeratorAccess, requireActiveAccessProfile } from '@/lib/access';
 import { writeAuditLog } from '@/lib/audit';
 import { scanAndStoreCodmSubmissionOcr } from '@/lib/codm-result-ocr';
 import {
+  getOnlineTournamentDefaultPaymentForConfirmation,
+  getOnlineTournamentPaymentTierAmount,
   ONLINE_TOURNAMENT_SLUG,
+  isOnlineTournamentPaidStatus,
   isOnlineTournamentGame,
+  isOnlineTournamentPaymentStatus,
+  isOnlineTournamentPaymentTier,
+  type OnlineTournamentPaymentStatus,
+  type OnlineTournamentPaymentTier,
 } from '@/lib/online-tournament';
 import {
   ONLINE_TOURNAMENT_EFOOTBALL_ROUNDS,
@@ -22,6 +29,7 @@ import { buildOnlineTournamentOpsDashboardState } from '@/lib/online-tournament-
 import {
   getBronzeEfootballPosition,
   getNextEfootballPosition,
+  isMissingOnlineTournamentPaymentSchemaError,
 } from '@/lib/online-tournament-store';
 import { getClientIp } from '@/lib/rateLimit';
 import { createServiceClient } from '@/lib/supabase';
@@ -76,6 +84,23 @@ function readNumber(value: unknown): number | null {
   return Number(text);
 }
 
+function readOptionalInteger(value: unknown) {
+  if (value === null || value === undefined || value === '') {
+    return null;
+  }
+
+  if (typeof value === 'number' && Number.isInteger(value) && value >= 0) {
+    return value;
+  }
+
+  const text = String(value).trim();
+  if (!/^\d+$/.test(text)) {
+    return Number.NaN;
+  }
+
+  return Number(text);
+}
+
 function isRoomStatus(value: unknown): value is OnlineTournamentRoomStatus {
   return typeof value === 'string' && ROOM_STATUSES.includes(value as OnlineTournamentRoomStatus);
 }
@@ -95,6 +120,34 @@ function isPayoutStatus(value: unknown): value is OnlineTournamentPayoutStatus {
 async function getAdminState() {
   const supabase = createServiceClient();
   return buildOnlineTournamentOpsDashboardState(supabase);
+}
+
+async function getEarlyBirdPaidCount(params: {
+  supabase: ReturnType<typeof createServiceClient>;
+  excludeRegistrationId?: string;
+}) {
+  let query = params.supabase
+    .from('online_tournament_registrations')
+    .select('id', { count: 'exact', head: true })
+    .eq('event_slug', ONLINE_TOURNAMENT_SLUG)
+    .eq('payment_status', 'paid')
+    .eq('payment_tier', 'early_bird')
+    .neq('eligibility_status', 'disqualified');
+
+  if (params.excludeRegistrationId) {
+    query = query.neq('id', params.excludeRegistrationId);
+  }
+
+  const { count, error } = await query;
+  if (error) {
+    if (isMissingOnlineTournamentPaymentSchemaError(error)) {
+      return 0;
+    }
+
+    throw error;
+  }
+
+  return count ?? 0;
 }
 
 async function markFixtureReadyIfFilled(fixtureId: string) {
@@ -301,6 +354,7 @@ async function seedEfootballFixtures(registrations: OnlineTournamentRegistration
       (registration) =>
         registration.game === 'efootball' &&
         registration.check_in_status === 'checked_in' &&
+        isOnlineTournamentPaidStatus(registration.payment_status) &&
         registration.eligibility_status !== 'disqualified'
     )
     .sort((left, right) => {
@@ -616,6 +670,173 @@ export async function PATCH(request: NextRequest) {
         action: 'system_note',
         targetType: 'tournament',
         details: { action, game, matchNumber, status },
+        ipAddress: getClientIp(request),
+      });
+
+      return NextResponse.json(await getAdminState());
+    }
+
+    if (action === 'update_payment_status' || action === 'confirm_payment') {
+      const registrationId = cleanText(body.registration_id, 80);
+      if (!registrationId) {
+        return NextResponse.json({ error: 'Registration is required' }, { status: 400 });
+      }
+
+      const { data: currentRaw, error: currentError } = await supabase
+        .from('online_tournament_registrations')
+        .select(
+          'id, game, check_in_status, eligibility_status, payment_status, payment_tier, entry_fee_kes'
+        )
+        .eq('id', registrationId)
+        .eq('event_slug', ONLINE_TOURNAMENT_SLUG)
+        .maybeSingle();
+
+      const currentRegistration = currentRaw as
+        | {
+            id: string;
+            game: string;
+            check_in_status: OnlineTournamentRegistrationOpsRow['check_in_status'];
+            eligibility_status: OnlineTournamentRegistrationOpsRow['eligibility_status'];
+            payment_status: OnlineTournamentPaymentStatus;
+            payment_tier: OnlineTournamentPaymentTier | null;
+            entry_fee_kes: number | null;
+          }
+        | null;
+
+      if (currentError) {
+        if (isMissingOnlineTournamentPaymentSchemaError(currentError)) {
+          return NextResponse.json(
+            { error: 'Payment tracking columns are not synced on this database yet.' },
+            { status: 503 }
+          );
+        }
+
+        return NextResponse.json({ error: 'Registration not found' }, { status: 404 });
+      }
+
+      if (!currentRegistration) {
+        return NextResponse.json({ error: 'Registration not found' }, { status: 404 });
+      }
+
+      let nextPaymentStatus = currentRegistration.payment_status;
+      let nextPaymentTier = currentRegistration.payment_tier;
+      let nextEntryFeeKes = currentRegistration.entry_fee_kes;
+      const paymentUpdates: Record<string, unknown> = {
+        updated_at: new Date().toISOString(),
+      };
+
+      if (action === 'confirm_payment') {
+        nextPaymentStatus = 'paid';
+        paymentUpdates.payment_status = 'paid';
+        paymentUpdates.payment_confirmed_at = paymentUpdates.updated_at;
+        paymentUpdates.payment_confirmed_by = access.profile.id;
+      } else if (Object.prototype.hasOwnProperty.call(body, 'payment_status')) {
+        if (!isOnlineTournamentPaymentStatus(body.payment_status)) {
+          return NextResponse.json({ error: 'Invalid payment status' }, { status: 400 });
+        }
+
+        nextPaymentStatus = body.payment_status;
+        paymentUpdates.payment_status = nextPaymentStatus;
+
+        if (isOnlineTournamentPaidStatus(nextPaymentStatus)) {
+          paymentUpdates.payment_confirmed_at = paymentUpdates.updated_at;
+          paymentUpdates.payment_confirmed_by = access.profile.id;
+        } else {
+          paymentUpdates.payment_confirmed_at = null;
+          paymentUpdates.payment_confirmed_by = null;
+        }
+      }
+
+      if (Object.prototype.hasOwnProperty.call(body, 'payment_tier')) {
+        if (body.payment_tier === null || body.payment_tier === '') {
+          nextPaymentTier = null;
+          paymentUpdates.payment_tier = null;
+        } else if (!isOnlineTournamentPaymentTier(body.payment_tier)) {
+          return NextResponse.json({ error: 'Invalid payment tier' }, { status: 400 });
+        } else {
+          nextPaymentTier = body.payment_tier;
+          paymentUpdates.payment_tier = body.payment_tier;
+        }
+      }
+
+      if (Object.prototype.hasOwnProperty.call(body, 'entry_fee_kes')) {
+        const entryFeeKes = readOptionalInteger(body.entry_fee_kes);
+        if (Number.isNaN(entryFeeKes)) {
+          return NextResponse.json(
+            { error: 'Entry fee must be a non-negative whole number' },
+            { status: 400 }
+          );
+        }
+
+        nextEntryFeeKes = entryFeeKes;
+        paymentUpdates.entry_fee_kes = entryFeeKes;
+      }
+
+      if (Object.prototype.hasOwnProperty.call(body, 'payment_reference')) {
+        paymentUpdates.payment_reference = cleanOptionalText(body.payment_reference, 120);
+      }
+
+      if (Object.prototype.hasOwnProperty.call(body, 'payment_note')) {
+        paymentUpdates.payment_note = cleanOptionalText(body.payment_note, 500);
+      }
+
+      if (isOnlineTournamentPaidStatus(nextPaymentStatus) && !nextPaymentTier) {
+        const earlyBirdPaidCount = await getEarlyBirdPaidCount({
+          supabase,
+          excludeRegistrationId: registrationId,
+        });
+        const defaultPayment = getOnlineTournamentDefaultPaymentForConfirmation(earlyBirdPaidCount);
+
+        nextPaymentTier = defaultPayment.tier;
+        paymentUpdates.payment_tier = defaultPayment.tier;
+
+        if (nextEntryFeeKes === null) {
+          nextEntryFeeKes = defaultPayment.amountKes;
+          paymentUpdates.entry_fee_kes = defaultPayment.amountKes;
+        }
+      }
+
+      if (isOnlineTournamentPaidStatus(nextPaymentStatus) && nextPaymentTier && nextEntryFeeKes === null) {
+        nextEntryFeeKes = getOnlineTournamentPaymentTierAmount(nextPaymentTier);
+        paymentUpdates.entry_fee_kes = nextEntryFeeKes;
+      }
+
+      if (!isOnlineTournamentPaidStatus(nextPaymentStatus)) {
+        paymentUpdates.check_in_status = 'registered';
+        paymentUpdates.checked_in_at = null;
+        paymentUpdates.tournament_lobby_number = null;
+        paymentUpdates.tournament_lobby_slot = null;
+        paymentUpdates.tournament_lobby_assigned_at = null;
+      }
+
+      const { error } = await supabase
+        .from('online_tournament_registrations')
+        .update(paymentUpdates)
+        .eq('id', registrationId)
+        .eq('event_slug', ONLINE_TOURNAMENT_SLUG);
+
+      if (error) {
+        if (isMissingOnlineTournamentPaymentSchemaError(error)) {
+          return NextResponse.json(
+            { error: 'Payment tracking columns are not synced on this database yet.' },
+            { status: 503 }
+          );
+        }
+
+        return NextResponse.json({ error: 'Could not update payment status' }, { status: 500 });
+      }
+
+      await writeAuditLog({
+        adminId: access.profile.id,
+        action: 'system_note',
+        targetType: 'tournament',
+        targetId: registrationId,
+        details: {
+          action,
+          payment_status: nextPaymentStatus,
+          payment_tier: nextPaymentTier,
+          entry_fee_kes: nextEntryFeeKes,
+        },
         ipAddress: getClientIp(request),
       });
 

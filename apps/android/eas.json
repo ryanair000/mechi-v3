@@ -36,6 +36,7 @@
   "submit": {
     "playInternal": {
       "android": {
+        "applicationId": "com.mechi.app",
         "serviceAccountKeyPath": "./google-play-service-account.json",
         "track": "internal",
         "releaseStatus": "completed"
@@ -43,6 +44,7 @@
     },
     "closedtesting": {
       "android": {
+        "applicationId": "com.mechi.app",
         "serviceAccountKeyPath": "./google-play-service-account.json",
         "track": "alpha",
         "releaseStatus": "completed"
@@ -50,6 +52,7 @@
     },
     "production": {
       "android": {
+        "applicationId": "com.mechi.app",
         "serviceAccountKeyPath": "./google-play-service-account.json",
         "track": "production",
         "releaseStatus": "completed"

@@ -20,6 +20,17 @@ You can start editing the page by modifying `app/page.tsx`. The page auto-update
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
+## X publishing
+
+The marketing dashboard can publish PlayMechi content items to X from the server.
+
+Set one of these auth bundles in the marketing app environment:
+
+- OAuth 1.0a: `X_API_KEY`, `X_API_SECRET`, `X_ACCESS_TOKEN`, `X_ACCESS_TOKEN_SECRET`
+- OAuth 2.0 user token: `X_OAUTH2_ACCESS_TOKEN`
+
+The dashboard stores the published post id, URL, text, posted timestamp, and the most recent X error on each `content_items` row.
+
 ## Learn More
 
 To learn more about Next.js, take a look at the following resources:

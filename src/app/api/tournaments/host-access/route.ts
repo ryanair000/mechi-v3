@@ -17,7 +17,7 @@ export async function GET(request: NextRequest) {
     const supabase = createServiceClient();
     const { data: profileRaw, error: profileError } = await supabase
       .from('profiles')
-      .select('plan, plan_expires_at')
+      .select('plan, plan_expires_at, role')
       .eq('id', access.profile.id)
       .single();
 
@@ -35,7 +35,8 @@ export async function GET(request: NextRequest) {
     );
 
     let hostedThisMonth = 0;
-    if (resolvedPlan === 'elite') {
+    const role = (profileRaw.role as 'user' | 'moderator' | 'admin' | null | undefined) ?? null;
+    if (resolvedPlan === 'elite' && role !== 'admin') {
       const { startIso, endIso } = getTournamentHostingMonthWindow();
       const { count, error: countError } = await supabase
         .from('tournaments')
@@ -51,7 +52,7 @@ export async function GET(request: NextRequest) {
       hostedThisMonth = count ?? 0;
     }
 
-    const hostingAccess = getTournamentHostingAccess(resolvedPlan, hostedThisMonth);
+    const hostingAccess = getTournamentHostingAccess(resolvedPlan, hostedThisMonth, { role });
 
     return NextResponse.json({
       access: {

@@ -1,5 +1,6 @@
 import type { OnlineTournamentRegistrationOpsRow } from '@/lib/online-tournament-ops';
 import {
+  isOnlineTournamentPaidStatus,
   isValidTournamentDeviceSerialLast6,
   requiresTournamentDeviceSerialLast6,
 } from '@/lib/online-tournament';
@@ -38,6 +39,7 @@ export function hasTournamentLobby(registration: OnlineTournamentRegistrationOps
 export function needsTournamentRosterAttention(registration: OnlineTournamentRegistrationOpsRow) {
   return (
     Boolean(registration.user?.is_banned) ||
+    !isOnlineTournamentPaidStatus(registration.payment_status) ||
     registration.eligibility_status === 'ineligible' ||
     registration.eligibility_status === 'disqualified' ||
     registration.check_in_status === 'no_show' ||
@@ -60,6 +62,7 @@ export function matchesTournamentRosterMode(
     case 'unverified':
       return (
         registration.check_in_status === 'checked_in' &&
+        isOnlineTournamentPaidStatus(registration.payment_status) &&
         registration.eligibility_status !== 'verified' &&
         registration.eligibility_status !== 'disqualified'
       );
@@ -98,6 +101,9 @@ export function matchesTournamentRosterSearch(
     registration.admin_note,
     registration.eligibility_status,
     registration.check_in_status,
+    registration.payment_status,
+    registration.payment_tier,
+    registration.payment_reference,
     registration.tournament_lobby_number
       ? `lobby ${registration.tournament_lobby_number}`
       : null,

@@ -53,8 +53,15 @@ $env:EXPO_NO_DEPENDENCY_VALIDATION = "1"
 $env:EXPO_PUBLIC_MECHI_API_URL = "http://127.0.0.1:$ApiPort"
 
 if ($Install) {
-  & npx expo run:android --device $serial
-  exit $LASTEXITCODE
+  Push-Location "$PSScriptRoot\..\android"
+  try {
+    $env:ANDROID_SERIAL = $serial
+    & .\gradlew.bat installDebug
+    exit $LASTEXITCODE
+  }
+  finally {
+    Pop-Location
+  }
 }
 
 if (-not $NoMetro) {

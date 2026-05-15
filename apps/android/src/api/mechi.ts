@@ -2,6 +2,7 @@ import { apiRequest } from './client';
 import type {
   AuthResponse,
   AuthUser,
+  CommunityRoomResponse,
   GameKey,
   OnlineTournamentGameKey,
   OnlineTournamentPlayerState,
@@ -94,6 +95,17 @@ export type PushTokenPayload = {
 export type TournamentStateResponse = OnlineTournamentPlayerState & {
   warning?: string;
 };
+
+export type CommunityMessagePayload = {
+  message: string;
+  message_type?: 'text' | 'announcement';
+};
+
+export type CommunityModerationPayload =
+  | { action: 'lock' | 'unlock' | 'unpin' }
+  | { action: 'pin' | 'delete_message'; message_id: string }
+  | { action: 'mute_user'; user_id: string; duration_hours?: number }
+  | { action: 'unmute_user'; user_id: string };
 
 export function login(payload: LoginPayload) {
   return apiRequest<AuthResponse>('/api/auth/login', {
@@ -204,4 +216,24 @@ export function submitTournamentResult(payload: TournamentResultPayload) {
       body: form,
     }
   );
+}
+
+export function getCommunityRoom(limit = 80) {
+  return apiRequest<CommunityRoomResponse>(
+    `/api/community/room?limit=${encodeURIComponent(String(limit))}`
+  );
+}
+
+export function sendCommunityMessage(payload: CommunityMessagePayload) {
+  return apiRequest<{ message: CommunityRoomResponse['messages'][number] }>('/api/community/room', {
+    method: 'POST',
+    body: payload,
+  });
+}
+
+export function moderateCommunityRoom(payload: CommunityModerationPayload) {
+  return apiRequest<{ success: true }>('/api/community/room', {
+    method: 'PATCH',
+    body: payload,
+  });
 }

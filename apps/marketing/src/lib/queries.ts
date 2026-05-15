@@ -1,4 +1,5 @@
 import { CAMPAIGN_TOTAL_DAYS, CAMPAIGN_WEEKS, DEFAULT_SETTINGS } from "@/lib/constants";
+import { toContentItem } from "@/lib/content-items";
 import { formatDateRange } from "@/lib/format";
 import { createServiceClient } from "@/lib/supabase";
 import type {
@@ -8,7 +9,6 @@ import type {
   CampaignWeek,
   CommunityPageData,
   CommunitySnapshot,
-  ContentItem,
   ContentPageData,
   NavigationWeek,
   OverviewData,
@@ -100,24 +100,6 @@ function toBounty(row: Record<string, unknown>): Bounty {
       typeof row.rolled_over_from_bounty_id === "string"
         ? row.rolled_over_from_bounty_id
         : null,
-    created_at: typeof row.created_at === "string" ? row.created_at : undefined,
-    updated_at: typeof row.updated_at === "string" ? row.updated_at : undefined,
-  };
-}
-
-function toContentItem(row: Record<string, unknown>): ContentItem {
-  return {
-    id: String(row.id),
-    week_id: String(row.week_id),
-    scheduled_date: String(row.scheduled_date),
-    day_type: String(row.day_type) as ContentItem["day_type"],
-    title: String(row.title),
-    description: typeof row.description === "string" ? row.description : null,
-    posted_tiktok: Boolean(row.posted_tiktok),
-    posted_instagram: Boolean(row.posted_instagram),
-    posted_twitter: Boolean(row.posted_twitter),
-    posted_whatsapp: Boolean(row.posted_whatsapp),
-    notes: typeof row.notes === "string" ? row.notes : null,
     created_at: typeof row.created_at === "string" ? row.created_at : undefined,
     updated_at: typeof row.updated_at === "string" ? row.updated_at : undefined,
   };

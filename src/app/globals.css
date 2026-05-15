@@ -994,6 +994,13 @@ html[data-theme='dark'] {
     --radius-nav-shell: 1.75rem;
   }
 
+  .mechi-home-shell {
+    --font-display: var(--font-montserrat), "Montserrat", "Segoe UI Semibold", sans-serif;
+    --font-body: var(--font-open-sans), "Open Sans", "Segoe UI", sans-serif;
+    --font-sans: var(--font-open-sans), "Open Sans", "Segoe UI", sans-serif;
+    --radius-nav-shell: 2rem;
+  }
+
   .app-prototype-shell {
     --font-display: var(--font-montserrat), "Montserrat", "Segoe UI Semibold", sans-serif;
     --font-body: var(--font-open-sans), "Open Sans", "Segoe UI", sans-serif;
@@ -1028,10 +1035,10 @@ html[data-theme='dark'] {
     --success-soft: rgba(50, 224, 196, 0.12);
     --warning-soft: rgba(251, 191, 36, 0.16);
     --radius: 0.5rem;
-    --radius-control: 0.55rem;
-    --radius-panel: 0.65rem;
-    --radius-card: 0.75rem;
-    --radius-hero: 0.8rem;
+    --radius-control: 1rem;
+    --radius-panel: 1.35rem;
+    --radius-card: 1.35rem;
+    --radius-hero: 1.35rem;
     position: relative;
     isolation: isolate;
     min-height: 100svh;
@@ -1072,10 +1079,17 @@ html[data-theme='dark'] {
     text-transform: uppercase;
   }
 
-  .app-prototype-shell .nav-panel,
   .app-prototype-shell .card,
   .app-prototype-shell .card-hover,
   .app-prototype-shell .subtle-card {
+    border-radius: var(--radius-panel);
+    border-color: var(--border-color);
+    background: var(--surface-strong);
+    box-shadow: none;
+    backdrop-filter: none;
+  }
+
+  .app-prototype-shell .nav-panel {
     border-radius: 0.5rem;
     border-color: var(--border-color);
     background: var(--surface-strong);
@@ -1094,8 +1108,8 @@ html[data-theme='dark'] {
   }
 
   .app-prototype-shell .playmechi-tournament-desk {
-    --radius-panel: 0.5rem;
-    --radius-card: 0.5rem;
+    --radius-panel: 1.35rem;
+    --radius-card: 1.35rem;
   }
 
   .app-prototype-shell .playmechi-tournament-desk :is(.rounded-lg, .rounded-xl, .rounded-2xl, .rounded-3xl):not(.rounded-full) {
@@ -1109,7 +1123,7 @@ html[data-theme='dark'] {
   .app-prototype-shell .icon-button,
   .app-prototype-shell .theme-toggle {
     min-height: 2.5rem;
-    border-radius: 0.4rem;
+    border-radius: var(--radius-control);
     font-family: var(--font-display), "Montserrat", sans-serif;
     font-size: 0.78rem;
     letter-spacing: 0.01em;
@@ -1135,6 +1149,30 @@ html[data-theme='dark'] {
   .app-prototype-shell .btn-ghost:hover {
     background: rgba(50, 224, 196, 0.16);
     color: var(--text-primary);
+  }
+
+  .weekend-cup-shell {
+    --radius-panel: 1.35rem;
+    --radius-card: 1.35rem;
+    --radius-control: 1rem;
+  }
+
+  .weekend-cup-shell .nav-panel,
+  .weekend-cup-shell .card,
+  .weekend-cup-shell .card-hover,
+  .weekend-cup-shell .subtle-card {
+    border-radius: var(--radius-panel);
+  }
+
+  .weekend-cup-shell .btn-primary,
+  .weekend-cup-shell .btn-ghost,
+  .weekend-cup-shell .btn-danger,
+  .weekend-cup-shell .btn-outline,
+  .weekend-cup-shell .icon-button,
+  .weekend-cup-shell .theme-toggle,
+  .weekend-cup-shell .input,
+  .weekend-cup-shell .input-field {
+    border-radius: var(--radius-control);
   }
 
   .app-prototype-shell .btn-outline,

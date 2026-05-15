@@ -58,11 +58,11 @@ export const Faq5 = ({
     <section
       id="faq"
       className={cn(
-        'landing-section scroll-mt-24 border-t border-[var(--border-color)] pb-8 pt-16 md:pb-12 md:pt-24',
+        'landing-section scroll-mt-24 border-t border-[var(--border-color)] py-16 md:py-24',
         className
       )}
     >
-      <div className="mx-auto max-w-5xl">
+      <div className="landing-shell">
         <div className="text-center">
           <Badge className="border-[rgba(50,224,196,0.28)] bg-[rgba(50,224,196,0.12)] text-xs font-black uppercase tracking-[0.14em] text-[var(--accent-secondary-text)] hover:bg-[rgba(50,224,196,0.16)]">
             {badge}
@@ -77,7 +77,7 @@ export const Faq5 = ({
 
         <div className="mx-auto mt-12 max-w-screen-sm">
           {faqs.map((faq, index) => (
-            <div key={faq.question} className="mb-8 flex gap-4 border-t border-[var(--border-color)] pt-6">
+            <div key={faq.question} className="mb-8 flex gap-4">
               <span className="flex size-7 shrink-0 items-center justify-center rounded-[var(--radius-control)] bg-[rgba(50,224,196,0.12)] font-mono text-xs font-black text-[var(--accent-secondary-text)]">
                 {index + 1}
               </span>

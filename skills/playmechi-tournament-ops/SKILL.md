@@ -48,10 +48,11 @@ npm run ops:registrations -- --json
 Read the `onlineTournament` object in the output:
 
 - `onlineTournament.storageReady`: whether `online_tournament_registrations` exists in live Supabase
-- `onlineTournament.slots`: total event capacity, expected `216`
+- `onlineTournament.slots`: total event registration capacity, expected `600`
+- `onlineTournament.checkInCap`: total match-day check-in capacity, expected `216`
 - `onlineTournament.registered`: total event registrations
 - `onlineTournament.spotsLeft`: remaining event slots
-- `onlineTournament.games[]`: per-game slots, registered, verified, pending, and spots left
+- `onlineTournament.games[]`: per-game registration caps, check-in caps, registered, verified, pending, checked-in, and spots left
 
 If `storageReady` is `false`, say the live tournament registration table is not ready yet and that the migration must be applied before player slot locking can work. Do not claim live tournament registration counts from memory.
 
@@ -67,7 +68,8 @@ npm run ops:tournaments -- --json
 - Organizer: Mechi.club
 - Registration: free
 - Tournament type: fully online
-- Total slots: 216 players
+- Total registration cap: 600 players
+- Total match-day check-in cap: 216 players
 - Cash prize pool: KSh 6,000
 - Stream channel: PlayMechi on Instagram, TikTok, and YouTube
 - Streamer: Kabaka Mwangi
@@ -85,9 +87,9 @@ All matches start at 8:00 PM EAT.
 
 ## Games, Slots, And Formats
 
-- PUBG Mobile: 100 players, individual Battle Royale tournament room, 3 matches, 1 kill = 1 point, no placement points
-- Call of Duty Mobile: 100 players, individual Battle Royale tournament room, 3 matches, 1 kill = 1 point, no placement points
-- eFootball: 16 players, 1v1 online friendly knockout, Round of 16 to final, one leg per fixture
+- PUBG Mobile: 200 registrations, 100 match-day check-ins, individual Battle Royale tournament room, 3 matches, 1 kill = 1 point, no placement points
+- Call of Duty Mobile: 200 registrations, 100 match-day check-ins, individual Battle Royale tournament room, 3 matches, 1 kill = 3 points, placement #1 20, #2 15, #3 10, #4 5, #5-25 3
+- eFootball: 200 registrations, 16 match-day check-ins, 1v1 online friendly knockout, Round of 16 to final, one leg per fixture
 
 ## Prizes
 

@@ -12,6 +12,7 @@ export type GameKey =
   | 'sf6'
   | 'codm'
   | 'pubgm'
+  | 'mystery'
   | 'cs2'
   | 'valorant'
   | 'mariokart'
@@ -61,6 +62,8 @@ export type NotificationType =
   | 'tournament_registration_verified'
   | 'match_found'
   | 'match_chat_message'
+  | 'community_chat_message'
+  | 'community_announcement'
   | 'match_reported'
   | 'match_completed'
   | 'match_disputed';
@@ -212,6 +215,8 @@ export interface QueueEntry {
 export type MatchStatus = 'pending' | 'completed' | 'disputed' | 'cancelled';
 export type MatchChatMessageType = 'text' | 'system' | 'quick_reply';
 export type MatchChatSenderType = 'player' | 'system' | 'admin';
+export type CommunityMessageType = 'text' | 'announcement' | 'system';
+export type CommunityMessageSenderType = 'user' | 'moderator' | 'admin' | 'system';
 export type MatchEscalationReason =
   | 'setup_issue'
   | 'stalling'
@@ -275,6 +280,68 @@ export interface MatchChatThreadState {
   latest_player_message_at?: string | null;
   latest_player_message_sender_user_id?: string | null;
   opponent_has_seen_latest_message: boolean;
+}
+
+export interface CommunityRoom {
+  id: string;
+  slug: string;
+  name: string;
+  description?: string | null;
+  is_locked: boolean;
+  pinned_message_id?: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CommunityMessage {
+  id: string;
+  room_id: string;
+  sender_user_id?: string | null;
+  sender_type: CommunityMessageSenderType;
+  message_type: CommunityMessageType;
+  body?: string | null;
+  meta?: Record<string, unknown> | null;
+  is_deleted: boolean;
+  created_at: string;
+  deleted_at?: string | null;
+  deleted_by?: string | null;
+  sender?: Pick<Profile, 'id' | 'username' | 'avatar_url' | 'role'> | null;
+}
+
+export interface CommunityRoomMember {
+  room_id: string;
+  user_id: string;
+  last_read_at?: string | null;
+  last_notified_at?: string | null;
+  muted_until?: string | null;
+  joined_at: string;
+  updated_at: string;
+}
+
+export interface CommunityMutedMember {
+  user: Pick<Profile, 'id' | 'username' | 'avatar_url' | 'role'>;
+  muted_until: string;
+}
+
+export interface CommunityRoomState {
+  unread_count: number;
+  my_last_read_at?: string | null;
+  latest_message_at?: string | null;
+  latest_message_sender_user_id?: string | null;
+  latest_message_sender_type?: CommunityMessageSenderType | null;
+  mute_until?: string | null;
+  room_locked: boolean;
+}
+
+export interface CommunityRoomResponse {
+  room: CommunityRoom;
+  messages: CommunityMessage[];
+  pinned_message?: CommunityMessage | null;
+  state: CommunityRoomState;
+  member_count: number;
+  muted_members: CommunityMutedMember[];
+  can_moderate: boolean;
+  did_mark_read: boolean;
 }
 
 export interface MatchEscalation {

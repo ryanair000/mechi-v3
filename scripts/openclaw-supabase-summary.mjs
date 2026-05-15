@@ -9,12 +9,16 @@ const DEFAULT_RECENT_LIMIT = 5;
 const DEFAULT_WINDOW_HOURS = 24;
 const ONLINE_TOURNAMENT_SLUG = 'mechi-club-online-gaming-tournament-2026-05';
 const ONLINE_TOURNAMENT_GAMES = [
-  { game: 'pubgm', label: 'PUBG Mobile', slots: 100 },
-  { game: 'codm', label: 'Call of Duty Mobile', slots: 100 },
-  { game: 'efootball', label: 'eFootball', slots: 16, registrationClosed: true },
+  { game: 'pubgm', label: 'PUBG Mobile', slots: 200, checkInCap: 100 },
+  { game: 'codm', label: 'Call of Duty Mobile', slots: 200, checkInCap: 100 },
+  { game: 'efootball', label: 'eFootball', slots: 200, checkInCap: 16 },
 ];
 const ONLINE_TOURNAMENT_TOTAL_SLOTS = ONLINE_TOURNAMENT_GAMES.reduce(
   (total, game) => total + game.slots,
+  0
+);
+const ONLINE_TOURNAMENT_TOTAL_CHECK_IN_CAP = ONLINE_TOURNAMENT_GAMES.reduce(
+  (total, game) => total + game.checkInCap,
   0
 );
 
@@ -134,11 +138,14 @@ function formatSummary(summary, options) {
 
   if (summary.onlineTournament.storageReady) {
     lines.push(
-      `PlayMechi tournament entries: ${summary.onlineTournament.registered}/${summary.onlineTournament.slots} (${summary.onlineTournament.spotsLeft} slots left)`
+      `PlayMechi registrations: ${summary.onlineTournament.registered}/${summary.onlineTournament.slots} (${summary.onlineTournament.spotsLeft} left)`
+    );
+    lines.push(
+      `PlayMechi check-ins: ${summary.onlineTournament.checkedIn}/${summary.onlineTournament.checkInCap} (${summary.onlineTournament.checkInSpotsLeft} left)`
     );
     summary.onlineTournament.games.forEach((game) => {
       lines.push(
-        `- ${game.label}: ${game.registered}/${game.slots} (${game.spotsLeft} left, ${game.verified} verified, ${game.pending} pending)`
+        `- ${game.label}: ${game.registered}/${game.slots} regs (${game.spotsLeft} left), ${game.checkedIn}/${game.checkInCap} checked in (${game.checkInSpotsLeft} left), ${game.verified} verified, ${game.pending} pending`
       );
     });
   } else {
@@ -256,15 +263,21 @@ async function getOnlineTournamentSummary() {
       registered: 0,
       verified: 0,
       pending: 0,
-      spotsLeft: game.registrationClosed ? 0 : game.slots,
+      checkedIn: 0,
+      spotsLeft: game.slots,
+      checkInSpotsLeft: game.checkInCap,
+      checkInFull: false,
     }));
 
     return {
       storageReady: false,
       slug: ONLINE_TOURNAMENT_SLUG,
       slots: ONLINE_TOURNAMENT_TOTAL_SLOTS,
+      checkInCap: ONLINE_TOURNAMENT_TOTAL_CHECK_IN_CAP,
       registered: 0,
+      checkedIn: 0,
       spotsLeft: games.reduce((total, game) => total + game.spotsLeft, 0),
+      checkInSpotsLeft: games.reduce((total, game) => total + game.checkInSpotsLeft, 0),
       error: errorMessage,
       games,
     };
@@ -281,18 +294,30 @@ async function getOnlineTournamentSummary() {
       registered: gameRows.length,
       verified: gameRows.filter((row) => row.eligibility_status === 'verified').length,
       pending: gameRows.filter((row) => row.eligibility_status === 'pending').length,
-      spotsLeft: game.registrationClosed ? 0 : Math.max(0, game.slots - gameRows.length),
+      checkedIn: gameRows.filter((row) => row.check_in_status === 'checked_in').length,
+      spotsLeft: Math.max(0, game.slots - gameRows.length),
+      checkInSpotsLeft: Math.max(
+        0,
+        game.checkInCap - gameRows.filter((row) => row.check_in_status === 'checked_in').length
+      ),
+      checkInFull:
+        gameRows.filter((row) => row.check_in_status === 'checked_in').length >= game.checkInCap,
     };
   });
   const registered = games.reduce((total, game) => total + game.registered, 0);
+  const checkedIn = games.reduce((total, game) => total + game.checkedIn, 0);
   const spotsLeft = games.reduce((total, game) => total + game.spotsLeft, 0);
+  const checkInSpotsLeft = games.reduce((total, game) => total + game.checkInSpotsLeft, 0);
 
   return {
     storageReady: true,
     slug: ONLINE_TOURNAMENT_SLUG,
     slots: ONLINE_TOURNAMENT_TOTAL_SLOTS,
+    checkInCap: ONLINE_TOURNAMENT_TOTAL_CHECK_IN_CAP,
     registered,
+    checkedIn,
     spotsLeft,
+    checkInSpotsLeft,
     games,
   };
 }

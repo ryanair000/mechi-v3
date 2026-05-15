@@ -10,17 +10,18 @@ import { PlanBadge } from '@/components/PlanBadge';
 import PricingSection from '@/components/pricing-section';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { useAuth, useAuthFetch } from '@/components/AuthProvider';
-import { type BillingCycle, type Plan, PLANS } from '@/lib/plans';
+import { type BillingCycle, type Plan, getPlanWeeklyPrice, PLANS } from '@/lib/plans';
 
 const VISIBLE_PLAN_ORDER: Array<'free' | 'pro' | 'elite'> = ['free', 'pro', 'elite'];
 
 const COMPARISON_ROWS = [
+  { label: 'Billing', free: 'Free', pro: 'KES 199/month | from KES 49/week', elite: 'KES 699/month | from KES 175/week' },
   { label: 'Matches per day', free: '5', pro: 'Unlimited', elite: 'Unlimited' },
   { label: 'Games selectable', free: '1', pro: '3', elite: '3' },
   { label: 'Direct 1-on-1 challenges', free: 'Yes', pro: 'Yes', elite: 'Yes' },
-  { label: 'Tournament hosting', free: 'No', pro: 'Yes', elite: 'Yes' },
-  { label: 'Prize pool controls', free: 'No', pro: 'Auto or specified', elite: 'Auto or specified' },
-  { label: 'Tournament platform fee', free: 'n/a', pro: '5%', elite: '0% on first 3 / month' },
+  { label: 'Tournament hosting', free: 'No', pro: 'No', elite: 'Yes' },
+  { label: 'Prize pool controls', free: 'No', pro: 'No', elite: 'Auto or specified' },
+  { label: 'Tournament platform fee', free: 'n/a', pro: 'n/a', elite: '0% on first 3 / month' },
   { label: 'Match history', free: '10', pro: '100', elite: 'Unlimited' },
   { label: 'Early access', free: 'No', pro: 'No', elite: 'Yes' },
   { label: 'Streaming features', free: 'No', pro: 'No', elite: 'Yes' },
@@ -127,15 +128,15 @@ function PricingPageContent() {
 
     const description =
       planKey === 'free'
-        ? 'Jump into ranked matches, direct challenges, and open tournament joins without paying first.'
+        ? 'Start clean with ranked matches, tournament joins, and direct 1-on-1 play without paying first.'
         : planKey === 'pro'
-          ? 'Unlock unlimited ranked runs, more game slots, tournament hosting, and a deeper match-history lane for your next grind.'
-          : 'Own the premium lane with three fee-free tournaments each month, early access, and streaming perks.';
+          ? 'The everyday climb plan for players who want more volume, more game slots, and a longer history lane.'
+          : 'The premium control lane for players and organizers who want hosting, prize-pool control, and streaming perks.';
 
     return {
       id: planKey,
       title: plan.name,
-      price: planKey === 'free' ? 'Free' : `KSH ${price}`,
+      price: planKey === 'free' ? 'Free' : `KES ${price}`,
       description,
       features: plan.features,
       cta:
@@ -163,8 +164,8 @@ function PricingPageContent() {
         planKey === 'free'
           ? 'No payment needed'
           : billingCycle === 'annual'
-            ? `Billed yearly, save KSH ${savings}`
-            : 'Billed monthly via Paystack',
+            ? `About KES ${getPlanWeeklyPrice(planKey, billingCycle)}/week on annual billing | Save KES ${savings}`
+            : `From KES ${getPlanWeeklyPrice(planKey, billingCycle)}/week, billed monthly via Paystack`,
       footnote: planKey === 'pro' ? '1-month trial on new signups' : undefined,
       current: isCurrent,
       disabled: planKey === 'free' ? false : user ? actionDisabled : false,
@@ -227,7 +228,7 @@ function PricingPageContent() {
                   Start free. Upgrade only when your Mechi climb needs more.
                 </h1>
                 <p className="mt-4 max-w-2xl text-sm leading-7 text-[var(--text-secondary)] sm:text-base">
-                  New players start with a 1-month Pro trial. After that, keep it free, move to Pro at KES 299 for unlimited ranked runs, direct challenges, and tournament hosting with a 5% platform fee, or go Elite at KES 999 for three fee-free tournaments every month, early access, and streaming perks.
+                  New players start with a 1-month Pro trial. After that, keep it free, move to Pro at KES 199 a month from KES 49 a week, or go Elite at KES 699 a month from KES 175 a week for tournament hosting, prize-pool control, fee-free monthly brackets, and streaming perks.
                 </p>
               </div>
 
@@ -267,8 +268,8 @@ function PricingPageContent() {
         </section>
 
         <PricingSection
-          title="Pick the plan that fits your Mechi season"
-          description="Free gets you in the arena. Pro opens up unlimited ranked volume plus tournament hosting. Elite adds prize-pool control, fee-free monthly brackets, and the premium lane."
+          title="Pick the plan that fits your current grind"
+          description="Free gets you moving. Pro keeps the ranked climb lighter on your wallet. Elite adds hosting, prize-pool control, fee-free monthly brackets, and the full premium lane."
           plans={pricingCards}
         />
 

@@ -88,8 +88,8 @@ export const MECHI_BLOCKED_TOPICS = [
 
 const PLAN_LINES = [
   'Free: KES 0/month. 5 ranked matches per day, 1 selected game, tournament joins, 1-on-1 direct challenges, WhatsApp match alerts.',
-  'Pro: KES 299/month or KES 2,990/year. 1-month Pro trial for new players, unlimited ranked matches, up to 3 selected games, tournament hosting, 5% tournament platform fee.',
-  'Elite: KES 999/month or KES 9,990/year. Everything in Pro, 3 fee-free tournaments each month, auto or specified prize pools, priority matchmaking, unlimited history, CSV export, early access, streaming features.',
+  'Pro: KES 199/month or KES 1,990/year. From KES 49/week on the monthly lane. 1-month Pro trial for new players, unlimited ranked matches, up to 3 selected games, tournament joins, direct challenges, and deeper history.',
+  'Elite: KES 699/month or KES 6,990/year. From KES 175/week on the monthly lane. Everything in Pro, tournament hosting, 3 fee-free tournaments each month, auto or specified prize pools, priority matchmaking, unlimited history, CSV export, early access, and streaming features.',
 ];
 
 const ONE_ON_ONE_GAMES = [
@@ -156,9 +156,9 @@ export function buildMechiBridgeContext(options = {}) {
     'Core rules:',
     '- New players can get a 1-month Pro trial.',
     '- Direct 1-on-1 challenges are supported for compatible one-on-one games and platforms when both players are available.',
-    '- Tournament hosting requires Pro or Elite.',
-    '- Pro organizers use the standard 5% tournament platform fee; Elite gets the first 3 tournaments each month fee-free.',
-    '- Pro and Elite organizers can run auto prize pools from paid entries or set a specified prize pool up front.',
+    '- Tournament hosting requires Elite or admin access.',
+    '- Elite organizers get the first 3 tournaments each month fee-free.',
+    '- Elite organizers can run auto prize pools from paid entries or set a specified prize pool up front.',
     '- FC26 and eFootball score reporting use scorelines; matching reports can confirm a win or draw, mismatches go to dispute review.',
     '- Reward Points are Mechi in-product points; do not promise redemption completion, payout completion, or point restoration without verified state.',
     'Current Weekend Cup facts:',

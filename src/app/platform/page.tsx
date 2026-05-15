@@ -29,7 +29,7 @@ const HERO_STATS = [
   { value: '16+', label: 'Supported titles' },
   { value: '1v1', label: 'Ranked direct challenges' },
   { value: '24/7', label: 'Queue access' },
-  { value: 'KES 299', label: 'Pro monthly', note: '1 month free trial' },
+  { value: 'KES 49', label: 'Starts per week', note: '1 month Pro trial' },
 ];
 
 const PLATFORM_NAV_ITEMS = [
@@ -77,7 +77,7 @@ const PRICING_PLANS = [
     key: 'pro',
     kicker: 'MOST POPULAR',
     description:
-      'KES 299/month after the 1-month trial. Unlimited ranked play, 3 saved games, and a deeper grind lane.',
+      'From KES 49/week billed monthly at KES 199. Unlimited ranked play, 3 saved games, and a cleaner grind lane.',
     href: '/pricing',
     cta: 'SEE PRO',
     featured: true,
@@ -86,7 +86,7 @@ const PRICING_PLANS = [
     key: 'elite',
     kicker: 'ALL ACCESS',
     description:
-      'KES 999/month for players who want the full stack: tournament hosting, auto or specified prize pools, 3 fee-free tournaments each month, and streaming access.',
+      'From KES 175/week billed monthly at KES 699. Tournament hosting, prize-pool control, 3 fee-free brackets each month, and streaming access.',
     href: '/pricing',
     cta: 'SEE ELITE',
     featured: false,
@@ -355,7 +355,7 @@ export default async function PlatformPage() {
               </h2>
             </div>
             <p className="max-w-xl text-sm leading-6 text-[var(--text-secondary)]">
-              New signups begin with a 1-month Pro trial. After that, Pro keeps the regular climb moving at KES 299, and Elite opens the all-access lane at KES 999.
+              New signups begin with a 1-month Pro trial. After that, Pro starts at KES 49/week billed monthly at KES 199, while Elite opens the all-access lane from KES 175/week billed monthly at KES 699.
             </p>
           </div>
 
@@ -393,8 +393,13 @@ export default async function PlatformPage() {
                         {config.monthlyKes === 0 ? 'FREE' : `KES ${config.monthlyKes}`}
                       </p>
                       <p className="mt-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--text-soft)]">
-                        {config.monthlyKes === 0 ? 'No payment needed' : 'per month'}
+                        {config.monthlyKes === 0 ? 'No payment needed' : 'billed monthly'}
                       </p>
+                      {config.monthlyKes > 0 ? (
+                        <p className="mt-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--accent-secondary-text)]">
+                          From KES {config.weeklyKes}/week
+                        </p>
+                      ) : null}
                     </div>
                   </div>
 

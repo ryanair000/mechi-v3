@@ -25,6 +25,7 @@ import {
   WEEKEND_CUP_PRIZE_POOL_LABEL,
   WEEKEND_CUP_PROMO_IMAGE,
   WEEKEND_CUP_PUBLIC_PATH,
+  WEEKEND_CUP_REGISTRATION_PATH,
   WEEKEND_CUP_STREAM_LABEL,
   WEEKEND_CUP_VOTING_DISABLED_MESSAGE,
   WEEKEND_CUP_VOTING_ENABLED,
@@ -501,7 +502,7 @@ export function WeekendCupClient() {
                 {user ? 'Vote mystery slot' : 'Sign in to vote'}
               </Link>
               <Link
-                href="/weekendcup"
+                href={WEEKEND_CUP_REGISTRATION_PATH}
                 className={`btn-outline min-h-11 px-4 py-2 text-[0.9rem] ${DASHBOARD_CONTROL_RADIUS_CLASS}`}
               >
                 Open registration

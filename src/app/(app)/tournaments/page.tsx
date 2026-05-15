@@ -40,8 +40,6 @@ type OnlineTournamentUserRegistration = {
 };
 
 const STATUS_FILTERS = ['all', 'open', 'active', 'completed'] as const;
-const WEEKEND_CUP_FILL_LABEL = '20% full';
-
 function formatTournamentFilterLabel(status: (typeof STATUS_FILTERS)[number]) {
   switch (status) {
     case 'all':
@@ -132,10 +130,10 @@ export default function TournamentsPage() {
           id: `weekendcup-${game.game}`,
           metaLabel: isMysteryGame ? 'Mystery vote' : 'Paid entry',
           prizeLabel: getWeekendCupGamePrizeLabel(game),
-          progress: 20,
+          progress: isMysteryGame ? 0 : 8,
           secondaryActionHref: isMysteryGame ? WEEKEND_CUP_PUBLIC_PATH : `${WEEKEND_CUP_REGISTRATION_PATH}?game=${game.game}`,
           secondaryActionLabel: isMysteryGame ? 'Preview' : 'Open form',
-          slotsLabel: WEEKEND_CUP_FILL_LABEL,
+          slotsLabel: isMysteryGame ? 'Vote decides the slot' : 'Entry from KSh 50',
           startsLabel: `${game.dateLabel.replace(' 2026', '')}, ${game.timeLabel}`,
           statusClassName: getStatusClasses('open'),
           statusLabel: 'Open',
@@ -247,23 +245,6 @@ export default function TournamentsPage() {
             </span>
           </div>
 
-          <div className="mt-5 grid gap-3 lg:grid-cols-3">
-            {PRIMARY_UPCOMING_PLAYMECHI_TOURNAMENT.games.map((game) => (
-              <div
-                key={game.key}
-                className="rounded-[var(--radius-panel)] border border-[var(--border-color)] bg-[var(--surface-elevated)] px-4 py-4 shadow-[var(--shadow-soft)]"
-              >
-                <div className="flex items-center justify-between gap-3">
-                  <p className="text-sm font-black text-[var(--text-primary)]">{game.label}</p>
-                  <span className="brand-chip !rounded-[var(--radius-control)] px-2.5 py-1">{WEEKEND_CUP_FILL_LABEL}</span>
-                </div>
-                <p className="mt-2 text-xs text-[var(--text-secondary)]">{game.dateLabel}</p>
-                <p className="mt-3 text-xs font-semibold text-[var(--accent-secondary-text)]">
-                  {game.key === 'mystery' ? 'Vote decides the final slot' : 'Season 1 locked'}
-                </p>
-              </div>
-            ))}
-          </div>
         </section>
       ) : null}
 

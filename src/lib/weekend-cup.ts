@@ -98,8 +98,8 @@ export type WeekendCupPlayerRegistration = {
 
 export const WEEKEND_CUP_SLUG = 'playmechi-weekend-cup-season-1-2026-05-29';
 export const WEEKEND_CUP_TITLE = 'PlayMechi Weekend Cup Season 1';
-export const WEEKEND_CUP_PUBLIC_PATH = '/';
-export const WEEKEND_CUP_REGISTRATION_PATH = '/weekendcup';
+export const WEEKEND_CUP_PUBLIC_PATH = '/weekendcup';
+export const WEEKEND_CUP_REGISTRATION_PATH = '/weekendcup/register';
 export const WEEKEND_CUP_DASHBOARD_PATH = '/weekendcup/dashboard';
 export const WEEKEND_CUP_PROMO_IMAGE = '/images/weekendcup/season-1-promo.png';
 export const WEEKEND_CUP_REGISTRATION_ENABLED = true;

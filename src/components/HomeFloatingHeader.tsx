@@ -21,9 +21,9 @@ const DEFAULT_NAV_ITEMS: NavItem[] = [
 ];
 
 const HEADER_TEXT_CLASS =
-  'rounded-[var(--radius-control)] px-3 py-2 text-sm font-semibold uppercase tracking-[0.14em] text-[var(--text-secondary)] transition-colors hover:bg-[var(--surface-elevated)] hover:text-[var(--text-primary)]';
+  'rounded-[var(--radius-control)] px-3 py-2 font-[var(--font-display)] text-sm font-black uppercase tracking-[0.14em] text-[var(--text-secondary)] transition-colors hover:bg-[var(--surface-elevated)] hover:text-[var(--text-primary)]';
 const SIGN_IN_BUTTON_CLASS =
-  'inline-flex min-h-11 items-center justify-center rounded-[var(--radius-panel)] border border-[rgba(50,224,196,0.28)] bg-[var(--surface-elevated)] px-4 py-2 text-base font-semibold uppercase tracking-[0.14em] text-[var(--accent-secondary-text)] transition-all hover:border-[rgba(50,224,196,0.42)] hover:bg-[rgba(50,224,196,0.12)] hover:text-[var(--text-primary)] sm:text-sm';
+  'inline-flex min-h-11 items-center justify-center rounded-[var(--radius-panel)] border border-[rgba(50,224,196,0.28)] bg-[var(--surface-elevated)] px-4 py-2 font-[var(--font-display)] text-base font-black uppercase tracking-[0.14em] text-[var(--accent-secondary-text)] transition-all hover:border-[rgba(50,224,196,0.42)] hover:bg-[rgba(50,224,196,0.12)] hover:text-[var(--text-primary)] sm:text-sm';
 
 interface HomeFloatingHeaderProps {
   navItems?: NavItem[];
@@ -77,7 +77,7 @@ export function HomeFloatingHeader({
                   {user ? 'DASHBOARD' : 'SIGN IN'}
                 </Link>
                 {!user ? (
-                  <Link href={joinHref} className="btn-primary shadow-none text-sm uppercase tracking-[0.14em]">
+                  <Link href={joinHref} className="btn-primary shadow-none font-[var(--font-display)] text-sm font-black uppercase tracking-[0.14em]">
                     {joinLabel}
                   </Link>
                 ) : null}
@@ -119,7 +119,7 @@ export function HomeFloatingHeader({
                   <Link
                     href={joinHref}
                     onClick={() => setIsOpen(false)}
-                    className="btn-primary shadow-none text-sm uppercase tracking-[0.14em]"
+                    className="btn-primary shadow-none font-[var(--font-display)] text-sm font-black uppercase tracking-[0.14em]"
                   >
                     {joinLabel}
                   </Link>

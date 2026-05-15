@@ -1,13 +1,13 @@
 import type { Metadata } from 'next';
-import { WeekendCupClient } from '@/app/weekendcup/weekend-cup-client';
-import { WEEKEND_CUP_EVENT_DATES, WEEKEND_CUP_TITLE } from '@/lib/weekend-cup';
+import { MechiHomePageShell } from '@/app/home/mechi-home-page';
+import { WEEKEND_CUP_TITLE } from '@/lib/weekend-cup';
 
 export const metadata: Metadata = {
-  title: `${WEEKEND_CUP_TITLE} | Mechi.club`,
+  title: 'Home | Mechi.club',
   description:
-    `Vote for the mystery game and register for ${WEEKEND_CUP_TITLE}, running ${WEEKEND_CUP_EVENT_DATES}.`,
+    `Mechi.club home for ${WEEKEND_CUP_TITLE}, platform discovery, and community-driven competition.`,
 };
 
 export default function HomePage() {
-  return <WeekendCupClient />;
+  return <MechiHomePageShell />;
 }

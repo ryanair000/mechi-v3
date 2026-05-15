@@ -1,21 +1,16 @@
 import type { Metadata } from 'next';
-import { Suspense } from 'react';
-import { WeekendCupRegistrationClient } from './register/weekend-cup-registration-client';
+import { WeekendCupClient } from '@/app/weekendcup/weekend-cup-client';
 import {
   WEEKEND_CUP_EVENT_DATES,
   WEEKEND_CUP_TITLE,
 } from '@/lib/weekend-cup';
 
 export const metadata: Metadata = {
-  title: `Register | ${WEEKEND_CUP_TITLE}`,
+  title: `${WEEKEND_CUP_TITLE} | Mechi.club`,
   description:
-    `${WEEKEND_CUP_TITLE} registration is open for ${WEEKEND_CUP_EVENT_DATES}. Pay now to confirm your Weekend Cup slot.`,
+    `Vote for the mystery game and register for ${WEEKEND_CUP_TITLE}, running ${WEEKEND_CUP_EVENT_DATES}.`,
 };
 
 export default function WeekendCupPage() {
-  return (
-    <Suspense fallback={<div className="page-container py-8">Loading Weekend Cup registration...</div>}>
-      <WeekendCupRegistrationClient />
-    </Suspense>
-  );
+  return <WeekendCupClient />;
 }

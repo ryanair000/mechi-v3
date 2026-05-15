@@ -29,32 +29,27 @@ const LEADERBOARD_SLIDES: Slide[] = [
   {
     id: "slide-1",
     title: "pubg mobile",
-    imageUrl:
-      "https://images.unsplash.com/photo-1654618977232-a6c6dea9d1e8?q=80&w=2486&auto=format&fit=crop",
+    imageUrl: "/images/playmechi/leaderboard/pubgm-winners.png",
   },
   {
     id: "slide-2",
     title: "codm",
-    imageUrl:
-      "https://images.unsplash.com/photo-1624996752380-8ec242e0f85d?q=80&w=2487&auto=format&fit=crop",
+    imageUrl: "/images/playmechi/leaderboard/codm-winners.png",
   },
   {
     id: "slide-3",
     title: "efootball",
-    imageUrl:
-      "https://images.unsplash.com/photo-1688733720228-4f7a18681c4f?q=80&w=2487&auto=format&fit=crop",
+    imageUrl: "/images/playmechi/leaderboard/efootball-winners.png",
   },
   {
     id: "slide-4",
     title: "weekend cup",
-    imageUrl:
-      "https://images.unsplash.com/photo-1574717025058-2f8737d2e2b7?q=80&w=2487&auto=format&fit=crop",
+    imageUrl: "/images/playmechi/leaderboard/weekend-cup-winners.png",
   },
   {
     id: "slide-5",
     title: "weka mawe",
-    imageUrl:
-      "https://images.unsplash.com/photo-1726066012698-bb7a3abce786?q=80&w=2487&auto=format&fit=crop",
+    imageUrl: "/images/playmechi/weka-mawe-weekly-poster.png",
   },
 ];
 

@@ -5,6 +5,7 @@ import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft } from 'lucide-react';
 import { BrandLogo } from '@/components/BrandLogo';
+import { PageBreadcrumbs } from '@/components/PageBreadcrumbs';
 
 type SignupPageVariant = 'default' | 'marketing';
 type SideContentPlacement = 'default' | 'bottom';
@@ -100,6 +101,8 @@ export function SignupPage({
                     </button>
                   </div>
 
+                  <PageBreadcrumbs className="mt-4" />
+
                   <div className={sideCopyClass}>
                     {sideEyebrowLabel ? (
                       <p className="section-title">{sideEyebrowLabel}</p>
@@ -156,6 +159,7 @@ export function SignupPage({
 
               <div className="flex flex-1 flex-col justify-center overflow-y-auto p-2 md:overflow-hidden lg:p-4">
                 <div className="mx-auto w-full max-w-xl">
+                  <PageBreadcrumbs className="mb-5 md:hidden" />
                   {!hideMainHeader && (mainTitle || mainSubtitle) ? (
                     <div className="mb-8">
                       <p className="mb-3 text-xs font-semibold uppercase tracking-[0.3em] text-[var(--text-soft)]">

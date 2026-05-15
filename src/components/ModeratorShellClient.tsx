@@ -4,6 +4,7 @@ import { useState, type ReactNode } from 'react';
 import { PanelLeftClose, PanelLeftOpen, ShieldCheck } from 'lucide-react';
 import { BrandLogo } from '@/components/BrandLogo';
 import { ModeratorNavigation } from '@/components/ModeratorNavigation';
+import { PageBreadcrumbs } from '@/components/PageBreadcrumbs';
 import type { OnlineTournamentGameKey } from '@/lib/online-tournament';
 import { cn } from '@/lib/utils';
 import type { UserRole } from '@/types';
@@ -123,7 +124,10 @@ export function ModeratorShellClient({ children, profile, tournament }: Moderato
           </div>
         </header>
 
-        <div className="mx-auto w-full max-w-[92rem] px-4 py-5 sm:px-6 lg:px-8 lg:py-7">{children}</div>
+        <div className="mx-auto w-full max-w-[92rem] px-4 py-5 sm:px-6 lg:px-8 lg:py-7">
+          <PageBreadcrumbs className="pb-4" />
+          {children}
+        </div>
       </main>
     </div>
   );

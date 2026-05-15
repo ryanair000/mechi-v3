@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useAuth } from '@/components/AuthProvider';
 import { BrandLogo } from '@/components/BrandLogo';
+import { PageBreadcrumbs } from '@/components/PageBreadcrumbs';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { getLoginPath } from '@/lib/navigation';
 import {
@@ -91,6 +92,8 @@ export function WeekendCupHeader({
             </div>
           </div>
         </nav>
+
+        <PageBreadcrumbs className="mt-3 px-1 sm:px-2" />
       </div>
     </header>
   );

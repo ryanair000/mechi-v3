@@ -29,6 +29,14 @@ const AUTH_NOTICE_COPY: Record<string, { tone: 'success' | 'error'; message: str
     tone: 'error',
     message: 'That reset link expired. Request a fresh one.',
   },
+  signin_required: {
+    tone: 'error',
+    message: 'Sign in first to continue there.',
+  },
+  session_expired: {
+    tone: 'error',
+    message: 'Your session expired. Sign in again and keep going.',
+  },
   magic_link_invalid: {
     tone: 'error',
     message: 'That sign-in link is invalid or already used.',

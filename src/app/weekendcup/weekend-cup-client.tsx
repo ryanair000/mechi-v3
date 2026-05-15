@@ -313,7 +313,8 @@ export function WeekendCupClient() {
     Record<string, { label: string; description: string }>
   >({});
 
-  const signInHref = getLoginPath(`${WEEKEND_CUP_PUBLIC_PATH}#vote`);
+  const signInHref = getLoginPath(`${WEEKEND_CUP_PUBLIC_PATH}#vote`, 'signin_required');
+  const sessionExpiredHref = getLoginPath(`${WEEKEND_CUP_PUBLIC_PATH}#vote`, 'session_expired');
 
   const visibleBallots = useMemo(() => {
     const source = ballots.length > 0 ? ballots : getFallbackBallots();
@@ -346,8 +347,8 @@ export function WeekendCupClient() {
   }, [loadState]);
 
   const handleAuthFailure = useCallback(() => {
-    window.location.href = signInHref;
-  }, [signInHref]);
+    window.location.href = sessionExpiredHref;
+  }, [sessionExpiredHref]);
 
   const ensureLiveSession = useCallback(async () => {
     if (!user) {
@@ -374,12 +375,12 @@ export function WeekendCupClient() {
         return false;
       }
 
-        toast.error(errorMessage ?? 'Could not verify your session right now. Try again in a moment.');
-        return false;
-      } catch {
-        toast.error('Could not verify your session right now. Try again in a moment.');
-        return false;
-      }
+      toast.error(errorMessage ?? 'Could not verify your session right now. Try again in a moment.');
+      return false;
+    } catch {
+      toast.error('Could not verify your session right now. Try again in a moment.');
+      return false;
+    }
   }, [authFetch, handleAuthFailure, signInHref, user]);
 
   const handleVote = useCallback(async (optionId: string, alreadySelected: boolean, selectedCount: number) => {

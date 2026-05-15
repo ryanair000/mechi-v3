@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import Link from 'next/link';
 import { ArrowLeft, Mail } from 'lucide-react';
 import FooterSection from '@/components/footer';
+import { PageBreadcrumbs } from '@/components/PageBreadcrumbs';
 
 type LegalSection = {
   title: string;
@@ -41,6 +42,8 @@ export function LegalPage({
           <ArrowLeft size={16} />
           Back to Mechi
         </Link>
+
+        <PageBreadcrumbs className="mt-4" />
 
         <section className="card mt-5 overflow-hidden p-5 sm:p-8">
           <div className="brand-kicker w-fit">Mechi legal</div>

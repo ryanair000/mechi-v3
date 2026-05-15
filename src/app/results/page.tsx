@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { TestsWorkspaceNav } from '@/components/TestsWorkspaceNav';
 import { verifyToken } from '@/lib/auth';
+import { getLoginPath } from '@/lib/navigation';
 import { createServiceClient } from '@/lib/supabase';
 import { sendTestIssueResolvedTelegramNotification } from '@/lib/telegram';
 import { TESTS_URL } from '@/app/manual-tests/manual-test-kit';
@@ -114,7 +115,7 @@ async function getResultsAccess() {
   const payload = token ? verifyToken(token) : null;
 
   if (!payload?.sub) {
-    redirect('/login?next=/results');
+    redirect(getLoginPath('/results', 'signin_required'));
   }
 
   const supabase = createServiceClient();

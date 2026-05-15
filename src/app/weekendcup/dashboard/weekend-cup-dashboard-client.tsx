@@ -108,7 +108,8 @@ export function WeekendCupDashboardClient() {
     summary.registrations.find((registration) => registration.game === selectedConfig.game) ?? null;
   const currentCounts = summary.games[selectedConfig.game];
   const signInHref = getLoginPath(
-    `${WEEKEND_CUP_DASHBOARD_PATH}?game=${encodeURIComponent(selectedConfig.game)}`
+    `${WEEKEND_CUP_DASHBOARD_PATH}?game=${encodeURIComponent(selectedConfig.game)}`,
+    'signin_required'
   );
   const slotBooked = currentRegistration?.payment_status === 'paid';
   const fallbackEntryAmount =

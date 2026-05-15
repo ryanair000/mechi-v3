@@ -467,8 +467,8 @@ function unauthorizedResponse(pathname: string, request: NextRequest) {
 
   const nextPath = `${pathname}${request.nextUrl.search}`;
   const loginPath = pathname.startsWith('/moderators')
-    ? getModeratorLoginPath(nextPath)
-    : getLoginPath(nextPath);
+    ? getModeratorLoginPath(nextPath, 'signin_required')
+    : getLoginPath(nextPath, 'signin_required');
   return clearAuthCookie(NextResponse.redirect(new URL(loginPath, request.url)));
 }
 

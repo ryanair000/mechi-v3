@@ -6,6 +6,7 @@ import { useSearchParams } from 'next/navigation';
 import toast from 'react-hot-toast';
 import { Crown, Sparkles } from 'lucide-react';
 import { BrandLogo } from '@/components/BrandLogo';
+import { PageBreadcrumbs } from '@/components/PageBreadcrumbs';
 import { PlanBadge } from '@/components/PlanBadge';
 import PricingSection from '@/components/pricing-section';
 import { ThemeToggle } from '@/components/ThemeToggle';
@@ -210,6 +211,8 @@ function PricingPageContent() {
               </div>
             </div>
           </div>
+
+          <PageBreadcrumbs className="mt-3" />
         </div>
       </header>
 

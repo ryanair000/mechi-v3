@@ -6,6 +6,7 @@ import { LiveBadge } from '@/components/LiveBadge';
 import { StreamPlayer } from '@/components/StreamPlayer';
 import { isE2ETournamentFixture, shouldHideE2EFixtures } from '@/lib/e2e-fixtures';
 import { verifyToken } from '@/lib/auth';
+import { getLoginPath } from '@/lib/navigation';
 import { createServiceClient } from '@/lib/supabase';
 import { firstRelation } from '@/lib/tournaments';
 import type { LiveStream } from '@/types';
@@ -28,9 +29,10 @@ export default async function TournamentLivePage({
   const cookieStore = await cookies();
   const token = cookieStore.get('auth_token')?.value;
   const payload = token ? verifyToken(token) : null;
+  const nextPath = `/t/${slug}/live`;
 
   if (!payload?.sub) {
-    redirect('/login');
+    redirect(getLoginPath(nextPath, 'signin_required'));
   }
 
   const supabase = createServiceClient();
@@ -40,8 +42,12 @@ export default async function TournamentLivePage({
     .eq('id', payload.sub)
     .maybeSingle();
 
-  if (!viewerProfile || viewerProfile.is_banned) {
-    redirect('/login');
+  if (viewerProfile?.is_banned) {
+    redirect('/banned');
+  }
+
+  if (!viewerProfile) {
+    redirect(getLoginPath(nextPath, 'signin_required'));
   }
 
   let tournamentQuery = supabase

@@ -5,6 +5,7 @@ import { hasPrimaryAdminAccess } from '@/lib/admin-access';
 import { verifyToken } from '@/lib/auth';
 import { AdminNavigation } from '@/components/AdminNavigation';
 import { BrandLogo } from '@/components/BrandLogo';
+import { PageBreadcrumbs } from '@/components/PageBreadcrumbs';
 import { createServiceClient } from '@/lib/supabase';
 import { APP_URL } from '@/lib/urls';
 
@@ -103,6 +104,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
         </header>
 
         <div className="mx-auto w-full max-w-[72rem] px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
+          <PageBreadcrumbs className="pb-4" />
           {children}
         </div>
       </main>

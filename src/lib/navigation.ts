@@ -114,12 +114,25 @@ export function withQuery(
   return query ? `${pathname}?${query}` : pathname;
 }
 
-export function getLoginPath(next?: string | null) {
-  return withQuery('/login', { next: next ?? null });
+export function getLoginPathWithNotice(
+  next?: string | null,
+  authNotice?: string | null
+) {
+  return withQuery('/login', {
+    next: next ?? null,
+    auth_notice: authNotice ?? null,
+  });
 }
 
-export function getModeratorLoginPath(next?: string | null) {
-  return withQuery('/moderator-login', { next: next ?? null });
+export function getLoginPath(next?: string | null, authNotice?: string | null) {
+  return getLoginPathWithNotice(next, authNotice);
+}
+
+export function getModeratorLoginPath(next?: string | null, authNotice?: string | null) {
+  return withQuery('/moderator-login', {
+    next: next ?? null,
+    auth_notice: authNotice ?? null,
+  });
 }
 
 export function getRegisterPath(options?: {

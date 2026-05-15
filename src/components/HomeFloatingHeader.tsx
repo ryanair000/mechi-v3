@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { ChevronDown, Menu, X } from 'lucide-react';
 import { useAuth } from '@/components/AuthProvider';
 import { BrandLogo } from '@/components/BrandLogo';
+import { PageBreadcrumbs } from '@/components/PageBreadcrumbs';
 import { ThemeToggle } from '@/components/ThemeToggle';
 
 type NavLinkItem = {
@@ -262,6 +263,8 @@ export function HomeFloatingHeader({
             </div>
           ) : null}
         </div>
+
+        <PageBreadcrumbs className="mt-3 px-1 sm:px-2" />
       </div>
     </header>
   );

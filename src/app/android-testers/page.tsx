@@ -4,6 +4,7 @@ import { ArrowLeft } from 'lucide-react';
 import { AndroidTestersClient } from '@/app/android-testers/android-testers-client';
 import { BrandLogo } from '@/components/BrandLogo';
 import FooterSection from '@/components/footer';
+import { PageBreadcrumbs } from '@/components/PageBreadcrumbs';
 
 export const metadata: Metadata = {
   title: 'Mechi v4.0.1 Android Early Access | Mechi.club',
@@ -25,6 +26,8 @@ export default function AndroidTestersPage() {
             </Link>
             <BrandLogo size="sm" />
           </header>
+
+          <PageBreadcrumbs className="py-2" />
 
           <section className="grid gap-5 py-7 lg:grid-cols-[minmax(0,0.88fr)_minmax(360px,0.72fr)] lg:items-start">
             <div className="space-y-5">

@@ -71,7 +71,7 @@ const DASHBOARD_FONT_STYLE: CSSProperties & Record<string, string> = {
 };
 
 const OPTION_IMAGE_BY_SLUG: Partial<Record<string, string | null>> = {
-  bloodstrike: 'https://cdn.cloudflare.steamstatic.com/steam/apps/3199170/capsule_616x353.jpg',
+  bloodstrike: '/game-artwork/bloodstrike-header.jpg',
   'fc-mobile': '/game-artwork/fc26-header.webp',
   efootball: getGameImage('efootball'),
   'free-fire': getGameImage('freefire'),
@@ -159,7 +159,7 @@ function getOptionImage(option: WeekendCupBallotOption) {
 function getOptionImagePosition(option: WeekendCupBallotOption) {
   switch (option.slug) {
     case 'bloodstrike':
-      return 'center center';
+      return 'center top';
     case 'fc-mobile':
       return 'center top';
     case 'efootball':
@@ -226,11 +226,86 @@ function WeekendCupOptionCard({
   );
 }
 
+type WeekendCupSuggestionCardProps = {
+  ballotSlug: string;
+  draft: {
+    label: string;
+    description: string;
+  };
+  loading: boolean;
+  onLabelChange: (value: string) => void;
+  onDescriptionChange: (value: string) => void;
+  onSubmit: () => void;
+};
+
+function WeekendCupSuggestionCard({
+  ballotSlug,
+  draft,
+  loading,
+  onLabelChange,
+  onDescriptionChange,
+  onSubmit,
+}: WeekendCupSuggestionCardProps) {
+  return (
+    <div
+      className={`group relative flex min-h-[250px] flex-col overflow-hidden border border-white/10 bg-[rgba(17,26,44,0.72)] text-left shadow-[var(--shadow-soft)] sm:min-h-[270px] ${DASHBOARD_INNER_RADIUS_CLASS}`}
+    >
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(50,224,196,0.1),transparent_42%),linear-gradient(180deg,rgba(17,26,44,0.96),rgba(8,14,24,0.98))]" />
+      <div className="relative z-10 flex h-full flex-col p-4 sm:p-5">
+        <div className="space-y-2">
+          <p className="section-title">Suggest a game</p>
+          <p className="text-sm leading-6 text-[var(--text-secondary)]">
+            Missing your pick? Add it here and we can slot it into the mystery-game vote.
+          </p>
+        </div>
+
+        <div className="mt-4 flex flex-1 flex-col gap-3">
+          <input
+            type="text"
+            value={draft.label}
+            onChange={(event) => onLabelChange(event.target.value)}
+            placeholder="Game title"
+            className="input"
+            maxLength={80}
+            aria-label={`Suggest a game title for ${ballotSlug}`}
+          />
+          <textarea
+            value={draft.description}
+            onChange={(event) => onDescriptionChange(event.target.value)}
+            placeholder="Why it should be in"
+            className="input min-h-[88px] resize-none py-3"
+            maxLength={240}
+            aria-label={`Suggest why the game should be in for ${ballotSlug}`}
+          />
+        </div>
+
+        <button
+          type="button"
+          onClick={onSubmit}
+          disabled={loading}
+          className={`btn-outline mt-4 min-h-10 justify-center px-4 text-[0.88rem] ${DASHBOARD_CONTROL_RADIUS_CLASS}`}
+        >
+          {loading ? (
+            <>
+              <Loader2 size={14} className="animate-spin" />
+              Adding
+            </>
+          ) : (
+            <>
+              Suggest
+              <ArrowRight size={14} />
+            </>
+          )}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export function WeekendCupClient() {
   const { user } = useAuth();
   const authFetch = useAuthFetch();
   const [ballots, setBallots] = useState<WeekendCupBallot[]>([]);
-  const [loading, setLoading] = useState(true);
   const [actingOptionId, setActingOptionId] = useState<string | null>(null);
   const [clearingBallotSlug, setClearingBallotSlug] = useState<string | null>(null);
   const [submittingBallotSlug, setSubmittingBallotSlug] = useState<string | null>(null);
@@ -251,7 +326,6 @@ export function WeekendCupClient() {
   }, [ballots]);
 
   const loadState = useCallback(async () => {
-    setLoading(true);
     try {
       const res = await authFetch(API_PATH, { method: 'GET' });
       const data = (await res.json()) as WeekendCupSeriesResponse;
@@ -264,8 +338,6 @@ export function WeekendCupClient() {
       setBallots((data.ballots ?? []).filter((ballot) => VISIBLE_BALLOT_SLUGS.has(ballot.slug)));
     } catch {
       setBallots([]);
-    } finally {
-      setLoading(false);
     }
   }, [authFetch]);
 
@@ -577,12 +649,42 @@ export function WeekendCupClient() {
 
                 <div
                   id="options"
-                  className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3"
+                  className="grid gap-4 sm:grid-cols-2"
                 >
-                  {ballot.options.map((option) => {
+                  {ballot.options.flatMap((option, index) => {
                     const isVoting = actingOptionId === option.id;
+                    const suggestionDraft = suggestionDrafts[ballot.slug] ?? { label: '', description: '' };
+                    const suggestionCard =
+                      index === 0 ? (
+                        <WeekendCupSuggestionCard
+                          key={`suggest-${ballot.slug}`}
+                          ballotSlug={ballot.slug}
+                          draft={suggestionDraft}
+                          loading={submittingBallotSlug === ballot.slug}
+                          onLabelChange={(value) =>
+                            setSuggestionDrafts((current) => ({
+                              ...current,
+                              [ballot.slug]: {
+                                ...current[ballot.slug],
+                                label: value,
+                                description: current[ballot.slug]?.description ?? '',
+                              },
+                            }))
+                          }
+                          onDescriptionChange={(value) =>
+                            setSuggestionDrafts((current) => ({
+                              ...current,
+                              [ballot.slug]: {
+                                label: current[ballot.slug]?.label ?? '',
+                                description: value,
+                              },
+                            }))
+                          }
+                          onSubmit={() => void handleSuggest(ballot.slug)}
+                        />
+                      ) : null;
 
-                    return (
+                    return [
                       <button
                         key={option.id}
                         type="button"
@@ -601,71 +703,10 @@ export function WeekendCupClient() {
                         )}
                       >
                         <WeekendCupOptionCard option={option} isVoting={isVoting} />
-                      </button>
-                    );
+                      </button>,
+                      suggestionCard,
+                    ].filter(Boolean);
                   })}
-                </div>
-
-                <div
-                  className={`grid gap-3 border border-[var(--border-color)] bg-[rgba(17,26,44,0.68)] p-4 shadow-[var(--shadow-soft)] sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] sm:items-end ${DASHBOARD_INNER_RADIUS_CLASS}`}
-                >
-                  <div className="sm:col-span-3">
-                    <label className="label">Suggest a game</label>
-                    <p className="mt-1 text-sm text-[var(--text-secondary)]">
-                      Missing your pick? Drop it here and we can add it to the mystery-game vote.
-                    </p>
-                  </div>
-                  <input
-                    type="text"
-                    value={suggestionDrafts[ballot.slug]?.label ?? ''}
-                    onChange={(event) =>
-                      setSuggestionDrafts((current) => ({
-                        ...current,
-                        [ballot.slug]: {
-                          ...current[ballot.slug],
-                          label: event.target.value,
-                          description: current[ballot.slug]?.description ?? '',
-                        },
-                      }))
-                    }
-                    placeholder="Game title"
-                    className="input"
-                    maxLength={80}
-                  />
-                  <input
-                    type="text"
-                    value={suggestionDrafts[ballot.slug]?.description ?? ''}
-                    onChange={(event) =>
-                      setSuggestionDrafts((current) => ({
-                        ...current,
-                        [ballot.slug]: {
-                          label: current[ballot.slug]?.label ?? '',
-                          description: event.target.value,
-                        },
-                      }))
-                    }
-                    placeholder="Why it should be in"
-                    className="input"
-                    maxLength={240}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => void handleSuggest(ballot.slug)}
-                    disabled={loading || submittingBallotSlug === ballot.slug}
-                    className={`btn-outline min-h-10 justify-center px-4 text-[0.88rem] ${DASHBOARD_CONTROL_RADIUS_CLASS}`}
-                  >
-                    {submittingBallotSlug === ballot.slug ? (
-                      <>
-                        <Loader2 size={14} className="animate-spin" />
-                        Adding
-                      </>
-                    ) : (
-                      <>
-                        Suggest
-                        <ArrowRight size={14} />
-                      </>
-                    )}
-                  </button>
                 </div>
               </div>
             );

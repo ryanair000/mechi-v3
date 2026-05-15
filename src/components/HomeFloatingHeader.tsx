@@ -2,17 +2,25 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { Menu, X } from 'lucide-react';
+import { ChevronDown, Menu, X } from 'lucide-react';
 import { useAuth } from '@/components/AuthProvider';
 import { BrandLogo } from '@/components/BrandLogo';
 import { ThemeToggle } from '@/components/ThemeToggle';
 
-type NavItem = {
+type NavLinkItem = {
   href: string;
   label: string;
+  description?: string;
 };
 
-const DEFAULT_NAV_ITEMS: NavItem[] = [
+type NavDropdownItem = {
+  label: string;
+  items: NavLinkItem[];
+};
+
+export type HomeFloatingHeaderNavItem = NavLinkItem | NavDropdownItem;
+
+const DEFAULT_NAV_ITEMS: HomeFloatingHeaderNavItem[] = [
   { href: '#how-it-works', label: 'HOW IT WORKS' },
   { href: '#supported', label: 'GAMES' },
   { href: '/android-testers', label: 'ANDROID' },
@@ -27,9 +35,17 @@ const SIGN_IN_BUTTON_CLASS =
   'inline-flex min-h-[2.3rem] items-center justify-center rounded-[0.85rem] border border-[rgba(50,224,196,0.32)] bg-[rgba(17,27,46,0.88)] px-[1.125rem] py-1.5 font-[var(--font-display)] text-[0.88rem] font-extrabold uppercase tracking-[0.16em] text-[var(--accent-secondary-text)] transition-all hover:border-[rgba(50,224,196,0.46)] hover:bg-[rgba(50,224,196,0.12)] hover:text-[var(--text-primary)]';
 const JOIN_BUTTON_CLASS =
   'btn-primary min-h-[2.3rem] rounded-[0.85rem] px-[1.125rem] shadow-none font-[var(--font-display)] text-[0.88rem] font-extrabold uppercase tracking-[0.16em] text-[#08111d]';
+const DROPDOWN_PANEL_CLASS =
+  'pointer-events-none invisible absolute left-1/2 top-[calc(100%+0.65rem)] z-50 min-w-[15rem] -translate-x-1/2 rounded-[1rem] border border-[rgba(129,148,178,0.18)] bg-[rgba(11,20,36,0.96)] p-2 opacity-0 shadow-[0_20px_60px_rgba(2,8,23,0.45)] backdrop-blur-xl transition-all duration-200 group-hover:pointer-events-auto group-hover:visible group-hover:translate-y-0 group-hover:opacity-100 group-focus-within:pointer-events-auto group-focus-within:visible group-focus-within:translate-y-0 group-focus-within:opacity-100';
+const DROPDOWN_LINK_CLASS =
+  'flex rounded-[0.85rem] px-3 py-2.5 text-left transition-colors hover:bg-[rgba(50,224,196,0.1)] focus-visible:bg-[rgba(50,224,196,0.1)] focus-visible:outline-none';
+
+function isDropdownNavItem(item: HomeFloatingHeaderNavItem): item is NavDropdownItem {
+  return 'items' in item;
+}
 
 interface HomeFloatingHeaderProps {
-  navItems?: NavItem[];
+  navItems?: HomeFloatingHeaderNavItem[];
   signInHref?: string;
   joinHref?: string;
   joinLabel?: string;
@@ -44,7 +60,23 @@ export function HomeFloatingHeader({
   showLogo = true,
 }: HomeFloatingHeaderProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const [openMobileDropdown, setOpenMobileDropdown] = useState<string | null>(null);
   const { user } = useAuth();
+
+  const closeMobileMenu = () => {
+    setIsOpen(false);
+    setOpenMobileDropdown(null);
+  };
+
+  const toggleMobileMenu = () => {
+    setIsOpen((current) => {
+      const nextOpen = !current;
+      if (!nextOpen) {
+        setOpenMobileDropdown(null);
+      }
+      return nextOpen;
+    });
+  };
 
   return (
     <header className="sticky top-3 z-50 sm:top-6">
@@ -63,14 +95,54 @@ export function HomeFloatingHeader({
 
             <div className="hidden min-w-0 flex-1 items-center justify-center gap-3 md:flex">
               {navItems.map((item) => (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className={HEADER_TEXT_CLASS}
-                  style={DISPLAY_FONT_STYLE}
-                >
-                  {item.label}
-                </Link>
+                isDropdownNavItem(item) ? (
+                  <div key={item.label} className="group relative">
+                    <button
+                      type="button"
+                      className={`${HEADER_TEXT_CLASS} gap-1.5`}
+                      style={DISPLAY_FONT_STYLE}
+                      aria-haspopup="menu"
+                    >
+                      <span>{item.label}</span>
+                      <ChevronDown size={15} className="transition-transform duration-200 group-hover:rotate-180 group-focus-within:rotate-180" />
+                    </button>
+                    <div className={DROPDOWN_PANEL_CLASS} role="menu" aria-label={item.label}>
+                      <div className="grid gap-1">
+                        {item.items.map((dropdownItem) => (
+                          <Link
+                            key={`${item.label}-${dropdownItem.href}`}
+                            href={dropdownItem.href}
+                            className={DROPDOWN_LINK_CLASS}
+                            role="menuitem"
+                          >
+                            <span className="flex flex-col">
+                              <span
+                                className="font-[var(--font-display)] text-[0.9rem] font-extrabold uppercase tracking-[0.14em] text-[var(--text-primary)]"
+                                style={DISPLAY_FONT_STYLE}
+                              >
+                                {dropdownItem.label}
+                              </span>
+                              {dropdownItem.description ? (
+                                <span className="mt-1 text-[0.72rem] font-medium uppercase tracking-[0.12em] text-[var(--text-soft)]">
+                                  {dropdownItem.description}
+                                </span>
+                              ) : null}
+                            </span>
+                          </Link>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    className={HEADER_TEXT_CLASS}
+                    style={DISPLAY_FONT_STYLE}
+                  >
+                    {item.label}
+                  </Link>
+                )
               ))}
             </div>
 
@@ -92,7 +164,7 @@ export function HomeFloatingHeader({
               </div>
               <button
                 type="button"
-                onClick={() => setIsOpen((current) => !current)}
+                onClick={toggleMobileMenu}
                 className="icon-button h-8 w-8 md:hidden"
                 aria-label={isOpen ? 'Close menu' : 'Open menu'}
                 aria-expanded={isOpen}
@@ -105,21 +177,72 @@ export function HomeFloatingHeader({
 
           {isOpen ? (
             <div id="home-mobile-nav" className="mt-2 grid gap-1 border-t border-[var(--border-color)] pt-2 md:hidden">
-              {navItems.map((item) => (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  onClick={() => setIsOpen(false)}
-                  className={HEADER_TEXT_CLASS}
-                  style={DISPLAY_FONT_STYLE}
-                >
-                  {item.label}
-                </Link>
-              ))}
+              {navItems.map((item) =>
+                isDropdownNavItem(item) ? (
+                  <div
+                    key={item.label}
+                    className="rounded-[0.95rem] border border-[rgba(129,148,178,0.14)] bg-[rgba(17,27,46,0.54)]"
+                  >
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setOpenMobileDropdown((current) => (current === item.label ? null : item.label))
+                      }
+                      className={`${HEADER_TEXT_CLASS} flex w-full items-center justify-between gap-2`}
+                      style={DISPLAY_FONT_STYLE}
+                      aria-expanded={openMobileDropdown === item.label}
+                    >
+                      <span>{item.label}</span>
+                      <ChevronDown
+                        size={15}
+                        className={`transition-transform duration-200 ${
+                          openMobileDropdown === item.label ? 'rotate-180' : ''
+                        }`}
+                      />
+                    </button>
+                    {openMobileDropdown === item.label ? (
+                      <div className="grid gap-1 px-1 pb-2">
+                        {item.items.map((dropdownItem) => (
+                          <Link
+                            key={`${item.label}-${dropdownItem.href}`}
+                            href={dropdownItem.href}
+                            onClick={closeMobileMenu}
+                            className={DROPDOWN_LINK_CLASS}
+                          >
+                            <span className="flex flex-col">
+                              <span
+                                className="font-[var(--font-display)] text-[0.88rem] font-extrabold uppercase tracking-[0.14em] text-[var(--text-primary)]"
+                                style={DISPLAY_FONT_STYLE}
+                              >
+                                {dropdownItem.label}
+                              </span>
+                              {dropdownItem.description ? (
+                                <span className="mt-1 text-[0.72rem] font-medium uppercase tracking-[0.12em] text-[var(--text-soft)]">
+                                  {dropdownItem.description}
+                                </span>
+                              ) : null}
+                            </span>
+                          </Link>
+                        ))}
+                      </div>
+                    ) : null}
+                  </div>
+                ) : (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    onClick={closeMobileMenu}
+                    className={HEADER_TEXT_CLASS}
+                    style={DISPLAY_FONT_STYLE}
+                  >
+                    {item.label}
+                  </Link>
+                )
+              )}
               <div className="mt-1 grid gap-2 px-1 pb-1 pt-2 sm:flex sm:items-center">
                 <Link
                   href={user ? '/dashboard' : signInHref}
-                  onClick={() => setIsOpen(false)}
+                  onClick={closeMobileMenu}
                   className={SIGN_IN_BUTTON_CLASS}
                   style={DISPLAY_FONT_STYLE}
                 >
@@ -128,7 +251,7 @@ export function HomeFloatingHeader({
                 {!user ? (
                   <Link
                     href={joinHref}
-                    onClick={() => setIsOpen(false)}
+                    onClick={closeMobileMenu}
                     className={JOIN_BUTTON_CLASS}
                     style={DISPLAY_FONT_STYLE}
                   >

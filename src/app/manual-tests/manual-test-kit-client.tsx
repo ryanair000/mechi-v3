@@ -2,6 +2,7 @@
 
 import { useDeferredValue, useState, useSyncExternalStore } from 'react';
 import { CheckCircle2, ExternalLink, RefreshCcw, Search, ShieldCheck, Users } from 'lucide-react';
+import { PageBreadcrumbs } from '@/components/PageBreadcrumbs';
 import { TestsWorkspaceNav } from '@/components/TestsWorkspaceNav';
 import {
   MANUAL_TEST_STORAGE_KEY,
@@ -369,6 +370,7 @@ export default function ManualTestKitClient({
         <div className="mx-auto max-w-6xl space-y-4 sm:space-y-6">
           <div className="card circuit-panel overflow-hidden p-6 sm:p-7">
             <TestsWorkspaceNav current="checklist" />
+            <PageBreadcrumbs className="mt-4" />
 
             <div className="flex flex-col gap-6 xl:flex-row xl:items-end xl:justify-between">
               <div className="max-w-3xl">

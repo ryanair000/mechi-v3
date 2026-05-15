@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { CheckCircle2, ImagePlus, Loader2, Send, ShieldCheck, X } from 'lucide-react';
 import { useAuth } from '@/components/AuthProvider';
 import { ActionFeedback, type ActionFeedbackState } from '@/components/ActionFeedback';
+import { PageBreadcrumbs } from '@/components/PageBreadcrumbs';
 import { TestsWorkspaceNav } from '@/components/TestsWorkspaceNav';
 
 const MAX_IMAGE_SIZE_MB = 4;
@@ -135,6 +136,7 @@ export default function ReportIssueClient() {
         <div className="mx-auto max-w-5xl space-y-4 sm:space-y-6">
           <div className="card circuit-panel overflow-hidden p-6 sm:p-7">
             <TestsWorkspaceNav current="report" />
+            <PageBreadcrumbs className="mt-4" />
 
             <div className="mt-6 grid gap-5 lg:grid-cols-[minmax(0,1.1fr)_minmax(280px,0.9fr)] lg:items-start">
               <div className="max-w-3xl">

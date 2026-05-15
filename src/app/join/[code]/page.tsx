@@ -2,6 +2,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import type { Metadata } from 'next';
 import { BrandLogo } from '@/components/BrandLogo';
+import { PageBreadcrumbs } from '@/components/PageBreadcrumbs';
 import { findInviterByCode } from '@/lib/invite';
 import { formatLocationLabel } from '@/lib/location';
 import { getLoginPath, getRegisterPath } from '@/lib/navigation';
@@ -50,6 +51,7 @@ export default async function JoinInvitePage({ params }: Props) {
 
         <main className="landing-shell flex flex-1 items-center justify-center py-16">
           <div className="card circuit-panel w-full max-w-xl p-8 text-center sm:p-10">
+            <PageBreadcrumbs className="mb-6 text-left" />
             <p className="brand-kicker justify-center">Invite Link</p>
             <div className="mx-auto my-6 flex h-20 w-20 items-center justify-center rounded-3xl bg-[rgba(255,107,107,0.14)] text-3xl font-black text-[var(--brand-coral)]">
               ?
@@ -94,6 +96,7 @@ export default async function JoinInvitePage({ params }: Props) {
         <div className="card circuit-panel w-full max-w-2xl overflow-hidden p-0">
           <div className="grid gap-0 lg:grid-cols-[0.95fr_1.05fr]">
             <div className="border-b border-[var(--border-color)] bg-[var(--surface-strong)] p-8 lg:border-b-0 lg:border-r lg:p-10">
+              <PageBreadcrumbs className="mb-6" />
               <p className="brand-kicker">Invite Link</p>
               <h1 className="mt-5 text-4xl font-black tracking-normal text-[var(--text-primary)]">
                 {inviter.username} wants you on Mechi

@@ -13,6 +13,7 @@ import {
   Inbox,
   ShieldCheck,
 } from 'lucide-react';
+import { PageBreadcrumbs } from '@/components/PageBreadcrumbs';
 import { TestsWorkspaceNav } from '@/components/TestsWorkspaceNav';
 import { verifyToken } from '@/lib/auth';
 import { getLoginPath } from '@/lib/navigation';
@@ -230,6 +231,7 @@ function RestrictedResults() {
         <div className="mx-auto max-w-4xl space-y-4 sm:space-y-6">
           <div className="card circuit-panel overflow-hidden p-6 sm:p-7">
             <TestsWorkspaceNav current="results" />
+            <PageBreadcrumbs className="mt-4" />
 
             <div className="mt-8 flex flex-col gap-4">
               <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-[rgba(255,107,107,0.24)] bg-[rgba(255,107,107,0.1)] text-[var(--brand-coral)]">
@@ -299,6 +301,7 @@ export default async function ResultsPage({ searchParams }: ResultsPageProps) {
         <div className="mx-auto max-w-6xl space-y-4 sm:space-y-6">
           <div className="card circuit-panel overflow-hidden p-6 sm:p-7">
             <TestsWorkspaceNav current="results" />
+            <PageBreadcrumbs className="mt-4" />
 
             <div className="mt-6 grid gap-5 lg:grid-cols-[minmax(0,1.1fr)_minmax(280px,0.9fr)] lg:items-end">
               <div>

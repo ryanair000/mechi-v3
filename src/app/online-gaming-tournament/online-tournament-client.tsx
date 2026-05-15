@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import FooterSection from '@/components/footer';
 import { useAuth } from '@/components/AuthProvider';
 import { HomeFloatingHeader } from '@/components/HomeFloatingHeader';
+import { useRegionalSettings } from '@/components/RegionalSettingsProvider';
 import { CtaCard } from '@/components/ui/cta-card';
 import { Faq5 } from '@/components/ui/faq-5';
 import { Features } from '@/components/ui/features-4';
@@ -45,16 +46,6 @@ const TOURNAMENT_SIGN_IN_PATH = getLoginPath(ONLINE_TOURNAMENT_REGISTRATION_PATH
 const TOURNAMENT_SIGN_UP_PATH = getRegisterPath({
   next: ONLINE_TOURNAMENT_REGISTRATION_PATH,
 });
-const TOURNAMENT_NAV_ITEMS = [
-  { href: '#prizes', label: 'PRIZES' },
-  { href: '#rules', label: 'RULES' },
-  { href: '#stream', label: 'STREAM' },
-  { href: ONLINE_TOURNAMENT_DISPUTE_PATH, label: 'REPORT' },
-  { href: '/blog', label: 'BLOG' },
-  { href: '/android-testers', label: 'ANDROID' },
-  { href: '/platform', label: 'PLATFORM' },
-];
-
 function getFallbackSummary(): RegistrationSummary {
   return {
     games: ONLINE_TOURNAMENT_GAMES.reduce(
@@ -80,12 +71,33 @@ function getFallbackSummary(): RegistrationSummary {
 
 export function OnlineTournamentClient() {
   const { user } = useAuth();
+  const { locale } = useRegionalSettings();
   const [summary, setSummary] = useState<RegistrationSummary>(() => getFallbackSummary());
   const [summaryLoading, setSummaryLoading] = useState(true);
   const [summaryError, setSummaryError] = useState<string | null>(null);
   const tournamentRegistrationHref = user
     ? ONLINE_TOURNAMENT_REGISTRATION_PATH
     : TOURNAMENT_SIGN_UP_PATH;
+  const isSwahili = locale === 'sw-TZ';
+  const tournamentNavItems = isSwahili
+    ? [
+        { href: '#prizes', label: 'ZAWADI' },
+        { href: '#rules', label: 'SHERIA' },
+        { href: '#stream', label: 'STREAM' },
+        { href: ONLINE_TOURNAMENT_DISPUTE_PATH, label: 'RIPOTI' },
+        { href: '/blog', label: 'BLOG' },
+        { href: '/android-testers', label: 'ANDROID' },
+        { href: '/platform', label: 'MFUMO' },
+      ]
+    : [
+        { href: '#prizes', label: 'PRIZES' },
+        { href: '#rules', label: 'RULES' },
+        { href: '#stream', label: 'STREAM' },
+        { href: ONLINE_TOURNAMENT_DISPUTE_PATH, label: 'REPORT' },
+        { href: '/blog', label: 'BLOG' },
+        { href: '/android-testers', label: 'ANDROID' },
+        { href: '/platform', label: 'PLATFORM' },
+      ];
 
   const loadSummary = useCallback(async () => {
     setSummaryLoading(true);
@@ -114,7 +126,7 @@ export function OnlineTournamentClient() {
   return (
     <div className="page-base marketing-prototype-shell min-h-screen">
       <HomeFloatingHeader
-        navItems={TOURNAMENT_NAV_ITEMS}
+        navItems={tournamentNavItems}
         signInHref={TOURNAMENT_SIGN_IN_PATH}
         joinHref={tournamentRegistrationHref}
       />
@@ -123,18 +135,22 @@ export function OnlineTournamentClient() {
         <section>
           <Hero1
             badgeLabel={`Free entry | ${ONLINE_TOURNAMENT_TOTAL_SLOTS} registrations max | ${ONLINE_TOURNAMENT_EVENT_DATES}`}
-            title="Pull up. Lock in. Win on Mechi."
-            description="Free online tournament for PUBG Mobile, Call of Duty Mobile, and eFootball. Each game accepts up to 200 registrations, while match-day check-in caps stay locked at PUBG 100, CODM 100, and eFootball 16. Register on Mechi.club, show up at 8:00 PM, and fight for the KSh 6,000 cash prize pool plus game currency live on PlayMechi."
-            secondaryLabel="See The Prizes"
+            title={isSwahili ? 'Njoo. Jifunge. Shinda kwenye Mechi.' : 'Pull up. Lock in. Win on Mechi.'}
+            description={
+              isSwahili
+                ? 'Tournament ya bure ya mtandaoni kwa PUBG Mobile, Call of Duty Mobile, na eFootball. Kila mchezo unakubali usajili hadi 200, huku check-in za siku ya mechi zikibaki PUBG 100, CODM 100, na eFootball 16. Jisajili kwenye Mechi.club, fika saa 2:00 usiku, na pigania prize pool ya KSh 6,000 pamoja na game currency live kwenye PlayMechi.'
+                : 'Free online tournament for PUBG Mobile, Call of Duty Mobile, and eFootball. Each game accepts up to 200 registrations, while match-day check-in caps stay locked at PUBG 100, CODM 100, and eFootball 16. Register on Mechi.club, show up at 8:00 PM, and fight for the KSh 6,000 cash prize pool plus game currency live on PlayMechi.'
+            }
+            secondaryLabel={isSwahili ? 'Ona Zawadi' : 'See The Prizes'}
             secondaryHref="#prizes"
-            primaryLabel="Register Now!"
+            primaryLabel={isSwahili ? 'Jisajili Sasa!' : 'Register Now!'}
             primaryHref={tournamentRegistrationHref}
           />
         </section>
 
         <section id="games" className="scroll-mt-24 pt-2 sm:pt-4">
           <div id="prizes" className="scroll-mt-24">
-            <p className="section-title">Games and prizes</p>
+            <p className="section-title">{isSwahili ? 'Michezo na zawadi' : 'Games and prizes'}</p>
             <div className="mt-3 grid gap-4 lg:grid-cols-3">
               {ONLINE_TOURNAMENT_GAMES.map((game) => (
                 <GlassBlogCard
@@ -148,12 +164,14 @@ export function OnlineTournamentClient() {
                     game.shortLabel,
                     summaryLoading || summaryError
                       ? `${game.slots} slots`
-                      : `${summary.games[game.game]?.spotsLeft ?? game.slots} slots left`,
+                      : isSwahili
+                        ? `${summary.games[game.game]?.spotsLeft ?? game.slots} nafasi zimebaki`
+                        : `${summary.games[game.game]?.spotsLeft ?? game.slots} slots left`,
                   ]}
                   stats={[
-                    { label: '1st place', value: game.firstPrize },
-                    { label: '2nd place', value: game.secondPrize },
-                    { label: '3rd place', value: game.thirdPrize },
+                    { label: isSwahili ? 'Nafasi ya 1' : '1st place', value: game.firstPrize },
+                    { label: isSwahili ? 'Nafasi ya 2' : '2nd place', value: game.secondPrize },
+                    { label: isSwahili ? 'Nafasi ya 3' : '3rd place', value: game.thirdPrize },
                   ]}
                 />
               ))}
@@ -165,26 +183,40 @@ export function OnlineTournamentClient() {
 
         <section id="stream" className="landing-section scroll-mt-24 border-t border-[var(--border-color)]">
           <CtaCard
-            title="Stream"
-            subtitle="Watch it live on Instagram, TikTok, and YouTube."
-            description={`${ONLINE_TOURNAMENT_STREAMER} handles the broadcast for all three nights. Pull up on social at 8:00 PM EAT, bring the chat energy, and watch PUBG Mobile, CODM, and eFootball go off live.`}
-            buttonText="Open YouTube channel"
+            title={isSwahili ? 'Stream' : 'Stream'}
+            subtitle={
+              isSwahili
+                ? 'Tazama live kwenye Instagram, TikTok, na YouTube.'
+                : 'Watch it live on Instagram, TikTok, and YouTube.'
+            }
+            description={
+              isSwahili
+                ? `${ONLINE_TOURNAMENT_STREAMER} anasimamia broadcast kwa nights zote tatu. Njoo kwenye social saa 2:00 usiku EAT, leta nguvu za chat, na tazama PUBG Mobile, CODM, na eFootball live.`
+                : `${ONLINE_TOURNAMENT_STREAMER} handles the broadcast for all three nights. Pull up on social at 8:00 PM EAT, bring the chat energy, and watch PUBG Mobile, CODM, and eFootball go off live.`
+            }
+            buttonText={isSwahili ? 'Fungua channel ya YouTube' : 'Open YouTube channel'}
             buttonHref={ONLINE_TOURNAMENT_YOUTUBE_URL}
             buttonTarget="_blank"
             imageSrc="/game-artwork/codm-header.webp"
-            imageAlt="Call of Duty Mobile action artwork for the PlayMechi tournament stream"
+            imageAlt={
+              isSwahili
+                ? 'Picha ya Call of Duty Mobile kwa stream ya tournament ya PlayMechi'
+                : 'Call of Duty Mobile action artwork for the PlayMechi tournament stream'
+            }
             className="border-white/10 bg-[rgba(10,18,31,0.76)] text-[var(--text-primary)] shadow-2xl shadow-black/20 ring-1 ring-white/10 backdrop-blur-md [&_h2]:text-[var(--text-primary)] [&_p]:leading-7 [&_p]:text-[var(--text-secondary)] [&>div:first-child]:border-b [&>div:first-child]:border-white/10 md:[&>div:first-child]:border-b-0 md:[&>div:first-child]:border-r"
           />
         </section>
 
         <section id="team" className="landing-section scroll-mt-24 border-t border-[var(--border-color)]">
           <div className="mb-8 max-w-3xl">
-            <p className="section-title">Team</p>
+            <p className="section-title">{isSwahili ? 'Timu' : 'Team'}</p>
             <h2 className="mt-3 text-3xl font-black leading-tight text-[var(--text-primary)] sm:text-4xl">
-              The crew running the night.
+              {isSwahili ? 'Kikosi kinachosimamia usiku.' : 'The crew running the night.'}
             </h2>
             <p className="mt-3 text-sm leading-7 text-[var(--text-secondary)] sm:text-base">
-              Stream, match control, and tournament ops are covered by the people below.
+              {isSwahili
+                ? 'Stream, udhibiti wa mechi, na ops za tournament zinasimamiwa na watu waliopo hapa chini.'
+                : 'Stream, match control, and tournament ops are covered by the people below.'}
             </p>
           </div>
 

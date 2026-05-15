@@ -93,6 +93,7 @@ export function WeekendCupRegistrationClient() {
   });
   const createAccountHref = getRegisterPath({ next: returnPath });
   const signInHref = getLoginPath(returnPath);
+  const sessionExpiredHref = getLoginPath(returnPath, 'session_expired');
   const dashboardHref = requestedNextPath || `${WEEKEND_CUP_DASHBOARD_PATH}?game=${encodeURIComponent(selectedGame)}`;
   useEffect(() => {
     setRegistrationOpen(WEEKEND_CUP_REGISTRATION_ENABLED && isWeekendCupRegistrationOpen());
@@ -108,6 +109,11 @@ export function WeekendCupRegistrationClient() {
     try {
       const res = await authFetch(API_PATH, { method: 'GET' });
       const data = (await res.json()) as WeekendCupRegistrationSummary & { error?: string };
+      if (res.status === 401 || res.status === 403) {
+        toast.error('Your session expired. Sign in again to continue registration.');
+        router.replace(sessionExpiredHref);
+        return;
+      }
       if (!res.ok) {
         toast.error(data.error ?? 'Could not load Weekend Cup registration');
         return;
@@ -117,15 +123,15 @@ export function WeekendCupRegistrationClient() {
     } catch {
       toast.error('Could not load Weekend Cup registration');
     }
-  }, [authFetch]);
+  }, [authFetch, router, sessionExpiredHref]);
 
   useEffect(() => {
-    if (!registrationOpen || authLoading) {
+    if (!registrationOpen || authLoading || !user) {
       return;
     }
 
     void loadSummary();
-  }, [authLoading, loadSummary, registrationOpen]);
+  }, [authLoading, loadSummary, registrationOpen, user]);
 
   useEffect(() => {
     const prefill = summary.prefill?.[selectedGame] ?? null;
@@ -157,6 +163,7 @@ export function WeekendCupRegistrationClient() {
 
     if (!user) {
       toast.error('Sign in to register for Weekend Cup.');
+      router.replace(signInHref);
       return;
     }
 
@@ -183,6 +190,12 @@ export function WeekendCupRegistrationClient() {
           })
         | { error?: string };
 
+      if (res.status === 401 || res.status === 403) {
+        toast.error('Your session expired. Sign in again to continue registration.');
+        router.replace(sessionExpiredHref);
+        return;
+      }
+
       if (!res.ok) {
         toast.error(data.error ?? 'Could not save Weekend Cup registration');
         return;
@@ -205,9 +218,7 @@ export function WeekendCupRegistrationClient() {
       }
 
       toast.success('Payment already confirmed. Your slot is locked.');
-      if (requestedNextPath) {
-        router.push(requestedNextPath);
-      }
+      router.push(dashboardHref);
     } catch {
       toast.error('Network error while saving registration');
     } finally {

@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import { useRegionalSettings } from "@/components/RegionalSettingsProvider";
 import { TimelineContent } from "@/components/ui/timeline-animation";
 import { cn } from "@/lib/utils";
 import { WEEKEND_CUP_REGISTRATION_PATH } from "@/lib/weekend-cup";
@@ -27,6 +28,9 @@ export const blocksDesign = [
 ];
 
 export default function HeroSection() {
+  const { locale } = useRegionalSettings();
+  const isSwahili = locale === "sw-TZ";
+
   return (
     <section className="page-base relative overflow-hidden bg-transparent px-4 pb-5 pt-16 text-[var(--text-primary)] sm:pt-20">
       <div className="mx-auto min-h-[60vh] max-w-screen-2xl">
@@ -37,10 +41,12 @@ export default function HeroSection() {
             className="mx-auto flex w-fit items-center gap-1 rounded-full border-4 border-blue-200 bg-blue-600 py-0.5 pl-0.5 pr-3 text-xs"
           >
             <div className="rounded-full bg-[var(--surface-strong)] px-2 py-1 text-xs text-[var(--text-primary)]">
-              Latest
+              {isSwahili ? "Mpya" : "Latest"}
             </div>
             <p className="inline-block text-xs text-white sm:text-base">
-              <span className="px-1 font-semibold">Weekend Cup Live Now!</span>
+              <span className="px-1 font-semibold">
+                {isSwahili ? "Weekend Cup Inaendelea Sasa!" : "Weekend Cup Live Now!"}
+              </span>
             </p>
 
             <svg
@@ -63,13 +69,13 @@ export default function HeroSection() {
             as="h1"
             className="text-4xl leading-[100%] text-[var(--text-primary)] sm:text-5xl xl:text-6xl 2xl:text-7xl"
           >
-            Compete.{" "}
+            {isSwahili ? "Shindana." : "Compete."}{" "}
             <span className="bg-gradient-to-r from-red-500 to-orange-500 bg-clip-text font-semibold text-transparent">
-              Win Prizes.
+              {isSwahili ? "Shinda Zawadi." : "Win Prizes."}
             </span>{" "}
-            Level Up.{" "}
+            {isSwahili ? "Panda Ngazi." : "Level Up."}{" "}
             <span className="bg-gradient-to-r from-blue-400 to-blue-600 bg-clip-text font-semibold text-transparent">
-              Get Recognized.
+              {isSwahili ? "Tambulika." : "Get Recognized."}
             </span>{" "}
           </TimelineContent>
 
@@ -77,9 +83,9 @@ export default function HeroSection() {
             as="p"
             className="mx-auto max-w-2xl text-sm text-[var(--text-secondary)] sm:text-lg lg:text-xl"
           >
-            Pull up to PlayMechi, sharpen your skill, chase real prizes, and
-            make your name ring out. Clean competition, live pressure, and a
-            real shot to get seen.
+            {isSwahili
+              ? "Njoo PlayMechi, boresha uwezo wako, fuata zawadi halisi, na fanya jina lako lisikike. Ushindani safi, presha ya moja kwa moja, na nafasi ya kweli ya kuonekana."
+              : "Pull up to PlayMechi, sharpen your skill, chase real prizes, and make your name ring out. Clean competition, live pressure, and a real shot to get seen."}
           </TimelineContent>
         </article>
 

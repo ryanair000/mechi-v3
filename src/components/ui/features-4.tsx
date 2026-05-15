@@ -1,5 +1,8 @@
+'use client';
+
 import type { ComponentType } from 'react';
 import { Cpu, Fingerprint, Pencil, Settings2, Sparkles, Zap } from 'lucide-react';
+import { useRegionalSettings } from '@/components/RegionalSettingsProvider';
 import { cn } from '@/lib/utils';
 
 type RuleFeature = {
@@ -42,6 +45,43 @@ const COMMON_RULES: RuleFeature[] = [
 ];
 
 export function Features({ className }: { className?: string }) {
+  const { locale } = useRegionalSettings();
+  const isSwahili = locale === 'sw-TZ';
+  const rules = isSwahili
+    ? [
+        {
+          title: 'Fika kwa wakati',
+          body: 'Michezo yote huanza saa 2:00 usiku EAT. Ingia room yako, lobby, au fixture mapema ili admins wafunge mechi kwa usafi.',
+          icon: Zap,
+        },
+        {
+          title: 'Tumia tag uliyojisajili nayo',
+          body: 'Cheza na username au gamer tag ile ile uliyoweka wakati wa usajili. Kubadilisha akaunti hovyo kunaweza kukuondoa.',
+          icon: Fingerprint,
+        },
+        {
+          title: 'Fair play tu',
+          body: 'Hakuna cheating, hacking, teaming, scripts, emulator abuse, manipulation ya matokeo, au tools zisizo fair kwenye mchezo wowote.',
+          icon: Cpu,
+        },
+        {
+          title: 'Tuma uthibitisho safi',
+          body: 'Screenshots na rekodi za admin ndizo huzingatia matokeo. Tuma ushahidi ulio wazi admins wanapouomba, hasa baada ya mechi za eFootball.',
+          icon: Pencil,
+        },
+        {
+          title: 'Heshimu lobby',
+          body: 'Hakuna matusi, vitisho, usumbufu, au chat yenye sumu. Fuata maelekezo ya admin ili tournament iendelee vizuri.',
+          icon: Sparkles,
+        },
+        {
+          title: 'Maamuzi ya admin ni ya mwisho',
+          body: 'Ripoti disputes mara moja na ushahidi. Baada ya review, uamuzi wa organizer/admin unafunga suala hilo.',
+          icon: Settings2,
+        },
+      ]
+    : COMMON_RULES;
+
   return (
     <section
       id="rules"
@@ -49,18 +89,19 @@ export function Features({ className }: { className?: string }) {
     >
       <div className="mx-auto max-w-5xl space-y-8 md:space-y-14">
         <div className="relative z-10 mx-auto max-w-2xl space-y-4 text-center">
-          <p className="section-title">Rules</p>
+          <p className="section-title">{isSwahili ? 'Sheria' : 'Rules'}</p>
           <h2 className="text-balance text-3xl font-black leading-tight text-[var(--text-primary)] sm:text-4xl lg:text-5xl">
-            Common rules for every game.
+            {isSwahili ? 'Sheria za pamoja kwa kila mchezo.' : 'Common rules for every game.'}
           </h2>
           <p className="text-sm leading-7 text-[var(--text-secondary)] sm:text-base">
-            These apply to PUBG Mobile, Call of Duty Mobile, and eFootball. Keep it fair, keep it
-            clean, and make admin verification easy.
+            {isSwahili
+              ? 'Hizi zinatumika kwa PUBG Mobile, Call of Duty Mobile, na eFootball. Weka ushindani fair, safi, na ufanye uthibitisho wa admin uwe mwepesi.'
+              : 'These apply to PUBG Mobile, Call of Duty Mobile, and eFootball. Keep it fair, keep it clean, and make admin verification easy.'}
           </p>
         </div>
 
         <div className="relative mx-auto grid max-w-2xl overflow-hidden rounded-[var(--radius-card)] border border-[var(--border-color)] bg-[rgba(10,18,31,0.72)] shadow-2xl shadow-black/20 ring-1 ring-white/10 backdrop-blur-md sm:grid-cols-2 lg:max-w-4xl lg:grid-cols-3">
-          {COMMON_RULES.map((rule) => {
+          {rules.map((rule) => {
             const Icon = rule.icon;
 
             return (

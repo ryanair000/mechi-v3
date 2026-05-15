@@ -1,15 +1,16 @@
 'use client';
 
+import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
 import {
   ArrowUp,
-  CheckCircle2,
   Gamepad2,
   Loader2,
   Send,
 } from 'lucide-react';
 import { useAuthFetch } from '@/components/AuthProvider';
+import { getLoginPath, withQuery } from '@/lib/navigation';
 import type { Suggestion } from '@/types';
 
 function formatSuggestionDate(value: string) {
@@ -31,11 +32,11 @@ function getStatusClasses(status: Suggestion['status']) {
 }
 
 export default function SuggestPage() {
+  const router = useRouter();
   const authFetch = useAuthFetch();
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
-  const [submitted, setSubmitted] = useState(false);
   const [votingId, setVotingId] = useState<string | null>(null);
   const [form, setForm] = useState({ game_name: '', description: '' });
 
@@ -46,13 +47,16 @@ export default function SuggestPage() {
       if (res.ok) {
         const data = (await res.json()) as { suggestions?: Suggestion[] };
         setSuggestions(data.suggestions ?? []);
+      } else if (res.status === 401 || res.status === 403) {
+        toast.error('Your session expired. Sign in again to continue.');
+        router.replace(getLoginPath('/suggest', 'session_expired'));
       } else {
         setSuggestions([]);
       }
     } finally {
       setLoading(false);
     }
-  }, [authFetch]);
+  }, [authFetch, router]);
 
   useEffect(() => {
     void fetchSuggestions();
@@ -63,6 +67,11 @@ export default function SuggestPage() {
     try {
       const res = await authFetch(`/api/suggestions/${id}/vote`, { method: 'POST' });
       const data = (await res.json()) as { error?: string; votes?: number; voted?: boolean };
+      if (res.status === 401 || res.status === 403) {
+        toast.error('Your session expired. Sign in again to continue.');
+        router.replace(getLoginPath('/suggest', 'session_expired'));
+        return;
+      }
       if (!res.ok) {
         toast.error(data.error ?? 'Vote failed');
         return;
@@ -97,6 +106,11 @@ export default function SuggestPage() {
         body: JSON.stringify(form),
       });
       const data = (await res.json()) as { error?: string; suggestion?: Suggestion };
+      if (res.status === 401 || res.status === 403) {
+        toast.error('Your session expired. Sign in again to continue.');
+        router.replace(getLoginPath('/suggest', 'session_expired'));
+        return;
+      }
       if (!res.ok || !data.suggestion) {
         toast.error(data.error ?? 'Failed to submit');
         return;
@@ -110,7 +124,11 @@ export default function SuggestPage() {
       toast.success('Suggestion submitted');
       setSuggestions((prev) => [createdSuggestion, ...prev]);
       setForm({ game_name: '', description: '' });
-      setSubmitted(true);
+      router.push(
+        withQuery('/suggest/complete', {
+          game: createdSuggestion.game_name,
+        })
+      );
     } finally {
       setSubmitting(false);
     }
@@ -134,70 +152,48 @@ export default function SuggestPage() {
         <div className="card p-5">
           <p className="text-sm font-black text-[var(--text-primary)]">Submit a suggestion</p>
 
-          {submitted ? (
-            <div className="py-10 text-center">
-              <CheckCircle2
-                size={40}
-                className="mx-auto mb-4 text-[var(--accent-secondary-text)]"
+          <form onSubmit={handleSubmit} className="mt-4 space-y-4">
+            <div>
+              <label className="label">Game title</label>
+              <input
+                type="text"
+                value={form.game_name}
+                onChange={(event) =>
+                  setForm((current) => ({ ...current, game_name: event.target.value }))
+                }
+                placeholder="e.g. Rocket League Mobile"
+                className="input"
+                maxLength={60}
               />
-              <p className="text-base font-black text-[var(--text-primary)]">
-                Suggestion submitted
-              </p>
-              <p className="mx-auto mt-2 max-w-sm text-sm leading-6 text-[var(--text-secondary)]">
-                We will review it and keep the community list updated as requests move.
-              </p>
-              <button
-                type="button"
-                onClick={() => setSubmitted(false)}
-                className="btn-outline mt-5"
-              >
-                Submit another
-              </button>
             </div>
-          ) : (
-            <form onSubmit={handleSubmit} className="mt-4 space-y-4">
-              <div>
-                <label className="label">Game title</label>
-                <input
-                  type="text"
-                  value={form.game_name}
-                  onChange={(event) =>
-                    setForm((current) => ({ ...current, game_name: event.target.value }))
-                  }
-                  placeholder="e.g. Rocket League Mobile"
-                  className="input"
-                  maxLength={60}
-                />
-              </div>
 
-              <div>
-                <label className="label">Why should Mechi add it?</label>
-                <textarea
-                  value={form.description}
-                  onChange={(event) =>
-                    setForm((current) => ({ ...current, description: event.target.value }))
-                  }
-                  placeholder="Explain the player base, the competitive scene, or why it fits Mechi."
-                  className="input min-h-[104px] resize-none"
-                  maxLength={300}
-                />
-              </div>
+            <div>
+              <label className="label">Why should Mechi add it?</label>
+              <textarea
+                value={form.description}
+                onChange={(event) =>
+                  setForm((current) => ({ ...current, description: event.target.value }))
+                }
+                placeholder="Explain the player base, the competitive scene, or why it fits Mechi."
+                className="input min-h-[104px] resize-none"
+                maxLength={300}
+              />
+            </div>
 
-              <button type="submit" disabled={submitting} className="btn-primary w-full">
-                {submitting ? (
-                  <>
-                    <Loader2 size={14} className="animate-spin" />
-                    Submitting...
-                  </>
-                ) : (
-                  <>
-                    <Send size={14} />
-                    Submit suggestion
-                  </>
-                )}
-              </button>
-            </form>
-          )}
+            <button type="submit" disabled={submitting} className="btn-primary w-full">
+              {submitting ? (
+                <>
+                  <Loader2 size={14} className="animate-spin" />
+                  Submitting...
+                </>
+              ) : (
+                <>
+                  <Send size={14} />
+                  Submit suggestion
+                </>
+              )}
+            </button>
+          </form>
         </div>
 
         <div className="card overflow-hidden">

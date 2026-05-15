@@ -5,7 +5,9 @@ import { Toaster } from 'react-hot-toast';
 import { AuthFlashToastBridge } from '@/components/AuthFlashToastBridge';
 import { AuthProvider } from '@/components/AuthProvider';
 import { NotificationToastBridge } from '@/components/NotificationToastBridge';
+import { RegionalSettingsProvider } from '@/components/RegionalSettingsProvider';
 import { ThemeProvider, useTheme } from '@/components/ThemeProvider';
+import type { RegionalSettings } from '@/lib/regional-settings';
 
 function ThemedToaster() {
   const { resolvedTheme } = useTheme();
@@ -35,17 +37,34 @@ function ThemedToaster() {
   );
 }
 
-export function AppProviders({ children }: { children: React.ReactNode }) {
+export function AppProviders({
+  children,
+  initialRegionalSettings,
+}: {
+  children: React.ReactNode;
+  initialRegionalSettings: RegionalSettings;
+}) {
+  const regionalSettingsKey = [
+    initialRegionalSettings.locale,
+    initialRegionalSettings.country ?? 'default',
+    initialRegionalSettings.countrySource,
+  ].join(':');
+
   return (
     <ThemeProvider>
-      <AuthProvider>
-        <Suspense fallback={null}>
-          <AuthFlashToastBridge />
-        </Suspense>
-        <NotificationToastBridge />
-        {children}
-        <ThemedToaster />
-      </AuthProvider>
+      <RegionalSettingsProvider
+        key={regionalSettingsKey}
+        initialSettings={initialRegionalSettings}
+      >
+        <AuthProvider>
+          <Suspense fallback={null}>
+            <AuthFlashToastBridge />
+          </Suspense>
+          <NotificationToastBridge />
+          {children}
+          <ThemedToaster />
+        </AuthProvider>
+      </RegionalSettingsProvider>
     </ThemeProvider>
   );
 }

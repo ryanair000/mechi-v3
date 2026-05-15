@@ -5,7 +5,9 @@ import Link from 'next/link';
 import { ChevronDown, Menu, X } from 'lucide-react';
 import { useAuth } from '@/components/AuthProvider';
 import { BrandLogo } from '@/components/BrandLogo';
+import { CountryLanguageBar } from '@/components/CountryLanguageBar';
 import { PageBreadcrumbs } from '@/components/PageBreadcrumbs';
+import { useRegionalSettings } from '@/components/RegionalSettingsProvider';
 import { ThemeToggle } from '@/components/ThemeToggle';
 
 type NavLinkItem = {
@@ -27,6 +29,13 @@ const DEFAULT_NAV_ITEMS: HomeFloatingHeaderNavItem[] = [
   { href: '/android-testers', label: 'ANDROID' },
   { href: '#pricing', label: 'PRICING' },
   { href: '#ranks', label: 'RANKS' },
+];
+const SWAHILI_DEFAULT_NAV_ITEMS: HomeFloatingHeaderNavItem[] = [
+  { href: '#how-it-works', label: 'JINSI INAVYOFANYA KAZI' },
+  { href: '#supported', label: 'MICHEZO' },
+  { href: '/android-testers', label: 'ANDROID' },
+  { href: '#pricing', label: 'BEI' },
+  { href: '#ranks', label: 'RANKI' },
 ];
 const DISPLAY_FONT_STYLE = { fontFamily: 'var(--font-display)' } as const;
 
@@ -54,15 +63,23 @@ interface HomeFloatingHeaderProps {
 }
 
 export function HomeFloatingHeader({
-  navItems = DEFAULT_NAV_ITEMS,
+  navItems,
   signInHref = '/login',
   joinHref = '/register',
-  joinLabel = 'JOIN FREE',
+  joinLabel,
   showLogo = true,
 }: HomeFloatingHeaderProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [openMobileDropdown, setOpenMobileDropdown] = useState<string | null>(null);
   const { user } = useAuth();
+  const { locale } = useRegionalSettings();
+  const isSwahili = locale === 'sw-TZ';
+  const resolvedNavItems = navItems ?? (isSwahili ? SWAHILI_DEFAULT_NAV_ITEMS : DEFAULT_NAV_ITEMS);
+  const resolvedJoinLabel = joinLabel ?? (isSwahili ? 'JIUNGE BURE' : 'JOIN FREE');
+  const signInLabel = isSwahili ? 'INGIA' : 'SIGN IN';
+  const dashboardLabel = isSwahili ? 'DASHIBODI' : 'DASHBOARD';
+  const openMenuLabel = isSwahili ? 'Fungua menyu' : 'Open menu';
+  const closeMenuLabel = isSwahili ? 'Funga menyu' : 'Close menu';
 
   const closeMobileMenu = () => {
     setIsOpen(false);
@@ -95,7 +112,7 @@ export function HomeFloatingHeader({
             ) : null}
 
             <div className="hidden min-w-0 flex-1 items-center justify-center gap-3 md:flex">
-              {navItems.map((item) => (
+              {resolvedNavItems.map((item) => (
                 isDropdownNavItem(item) ? (
                   <div key={item.label} className="group relative">
                     <button
@@ -148,6 +165,7 @@ export function HomeFloatingHeader({
             </div>
 
             <div className="ml-auto flex items-center gap-2">
+              <CountryLanguageBar className="hidden lg:flex" />
               <ThemeToggle className="!h-[2.3rem] !min-h-[2.3rem] !w-[2.3rem] !min-w-[2.3rem] !rounded-[0.85rem] !border-[rgba(129,148,178,0.18)] !bg-[rgba(17,27,46,0.88)] !text-[color:rgba(193,203,218,0.96)]" />
               <div className="hidden items-center gap-2 sm:flex">
                 <Link
@@ -155,11 +173,11 @@ export function HomeFloatingHeader({
                   className={SIGN_IN_BUTTON_CLASS}
                   style={DISPLAY_FONT_STYLE}
                 >
-                  {user ? 'DASHBOARD' : 'SIGN IN'}
+                  {user ? dashboardLabel : signInLabel}
                 </Link>
                 {!user ? (
                   <Link href={joinHref} className={JOIN_BUTTON_CLASS} style={DISPLAY_FONT_STYLE}>
-                    {joinLabel}
+                    {resolvedJoinLabel}
                   </Link>
                 ) : null}
               </div>
@@ -167,7 +185,7 @@ export function HomeFloatingHeader({
                 type="button"
                 onClick={toggleMobileMenu}
                 className="icon-button h-8 w-8 md:hidden"
-                aria-label={isOpen ? 'Close menu' : 'Open menu'}
+                aria-label={isOpen ? closeMenuLabel : openMenuLabel}
                 aria-expanded={isOpen}
                 aria-controls="home-mobile-nav"
               >
@@ -178,7 +196,11 @@ export function HomeFloatingHeader({
 
           {isOpen ? (
             <div id="home-mobile-nav" className="mt-2 grid gap-1 border-t border-[var(--border-color)] pt-2 md:hidden">
-              {navItems.map((item) =>
+              <div className="px-1 pb-1">
+                <CountryLanguageBar inline />
+              </div>
+
+              {resolvedNavItems.map((item) =>
                 isDropdownNavItem(item) ? (
                   <div
                     key={item.label}
@@ -247,7 +269,7 @@ export function HomeFloatingHeader({
                   className={SIGN_IN_BUTTON_CLASS}
                   style={DISPLAY_FONT_STYLE}
                 >
-                  {user ? 'DASHBOARD' : 'SIGN IN'}
+                  {user ? dashboardLabel : signInLabel}
                 </Link>
                 {!user ? (
                   <Link
@@ -256,7 +278,7 @@ export function HomeFloatingHeader({
                     className={JOIN_BUTTON_CLASS}
                     style={DISPLAY_FONT_STYLE}
                   >
-                    {joinLabel}
+                    {resolvedJoinLabel}
                   </Link>
                 ) : null}
               </div>

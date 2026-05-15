@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import Link from 'next/link';
 import { ArrowLeft, Mail } from 'lucide-react';
+import { CountryLanguageBar } from '@/components/CountryLanguageBar';
 import FooterSection from '@/components/footer';
 import { PageBreadcrumbs } from '@/components/PageBreadcrumbs';
 
@@ -35,13 +36,16 @@ export function LegalPage({
   return (
     <div className="page-base">
       <main className="landing-shell pb-16 pt-6 sm:pb-20 sm:pt-10">
-        <Link
-          href="/"
-          className="brand-link inline-flex min-h-11 items-center gap-2 text-sm font-semibold"
-        >
-          <ArrowLeft size={16} />
-          Back to Mechi
-        </Link>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <Link
+            href="/"
+            className="brand-link inline-flex min-h-11 items-center gap-2 text-sm font-semibold"
+          >
+            <ArrowLeft size={16} />
+            Back to Mechi
+          </Link>
+          <CountryLanguageBar inline />
+        </div>
 
         <PageBreadcrumbs className="mt-4" />
 

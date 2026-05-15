@@ -7,6 +7,7 @@ import toast from 'react-hot-toast';
 import { Eye, EyeOff, Loader2, UserCheck } from 'lucide-react';
 import { ActionFeedback, type ActionFeedbackState } from '@/components/ActionFeedback';
 import { useAuth } from '@/components/AuthProvider';
+import { useRegionalSettings } from '@/components/RegionalSettingsProvider';
 import { FullScreenSignup } from '@/components/ui/full-screen-signup';
 import { getPostLoginRedirectPath } from '@/lib/navigation';
 
@@ -38,6 +39,32 @@ const LOGIN_METHODS: Array<{
   },
 ];
 
+const SW_LOGIN_METHODS: Array<{
+  key: LoginMethod;
+  label: string;
+  placeholder: string;
+  helper: string;
+}> = [
+  {
+    key: 'phone',
+    label: 'Namba ya simu',
+    placeholder: '0755 123 456',
+    helper: 'Tumia namba ya simu iliyo kwenye profile yako ya Mechi.',
+  },
+  {
+    key: 'username',
+    label: 'Username',
+    placeholder: 'GameKingTZ',
+    helper: 'Tumia username uliyosajili nayo.',
+  },
+  {
+    key: 'email',
+    label: 'Barua pepe',
+    placeholder: 'wewe@mail.com',
+    helper: 'Tumia email yako na password, au omba link salama ya kuingia.',
+  },
+];
+
 function isValidEmail(value: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
 }
@@ -58,11 +85,20 @@ export function AuthLoginScreen({
   sideTitle: string;
 }) {
   const { user, loading: authLoading, login } = useAuth();
+  const { locale, phonePlaceholder } = useRegionalSettings();
   const router = useRouter();
+  const isSwahili = locale === 'sw-TZ';
   const [loginMethod, setLoginMethod] = useState<LoginMethod>('phone');
+  const loginMethods = useMemo(
+    () =>
+      (isSwahili ? SW_LOGIN_METHODS : LOGIN_METHODS).map((method) =>
+        method.key === 'phone' ? { ...method, placeholder: phonePlaceholder } : method
+      ),
+    [isSwahili, phonePlaceholder]
+  );
   const methodMeta = useMemo(
-    () => LOGIN_METHODS.find((item) => item.key === loginMethod) ?? LOGIN_METHODS[0],
-    [loginMethod]
+    () => loginMethods.find((item) => item.key === loginMethod) ?? loginMethods[0],
+    [loginMethod, loginMethods]
   );
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
@@ -85,11 +121,17 @@ export function AuthLoginScreen({
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
     if (!identifier.trim() || !password) {
-      toast.error('Enter your sign-in details and password');
+      toast.error(
+        isSwahili
+          ? 'Weka taarifa zako za kuingia pamoja na password'
+          : 'Enter your sign-in details and password'
+      );
       setFeedback({
         tone: 'error',
-        title: 'Your sign-in details are incomplete.',
-        detail: 'Pick a method, enter the matching detail, then add your password.',
+        title: isSwahili ? 'Taarifa zako za kuingia hazijakamilika.' : 'Your sign-in details are incomplete.',
+        detail: isSwahili
+          ? 'Chagua njia, weka taarifa sahihi, halafu ongeza password.'
+          : 'Pick a method, enter the matching detail, then add your password.',
       });
       return;
     }
@@ -97,8 +139,8 @@ export function AuthLoginScreen({
     setSubmitting(true);
     setFeedback({
       tone: 'loading',
-      title: 'Signing you in...',
-      detail: 'Checking your Mechi account now.',
+      title: isSwahili ? 'Inaingiza akaunti yako...' : 'Signing you in...',
+      detail: isSwahili ? 'Tunaikagua akaunti yako ya Mechi sasa.' : 'Checking your Mechi account now.',
     });
 
     try {
@@ -117,10 +159,14 @@ export function AuthLoginScreen({
       if (!res.ok) {
         setFeedback({
           tone: 'error',
-          title: 'Sign-in failed.',
-          detail: data.error ?? 'Please double-check your details and try again.',
+          title: isSwahili ? 'Kuingia kumeshindikana.' : 'Sign-in failed.',
+          detail:
+            data.error ??
+            (isSwahili
+              ? 'Tafadhali hakiki taarifa zako halafu ujaribu tena.'
+              : 'Please double-check your details and try again.'),
         });
-        toast.error(data.error ?? 'Login failed');
+        toast.error(data.error ?? (isSwahili ? 'Kuingia kumeshindikana' : 'Login failed'));
         return;
       }
 
@@ -132,18 +178,24 @@ export function AuthLoginScreen({
       login(data.token, data.user);
       setFeedback({
         tone: 'success',
-        title: `Welcome back, ${data.user.username}.`,
-        detail: 'Taking you into Mechi now.',
+        title: isSwahili
+          ? `Karibu tena, ${data.user.username}.`
+          : `Welcome back, ${data.user.username}.`,
+        detail: isSwahili ? 'Tunakukalisha ndani ya Mechi sasa.' : 'Taking you into Mechi now.',
       });
-      toast.success(`Welcome back, ${data.user.username}!`);
+      toast.success(
+        isSwahili ? `Karibu tena, ${data.user.username}!` : `Welcome back, ${data.user.username}!`
+      );
       window.location.assign(redirectPath);
     } catch {
       setFeedback({
         tone: 'error',
-        title: 'We could not reach the server.',
-        detail: 'Please check your connection and try again.',
+        title: isSwahili ? 'Tumeshindwa kufikia server.' : 'We could not reach the server.',
+        detail: isSwahili
+          ? 'Tafadhali angalia intaneti yako halafu ujaribu tena.'
+          : 'Please check your connection and try again.',
       });
-      toast.error('Network error.');
+      toast.error(isSwahili ? 'Hitilafu ya mtandao.' : 'Network error.');
     } finally {
       setSubmitting(false);
     }
@@ -152,11 +204,15 @@ export function AuthLoginScreen({
   const handleMagicLinkRequest = async () => {
     const email = identifier.trim();
     if (!isValidEmail(email)) {
-      toast.error('Enter a valid email address first');
+      toast.error(
+        isSwahili ? 'Weka kwanza barua pepe sahihi' : 'Enter a valid email address first'
+      );
       setFeedback({
         tone: 'error',
-        title: 'A valid email is required.',
-        detail: 'Switch to Email and enter the address on your Mechi profile.',
+        title: isSwahili ? 'Barua pepe sahihi inahitajika.' : 'A valid email is required.',
+        detail: isSwahili
+          ? 'Badili kwenda Email kisha weka anuani iliyo kwenye profile yako ya Mechi.'
+          : 'Switch to Email and enter the address on your Mechi profile.',
       });
       return;
     }
@@ -164,8 +220,12 @@ export function AuthLoginScreen({
     setSendingMagicLink(true);
     setFeedback({
       tone: 'loading',
-      title: 'Sending a secure sign-in link...',
-      detail: 'If that email matches a Mechi account, the link is on the way.',
+      title: isSwahili
+        ? 'Tunatuma link salama ya kuingia...'
+        : 'Sending a secure sign-in link...',
+      detail: isSwahili
+        ? 'Ikiwa email hiyo inalingana na akaunti ya Mechi, link iko njiani.'
+        : 'If that email matches a Mechi account, the link is on the way.',
     });
 
     try {
@@ -179,26 +239,47 @@ export function AuthLoginScreen({
       if (!res.ok) {
         setFeedback({
           tone: 'error',
-          title: 'We could not send that sign-in link.',
-          detail: data.error ?? 'Check the email address and try again.',
+          title: isSwahili
+            ? 'Tumeshindwa kutuma link ya kuingia.'
+            : 'We could not send that sign-in link.',
+          detail:
+            data.error ??
+            (isSwahili
+              ? 'Angalia barua pepe hiyo halafu ujaribu tena.'
+              : 'Check the email address and try again.'),
         });
-        toast.error(data.error ?? 'We could not send that sign-in link.');
+        toast.error(
+          data.error ??
+            (isSwahili
+              ? 'Tumeshindwa kutuma link ya kuingia.'
+              : 'We could not send that sign-in link.')
+        );
         return;
       }
 
       setFeedback({
         tone: 'success',
-        title: 'Check your email.',
-        detail: data.message ?? 'If those details match, your sign-in link is on the way.',
+        title: isSwahili ? 'Angalia email yako.' : 'Check your email.',
+        detail:
+          data.message ??
+          (isSwahili
+            ? 'Ikiwa taarifa hizo zinafanana, link yako ya kuingia iko njiani.'
+            : 'If those details match, your sign-in link is on the way.'),
       });
-      toast.success('Check your email for the sign-in link.');
+      toast.success(
+        isSwahili
+          ? 'Angalia email yako kwa link ya kuingia.'
+          : 'Check your email for the sign-in link.'
+      );
     } catch {
       setFeedback({
         tone: 'error',
-        title: 'We could not check those details.',
-        detail: 'Please check your connection and try again.',
+        title: isSwahili ? 'Tumeshindwa kukagua taarifa hizo.' : 'We could not check those details.',
+        detail: isSwahili
+          ? 'Tafadhali angalia intaneti yako halafu ujaribu tena.'
+          : 'Please check your connection and try again.',
       });
-      toast.error('Network error.');
+      toast.error(isSwahili ? 'Hitilafu ya mtandao.' : 'Network error.');
     } finally {
       setSendingMagicLink(false);
     }
@@ -217,7 +298,7 @@ export function AuthLoginScreen({
     >
       <div className="card p-4 sm:p-6">
         <div className="grid grid-cols-3 gap-2">
-          {LOGIN_METHODS.map((method) => {
+          {loginMethods.map((method) => {
             const active = method.key === loginMethod;
             return (
               <button
@@ -263,13 +344,13 @@ export function AuthLoginScreen({
           <div>
             <div className="flex items-center justify-between gap-3">
               <label className="label mb-0" htmlFor="login-password">
-                Password
+                {isSwahili ? 'Nenosiri' : 'Password'}
               </label>
               <Link
                 href={`/forgot-password?next=${encodeURIComponent(nextPath)}`}
                 className="brand-link-coral text-xs font-semibold uppercase tracking-[0.12em]"
               >
-                Forgot password?
+                {isSwahili ? 'Umesahau nenosiri?' : 'Forgot password?'}
               </Link>
             </div>
             <div className="relative mt-2">
@@ -279,7 +360,7 @@ export function AuthLoginScreen({
                 type={showPassword ? 'text' : 'password'}
                 value={password}
                 onChange={(event) => setPassword(event.target.value)}
-                placeholder="Enter your password"
+                placeholder={isSwahili ? 'Weka nenosiri lako' : 'Enter your password'}
                 className="input pr-12"
                 autoComplete="current-password"
               />
@@ -287,7 +368,15 @@ export function AuthLoginScreen({
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
                 className="absolute right-1 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-lg text-[var(--text-soft)] hover:text-[var(--text-primary)]"
-                aria-label={showPassword ? 'Hide password' : 'Show password'}
+                aria-label={
+                  showPassword
+                    ? isSwahili
+                      ? 'Ficha nenosiri'
+                      : 'Hide password'
+                    : isSwahili
+                      ? 'Onyesha nenosiri'
+                      : 'Show password'
+                }
               >
                 {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
               </button>
@@ -300,20 +389,22 @@ export function AuthLoginScreen({
             {submitting ? (
               <>
                 <Loader2 size={14} className="animate-spin" />
-                Signing in...
+                {isSwahili ? 'Inaingia...' : 'Signing in...'}
               </>
             ) : (
-              'Sign in'
+              isSwahili ? 'Ingia' : 'Sign in'
             )}
           </button>
 
           {loginMethod === 'email' ? (
             <div className="rounded-xl border border-[var(--border-color)] bg-[var(--surface-elevated)] p-3">
               <p className="text-sm font-semibold text-[var(--text-primary)]">
-                No password right now?
+                {isSwahili ? 'Huna password sasa?' : 'No password right now?'}
               </p>
               <p className="mt-1 text-xs leading-5 text-[var(--text-soft)]">
-                Enter your email above and Mechi will send a one-time sign-in link.
+                {isSwahili
+                  ? 'Weka email yako hapo juu na Mechi itakutumia link ya kuingia mara moja.'
+                  : 'Enter your email above and Mechi will send a one-time sign-in link.'}
               </p>
               <button
                 type="button"
@@ -324,12 +415,12 @@ export function AuthLoginScreen({
                 {sendingMagicLink ? (
                   <>
                     <Loader2 size={14} className="animate-spin" />
-                    Sending link...
+                    {isSwahili ? 'Inatuma link...' : 'Sending link...'}
                   </>
                 ) : (
                   <>
                     <UserCheck size={14} />
-                    Email me a sign-in link
+                    {isSwahili ? 'Nitumie link ya kuingia' : 'Email me a sign-in link'}
                   </>
                 )}
               </button>

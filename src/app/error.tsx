@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { RefreshCcw, ShieldAlert } from 'lucide-react';
+import { LifeBuoy, RefreshCcw, ShieldAlert } from 'lucide-react';
 import { useEffect } from 'react';
 import { BrandLogo } from '@/components/BrandLogo';
 
@@ -32,7 +32,7 @@ export default function GlobalError({
           the dashboard and try the next action from there.
         </p>
 
-        <div className="mt-6 grid gap-3 sm:grid-cols-3">
+        <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <button type="button" onClick={() => reset()} className="btn-primary justify-center">
             <RefreshCcw size={15} />
             Try again
@@ -42,6 +42,10 @@ export default function GlobalError({
           </Link>
           <Link href="/dashboard" className="btn-ghost justify-center">
             Dashboard
+          </Link>
+          <Link href="/support" className="btn-ghost justify-center">
+            <LifeBuoy size={15} />
+            Support
           </Link>
         </div>
       </section>

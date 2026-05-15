@@ -13,6 +13,8 @@ import {
 import Link from 'next/link';
 import type { FormEvent, ReactNode } from 'react';
 import { useState } from 'react';
+import { CountryLanguageBar } from '@/components/CountryLanguageBar';
+import { useRegionalSettings } from '@/components/RegionalSettingsProvider';
 import { SignupPage } from '@/components/ui/sign-up-page';
 import {
   CUSTOMER_WHATSAPP_SUPPORT_NUMBER_LABEL,
@@ -90,20 +92,25 @@ export function FullScreenSignup({
   }
 
   return (
-    <SignupPage
-      title={title}
-      subtitle={subtitle}
-      sideEyebrow={sideEyebrow}
-      sideTitle={sideTitle}
-      sideDescription={sideDescription}
-      sidePoints={sidePoints}
-      variant={variant}
-      hideMainHeader={hideMainHeader}
-      hideSideEyebrow={hideSideEyebrow}
-      sideContentPlacement={sideContentPlacement}
-    >
-      {children}
-    </SignupPage>
+    <div className="relative">
+      <div className="absolute right-4 top-4 z-20">
+        <CountryLanguageBar />
+      </div>
+      <SignupPage
+        title={title}
+        subtitle={subtitle}
+        sideEyebrow={sideEyebrow}
+        sideTitle={sideTitle}
+        sideDescription={sideDescription}
+        sidePoints={sidePoints}
+        variant={variant}
+        hideMainHeader={hideMainHeader}
+        hideSideEyebrow={hideSideEyebrow}
+        sideContentPlacement={sideContentPlacement}
+      >
+        {children}
+      </SignupPage>
+    </div>
   );
 }
 
@@ -115,6 +122,8 @@ function StandaloneFullScreenSignup({
   submitLabel,
 }: Required<Pick<FullScreenSignupProps, 'loginHref' | 'submitting' | 'submitLabel'>> &
   Pick<FullScreenSignupProps, 'feedback' | 'onSubmit'>) {
+  const { locale, phonePlaceholder } = useRegionalSettings();
+  const isSwahili = locale === 'sw-TZ';
   const [values, setValues] = useState<FullScreenSignupValues>({
     email: '',
     phone: '',
@@ -135,19 +144,23 @@ function StandaloneFullScreenSignup({
     const username = values.username.trim();
 
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      nextErrors.email = 'Enter a valid email address.';
+      nextErrors.email = isSwahili ? 'Weka barua pepe sahihi.' : 'Enter a valid email address.';
     }
 
     if (phoneDigits.length < 9) {
-      nextErrors.phone = 'Enter a valid phone number.';
+      nextErrors.phone = isSwahili ? 'Weka namba ya simu sahihi.' : 'Enter a valid phone number.';
     }
 
     if (username.length < 3) {
-      nextErrors.username = 'Username must be at least 3 characters.';
+      nextErrors.username = isSwahili
+        ? 'Username lazima iwe na angalau herufi 3.'
+        : 'Username must be at least 3 characters.';
     }
 
     if (values.password.length < 9) {
-      nextErrors.password = 'Password must be more than 8 characters.';
+      nextErrors.password = isSwahili
+        ? 'Password lazima iwe na zaidi ya herufi 8.'
+        : 'Password must be more than 8 characters.';
     }
 
     setErrors(nextErrors);
@@ -193,15 +206,15 @@ function StandaloneFullScreenSignup({
     },
     {
       id: 'phone',
-      label: 'Phone Number',
+      label: isSwahili ? 'Namba ya Simu' : 'Phone Number',
       type: 'tel',
-      placeholder: '0712 345 678',
+      placeholder: phonePlaceholder,
       icon: <Phone className="h-4 w-4" />,
       autoComplete: 'tel',
     },
     {
       id: 'email',
-      label: 'Mail Address',
+      label: isSwahili ? 'Barua Pepe' : 'Mail Address',
       type: 'email',
       placeholder: 'you@mechi.club',
       icon: <Mail className="h-4 w-4" />,
@@ -209,9 +222,9 @@ function StandaloneFullScreenSignup({
     },
     {
       id: 'password',
-      label: 'Password',
+      label: isSwahili ? 'Nenosiri' : 'Password',
       type: 'password',
-      placeholder: 'More than 8 characters',
+      placeholder: isSwahili ? 'Zaidi ya herufi 8' : 'More than 8 characters',
       icon: <LockKeyhole className="h-4 w-4" />,
       autoComplete: 'new-password',
     },
@@ -219,6 +232,9 @@ function StandaloneFullScreenSignup({
 
   return (
     <div className="flex min-h-screen items-center justify-center overflow-hidden bg-[#0b1121] px-4 py-6 text-slate-950">
+      <div className="fixed right-4 top-4 z-20">
+        <CountryLanguageBar />
+      </div>
       <div className="relative flex w-full max-w-5xl flex-col overflow-hidden rounded-lg bg-white shadow-2xl md:min-h-[40rem] md:flex-row">
         <div className="relative min-h-[16rem] overflow-hidden bg-black text-white md:w-1/2">
           <div className="absolute inset-0 bg-[url('/mechi-whatsapp-profile.jpg')] bg-cover bg-center opacity-70" />
@@ -233,12 +249,13 @@ function StandaloneFullScreenSignup({
                 mechi.club
               </p>
               <h1 className="mt-4 max-w-sm text-3xl font-semibold leading-tight tracking-normal md:text-4xl">
-                Create your Mechi account.
+                {isSwahili ? 'Tengeneza akaunti yako ya Mechi.' : 'Create your Mechi account.'}
               </h1>
             </div>
             <p className="mt-8 max-w-sm text-sm leading-6 text-white/78">
-              Start with the essentials. Your games, IDs, and tournament setup can follow once the
-              account is live.
+              {isSwahili
+                ? 'Anza na taarifa za msingi. Michezo yako, ID zako, na mpangilio wa tournament utaongeza baada ya akaunti kuwashwa.'
+                : 'Start with the essentials. Your games, IDs, and tournament setup can follow once the account is live.'}
             </p>
           </div>
         </div>
@@ -248,9 +265,13 @@ function StandaloneFullScreenSignup({
             <div className="mb-4 text-orange-500">
               <Sunburst className="h-10 w-10" />
             </div>
-            <h2 className="text-3xl font-medium tracking-normal">Get Started</h2>
+            <h2 className="text-3xl font-medium tracking-normal">
+              {isSwahili ? 'Anza Sasa' : 'Get Started'}
+            </h2>
             <p className="mt-2 text-sm leading-6 opacity-80">
-              Register a new Mechi player account.
+              {isSwahili
+                ? 'Sajili akaunti mpya ya player wa Mechi.'
+                : 'Register a new Mechi player account.'}
             </p>
           </div>
 
@@ -263,7 +284,11 @@ function StandaloneFullScreenSignup({
                 className="flex min-h-11 items-center gap-3 rounded-lg border border-emerald-500/25 bg-emerald-500/10 px-3 py-2 text-sm font-medium text-emerald-950 transition-colors hover:bg-emerald-500/15"
               >
                 <MessageCircle className="h-4 w-4 shrink-0" />
-                <span className="min-w-0 flex-1">Join the PlayMechi WhatsApp group</span>
+                <span className="min-w-0 flex-1">
+                  {isSwahili
+                    ? 'Jiunge na kundi la WhatsApp la PlayMechi'
+                    : 'Join the PlayMechi WhatsApp group'}
+                </span>
                 <ExternalLink className="h-3.5 w-3.5 shrink-0 opacity-75" />
               </a>
 
@@ -275,7 +300,8 @@ function StandaloneFullScreenSignup({
               >
                 <MessageCircle className="h-4 w-4 shrink-0" />
                 <span className="min-w-0 flex-1">
-                  WhatsApp support: {CUSTOMER_WHATSAPP_SUPPORT_NUMBER_LABEL}
+                  {isSwahili ? 'Msaada wa WhatsApp:' : 'WhatsApp support:'}{' '}
+                  {CUSTOMER_WHATSAPP_SUPPORT_NUMBER_LABEL}
                 </span>
                 <ExternalLink className="h-3.5 w-3.5 shrink-0 opacity-75" />
               </a>
@@ -329,13 +355,17 @@ function StandaloneFullScreenSignup({
               className="mt-1 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-lg bg-orange-500 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-orange-600 disabled:cursor-not-allowed disabled:opacity-70"
             >
               {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-              {submitting ? 'Creating account...' : submitLabel}
+              {submitting
+                ? isSwahili
+                  ? 'Inatengeneza akaunti...'
+                  : 'Creating account...'
+                : submitLabel}
             </button>
 
             <div className="text-center text-sm text-gray-600">
-              Already have account?{' '}
+              {isSwahili ? 'Tayari una akaunti?' : 'Already have account?'}{' '}
               <Link href={loginHref} className="font-medium text-secondary-foreground underline">
-                Login
+                {isSwahili ? 'Ingia' : 'Login'}
               </Link>
             </div>
           </form>

@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { Compass, Home, LifeBuoy } from 'lucide-react';
+import { Compass, Home, LifeBuoy, TriangleAlert } from 'lucide-react';
 import { BrandLogo } from '@/components/BrandLogo';
 
 export default function NotFound() {
@@ -18,7 +18,7 @@ export default function NotFound() {
           safe paths below and keep moving.
         </p>
 
-        <div className="mt-6 grid gap-3 sm:grid-cols-3">
+        <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <Link href="/" className="btn-primary justify-center">
             <Home size={15} />
             Home
@@ -27,8 +27,12 @@ export default function NotFound() {
             <Compass size={15} />
             Dashboard
           </Link>
-          <Link href="/report" className="btn-ghost justify-center">
+          <Link href="/support" className="btn-ghost justify-center">
             <LifeBuoy size={15} />
+            Support
+          </Link>
+          <Link href="/report" className="btn-ghost justify-center">
+            <TriangleAlert size={15} />
             Report issue
           </Link>
         </div>

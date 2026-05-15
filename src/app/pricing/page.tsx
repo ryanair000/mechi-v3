@@ -6,11 +6,13 @@ import { useSearchParams } from 'next/navigation';
 import toast from 'react-hot-toast';
 import { Crown, Sparkles } from 'lucide-react';
 import { BrandLogo } from '@/components/BrandLogo';
+import { CountryLanguageBar } from '@/components/CountryLanguageBar';
 import { PageBreadcrumbs } from '@/components/PageBreadcrumbs';
 import { PlanBadge } from '@/components/PlanBadge';
 import PricingSection from '@/components/pricing-section';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { useAuth, useAuthFetch } from '@/components/AuthProvider';
+import { useRegionalSettings } from '@/components/RegionalSettingsProvider';
 import { type BillingCycle, type Plan, getPlanWeeklyPrice, PLANS } from '@/lib/plans';
 
 const VISIBLE_PLAN_ORDER: Array<'free' | 'pro' | 'elite'> = ['free', 'pro', 'elite'];
@@ -47,7 +49,9 @@ function getPlanActionLabel(currentPlan: Plan, targetPlan: Plan) {
 function PricingPageContent() {
   const { user, refresh } = useAuth();
   const authFetch = useAuthFetch();
+  const { locale } = useRegionalSettings();
   const searchParams = useSearchParams();
+  const isSwahili = locale === 'sw-TZ';
   const [billingCycle, setBillingCycle] = useState<BillingCycle>('monthly');
   const [loadingPlan, setLoadingPlan] = useState<Exclude<Plan, 'free'> | null>(null);
   const [currentPlan, setCurrentPlan] = useState<Plan>((user?.plan as Plan | undefined) ?? 'free');
@@ -62,11 +66,11 @@ function PricingPageContent() {
     const checkout = searchParams.get('checkout');
     if (checkout === 'success') {
       void refresh();
-      toast.success('Your plan is active now.');
+      toast.success(isSwahili ? 'Plan yako imewashwa sasa.' : 'Your plan is active now.');
     } else if (checkout === 'failed') {
-      toast.error('Payment was not confirmed. Try again.');
+      toast.error(isSwahili ? 'Malipo hayajathibitishwa. Jaribu tena.' : 'Payment was not confirmed. Try again.');
     }
-  }, [refresh, searchParams]);
+  }, [isSwahili, refresh, searchParams]);
 
   const annualSavings = useMemo(
     () => ({
@@ -95,13 +99,15 @@ function PricingPageContent() {
       const data = await res.json();
 
       if (!res.ok) {
-        toast.error(data.error ?? 'Could not start checkout');
+        toast.error(data.error ?? (isSwahili ? 'Imeshindikana kuanza checkout' : 'Could not start checkout'));
         return;
       }
 
       if (data.activated) {
         await refresh();
-        toast.success(`${PLANS[plan].name} is active now.`);
+        toast.success(
+          isSwahili ? `${PLANS[plan].name} imewashwa sasa.` : `${PLANS[plan].name} is active now.`
+        );
         return;
       }
 
@@ -110,9 +116,9 @@ function PricingPageContent() {
         return;
       }
 
-      toast.error('Checkout did not start correctly.');
+      toast.error(isSwahili ? 'Checkout haijaanza vizuri.' : 'Checkout did not start correctly.');
     } catch {
-      toast.error('Network error.');
+      toast.error(isSwahili ? 'Hitilafu ya mtandao.' : 'Network error.');
     } finally {
       setLoadingPlan(null);
     }
@@ -129,21 +135,41 @@ function PricingPageContent() {
 
     const description =
       planKey === 'free'
-        ? 'Start clean with ranked matches, tournament joins, and direct 1-on-1 play without paying first.'
+        ? isSwahili
+          ? 'Anza kwa usafi na ranked matches, kujiunga na tournaments, na 1-on-1 za moja kwa moja bila kulipa mwanzo.'
+          : 'Start clean with ranked matches, tournament joins, and direct 1-on-1 play without paying first.'
         : planKey === 'pro'
-          ? 'The everyday climb plan for players who want more volume, more game slots, and a longer history lane.'
-          : 'The premium control lane for players and organizers who want hosting, prize-pool control, and streaming perks.';
+          ? isSwahili
+            ? 'Plan ya kila siku kwa players wanaotaka volume zaidi, game slots zaidi, na historia ndefu ya mechi.'
+            : 'The everyday climb plan for players who want more volume, more game slots, and a longer history lane.'
+          : isSwahili
+            ? 'Njia ya premium control kwa players na organizers wanaotaka hosting, udhibiti wa prize pool, na streaming perks.'
+            : 'The premium control lane for players and organizers who want hosting, prize-pool control, and streaming perks.';
 
     return {
       id: planKey,
       title: plan.name,
-      price: planKey === 'free' ? 'Free' : `KES ${price}`,
+      price: planKey === 'free' ? (isSwahili ? 'Bure' : 'Free') : `KES ${price}`,
       description,
       features: plan.features,
       cta:
         loadingPlan === planKey
-          ? 'Starting checkout...'
-          : getPlanActionLabel(currentPlan, planKey),
+          ? isSwahili
+            ? 'Inaanza checkout...'
+            : 'Starting checkout...'
+          : isSwahili
+            ? planKey === 'free'
+              ? currentPlan === 'free'
+                ? 'Plan ya sasa'
+                : 'Ipo kwa kawaida'
+              : currentPlan === planKey
+                ? 'Plan ya sasa'
+                : currentPlan === 'elite' && planKey === 'pro'
+                  ? 'Ipo ndani ya Elite'
+                  : planKey === 'elite'
+                    ? 'Nenda Elite'
+                    : 'Nenda Pro'
+            : getPlanActionLabel(currentPlan, planKey),
       href:
         planKey === 'free'
           ? user
@@ -163,11 +189,17 @@ function PricingPageContent() {
       badge: <PlanBadge plan={planKey} size="md" />,
       helperText:
         planKey === 'free'
-          ? 'No payment needed'
+          ? isSwahili
+            ? 'Hakuna malipo yanayohitajika'
+            : 'No payment needed'
           : billingCycle === 'annual'
-            ? `About KES ${getPlanWeeklyPrice(planKey, billingCycle)}/week on annual billing | Save KES ${savings}`
-            : `From KES ${getPlanWeeklyPrice(planKey, billingCycle)}/week, billed monthly via Paystack`,
-      footnote: planKey === 'pro' ? '1-month trial on new signups' : undefined,
+            ? isSwahili
+              ? `Takriban KES ${getPlanWeeklyPrice(planKey, billingCycle)}/wiki kwa annual billing | Okoa KES ${savings}`
+              : `About KES ${getPlanWeeklyPrice(planKey, billingCycle)}/week on annual billing | Save KES ${savings}`
+            : isSwahili
+              ? `Kuanzia KES ${getPlanWeeklyPrice(planKey, billingCycle)}/wiki, malipo ya kila mwezi kupitia Paystack`
+              : `From KES ${getPlanWeeklyPrice(planKey, billingCycle)}/week, billed monthly via Paystack`,
+      footnote: planKey === 'pro' ? (isSwahili ? 'Trial ya mwezi 1 kwa signups mpya' : '1-month trial on new signups') : undefined,
       current: isCurrent,
       disabled: planKey === 'free' ? false : user ? actionDisabled : false,
     };
@@ -185,26 +217,29 @@ function PricingPageContent() {
 
               <div className="hidden items-center justify-center gap-2 md:flex">
                 <Link href="/" className="rounded-lg px-3 py-2 text-sm font-semibold uppercase tracking-[0.14em] text-[var(--text-secondary)] hover:text-[var(--text-primary)]">
-                  Home
+                  {isSwahili ? 'Nyumbani' : 'Home'}
                 </Link>
                 <Link href="/pricing" className="rounded-lg bg-[var(--surface-elevated)] px-3 py-2 text-sm font-semibold uppercase tracking-[0.14em] text-[var(--text-primary)]">
-                  Pricing
+                  {isSwahili ? 'Bei' : 'Pricing'}
                 </Link>
               </div>
 
               <div className="flex items-center justify-end gap-2">
+                <div className="hidden lg:block">
+                  <CountryLanguageBar />
+                </div>
                 <ThemeToggle />
                 {user ? (
                   <Link href="/dashboard" className="btn-primary text-sm uppercase tracking-[0.14em]">
-                    Dashboard
+                    {isSwahili ? 'Dashibodi' : 'Dashboard'}
                   </Link>
                 ) : (
                   <>
                     <Link href="/login" className="btn-outline hidden text-sm uppercase tracking-[0.14em] sm:inline-flex">
-                      Sign in
+                      {isSwahili ? 'Ingia' : 'Sign in'}
                     </Link>
                     <Link href="/register" className="btn-primary text-sm uppercase tracking-[0.14em]">
-                      Join free
+                      {isSwahili ? 'Jiunge bure' : 'Join free'}
                     </Link>
                   </>
                 )}
@@ -213,6 +248,9 @@ function PricingPageContent() {
           </div>
 
           <PageBreadcrumbs className="mt-3" />
+          <div className="mt-3 lg:hidden">
+            <CountryLanguageBar inline />
+          </div>
         </div>
       </header>
 
@@ -222,16 +260,20 @@ function PricingPageContent() {
           <div className="relative">
             <div className="brand-kicker">
               <Sparkles size={12} />
-              Pricing that grows with your grind
+              {isSwahili ? 'Bei zinazokua pamoja na grind yako' : 'Pricing that grows with your grind'}
             </div>
 
             <div className="mt-5 grid gap-8 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
               <div>
                 <h1 className="max-w-3xl text-[2rem] font-black leading-[1.05] tracking-normal text-[var(--text-primary)] sm:text-[3.3rem] sm:leading-[1]">
-                  Start free. Upgrade only when your Mechi climb needs more.
+                  {isSwahili
+                    ? 'Anza bure. Panda plan pale tu safari yako ya Mechi inapohitaji zaidi.'
+                    : 'Start free. Upgrade only when your Mechi climb needs more.'}
                 </h1>
                 <p className="mt-4 max-w-2xl text-sm leading-7 text-[var(--text-secondary)] sm:text-base">
-                  New players start with a 1-month Pro trial. After that, keep it free, move to Pro at KES 199 a month from KES 49 a week, or go Elite at KES 699 a month from KES 175 a week for tournament hosting, prize-pool control, fee-free monthly brackets, and streaming perks.
+                  {isSwahili
+                    ? 'Players wapya wanaanza na trial ya Pro ya mwezi 1. Baada ya hapo, baki bure, hamia Pro kwa KES 199 kwa mwezi kuanzia KES 49 kwa wiki, au nenda Elite kwa KES 699 kwa mwezi kuanzia KES 175 kwa wiki kwa hosting ya tournament, udhibiti wa prize pool, brackets za kila mwezi zisizo na fee, na streaming perks.'
+                    : 'New players start with a 1-month Pro trial. After that, keep it free, move to Pro at KES 199 a month from KES 49 a week, or go Elite at KES 699 a month from KES 175 a week for tournament hosting, prize-pool control, fee-free monthly brackets, and streaming perks.'}
                 </p>
               </div>
 
@@ -248,7 +290,13 @@ function PricingPageContent() {
                           : 'text-[var(--text-secondary)]'
                       }`}
                     >
-                      {cycle === 'monthly' ? 'Monthly' : 'Annual'}
+                      {cycle === 'monthly'
+                        ? isSwahili
+                          ? 'Kila mwezi'
+                          : 'Monthly'
+                        : isSwahili
+                          ? 'Kila mwaka'
+                          : 'Annual'}
                     </button>
                   ))}
                 </div>
@@ -257,12 +305,17 @@ function PricingPageContent() {
 
             {user ? (
               <div className="mt-5 inline-flex flex-wrap items-center gap-2 rounded-2xl border border-[var(--border-color)] bg-[var(--surface-elevated)] px-4 py-3 text-sm text-[var(--text-secondary)]">
-                <span>Current plan:</span>
+                <span>{isSwahili ? 'Plan ya sasa:' : 'Current plan:'}</span>
                 <span className="font-black text-[var(--text-primary)]">{PLANS[currentPlan].name}</span>
                 <PlanBadge plan={currentPlan} size="md" />
                 {planExpiry && currentPlan !== 'free' ? (
                   <span className="text-[var(--text-soft)]">
-                    active until {new Date(planExpiry).toLocaleDateString('en-KE', { day: 'numeric', month: 'short', year: 'numeric' })}
+                    {isSwahili ? 'inaendelea hadi' : 'active until'}{' '}
+                    {new Date(planExpiry).toLocaleDateString(isSwahili ? 'sw-TZ' : 'en-KE', {
+                      day: 'numeric',
+                      month: 'short',
+                      year: 'numeric',
+                    })}
                   </span>
                 ) : null}
               </div>
@@ -271,8 +324,16 @@ function PricingPageContent() {
         </section>
 
         <PricingSection
-          title="Pick the plan that fits your current grind"
-          description="Free gets you moving. Pro keeps the ranked climb lighter on your wallet. Elite adds hosting, prize-pool control, fee-free monthly brackets, and the full premium lane."
+          title={
+            isSwahili
+              ? 'Chagua plan inayofaa grind yako ya sasa'
+              : 'Pick the plan that fits your current grind'
+          }
+          description={
+            isSwahili
+              ? 'Free inaanzisha safari. Pro inafanya ranked climb iwe nyepesi kwa mfuko wako. Elite inaongeza hosting, udhibiti wa prize pool, monthly brackets zisizo na fee, na premium lane yote.'
+              : 'Free gets you moving. Pro keeps the ranked climb lighter on your wallet. Elite adds hosting, prize-pool control, fee-free monthly brackets, and the full premium lane.'
+          }
           plans={pricingCards}
         />
 
@@ -280,7 +341,9 @@ function PricingPageContent() {
           <div className="card overflow-hidden p-5 sm:p-6">
             <div className="flex items-center gap-2">
               <Crown size={16} className="text-[var(--brand-coral)]" />
-              <h2 className="text-xl font-black text-[var(--text-primary)]">Plan breakdown</h2>
+              <h2 className="text-xl font-black text-[var(--text-primary)]">
+                {isSwahili ? 'Ufafanuzi wa plan' : 'Plan breakdown'}
+              </h2>
             </div>
 
             <div className="mt-5 grid gap-3 sm:hidden">
@@ -356,8 +419,24 @@ function PricingPageContent() {
               },
             ].map((item) => (
               <div key={item.q} className="card p-5">
-                <p className="text-base font-black text-[var(--text-primary)]">{item.q}</p>
-                <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">{item.a}</p>
+                <p className="text-base font-black text-[var(--text-primary)]">
+                  {isSwahili
+                    ? item.q === 'How does payment work?'
+                      ? 'Malipo yanafanyikaje?'
+                      : item.q === 'Can I cancel any time?'
+                        ? 'Naweza kusitisha wakati wowote?'
+                        : 'Elite inafungua nini?'
+                    : item.q}
+                </p>
+                <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">
+                  {isSwahili
+                    ? item.q === 'How does payment work?'
+                      ? 'Mechi huanza checkout kupitia Paystack, kisha huwasha plan yako mara tu malipo yanapothibitishwa.'
+                      : item.q === 'Can I cancel any time?'
+                        ? 'Ndiyo. Ukisitisha, renewal inasimama lakini plan yako inaendelea hadi billing period ya sasa iishe.'
+                        : 'Elite inabeba kila kitu kilicho ndani ya Pro, kisha inaongeza hosting ya tournament yenye auto au specified prize pools, tournaments tatu za bure kila mwezi, early access, gold badge, na streaming-feature access.'
+                    : item.a}
+                </p>
               </div>
             ))}
           </div>

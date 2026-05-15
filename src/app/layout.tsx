@@ -10,6 +10,7 @@ import {
   GOOGLE_ANALYTICS_ID,
   getGoogleAnalyticsConfigScript,
 } from '@/lib/analytics';
+import { getRequestRegionalSettings } from '@/lib/regional-settings-server';
 import {
   DARK_THEME_COLOR,
   DEFAULT_THEME,
@@ -29,45 +30,53 @@ const openSans = Open_Sans({
   display: 'swap',
 });
 
-export const metadata: Metadata = {
-  metadataBase: new URL('https://mechi.club'),
-  manifest: '/manifest.webmanifest',
-  title: 'Mechi | Compete. Connect. Rise.',
-  description:
-    'Mechi helps East African players find proper 1v1s, clean lobbies, and prize-backed tournaments without the WhatsApp chaos.',
-  keywords: [
-    'mechi',
-    'gaming',
-    'matchmaking',
-    'east africa',
-    'kenya',
-    'tanzania',
-    'uganda',
-    'rwanda',
-    'ethiopia',
-    'esports',
-    '1v1',
-    'competitive gaming',
-    'efootball',
-    'ea fc',
-    'tekken',
-  ],
-  openGraph: {
+export async function generateMetadata(): Promise<Metadata> {
+  const regionalSettings = await getRequestRegionalSettings();
+  const isSwahili = regionalSettings.locale === 'sw-TZ';
+
+  return {
+    metadataBase: new URL('https://mechi.club'),
+    manifest: '/manifest.webmanifest',
     title: 'Mechi | Compete. Connect. Rise.',
-    description:
-      'Queue clean 1v1s, spin up proper lobbies, and run prize-backed tournaments for players across East Africa in one place.',
-    url: 'https://mechi.club',
-    siteName: 'Mechi',
-    locale: 'en',
-    type: 'website',
-  },
-  twitter: {
-    card: 'summary_large_image',
-    title: 'Mechi | Compete. Connect. Rise.',
-    description:
-      'Players across Kenya, Tanzania, Uganda, Rwanda, and Ethiopia use Mechi for cleaner 1v1s, better lobbies, and smoother tournament runs.',
-  },
-};
+    description: isSwahili
+      ? 'Mechi inawasaidia gamers wa Afrika Mashariki kupata mechi safi za 1v1, lobbies zilizo sawa, na tournaments zenye zawadi bila vurugu za WhatsApp.'
+      : 'Mechi helps East African players find proper 1v1s, clean lobbies, and prize-backed tournaments without the WhatsApp chaos.',
+    keywords: [
+      'mechi',
+      'gaming',
+      'matchmaking',
+      'east africa',
+      'kenya',
+      'tanzania',
+      'uganda',
+      'rwanda',
+      'ethiopia',
+      'esports',
+      '1v1',
+      'competitive gaming',
+      'efootball',
+      'ea fc',
+      'tekken',
+    ],
+    openGraph: {
+      title: 'Mechi | Compete. Connect. Rise.',
+      description: isSwahili
+        ? 'Panga 1v1 safi, simamia lobbies vizuri, na endesha tournaments zenye zawadi kwa players wa Afrika Mashariki sehemu moja.'
+        : 'Queue clean 1v1s, spin up proper lobbies, and run prize-backed tournaments for players across East Africa in one place.',
+      url: 'https://mechi.club',
+      siteName: 'Mechi',
+      locale: regionalSettings.locale === 'sw-TZ' ? 'sw_TZ' : 'en_US',
+      type: 'website',
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: 'Mechi | Compete. Connect. Rise.',
+      description: isSwahili
+        ? 'Players wa Kenya, Tanzania, Uganda, Rwanda, na Ethiopia wanatumia Mechi kwa 1v1 safi, lobbies bora, na tournament zenye mpangilio mzuri.'
+        : 'Players across Kenya, Tanzania, Uganda, Rwanda, and Ethiopia use Mechi for cleaner 1v1s, better lobbies, and smoother tournament runs.',
+    },
+  };
+}
 
 export const viewport: Viewport = {
   width: 'device-width',
@@ -106,10 +115,12 @@ const themeScript = `
   })();
 `;
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  const regionalSettings = await getRequestRegionalSettings();
+
   return (
     <html
-      lang="en"
+      lang={regionalSettings.htmlLang}
       className={`${montserrat.variable} ${openSans.variable} font-sans dark`}
       data-theme={DEFAULT_THEME}
       style={{ colorScheme: DEFAULT_THEME }}
@@ -121,7 +132,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         </Script>
       </head>
       <body>
-        <AppProviders>{children}</AppProviders>
+        <AppProviders initialRegionalSettings={regionalSettings}>{children}</AppProviders>
         <Suspense fallback={null}>
           <GoogleAnalyticsPageView measurementId={GOOGLE_ANALYTICS_ID} />
         </Suspense>

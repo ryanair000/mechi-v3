@@ -4,17 +4,18 @@ import { isMissingColumnError, isMissingTableError } from '@/lib/db-compat';
 import { sendWelcomeEmail } from '@/lib/email';
 import { DEFAULT_RATING } from '@/lib/config';
 import { generateUniqueInviteCode } from '@/lib/invite';
+import { getCountryLabel } from '@/lib/location';
 import { getPhoneLookupVariants, isValidPhoneNumber, normalizePhoneNumber } from '@/lib/phone';
 import { checkPersistentRateLimit, getClientIp, rateLimitResponse } from '@/lib/rateLimit';
+import { normalizeRegionalPreference } from '@/lib/regional-settings';
+import { resolveRegionalSettingsForRequest } from '@/lib/regional-settings-server';
 import { ensureChezahubCustomer } from '@/lib/rewards';
 import { createServiceClient } from '@/lib/supabase';
 import { sendNewRegistrationTelegramNotification } from '@/lib/telegram';
 import { isUsernameTaken } from '@/lib/username-availability';
 import { validateUsername } from '@/lib/username';
-import type { CountryKey } from '@/types';
 
 const STARTER_TRIAL_PLAN = 'pro';
-const DEFAULT_COUNTRY: CountryKey = 'kenya';
 const DEFAULT_REGION = 'Other';
 const MIN_PASSWORD_LENGTH = 9;
 
@@ -49,6 +50,12 @@ export async function POST(request: NextRequest) {
     const email = String(body.email ?? '').trim().toLowerCase();
     const password = String(body.password ?? '');
     const rawPhone = String(body.phone ?? '').trim();
+    const requestedCountry =
+      body.country == null ? null : normalizeRegionalPreference(body.country);
+
+    if (body.country != null && !requestedCountry) {
+      return NextResponse.json({ error: 'Unsupported country' }, { status: 400 });
+    }
 
     if (usernameError || !email || !rawPhone || !password) {
       return NextResponse.json({ error: usernameError ?? 'Missing required fields' }, { status: 400 });
@@ -65,7 +72,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (!isValidPhoneNumber(rawPhone, DEFAULT_COUNTRY)) {
+    const regionalSettings = requestedCountry
+      ? { country: requestedCountry }
+      : await resolveRegionalSettingsForRequest(request);
+    const signupCountry = regionalSettings.country;
+
+    if (!isValidPhoneNumber(rawPhone, signupCountry)) {
       return NextResponse.json({ error: 'Enter a valid phone number' }, { status: 400 });
     }
 
@@ -73,9 +85,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Username already taken' }, { status: 409 });
     }
 
-    const normalizedPhone = normalizePhoneNumber(rawPhone, DEFAULT_COUNTRY);
+    const normalizedPhone = normalizePhoneNumber(rawPhone, signupCountry);
     const supabase = createServiceClient();
-    const phoneVariants = getPhoneLookupVariants(normalizedPhone, DEFAULT_COUNTRY);
+    const phoneVariants = getPhoneLookupVariants(normalizedPhone, signupCountry);
     const { data: existingPhoneMatches, error: phoneLookupError } = await supabase
       .from('profiles')
       .select('id')
@@ -115,7 +127,7 @@ export async function POST(request: NextRequest) {
       email,
       password_hash,
       invite_code: ownInviteCode,
-      country: DEFAULT_COUNTRY,
+      country: signupCountry,
       region: DEFAULT_REGION,
       plan: STARTER_TRIAL_PLAN,
       plan_since: trialWindow.startedAtIso,
@@ -193,7 +205,7 @@ export async function POST(request: NextRequest) {
           username: profile.username as string,
           email,
           phone: normalizedPhone,
-          location: 'Kenya / Other',
+          location: `${getCountryLabel(signupCountry)} / ${DEFAULT_REGION}`,
           selectedGames: [],
           plan: STARTER_TRIAL_PLAN,
         });

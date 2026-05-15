@@ -111,6 +111,10 @@ export function WeekendCupDashboardClient() {
     `${WEEKEND_CUP_DASHBOARD_PATH}?game=${encodeURIComponent(selectedConfig.game)}`,
     'signin_required'
   );
+  const sessionExpiredHref = getLoginPath(
+    `${WEEKEND_CUP_DASHBOARD_PATH}?game=${encodeURIComponent(selectedConfig.game)}`,
+    'session_expired'
+  );
   const slotBooked = currentRegistration?.payment_status === 'paid';
   const fallbackEntryAmount =
     formatKes(getWeekendCupPaymentTierAmount('early_bird', selectedConfig.game)) ?? 'KSh 50';
@@ -144,6 +148,12 @@ export function WeekendCupDashboardClient() {
       const res = await authFetch(API_PATH, { method: 'GET' });
       const data = (await res.json()) as WeekendCupRegistrationSummary & { error?: string };
 
+      if (res.status === 401 || res.status === 403) {
+        toast.error('Your session expired. Sign in again to open your dashboard.');
+        router.replace(sessionExpiredHref);
+        return;
+      }
+
       if (!res.ok) {
         toast.error(data.error ?? 'Could not load your Weekend Cup status');
         return;
@@ -155,7 +165,7 @@ export function WeekendCupDashboardClient() {
     } finally {
       setLoading(false);
     }
-  }, [authFetch]);
+  }, [authFetch, router, sessionExpiredHref]);
 
   useEffect(() => {
     if (!registrationOpen || authLoading || !user) {
@@ -196,7 +206,7 @@ export function WeekendCupDashboardClient() {
 
       if (res.status === 401 || res.status === 403) {
         toast.error('Sign in again to continue payment.');
-        router.replace(signInHref);
+        router.replace(sessionExpiredHref);
         return;
       }
 
@@ -225,7 +235,7 @@ export function WeekendCupDashboardClient() {
     } finally {
       setRetryingPayment(false);
     }
-  }, [authFetch, currentRegistration, router, signInHref]);
+  }, [authFetch, currentRegistration, router, sessionExpiredHref]);
 
   if (!registrationOpen) {
     return (

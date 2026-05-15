@@ -1,3 +1,5 @@
+'use client';
+
 import Link from 'next/link';
 import {
   FaDiscord,
@@ -9,48 +11,90 @@ import {
   FaYoutube,
 } from 'react-icons/fa6';
 import { BrandLogo } from '@/components/BrandLogo';
+import { useRegionalSettings } from '@/components/RegionalSettingsProvider';
 import {
   CUSTOMER_WHATSAPP_SUPPORT_NUMBER_LABEL,
   CUSTOMER_WHATSAPP_SUPPORT_URL,
 } from '@/lib/social-links';
 import { cn } from '@/lib/utils';
 
-const links = [
-  {
-    title: 'How It Works',
-    href: '/#how-it-works',
-  },
-  {
-    title: 'Pricing',
-    href: '/pricing',
-  },
-  {
-    title: 'Ranks',
-    href: '/#ranks',
-  },
-  {
-    title: 'Tournaments',
-    href: '/tournaments',
-  },
-  {
-    title: 'Privacy Policy',
-    href: '/privacy-policy',
-  },
-  {
-    title: 'Terms of Service',
-    href: '/terms-of-service',
-  },
-];
-
 type FooterSectionProps = {
   className?: string;
 };
 
 export default function FooterSection({ className }: FooterSectionProps) {
+  const { locale } = useRegionalSettings();
+  const isSwahili = locale === 'sw-TZ';
+  const links = isSwahili
+    ? [
+        {
+          title: 'Jinsi Inavyofanya Kazi',
+          href: '/#how-it-works',
+        },
+        {
+          title: 'Bei',
+          href: '/pricing',
+        },
+        {
+          title: 'Msaada',
+          href: '/support',
+        },
+        {
+          title: 'Ranki',
+          href: '/#ranks',
+        },
+        {
+          title: 'Tournaments',
+          href: '/tournaments',
+        },
+        {
+          title: 'Sera ya Faragha',
+          href: '/privacy-policy',
+        },
+        {
+          title: 'Masharti ya Matumizi',
+          href: '/terms-of-service',
+        },
+      ]
+    : [
+        {
+          title: 'How It Works',
+          href: '/#how-it-works',
+        },
+        {
+          title: 'Pricing',
+          href: '/pricing',
+        },
+        {
+          title: 'Support',
+          href: '/support',
+        },
+        {
+          title: 'Ranks',
+          href: '/#ranks',
+        },
+        {
+          title: 'Tournaments',
+          href: '/tournaments',
+        },
+        {
+          title: 'Privacy Policy',
+          href: '/privacy-policy',
+        },
+        {
+          title: 'Terms of Service',
+          href: '/terms-of-service',
+        },
+      ];
+
   return (
     <footer className={cn('py-16 md:py-32', className)}>
       <div className="landing-shell">
-        <Link href="/" aria-label="go home" className="mx-auto block size-fit">
+        <Link
+          href="/"
+          aria-label={isSwahili ? 'rudi nyumbani' : 'go home'}
+          className="mx-auto block size-fit"
+        >
           <BrandLogo size="sm" />
         </Link>
 
@@ -70,7 +114,7 @@ export default function FooterSection({ className }: FooterSectionProps) {
             href={CUSTOMER_WHATSAPP_SUPPORT_URL}
             target="_blank"
             rel="noopener noreferrer"
-            aria-label="WhatsApp support"
+            aria-label={isSwahili ? 'Msaada wa WhatsApp' : 'WhatsApp support'}
             className="text-muted-foreground hover:text-primary block"
           >
             <FaWhatsapp className="size-6" />
@@ -138,11 +182,14 @@ export default function FooterSection({ className }: FooterSectionProps) {
         >
           <FaWhatsapp className="size-4 shrink-0" />
           <span className="min-w-0 break-words">
-            Customer WhatsApp support: {CUSTOMER_WHATSAPP_SUPPORT_NUMBER_LABEL}
+            {isSwahili ? 'Msaada wa WhatsApp:' : 'Customer WhatsApp support:'}{' '}
+            {CUSTOMER_WHATSAPP_SUPPORT_NUMBER_LABEL}
           </span>
         </Link>
         <span className="text-muted-foreground block text-center text-sm">
-          Copyright {new Date().getFullYear()} Mechi, All rights reserved
+          {isSwahili
+            ? `Hakimiliki ${new Date().getFullYear()} Mechi, haki zote zimehifadhiwa`
+            : `Copyright ${new Date().getFullYear()} Mechi, All rights reserved`}
         </span>
       </div>
     </footer>

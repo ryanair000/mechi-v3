@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { MotionConfig, motion, type HTMLMotionProps } from "motion/react";
+import { useRegionalSettings } from "@/components/RegionalSettingsProvider";
 import { cn } from "@/lib/utils";
 
 interface TextStaggerHoverProps {
@@ -221,10 +222,13 @@ export const HoverSliderImage = React.forwardRef<
 HoverSliderImage.displayName = "HoverSliderImage";
 
 export function AnimatedSlideshowSection() {
+  const { locale } = useRegionalSettings();
+  const isSwahili = locale === "sw-TZ";
+
   return (
     <HoverSlider className="landing-shell px-4 py-8 text-[var(--text-primary)] md:px-12 md:py-12">
       <h3 className="mb-6 text-xs font-medium capitalize tracking-wide text-[rgb(201,100,66)]">
-        / Leaderboard
+        {isSwahili ? "/ Ubao wa Washindi" : "/ Leaderboard"}
       </h3>
       <div className="flex flex-col items-center justify-center gap-5 lg:flex-row lg:items-center lg:gap-8">
         <div className="flex shrink-0 flex-col space-y-2 md:space-y-4">

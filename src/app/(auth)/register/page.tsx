@@ -6,6 +6,7 @@ import toast from 'react-hot-toast';
 import { ExternalLink, Eye, EyeOff, Loader2, MessageCircle } from 'lucide-react';
 import { ActionFeedback, type ActionFeedbackState } from '@/components/ActionFeedback';
 import { useAuth } from '@/components/AuthProvider';
+import { useRegionalSettings } from '@/components/RegionalSettingsProvider';
 import { FullScreenSignup } from '@/components/ui/full-screen-signup';
 import { normalizeInviteCode } from '@/lib/invite';
 import { getLoginPath, getSafeNextPath } from '@/lib/navigation';
@@ -37,6 +38,7 @@ interface RegisterFormData {
 
 export default function RegisterPage({ searchParams }: { searchParams: RegisterSearchParams }) {
   const { user, loading: authLoading, login } = useAuth();
+  const { country, locale, phonePlaceholder } = useRegionalSettings();
   const resolvedSearchParams = use(searchParams);
   const rawInviteValue = resolvedSearchParams.invite;
   const rawInviteCode =
@@ -55,6 +57,7 @@ export default function RegisterPage({ searchParams }: { searchParams: RegisterS
         : null;
   const nextPath = getSafeNextPath(rawNext, '/dashboard');
   const loginHref = getLoginPath(rawNext ? nextPath : null);
+  const isSwahili = locale === 'sw-TZ';
   const [formData, setFormData] = useState<RegisterFormData>({
     username: '',
     phone: '',
@@ -89,8 +92,12 @@ export default function RegisterPage({ searchParams }: { searchParams: RegisterS
     if (!formIsValid) {
       setSubmitFeedback({
         tone: 'error',
-        title: 'Check the four account fields.',
-        detail: usernameValidation.error ?? 'Username, phone, mail address, and password are required.',
+        title: isSwahili ? 'Kagua sehemu nne za akaunti.' : 'Check the four account fields.',
+        detail:
+          usernameValidation.error ??
+          (isSwahili
+            ? 'Username, simu, barua pepe, na password zinahitajika.'
+            : 'Username, phone, mail address, and password are required.'),
       });
       return;
     }
@@ -98,8 +105,10 @@ export default function RegisterPage({ searchParams }: { searchParams: RegisterS
     setLoading(true);
     setSubmitFeedback({
       tone: 'loading',
-      title: 'Creating your Mechi account...',
-      detail: 'Saving the essentials and starting your Pro trial now.',
+      title: isSwahili ? 'Inatengeneza akaunti yako ya Mechi...' : 'Creating your Mechi account...',
+      detail: isSwahili
+        ? 'Tunatunza taarifa za msingi na kuwasha trial yako ya Pro sasa.'
+        : 'Saving the essentials and starting your Pro trial now.',
     });
 
     try {
@@ -112,6 +121,7 @@ export default function RegisterPage({ searchParams }: { searchParams: RegisterS
           email: formData.email.trim(),
           password: formData.password,
           invite_code: normalizedInviteCode,
+          country,
         }),
       });
       const data = await res.json();
@@ -119,28 +129,42 @@ export default function RegisterPage({ searchParams }: { searchParams: RegisterS
       if (!res.ok) {
         setSubmitFeedback({
           tone: 'error',
-          title: 'Registration did not go through.',
-          detail: data.error ?? 'Please check your details and try again.',
+          title: isSwahili ? 'Usajili haujakamilika.' : 'Registration did not go through.',
+          detail:
+            data.error ??
+            (isSwahili
+              ? 'Tafadhali kagua taarifa zako halafu ujaribu tena.'
+              : 'Please check your details and try again.'),
         });
-        toast.error(data.error ?? 'Registration failed');
+        toast.error(data.error ?? (isSwahili ? 'Usajili umeshindikana' : 'Registration failed'));
         return;
       }
 
       login(data.token, data.user);
       setSubmitFeedback({
         tone: 'success',
-        title: `Welcome to Mechi, ${data.user.username}.`,
-        detail: 'Your account is live. Taking you into Mechi now.',
+        title: isSwahili
+          ? `Karibu Mechi, ${data.user.username}.`
+          : `Welcome to Mechi, ${data.user.username}.`,
+        detail: isSwahili
+          ? 'Akaunti yako imewashwa. Tunakuingiza ndani ya Mechi sasa.'
+          : 'Your account is live. Taking you into Mechi now.',
       });
-      toast.success(`Welcome to Mechi, ${data.user.username}!`);
+      toast.success(
+        isSwahili
+          ? `Karibu Mechi, ${data.user.username}!`
+          : `Welcome to Mechi, ${data.user.username}!`
+      );
       window.location.assign(nextPath);
     } catch {
       setSubmitFeedback({
         tone: 'error',
-        title: 'We could not reach the server.',
-        detail: 'Your account was not created. Check your connection and try again.',
+        title: isSwahili ? 'Tumeshindwa kufikia server.' : 'We could not reach the server.',
+        detail: isSwahili
+          ? 'Akaunti yako haijatengenezwa. Angalia intaneti yako halafu ujaribu tena.'
+          : 'Your account was not created. Check your connection and try again.',
       });
-      toast.error('Network error.');
+      toast.error(isSwahili ? 'Hitilafu ya mtandao.' : 'Network error.');
     } finally {
       setLoading(false);
     }
@@ -150,8 +174,12 @@ export default function RegisterPage({ searchParams }: { searchParams: RegisterS
     <FullScreenSignup
       title=""
       subtitle=""
-      sideTitle="Join Mechi Now"
-      sideDescription="Pull up, lock in, compete with real players, and win prizes in Mechi tournaments."
+      sideTitle={isSwahili ? 'Jiunge na Mechi Sasa' : 'Join Mechi Now'}
+      sideDescription={
+        isSwahili
+          ? 'Njoo, jifunge, shindana na players wa kweli, na ushinde zawadi kwenye tournaments za Mechi.'
+          : 'Pull up, lock in, compete with real players, and win prizes in Mechi tournaments.'
+      }
       hideSideEyebrow
       sideContentPlacement="bottom"
       hideMainHeader
@@ -159,12 +187,12 @@ export default function RegisterPage({ searchParams }: { searchParams: RegisterS
     >
       <form className="card p-4 sm:p-6" onSubmit={handleSubmit} noValidate>
         <p className="mb-5 text-center text-sm text-[var(--text-secondary)]">
-          Already have an account?{' '}
+          {isSwahili ? 'Tayari una akaunti?' : 'Already have an account?'}{' '}
           <Link
             href={user ? nextPath : loginHref}
             className="brand-link-coral inline-flex min-h-11 items-center font-semibold"
           >
-            Sign in
+            {isSwahili ? 'Ingia' : 'Sign in'}
           </Link>
         </p>
 
@@ -176,7 +204,11 @@ export default function RegisterPage({ searchParams }: { searchParams: RegisterS
             className="flex min-h-12 items-center gap-3 rounded-lg border border-[#25d366]/25 bg-[#25d366]/10 px-3 py-2 text-sm font-semibold text-[#7cf0ad] transition-colors hover:bg-[#25d366]/15"
           >
             <MessageCircle size={16} className="shrink-0" />
-            <span className="min-w-0 flex-1">Join the PlayMechi WhatsApp group</span>
+            <span className="min-w-0 flex-1">
+              {isSwahili
+                ? 'Jiunge na kundi la WhatsApp la PlayMechi'
+                : 'Join the PlayMechi WhatsApp group'}
+            </span>
             <ExternalLink size={14} className="shrink-0 opacity-80" />
           </a>
 
@@ -188,7 +220,8 @@ export default function RegisterPage({ searchParams }: { searchParams: RegisterS
           >
             <MessageCircle size={16} className="shrink-0" />
             <span className="min-w-0 flex-1">
-              WhatsApp support: {CUSTOMER_WHATSAPP_SUPPORT_NUMBER_LABEL}
+              {isSwahili ? 'Msaada wa WhatsApp:' : 'WhatsApp support:'}{' '}
+              {CUSTOMER_WHATSAPP_SUPPORT_NUMBER_LABEL}
             </span>
             <ExternalLink size={14} className="shrink-0 opacity-80" />
           </a>
@@ -226,14 +259,14 @@ export default function RegisterPage({ searchParams }: { searchParams: RegisterS
 
           <div>
             <label className="label" htmlFor="phone">
-              Phone Number
+              {isSwahili ? 'Namba ya Simu' : 'Phone Number'}
             </label>
             <input
               id="phone"
               type="tel"
               value={formData.phone}
               onChange={(event) => setField('phone', event.target.value)}
-              placeholder="0712 345 678"
+              placeholder={phonePlaceholder}
               className="input"
               inputMode="tel"
               autoComplete="tel"
@@ -242,7 +275,7 @@ export default function RegisterPage({ searchParams }: { searchParams: RegisterS
 
           <div>
             <label className="label" htmlFor="email">
-              Mail Address
+              {isSwahili ? 'Barua Pepe' : 'Mail Address'}
             </label>
             <input
               id="email"
@@ -258,7 +291,7 @@ export default function RegisterPage({ searchParams }: { searchParams: RegisterS
 
           <div>
             <label className="label" htmlFor="password">
-              Password
+              {isSwahili ? 'Nenosiri' : 'Password'}
             </label>
             <div className="relative">
               <input
@@ -266,7 +299,7 @@ export default function RegisterPage({ searchParams }: { searchParams: RegisterS
                 type={showPassword ? 'text' : 'password'}
                 value={formData.password}
                 onChange={(event) => setField('password', event.target.value)}
-                placeholder="More than 8 characters"
+                placeholder={isSwahili ? 'Zaidi ya herufi 8' : 'More than 8 characters'}
                 className="input pr-12"
                 minLength={MIN_PASSWORD_LENGTH}
                 autoComplete="new-password"
@@ -275,14 +308,24 @@ export default function RegisterPage({ searchParams }: { searchParams: RegisterS
                 type="button"
                 onClick={() => setShowPassword((current) => !current)}
                 className="absolute right-1 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-lg text-[var(--text-soft)] transition-colors hover:text-[var(--text-primary)]"
-                aria-label={showPassword ? 'Hide password' : 'Show password'}
+                aria-label={
+                  showPassword
+                    ? isSwahili
+                      ? 'Ficha nenosiri'
+                      : 'Hide password'
+                    : isSwahili
+                      ? 'Onyesha nenosiri'
+                      : 'Show password'
+                }
               >
                 {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
               </button>
             </div>
             {formData.password.length > 0 && !passwordIsValid ? (
               <p className="mt-2 text-xs text-[var(--brand-coral)]">
-                Password must be more than 8 characters.
+                {isSwahili
+                  ? 'Password lazima iwe na zaidi ya herufi 8.'
+                  : 'Password must be more than 8 characters.'}
               </p>
             ) : null}
           </div>
@@ -303,10 +346,10 @@ export default function RegisterPage({ searchParams }: { searchParams: RegisterS
             {loading ? (
               <>
                 <Loader2 size={14} className="animate-spin" />
-                Creating...
+                {isSwahili ? 'Inatengeneza...' : 'Creating...'}
               </>
             ) : (
-              'Create Account'
+              isSwahili ? 'Tengeneza Akaunti' : 'Create Account'
             )}
           </button>
         </div>

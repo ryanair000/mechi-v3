@@ -3,7 +3,9 @@
 import Link from 'next/link';
 import { useAuth } from '@/components/AuthProvider';
 import { BrandLogo } from '@/components/BrandLogo';
+import { CountryLanguageBar } from '@/components/CountryLanguageBar';
 import { PageBreadcrumbs } from '@/components/PageBreadcrumbs';
+import { useRegionalSettings } from '@/components/RegionalSettingsProvider';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { getLoginPath } from '@/lib/navigation';
 import {
@@ -21,16 +23,26 @@ export function WeekendCupHeader({
   registerHref = WEEKEND_CUP_REGISTRATION_PATH,
 }: WeekendCupHeaderProps) {
   const { user } = useAuth();
+  const { locale } = useRegionalSettings();
+  const isSwahili = locale === 'sw-TZ';
   const signInHref = getLoginPath(
     voteHref.startsWith('/') ? voteHref : `${WEEKEND_CUP_PUBLIC_PATH}${voteHref}`
   );
-  const navItems = [
-    { href: voteHref, label: 'Vote' },
-    { href: '/leaderboard', label: 'Leaderboard' },
-    { href: '/playmechi', label: 'Last Tournament' },
-    { href: '/android-testers', label: 'Android' },
-    { href: '/platform', label: 'Platform' },
-  ];
+  const navItems = isSwahili
+    ? [
+        { href: voteHref, label: 'Kura' },
+        { href: '/leaderboard', label: 'Ubao wa Washindi' },
+        { href: '/playmechi', label: 'Tournament Iliyopita' },
+        { href: '/android-testers', label: 'Android' },
+        { href: '/platform', label: 'Mfumo' },
+      ]
+    : [
+        { href: voteHref, label: 'Vote' },
+        { href: '/leaderboard', label: 'Leaderboard' },
+        { href: '/playmechi', label: 'Last Tournament' },
+        { href: '/android-testers', label: 'Android' },
+        { href: '/platform', label: 'Platform' },
+      ];
 
   return (
     <header className="sticky top-2 z-50 sm:top-3">
@@ -62,23 +74,27 @@ export function WeekendCupHeader({
             </div>
 
             <div className="ml-auto flex items-center gap-2">
+              <CountryLanguageBar className="hidden lg:flex" />
               <ThemeToggle />
               <Link
                 href={user ? '/dashboard' : signInHref}
                 className="inline-flex min-h-[32px] items-center justify-center rounded-[var(--radius-control)] border border-[rgba(50,224,196,0.34)] bg-[rgba(17,35,55,0.88)] px-3 font-[var(--font-display)] text-[0.72rem] font-black uppercase tracking-[0.14em] text-[var(--accent-secondary-text)] transition-all hover:border-[rgba(50,224,196,0.55)] hover:bg-[rgba(50,224,196,0.12)] hover:text-[var(--text-primary)]"
               >
-                {user ? 'Dashboard' : 'Sign in'}
+                {user ? (isSwahili ? 'Dashibodi' : 'Dashboard') : isSwahili ? 'Ingia' : 'Sign in'}
               </Link>
               <Link
                 href={registerHref}
                 className="inline-flex min-h-[32px] items-center justify-center rounded-[var(--radius-control)] bg-[#ff6268] px-3.5 font-[var(--font-display)] text-[0.72rem] font-black uppercase tracking-[0.14em] text-[#07111e] shadow-[0_12px_28px_rgba(255,98,104,0.22)] transition-all hover:-translate-y-0.5 hover:bg-[#ff7479]"
               >
-                Register
+                {isSwahili ? 'Jisajili' : 'Register'}
               </Link>
             </div>
           </div>
 
           <div className="mt-1.5 border-t border-[rgba(112,139,174,0.2)] pt-1.5 lg:hidden">
+            <div className="pb-2">
+              <CountryLanguageBar inline />
+            </div>
             <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar">
               {navItems.map((item) => (
                 <Link

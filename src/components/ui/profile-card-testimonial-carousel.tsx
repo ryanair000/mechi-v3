@@ -4,6 +4,7 @@ import { type KeyboardEvent, useRef, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { ChevronLeft, ChevronRight, CirclePlay } from 'lucide-react';
+import { useRegionalSettings } from '@/components/RegionalSettingsProvider';
 import { cn } from '@/lib/utils';
 
 interface Testimonial {
@@ -75,8 +76,10 @@ function TeamPortrait({ member, className }: { member: Testimonial; className?: 
 }
 
 export function TestimonialCarousel({ className }: TestimonialCarouselProps) {
+  const { locale } = useRegionalSettings();
   const [currentIndex, setCurrentIndex] = useState(0);
   const lastActivationRef = useRef(0);
+  const isSwahili = locale === 'sw-TZ';
 
   const activate = (action: () => void) => {
     const now = Date.now();
@@ -195,11 +198,11 @@ export function TestimonialCarousel({ className }: TestimonialCarouselProps) {
             activate(handlePrevious);
           }}
           onKeyDown={(event) => handleKeyActivate(event, () => activate(handlePrevious))}
-          aria-label="Previous team member"
+          aria-label={isSwahili ? 'Member wa timu aliyepita' : 'Previous team member'}
           className="flex h-12 w-12 cursor-pointer items-center justify-center rounded-full border border-[var(--border-color)] bg-[var(--surface-strong)] shadow-md transition-colors hover:bg-[var(--surface-elevated)]"
         >
           <ChevronLeft className="pointer-events-none h-6 w-6 text-[var(--text-primary)]" />
-          <span className="sr-only">Previous</span>
+          <span className="sr-only">{isSwahili ? 'Iliyopita' : 'Previous'}</span>
         </button>
 
         <div className="flex gap-2">
@@ -230,7 +233,7 @@ export function TestimonialCarousel({ className }: TestimonialCarouselProps) {
                   ? 'bg-[var(--brand-teal)]'
                   : 'bg-[rgba(255,255,255,0.26)]'
               )}
-              aria-label={`Go to ${testimonial.name}`}
+              aria-label={isSwahili ? `Nenda kwa ${testimonial.name}` : `Go to ${testimonial.name}`}
             />
           ))}
         </div>
@@ -254,11 +257,11 @@ export function TestimonialCarousel({ className }: TestimonialCarouselProps) {
             activate(handleNext);
           }}
           onKeyDown={(event) => handleKeyActivate(event, () => activate(handleNext))}
-          aria-label="Next team member"
+          aria-label={isSwahili ? 'Member anayefuata wa timu' : 'Next team member'}
           className="flex h-12 w-12 cursor-pointer items-center justify-center rounded-full border border-[var(--border-color)] bg-[var(--surface-strong)] shadow-md transition-colors hover:bg-[var(--surface-elevated)]"
         >
           <ChevronRight className="pointer-events-none h-6 w-6 text-[var(--text-primary)]" />
-          <span className="sr-only">Next</span>
+          <span className="sr-only">{isSwahili ? 'Inayofuata' : 'Next'}</span>
         </button>
       </div>
     </div>

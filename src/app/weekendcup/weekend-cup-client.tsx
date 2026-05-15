@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { useCallback, useEffect, useMemo, useState, type CSSProperties } from 'react';
 import toast from 'react-hot-toast';
@@ -15,7 +16,7 @@ import { useAuth, useAuthFetch } from '@/components/AuthProvider';
 import FooterSection from '@/components/footer';
 import { WeekendCupHeader } from '@/components/WeekendCupHeader';
 import { getGameImage } from '@/lib/config';
-import { getLoginPath } from '@/lib/navigation';
+import { getLoginPath, withQuery } from '@/lib/navigation';
 import { cn } from '@/lib/utils';
 import {
   WEEKEND_CUP_BALLOTS,
@@ -303,6 +304,7 @@ function WeekendCupSuggestionCard({
 }
 
 export function WeekendCupClient() {
+  const router = useRouter();
   const { user } = useAuth();
   const authFetch = useAuthFetch();
   const [ballots, setBallots] = useState<WeekendCupBallot[]>([]);
@@ -383,49 +385,67 @@ export function WeekendCupClient() {
     }
   }, [authFetch, handleAuthFailure, signInHref, user]);
 
-  const handleVote = useCallback(async (optionId: string, alreadySelected: boolean, selectedCount: number) => {
-    if (!WEEKEND_CUP_VOTING_ENABLED) {
-      toast.error(WEEKEND_CUP_VOTING_DISABLED_MESSAGE);
-      return;
-    }
-
-    if (!(await ensureLiveSession())) {
-      return;
-    }
-
-    if (!alreadySelected && selectedCount >= WEEKEND_CUP_MAX_VOTE_SELECTIONS) {
-      toast.error('Pick one game only for the mystery slot.');
-      return;
-    }
-
-    setActingOptionId(optionId);
-    try {
-      const res = await authFetch(API_PATH, {
-        method: 'POST',
-        body: JSON.stringify({
-          action: 'vote',
-          option_id: optionId,
-        }),
-      });
-      const data = (await res.json()) as WeekendCupSeriesResponse;
-
-      if (isAuthFailure(res.status, data.error)) {
-        handleAuthFailure();
+  const handleVote = useCallback(
+    async (optionId: string, alreadySelected: boolean, selectedCount: number) => {
+      if (!WEEKEND_CUP_VOTING_ENABLED) {
+        toast.error(WEEKEND_CUP_VOTING_DISABLED_MESSAGE);
         return;
       }
 
-      if (!res.ok) {
-        toast.error(data.error ?? 'Could not save vote');
+      if (!(await ensureLiveSession())) {
         return;
       }
 
-      setBallots((data.ballots ?? []).filter((ballot) => VISIBLE_BALLOT_SLUGS.has(ballot.slug)));
-    } catch {
-      toast.error('Network error while saving vote');
-    } finally {
-      setActingOptionId(null);
-    }
-  }, [authFetch, ensureLiveSession, handleAuthFailure]);
+      if (!alreadySelected && selectedCount >= WEEKEND_CUP_MAX_VOTE_SELECTIONS) {
+        toast.error('Pick one game only for the mystery slot.');
+        return;
+      }
+
+      const pickedOption =
+        visibleBallots.flatMap((ballot) => ballot.options).find((option) => option.id === optionId) ??
+        null;
+
+      setActingOptionId(optionId);
+      try {
+        const res = await authFetch(API_PATH, {
+          method: 'POST',
+          body: JSON.stringify({
+            action: 'vote',
+            option_id: optionId,
+          }),
+        });
+        const data = (await res.json()) as WeekendCupSeriesResponse;
+
+        if (isAuthFailure(res.status, data.error)) {
+          handleAuthFailure();
+          return;
+        }
+
+        if (!res.ok) {
+          toast.error(data.error ?? 'Could not save vote');
+          return;
+        }
+
+        setBallots((data.ballots ?? []).filter((ballot) => VISIBLE_BALLOT_SLUGS.has(ballot.slug)));
+
+        if (alreadySelected) {
+          toast.success('Mystery pick cleared. Choose the next one.');
+          return;
+        }
+
+        router.push(
+          withQuery('/weekendcup/vote/complete', {
+            game: pickedOption?.label ?? 'Mystery game',
+          })
+        );
+      } catch {
+        toast.error('Network error while saving vote');
+      } finally {
+        setActingOptionId(null);
+      }
+    },
+    [authFetch, ensureLiveSession, handleAuthFailure, router, visibleBallots]
+  );
 
   const handleClearVotes = useCallback(async (ballotSlug: string) => {
     if (!(await ensureLiveSession())) {
@@ -462,64 +482,71 @@ export function WeekendCupClient() {
     }
   }, [authFetch, ensureLiveSession, handleAuthFailure]);
 
-  const handleSuggest = async (ballotSlug: string) => {
-    if (!WEEKEND_CUP_VOTING_ENABLED) {
-      toast.error(WEEKEND_CUP_VOTING_DISABLED_MESSAGE);
-      return;
-    }
-
-    if (!(await ensureLiveSession())) {
-      return;
-    }
-
-    const draft = suggestionDrafts[ballotSlug] ?? { label: '', description: '' };
-    if (!draft.label.trim()) {
-      toast.error('Add the game title first.');
-      return;
-    }
-
-    const ballot = visibleBallots.find((item) => item.slug === ballotSlug);
-    const selectedCount = ballot?.options.filter((option) => option.userVoted).length ?? 0;
-    if (selectedCount >= WEEKEND_CUP_MAX_VOTE_SELECTIONS) {
-      toast.error('Clear your current pick first. Only one mystery-game vote is allowed.');
-      return;
-    }
-
-    setSubmittingBallotSlug(ballotSlug);
-    try {
-      const res = await authFetch(API_PATH, {
-        method: 'POST',
-        body: JSON.stringify({
-          action: 'suggest_game',
-          ballot_slug: ballotSlug,
-          label: draft.label,
-          description: draft.description,
-        }),
-      });
-      const data = (await res.json()) as WeekendCupSeriesResponse;
-
-      if (isAuthFailure(res.status, data.error)) {
-        handleAuthFailure();
+  const handleSuggest = useCallback(
+    async (ballotSlug: string) => {
+      if (!WEEKEND_CUP_VOTING_ENABLED) {
+        toast.error(WEEKEND_CUP_VOTING_DISABLED_MESSAGE);
         return;
       }
 
-      if (!res.ok) {
-        toast.error(data.error ?? 'Could not add that game');
+      if (!(await ensureLiveSession())) {
         return;
       }
 
-      toast.success('Game added to the vote.');
-      setSuggestionDrafts((current) => ({
-        ...current,
-        [ballotSlug]: { label: '', description: '' },
-      }));
-      setBallots((data.ballots ?? []).filter((ballot) => VISIBLE_BALLOT_SLUGS.has(ballot.slug)));
-    } catch {
-      toast.error('Network error while suggesting the game');
-    } finally {
-      setSubmittingBallotSlug(null);
-    }
-  };
+      const draft = suggestionDrafts[ballotSlug] ?? { label: '', description: '' };
+      if (!draft.label.trim()) {
+        toast.error('Add the game title first.');
+        return;
+      }
+
+      const ballot = visibleBallots.find((item) => item.slug === ballotSlug);
+      const selectedCount = ballot?.options.filter((option) => option.userVoted).length ?? 0;
+      if (selectedCount >= WEEKEND_CUP_MAX_VOTE_SELECTIONS) {
+        toast.error('Clear your current pick first. Only one mystery-game vote is allowed.');
+        return;
+      }
+
+      setSubmittingBallotSlug(ballotSlug);
+      try {
+        const res = await authFetch(API_PATH, {
+          method: 'POST',
+          body: JSON.stringify({
+            action: 'suggest_game',
+            ballot_slug: ballotSlug,
+            label: draft.label,
+            description: draft.description,
+          }),
+        });
+        const data = (await res.json()) as WeekendCupSeriesResponse;
+
+        if (isAuthFailure(res.status, data.error)) {
+          handleAuthFailure();
+          return;
+        }
+
+        if (!res.ok) {
+          toast.error(data.error ?? 'Could not add that game');
+          return;
+        }
+
+        setSuggestionDrafts((current) => ({
+          ...current,
+          [ballotSlug]: { label: '', description: '' },
+        }));
+        setBallots((data.ballots ?? []).filter((ballot) => VISIBLE_BALLOT_SLUGS.has(ballot.slug)));
+        router.push(
+          withQuery('/weekendcup/suggest/complete', {
+            game: draft.label.trim(),
+          })
+        );
+      } catch {
+        toast.error('Network error while suggesting the game');
+      } finally {
+        setSubmittingBallotSlug(null);
+      }
+    },
+    [authFetch, ensureLiveSession, handleAuthFailure, router, suggestionDrafts, visibleBallots]
+  );
 
   return (
     <div

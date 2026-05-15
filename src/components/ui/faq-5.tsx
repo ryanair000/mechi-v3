@@ -1,4 +1,7 @@
+'use client';
+
 import { Badge } from '@/components/ui/badge';
+import { useRegionalSettings } from '@/components/RegionalSettingsProvider';
 import { cn } from '@/lib/utils';
 
 export interface FaqItem {
@@ -48,12 +51,59 @@ const defaultFaqs: FaqItem[] = [
 ];
 
 export const Faq5 = ({
-  badge = 'FAQ',
-  heading = 'Quick answers before match day.',
-  description = 'Everything players usually ask before joining Playmechi Launch.',
-  faqs = defaultFaqs,
+  badge,
+  heading,
+  description,
+  faqs,
   className,
 }: Faq5Props) => {
+  const { locale } = useRegionalSettings();
+  const isSwahili = locale === 'sw-TZ';
+  const resolvedBadge = badge ?? (isSwahili ? 'Maswali' : 'FAQ');
+  const resolvedHeading =
+    heading ?? (isSwahili ? 'Majibu ya haraka kabla ya siku ya mechi.' : 'Quick answers before match day.');
+  const resolvedDescription =
+    description ??
+    (isSwahili
+      ? 'Haya ndiyo mambo ambayo players wengi huuliza kabla ya kujiunga na Playmechi Launch.'
+      : 'Everything players usually ask before joining Playmechi Launch.');
+  const resolvedFaqs =
+    faqs ??
+    (isSwahili
+      ? [
+          {
+            question: 'Je, usajili ni bure?',
+            answer:
+              'Ndiyo. Usajili ni bure kwenye Mechi.club. Chagua mchezo wako, tuma gamer tag sahihi, na hakikisha unapatikana saa 2:00 usiku siku ya mechi.',
+          },
+          {
+            question: 'Ni michezo gani ipo kwenye tournament?',
+            answer:
+              'Tournament ina PUBG Mobile, Call of Duty Mobile, na eFootball. PUBG inachezwa Ijumaa 8 May, CODM Jumamosi 9 May, na eFootball Jumapili 10 May.',
+          },
+          {
+            question: 'Ninajuaje kustahili rewards?',
+            answer:
+              'Jisajili kwa taarifa sahihi, tumia akaunti ile ile ya mchezo, fuata sheria, na kamilisha sharti la kufollow PlayMechi na ku-subscribe YouTube kabla ya siku yako ya mechi.',
+          },
+          {
+            question: 'Washindi wa PUBG Mobile na CODM wanaamuliwaje?',
+            answer:
+              'PUBG Mobile hutumia kill-race scoring kwenye mechi tatu za Battle Royale. CODM pia ina mechi tatu za Battle Royale, lakini hutumia pointi za kills na placement kulingana na sheria zilizochapishwa na desk ya tournament.',
+          },
+          {
+            question: 'eFootball inafanyaje kazi?',
+            answer:
+              'eFootball ni bracket ya mtoano ya players 16 ya 1v1. Ukishinda unasonga mbele. Ikiwa kuna dispute, tuma screenshot safi mara moja ili admins wafanye review.',
+          },
+          {
+            question: 'Naweza kutazama mechi wapi?',
+            answer:
+              'Tournament inastream live YouTube kupitia PlayMechi. PUBG Mobile na CODM hutumia stream delay fupi ili michezo ibaki fair.',
+          },
+        ]
+      : defaultFaqs);
+
   return (
     <section
       id="faq"
@@ -65,18 +115,18 @@ export const Faq5 = ({
       <div className="landing-shell">
         <div className="text-center">
           <Badge className="border-[rgba(50,224,196,0.28)] bg-[rgba(50,224,196,0.12)] text-xs font-black uppercase tracking-[0.14em] text-[var(--accent-secondary-text)] hover:bg-[rgba(50,224,196,0.16)]">
-            {badge}
+            {resolvedBadge}
           </Badge>
           <h2 className="mt-4 text-3xl font-black leading-tight text-[var(--text-primary)] sm:text-4xl lg:text-5xl">
-            {heading}
+            {resolvedHeading}
           </h2>
           <p className="mx-auto mt-5 max-w-2xl text-sm font-medium leading-7 text-[var(--text-secondary)] sm:text-base">
-            {description}
+            {resolvedDescription}
           </p>
         </div>
 
         <div className="mx-auto mt-12 max-w-screen-sm">
-          {faqs.map((faq, index) => (
+          {resolvedFaqs.map((faq, index) => (
             <div key={faq.question} className="mb-8 flex gap-4">
               <span className="flex size-7 shrink-0 items-center justify-center rounded-[var(--radius-control)] bg-[rgba(50,224,196,0.12)] font-mono text-xs font-black text-[var(--accent-secondary-text)]">
                 {index + 1}

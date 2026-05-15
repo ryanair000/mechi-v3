@@ -43,6 +43,10 @@ function matchesAppPath(pathname: string, basePath: string) {
   );
 }
 
+function isAdminPath(pathname: string) {
+  return matchesAppPath(pathname, '/admin');
+}
+
 function isWeekendCupHomeAnchorPath(pathname: string) {
   return pathname === '/#vote' || pathname === '/#overview' || pathname === '/#options';
 }
@@ -55,6 +59,11 @@ export function hasModeratorDeskRole(identity: PostLoginIdentity | null | undefi
   return identity?.role === 'moderator' || identity?.role === 'admin';
 }
 
+function getNonStaffFallbackPath(fallback: string | null | undefined) {
+  const safeFallback = getSafeNextPath(fallback, '/dashboard');
+  return isModeratorDeskPath(safeFallback) || isAdminPath(safeFallback) ? '/dashboard' : safeFallback;
+}
+
 export function getPostLoginRedirectPath(
   identity: PostLoginIdentity | null | undefined,
   requestedPath: string | null | undefined,
@@ -63,6 +72,10 @@ export function getPostLoginRedirectPath(
   const safePath = getSafeNextPath(requestedPath, fallback);
 
   if (!hasModeratorDeskRole(identity)) {
+    if (isModeratorDeskPath(safePath) || isAdminPath(safePath)) {
+      return getNonStaffFallbackPath(fallback);
+    }
+
     return safePath;
   }
 
@@ -74,7 +87,7 @@ export function getPostLoginRedirectPath(
     return safePath;
   }
 
-  if (identity?.role === 'admin' && matchesAppPath(safePath, '/admin')) {
+  if (identity?.role === 'admin' && isAdminPath(safePath)) {
     return safePath;
   }
 

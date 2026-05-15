@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import type { JWTPayload } from '@/types';
 import { hasPrimaryAdminAccess } from '@/lib/admin-access';
-import { getLoginPath, getModeratorLoginPath, getSafeNextPath } from '@/lib/navigation';
+import {
+  getLoginPath,
+  getModeratorLoginPath,
+  getPostLoginRedirectPath,
+} from '@/lib/navigation';
 import { checkRateLimit, getClientIp } from '@/lib/rateLimit';
 import { createServiceClient } from '@/lib/supabase';
 import { ADMIN_HOST as CONFIGURED_ADMIN_HOST, ADMIN_URL, APP_HOST, APP_URL } from '@/lib/urls';
@@ -569,7 +573,11 @@ export async function proxy(request: NextRequest) {
       adminHost && !access.is_banned && hasPrimaryAdminAccess(access)
         ? '/admin'
         : '/dashboard';
-    const nextPath = getSafeNextPath(request.nextUrl.searchParams.get('next'), fallbackPath);
+    const nextPath = getPostLoginRedirectPath(
+      access,
+      request.nextUrl.searchParams.get('next'),
+      fallbackPath
+    );
     return NextResponse.redirect(new URL(nextPath, request.url));
   }
 

@@ -54,6 +54,21 @@ test.describe('Public and Auth Flows', () => {
     await expect(page).toHaveURL(/\/dashboard/);
   });
 
+  test('normal users are not redirected into the moderator desk by next params @core', async ({
+    page,
+  }) => {
+    await page.goto('/login?next=/moderators');
+    await page.getByLabel('Phone number').fill(SEEDED_PERSONAS.playerPro.phone);
+    await page.getByLabel('Password').fill(DEFAULT_PASSWORD);
+    await page.getByRole('button', { name: /^sign in$/i }).click();
+
+    await expect(page).toHaveURL(/\/dashboard/);
+    await expect(page.locator('body')).not.toContainText(/moderator access required/i);
+
+    await page.goto('/login?next=/moderators');
+    await expect(page).toHaveURL(/\/dashboard/);
+  });
+
   test('email magic sign-in and username/contact password reset recovery work @core', async ({
     page,
     playwright,

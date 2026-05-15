@@ -32,9 +32,8 @@ const LOGOS: Logo[] = [
     className: 'brightness-0 invert',
   },
   {
-    src: 'https://upload.wikimedia.org/wikipedia/en/9/92/Garena_Free_Fire_logo.svg',
+    src: 'https://commons.wikimedia.org/wiki/Special:Redirect/file/Freefirelogo.png',
     alt: 'Free Fire Logo',
-    className: 'brightness-0 invert',
   },
   {
     src: '/game-artwork/fc26-header.svg',

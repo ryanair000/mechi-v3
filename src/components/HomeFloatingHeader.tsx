@@ -19,11 +19,14 @@ const DEFAULT_NAV_ITEMS: NavItem[] = [
   { href: '#pricing', label: 'PRICING' },
   { href: '#ranks', label: 'RANKS' },
 ];
+const DISPLAY_FONT_STYLE = { fontFamily: 'var(--font-display)' } as const;
 
 const HEADER_TEXT_CLASS =
-  'rounded-[var(--radius-control)] px-3 py-2 font-[var(--font-display)] text-sm font-black uppercase tracking-[0.14em] text-[var(--text-secondary)] transition-colors hover:bg-[var(--surface-elevated)] hover:text-[var(--text-primary)]';
+  'inline-flex min-h-[3.25rem] items-center rounded-[1rem] px-4 py-2 font-[var(--font-display)] text-[0.8rem] font-extrabold uppercase tracking-[0.18em] text-[color:rgba(193,203,218,0.96)] transition-colors hover:text-[var(--text-primary)]';
 const SIGN_IN_BUTTON_CLASS =
-  'inline-flex min-h-11 items-center justify-center rounded-[var(--radius-panel)] border border-[rgba(50,224,196,0.28)] bg-[var(--surface-elevated)] px-4 py-2 font-[var(--font-display)] text-base font-black uppercase tracking-[0.14em] text-[var(--accent-secondary-text)] transition-all hover:border-[rgba(50,224,196,0.42)] hover:bg-[rgba(50,224,196,0.12)] hover:text-[var(--text-primary)] sm:text-sm';
+  'inline-flex min-h-[3.25rem] items-center justify-center rounded-[1rem] border border-[rgba(50,224,196,0.32)] bg-[rgba(17,27,46,0.88)] px-6 py-2 font-[var(--font-display)] text-[0.8rem] font-extrabold uppercase tracking-[0.18em] text-[var(--accent-secondary-text)] transition-all hover:border-[rgba(50,224,196,0.46)] hover:bg-[rgba(50,224,196,0.12)] hover:text-[var(--text-primary)]';
+const JOIN_BUTTON_CLASS =
+  'btn-primary min-h-[3.25rem] rounded-[1rem] px-6 shadow-none font-[var(--font-display)] text-[0.8rem] font-extrabold uppercase tracking-[0.18em] text-[#08111d]';
 
 interface HomeFloatingHeaderProps {
   navItems?: NavItem[];
@@ -44,26 +47,27 @@ export function HomeFloatingHeader({
   const { user } = useAuth();
 
   return (
-    <header className="sticky top-2 z-50 sm:top-4">
-      <div className="landing-shell relative">
+    <header className="sticky top-3 z-50 sm:top-6">
+      <div className="relative mx-auto w-full max-w-[88rem] px-4 sm:px-6 lg:px-8">
         <div
           aria-hidden="true"
           className="pointer-events-none absolute left-1/2 top-1/2 h-px w-screen -translate-x-1/2 -translate-y-1/2 bg-gradient-to-r from-transparent via-[rgba(50,224,196,0.28)] to-transparent"
         />
         <div className="rounded-[var(--radius-nav-shell)] border border-[var(--border-color)] bg-[var(--surface-soft)] p-1.5 shadow-[var(--shadow-soft)] backdrop-blur-xl sm:p-2">
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-4">
             {showLogo ? (
-              <Link href="/" className="flex shrink-0 items-center rounded-[var(--radius-panel)] px-1.5 py-1">
-                <BrandLogo size="sm" variant="symbol" />
+              <Link href="/" className="flex shrink-0 items-center rounded-[1rem] px-2 py-1.5">
+                <BrandLogo size="md" variant="symbol" />
               </Link>
             ) : null}
 
-            <div className="hidden min-w-0 flex-1 items-center justify-center gap-1 md:flex">
+            <div className="hidden min-w-0 flex-1 items-center justify-center gap-3 md:flex">
               {navItems.map((item) => (
                 <Link
                   key={item.href}
                   href={item.href}
                   className={HEADER_TEXT_CLASS}
+                  style={DISPLAY_FONT_STYLE}
                 >
                   {item.label}
                 </Link>
@@ -71,13 +75,17 @@ export function HomeFloatingHeader({
             </div>
 
             <div className="ml-auto flex items-center gap-2">
-              <ThemeToggle />
+              <ThemeToggle className="!h-[3.25rem] !min-h-[3.25rem] !w-[3.25rem] !min-w-[3.25rem] !rounded-[1rem] !border-[rgba(129,148,178,0.18)] !bg-[rgba(17,27,46,0.88)] !text-[color:rgba(193,203,218,0.96)]" />
               <div className="hidden items-center gap-2 sm:flex">
-                <Link href={user ? '/dashboard' : signInHref} className={SIGN_IN_BUTTON_CLASS}>
+                <Link
+                  href={user ? '/dashboard' : signInHref}
+                  className={SIGN_IN_BUTTON_CLASS}
+                  style={DISPLAY_FONT_STYLE}
+                >
                   {user ? 'DASHBOARD' : 'SIGN IN'}
                 </Link>
                 {!user ? (
-                  <Link href={joinHref} className="btn-primary shadow-none font-[var(--font-display)] text-sm font-black uppercase tracking-[0.14em]">
+                  <Link href={joinHref} className={JOIN_BUTTON_CLASS} style={DISPLAY_FONT_STYLE}>
                     {joinLabel}
                   </Link>
                 ) : null}
@@ -103,6 +111,7 @@ export function HomeFloatingHeader({
                   href={item.href}
                   onClick={() => setIsOpen(false)}
                   className={HEADER_TEXT_CLASS}
+                  style={DISPLAY_FONT_STYLE}
                 >
                   {item.label}
                 </Link>
@@ -112,6 +121,7 @@ export function HomeFloatingHeader({
                   href={user ? '/dashboard' : signInHref}
                   onClick={() => setIsOpen(false)}
                   className={SIGN_IN_BUTTON_CLASS}
+                  style={DISPLAY_FONT_STYLE}
                 >
                   {user ? 'DASHBOARD' : 'SIGN IN'}
                 </Link>
@@ -119,7 +129,8 @@ export function HomeFloatingHeader({
                   <Link
                     href={joinHref}
                     onClick={() => setIsOpen(false)}
-                    className="btn-primary shadow-none font-[var(--font-display)] text-sm font-black uppercase tracking-[0.14em]"
+                    className={JOIN_BUTTON_CLASS}
+                    style={DISPLAY_FONT_STYLE}
                   >
                     {joinLabel}
                   </Link>

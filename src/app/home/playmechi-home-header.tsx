@@ -2,7 +2,6 @@
 
 import { HomeFloatingHeader } from '@/components/HomeFloatingHeader';
 import { getLoginPath, getRegisterPath } from '@/lib/navigation';
-import { WEEKEND_CUP_REGISTRATION_PATH } from '@/lib/weekend-cup';
 
 const PLAYMECHI_HOME_NAV_ITEMS = [
   { href: '/weekendcup', label: 'TOURNAMENTS' },
@@ -10,10 +9,10 @@ const PLAYMECHI_HOME_NAV_ITEMS = [
   { href: '/pricing', label: 'SUBSCRIPTIONS' },
 ];
 
-const PLAYMECHI_SIGN_IN_PATH = getLoginPath(WEEKEND_CUP_REGISTRATION_PATH);
+const PLAYMECHI_SIGN_IN_PATH = getLoginPath();
 
 export function PlayMechiHomeHeader() {
-  const joinHref = getRegisterPath({ next: WEEKEND_CUP_REGISTRATION_PATH });
+  const joinHref = getRegisterPath();
 
   return (
     <HomeFloatingHeader

@@ -40,7 +40,7 @@ const HOME_FAQS: FaqItem[] = [
 
 export function MechiHomePageShell() {
   return (
-    <div className="page-base marketing-prototype-shell flex min-h-screen flex-col">
+    <div className="page-base marketing-prototype-shell mechi-home-shell flex min-h-screen flex-col">
       <PlayMechiHomeHeader />
       <div className="flex-1">
         <HeroSection />

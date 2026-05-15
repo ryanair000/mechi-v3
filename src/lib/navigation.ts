@@ -3,12 +3,31 @@ import type { UserRole } from '@/types';
 
 export const MODERATOR_DESK_PATH = '/moderators';
 
+const BLOCKED_POST_AUTH_PATHS = new Set([
+  '/login',
+  '/register',
+  '/signup',
+  '/forgot-password',
+  '/reset-password',
+  '/moderator-login',
+  '/moderator-signup',
+]);
+
 type PostLoginIdentity = {
   role?: UserRole | null;
 };
 
 export function getSafeNextPath(value: string | null | undefined, fallback = '/dashboard') {
   if (!value || !value.startsWith('/') || value.startsWith('//')) {
+    return fallback;
+  }
+
+  try {
+    const parsed = new URL(value, 'https://mechi.club');
+    if (BLOCKED_POST_AUTH_PATHS.has(parsed.pathname)) {
+      return fallback;
+    }
+  } catch {
     return fallback;
   }
 

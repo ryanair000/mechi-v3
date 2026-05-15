@@ -994,6 +994,13 @@ html[data-theme='dark'] {
     --radius-nav-shell: 1.75rem;
   }
 
+  .mechi-home-shell {
+    --font-display: var(--font-montserrat), "Montserrat", "Segoe UI Semibold", sans-serif;
+    --font-body: var(--font-open-sans), "Open Sans", "Segoe UI", sans-serif;
+    --font-sans: var(--font-open-sans), "Open Sans", "Segoe UI", sans-serif;
+    --radius-nav-shell: 2rem;
+  }
+
   .app-prototype-shell {
     --font-display: var(--font-montserrat), "Montserrat", "Segoe UI Semibold", sans-serif;
     --font-body: var(--font-open-sans), "Open Sans", "Segoe UI", sans-serif;

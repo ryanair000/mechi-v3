@@ -1,4 +1,5 @@
 import type { ComponentProps } from 'react';
+import Image from 'next/image';
 import { useRegionalSettings } from '@/components/RegionalSettingsProvider';
 import { InfiniteSlider } from '@/components/ui/infinite-slider';
 import { cn } from '@/lib/utils';
@@ -17,37 +18,46 @@ type LogoCloudProps = ComponentProps<'div'> & {
 
 const LOGOS: Logo[] = [
   {
-    src: 'https://upload.wikimedia.org/wikipedia/commons/2/27/PUBG_Mobile_simple_logo_black.svg',
+    src: '/game-logos/pubgm.svg',
     alt: 'PUBG Mobile Logo',
-    className: 'brightness-0 invert',
+    className: 'brightness-0 invert opacity-70',
+    width: 176,
   },
   {
-    src: 'https://upload.wikimedia.org/wikipedia/commons/3/37/Call_of_Duty_Mobile_2023_logo.svg',
+    src: '/game-logos/codm.svg',
     alt: 'Call of Duty Mobile Logo',
-    className: 'brightness-0 invert',
+    className: 'brightness-0 invert opacity-70',
+    width: 252,
   },
   {
-    src: 'https://upload.wikimedia.org/wikipedia/commons/e/ee/EFootball_logo.svg',
+    src: '/game-logos/efootball.svg',
     alt: 'eFootball Logo',
-    className: 'brightness-0 invert',
+    className: 'brightness-0 invert opacity-70',
+    width: 110,
   },
   {
-    src: 'https://commons.wikimedia.org/wiki/Special:Redirect/file/Freefirelogo.png',
+    src: '/game-logos/freefire-white.png',
     alt: 'Free Fire Logo',
+    className: 'opacity-70',
+    width: 208,
   },
   {
-    src: '/game-artwork/fc26-header.svg',
+    src: '/game-logos/fc26-white.png',
     alt: 'FC 26 Logo',
-    className: 'brightness-0 invert',
+    className: 'opacity-70',
+    width: 188,
   },
   {
-    src: '/game-artwork/mk11-header.svg',
+    src: '/game-logos/mk11.svg',
     alt: 'Mortal Kombat 11 Logo',
-    className: 'brightness-0 invert',
+    className: 'brightness-0 invert opacity-70',
+    width: 178,
   },
   {
-    src: 'https://drop-assets.ea.com/images/7Dx4nROmD8Iy61CuHhUdbo/99a1ebf0a07247e13debb95efa0002a4/ufc5-logo-reveal-white-1.png',
+    src: '/game-logos/ufc5-white.png',
     alt: 'UFC 5 Logo',
+    className: 'opacity-70',
+    width: 212,
   },
 ];
 
@@ -62,17 +72,17 @@ export function LogoCloud({ className, logos, ...props }: LogoCloudProps) {
     >
       <InfiniteSlider gap={42} reverse speed={80} speedOnHover={25}>
         {logos.map((logo) => (
-          <img
+          <Image
             alt={logo.alt}
             className={cn(
-              'pointer-events-none h-12 w-auto select-none object-contain [clip-path:inset(2px)] md:h-14',
+              'pointer-events-none h-12 shrink-0 select-none object-contain md:h-14',
               logo.className
             )}
-            height={logo.height || 'auto'}
+            height={logo.height ?? 56}
             key={`logo-${logo.alt}`}
-            loading="lazy"
             src={logo.src}
-            width={logo.width || 'auto'}
+            unoptimized
+            width={logo.width ?? 180}
           />
         ))}
       </InfiniteSlider>

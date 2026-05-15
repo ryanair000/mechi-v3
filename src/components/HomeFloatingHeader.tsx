@@ -2,84 +2,170 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { Menu, X } from 'lucide-react';
+import { ChevronDown, Menu, X } from 'lucide-react';
 import { useAuth } from '@/components/AuthProvider';
 import { BrandLogo } from '@/components/BrandLogo';
 import { ThemeToggle } from '@/components/ThemeToggle';
 
-type NavItem = {
+type NavLinkItem = {
   href: string;
   label: string;
+  description?: string;
 };
 
-const DEFAULT_NAV_ITEMS: NavItem[] = [
+type NavDropdownItem = {
+  label: string;
+  items: NavLinkItem[];
+};
+
+export type HomeFloatingHeaderNavItem = NavLinkItem | NavDropdownItem;
+
+const DEFAULT_NAV_ITEMS: HomeFloatingHeaderNavItem[] = [
   { href: '#how-it-works', label: 'HOW IT WORKS' },
   { href: '#supported', label: 'GAMES' },
   { href: '/android-testers', label: 'ANDROID' },
   { href: '#pricing', label: 'PRICING' },
   { href: '#ranks', label: 'RANKS' },
 ];
+const DISPLAY_FONT_STYLE = { fontFamily: 'var(--font-display)' } as const;
 
 const HEADER_TEXT_CLASS =
-  'rounded-[var(--radius-control)] px-3 py-2 text-sm font-semibold uppercase tracking-[0.14em] text-[var(--text-secondary)] transition-colors hover:bg-[var(--surface-elevated)] hover:text-[var(--text-primary)]';
+  'inline-flex min-h-[2.3rem] items-center rounded-[0.85rem] px-3 py-1.5 font-[var(--font-display)] text-[0.88rem] font-extrabold uppercase tracking-[0.16em] text-[color:rgba(193,203,218,0.96)] transition-colors hover:text-[var(--text-primary)]';
 const SIGN_IN_BUTTON_CLASS =
-  'inline-flex min-h-11 items-center justify-center rounded-[var(--radius-panel)] border border-[rgba(50,224,196,0.28)] bg-[var(--surface-elevated)] px-4 py-2 text-base font-semibold uppercase tracking-[0.14em] text-[var(--accent-secondary-text)] transition-all hover:border-[rgba(50,224,196,0.42)] hover:bg-[rgba(50,224,196,0.12)] hover:text-[var(--text-primary)] sm:text-sm';
+  'inline-flex min-h-[2.3rem] items-center justify-center rounded-[0.85rem] border border-[rgba(50,224,196,0.32)] bg-[rgba(17,27,46,0.88)] px-[1.125rem] py-1.5 font-[var(--font-display)] text-[0.88rem] font-extrabold uppercase tracking-[0.16em] text-[var(--accent-secondary-text)] transition-all hover:border-[rgba(50,224,196,0.46)] hover:bg-[rgba(50,224,196,0.12)] hover:text-[var(--text-primary)]';
+const JOIN_BUTTON_CLASS =
+  'btn-primary min-h-[2.3rem] rounded-[0.85rem] px-[1.125rem] shadow-none font-[var(--font-display)] text-[0.88rem] font-extrabold uppercase tracking-[0.16em] text-[#08111d]';
+const DROPDOWN_PANEL_CLASS =
+  'pointer-events-none invisible absolute left-1/2 top-[calc(100%+0.65rem)] z-50 min-w-[15rem] -translate-x-1/2 rounded-[1rem] border border-[rgba(129,148,178,0.18)] bg-[rgba(11,20,36,0.96)] p-2 opacity-0 shadow-[0_20px_60px_rgba(2,8,23,0.45)] backdrop-blur-xl transition-all duration-200 group-hover:pointer-events-auto group-hover:visible group-hover:translate-y-0 group-hover:opacity-100 group-focus-within:pointer-events-auto group-focus-within:visible group-focus-within:translate-y-0 group-focus-within:opacity-100';
+const DROPDOWN_LINK_CLASS =
+  'flex rounded-[0.85rem] px-3 py-2.5 text-left transition-colors hover:bg-[rgba(50,224,196,0.1)] focus-visible:bg-[rgba(50,224,196,0.1)] focus-visible:outline-none';
+
+function isDropdownNavItem(item: HomeFloatingHeaderNavItem): item is NavDropdownItem {
+  return 'items' in item;
+}
 
 interface HomeFloatingHeaderProps {
-  navItems?: NavItem[];
+  navItems?: HomeFloatingHeaderNavItem[];
   signInHref?: string;
   joinHref?: string;
+  joinLabel?: string;
+  showLogo?: boolean;
 }
 
 export function HomeFloatingHeader({
   navItems = DEFAULT_NAV_ITEMS,
   signInHref = '/login',
   joinHref = '/register',
+  joinLabel = 'JOIN FREE',
+  showLogo = true,
 }: HomeFloatingHeaderProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const [openMobileDropdown, setOpenMobileDropdown] = useState<string | null>(null);
   const { user } = useAuth();
 
+  const closeMobileMenu = () => {
+    setIsOpen(false);
+    setOpenMobileDropdown(null);
+  };
+
+  const toggleMobileMenu = () => {
+    setIsOpen((current) => {
+      const nextOpen = !current;
+      if (!nextOpen) {
+        setOpenMobileDropdown(null);
+      }
+      return nextOpen;
+    });
+  };
+
   return (
-    <header className="sticky top-2 z-50 sm:top-4">
-      <div className="landing-shell relative">
+    <header className="sticky top-3 z-50 sm:top-6">
+      <div className="relative mx-auto w-full max-w-[88rem] px-4 sm:px-6 lg:px-8">
         <div
           aria-hidden="true"
           className="pointer-events-none absolute left-1/2 top-1/2 h-px w-screen -translate-x-1/2 -translate-y-1/2 bg-gradient-to-r from-transparent via-[rgba(50,224,196,0.28)] to-transparent"
         />
-        <div className="rounded-[var(--radius-nav-shell)] border border-[var(--border-color)] bg-[var(--surface-soft)] p-1.5 shadow-[var(--shadow-soft)] backdrop-blur-xl sm:p-2">
+        <div className="rounded-[var(--radius-nav-shell)] border border-[var(--border-color)] bg-[var(--surface-soft)] p-1 shadow-[var(--shadow-soft)] backdrop-blur-xl sm:p-1.5">
           <div className="flex items-center gap-3">
-            <Link href="/" className="flex shrink-0 items-center rounded-[var(--radius-panel)] px-1.5 py-1">
-              <BrandLogo size="sm" variant="symbol" />
-            </Link>
+            {showLogo ? (
+              <Link href="/" className="flex shrink-0 items-center rounded-[0.85rem] px-1.5 py-1">
+                <BrandLogo size="sm" variant="symbol" />
+              </Link>
+            ) : null}
 
-            <div className="hidden min-w-0 flex-1 items-center justify-center gap-1 md:flex">
+            <div className="hidden min-w-0 flex-1 items-center justify-center gap-3 md:flex">
               {navItems.map((item) => (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className={HEADER_TEXT_CLASS}
-                >
-                  {item.label}
-                </Link>
+                isDropdownNavItem(item) ? (
+                  <div key={item.label} className="group relative">
+                    <button
+                      type="button"
+                      className={`${HEADER_TEXT_CLASS} gap-1.5`}
+                      style={DISPLAY_FONT_STYLE}
+                      aria-haspopup="menu"
+                    >
+                      <span>{item.label}</span>
+                      <ChevronDown size={15} className="transition-transform duration-200 group-hover:rotate-180 group-focus-within:rotate-180" />
+                    </button>
+                    <div className={DROPDOWN_PANEL_CLASS} role="menu" aria-label={item.label}>
+                      <div className="grid gap-1">
+                        {item.items.map((dropdownItem) => (
+                          <Link
+                            key={`${item.label}-${dropdownItem.href}`}
+                            href={dropdownItem.href}
+                            className={DROPDOWN_LINK_CLASS}
+                            role="menuitem"
+                          >
+                            <span className="flex flex-col">
+                              <span
+                                className="font-[var(--font-display)] text-[0.9rem] font-extrabold uppercase tracking-[0.14em] text-[var(--text-primary)]"
+                                style={DISPLAY_FONT_STYLE}
+                              >
+                                {dropdownItem.label}
+                              </span>
+                              {dropdownItem.description ? (
+                                <span className="mt-1 text-[0.72rem] font-medium uppercase tracking-[0.12em] text-[var(--text-soft)]">
+                                  {dropdownItem.description}
+                                </span>
+                              ) : null}
+                            </span>
+                          </Link>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    className={HEADER_TEXT_CLASS}
+                    style={DISPLAY_FONT_STYLE}
+                  >
+                    {item.label}
+                  </Link>
+                )
               ))}
             </div>
 
             <div className="ml-auto flex items-center gap-2">
-              <ThemeToggle />
+              <ThemeToggle className="!h-[2.3rem] !min-h-[2.3rem] !w-[2.3rem] !min-w-[2.3rem] !rounded-[0.85rem] !border-[rgba(129,148,178,0.18)] !bg-[rgba(17,27,46,0.88)] !text-[color:rgba(193,203,218,0.96)]" />
               <div className="hidden items-center gap-2 sm:flex">
-                <Link href={user ? '/dashboard' : signInHref} className={SIGN_IN_BUTTON_CLASS}>
+                <Link
+                  href={user ? '/dashboard' : signInHref}
+                  className={SIGN_IN_BUTTON_CLASS}
+                  style={DISPLAY_FONT_STYLE}
+                >
                   {user ? 'DASHBOARD' : 'SIGN IN'}
                 </Link>
                 {!user ? (
-                  <Link href={joinHref} className="btn-primary shadow-none text-sm uppercase tracking-[0.14em]">
-                    JOIN FREE
+                  <Link href={joinHref} className={JOIN_BUTTON_CLASS} style={DISPLAY_FONT_STYLE}>
+                    {joinLabel}
                   </Link>
                 ) : null}
               </div>
               <button
                 type="button"
-                onClick={() => setIsOpen((current) => !current)}
-                className="icon-button h-9 w-9 md:hidden"
+                onClick={toggleMobileMenu}
+                className="icon-button h-8 w-8 md:hidden"
                 aria-label={isOpen ? 'Close menu' : 'Open menu'}
                 aria-expanded={isOpen}
                 aria-controls="home-mobile-nav"
@@ -91,31 +177,85 @@ export function HomeFloatingHeader({
 
           {isOpen ? (
             <div id="home-mobile-nav" className="mt-2 grid gap-1 border-t border-[var(--border-color)] pt-2 md:hidden">
-              {navItems.map((item) => (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  onClick={() => setIsOpen(false)}
-                  className={HEADER_TEXT_CLASS}
-                >
-                  {item.label}
-                </Link>
-              ))}
+              {navItems.map((item) =>
+                isDropdownNavItem(item) ? (
+                  <div
+                    key={item.label}
+                    className="rounded-[0.95rem] border border-[rgba(129,148,178,0.14)] bg-[rgba(17,27,46,0.54)]"
+                  >
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setOpenMobileDropdown((current) => (current === item.label ? null : item.label))
+                      }
+                      className={`${HEADER_TEXT_CLASS} flex w-full items-center justify-between gap-2`}
+                      style={DISPLAY_FONT_STYLE}
+                      aria-expanded={openMobileDropdown === item.label}
+                    >
+                      <span>{item.label}</span>
+                      <ChevronDown
+                        size={15}
+                        className={`transition-transform duration-200 ${
+                          openMobileDropdown === item.label ? 'rotate-180' : ''
+                        }`}
+                      />
+                    </button>
+                    {openMobileDropdown === item.label ? (
+                      <div className="grid gap-1 px-1 pb-2">
+                        {item.items.map((dropdownItem) => (
+                          <Link
+                            key={`${item.label}-${dropdownItem.href}`}
+                            href={dropdownItem.href}
+                            onClick={closeMobileMenu}
+                            className={DROPDOWN_LINK_CLASS}
+                          >
+                            <span className="flex flex-col">
+                              <span
+                                className="font-[var(--font-display)] text-[0.88rem] font-extrabold uppercase tracking-[0.14em] text-[var(--text-primary)]"
+                                style={DISPLAY_FONT_STYLE}
+                              >
+                                {dropdownItem.label}
+                              </span>
+                              {dropdownItem.description ? (
+                                <span className="mt-1 text-[0.72rem] font-medium uppercase tracking-[0.12em] text-[var(--text-soft)]">
+                                  {dropdownItem.description}
+                                </span>
+                              ) : null}
+                            </span>
+                          </Link>
+                        ))}
+                      </div>
+                    ) : null}
+                  </div>
+                ) : (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    onClick={closeMobileMenu}
+                    className={HEADER_TEXT_CLASS}
+                    style={DISPLAY_FONT_STYLE}
+                  >
+                    {item.label}
+                  </Link>
+                )
+              )}
               <div className="mt-1 grid gap-2 px-1 pb-1 pt-2 sm:flex sm:items-center">
                 <Link
                   href={user ? '/dashboard' : signInHref}
-                  onClick={() => setIsOpen(false)}
+                  onClick={closeMobileMenu}
                   className={SIGN_IN_BUTTON_CLASS}
+                  style={DISPLAY_FONT_STYLE}
                 >
                   {user ? 'DASHBOARD' : 'SIGN IN'}
                 </Link>
                 {!user ? (
                   <Link
                     href={joinHref}
-                    onClick={() => setIsOpen(false)}
-                    className="btn-primary shadow-none text-sm uppercase tracking-[0.14em]"
+                    onClick={closeMobileMenu}
+                    className={JOIN_BUTTON_CLASS}
+                    style={DISPLAY_FONT_STYLE}
                   >
-                    JOIN FREE
+                    {joinLabel}
                   </Link>
                 ) : null}
               </div>

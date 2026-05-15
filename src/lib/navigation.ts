@@ -3,12 +3,31 @@ import type { UserRole } from '@/types';
 
 export const MODERATOR_DESK_PATH = '/moderators';
 
+const BLOCKED_POST_AUTH_PATHS = new Set([
+  '/login',
+  '/register',
+  '/signup',
+  '/forgot-password',
+  '/reset-password',
+  '/moderator-login',
+  '/moderator-signup',
+]);
+
 type PostLoginIdentity = {
   role?: UserRole | null;
 };
 
 export function getSafeNextPath(value: string | null | undefined, fallback = '/dashboard') {
   if (!value || !value.startsWith('/') || value.startsWith('//')) {
+    return fallback;
+  }
+
+  try {
+    const parsed = new URL(value, 'https://mechi.club');
+    if (BLOCKED_POST_AUTH_PATHS.has(parsed.pathname)) {
+      return fallback;
+    }
+  } catch {
     return fallback;
   }
 
@@ -24,12 +43,25 @@ function matchesAppPath(pathname: string, basePath: string) {
   );
 }
 
+function isAdminPath(pathname: string) {
+  return matchesAppPath(pathname, '/admin');
+}
+
+function isWeekendCupHomeAnchorPath(pathname: string) {
+  return pathname === '/#vote' || pathname === '/#overview' || pathname === '/#options';
+}
+
 export function isModeratorDeskPath(pathname: string) {
   return matchesAppPath(pathname, MODERATOR_DESK_PATH);
 }
 
 export function hasModeratorDeskRole(identity: PostLoginIdentity | null | undefined) {
   return identity?.role === 'moderator' || identity?.role === 'admin';
+}
+
+function getNonStaffFallbackPath(fallback: string | null | undefined) {
+  const safeFallback = getSafeNextPath(fallback, '/dashboard');
+  return isModeratorDeskPath(safeFallback) || isAdminPath(safeFallback) ? '/dashboard' : safeFallback;
 }
 
 export function getPostLoginRedirectPath(
@@ -40,10 +72,22 @@ export function getPostLoginRedirectPath(
   const safePath = getSafeNextPath(requestedPath, fallback);
 
   if (!hasModeratorDeskRole(identity)) {
+    if (isModeratorDeskPath(safePath) || isAdminPath(safePath)) {
+      return getNonStaffFallbackPath(fallback);
+    }
+
     return safePath;
   }
 
-  if (identity?.role === 'admin' && matchesAppPath(safePath, '/admin')) {
+  if (isWeekendCupHomeAnchorPath(safePath)) {
+    return safePath;
+  }
+
+  if (matchesAppPath(safePath, '/weekendcup')) {
+    return safePath;
+  }
+
+  if (identity?.role === 'admin' && isAdminPath(safePath)) {
     return safePath;
   }
 

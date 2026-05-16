@@ -41,6 +41,7 @@ interface AuthContextValue {
   loading: boolean;
   login: (token: string, user: AuthUser) => void;
   logout: () => void;
+  clearLocalAuth: () => void;
   refresh: () => Promise<void>;
 }
 
@@ -50,6 +51,7 @@ const AuthContext = createContext<AuthContextValue>({
   loading: true,
   login: () => {},
   logout: () => {},
+  clearLocalAuth: () => {},
   refresh: async () => {},
 });
 
@@ -97,7 +99,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (cachedUser) {
       setUser(cachedUser);
       setToken(null);
-      setLoading(false);
     }
 
     if (!cachedUser) {
@@ -162,8 +163,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     window.location.href = '/login';
   }, []);
 
+  const clearLocalAuth = useCallback(() => {
+    localStorage.removeItem(USER_STORAGE_KEY);
+    setToken(null);
+    setUser(null);
+  }, []);
+
   return (
-    <AuthContext.Provider value={{ user, token, loading, login, logout, refresh }}>
+    <AuthContext.Provider value={{ user, token, loading, login, logout, clearLocalAuth, refresh }}>
       {children}
     </AuthContext.Provider>
   );

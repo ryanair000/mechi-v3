@@ -113,8 +113,9 @@ function getDisputeStatusClassName(status: DisputeEntry['status']) {
 export function OnlineTournamentDisputeClient() {
   const router = useRouter();
   const authFetch = useAuthFetch();
-  const { user, loading: authLoading } = useAuth();
+  const { clearLocalAuth, user, loading: authLoading } = useAuth();
   const signInHref = getLoginPath(ONLINE_TOURNAMENT_DISPUTE_PATH);
+  const sessionExpiredHref = getLoginPath(ONLINE_TOURNAMENT_DISPUTE_PATH, 'session_expired');
   const createAccountHref = getRegisterPath({ next: ONLINE_TOURNAMENT_DISPUTE_PATH });
   const [summary, setSummary] = useState<DisputeSummary>(EMPTY_SUMMARY);
   const [loading, setLoading] = useState(true);
@@ -128,6 +129,11 @@ export function OnlineTournamentDisputeClient() {
   const [evidenceUrl, setEvidenceUrl] = useState('');
   const [resultSubmissionId, setResultSubmissionId] = useState('');
   const [fixtureId, setFixtureId] = useState('');
+  const handleAuthExpired = useCallback(() => {
+    clearLocalAuth();
+    toast.error('Your session expired. Sign in again to continue.');
+    router.replace(sessionExpiredHref);
+  }, [clearLocalAuth, router, sessionExpiredHref]);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -169,6 +175,11 @@ export function OnlineTournamentDisputeClient() {
       const res = await authFetch(ONLINE_TOURNAMENT_DISPUTE_API_PATH, { method: 'GET' });
       const data = (await res.json()) as DisputeSummary & { error?: string };
 
+      if (res.status === 401 || res.status === 403) {
+        handleAuthExpired();
+        return;
+      }
+
       if (!res.ok) {
         const message = data.error ?? 'Could not load the dispute form';
         setFeedback({
@@ -192,7 +203,7 @@ export function OnlineTournamentDisputeClient() {
     } finally {
       setLoading(false);
     }
-  }, [authFetch, user]);
+  }, [authFetch, handleAuthExpired, user]);
 
   useEffect(() => {
     if (authLoading || !user) {
@@ -280,6 +291,11 @@ export function OnlineTournamentDisputeClient() {
         }),
       });
       const data = (await res.json()) as DisputeSummary & { error?: string };
+
+      if (res.status === 401 || res.status === 403) {
+        handleAuthExpired();
+        return;
+      }
 
       if (!res.ok) {
         const message = data.error ?? 'Could not submit the dispute';

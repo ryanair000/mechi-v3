@@ -305,7 +305,7 @@ function WeekendCupSuggestionCard({
 
 export function WeekendCupClient() {
   const router = useRouter();
-  const { user } = useAuth();
+  const { clearLocalAuth, user } = useAuth();
   const authFetch = useAuthFetch();
   const [ballots, setBallots] = useState<WeekendCupBallot[]>([]);
   const [actingOptionId, setActingOptionId] = useState<string | null>(null);
@@ -349,8 +349,9 @@ export function WeekendCupClient() {
   }, [loadState]);
 
   const handleAuthFailure = useCallback(() => {
+    clearLocalAuth();
     window.location.href = sessionExpiredHref;
-  }, [sessionExpiredHref]);
+  }, [clearLocalAuth, sessionExpiredHref]);
 
   const ensureLiveSession = useCallback(async () => {
     if (!user) {

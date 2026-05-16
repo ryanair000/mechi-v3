@@ -84,7 +84,7 @@ export function WeekendCupDashboardClient() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const authFetch = useAuthFetch();
-  const { user, loading: authLoading } = useAuth();
+  const { clearLocalAuth, user, loading: authLoading } = useAuth();
   const [summary, setSummary] = useState<WeekendCupRegistrationSummary>(
     getWeekendCupFallbackSummary
   );
@@ -115,6 +115,12 @@ export function WeekendCupDashboardClient() {
     `${WEEKEND_CUP_DASHBOARD_PATH}?game=${encodeURIComponent(selectedConfig.game)}`,
     'session_expired'
   );
+  const handleAuthExpired = useCallback(() => {
+    clearLocalAuth();
+    toast.error('Your session expired. Sign in again to open your dashboard.');
+    router.replace(sessionExpiredHref);
+  }, [clearLocalAuth, router, sessionExpiredHref]);
+
   const slotBooked = currentRegistration?.payment_status === 'paid';
   const fallbackEntryAmount =
     formatKes(getWeekendCupPaymentTierAmount('early_bird', selectedConfig.game)) ?? 'KSh 50';
@@ -149,8 +155,7 @@ export function WeekendCupDashboardClient() {
       const data = (await res.json()) as WeekendCupRegistrationSummary & { error?: string };
 
       if (res.status === 401 || res.status === 403) {
-        toast.error('Your session expired. Sign in again to open your dashboard.');
-        router.replace(sessionExpiredHref);
+        handleAuthExpired();
         return;
       }
 
@@ -165,7 +170,7 @@ export function WeekendCupDashboardClient() {
     } finally {
       setLoading(false);
     }
-  }, [authFetch, router, sessionExpiredHref]);
+  }, [authFetch, handleAuthExpired]);
 
   useEffect(() => {
     if (!registrationOpen || authLoading || !user) {
@@ -205,8 +210,7 @@ export function WeekendCupDashboardClient() {
         | { error?: string };
 
       if (res.status === 401 || res.status === 403) {
-        toast.error('Sign in again to continue payment.');
-        router.replace(sessionExpiredHref);
+        handleAuthExpired();
         return;
       }
 
@@ -235,7 +239,7 @@ export function WeekendCupDashboardClient() {
     } finally {
       setRetryingPayment(false);
     }
-  }, [authFetch, currentRegistration, router, sessionExpiredHref]);
+  }, [authFetch, currentRegistration, handleAuthExpired]);
 
   if (!registrationOpen) {
     return (

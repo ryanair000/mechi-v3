@@ -11,6 +11,7 @@ import {
   Users,
 } from 'lucide-react';
 import { useAuth, useAuthFetch } from '@/components/AuthProvider';
+import { getLoginPath } from '@/lib/navigation';
 import {
   GAMES,
   getSelectableGameKeys,
@@ -73,7 +74,7 @@ function getStatusClasses(status: Lobby['status']) {
 }
 
 function LobbiesContent() {
-  const { user } = useAuth();
+  const { clearLocalAuth, user } = useAuth();
   const authFetch = useAuthFetch();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -82,6 +83,11 @@ function LobbiesContent() {
   const [lobbies, setLobbies] = useState<Lobby[]>([]);
   const [loading, setLoading] = useState(true);
   const [joiningId, setJoiningId] = useState<string | null>(null);
+  const handleAuthExpired = useCallback(() => {
+    clearLocalAuth();
+    toast.error('Your session expired. Sign in again to continue.');
+    router.replace(getLoginPath('/lobbies', 'session_expired'));
+  }, [clearLocalAuth, router]);
 
   const lobbyGames = getSelectableGameKeys().filter((game) => supportsLobbyMode(game));
 
@@ -97,8 +103,8 @@ function LobbiesContent() {
         return;
       }
 
-      if (res.status === 401) {
-        router.push('/login');
+      if (res.status === 401 || res.status === 403) {
+        handleAuthExpired();
         return;
       }
 
@@ -113,7 +119,7 @@ function LobbiesContent() {
     } finally {
       setLoading(false);
     }
-  }, [authFetch, gameFilter, router]);
+  }, [authFetch, gameFilter, handleAuthExpired]);
 
   useEffect(() => {
     void fetchLobbies();
@@ -124,6 +130,11 @@ function LobbiesContent() {
     try {
       const res = await authFetch(`/api/lobbies/${lobbyId}/join`, { method: 'POST' });
       const data = (await res.json()) as { error?: string };
+      if (res.status === 401 || res.status === 403) {
+        handleAuthExpired();
+        return;
+      }
+
       if (!res.ok) {
         toast.error(data.error ?? 'Failed to join');
         return;

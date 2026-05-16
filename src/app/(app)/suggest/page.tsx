@@ -9,7 +9,7 @@ import {
   Loader2,
   Send,
 } from 'lucide-react';
-import { useAuthFetch } from '@/components/AuthProvider';
+import { useAuth, useAuthFetch } from '@/components/AuthProvider';
 import { getLoginPath, withQuery } from '@/lib/navigation';
 import type { Suggestion } from '@/types';
 
@@ -33,12 +33,18 @@ function getStatusClasses(status: Suggestion['status']) {
 
 export default function SuggestPage() {
   const router = useRouter();
+  const { clearLocalAuth } = useAuth();
   const authFetch = useAuthFetch();
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [votingId, setVotingId] = useState<string | null>(null);
   const [form, setForm] = useState({ game_name: '', description: '' });
+  const handleAuthExpired = useCallback(() => {
+    clearLocalAuth();
+    toast.error('Your session expired. Sign in again to continue.');
+    router.replace(getLoginPath('/suggest', 'session_expired'));
+  }, [clearLocalAuth, router]);
 
   const fetchSuggestions = useCallback(async () => {
     setLoading(true);
@@ -48,15 +54,14 @@ export default function SuggestPage() {
         const data = (await res.json()) as { suggestions?: Suggestion[] };
         setSuggestions(data.suggestions ?? []);
       } else if (res.status === 401 || res.status === 403) {
-        toast.error('Your session expired. Sign in again to continue.');
-        router.replace(getLoginPath('/suggest', 'session_expired'));
+        handleAuthExpired();
       } else {
         setSuggestions([]);
       }
     } finally {
       setLoading(false);
     }
-  }, [authFetch, router]);
+  }, [authFetch, handleAuthExpired]);
 
   useEffect(() => {
     void fetchSuggestions();
@@ -68,8 +73,7 @@ export default function SuggestPage() {
       const res = await authFetch(`/api/suggestions/${id}/vote`, { method: 'POST' });
       const data = (await res.json()) as { error?: string; votes?: number; voted?: boolean };
       if (res.status === 401 || res.status === 403) {
-        toast.error('Your session expired. Sign in again to continue.');
-        router.replace(getLoginPath('/suggest', 'session_expired'));
+        handleAuthExpired();
         return;
       }
       if (!res.ok) {
@@ -107,8 +111,7 @@ export default function SuggestPage() {
       });
       const data = (await res.json()) as { error?: string; suggestion?: Suggestion };
       if (res.status === 401 || res.status === 403) {
-        toast.error('Your session expired. Sign in again to continue.');
-        router.replace(getLoginPath('/suggest', 'session_expired'));
+        handleAuthExpired();
         return;
       }
       if (!res.ok || !data.suggestion) {

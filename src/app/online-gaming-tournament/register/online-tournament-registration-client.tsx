@@ -127,7 +127,7 @@ export function OnlineTournamentRegistrationClient() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const authFetch = useAuthFetch();
-  const { user, loading: authLoading } = useAuth();
+  const { clearLocalAuth, user, loading: authLoading } = useAuth();
   const [summary, setSummary] = useState<RegistrationSummary>(() => getFallbackSummary());
   const [summaryError, setSummaryError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -160,6 +160,7 @@ export function OnlineTournamentRegistrationClient() {
   });
   const createAccountHref = getRegisterPath({ next: returnPath });
   const signInHref = getLoginPath(returnPath);
+  const sessionExpiredHref = getLoginPath(returnPath, 'session_expired');
   const tournamentArenaHref =
     requestedNextPath || `${ONLINE_TOURNAMENT_ARENA_PATH}?game=${encodeURIComponent(selectedGame)}`;
   const tournamentCheckInHref =
@@ -186,6 +187,11 @@ export function OnlineTournamentRegistrationClient() {
       : tournamentCheckInHref;
   const detailFieldsDisabled =
     submitting || (Boolean(currentRegistration) && !selectedGameRegistrationOpen);
+  const handleAuthExpired = useCallback(() => {
+    clearLocalAuth();
+    toast.error('Your session expired. Sign in again to continue registration.');
+    router.replace(sessionExpiredHref);
+  }, [clearLocalAuth, router, sessionExpiredHref]);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -204,6 +210,11 @@ export function OnlineTournamentRegistrationClient() {
       const res = await authFetch(API_PATH, { method: 'GET' });
       const data = (await res.json()) as RegistrationSummary & { error?: string };
 
+      if (res.status === 401 || res.status === 403) {
+        handleAuthExpired();
+        return;
+      }
+
       if (!res.ok) {
         const nextError = data.error ?? 'Could not load tournament slots';
         setSummaryError(nextError);
@@ -217,7 +228,7 @@ export function OnlineTournamentRegistrationClient() {
       setSummaryError('Could not load tournament slots');
       toast.error('Could not load tournament slots');
     }
-  }, [authFetch]);
+  }, [authFetch, handleAuthExpired]);
 
   useEffect(() => {
     if (authLoading || !user) {
@@ -283,6 +294,11 @@ export function OnlineTournamentRegistrationClient() {
         }),
       });
       const data = (await res.json()) as (RegistrationSummary & { error?: string }) | { error?: string };
+
+      if (res.status === 401 || res.status === 403) {
+        handleAuthExpired();
+        return;
+      }
 
       if (!res.ok) {
         toast.error(data.error ?? 'Could not save tournament registration');

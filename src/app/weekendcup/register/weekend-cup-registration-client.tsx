@@ -67,7 +67,7 @@ export function WeekendCupRegistrationClient() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const authFetch = useAuthFetch();
-  const { user, loading: authLoading } = useAuth();
+  const { clearLocalAuth, user, loading: authLoading } = useAuth();
   const [registrationOpen, setRegistrationOpen] = useState(false);
   const [summary, setSummary] = useState<WeekendCupRegistrationSummary>(
     getWeekendCupFallbackSummary
@@ -95,6 +95,12 @@ export function WeekendCupRegistrationClient() {
   const signInHref = getLoginPath(returnPath);
   const sessionExpiredHref = getLoginPath(returnPath, 'session_expired');
   const dashboardHref = requestedNextPath || `${WEEKEND_CUP_DASHBOARD_PATH}?game=${encodeURIComponent(selectedGame)}`;
+  const handleAuthExpired = useCallback(() => {
+    clearLocalAuth();
+    toast.error('Your session expired. Sign in again to continue registration.');
+    router.replace(sessionExpiredHref);
+  }, [clearLocalAuth, router, sessionExpiredHref]);
+
   useEffect(() => {
     setRegistrationOpen(WEEKEND_CUP_REGISTRATION_ENABLED && isWeekendCupRegistrationOpen());
   }, []);
@@ -110,8 +116,7 @@ export function WeekendCupRegistrationClient() {
       const res = await authFetch(API_PATH, { method: 'GET' });
       const data = (await res.json()) as WeekendCupRegistrationSummary & { error?: string };
       if (res.status === 401 || res.status === 403) {
-        toast.error('Your session expired. Sign in again to continue registration.');
-        router.replace(sessionExpiredHref);
+        handleAuthExpired();
         return;
       }
       if (!res.ok) {
@@ -123,7 +128,7 @@ export function WeekendCupRegistrationClient() {
     } catch {
       toast.error('Could not load Weekend Cup registration');
     }
-  }, [authFetch, router, sessionExpiredHref]);
+  }, [authFetch, handleAuthExpired]);
 
   useEffect(() => {
     if (!registrationOpen || authLoading || !user) {
@@ -191,8 +196,7 @@ export function WeekendCupRegistrationClient() {
         | { error?: string };
 
       if (res.status === 401 || res.status === 403) {
-        toast.error('Your session expired. Sign in again to continue registration.');
-        router.replace(sessionExpiredHref);
+        handleAuthExpired();
         return;
       }
 

@@ -13,7 +13,7 @@ import {
 
 export const metadata: Metadata = {
   title: `Vote Submitted | ${WEEKEND_CUP_TITLE}`,
-  description: 'Your Weekend Cup mystery-slot vote was saved.',
+  description: 'Your Weekend Cup vote was saved.',
 };
 
 export default async function WeekendCupVoteCompletePage({
@@ -22,7 +22,7 @@ export default async function WeekendCupVoteCompletePage({
   searchParams: Promise<{ game?: string; ballot?: string }>;
 }) {
   const params = await searchParams;
-  const game = params.game?.trim() || 'your mystery-slot pick';
+  const game = params.game?.trim() || 'Your pick';
 
   return (
     <div className="weekend-cup-shell app-prototype-shell page-base min-h-screen bg-[linear-gradient(180deg,#07111e_0%,#050b13_100%)]">
@@ -33,20 +33,21 @@ export default async function WeekendCupVoteCompletePage({
             <Vote size={22} />
           </div>
           <p className="mt-5 text-center text-xs font-black uppercase tracking-[0.16em] text-[var(--text-soft)]">
-            Vote submitted
+            Vote locked in
           </p>
           <h1 className="mt-2 text-center text-3xl font-black text-[var(--text-primary)]">
-            {game} is locked on this account.
+            {game} is saved on this account.
           </h1>
           <p className="mx-auto mt-3 max-w-xl text-center text-sm leading-6 text-[var(--text-secondary)]">
-            Your pick is saved. If voting is still open, you can clear it later and switch to a
-            different game. Registration for the fixed Weekend Cup games happens separately.
+            Clean choice. Your vote is counted, and if voting is still open you can switch later by
+            clearing this pick first. Tournament registration is separate, so lock your player slot
+            when you are ready.
           </p>
 
           <div className="mt-6 grid gap-3 rounded-[var(--radius-card)] border border-[var(--border-color)] bg-[var(--surface-soft)] p-4 text-sm text-[var(--text-secondary)]">
-            <p>1. Your mystery-slot vote is tied to this signed-in account.</p>
-            <p>2. You can still change it before voting closes by clearing the current pick.</p>
-            <p>3. To actually enter the tournament, use the registration flow for the fixed games.</p>
+            <p>1. This vote is tied to your signed-in Mechi account.</p>
+            <p>2. Changed your mind? Clear this pick before voting closes, then choose again.</p>
+            <p>3. Voting helps shape the lineup. Registration is still how you enter the cup.</p>
           </div>
 
           <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-center">

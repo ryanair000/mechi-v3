@@ -36,7 +36,7 @@ type WeekendCupBallotOption = {
   id: string;
   slug: string;
   label: string;
-  platform: 'mobile' | 'console' | 'mixed';
+  platform: 'mobile' | 'console' | 'pc' | 'mixed';
   description: string;
   isOfficial: boolean;
   votes: number;
@@ -62,7 +62,7 @@ type WeekendCupSeriesResponse = {
 };
 
 const API_PATH = '/api/weekendcup/series';
-const VISIBLE_BALLOT_SLUGS = new Set(['weekend-cup-1-mobile']);
+const VISIBLE_BALLOT_SLUGS = new Set(['weekend-cup-1-mobile', 'weekend-cup-2-pc']);
 const FIXED_SEASON_ONE_GAME_SLUGS = new Set(['pubgm', 'codm', 'efootball']);
 
 const DASHBOARD_FONT_STYLE: CSSProperties & Record<string, string> = {
@@ -79,6 +79,10 @@ const OPTION_IMAGE_BY_SLUG: Partial<Record<string, string | null>> = {
   ludo: getGameImage('ludo'),
   pubgm: getGameImage('pubgm'),
   codm: getGameImage('codm'),
+  tekken8: getGameImage('tekken8'),
+  fc26: getGameImage('fc26'),
+  nba2k26: getGameImage('nba2k26'),
+  mk11: getGameImage('mk11'),
   fortnite: getGameImage('fortnite'),
   'ea-sports-fc-26': getGameImage('fc26'),
   'mortal-kombat': getGameImage('mk11'),
@@ -135,15 +139,20 @@ function getOptionTone(option: WeekendCupBallotOption) {
       return 'from-rose-400/30 via-orange-400/16 to-slate-950';
     case 'efootball':
     case 'ea-sports-fc-26':
+    case 'fc26':
       return 'from-cyan-400/28 via-sky-400/16 to-slate-950';
     case 'free-fire':
       return 'from-amber-300/30 via-orange-400/16 to-slate-950';
     case 'fortnite':
       return 'from-fuchsia-400/26 via-violet-400/16 to-slate-950';
     case 'mortal-kombat':
+    case 'mk11':
       return 'from-red-500/28 via-rose-500/16 to-slate-950';
     case 'nba-2k26':
+    case 'nba2k26':
       return 'from-orange-400/28 via-red-400/16 to-slate-950';
+    case 'tekken8':
+      return 'from-sky-300/28 via-cyan-400/14 to-slate-950';
     case 'warzone':
       return 'from-lime-300/25 via-emerald-400/14 to-slate-950';
     default:
@@ -171,9 +180,36 @@ function getOptionImagePosition(option: WeekendCupBallotOption) {
       return 'center center';
     case 'free-fire':
       return 'center top';
+    case 'fc26':
+    case 'nba2k26':
+    case 'mk11':
+    case 'tekken8':
+      return 'center top';
+    case 'fortnite':
+      return 'center center';
     default:
       return 'center center';
   }
+}
+
+function isSeasonOneMysteryBallot(ballotSlug: string) {
+  return ballotSlug === 'weekend-cup-1-mobile';
+}
+
+function getBallotHeading(ballot: WeekendCupBallot) {
+  return isSeasonOneMysteryBallot(ballot.slug)
+    ? 'Pick the mystery slot.'
+    : 'Vote the Season 2 PC game.';
+}
+
+function getBallotDescription(ballot: WeekendCupBallot) {
+  return isSeasonOneMysteryBallot(ballot.slug)
+    ? 'CODM, PUBG Mobile, and eFootball are already locked for Season 1. Choose one mystery game only. If your title is missing, drop it below and we can add it to the vote.'
+    : 'Season 2 is for PC players. Pick one headline game from Tekken 8, FC 26, NBA 2K26, Mortal Kombat 11, and Fortnite.';
+}
+
+function getBallotScopeLabel(ballot: WeekendCupBallot) {
+  return isSeasonOneMysteryBallot(ballot.slug) ? 'Mystery slot voting only' : 'Season 2 PC voting only';
 }
 
 type WeekendCupOptionCardProps = {
@@ -605,7 +641,7 @@ export function WeekendCupClient() {
                 href={user ? '#vote' : signInHref}
                 className={`btn-primary min-h-11 px-4 py-2 text-[0.9rem] ${DASHBOARD_CONTROL_RADIUS_CLASS}`}
               >
-                {user ? 'Vote mystery slot' : 'Sign in to vote'}
+                {user ? 'Vote now' : 'Sign in to vote'}
               </Link>
               <Link
                 href={WEEKEND_CUP_REGISTRATION_PATH}
@@ -626,12 +662,10 @@ export function WeekendCupClient() {
                 <div className="max-w-3xl space-y-3">
                   <p className="section-title">Player vote</p>
                   <h2 className="text-[clamp(1.7rem,3.4vw,2.7rem)] font-black leading-[0.98] text-[var(--text-primary)]">
-                    Pick the mystery slot.
+                    {getBallotHeading(ballot)}
                   </h2>
                   <p className="max-w-2xl text-[0.9rem] leading-7 text-[var(--text-secondary)] sm:text-[0.98rem]">
-                    CODM, PUBG Mobile, and eFootball are already locked for Season 1. Choose one
-                    mystery game only. If your title is missing, drop it below and we can add it
-                    to the vote.
+                    {getBallotDescription(ballot)}
                   </p>
 
                   <div className="flex flex-wrap items-center gap-2">
@@ -648,7 +682,7 @@ export function WeekendCupClient() {
                     <span
                       className={`brand-chip ${DASHBOARD_CONTROL_RADIUS_CLASS} !px-3 !py-1 !text-[0.76rem]`}
                     >
-                      Mystery slot voting only
+                      {getBallotScopeLabel(ballot)}
                     </span>
                     {!user ? (
                       <Link
@@ -689,7 +723,7 @@ export function WeekendCupClient() {
                     const isVoting = actingOptionId === option.id;
                     const suggestionDraft = suggestionDrafts[ballot.slug] ?? { label: '', description: '' };
                     const suggestionCard =
-                      index === 0 ? (
+                      isSeasonOneMysteryBallot(ballot.slug) && index === 0 ? (
                         <WeekendCupSuggestionCard
                           key={`suggest-${ballot.slug}`}
                           ballotSlug={ballot.slug}

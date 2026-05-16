@@ -215,6 +215,10 @@ const GAME_ARTWORK: Partial<Record<GameKey, { header: string; capsule: string }>
     header: '/game-artwork/rocketleague-header.webp',
     capsule: '/game-artwork/rocketleague-capsule.webp',
   },
+  fortnite: {
+    header: '/game-artwork/fortnite-header.jpg',
+    capsule: '/game-artwork/fortnite-capsule.jpg',
+  },
 };
 
 export const LOBBY_MODE_OPTIONS: Partial<Record<GameKey, readonly string[]>> = {

@@ -14,7 +14,7 @@ import {
 } from '@/lib/social-links';
 
 export type WeekendCupBallotStatus = 'open' | 'review' | 'locked';
-export type WeekendCupBallotPlatform = 'mobile' | 'console' | 'mixed';
+export type WeekendCupBallotPlatform = 'mobile' | 'console' | 'pc' | 'mixed';
 
 export type WeekendCupBallotSeed = {
   slug: string;
@@ -293,46 +293,46 @@ export const WEEKEND_CUP_BALLOTS: WeekendCupBallotSeed[] = [
     ],
   },
   {
-    slug: 'weekend-cup-2-console',
-    title: 'Weekend Cup 2',
-    subtitle: 'Console Games Cup',
+    slug: 'weekend-cup-2-pc',
+    title: 'Season 2 PC Games Vote',
+    subtitle: 'Pick the headline PC game for Season 2',
     dateLabel: '12-14 June 2026',
-    themeLabel: 'Weekend 2',
+    themeLabel: 'PC games',
     status: 'open',
     options: [
       {
+        slug: 'tekken8',
+        label: 'Tekken 8',
+        platform: 'pc',
+        description: 'Fast sets, clean rivalries, and a bracket that gets loud quickly.',
+        isOfficial: true,
+      },
+      {
+        slug: 'fc26',
+        label: 'EA SPORTS FC 26',
+        platform: 'pc',
+        description: 'Football rivalry pressure with easy-to-follow matches and instant debate.',
+        isOfficial: true,
+      },
+      {
+        slug: 'nba2k26',
+        label: 'NBA 2K26',
+        platform: 'pc',
+        description: 'Culture play, clutch possessions, and a natural weekend crowd.',
+        isOfficial: true,
+      },
+      {
+        slug: 'mk11',
+        label: 'Mortal Kombat 11',
+        platform: 'pc',
+        description: 'Brutal momentum swings, quick sets, and clean knockout energy.',
+        isOfficial: true,
+      },
+      {
         slug: 'fortnite',
         label: 'Fortnite',
-        platform: 'console',
-        description: 'Big casual pull, clean clips, and strong community reach.',
-        isOfficial: true,
-      },
-      {
-        slug: 'ea-sports-fc-26',
-        label: 'EA SPORTS FC 26',
-        platform: 'console',
-        description: 'Easy to follow, easy to stream, always gets debate moving.',
-        isOfficial: true,
-      },
-      {
-        slug: 'mortal-kombat',
-        label: 'Mortal Kombat',
-        platform: 'console',
-        description: 'Fast sets, loud moments, strong local comp energy.',
-        isOfficial: true,
-      },
-      {
-        slug: 'nba-2k26',
-        label: 'NBA 2K26',
-        platform: 'console',
-        description: 'Strong culture play with a natural weekend crowd.',
-        isOfficial: true,
-      },
-      {
-        slug: 'warzone',
-        label: 'Call of Duty: Warzone',
-        platform: 'console',
-        description: 'Bigger BR names, bigger stream moments.',
+        platform: 'pc',
+        description: 'Big casual pull, fast clips, and strong squad reach on PC.',
         isOfficial: true,
       },
     ],

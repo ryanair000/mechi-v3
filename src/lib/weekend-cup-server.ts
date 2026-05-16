@@ -49,7 +49,7 @@ type WeekendCupBallotOptionRow = {
   ballot_id: string;
   slug: string;
   label: string;
-  platform: 'mobile' | 'console' | 'mixed';
+  platform: 'mobile' | 'console' | 'pc' | 'mixed';
   description: string | null;
   is_official: boolean;
   suggested_by: string | null;
@@ -308,6 +308,84 @@ function getFallbackBallotState(userId?: string | null) {
       suggestionNote: null,
     })),
   }));
+}
+
+export async function ensureWeekendCupBallotSeeds(params?: {
+  supabase?: SupabaseClient;
+}) {
+  const supabase = params?.supabase ?? createServiceClient();
+  const seededBallotIds = new Map<string, string>();
+
+  for (const [ballotIndex, ballot] of WEEKEND_CUP_BALLOTS.entries()) {
+    const { data, error } = await supabase
+      .from('weekend_cup_ballots')
+      .upsert(
+        {
+          slug: ballot.slug,
+          title: ballot.title,
+          subtitle: ballot.subtitle,
+          date_label: ballot.dateLabel,
+          theme_label: ballot.themeLabel,
+          cup_order: ballotIndex + 1,
+          status: ballot.status,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: 'slug' }
+      )
+      .select('id')
+      .single();
+
+    if (error || !data) {
+      if (isMissingWeekendCupTableError(error)) {
+        return;
+      }
+
+      throw error ?? new Error('Could not prepare Weekend Cup ballots');
+    }
+
+    seededBallotIds.set(ballot.slug, (data as { id: string }).id);
+
+    const { error: optionsError } = await supabase
+      .from('weekend_cup_ballot_options')
+      .upsert(
+        ballot.options.map((option) => ({
+          ballot_id: (data as { id: string }).id,
+          slug: option.slug,
+          label: option.label,
+          platform: option.platform,
+          description: option.description,
+          is_official: option.isOfficial,
+          updated_at: new Date().toISOString(),
+        })),
+        { onConflict: 'ballot_id,slug' }
+      );
+
+    if (optionsError) {
+      if (isMissingWeekendCupTableError(optionsError)) {
+        return;
+      }
+
+      throw optionsError;
+    }
+  }
+
+  const seasonTwoBallotId = seededBallotIds.get('weekend-cup-2-pc');
+  if (seasonTwoBallotId) {
+    const seasonTwoOptionSlugs =
+      WEEKEND_CUP_BALLOTS.find((ballot) => ballot.slug === 'weekend-cup-2-pc')?.options.map(
+        (option) => option.slug
+      ) ?? [];
+
+    const { error } = await supabase
+      .from('weekend_cup_ballot_options')
+      .delete()
+      .eq('ballot_id', seasonTwoBallotId)
+      .not('slug', 'in', `(${seasonTwoOptionSlugs.join(',')})`);
+
+    if (error && !isMissingWeekendCupTableError(error)) {
+      throw error;
+    }
+  }
 }
 
 export async function loadWeekendCupBallotState(params?: {

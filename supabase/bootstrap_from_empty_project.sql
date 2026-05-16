@@ -313,7 +313,7 @@ CREATE TABLE IF NOT EXISTS weekend_cup_ballot_options (
   ballot_id uuid NOT NULL REFERENCES weekend_cup_ballots(id) ON DELETE CASCADE,
   slug text NOT NULL,
   label text NOT NULL,
-  platform text NOT NULL CHECK (platform IN ('mobile', 'console', 'mixed')),
+  platform text NOT NULL CHECK (platform IN ('mobile', 'console', 'pc', 'mixed')),
   description text,
   is_official boolean NOT NULL DEFAULT false,
   suggested_by uuid REFERENCES profiles(id) ON DELETE SET NULL,
@@ -352,7 +352,7 @@ INSERT INTO weekend_cup_ballots (
 )
 VALUES
   ('weekend-cup-1-mobile', 'Weekend Cup 1', 'Mobile Games Cup', '29-31 May 2026', 'Weekend 1', 1, 'open'),
-  ('weekend-cup-2-console', 'Weekend Cup 2', 'Console Games Cup', '12-14 June 2026', 'Weekend 2', 2, 'open'),
+  ('weekend-cup-2-pc', 'Season 2 PC Games Vote', 'Pick the headline PC game for Season 2', '12-14 June 2026', 'PC games', 2, 'open'),
   ('weekend-cup-3-mixed', 'Weekend Cup 3', 'Mixed Games Cup', '26-28 June 2026', 'Weekend 3', 3, 'review')
 ON CONFLICT (slug) DO UPDATE
 SET
@@ -377,11 +377,11 @@ VALUES
   ((SELECT id FROM weekend_cup_ballots WHERE slug = 'weekend-cup-1-mobile'), 'free-fire', 'Free Fire', 'mobile', 'Fast lobbies, quick smoke, huge casual pull.', true),
   ((SELECT id FROM weekend_cup_ballots WHERE slug = 'weekend-cup-1-mobile'), 'pubgm', 'PUBG Mobile', 'mobile', 'Classic BR sweat, strong squads, big room potential.', true),
   ((SELECT id FROM weekend_cup_ballots WHERE slug = 'weekend-cup-1-mobile'), 'codm', 'Call of Duty: Mobile', 'mobile', 'High-speed BR action with creator-friendly highlights.', true),
-  ((SELECT id FROM weekend_cup_ballots WHERE slug = 'weekend-cup-2-console'), 'fortnite', 'Fortnite', 'console', 'Big casual pull, clean clips, and strong community reach.', true),
-  ((SELECT id FROM weekend_cup_ballots WHERE slug = 'weekend-cup-2-console'), 'ea-sports-fc-26', 'EA SPORTS FC 26', 'console', 'Easy to follow, easy to stream, always gets debate moving.', true),
-  ((SELECT id FROM weekend_cup_ballots WHERE slug = 'weekend-cup-2-console'), 'mortal-kombat', 'Mortal Kombat', 'console', 'Fast sets, loud moments, strong local comp energy.', true),
-  ((SELECT id FROM weekend_cup_ballots WHERE slug = 'weekend-cup-2-console'), 'nba-2k26', 'NBA 2K26', 'console', 'Strong culture play with a natural weekend crowd.', true),
-  ((SELECT id FROM weekend_cup_ballots WHERE slug = 'weekend-cup-2-console'), 'warzone', 'Call of Duty: Warzone', 'console', 'Bigger BR names, bigger stream moments.', true),
+  ((SELECT id FROM weekend_cup_ballots WHERE slug = 'weekend-cup-2-pc'), 'tekken8', 'Tekken 8', 'pc', 'Fast sets, clean rivalries, and a bracket that gets loud quickly.', true),
+  ((SELECT id FROM weekend_cup_ballots WHERE slug = 'weekend-cup-2-pc'), 'fc26', 'EA SPORTS FC 26', 'pc', 'Football rivalry pressure with easy-to-follow matches and instant debate.', true),
+  ((SELECT id FROM weekend_cup_ballots WHERE slug = 'weekend-cup-2-pc'), 'nba2k26', 'NBA 2K26', 'pc', 'Culture play, clutch possessions, and a natural weekend crowd.', true),
+  ((SELECT id FROM weekend_cup_ballots WHERE slug = 'weekend-cup-2-pc'), 'mk11', 'Mortal Kombat 11', 'pc', 'Brutal momentum swings, quick sets, and clean knockout energy.', true),
+  ((SELECT id FROM weekend_cup_ballots WHERE slug = 'weekend-cup-2-pc'), 'fortnite', 'Fortnite', 'pc', 'Big casual pull, fast clips, and strong squad reach on PC.', true),
   ((SELECT id FROM weekend_cup_ballots WHERE slug = 'weekend-cup-3-mixed'), 'mixed-mobile-console', 'Mixed format picks', 'mixed', 'The final mix pulls the strongest-supported mobile and console titles.', true)
 ON CONFLICT (ballot_id, slug) DO UPDATE
 SET

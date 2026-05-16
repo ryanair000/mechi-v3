@@ -20,5 +20,6 @@ Most local artwork in this folder was cropped from public official storefront/me
 | Mario Kart 8 | https://www.nintendo.com/ph/switch/aabp/about/index.html |
 | Super Smash Bros | https://www.smashbros.com/en_US/ |
 | Free Fire | https://ff.garena.com/en/wallpaper/28/ |
+| Fortnite | https://store.epicgames.com/en-US/p/fortnite |
 | Ludo | https://commons.wikimedia.org/wiki/File:Ludu_game_playboard.jpg |
 | Rocket League | https://store.steampowered.com/app/252950/Rocket_League/ |

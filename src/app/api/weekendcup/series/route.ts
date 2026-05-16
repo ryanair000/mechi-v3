@@ -11,6 +11,7 @@ import {
   cleanWeekendCupText,
 } from '@/lib/weekend-cup';
 import {
+  ensureWeekendCupBallotSeeds,
   getWeekendCupRegistrationSummary,
   loadWeekendCupBallotState,
 } from '@/lib/weekend-cup-server';
@@ -172,6 +173,7 @@ export async function GET(request: NextRequest) {
   try {
     const accessProfile = await getRequestAccessProfile(request);
     const supabase = createServiceClient();
+    await ensureWeekendCupBallotSeeds({ supabase });
     const [ballots, registrationSummary] = await Promise.all([
       loadWeekendCupBallotState({
         supabase,
@@ -212,6 +214,7 @@ export async function POST(request: NextRequest) {
     const body = (await request.json()) as Record<string, unknown>;
     const action = cleanWeekendCupText(body.action, 40);
     const supabase = createServiceClient();
+    await ensureWeekendCupBallotSeeds({ supabase });
 
     if (action === 'vote') {
       const optionId = cleanWeekendCupText(body.option_id, 80);
@@ -301,7 +304,7 @@ export async function POST(request: NextRequest) {
       const defaultPlatform = fallbackBallot?.options[0]?.platform ?? 'mobile';
       const platform = cleanWeekendCupText(body.platform, 20) || defaultPlatform;
       const safePlatform =
-        platform === 'console' || platform === 'mixed' ? platform : 'mobile';
+        platform === 'console' || platform === 'pc' || platform === 'mixed' ? platform : 'mobile';
 
       const ballot = await ensureSeedBallot(supabase, ballotSlug);
       if (!ballot) {

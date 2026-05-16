@@ -50,6 +50,14 @@ const postHogAssetOrigin =
   postHogRegion === "eu"
     ? "https://eu-assets.i.posthog.com"
     : "https://us-assets.i.posthog.com";
+const scriptSrc = [
+  "script-src 'self'",
+  ...(isProductionBuild ? [] : ["'unsafe-eval'"]),
+  "'unsafe-inline'",
+  "https://www.googletagmanager.com",
+  "https://us-assets.i.posthog.com",
+  "https://eu-assets.i.posthog.com",
+].join(" ");
 
 function normalizePostHogProxyPath(value: string | undefined) {
   const cleaned = value?.trim();
@@ -63,6 +71,7 @@ function normalizePostHogProxyPath(value: string | undefined) {
 
 const nextConfig: NextConfig = {
   ...(distDir ? { distDir } : {}),
+  poweredByHeader: false,
   allowedDevOrigins: localDevOrigins,
   typescript: {
     tsconfigPath: isProductionBuild ? "tsconfig.build.json" : "tsconfig.json",
@@ -141,7 +150,7 @@ const nextConfig: NextConfig = {
             key: "Content-Security-Policy",
             value: [
               "default-src 'self'",
-              "script-src 'self' 'unsafe-eval' 'unsafe-inline' https://www.googletagmanager.com https://us-assets.i.posthog.com https://eu-assets.i.posthog.com",
+              scriptSrc,
               "style-src 'self' 'unsafe-inline'",
               "img-src 'self' data: blob: https://cdn.cloudflare.steamstatic.com https://res.cloudinary.com https://shared.cloudflare.steamstatic.com https://images.unsplash.com https://commons.wikimedia.org https://upload.wikimedia.org https://fifauteam.com https://drop-assets.ea.com https://www.google-analytics.com https://region1.google-analytics.com https://us.i.posthog.com https://eu.i.posthog.com https://us-assets.i.posthog.com https://eu-assets.i.posthog.com",
               "font-src 'self' data:",

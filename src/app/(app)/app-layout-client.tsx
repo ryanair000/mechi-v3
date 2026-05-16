@@ -10,20 +10,27 @@ import { Sidebar } from '@/components/Sidebar';
 import { BrandLogo } from '@/components/BrandLogo';
 import { getLoginPath } from '@/lib/navigation';
 
+const PUBLIC_APP_PATHS = new Set(['/leaderboard', '/tournaments']);
+
+function isPublicAppPath(pathname: string) {
+  return PUBLIC_APP_PATHS.has(pathname);
+}
+
 export function AppLayoutClient({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const publicAppPath = isPublicAppPath(pathname);
 
   useEffect(() => {
-    if (!loading && !user) {
+    if (!loading && !user && !publicAppPath) {
       const query = searchParams.toString();
       const nextPath = query ? `${pathname}?${query}` : pathname;
       router.replace(getLoginPath(nextPath, 'signin_required'));
     }
-  }, [loading, pathname, router, searchParams, user]);
+  }, [loading, pathname, publicAppPath, router, searchParams, user]);
 
   if (loading) {
     return (
@@ -36,7 +43,7 @@ export function AppLayoutClient({ children }: { children: React.ReactNode }) {
     );
   }
 
-  if (!user) {
+  if (!user && !publicAppPath) {
     return null;
   }
 

@@ -612,6 +612,7 @@ export function WeekendCupClient() {
             <p className="section-title">Weekend Cup preview</p>
             <h1 className="mx-auto font-[var(--font-display)] text-[clamp(1.9rem,5.4vw,3.55rem)] font-black leading-[0.94] tracking-[-0.03em] text-[var(--text-primary)]">
               <span className="block whitespace-nowrap">PlayMechi Weekend Cup</span>
+              <span className="sr-only"> </span>
               <span className="block">Season 1</span>
             </h1>
             <p className="mx-auto max-w-3xl text-[0.92rem] leading-7 text-[var(--text-secondary)] sm:text-[1rem]">

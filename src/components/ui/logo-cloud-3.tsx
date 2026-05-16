@@ -42,22 +42,28 @@ const LOGOS: Logo[] = [
     width: 208,
   },
   {
-    src: '/game-logos/fc26-white.png',
+    src: '/game-logos/fc26.svg',
     alt: 'FC 26 Logo',
-    className: 'opacity-70',
-    width: 188,
+    className: 'opacity-80',
+    width: 196,
   },
   {
     src: '/game-logos/mk11.svg',
     alt: 'Mortal Kombat 11 Logo',
     className: 'opacity-80',
-    width: 164,
+    width: 214,
   },
   {
     src: '/game-logos/ufc5.svg',
     alt: 'UFC 5 Logo',
     className: 'opacity-80',
     width: 176,
+  },
+  {
+    src: '/game-logos/tekken8.svg',
+    alt: 'Tekken 8 Logo',
+    className: 'opacity-80',
+    width: 214,
   },
 ];
 

@@ -96,11 +96,13 @@ export function HomeFloatingHeader({
   const logoPaddingClass = compact ? 'rounded-[0.7rem] px-1 py-0.5' : 'rounded-[0.85rem] px-1.5 py-1';
   const shellPaddingClass = compact ? 'p-0.5 sm:p-1' : 'p-1 sm:p-1.5';
   const shellGapClass = compact ? 'gap-2' : 'gap-3';
+  const shellContainerWidthClass = compact ? 'max-w-[66rem]' : 'max-w-[88rem]';
   const desktopNavGapClass = compact ? 'gap-1.5' : 'gap-3';
   const desktopNavLayoutClass = compact
-    ? 'hidden min-w-0 flex-1 items-center justify-start md:flex md:max-w-[75%]'
+    ? 'hidden min-w-0 flex-1 items-center justify-start md:ml-8 md:flex md:max-w-[75%] lg:ml-10'
     : 'hidden min-w-0 flex-1 items-center justify-center md:flex';
   const actionGapClass = compact ? 'gap-1.5' : 'gap-2';
+  const actionOffsetClass = compact ? (user ? 'md:mr-5 lg:mr-6' : 'md:mr-7 lg:mr-8') : '';
   const dropdownPanelClass = compact ? COMPACT_DROPDOWN_PANEL_CLASS : DROPDOWN_PANEL_CLASS;
   const themeToggleClass = compact
     ? '!h-[1.8rem] !min-h-[1.8rem] !w-[1.8rem] !min-w-[1.8rem] !rounded-[0.7rem] !border-[rgba(129,148,178,0.18)] !bg-[rgba(17,27,46,0.88)] !text-[color:rgba(193,203,218,0.96)]'
@@ -123,7 +125,7 @@ export function HomeFloatingHeader({
 
   return (
     <header className="sticky top-3 z-50 sm:top-6">
-      <div className="relative mx-auto w-full max-w-[88rem] px-4 sm:px-6 lg:px-8">
+      <div className={`relative mx-auto w-full px-4 sm:px-6 lg:px-8 ${shellContainerWidthClass}`}>
         <div
           aria-hidden="true"
           className="pointer-events-none absolute left-1/2 top-1/2 h-px w-screen -translate-x-1/2 -translate-y-1/2 bg-gradient-to-r from-transparent via-[rgba(50,224,196,0.28)] to-transparent"
@@ -189,7 +191,7 @@ export function HomeFloatingHeader({
               ))}
             </div>
 
-            <div className={`ml-auto flex items-center ${actionGapClass}`}>
+            <div className={`ml-auto flex items-center ${actionGapClass} ${actionOffsetClass}`}>
               <ThemeToggle className={themeToggleClass} />
               <div className={`hidden items-center sm:flex ${actionGapClass}`}>
                 <Link

@@ -47,6 +47,41 @@ export function PlayMechiHomeHeader() {
             },
           ],
         },
+        {
+          label: 'REGISTER',
+          items: [
+            {
+              href: '/android-testers',
+              label: 'Android Tester',
+              description: 'Jiunge na beta ya app',
+            },
+            {
+              href: '/weekendcup/register',
+              label: 'Weekend Cup',
+              description: 'Funga slot ya mashindano',
+            },
+            {
+              href: '/leaderboard',
+              label: 'Weka Mawe Weekly',
+              description: 'Ingia kwenye ubao wa wiki',
+            },
+          ],
+        },
+        {
+          label: 'POLL',
+          items: [
+            {
+              href: '/weekendcup#vote',
+              label: 'Weekend Cup Mystery Game Mobile',
+              description: 'Piga kura ya mystery slot',
+            },
+            {
+              href: '/weekendcup#vote',
+              label: 'Weekend Cup Season 2 Console',
+              description: 'Chagua game ya Season 2',
+            },
+          ],
+        },
       ]
     : [
         {
@@ -55,17 +90,17 @@ export function PlayMechiHomeHeader() {
             {
               href: '/playmechi',
               label: 'PlayMechi',
-              description: 'Launch tournament lane',
+              description: 'Main event, ready to run',
             },
             {
               href: '/weekendcup',
               label: 'Weekend Cup',
-              description: 'Current weekend bracket',
+              description: 'Weekend bracket, locked in',
             },
             {
               href: '/leaderboard',
               label: 'Weka Mawe',
-              description: 'Weekly grind board',
+              description: 'Weekly leaderboard push',
             },
           ],
         },
@@ -81,6 +116,41 @@ export function PlayMechiHomeHeader() {
               href: '/android-testers',
               label: 'Android',
               description: 'Tester lane and beta access',
+            },
+          ],
+        },
+        {
+          label: 'REGISTER',
+          items: [
+            {
+              href: '/android-testers',
+              label: 'Android Tester',
+              description: 'Join the app beta lane',
+            },
+            {
+              href: '/weekendcup/register',
+              label: 'Weekend Cup',
+              description: 'Lock your tournament slot',
+            },
+            {
+              href: '/leaderboard',
+              label: 'Weka Mawe Weekly',
+              description: 'Enter the weekly board',
+            },
+          ],
+        },
+        {
+          label: 'POLL',
+          items: [
+            {
+              href: '/weekendcup#vote',
+              label: 'Weekend Cup Mystery Game Mobile',
+              description: 'Vote the mystery slot',
+            },
+            {
+              href: '/weekendcup#vote',
+              label: 'Weekend Cup Season 2 Console',
+              description: 'Pick the Season 2 game',
             },
           ],
         },

@@ -6,14 +6,14 @@ This file summarizes the current Mechi OpenClaw runtime so fresh agent sessions 
 
 - live OpenClaw runtime = EC2 only
 - current production posture on EC2 = SMM-only
-- `socio` = the only live agent in `~/.openclaw/openclaw.json`
+- `socio` and `control` = the live agents in `~/.openclaw/openclaw.json`
 - live `socio` workspace = `~/.openclaw/workspace-growth`
-- archived/not-live runtime surfaces = `control`, `support`, `community`, `infra`, `billing`, `data`, `growth`, native WhatsApp, Mechi bridge, and Nginx front door
+- archived/not-live runtime surfaces = `support`, `community`, `infra`, `billing`, `data`, `growth`, native WhatsApp, Mechi bridge, and Nginx front door
 - host prune backup root from the 2026-05-10 cleanup = `/home/ubuntu/openclaw-pruned-20260510-212015-smm-only`
 
 ## Current Telegram routing
 
-- approved operator DMs route to `socio`
+- approved operator DMs route to `control` with coding tools for Boss admin and social execution
 - approved operator ids include `6806783421` and `6738706706`
 - Boss private `OPS` group `-1003922946344` is the social media execution room and routes to `socio`
 - Boss private `OPS` forum topic `SMM` (`topicId=7`) is explicitly pinned to `socio`
@@ -22,6 +22,8 @@ This file summarizes the current Mechi OpenClaw runtime so fresh agent sessions 
 - live prompts now explicitly support:
   - `socio post chezahub` -> Instagram + Facebook `ChezaHub`
   - `socio post playmechi` -> Instagram + Facebook `PlayMechi`
+  - `socio post mechi` / `post mechi` -> Instagram + Facebook `PlayMechi`
+  - schedule commands -> queued social jobs with Telegram notification after cron publishes or fails
 - when the brand is ambiguous, `socio` should ask one short clarification instead of assuming the wrong feed
 
 ## Current ClawHub skill map
@@ -104,14 +106,16 @@ Until that script is run and verified on EC2, this file's SMM-only live-state li
   - `publish-meta-photo.mjs`
   - `publish-meta-video.mjs`
 - native OpenClaw Telegram channel is the production Telegram path
-- live gateway is pruned to one active agent with `agents.defaults.thinkingDefault=minimal`, `socio.thinkingDefault=minimal`, and `socio.fastModeDefault=true`
+- live gateway is pruned to focused active agents with `agents.defaults.thinkingDefault=low`, `socio.thinkingDefault=low`, `control.thinkingDefault=low`, and `socio.fastModeDefault=true`
 - the 2026-05-10 prune cut gateway memory from roughly `847 MB` down to roughly `184 MB` immediately after restart
 - local Windows OpenClaw gateways are not production and should stay stopped for Mechi
 
 ## Guardrails by role
 
 - `socio`
-  The only live OpenClaw role on EC2 right now. Use it for Boss-approved SMM execution only. Do not use it for support, billing, infrastructure, or public community moderation.
+  The live SMM role on EC2. Use it for Boss-approved SMM execution only. Do not use it for support, billing, infrastructure, or public community moderation.
+- `control`
+  The live Boss DM/admin role on EC2 with coding tools and repo workspace access. Use it for Boss operator DMs, repo work, live checks, and explicit social post/schedule commands from the Boss DM.
 
 ## Critical reminder
 

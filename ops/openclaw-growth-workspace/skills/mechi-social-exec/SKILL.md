@@ -22,6 +22,7 @@ Before drafting or publishing, read `MECHI_SOCIAL_PLAYBOOK.md` from the workspac
 - If the Boss drops a photo or video in the private `OPS -> SMM` Telegram room without naming channels, treat it as an Instagram publishing request.
 - If the Boss says `socio post chezahub`, publish to both Instagram and Facebook for the `ChezaHub` brand pair.
 - If the Boss says `socio post playmechi`, publish to both Instagram and Facebook for the `PlayMechi` brand pair.
+- If the Boss says `socio post mechi` or `post mechi`, treat `Mechi` as `PlayMechi` and publish to Instagram + Facebook.
 - If the Boss says `socio instagram <brand>`, publish only to Instagram for that brand.
 - If the Boss says `socio facebook <brand>`, publish only to Facebook for that brand.
 - If the Boss says `socio x <brand>`, publish only to X for that brand.
@@ -29,9 +30,11 @@ Before drafting or publishing, read `MECHI_SOCIAL_PLAYBOOK.md` from the workspac
 - If the Boss says `socio all <brand>`, publish to Instagram, Facebook, and X for that brand.
 - If the Boss says `socio ping` or `socio test`, do not publish anything. Reply with a short live-readiness check that confirms the active brand commands and whether Instagram, Facebook, X, and Discord are ready or missing auth.
 - If the Boss says `socio help`, do not publish anything. Reply with the supported command list and a one-line explanation for each target pattern.
+- If the Boss says `schedule`, `scheduled`, `later`, or gives a future date/time for a post, do not publish immediately. Create a scheduled post with `schedule-social-post.mjs`, then report the job id, brand, channels, EAT time, and caption used.
 - If the Boss names extra targets such as Facebook, X, Discord, or `post all`, publish only to those named channels in addition to Instagram.
 - Never invent event facts. If the media does not make the topic obvious, ask one short clarification instead of guessing.
 - If the brand is not explicit and the asset could fit either `ChezaHub` or `PlayMechi`, ask one short clarification before posting.
+- For explicit Boss post or schedule commands, do not ask for caption approval. Execute the command, then notify with the result and exact caption used.
 
 ## Channel actions
 
@@ -166,6 +169,23 @@ If the webhook is not configured but native Discord channel support is configure
 
 Keep Discord copy short and community-first.
 
+### Scheduling
+
+Use the local queue when the Boss asks to schedule a post instead of posting now:
+
+```bash
+node scripts/schedule-social-post.mjs --brand playmechi --channels instagram/facebook --type photo --media ./image.jpg --caption-file ./caption.txt --at "2026-05-17T09:00:00+03:00"
+node scripts/schedule-social-post.mjs --brand chezahub --channels all --type video --media https://example.com/clip.mp4 --caption "Caption text" --at "2026-05-17 18:30"
+```
+
+The scheduler assumes Africa/Nairobi/EAT when the date has no timezone. The host cron runner publishes due jobs every 5 minutes through:
+
+```bash
+node scripts/run-scheduled-posts.mjs
+```
+
+Scheduled jobs live under `state/scheduled-posts` in the growth workspace. After scheduling, tell the Boss the job id, exact scheduled EAT time, channels, and caption used. Do not schedule ambiguous brand/channel/media/time requests; ask one short clarification only when a required field is truly missing.
+
 ## Output contract
 
 After each publish action:
@@ -173,3 +193,9 @@ After each publish action:
 - say which channels were posted
 - include ids or permalinks when available
 - say clearly if any channel was skipped because credentials or auth were missing
+- include the exact caption used
+
+After each schedule action:
+
+- say `SCHEDULED`
+- include the job id, exact EAT time, brand, channels, media, and exact caption queued

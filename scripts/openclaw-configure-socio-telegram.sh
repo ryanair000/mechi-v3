@@ -11,7 +11,11 @@ SOCIO_AGENT_ID="${SOCIO_AGENT_ID:-socio}"
 SOCIO_AGENT_NAME="${SOCIO_AGENT_NAME:-Mechi Socio}"
 SOCIO_WORKSPACE="${SOCIO_WORKSPACE:-$OPENCLAW_HOME/workspace-growth}"
 SOCIO_MODEL="${SOCIO_MODEL:-openai-codex/gpt-5.5}"
-SOCIO_TOOLS_PROFILE="${SOCIO_TOOLS_PROFILE:-minimal}"
+SOCIO_TOOLS_PROFILE="${SOCIO_TOOLS_PROFILE:-coding}"
+CONTROL_AGENT_ID="${CONTROL_AGENT_ID:-control}"
+CONTROL_AGENT_NAME="${CONTROL_AGENT_NAME:-Mechi Control}"
+CONTROL_WORKSPACE="${CONTROL_WORKSPACE:-$MECHI_REPO}"
+CONTROL_TOOLS_PROFILE="${CONTROL_TOOLS_PROFILE:-coding}"
 
 CALLER_SOCIO_INSTAGRAM_ACCESS_TOKEN="${SOCIO_INSTAGRAM_ACCESS_TOKEN-}"
 CALLER_INSTAGRAM_ACCESS_TOKEN="${INSTAGRAM_ACCESS_TOKEN-}"
@@ -220,7 +224,7 @@ copy_workspace "$GROWTH_WORKSPACE_SOURCE" "$SOCIO_WORKSPACE"
 ensure_xurl
 apply_telegram_empty_input_hotfix "$OPENCLAW_TELEGRAM_RUNTIME_FILE"
 
-node - "$OPENCLAW_HOME" "$SOCIO_WORKSPACE" "$SOCIO_INSTAGRAM_ACCESS_TOKEN" "$SOCIO_INSTAGRAM_BUSINESS_ACCOUNT_ID" "$SOCIO_FACEBOOK_USER_ACCESS_TOKEN" "$SOCIO_FACEBOOK_APP_ID" "$SOCIO_FACEBOOK_APP_SECRET" "$SOCIO_FACEBOOK_PAGE_ID" "$SOCIO_FACEBOOK_PAGE_ACCESS_TOKEN" "$SOCIO_FACEBOOK_GRAPH_API_VERSION" "$SOCIO_IMGUR_CLIENT_ID" "$SOCIO_X_API_KEY" "$SOCIO_X_API_SECRET" "$SOCIO_X_ACCESS_TOKEN" "$SOCIO_X_ACCESS_TOKEN_SECRET" "$SOCIO_X_OAUTH2_ACCESS_TOKEN" "$SOCIO_DISCORD_BOT_TOKEN" "$SOCIO_DISCORD_GUILD_ID" "$SOCIO_DISCORD_USER_ID" "$SOCIO_DISCORD_POST_CHANNEL_ID" "$SOCIO_DISCORD_WEBHOOK_URL" <<'NODE'
+node - "$OPENCLAW_HOME" "$SOCIO_WORKSPACE" "$SOCIO_INSTAGRAM_ACCESS_TOKEN" "$SOCIO_INSTAGRAM_BUSINESS_ACCOUNT_ID" "$SOCIO_FACEBOOK_USER_ACCESS_TOKEN" "$SOCIO_FACEBOOK_APP_ID" "$SOCIO_FACEBOOK_APP_SECRET" "$SOCIO_FACEBOOK_PAGE_ID" "$SOCIO_FACEBOOK_PAGE_ACCESS_TOKEN" "$SOCIO_FACEBOOK_GRAPH_API_VERSION" "$SOCIO_IMGUR_CLIENT_ID" "$SOCIO_X_API_KEY" "$SOCIO_X_API_SECRET" "$SOCIO_X_ACCESS_TOKEN" "$SOCIO_X_ACCESS_TOKEN_SECRET" "$SOCIO_X_OAUTH2_ACCESS_TOKEN" "$SOCIO_DISCORD_BOT_TOKEN" "$SOCIO_DISCORD_GUILD_ID" "$SOCIO_DISCORD_USER_ID" "$SOCIO_DISCORD_POST_CHANNEL_ID" "$SOCIO_DISCORD_WEBHOOK_URL" "$TELEGRAM_SOCIO_ALLOW_FROM" <<'NODE'
 const fs = require('node:fs');
 const path = require('node:path');
 
@@ -246,6 +250,7 @@ const [
   discordUserId,
   discordPostChannelId,
   discordWebhookUrl,
+  telegramAllowFrom,
 ] = process.argv.slice(2);
 
 function readEnvFile(targetPath) {
@@ -324,6 +329,11 @@ const passthroughKeys = [
   'PLAYMECHI_X_USERNAME',
   'X_AUTH_TYPE',
   'XURL_APP_NAME',
+  'TELEGRAM_BOT_TOKEN',
+  'OPENCLAW_TELEGRAM_BOT_TOKEN',
+  'MECHI_SOCIAL_NOTIFY_CHAT_ID',
+  'TELEGRAM_SOCIO_NOTIFY_CHAT_ID',
+  'TELEGRAM_BOSS_CHAT_ID',
 ];
 
 const entries = [
@@ -346,6 +356,7 @@ const entries = [
   ['DISCORD_USER_ID', firstNonEmpty(discordUserId, existingEnv.get('DISCORD_USER_ID'))],
   ['DISCORD_POST_CHANNEL_ID', firstNonEmpty(discordPostChannelId, existingEnv.get('DISCORD_POST_CHANNEL_ID'))],
   ['DISCORD_WEBHOOK_URL', firstNonEmpty(discordWebhookUrl, existingEnv.get('DISCORD_WEBHOOK_URL'))],
+  ['MECHI_SOCIAL_NOTIFY_CHAT_ID', firstNonEmpty(existingEnv.get('MECHI_SOCIAL_NOTIFY_CHAT_ID'), telegramAllowFrom.split(',')[0])],
   ...passthroughKeys.map((key) => [key, firstNonEmpty(process.env[key], existingEnv.get(key))]),
 ].filter(([, value]) => typeof value === 'string' && value.trim());
 
@@ -375,7 +386,7 @@ upsertEnvFile(rootEnvPath);
 upsertEnvFile(workspaceEnvPath);
 NODE
 
-node - "$OPENCLAW_HOME" "$SOCIO_AGENT_ID" "$SOCIO_AGENT_NAME" "$SOCIO_WORKSPACE" "$SOCIO_MODEL" "$SOCIO_TOOLS_PROFILE" "$TELEGRAM_SOCIO_GROUP_ID" "$TELEGRAM_SOCIO_TOPIC_ID" "$TELEGRAM_SOCIO_ALLOW_FROM" "$TELEGRAM_SOCIO_GROUP_TITLE" "$TELEGRAM_SOCIO_TOPIC_LABEL" "$SOCIO_DISCORD_BOT_TOKEN" "$SOCIO_DISCORD_GUILD_ID" "$SOCIO_DISCORD_USER_ID" <<'NODE'
+node - "$OPENCLAW_HOME" "$SOCIO_AGENT_ID" "$SOCIO_AGENT_NAME" "$SOCIO_WORKSPACE" "$SOCIO_MODEL" "$SOCIO_TOOLS_PROFILE" "$TELEGRAM_SOCIO_GROUP_ID" "$TELEGRAM_SOCIO_TOPIC_ID" "$TELEGRAM_SOCIO_ALLOW_FROM" "$TELEGRAM_SOCIO_GROUP_TITLE" "$TELEGRAM_SOCIO_TOPIC_LABEL" "$SOCIO_DISCORD_BOT_TOKEN" "$SOCIO_DISCORD_GUILD_ID" "$SOCIO_DISCORD_USER_ID" "$CONTROL_AGENT_ID" "$CONTROL_AGENT_NAME" "$CONTROL_WORKSPACE" "$CONTROL_TOOLS_PROFILE" <<'NODE'
 const fs = require('node:fs');
 const path = require('node:path');
 
@@ -394,6 +405,10 @@ const [
   discordBotToken,
   discordGuildId,
   discordUserId,
+  controlAgentId,
+  controlAgentName,
+  controlWorkspace,
+  controlToolsProfile,
 ] = process.argv.slice(2);
 
 const configPath = path.join(openclawHome, 'openclaw.json');
@@ -417,30 +432,53 @@ const agent = {
   name: socioAgentName,
   workspace: socioWorkspace,
   model: socioModel,
+  thinkingDefault: 'low',
+  fastModeDefault: true,
   tools: {
     profile: socioToolsProfile,
+  },
+};
+const controlAgent = {
+  id: controlAgentId,
+  name: controlAgentName,
+  workspace: controlWorkspace,
+  model: socioModel,
+  thinkingDefault: 'low',
+  fastModeDefault: false,
+  tools: {
+    profile: controlToolsProfile,
   },
 };
 
 config.agents = objectOrEmpty(config.agents);
 const list = Array.isArray(config.agents.list) ? [...config.agents.list] : [];
-const existingAgentIndex = list.findIndex((entry) => entry && entry.id === socioAgentId);
-if (existingAgentIndex >= 0) {
-  list[existingAgentIndex] = {
-    ...objectOrEmpty(list[existingAgentIndex]),
-    ...agent,
-    tools: {
-      ...objectOrEmpty(list[existingAgentIndex]?.tools),
-      profile: socioToolsProfile,
-    },
-  };
-} else {
-  list.push(agent);
+function upsertAgent(nextAgent) {
+  const existingAgentIndex = list.findIndex((entry) => entry && entry.id === nextAgent.id);
+  if (existingAgentIndex >= 0) {
+    list[existingAgentIndex] = {
+      ...objectOrEmpty(list[existingAgentIndex]),
+      ...nextAgent,
+      tools: {
+        ...objectOrEmpty(list[existingAgentIndex]?.tools),
+        ...objectOrEmpty(nextAgent.tools),
+      },
+    };
+  } else {
+    list.push(nextAgent);
+  }
 }
+upsertAgent(controlAgent);
+upsertAgent(agent);
 config.agents.list = list;
 
 config.channels = objectOrEmpty(config.channels);
 const telegram = objectOrEmpty(config.channels.telegram);
+telegram.enabled = true;
+telegram.dmPolicy = 'allowlist';
+telegram.allowFrom = allowFrom.map((entry) => String(entry));
+telegram.dms = Object.fromEntries(
+  allowFrom.map((entry) => [String(entry), { historyLimit: 80 }])
+);
 const groups = objectOrEmpty(telegram.groups);
 const existingGroup = objectOrEmpty(groups[groupId]);
 
@@ -451,13 +489,16 @@ const groupPrompt = [
   'When the Boss sends a photo or video here without naming channels, treat it as approval to publish on Instagram only.',
   'If the Boss says socio post chezahub, publish to both Instagram and Facebook for the ChezaHub brand pair.',
   'If the Boss says socio post playmechi, publish to both Instagram and Facebook for the PlayMechi brand pair.',
+  'If the Boss says socio post mechi or post mechi, treat Mechi as PlayMechi and publish to Instagram and Facebook for PlayMechi.',
   'If the Boss says socio instagram, socio facebook, socio x, socio instagram/facebook, or socio all, use those exact channel targets for the named brand.',
   'If the Boss says socio ping, socio test, or socio help, do not publish anything; reply with a short readiness or command summary only.',
+  'If the Boss asks to schedule a post, use the local mechi-social-exec scheduler immediately and reply with the queued job id, exact EAT time, target channels, and caption used.',
   'If the Boss names Facebook, X, Discord, or says post all, publish to those named channels too.',
   'For explicit chezahub or playmechi commands, use the local mechi-social-exec publish-meta helpers so the publish target is deterministic.',
   'Use the installed instagram-content-studio or instagram-api skill for Instagram-only publishing when the brand is already clear.',
   'Use the local mechi-social-exec workspace skill for Mechi-specific caption shaping, Facebook publishing, Discord webhook posting, X readiness checks, and cross-channel reporting.',
-  'If the message includes a caption, keep the Boss intent and clean it lightly. If there is no caption, draft a Mechi-ready caption from the media and context without inventing facts.',
+  'If the message includes a caption, keep the Boss intent and clean it lightly. If there is no caption, draft a Mechi-ready caption from the media, filename, command, and context without inventing facts.',
+  'Do not ask the Boss to confirm a caption for explicit post or schedule commands. Execute first, then report the caption that was used.',
   'If the brand is ambiguous between ChezaHub and PlayMechi, ask one short clarification before publishing.',
   'Reply after publish with the target channels plus the permalink, post id, or skip reason for each channel.',
   'Do not touch ad spend, unrelated campaigns, or customer account actions from this room.',
@@ -481,10 +522,13 @@ if (topicId) {
     'Read MECHI_SOCIAL_PLAYBOOK.md before drafting or publishing.',
     'If the Boss says socio post chezahub, publish to both Instagram and Facebook for the ChezaHub brand pair.',
     'If the Boss says socio post playmechi, publish to both Instagram and Facebook for the PlayMechi brand pair.',
+    'If the Boss says socio post mechi or post mechi, treat Mechi as PlayMechi and publish to Instagram and Facebook for PlayMechi.',
     'If the Boss says socio instagram, socio facebook, socio x, socio instagram/facebook, or socio all, use those exact channel targets for the named brand.',
     'If the Boss says socio ping, socio test, or socio help, do not publish anything; reply with a short readiness or command summary only.',
+    'If the Boss asks to schedule a post, use the local mechi-social-exec scheduler immediately and reply with the queued job id, exact EAT time, target channels, and caption used.',
     'When the Boss drops a photo or video here without naming a brand, do not assume PlayMechi or ChezaHub blindly. Infer from the asset and CTA, and ask one short clarification if it is still ambiguous.',
     'Use the message caption when present. If needed, improve grammar lightly but keep the Boss intent.',
+    'Do not ask the Boss to confirm a caption for explicit post or schedule commands. Execute first, then report the caption that was used.',
     'Use mechi-social-exec for caption shaping and cross-channel execution, especially the local publish-meta helpers for explicit chezahub or playmechi commands.',
   ].join(' ');
 
@@ -542,6 +586,20 @@ const filteredBindings = bindings.filter((binding) => {
   }
 
   return !(binding.match?.peer?.kind === 'group' && String(binding.match?.peer?.id || '') === groupId);
+}).filter((binding) => {
+  if (!binding || typeof binding !== 'object') {
+    return true;
+  }
+
+  if (binding.match?.channel !== 'telegram') {
+    return true;
+  }
+
+  const directIds = allowFrom.map((entry) => String(entry));
+  return !(
+    binding.match?.peer?.kind === 'direct' &&
+    directIds.includes(String(binding.match?.peer?.id || ''))
+  );
 });
 
 filteredBindings.push({
@@ -557,6 +615,21 @@ filteredBindings.push({
   },
 });
 
+for (const chatId of allowFrom.map((entry) => String(entry))) {
+  filteredBindings.push({
+    type: 'route',
+    comment: 'Approved Boss/admin Telegram DM -> control coding agent',
+    agentId: controlAgentId,
+    match: {
+      channel: 'telegram',
+      peer: {
+        kind: 'direct',
+        id: chatId,
+      },
+    },
+  });
+}
+
 config.bindings = filteredBindings;
 
 fs.writeFileSync(configPath, `${JSON.stringify(config, null, 2)}\n`, 'utf8');
@@ -566,6 +639,7 @@ NODE
 
 echo "Socio Telegram configuration applied."
 echo "- agent: $SOCIO_AGENT_ID"
+echo "- admin DM agent: $CONTROL_AGENT_ID ($CONTROL_TOOLS_PROFILE tools)"
 echo "- workspace: $SOCIO_WORKSPACE"
 echo "- group: $TELEGRAM_SOCIO_GROUP_TITLE ($TELEGRAM_SOCIO_GROUP_ID)"
 echo "- growth workspace synced from: $GROWTH_WORKSPACE_SOURCE"

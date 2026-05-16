@@ -230,6 +230,7 @@ DM us to secure yours.
   - `drop this on discord`
 - `socio post chezahub` means the Boss has explicitly named both the brand and the Instagram+Facebook publish pair.
 - `socio post playmechi` means the Boss has explicitly named both the brand and the Instagram+Facebook publish pair.
+- `socio post mechi` or `post mechi` means `PlayMechi` and counts as approval to publish to Instagram + Facebook for PlayMechi.
 - `socio instagram <brand>` means Instagram only for that brand.
 - `socio facebook <brand>` means Facebook only for that brand.
 - `socio x <brand>` means X only for that brand.
@@ -237,4 +238,7 @@ DM us to secure yours.
 - `socio all <brand>` means Instagram, Facebook, and X for that brand.
 - `socio ping` or `socio test` means return a short non-posting readiness reply for the current runtime.
 - `socio help` means return the supported command list without publishing anything.
-- After publishing, always report the target channels and the returned post IDs or permalinks when available.
+- `socio schedule ...` means create a scheduled post instead of publishing immediately. Do not ask for caption approval when brand, media, channels, and time are clear enough from the Boss's message.
+- After publishing, always report the target channels, the returned post IDs or permalinks when available, and the exact caption used.
+- After scheduling, always report the scheduled job id, brand, target channels, exact EAT time, and exact queued caption. Do not imply the post is already live.
+- For explicit Boss post or schedule commands, execute first and notify after. Only ask a clarification when a required target or time is truly missing.

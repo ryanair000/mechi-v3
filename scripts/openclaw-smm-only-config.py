@@ -23,19 +23,22 @@ def main() -> int:
     group_prompt = " ".join(
         [
             "This is OPS, the Boss private Mechi Telegram SMM room.",
-            "This runtime is intentionally trimmed to SMM only.",
+            "This runtime is intentionally trimmed to SMM plus Boss admin DM control.",
             "Use the socio agent for Mechi social publishing and social media operations.",
             "Read MECHI_SOCIAL_PLAYBOOK.md before drafting or publishing.",
             "When the Boss sends a photo or video here without naming channels, treat it as approval to publish on Instagram only.",
             "If the Boss says socio post chezahub, publish to both Instagram and Facebook for the ChezaHub brand pair.",
             "If the Boss says socio post playmechi, publish to both Instagram and Facebook for the PlayMechi brand pair.",
+            "If the Boss says socio post mechi or post mechi, treat Mechi as PlayMechi and publish to Instagram and Facebook for PlayMechi.",
             "If the Boss says socio instagram, socio facebook, socio x, socio instagram/facebook, or socio all, use those exact channel targets for the named brand.",
             "If the Boss says socio ping, socio test, or socio help, do not publish anything and return only a short readiness or command summary.",
+            "If the Boss asks to schedule a post, use the local mechi-social-exec scheduler immediately and reply with the queued job id, exact EAT time, target channels, and caption used.",
             "If the Boss names Facebook, X, Discord, or says post all, publish to those named channels too.",
             "For explicit chezahub or playmechi commands, use the local mechi-social-exec publish-meta helpers so the publish target is deterministic.",
             "Use instagram-content-studio or instagram-api for Instagram-only publishing when the brand is already clear.",
             "Use the local mechi-social-exec skill for Mechi-specific caption shaping, Facebook publishing, Discord webhook posting, X readiness checks, and cross-channel reporting.",
-            "If the message includes a caption, keep the Boss intent and clean it lightly. If there is no caption, draft a Mechi-ready caption from the media and context without inventing facts.",
+            "If the message includes a caption, keep the Boss intent and clean it lightly. If there is no caption, draft a Mechi-ready caption from the media, filename, command, and context without inventing facts.",
+            "Do not ask the Boss to confirm a caption for explicit post or schedule commands. Execute first, then report the caption that was used.",
             "If the brand is ambiguous between ChezaHub and PlayMechi, ask one short clarification before publishing.",
             "Reply after publish with the target channels plus the permalink, post id, or skip reason for each channel.",
             "Do not touch ad spend, unrelated campaigns, or customer account actions from this room.",
@@ -49,10 +52,13 @@ def main() -> int:
             "Read MECHI_SOCIAL_PLAYBOOK.md before drafting or publishing.",
             "If the Boss says socio post chezahub, publish to both Instagram and Facebook for the ChezaHub brand pair.",
             "If the Boss says socio post playmechi, publish to both Instagram and Facebook for the PlayMechi brand pair.",
+            "If the Boss says socio post mechi or post mechi, treat Mechi as PlayMechi and publish to Instagram and Facebook for PlayMechi.",
             "If the Boss says socio instagram, socio facebook, socio x, socio instagram/facebook, or socio all, use those exact channel targets for the named brand.",
             "If the Boss says socio ping, socio test, or socio help, do not publish anything and return only a short readiness or command summary.",
+            "If the Boss asks to schedule a post, use the local mechi-social-exec scheduler immediately and reply with the queued job id, exact EAT time, target channels, and caption used.",
             "When the Boss drops a photo or video here without naming a brand, do not assume PlayMechi or ChezaHub blindly. Infer from the asset and CTA, and ask one short clarification if it is still ambiguous.",
             "Use the message caption when present. Improve grammar lightly only when needed and keep the Boss intent.",
+            "Do not ask the Boss to confirm a caption for explicit post or schedule commands. Execute first, then report the caption that was used.",
             "Use mechi-social-exec for caption shaping and cross-channel execution, especially the local publish-meta helpers for explicit chezahub or playmechi commands.",
         ]
     )
@@ -61,18 +67,28 @@ def main() -> int:
     defaults = config["agents"].get("defaults") or {}
     defaults["workspace"] = socio_workspace
     defaults["repoRoot"] = defaults.get("repoRoot") or "/home/ubuntu/mechi-v3"
-    defaults["thinkingDefault"] = "minimal"
+    defaults["thinkingDefault"] = "low"
     defaults["timeoutSeconds"] = 120
     config["agents"]["defaults"] = defaults
+    control_workspace = "/home/ubuntu/mechi-v3"
     config["agents"]["list"] = [
+        {
+            "id": "control",
+            "name": "Mechi Control",
+            "workspace": control_workspace,
+            "model": socio_model,
+            "thinkingDefault": "low",
+            "fastModeDefault": False,
+            "tools": {"profile": "coding"},
+        },
         {
             "id": "socio",
             "name": "Mechi Socio",
             "workspace": socio_workspace,
             "model": socio_model,
-            "thinkingDefault": "minimal",
+            "thinkingDefault": "low",
             "fastModeDefault": True,
-            "tools": {"profile": "minimal"},
+            "tools": {"profile": "coding"},
         }
     ]
 
@@ -81,7 +97,7 @@ def main() -> int:
     telegram["enabled"] = True
     telegram["dmPolicy"] = "allowlist"
     telegram["allowFrom"] = allowed_ids
-    telegram["dms"] = {chat_id: {"historyLimit": 50} for chat_id in allowed_ids}
+    telegram["dms"] = {chat_id: {"historyLimit": 80} for chat_id in allowed_ids}
     telegram["groupPolicy"] = "allowlist"
     telegram["streaming"] = {"mode": "off"}
     telegram["replyToMode"] = "first"
@@ -117,8 +133,8 @@ def main() -> int:
         *[
             {
                 "type": "route",
-                "agentId": "socio",
-                "comment": "Approved Telegram DM -> socio",
+                "agentId": "control",
+                "comment": "Approved Boss/admin Telegram DM -> control coding agent",
                 "match": {"channel": "telegram", "peer": {"kind": "direct", "id": chat_id}},
             }
             for chat_id in allowed_ids

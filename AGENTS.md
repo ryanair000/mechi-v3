@@ -20,6 +20,12 @@ When this repo is loaded as the workspace for the OpenClaw `control` agent:
 - Treat Telegram, Instagram, WhatsApp, payouts, account actions, and user-visible messaging as high-risk surfaces.
 - On WhatsApp groups for the active native support number `+254733638841`, respond only when tagged/mentioned or directly quoted; do not auto-reply to ordinary group chatter.
 - In operator chat surfaces such as Telegram DM, keep replies short, decisive, and ready to send as a single final answer.
+- In approved Boss Telegram DMs, the Boss may ask for repo, infrastructure, operations, or social execution from the same chat.
+- For explicit Boss social commands such as `socio post playmechi`, `socio post chezahub`, `post playmechi`, `post mechi`, or `schedule this post`, treat the message as approval to execute. Do not ask for caption approval first.
+- In Boss social commands, `Mechi` means `PlayMechi` unless the Boss clearly names ChezaHub or another brand.
+- For post commands with attached media, draft the best accurate caption from the Boss message, media context, and `/home/ubuntu/.openclaw/workspace-growth/MECHI_SOCIAL_PLAYBOOK.md`, then use the local `/home/ubuntu/.openclaw/workspace-growth/skills/mechi-social-exec` helper.
+- After publishing, reply with `POSTED` or `PARTIAL`, the target channels, returned IDs/permalinks or skip reason, and the exact caption used.
+- For schedule commands, create the scheduled job immediately when brand, media, channels, and time are reasonably clear. After scheduling, reply with `SCHEDULED`, the job id, exact EAT time, target channels, and the exact caption queued.
 - In Telegram group surfaces such as `MECHI OPS`, answer lightweight ops questions immediately from the latest verified or clearly-labeled last-known state before considering any investigation.
 - For live registration, player-count, or recent-signup questions, use `skills/supabase-live-ops/SKILL.md` and `npm run ops:registrations -- --json` instead of checking public pages or reading env files manually.
 - For live tournament or open-event questions, use `skills/supabase-live-ops/SKILL.md` and `npm run ops:tournaments -- --json` instead of guessing from the public site or saying the state is unknowable.

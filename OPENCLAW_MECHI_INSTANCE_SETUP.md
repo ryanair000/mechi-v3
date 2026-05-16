@@ -9,9 +9,9 @@ Production rule: Mechi uses only the EC2 OpenClaw runtime. Local Windows or lapt
 As of 2026-05-10 EAT, the EC2 host is intentionally pruned to Telegram SMM only:
 
 1. OpenClaw gateway
-2. one live agent: `socio`
-3. one live workspace: `~/.openclaw/workspace-growth`
-4. native OpenClaw Telegram channel with approved operator DMs routed to `socio`
+2. live agents: `socio` and `control`
+3. live workspaces: `~/.openclaw/workspace-growth` for SMM and `/home/ubuntu/mechi-v3` for Boss control
+4. native OpenClaw Telegram channel with approved operator DMs routed to `control`
 5. Boss private `OPS -> SMM` topic (`group -1003922946344`, `topicId 7`) routed to `socio`
 6. growth media stack: `instagram-api`, `instagram-content-studio`, `mechi-social-exec`, `MECHI_SOCIAL_PLAYBOOK.md`
 
@@ -60,8 +60,8 @@ Native WhatsApp can use the chat history available to the logged-in session and 
 - `gateway.mode: "local"`
 - `gateway.bind: "loopback"`
 - `gateway.auth.mode: "token"`
-- one live agent only: `socio`
-- `agents.defaults.thinkingDefault: "minimal"`
+- focused live agents only: `socio` and `control`
+- `agents.defaults.thinkingDefault: "low"`
 - `agents.list[].fastModeDefault: true` for `socio`
 - `openclaw skills install <slug>` installs ClawHub skills into the active workspace `skills/` folder; keep skills scoped to each specialist workspace
 - `channels.telegram.streaming.mode: "off"` to prefer simple final Telegram replies
@@ -69,10 +69,11 @@ Native WhatsApp can use the chat history available to the logged-in session and 
 - `socio` brand-pair routing should be configured so:
   - `socio post chezahub` targets Instagram + Facebook `ChezaHub`
   - `socio post playmechi` targets Instagram + Facebook `PlayMechi`
+  - `socio post mechi` or `post mechi` targets Instagram + Facebook `PlayMechi`
 - brand-pair Meta env keys can be stored alongside the generic defaults:
   - `CHEZAHUB_INSTAGRAM_ACCESS_TOKEN`, `CHEZAHUB_INSTAGRAM_BUSINESS_ACCOUNT_ID`, `CHEZAHUB_FACEBOOK_PAGE_ID`, `CHEZAHUB_FACEBOOK_PAGE_ACCESS_TOKEN`
   - `PLAYMECHI_INSTAGRAM_ACCESS_TOKEN`, `PLAYMECHI_INSTAGRAM_BUSINESS_ACCOUNT_ID`, `PLAYMECHI_FACEBOOK_PAGE_ID`, `PLAYMECHI_FACEBOOK_PAGE_ACCESS_TOKEN`
-- `channels.telegram.dmPolicy: "allowlist"` so only approved operator DMs can reach `socio`
+- `channels.telegram.dmPolicy: "allowlist"` so only approved operator DMs can reach `control`
 - Installed host CLIs: AWS CLI, Membrane CLI, and Cloudflared
 - Installed live SMM skills:
   - `cloudinary`
@@ -93,7 +94,7 @@ Current posture:
 
 - Telegram is configured directly in `~/.openclaw/openclaw.json`
 - the live bot token should be sourced from `~/.openclaw/.env`, not stored in plaintext config
-- approved operator DMs resolve to `socio`
+- approved operator DMs resolve to `control`
 - the Boss private `OPS` Telegram group should resolve to `socio`
 - DMs are allowlisted so only approved operator chat ids can control the live agent
 - groups are allowlisted; the live config keeps only the Boss private `OPS` room

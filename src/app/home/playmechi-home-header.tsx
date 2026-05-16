@@ -47,7 +47,6 @@ export function PlayMechiHomeHeader() {
             },
           ],
         },
-        { href: '/pricing', label: 'USAJILI' },
       ]
     : [
         {
@@ -85,7 +84,6 @@ export function PlayMechiHomeHeader() {
             },
           ],
         },
-        { href: '/pricing', label: 'SUBSCRIPTIONS' },
       ];
 
   return (
@@ -94,6 +92,8 @@ export function PlayMechiHomeHeader() {
       signInHref={PLAYMECHI_SIGN_IN_PATH}
       joinHref={joinHref}
       joinLabel={isSwahili ? 'JIUNGE BURE' : 'JOIN FREE'}
+      showRegionalControls={false}
+      compact
       showLogo
     />
   );

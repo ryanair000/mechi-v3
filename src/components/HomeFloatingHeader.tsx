@@ -60,6 +60,8 @@ interface HomeFloatingHeaderProps {
   joinHref?: string;
   joinLabel?: string;
   showLogo?: boolean;
+  showRegionalControls?: boolean;
+  compact?: boolean;
 }
 
 export function HomeFloatingHeader({
@@ -68,6 +70,8 @@ export function HomeFloatingHeader({
   joinHref = '/register',
   joinLabel,
   showLogo = true,
+  showRegionalControls = true,
+  compact = false,
 }: HomeFloatingHeaderProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [openMobileDropdown, setOpenMobileDropdown] = useState<string | null>(null);
@@ -80,6 +84,23 @@ export function HomeFloatingHeader({
   const dashboardLabel = isSwahili ? 'DASHIBODI' : 'DASHBOARD';
   const openMenuLabel = isSwahili ? 'Fungua menyu' : 'Open menu';
   const closeMenuLabel = isSwahili ? 'Funga menyu' : 'Close menu';
+  const headerTextClass = compact
+    ? 'inline-flex min-h-[1.65rem] items-center rounded-[0.7rem] px-2.5 py-1 font-[var(--font-display)] text-[0.72rem] font-extrabold uppercase tracking-[0.14em] text-[color:rgba(193,203,218,0.96)] transition-colors hover:text-[var(--text-primary)]'
+    : HEADER_TEXT_CLASS;
+  const signInButtonClass = compact
+    ? 'inline-flex min-h-[1.65rem] items-center justify-center rounded-[0.7rem] border border-[rgba(50,224,196,0.32)] bg-[rgba(17,27,46,0.88)] px-3.5 py-1 font-[var(--font-display)] text-[0.72rem] font-extrabold uppercase tracking-[0.14em] text-[var(--accent-secondary-text)] transition-all hover:border-[rgba(50,224,196,0.46)] hover:bg-[rgba(50,224,196,0.12)] hover:text-[var(--text-primary)]'
+    : SIGN_IN_BUTTON_CLASS;
+  const joinButtonClass = compact
+    ? 'btn-primary min-h-[1.65rem] rounded-[0.7rem] px-3.5 py-1 shadow-none font-[var(--font-display)] text-[0.72rem] font-extrabold uppercase tracking-[0.14em] text-[#08111d]'
+    : JOIN_BUTTON_CLASS;
+  const logoPaddingClass = compact ? 'rounded-[0.7rem] px-1 py-0.5' : 'rounded-[0.85rem] px-1.5 py-1';
+  const shellPaddingClass = compact ? 'p-0.5 sm:p-1' : 'p-1 sm:p-1.5';
+  const shellGapClass = compact ? 'gap-2' : 'gap-3';
+  const desktopNavGapClass = compact ? 'gap-1.5' : 'gap-3';
+  const actionGapClass = compact ? 'gap-1.5' : 'gap-2';
+  const themeToggleClass = compact
+    ? '!h-[1.8rem] !min-h-[1.8rem] !w-[1.8rem] !min-w-[1.8rem] !rounded-[0.7rem] !border-[rgba(129,148,178,0.18)] !bg-[rgba(17,27,46,0.88)] !text-[color:rgba(193,203,218,0.96)]'
+    : '!h-[2.3rem] !min-h-[2.3rem] !w-[2.3rem] !min-w-[2.3rem] !rounded-[0.85rem] !border-[rgba(129,148,178,0.18)] !bg-[rgba(17,27,46,0.88)] !text-[color:rgba(193,203,218,0.96)]';
 
   const closeMobileMenu = () => {
     setIsOpen(false);
@@ -103,21 +124,21 @@ export function HomeFloatingHeader({
           aria-hidden="true"
           className="pointer-events-none absolute left-1/2 top-1/2 h-px w-screen -translate-x-1/2 -translate-y-1/2 bg-gradient-to-r from-transparent via-[rgba(50,224,196,0.28)] to-transparent"
         />
-        <div className="rounded-[var(--radius-nav-shell)] border border-[var(--border-color)] bg-[var(--surface-soft)] p-1 shadow-[var(--shadow-soft)] backdrop-blur-xl sm:p-1.5">
-          <div className="flex items-center gap-3">
+        <div className={`rounded-[var(--radius-nav-shell)] border border-[var(--border-color)] bg-[var(--surface-soft)] shadow-[var(--shadow-soft)] backdrop-blur-xl ${shellPaddingClass}`}>
+          <div className={`flex items-center ${shellGapClass}`}>
             {showLogo ? (
-              <Link href="/" className="flex shrink-0 items-center rounded-[0.85rem] px-1.5 py-1">
+              <Link href="/" className={`flex shrink-0 items-center ${logoPaddingClass}`}>
                 <BrandLogo size="sm" variant="symbol" />
               </Link>
             ) : null}
 
-            <div className="hidden min-w-0 flex-1 items-center justify-center gap-3 md:flex">
+            <div className={`hidden min-w-0 flex-1 items-center justify-center md:flex ${desktopNavGapClass}`}>
               {resolvedNavItems.map((item) => (
                 isDropdownNavItem(item) ? (
                   <div key={item.label} className="group relative">
                     <button
                       type="button"
-                      className={`${HEADER_TEXT_CLASS} gap-1.5`}
+                      className={`${headerTextClass} gap-1.5`}
                       style={DISPLAY_FONT_STYLE}
                       aria-haspopup="menu"
                     >
@@ -155,7 +176,7 @@ export function HomeFloatingHeader({
                   <Link
                     key={item.href}
                     href={item.href}
-                    className={HEADER_TEXT_CLASS}
+                    className={headerTextClass}
                     style={DISPLAY_FONT_STYLE}
                   >
                     {item.label}
@@ -164,19 +185,19 @@ export function HomeFloatingHeader({
               ))}
             </div>
 
-            <div className="ml-auto flex items-center gap-2">
-              <CountryLanguageBar className="hidden lg:flex" />
-              <ThemeToggle className="!h-[2.3rem] !min-h-[2.3rem] !w-[2.3rem] !min-w-[2.3rem] !rounded-[0.85rem] !border-[rgba(129,148,178,0.18)] !bg-[rgba(17,27,46,0.88)] !text-[color:rgba(193,203,218,0.96)]" />
-              <div className="hidden items-center gap-2 sm:flex">
+            <div className={`ml-auto flex items-center ${actionGapClass}`}>
+              {showRegionalControls ? <CountryLanguageBar className="hidden lg:flex" /> : null}
+              <ThemeToggle className={themeToggleClass} />
+              <div className={`hidden items-center sm:flex ${actionGapClass}`}>
                 <Link
                   href={user ? '/dashboard' : signInHref}
-                  className={SIGN_IN_BUTTON_CLASS}
+                  className={signInButtonClass}
                   style={DISPLAY_FONT_STYLE}
                 >
                   {user ? dashboardLabel : signInLabel}
                 </Link>
                 {!user ? (
-                  <Link href={joinHref} className={JOIN_BUTTON_CLASS} style={DISPLAY_FONT_STYLE}>
+                  <Link href={joinHref} className={joinButtonClass} style={DISPLAY_FONT_STYLE}>
                     {resolvedJoinLabel}
                   </Link>
                 ) : null}
@@ -196,9 +217,11 @@ export function HomeFloatingHeader({
 
           {isOpen ? (
             <div id="home-mobile-nav" className="mt-2 grid gap-1 border-t border-[var(--border-color)] pt-2 md:hidden">
-              <div className="px-1 pb-1">
-                <CountryLanguageBar inline />
-              </div>
+              {showRegionalControls ? (
+                <div className="px-1 pb-1">
+                  <CountryLanguageBar inline />
+                </div>
+              ) : null}
 
               {resolvedNavItems.map((item) =>
                 isDropdownNavItem(item) ? (
@@ -211,7 +234,7 @@ export function HomeFloatingHeader({
                       onClick={() =>
                         setOpenMobileDropdown((current) => (current === item.label ? null : item.label))
                       }
-                      className={`${HEADER_TEXT_CLASS} flex w-full items-center justify-between gap-2`}
+                      className={`${headerTextClass} flex w-full items-center justify-between gap-2`}
                       style={DISPLAY_FONT_STYLE}
                       aria-expanded={openMobileDropdown === item.label}
                     >
@@ -255,7 +278,7 @@ export function HomeFloatingHeader({
                     key={item.href}
                     href={item.href}
                     onClick={closeMobileMenu}
-                    className={HEADER_TEXT_CLASS}
+                    className={headerTextClass}
                     style={DISPLAY_FONT_STYLE}
                   >
                     {item.label}
@@ -266,7 +289,7 @@ export function HomeFloatingHeader({
                 <Link
                   href={user ? '/dashboard' : signInHref}
                   onClick={closeMobileMenu}
-                  className={SIGN_IN_BUTTON_CLASS}
+                  className={signInButtonClass}
                   style={DISPLAY_FONT_STYLE}
                 >
                   {user ? dashboardLabel : signInLabel}
@@ -275,7 +298,7 @@ export function HomeFloatingHeader({
                   <Link
                     href={joinHref}
                     onClick={closeMobileMenu}
-                    className={JOIN_BUTTON_CLASS}
+                    className={joinButtonClass}
                     style={DISPLAY_FONT_STYLE}
                   >
                     {resolvedJoinLabel}

@@ -5,7 +5,6 @@ import Link from 'next/link';
 import { ChevronDown, Menu, X } from 'lucide-react';
 import { useAuth } from '@/components/AuthProvider';
 import { BrandLogo } from '@/components/BrandLogo';
-import { CountryLanguageBar } from '@/components/CountryLanguageBar';
 import { PageBreadcrumbs } from '@/components/PageBreadcrumbs';
 import { useRegionalSettings } from '@/components/RegionalSettingsProvider';
 import { ThemeToggle } from '@/components/ThemeToggle';
@@ -72,7 +71,6 @@ export function HomeFloatingHeader({
   joinHref = '/register',
   joinLabel,
   showLogo = true,
-  showRegionalControls = true,
   compact = false,
 }: HomeFloatingHeaderProps) {
   const [isOpen, setIsOpen] = useState(false);
@@ -192,7 +190,6 @@ export function HomeFloatingHeader({
             </div>
 
             <div className={`ml-auto flex items-center ${actionGapClass}`}>
-              {showRegionalControls ? <CountryLanguageBar className="hidden lg:flex" /> : null}
               <ThemeToggle className={themeToggleClass} />
               <div className={`hidden items-center sm:flex ${actionGapClass}`}>
                 <Link
@@ -223,12 +220,6 @@ export function HomeFloatingHeader({
 
           {isOpen ? (
             <div id="home-mobile-nav" className="mt-2 grid gap-1 border-t border-[var(--border-color)] pt-2 md:hidden">
-              {showRegionalControls ? (
-                <div className="px-1 pb-1">
-                  <CountryLanguageBar inline />
-                </div>
-              ) : null}
-
               {resolvedNavItems.map((item) =>
                 isDropdownNavItem(item) ? (
                   <div

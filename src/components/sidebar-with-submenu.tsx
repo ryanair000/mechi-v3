@@ -13,7 +13,6 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/components/AuthProvider';
 import { BrandLogo } from '@/components/BrandLogo';
-import { CountryLanguageBar } from '@/components/CountryLanguageBar';
 import { NotificationNavButton } from '@/components/NotificationNavButton';
 import {
   type AppNavItem,
@@ -218,12 +217,6 @@ export default function SidebarWithSubmenu({ collapsed, onToggle }: SidebarWithS
           {collapsed ? <PanelLeftOpen size={14} /> : <PanelLeftClose size={14} />}
         </button>
       </div>
-      {!collapsed ? (
-        <div className="border-b border-[var(--border-color)] px-4 py-3">
-          <CountryLanguageBar className="w-full justify-between" inline />
-        </div>
-      ) : null}
-
       <nav className={cn('flex-1 space-y-1.5 overflow-y-auto py-3', collapsed ? 'px-3' : 'px-2')}>
         <SidebarSection>
           {SIDEBAR_PRIMARY_ITEMS.map((item) => {

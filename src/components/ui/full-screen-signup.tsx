@@ -13,7 +13,6 @@ import {
 import Link from 'next/link';
 import type { FormEvent, ReactNode } from 'react';
 import { useState } from 'react';
-import { CountryLanguageBar } from '@/components/CountryLanguageBar';
 import { useRegionalSettings } from '@/components/RegionalSettingsProvider';
 import { SignupPage } from '@/components/ui/sign-up-page';
 import {
@@ -93,9 +92,6 @@ export function FullScreenSignup({
 
   return (
     <div className="relative">
-      <div className="absolute right-4 top-4 z-20">
-        <CountryLanguageBar />
-      </div>
       <SignupPage
         title={title}
         subtitle={subtitle}
@@ -232,9 +228,6 @@ function StandaloneFullScreenSignup({
 
   return (
     <div className="flex min-h-screen items-center justify-center overflow-hidden bg-[#0b1121] px-4 py-6 text-slate-950">
-      <div className="fixed right-4 top-4 z-20">
-        <CountryLanguageBar />
-      </div>
       <div className="relative flex w-full max-w-5xl flex-col overflow-hidden rounded-lg bg-white shadow-2xl md:min-h-[40rem] md:flex-row">
         <div className="relative min-h-[16rem] overflow-hidden bg-black text-white md:w-1/2">
           <div className="absolute inset-0 bg-[url('/mechi-whatsapp-profile.jpg')] bg-cover bg-center opacity-70" />

@@ -6,7 +6,6 @@ import { useSearchParams } from 'next/navigation';
 import toast from 'react-hot-toast';
 import { Crown, Sparkles } from 'lucide-react';
 import { BrandLogo } from '@/components/BrandLogo';
-import { CountryLanguageBar } from '@/components/CountryLanguageBar';
 import { PageBreadcrumbs } from '@/components/PageBreadcrumbs';
 import { PlanBadge } from '@/components/PlanBadge';
 import PricingSection from '@/components/pricing-section';
@@ -225,9 +224,6 @@ function PricingPageContent() {
               </div>
 
               <div className="flex items-center justify-end gap-2">
-                <div className="hidden lg:block">
-                  <CountryLanguageBar />
-                </div>
                 <ThemeToggle />
                 {user ? (
                   <Link href="/dashboard" className="btn-primary text-sm uppercase tracking-[0.14em]">
@@ -248,9 +244,6 @@ function PricingPageContent() {
           </div>
 
           <PageBreadcrumbs className="mt-3" />
-          <div className="mt-3 lg:hidden">
-            <CountryLanguageBar inline />
-          </div>
         </div>
       </header>
 

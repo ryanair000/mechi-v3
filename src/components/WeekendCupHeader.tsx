@@ -3,7 +3,6 @@
 import Link from 'next/link';
 import { useAuth } from '@/components/AuthProvider';
 import { BrandLogo } from '@/components/BrandLogo';
-import { CountryLanguageBar } from '@/components/CountryLanguageBar';
 import { PageBreadcrumbs } from '@/components/PageBreadcrumbs';
 import { useRegionalSettings } from '@/components/RegionalSettingsProvider';
 import { ThemeToggle } from '@/components/ThemeToggle';
@@ -74,7 +73,6 @@ export function WeekendCupHeader({
             </div>
 
             <div className="ml-auto flex items-center gap-2">
-              <CountryLanguageBar className="hidden lg:flex" />
               <ThemeToggle />
               <Link
                 href={user ? '/dashboard' : signInHref}
@@ -92,9 +90,6 @@ export function WeekendCupHeader({
           </div>
 
           <div className="mt-1.5 border-t border-[rgba(112,139,174,0.2)] pt-1.5 lg:hidden">
-            <div className="pb-2">
-              <CountryLanguageBar inline />
-            </div>
             <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar">
               {navItems.map((item) => (
                 <Link

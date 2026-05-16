@@ -1,7 +1,6 @@
 import type { ReactNode } from 'react';
 import Link from 'next/link';
 import { ArrowLeft, Mail } from 'lucide-react';
-import { CountryLanguageBar } from '@/components/CountryLanguageBar';
 import FooterSection from '@/components/footer';
 import { PageBreadcrumbs } from '@/components/PageBreadcrumbs';
 
@@ -44,7 +43,6 @@ export function LegalPage({
             <ArrowLeft size={16} />
             Back to Mechi
           </Link>
-          <CountryLanguageBar inline />
         </div>
 
         <PageBreadcrumbs className="mt-4" />

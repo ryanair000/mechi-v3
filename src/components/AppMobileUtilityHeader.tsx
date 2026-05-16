@@ -3,7 +3,6 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { ChevronLeft } from 'lucide-react';
-import { CountryLanguageBar } from '@/components/CountryLanguageBar';
 import { NotificationNavButton } from '@/components/NotificationNavButton';
 
 type HeaderConfig = {
@@ -87,14 +86,8 @@ export function AppMobileUtilityHeader() {
           <h1 className="truncate text-lg font-bold text-[var(--text-primary)]">{config.title}</h1>
         </div>
         <div className="flex items-center gap-2">
-          <div className="hidden sm:block">
-            <CountryLanguageBar />
-          </div>
           <NotificationNavButton />
         </div>
-      </div>
-      <div className="px-4 pb-3 sm:hidden">
-        <CountryLanguageBar inline />
       </div>
     </header>
   );

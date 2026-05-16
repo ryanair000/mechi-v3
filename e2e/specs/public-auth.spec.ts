@@ -54,6 +54,21 @@ test.describe('Public and Auth Flows', () => {
     await expect(page).toHaveURL(/\/dashboard/);
   });
 
+  test('weekend cup vote login preserves the server session @core', async ({ page }) => {
+    await page.goto('/login?next=/weekendcup%23vote');
+    await page.getByLabel('Phone number').fill(SEEDED_PERSONAS.playerPro.username);
+    await page.getByLabel('Password').fill(DEFAULT_PASSWORD);
+    await page.getByRole('button', { name: /^sign in$/i }).click();
+
+    await expect(page).toHaveURL(/\/weekendcup#vote/);
+
+    const authStatus = await page.evaluate(async () => {
+      const res = await fetch('/api/auth/me', { credentials: 'include' });
+      return res.status;
+    });
+    expect(authStatus).toBe(200);
+  });
+
   test('normal users are not redirected into the moderator desk by next params @core', async ({
     page,
   }) => {

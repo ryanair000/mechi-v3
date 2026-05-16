@@ -162,6 +162,15 @@ function isDashboardRoute(pathname: string) {
   return pathname === '/dashboard' || pathname.startsWith('/dashboard/');
 }
 
+function isAuthEntryRoute(pathname: string) {
+  return (
+    pathname === '/login' ||
+    pathname === '/moderator-login' ||
+    pathname === '/register' ||
+    pathname === '/signup'
+  );
+}
+
 function isAdminHostLocalPublicPath(pathname: string) {
   return ADMIN_HOST_LOCAL_PUBLIC_PREFIXES.some((prefix) => pathname.startsWith(prefix));
 }
@@ -556,16 +565,14 @@ export async function proxy(request: NextRequest) {
   }
 
   const { payload } = await getAuthState(request);
+  const isAuthEntry = isAuthEntryRoute(effectivePathname);
   const needsProtectedAccess =
-    isAdminRoute(effectivePathname) || isProtectedRoute(effectivePathname);
+    isAdminRoute(effectivePathname) || isProtectedRoute(effectivePathname) || (isAuthEntry && Boolean(payload));
   const access =
     payload && needsProtectedAccess ? await getCurrentAccess(payload) : null;
 
   if (
-    (effectivePathname === '/login' ||
-      effectivePathname === '/moderator-login' ||
-      effectivePathname === '/register' ||
-      effectivePathname === '/signup') &&
+    isAuthEntry &&
     payload &&
     access
   ) {
@@ -582,10 +589,7 @@ export async function proxy(request: NextRequest) {
   }
 
   if (
-    (effectivePathname === '/login' ||
-      effectivePathname === '/moderator-login' ||
-      effectivePathname === '/register' ||
-      effectivePathname === '/signup') &&
+    isAuthEntry &&
     payload &&
     !access
   ) {

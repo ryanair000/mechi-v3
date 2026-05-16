@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { applyAuthCookie, createSessionForProfile, verifyPassword } from '@/lib/auth';
 import {
+  detectIdentifierType,
   getCandidateProfiles as getProfilesByIdentifier,
   parseLoginMethod,
   type LoginMethod,
@@ -72,6 +73,15 @@ async function getCandidateProfiles(identifier: string, loginMethod: LoginMethod
   };
 }
 
+function resolveLoginMethod(identifier: string, requestedMethod: LoginMethod): LoginMethod {
+  if (requestedMethod === 'auto') {
+    return 'auto';
+  }
+
+  const detectedMethod = detectIdentifierType(identifier);
+  return detectedMethod === requestedMethod ? requestedMethod : detectedMethod;
+}
+
 async function authenticateUser(
   identifier: string,
   password: string,
@@ -129,7 +139,7 @@ export async function POST(request: NextRequest) {
 
     const identifier = String(payload.identifier ?? payload.phone ?? '');
     const password = String(payload.password ?? '');
-    const loginMethod = parseLoginMethod(payload.login_method);
+    const loginMethod = resolveLoginMethod(identifier, parseLoginMethod(payload.login_method));
     const redirectTo = getSafeNextPath(String(payload.redirect_to ?? '/dashboard'), '/dashboard');
     const requestOrigin = getRequestOrigin(request);
 

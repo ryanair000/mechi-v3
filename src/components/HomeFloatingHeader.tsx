@@ -40,13 +40,15 @@ const SWAHILI_DEFAULT_NAV_ITEMS: HomeFloatingHeaderNavItem[] = [
 const DISPLAY_FONT_STYLE = { fontFamily: 'var(--font-display)' } as const;
 
 const HEADER_TEXT_CLASS =
-  'inline-flex min-h-[2.3rem] items-center rounded-[0.85rem] px-3 py-1.5 font-[var(--font-display)] text-[0.88rem] font-extrabold uppercase tracking-[0.16em] text-[color:rgba(193,203,218,0.96)] transition-colors hover:text-[var(--text-primary)]';
+  'inline-flex min-h-[2.3rem] items-center rounded-[0.85rem] px-3 py-1.5 font-[var(--font-display)] text-[0.88rem] font-extrabold uppercase tracking-[0.16em] text-[var(--text-primary)] transition-colors hover:text-[var(--text-primary)]';
 const SIGN_IN_BUTTON_CLASS =
   'inline-flex min-h-[2.3rem] items-center justify-center rounded-[0.85rem] border border-[rgba(50,224,196,0.32)] bg-[rgba(17,27,46,0.88)] px-[1.125rem] py-1.5 font-[var(--font-display)] text-[0.88rem] font-extrabold uppercase tracking-[0.16em] text-[var(--accent-secondary-text)] transition-all hover:border-[rgba(50,224,196,0.46)] hover:bg-[rgba(50,224,196,0.12)] hover:text-[var(--text-primary)]';
 const JOIN_BUTTON_CLASS =
   'btn-primary min-h-[2.3rem] rounded-[0.85rem] px-[1.125rem] shadow-none font-[var(--font-display)] text-[0.88rem] font-extrabold uppercase tracking-[0.16em] text-[#08111d]';
 const DROPDOWN_PANEL_CLASS =
   'pointer-events-none invisible absolute left-1/2 top-[calc(100%+0.65rem)] z-50 min-w-[15rem] -translate-x-1/2 rounded-[1rem] border border-[rgba(129,148,178,0.18)] bg-[rgba(11,20,36,0.96)] p-2 opacity-0 shadow-[0_20px_60px_rgba(2,8,23,0.45)] backdrop-blur-xl transition-all duration-200 group-hover:pointer-events-auto group-hover:visible group-hover:translate-y-0 group-hover:opacity-100 group-focus-within:pointer-events-auto group-focus-within:visible group-focus-within:translate-y-0 group-focus-within:opacity-100';
+const COMPACT_DROPDOWN_PANEL_CLASS =
+  'pointer-events-none invisible absolute left-0 top-[calc(100%+0.65rem)] z-50 min-w-[11.25rem] rounded-[1rem] border border-[rgba(129,148,178,0.18)] bg-[rgba(11,20,36,0.96)] p-2 opacity-0 shadow-[0_20px_60px_rgba(2,8,23,0.45)] backdrop-blur-xl transition-all duration-200 group-hover:pointer-events-auto group-hover:visible group-hover:translate-y-0 group-hover:opacity-100 group-focus-within:pointer-events-auto group-focus-within:visible group-focus-within:translate-y-0 group-focus-within:opacity-100';
 const DROPDOWN_LINK_CLASS =
   'flex rounded-[0.85rem] px-3 py-2.5 text-left transition-colors hover:bg-[rgba(50,224,196,0.1)] focus-visible:bg-[rgba(50,224,196,0.1)] focus-visible:outline-none';
 
@@ -85,7 +87,7 @@ export function HomeFloatingHeader({
   const openMenuLabel = isSwahili ? 'Fungua menyu' : 'Open menu';
   const closeMenuLabel = isSwahili ? 'Funga menyu' : 'Close menu';
   const headerTextClass = compact
-    ? 'inline-flex min-h-[1.65rem] items-center rounded-[0.7rem] px-2.5 py-1 font-[var(--font-display)] text-[0.72rem] font-extrabold uppercase tracking-[0.14em] text-[color:rgba(193,203,218,0.96)] transition-colors hover:text-[var(--text-primary)]'
+    ? 'inline-flex min-h-[1.65rem] items-center rounded-[0.7rem] px-2.5 py-1 font-[var(--font-display)] text-[0.72rem] font-extrabold uppercase tracking-[0.14em] text-[var(--text-primary)] transition-colors hover:text-[var(--text-primary)]'
     : HEADER_TEXT_CLASS;
   const signInButtonClass = compact
     ? 'inline-flex min-h-[1.65rem] items-center justify-center rounded-[0.7rem] border border-[rgba(50,224,196,0.32)] bg-[rgba(17,27,46,0.88)] px-3.5 py-1 font-[var(--font-display)] text-[0.72rem] font-extrabold uppercase tracking-[0.14em] text-[var(--accent-secondary-text)] transition-all hover:border-[rgba(50,224,196,0.46)] hover:bg-[rgba(50,224,196,0.12)] hover:text-[var(--text-primary)]'
@@ -97,7 +99,11 @@ export function HomeFloatingHeader({
   const shellPaddingClass = compact ? 'p-0.5 sm:p-1' : 'p-1 sm:p-1.5';
   const shellGapClass = compact ? 'gap-2' : 'gap-3';
   const desktopNavGapClass = compact ? 'gap-1.5' : 'gap-3';
+  const desktopNavLayoutClass = compact
+    ? 'hidden min-w-0 flex-1 items-center justify-start md:flex md:max-w-[75%]'
+    : 'hidden min-w-0 flex-1 items-center justify-center md:flex';
   const actionGapClass = compact ? 'gap-1.5' : 'gap-2';
+  const dropdownPanelClass = compact ? COMPACT_DROPDOWN_PANEL_CLASS : DROPDOWN_PANEL_CLASS;
   const themeToggleClass = compact
     ? '!h-[1.8rem] !min-h-[1.8rem] !w-[1.8rem] !min-w-[1.8rem] !rounded-[0.7rem] !border-[rgba(129,148,178,0.18)] !bg-[rgba(17,27,46,0.88)] !text-[color:rgba(193,203,218,0.96)]'
     : '!h-[2.3rem] !min-h-[2.3rem] !w-[2.3rem] !min-w-[2.3rem] !rounded-[0.85rem] !border-[rgba(129,148,178,0.18)] !bg-[rgba(17,27,46,0.88)] !text-[color:rgba(193,203,218,0.96)]';
@@ -132,7 +138,7 @@ export function HomeFloatingHeader({
               </Link>
             ) : null}
 
-            <div className={`hidden min-w-0 flex-1 items-center justify-center md:flex ${desktopNavGapClass}`}>
+            <div className={`${desktopNavLayoutClass} ${desktopNavGapClass}`}>
               {resolvedNavItems.map((item) => (
                 isDropdownNavItem(item) ? (
                   <div key={item.label} className="group relative">
@@ -145,7 +151,7 @@ export function HomeFloatingHeader({
                       <span>{item.label}</span>
                       <ChevronDown size={15} className="transition-transform duration-200 group-hover:rotate-180 group-focus-within:rotate-180" />
                     </button>
-                    <div className={DROPDOWN_PANEL_CLASS} role="menu" aria-label={item.label}>
+                    <div className={dropdownPanelClass} role="menu" aria-label={item.label}>
                       <div className="grid gap-1">
                         {item.items.map((dropdownItem) => (
                           <Link
@@ -154,15 +160,15 @@ export function HomeFloatingHeader({
                             className={DROPDOWN_LINK_CLASS}
                             role="menuitem"
                           >
-                            <span className="flex flex-col">
+                            <span className="flex flex-col items-start">
                               <span
-                                className="font-[var(--font-display)] text-[0.9rem] font-extrabold uppercase tracking-[0.14em] text-[var(--text-primary)]"
+                                className="font-[var(--font-display)] text-[0.9rem] font-bold tracking-[0.01em] text-[var(--text-primary)]"
                                 style={DISPLAY_FONT_STYLE}
                               >
                                 {dropdownItem.label}
                               </span>
                               {dropdownItem.description ? (
-                                <span className="mt-1 text-[0.72rem] font-medium uppercase tracking-[0.12em] text-[var(--text-soft)]">
+                                <span className="mt-1 text-[0.72rem] font-medium tracking-[0.02em] text-[var(--text-soft)]">
                                   {dropdownItem.description}
                                 </span>
                               ) : null}
@@ -255,15 +261,15 @@ export function HomeFloatingHeader({
                             onClick={closeMobileMenu}
                             className={DROPDOWN_LINK_CLASS}
                           >
-                            <span className="flex flex-col">
+                            <span className="flex flex-col items-start">
                               <span
-                                className="font-[var(--font-display)] text-[0.88rem] font-extrabold uppercase tracking-[0.14em] text-[var(--text-primary)]"
+                                className="font-[var(--font-display)] text-[0.88rem] font-bold tracking-[0.01em] text-[var(--text-primary)]"
                                 style={DISPLAY_FONT_STYLE}
                               >
                                 {dropdownItem.label}
                               </span>
                               {dropdownItem.description ? (
-                                <span className="mt-1 text-[0.72rem] font-medium uppercase tracking-[0.12em] text-[var(--text-soft)]">
+                                <span className="mt-1 text-[0.72rem] font-medium tracking-[0.02em] text-[var(--text-soft)]">
                                   {dropdownItem.description}
                                 </span>
                               ) : null}

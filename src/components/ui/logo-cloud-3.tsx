@@ -50,14 +50,14 @@ const LOGOS: Logo[] = [
   {
     src: '/game-logos/mk11.svg',
     alt: 'Mortal Kombat 11 Logo',
-    className: 'brightness-0 invert opacity-70',
-    width: 178,
+    className: 'opacity-80',
+    width: 164,
   },
   {
-    src: '/game-logos/ufc5-white.png',
+    src: '/game-logos/ufc5.svg',
     alt: 'UFC 5 Logo',
-    className: 'opacity-70',
-    width: 212,
+    className: 'opacity-80',
+    width: 176,
   },
 ];
 

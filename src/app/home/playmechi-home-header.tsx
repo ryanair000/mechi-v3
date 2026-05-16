@@ -17,17 +17,17 @@ export function PlayMechiHomeHeader() {
           items: [
             {
               href: '/playmechi',
-              label: 'PLAYMECHI',
+              label: 'PlayMechi',
               description: 'Njia ya tournament ya uzinduzi',
             },
             {
               href: '/weekendcup',
-              label: 'WEEKEND CUP',
+              label: 'Weekend Cup',
               description: 'Bracket ya wiki hii',
             },
             {
               href: '/leaderboard',
-              label: 'WEKA MAWE',
+              label: 'Weka Mawe',
               description: 'Ubao wa wiki',
             },
           ],
@@ -37,12 +37,12 @@ export function PlayMechiHomeHeader() {
           items: [
             {
               href: '/dashboard',
-              label: 'DASHIBODI',
+              label: 'Dashibodi',
               description: 'Akaunti, mechi, na queue',
             },
             {
               href: '/android-testers',
-              label: 'ANDROID',
+              label: 'Android',
               description: 'Njia ya majaribio ya beta',
             },
           ],
@@ -54,17 +54,17 @@ export function PlayMechiHomeHeader() {
           items: [
             {
               href: '/playmechi',
-              label: 'PLAYMECHI',
+              label: 'PlayMechi',
               description: 'Launch tournament lane',
             },
             {
               href: '/weekendcup',
-              label: 'WEEKEND CUP',
+              label: 'Weekend Cup',
               description: 'Current weekend bracket',
             },
             {
               href: '/leaderboard',
-              label: 'WEKA MAWE',
+              label: 'Weka Mawe',
               description: 'Weekly grind board',
             },
           ],
@@ -74,12 +74,12 @@ export function PlayMechiHomeHeader() {
           items: [
             {
               href: '/dashboard',
-              label: 'DASHBOARD',
+              label: 'Dashboard',
               description: 'Account, matches, queue',
             },
             {
               href: '/android-testers',
-              label: 'ANDROID',
+              label: 'Android',
               description: 'Tester lane and beta access',
             },
           ],
@@ -91,7 +91,7 @@ export function PlayMechiHomeHeader() {
       navItems={navItems}
       signInHref={PLAYMECHI_SIGN_IN_PATH}
       joinHref={joinHref}
-      joinLabel={isSwahili ? 'JIUNGE BURE' : 'JOIN FREE'}
+      joinLabel={isSwahili ? 'JIUNGE' : 'JOIN'}
       showRegionalControls={false}
       compact
       showLogo

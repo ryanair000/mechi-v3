@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 420 120" role="img" aria-labelledby="ufc5-title">
+  <title id="ufc5-title">UFC 5</title>
+  <g fill="#F5F7FB">
+    <path d="M33 24h22v46c0 8 4 12 12 12s12-4 12-12V24h22v48c0 11-4 20-11 27-8 6-18 10-31 10s-24-4-31-10c-8-7-11-16-11-27V24h16Z"/>
+    <path d="M120 24h64v17h-42v12h34v16h-34v27h-22V24Zm74 0h65v17h-43v11h35v16h-35v12h43v17h-65V24Zm92 0h88v17h-31v56h-22V41h-35V24Z"/>
+    <path d="M375 24h-23l-19 25h17l9-11h9c9 0 14 5 14 13 0 9-6 14-16 14h-30V96h33c14 0 25-4 32-11 8-8 12-18 12-30 0-9-3-16-8-22-6-6-16-9-30-9Z"/>
+  </g>
+</svg>

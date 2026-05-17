@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServiceClient } from '@/lib/supabase';
+import { CODM_WEEK1_LEADERBOARD_ROWS } from '@/lib/codm-week1-leaderboard';
 import {
   DEFAULT_RATING,
   GAMES,
@@ -294,6 +295,35 @@ function buildBattleRoyaleLeaderboard(params: {
   };
 }
 
+function buildCodmWeek1Leaderboard(): TournamentLeaderboardGame {
+  const config = ONLINE_TOURNAMENT_GAME_BY_KEY.codm;
+  const leaderboard = CODM_WEEK1_LEADERBOARD_ROWS.map((row, index): TournamentLeaderboardEntry => ({
+    avatarUrl: null,
+    checkedInAt: null,
+    detailText: `Kills ${row.totalKills} | KP ${row.killPoints} | PP ${row.totalPlacementPoints}`,
+    id: `codm-week-1-${index + 1}`,
+    latestLabel: `G1 ${row.kills[0]}K/${row.placementPoints[0]}PP | G2 ${row.kills[1]}K/${row.placementPoints[1]}PP | G3 ${row.kills[2]}K/${row.placementPoints[2]}PP`,
+    name: row.player,
+    rank: index + 1,
+    score: row.finalPoints,
+    scoreText: `${row.finalPoints} pts`,
+    username: null,
+    verifiedCount: 3,
+    verifiedText: '3 maps',
+  }));
+
+  return {
+    game: 'codm',
+    label: `${config.label} Week 1`,
+    leaderboard,
+    players: leaderboard.length,
+    scoreLabel: 'Points',
+    shortLabel: config.shortLabel,
+    verifiedLabel: 'Maps',
+    verifiedResults: leaderboard.reduce((total, entry) => total + entry.verifiedCount, 0),
+  };
+}
+
 function buildEfootballLeaderboard(params: {
   fixtures: PublicTournamentFixtureRow[];
   registrations: VerifiedTournamentRegistrationRow[];
@@ -467,7 +497,7 @@ async function getTournamentLeaderboard() {
 
   const leaderboards: TournamentLeaderboardGame[] = [
     buildBattleRoyaleLeaderboard({ game: 'pubgm', registrations, submissions }),
-    buildBattleRoyaleLeaderboard({ game: 'codm', registrations, submissions }),
+    buildCodmWeek1Leaderboard(),
     buildEfootballLeaderboard({ fixtures, registrations }),
   ];
 

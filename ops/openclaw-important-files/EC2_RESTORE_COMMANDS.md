@@ -28,6 +28,7 @@ export MECHI_OPENCLAW_TELEGRAM_DEFAULT_GROUP_REQUIRE_MENTION="true"
 # export MECHI_WHATSAPP_CUSTOMER_GROUP_MENTION_REQUIRED="false"
 
 bash scripts/openclaw-restore-mechi-support.sh
+bash scripts/openclaw-install-daily-mechi-report-cron.sh
 
 openclaw config validate --json
 openclaw agents list --json

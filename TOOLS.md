@@ -13,6 +13,8 @@ Repo and product surfaces:
 - live runtime brief: `OPENCLAW_LIVE_STATE.md`
 - Supabase bootstrap schema: `supabase/bootstrap_from_empty_project.sql`
 - live registration helper: `npm run ops:registrations -- --json`
+- daily 10pm EAT Telegram report helper: `npm run ops:daily-report:telegram -- --send`
+- daily report EC2 cron installer: `bash scripts/openclaw-install-daily-mechi-report-cron.sh`
 - workspace skill: `skills/supabase-live-ops/SKILL.md`
 - PlayMechi tournament skill: `skills/playmechi-tournament-ops/SKILL.md`
 - PlayMechi public paths: `/`, `/playmechi`, and `/playmechi/register`

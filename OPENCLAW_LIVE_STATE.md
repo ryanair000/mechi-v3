@@ -86,6 +86,8 @@ Until that script is run and verified on EC2, this file's SMM-only live-state li
 - PlayMechi Online Gaming Tournament details: `skills/playmechi-tournament-ops/SKILL.md`
 - PlayMechi live registration state: `npm run ops:registrations -- --json`, then inspect `onlineTournament`
 - live open/active tournaments: `npm run ops:tournaments -- --json`
+- daily Mechi report to the Boss on Telegram: `npm run ops:daily-report:telegram -- --send`
+- install/update the 10:00 PM EAT daily report cron on EC2: `bash scripts/openclaw-install-daily-mechi-report-cron.sh`
 - GitHub repo, issues, PRs, and workflow state: `./scripts/openclaw-gh.sh`
 - durable internal notes and memory: `./scripts/openclaw-obsidian.sh`
 - Mechi Obsidian vault path: `~/.openclaw/vaults/mechi-ops`

@@ -1,10 +1,17 @@
 'use client';
 
 import { Globe2, Loader2, MapPinned, Sparkles } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 import { COUNTRY_OPTIONS } from '@/lib/location';
 import { cn } from '@/lib/utils';
 import { useRegionalSettings } from '@/components/RegionalSettingsProvider';
 import type { CountryKey } from '@/types';
+
+const COUNTRY_LANDING_PATHS: Partial<Record<CountryKey, string>> = {
+  kenya: '/ke',
+  tanzania: '/tz',
+  uganda: '/ug',
+};
 
 function getSourceLabel(countrySource: string, locale: string) {
   const isSwahili = locale === 'sw-TZ';
@@ -38,6 +45,7 @@ export function CountryLanguageBar({
     locale,
     setCountryPreference,
   } = useRegionalSettings();
+  const router = useRouter();
   const isSwahili = locale === 'sw-TZ';
 
   return (
@@ -58,7 +66,12 @@ export function CountryLanguageBar({
         <select
           value={country}
           onChange={(event) => {
-            void setCountryPreference(event.target.value as CountryKey).catch(() => undefined);
+            const nextCountry = event.target.value as CountryKey;
+            void setCountryPreference(nextCountry)
+              .then(() => {
+                router.push(COUNTRY_LANDING_PATHS[nextCountry] ?? '/');
+              })
+              .catch(() => undefined);
           }}
           disabled={isUpdatingCountry}
           aria-label={isSwahili ? 'Badili nchi' : 'Switch country'}

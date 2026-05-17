@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import type { JWTPayload } from '@/types';
+import type { CountryKey, JWTPayload } from '@/types';
 import { hasPrimaryAdminAccess } from '@/lib/admin-access';
 import {
   getLoginPath,
@@ -47,7 +47,31 @@ const PROTECTED_PREFIXES = [
   '/api/moderators',
 ];
 const HIDDEN_PREFIXES = ['/tutorial', '/tutorials'];
-const TANZANIA_PATH_PREFIX = '/tz';
+const REGIONAL_ROUTE_CONFIGS: Array<{
+  pathPrefix: string;
+  country: CountryKey;
+  countryCode: string;
+  acceptLanguage: string;
+}> = [
+  {
+    pathPrefix: '/ke',
+    country: 'kenya',
+    countryCode: 'KE',
+    acceptLanguage: 'en-KE,en;q=0.9,sw;q=0.8',
+  },
+  {
+    pathPrefix: '/tz',
+    country: 'tanzania',
+    countryCode: 'TZ',
+    acceptLanguage: 'sw-TZ,sw;q=0.9,en;q=0.8',
+  },
+  {
+    pathPrefix: '/ug',
+    country: 'uganda',
+    countryCode: 'UG',
+    acceptLanguage: 'en-UG,en;q=0.9,sw;q=0.8',
+  },
+];
 
 const ADMIN_PREFIXES = ['/admin', '/api/admin'];
 const TESTS_HOSTS = new Set(['tests.mechi.club']);
@@ -325,51 +349,79 @@ function redirectToAppHost(pathname: string, request: NextRequest) {
   return NextResponse.redirect(new URL(`${pathname}${request.nextUrl.search}`, APP_URL));
 }
 
-function isTanzaniaPath(pathname: string) {
-  return pathname === TANZANIA_PATH_PREFIX || pathname.startsWith(`${TANZANIA_PATH_PREFIX}/`);
+function getRegionalRouteForPathname(pathname: string) {
+  return REGIONAL_ROUTE_CONFIGS.find(
+    (route) => pathname === route.pathPrefix || pathname.startsWith(`${route.pathPrefix}/`)
+  );
 }
 
-function getPathWithoutTanzaniaPrefix(pathname: string) {
-  if (pathname === TANZANIA_PATH_PREFIX) {
+function getRegionalRouteForCountry(country: CountryKey | null) {
+  if (!country) {
+    return null;
+  }
+
+  return REGIONAL_ROUTE_CONFIGS.find((route) => route.country === country) ?? null;
+}
+
+function getPathWithoutRegionalPrefix(pathname: string, pathPrefix: string) {
+  if (pathname === pathPrefix) {
     return '/';
   }
 
-  return pathname.slice(TANZANIA_PATH_PREFIX.length) || '/';
+  return pathname.slice(pathPrefix.length) || '/';
 }
 
-function withTanzaniaPreference(response: NextResponse) {
+function withRegionalPreference(response: NextResponse, country: CountryKey) {
   response.cookies.set(
     REGIONAL_PREFERENCE_COOKIE_NAME,
-    'tanzania',
+    country,
     getRegionalPreferenceCookieOptions()
   );
   return response;
 }
 
-function getTanzaniaRequestHeaders(request: NextRequest) {
+function getRegionalRequestHeaders(
+  request: NextRequest,
+  route: (typeof REGIONAL_ROUTE_CONFIGS)[number]
+) {
   const requestHeaders = new Headers(request.headers);
-  requestHeaders.set('x-country-code', 'TZ');
-  requestHeaders.set('x-vercel-ip-country', 'TZ');
-  requestHeaders.set('accept-language', 'sw-TZ,sw;q=0.9,en;q=0.8');
+  requestHeaders.set('x-country-code', route.countryCode);
+  requestHeaders.set('x-vercel-ip-country', route.countryCode);
+  requestHeaders.set('accept-language', route.acceptLanguage);
   return requestHeaders;
 }
 
-function rewriteTanzaniaPath(request: NextRequest) {
+function regionalPathResponse(
+  request: NextRequest,
+  route: (typeof REGIONAL_ROUTE_CONFIGS)[number]
+) {
+  if (request.nextUrl.pathname === route.pathPrefix) {
+    return withRegionalPreference(
+      NextResponse.next({
+        request: {
+          headers: getRegionalRequestHeaders(request, route),
+        },
+      }),
+      route.country
+    );
+  }
+
   const rewriteUrl = request.nextUrl.clone();
-  rewriteUrl.pathname = getPathWithoutTanzaniaPrefix(request.nextUrl.pathname);
-  return withTanzaniaPreference(
+  rewriteUrl.pathname = getPathWithoutRegionalPrefix(request.nextUrl.pathname, route.pathPrefix);
+  return withRegionalPreference(
     NextResponse.rewrite(rewriteUrl, {
       request: {
-        headers: getTanzaniaRequestHeaders(request),
+        headers: getRegionalRequestHeaders(request, route),
       },
-    })
+    }),
+    route.country
   );
 }
 
-function redirectTanzaniaVisitorToTz(request: NextRequest) {
+function redirectRegionalVisitor(request: NextRequest, route: (typeof REGIONAL_ROUTE_CONFIGS)[number]) {
   const targetUrl = request.nextUrl.clone();
-  targetUrl.pathname = TANZANIA_PATH_PREFIX;
-  return withTanzaniaPreference(NextResponse.redirect(targetUrl));
+  targetUrl.pathname = route.pathPrefix;
+  return withRegionalPreference(NextResponse.redirect(targetUrl), route.country);
 }
 
 function redirectToModeratorSignup(request: NextRequest) {
@@ -558,8 +610,9 @@ export async function proxy(request: NextRequest) {
     return guardedResponse;
   }
 
-  if (!adminHost && isTanzaniaPath(pathname)) {
-    return rewriteTanzaniaPath(request);
+  const regionalRoute = getRegionalRouteForPathname(pathname);
+  if (!adminHost && regionalRoute) {
+    return regionalPathResponse(request, regionalRoute);
   }
 
   if (TESTS_HOSTS.has(host) && pathname === '/') {
@@ -578,12 +631,11 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(dashboardUrl);
   }
 
-  if (
-    !adminHost &&
-    pathname === '/' &&
-    getCountryFromIpHeaders(request.headers) === 'tanzania'
-  ) {
-    return redirectTanzaniaVisitorToTz(request);
+  if (!adminHost && pathname === '/') {
+    const ipRegionalRoute = getRegionalRouteForCountry(getCountryFromIpHeaders(request.headers));
+    if (ipRegionalRoute) {
+      return redirectRegionalVisitor(request, ipRegionalRoute);
+    }
   }
 
   if (pathname === '/moderators/register' || pathname === '/admin/moderators/register') {

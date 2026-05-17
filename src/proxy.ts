@@ -378,7 +378,12 @@ function getPathWithoutRegionalPrefix(pathname: string, pathPrefix: string) {
 }
 
 function shouldKeepExplicitRegionalPath(pathname: string) {
-  return pathname === '/tz/register' || pathname.startsWith('/tz/register/');
+  return (
+    pathname === '/tz/register' ||
+    pathname.startsWith('/tz/register/') ||
+    pathname === '/tz/daysesports/register' ||
+    pathname.startsWith('/tz/daysesports/register/')
+  );
 }
 
 function withRegionalPreference(response: NextResponse, country: CountryKey) {
@@ -621,6 +626,12 @@ export async function proxy(request: NextRequest) {
 
   if (guardedResponse) {
     return guardedResponse;
+  }
+
+  if (pathname === '/tz/register' || pathname.startsWith('/tz/register/')) {
+    const tanzaniaRegistrationUrl = request.nextUrl.clone();
+    tanzaniaRegistrationUrl.pathname = '/tz/daysesports/register';
+    return NextResponse.redirect(tanzaniaRegistrationUrl, 308);
   }
 
   const regionalRoute = getRegionalRouteForPathname(pathname);

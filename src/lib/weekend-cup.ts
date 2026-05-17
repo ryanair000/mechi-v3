@@ -149,6 +149,11 @@ export const WEEKEND_CUP_GAME_ENTRY_FEES = {
     regular: 75,
     late: 100,
   },
+  freefire: {
+    early_bird: 50,
+    regular: 75,
+    late: 100,
+  },
 } as const satisfies Record<OnlineTournamentGameKey, Record<OnlineTournamentPaymentTier, number>>;
 
 export const WEEKEND_CUP_ENTRY_PRICING = {
@@ -224,28 +229,26 @@ export const WEEKEND_CUP_GAMES: OnlineTournamentGameConfig[] = [
     whatsappGroupUrl: 'https://chat.whatsapp.com/Cf9R0k2dPeP683wpNnib1N',
   },
   {
-    game: 'mystery',
-    label: 'Mystery Game',
-    shortLabel: 'Mystery',
-    dateLabel: 'Schedule drops after voting',
-    timeLabel: 'TBA',
+    game: 'freefire',
+    label: 'Free Fire',
+    shortLabel: 'Free Fire',
+    dateLabel: 'Sunday 31 May 2026',
+    timeLabel: '8:00 PM EAT',
     matchStartsAt: '2026-05-31T20:00:00+03:00',
     registrationClosesAt: '2026-05-31T19:00:00+03:00',
     slots: 80,
     checkInCap: 80,
-    format: 'Community-voted game slot',
-    matchCount: 'Format drops with the winning game',
-    scoring: 'Rules publish after voting closes and the mystery game is locked.',
-    firstPrize: 'TBA',
-    secondPrize: 'TBA',
-    thirdPrize: '',
+    format: 'Solo battle royale room',
+    matchCount: '3 matches',
+    scoring: '1 kill = 1 point. Top fraggers run it up.',
+    firstPrize: 'KSh 1,500',
+    secondPrize: 'KSh 1,000',
+    thirdPrize: 'KSh 500',
     whatsappGroupUrl: WEEKEND_CUP_SUPPORT_URL,
   },
 ];
 
-export const WEEKEND_CUP_REGISTERABLE_GAMES = WEEKEND_CUP_GAMES.filter(
-  (game) => game.game !== 'mystery'
-);
+export const WEEKEND_CUP_REGISTERABLE_GAMES = WEEKEND_CUP_GAMES;
 
 export const WEEKEND_CUP_GAME_BY_KEY = WEEKEND_CUP_GAMES.reduce(
   (games, game) => {
@@ -284,7 +287,7 @@ export const WEEKEND_CUP_BALLOTS: WeekendCupBallotSeed[] = [
         isOfficial: true,
       },
       {
-        slug: 'free-fire',
+        slug: 'freefire',
         label: 'Free Fire',
         platform: 'mobile',
         description: 'Fast lobbies, quick fights, and strong squad energy.',
@@ -362,8 +365,8 @@ export function isWeekendCupGame(value: unknown): value is OnlineTournamentGameK
 
 export function isWeekendCupRegisterableGame(
   value: unknown
-): value is Exclude<OnlineTournamentGameKey, 'mystery'> {
-  return isWeekendCupGame(value) && value !== 'mystery';
+): value is OnlineTournamentGameKey {
+  return isWeekendCupGame(value);
 }
 
 export function isWeekendCupPaymentStatus(

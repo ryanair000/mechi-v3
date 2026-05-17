@@ -11,7 +11,7 @@ import {
 } from '@/lib/weekend-cup';
 
 export type UpcomingPlayMechiTournamentGame = {
-  key: 'pubgm' | 'codm' | 'efootball' | 'mystery';
+  key: 'pubgm' | 'codm' | 'efootball' | 'mystery' | 'freefire';
   label: string;
   dateLabel: string;
   slots: number;

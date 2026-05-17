@@ -1,7 +1,7 @@
 import type { GameKey } from '@/types';
 import { PLAYMECHI_WHATSAPP_GROUP_URL } from '@/lib/social-links';
 
-export type OnlineTournamentGameKey = Extract<GameKey, 'pubgm' | 'codm' | 'efootball' | 'mystery'>;
+export type OnlineTournamentGameKey = Extract<GameKey, 'pubgm' | 'codm' | 'efootball' | 'mystery' | 'freefire'>;
 
 export type OnlineTournamentDisputeCategory =
   | 'wrongdoing'

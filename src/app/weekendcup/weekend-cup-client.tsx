@@ -62,7 +62,7 @@ type WeekendCupSeriesResponse = {
 };
 
 const API_PATH = '/api/weekendcup/series';
-const VISIBLE_BALLOT_SLUGS = new Set(['weekend-cup-1-mobile', 'weekend-cup-2-pc']);
+const VISIBLE_BALLOT_SLUGS = new Set(['weekend-cup-2-pc']);
 const FIXED_SEASON_ONE_GAME_SLUGS = new Set(['pubgm', 'codm', 'efootball']);
 
 const DASHBOARD_FONT_STYLE: CSSProperties & Record<string, string> = {

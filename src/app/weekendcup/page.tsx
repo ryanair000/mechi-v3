@@ -8,7 +8,7 @@ import {
 export const metadata: Metadata = {
   title: `${WEEKEND_CUP_TITLE} | Mechi.club`,
   description:
-    `Vote for the mystery game and register for ${WEEKEND_CUP_TITLE}, running ${WEEKEND_CUP_EVENT_DATES}.`,
+    `Vote for Season 2 Weekend Cup games and register for ${WEEKEND_CUP_TITLE}, running ${WEEKEND_CUP_EVENT_DATES}.`,
 };
 
 export default function WeekendCupPage() {

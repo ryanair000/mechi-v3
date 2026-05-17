@@ -12,7 +12,7 @@ import {
 
 export const metadata: Metadata = {
   title: `Suggestion Received | ${WEEKEND_CUP_TITLE}`,
-  description: 'Your Weekend Cup mystery-game suggestion was received.',
+  description: 'Your Season 2 Weekend Cup game suggestion was received.',
 };
 
 export default async function WeekendCupSuggestCompletePage({
@@ -38,13 +38,13 @@ export default async function WeekendCupSuggestCompletePage({
             {game} is now in the review lane.
           </h1>
           <p className="mx-auto mt-3 max-w-xl text-center text-sm leading-6 text-[var(--text-secondary)]">
-            We saved your mystery-game idea. If it fits the active vote and passes the current
-            filters, it can appear as a live option for players to back.
+            We saved your Season 2 Weekend Cup game idea. If it fits the active vote and passes
+            the current filters, it can appear as a live option for players to back.
           </p>
 
           <div className="mt-6 grid gap-3 rounded-[var(--radius-card)] border border-[var(--border-color)] bg-[var(--surface-soft)] p-4 text-sm text-[var(--text-secondary)]">
             <p>1. Your suggestion has been captured on this account.</p>
-            <p>2. The active mystery-slot vote still allows only one final pick per player.</p>
+            <p>2. The active Season 2 vote allows players to back more than one game.</p>
             <p>3. Weekend Cup registration remains separate from the community vote.</p>
           </div>
 

@@ -436,7 +436,7 @@ export function WeekendCupClient() {
       }
 
       if (!alreadySelected && selectedCount >= WEEKEND_CUP_MAX_VOTE_SELECTIONS) {
-        toast.error('Pick one game only for the mystery slot.');
+        toast.error('You can pick up to five Season 2 Weekend Cup games.');
         return;
       }
 
@@ -468,7 +468,7 @@ export function WeekendCupClient() {
         setBallots((data.ballots ?? []).filter((ballot) => VISIBLE_BALLOT_SLUGS.has(ballot.slug)));
 
         if (alreadySelected) {
-          toast.success('Mystery pick cleared. Choose the next one.');
+          toast.success('Season 2 Weekend Cup game removed from your picks.');
           return;
         }
 
@@ -512,7 +512,7 @@ export function WeekendCupClient() {
         return;
       }
 
-      toast.success('Mystery pick cleared. Choose the next one.');
+      toast.success('Season 2 Weekend Cup picks cleared.');
       setBallots((data.ballots ?? []).filter((ballot) => VISIBLE_BALLOT_SLUGS.has(ballot.slug)));
     } catch {
       toast.error('Network error while clearing your picks');
@@ -541,7 +541,7 @@ export function WeekendCupClient() {
       const ballot = visibleBallots.find((item) => item.slug === ballotSlug);
       const selectedCount = ballot?.options.filter((option) => option.userVoted).length ?? 0;
       if (selectedCount >= WEEKEND_CUP_MAX_VOTE_SELECTIONS) {
-        toast.error('Clear your current pick first. Only one mystery-game vote is allowed.');
+        toast.error('You can pick up to five Season 2 Weekend Cup games.');
         return;
       }
 
@@ -675,7 +675,9 @@ export function WeekendCupClient() {
                     <span
                       className={`brand-chip ${DASHBOARD_CONTROL_RADIUS_CLASS} !px-3 !py-1 !text-[0.76rem]`}
                     >
-                      {selectedCount === 0 ? 'No pick yet' : '1 pick locked'}
+                      {selectedCount === 0
+                        ? 'No picks yet'
+                        : `${selectedCount} ${selectedCount === 1 ? 'pick' : 'picks'} locked`}
                     </span>
                     <span
                       className={`brand-chip ${DASHBOARD_CONTROL_RADIUS_CLASS} !px-3 !py-1 !text-[0.76rem]`}
@@ -705,12 +707,12 @@ export function WeekendCupClient() {
                         {clearingBallotSlug === ballot.slug ? (
                           <>
                             <Loader2 size={14} className="animate-spin" />
-                            Clearing pick
+                            Clearing picks
                           </>
                         ) : (
                           <>
                             <RotateCcw size={14} />
-                            Clear my pick
+                            Clear my picks
                           </>
                         )}
                       </button>

@@ -251,7 +251,7 @@ export async function POST(request: NextRequest) {
         );
         if (selectedCount >= WEEKEND_CUP_MAX_VOTE_SELECTIONS) {
           return NextResponse.json(
-            { error: 'Pick one game only for the mystery slot.' },
+            { error: 'You can pick up to five Season 2 Weekend Cup games.' },
             { status: 400 }
           );
         }
@@ -271,7 +271,7 @@ export async function POST(request: NextRequest) {
     } else if (action === 'clear_votes') {
       const ballotSlug = cleanWeekendCupText(body.ballot_slug, 80);
       if (!ballotSlug) {
-        return NextResponse.json({ error: 'Pick the mystery vote you want to reset.' }, { status: 400 });
+        return NextResponse.json({ error: 'Pick the Season 2 Weekend Cup vote you want to reset.' }, { status: 400 });
       }
 
       const ballot = await ensureSeedBallot(supabase, ballotSlug);
@@ -334,7 +334,7 @@ export async function POST(request: NextRequest) {
       if (!optionId) {
         if (selectedCount >= WEEKEND_CUP_MAX_VOTE_SELECTIONS) {
           return NextResponse.json(
-            { error: 'Clear your current pick first. One mystery vote only.' },
+            { error: 'You can pick up to five Season 2 Weekend Cup games.' },
             { status: 400 }
           );
         }
@@ -371,7 +371,7 @@ export async function POST(request: NextRequest) {
       if (!existingVote?.id) {
         if (selectedCount >= WEEKEND_CUP_MAX_VOTE_SELECTIONS) {
           return NextResponse.json(
-            { error: 'Pick one game only for the mystery slot.' },
+            { error: 'You can pick up to five Season 2 Weekend Cup games.' },
             { status: 400 }
           );
         }

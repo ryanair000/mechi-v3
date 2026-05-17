@@ -39,14 +39,14 @@ export default async function WeekendCupVoteCompletePage({
             {game} is saved on this account.
           </h1>
           <p className="mx-auto mt-3 max-w-xl text-center text-sm leading-6 text-[var(--text-secondary)]">
-            Clean choice. Your vote is counted, and if voting is still open you can switch later by
-            clearing this pick first. Tournament registration is separate, so lock your player slot
-            when you are ready.
+            Clean choice. Your Season 2 Weekend Cup game vote is counted, and if voting is still
+            open you can add or remove picks later. Tournament registration is separate, so lock
+            your player slot when you are ready.
           </p>
 
           <div className="mt-6 grid gap-3 rounded-[var(--radius-card)] border border-[var(--border-color)] bg-[var(--surface-soft)] p-4 text-sm text-[var(--text-secondary)]">
             <p>1. This vote is tied to your signed-in Mechi account.</p>
-            <p>2. Changed your mind? Clear this pick before voting closes, then choose again.</p>
+            <p>2. You can back more than one Season 2 Weekend Cup game before voting closes.</p>
             <p>3. Voting helps shape the lineup. Registration is still how you enter the cup.</p>
           </div>
 

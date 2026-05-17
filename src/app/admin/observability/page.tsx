@@ -21,6 +21,8 @@ import {
   POSTHOG_UI_HOST,
 } from '@/lib/posthog';
 import { createServiceClient } from '@/lib/supabase';
+import { getObservabilitySettings } from '@/lib/observability-settings';
+import { ObservabilitySettingsPanel } from './observability-settings-panel';
 import { ObservabilityTestPanel } from './observability-test-panel';
 
 type StatusTone = 'ready' | 'warn' | 'off';
@@ -74,6 +76,7 @@ async function requireAdminRole() {
 
 export default async function AdminObservabilityPage() {
   await requireAdminRole();
+  const settings = await getObservabilitySettings();
 
   const sentryDsnReady = envEnabled('SENTRY_DSN') || envEnabled('NEXT_PUBLIC_SENTRY_DSN');
   const sentryUploadReady = envEnabled('SENTRY_AUTH_TOKEN');
@@ -90,24 +93,30 @@ export default async function AdminObservabilityPage() {
   const statusRows = [
     {
       label: 'PostHog client',
-      detail: POSTHOG_ENABLED
-        ? `Token present, browser events use ${POSTHOG_API_HOST}`
-        : 'NEXT_PUBLIC_POSTHOG_TOKEN is missing',
-      tone: POSTHOG_ENABLED ? 'ready' as const : 'off' as const,
+      detail: !settings.posthog_capture_enabled
+        ? 'Disabled in admin settings'
+        : POSTHOG_ENABLED
+          ? `Token present, browser events use ${POSTHOG_API_HOST}`
+          : 'NEXT_PUBLIC_POSTHOG_TOKEN is missing',
+      tone: settings.posthog_capture_enabled && POSTHOG_ENABLED ? 'ready' as const : 'off' as const,
     },
     {
       label: 'PostHog server',
-      detail: POSTHOG_ENABLED
-        ? `Server events send to ${POSTHOG_SERVER_HOST}`
-        : 'Server capture will be skipped until the token is configured',
-      tone: POSTHOG_ENABLED ? 'ready' as const : 'off' as const,
+      detail: !settings.posthog_capture_enabled
+        ? 'Disabled in admin settings'
+        : POSTHOG_ENABLED
+          ? `Server events send to ${POSTHOG_SERVER_HOST}`
+          : 'Server capture will be skipped until the token is configured',
+      tone: settings.posthog_capture_enabled && POSTHOG_ENABLED ? 'ready' as const : 'off' as const,
     },
     {
       label: 'Sentry SDK',
-      detail: sentryDsnReady
-        ? `DSN present, traces sample ${sentryTraceSample}`
-        : 'SENTRY_DSN or NEXT_PUBLIC_SENTRY_DSN is missing',
-      tone: sentryDsnReady ? 'ready' as const : 'off' as const,
+      detail: !settings.sentry_capture_enabled
+        ? 'Disabled in admin settings'
+        : sentryDsnReady
+          ? `DSN present, traces sample ${sentryTraceSample}`
+          : 'SENTRY_DSN or NEXT_PUBLIC_SENTRY_DSN is missing',
+      tone: settings.sentry_capture_enabled && sentryDsnReady ? 'ready' as const : 'off' as const,
     },
     {
       label: 'Sentry sourcemaps',
@@ -146,8 +155,14 @@ export default async function AdminObservabilityPage() {
             </div>
           </div>
           <div className="flex flex-wrap gap-2">
-            <StatusPill label={POSTHOG_ENABLED ? 'PostHog ready' : 'PostHog off'} tone={POSTHOG_ENABLED ? 'ready' : 'off'} />
-            <StatusPill label={sentryDsnReady ? 'Sentry ready' : 'Sentry off'} tone={sentryDsnReady ? 'ready' : 'off'} />
+            <StatusPill
+              label={settings.posthog_capture_enabled && POSTHOG_ENABLED ? 'PostHog ready' : 'PostHog off'}
+              tone={settings.posthog_capture_enabled && POSTHOG_ENABLED ? 'ready' : 'off'}
+            />
+            <StatusPill
+              label={settings.sentry_capture_enabled && sentryDsnReady ? 'Sentry ready' : 'Sentry off'}
+              tone={settings.sentry_capture_enabled && sentryDsnReady ? 'ready' : 'off'}
+            />
           </div>
         </div>
       </div>
@@ -171,6 +186,7 @@ export default async function AdminObservabilityPage() {
       </div>
 
       <ObservabilityTestPanel />
+      <ObservabilitySettingsPanel initialSettings={settings} />
 
       <div className="grid gap-4 lg:grid-cols-[1.1fr_0.9fr]">
         <div className="card p-5">
@@ -204,7 +220,9 @@ export default async function AdminObservabilityPage() {
             </div>
             <div>
               <dt className="text-[var(--text-soft)]">Sentry replay on error</dt>
-              <dd className="font-bold text-[var(--text-primary)]">{sentryReplayErrorSample}</dd>
+              <dd className="font-bold text-[var(--text-primary)]">
+                {settings.sentry_replay_on_error_enabled ? sentryReplayErrorSample : 'disabled'}
+              </dd>
             </div>
           </dl>
         </div>
@@ -216,10 +234,7 @@ export default async function AdminObservabilityPage() {
           <p className="text-xs font-black uppercase tracking-[0.16em]">Weekend Cup payment signal</p>
         </div>
         <p className="mt-3 max-w-3xl text-sm leading-7 text-[var(--text-secondary)]">
-          The WhatsApp screenshot is consistent with a non-Kenyan number trying an M-PESA option in
-          Paystack. The checkout now avoids passing non-Kenyan phone metadata and the registration page
-          warns players to use Paybill, Till, Airtel, card, or support when they do not have a Kenyan
-          Safaricom number.
+          {settings.payment_support_notice}
         </p>
       </div>
 

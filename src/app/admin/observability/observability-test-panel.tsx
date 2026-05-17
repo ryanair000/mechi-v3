@@ -11,6 +11,7 @@ type TestResult = {
   sentry: {
     attempted: boolean;
     ok: boolean;
+    skipped: boolean;
   };
   posthog: {
     attempted: boolean;
@@ -93,7 +94,14 @@ export function ObservabilityTestPanel() {
       {result ? (
         <div className="mt-4 rounded-md border border-[var(--border-color)] bg-[var(--surface-soft)] p-4 font-mono text-xs text-[var(--text-secondary)]">
           <p>request_id: {result.requestId}</p>
-          <p>sentry: {result.sentry.attempted ? 'sent' : 'not requested'}</p>
+          <p>
+            sentry:{' '}
+            {result.sentry.attempted
+              ? result.sentry.skipped
+                ? 'skipped, disabled in settings'
+                : 'sent'
+              : 'not requested'}
+          </p>
           <p>
             posthog:{' '}
             {result.posthog.attempted

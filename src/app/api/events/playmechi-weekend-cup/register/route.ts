@@ -19,6 +19,7 @@ import { checkPersistentRateLimit, getClientIp, rateLimitResponse } from '@/lib/
 import { makePaymentReference } from '@/lib/slug';
 import { createServiceClient } from '@/lib/supabase';
 import { sendOnlineTournamentRegistrationTelegramNotification } from '@/lib/telegram';
+import { getObservabilitySettings } from '@/lib/observability-settings';
 import type { GameKey, PlatformKey } from '@/types';
 import type { OnlineTournamentPaymentTier } from '@/lib/online-tournament';
 import {
@@ -416,6 +417,7 @@ export async function POST(request: NextRequest) {
       supabase,
       userId: access.profile.id,
     });
+    const observabilitySettings = await getObservabilitySettings();
     const gameSummary = summary.games[game];
     let authorizationUrl: string | null = null;
 
@@ -529,7 +531,7 @@ export async function POST(request: NextRequest) {
       paymentCopy: {
         pricingLine: WEEKEND_CUP_ENTRY_PRICING.pricingLineLabel,
         earlyBirdPolicy: WEEKEND_CUP_ENTRY_PRICING.earlyBirdPolicyLabel,
-        mpesaKenyanPhoneOnly: 'M-PESA needs a Kenyan Safaricom number. If your number is not Kenyan, use Paybill, Till, Airtel, card, or contact support.',
+        mpesaKenyanPhoneOnly: observabilitySettings.payment_support_notice,
         registerUrl: `${APP_URL}${WEEKEND_CUP_REGISTRATION_PATH}`,
       },
     });

@@ -64,6 +64,10 @@ function allowDevPaymentFallback(): boolean {
   return !isPaystackConfigured() && process.env.NODE_ENV !== 'production';
 }
 
+function allowMockPaymentFallback(): boolean {
+  return isMockProviderMode() && process.env.NODE_ENV !== 'production';
+}
+
 export function normaliseKenyanPhone(phone: string): string {
   const digits = phone.replace(/\D/g, '');
   if (digits.startsWith('0') && digits.length === 10) return `254${digits.slice(1)}`;
@@ -94,7 +98,7 @@ export async function initializePaystackTransaction(params: {
   reference: string;
   error?: string;
 }> {
-  if (isMockProviderMode()) {
+  if (allowMockPaymentFallback()) {
     const mockResult = {
       success: true,
       authorizationUrl: `${params.callbackUrl}?reference=${encodeURIComponent(params.reference)}`,
@@ -173,7 +177,7 @@ export async function verifyPaystackTransaction(params: {
   metadata?: Record<string, unknown>;
   error?: string;
 }> {
-  if (isMockProviderMode()) {
+  if (allowMockPaymentFallback()) {
     const mockResult = {
       success: true,
       amountKes: params.expectedAmountKes ?? 0,
@@ -267,7 +271,7 @@ export async function createMobileMoneyRecipient(params: {
   name: string;
   phone: string;
 }): Promise<{ success: boolean; recipientCode?: string; error?: string }> {
-  if (isMockProviderMode()) {
+  if (allowMockPaymentFallback()) {
     const mockResult = {
       success: true,
       recipientCode: `mock_recipient_${Date.now()}`,
@@ -335,7 +339,7 @@ export async function disbursePrize(params: {
   amountKes: number;
   reason: string;
 }): Promise<{ success: boolean; reference?: string; error?: string }> {
-  if (isMockProviderMode()) {
+  if (allowMockPaymentFallback()) {
     const mockResult = {
       success: true,
       reference: `mock_transfer_${Date.now()}`,

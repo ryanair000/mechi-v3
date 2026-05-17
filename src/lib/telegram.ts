@@ -247,6 +247,8 @@ export async function sendOnlineTournamentRegistrationTelegramNotification(param
   slots: number;
   spotsLeft: number;
   paymentStatus?: string | null;
+  paymentEvent?: 'pending' | 'confirmed' | 'already_paid' | 'updated' | null;
+  paymentReference?: string | null;
   paymentLabel?: string | null;
   entryFeeKes?: number | null;
   checkedIn?: number;
@@ -259,9 +261,11 @@ export async function sendOnlineTournamentRegistrationTelegramNotification(param
     ? params.paymentStatus.replaceAll('_', ' ')
     : null;
   const heading =
-    params.paymentStatus === 'paid'
+    params.paymentEvent === 'confirmed'
       ? '<b>PlayMechi tournament payment confirmed</b>'
-      : params.paymentStatus === 'pending_payment' || params.paymentStatus === 'manual_review'
+      : params.paymentEvent === 'already_paid'
+        ? '<b>PlayMechi tournament registration updated</b>'
+        : params.paymentStatus === 'pending_payment' || params.paymentStatus === 'manual_review'
         ? '<b>PlayMechi tournament registration pending payment</b>'
         : '<b>New PlayMechi tournament registration</b>';
   const message = [
@@ -304,6 +308,7 @@ export async function sendOnlineTournamentRegistrationTelegramNotification(param
             .join(' / ')
         )
       : null,
+    params.paymentReference?.trim() ? formatField('Payment ref', params.paymentReference.trim()) : null,
     formatField(
       'Requests',
       `${params.registered} saved / ${params.confirmed} confirmed / ${params.pendingPayment} pending payment`

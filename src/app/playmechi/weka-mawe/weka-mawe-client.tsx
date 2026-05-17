@@ -1,9 +1,23 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import type { ReactNode } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
-import { CheckCircle2, Clock3, Gamepad2, Trophy, Video, WalletCards } from 'lucide-react';
+import {
+  AlertCircle,
+  ArrowRight,
+  CalendarDays,
+  CheckCircle2,
+  Clock3,
+  LockKeyhole,
+  ShieldCheck,
+  Trophy,
+  Users,
+  Video,
+  WalletCards,
+  type LucideIcon,
+} from 'lucide-react';
 import FooterSection from '@/components/footer';
 import { useAuthFetch } from '@/components/AuthProvider';
 import { PlayMechiHomeHeader } from '@/app/home/playmechi-home-header';
@@ -16,13 +30,14 @@ import {
   formatEatDateTime,
   isWekaMaweCheckInOpen,
   isWekaMaweRegistrationOpen,
+  type WekaMawePaymentStatus,
   type WekaMaweSummary,
 } from '@/lib/weka-mawe-shared';
 
 type Mode = 'landing' | 'register' | 'check-in' | 'bracket';
+type Tone = 'default' | 'success' | 'warning' | 'danger';
 
-const API_PATH =
-  '/api/weka-mawe/current-edition';
+const API_PATH = '/api/weka-mawe/current-edition';
 const REGISTER_API_PATH = '/api/weka-mawe/register';
 const CHECK_IN_API_PATH = '/api/weka-mawe/check-in';
 
@@ -38,13 +53,75 @@ function initialSummary(): WekaMaweSummary {
   };
 }
 
-function StatCard({ label, value }: { label: string; value: string | number }) {
+function paymentLabel(status: WekaMawePaymentStatus | null | undefined) {
+  if (!status) return 'Not registered';
+  switch (status) {
+    case 'paid':
+      return 'Paid';
+    case 'failed':
+      return 'Failed';
+    case 'manual_review':
+      return 'Manual review';
+    case 'refunded':
+      return 'Refunded';
+    default:
+      return 'Pending payment';
+  }
+}
+
+function paymentTone(status: WekaMawePaymentStatus | null | undefined): Tone {
+  if (status === 'paid') return 'success';
+  if (status === 'failed' || status === 'refunded') return 'danger';
+  if (status === 'manual_review' || status === 'pending_payment') return 'warning';
+  return 'default';
+}
+
+function toneClass(tone: Tone) {
+  if (tone === 'success') return 'border-emerald-400/30 bg-emerald-400/10 text-emerald-100';
+  if (tone === 'warning') return 'border-amber-300/30 bg-amber-300/10 text-amber-100';
+  if (tone === 'danger') return 'border-rose-400/30 bg-rose-400/10 text-rose-100';
+  return 'border-[var(--border-color)] bg-[var(--surface-soft)] text-[var(--text-primary)]';
+}
+
+function Pill({ children, tone = 'default' }: { children: ReactNode; tone?: Tone }) {
+  return (
+    <span className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-black ${toneClass(tone)}`}>
+      {children}
+    </span>
+  );
+}
+
+function StatCard({
+  label,
+  value,
+  icon: Icon,
+}: {
+  label: string;
+  value: string | number;
+  icon: LucideIcon;
+}) {
   return (
     <div className="rounded-lg border border-[var(--border-color)] bg-[var(--surface-soft)] p-4">
-      <p className="text-[0.68rem] font-black uppercase tracking-[0.14em] text-[var(--text-soft)]">
+      <Icon size={18} className="text-[var(--accent-secondary-text)]" />
+      <p className="mt-3 text-[0.68rem] font-black uppercase tracking-[0.14em] text-[var(--text-soft)]">
         {label}
       </p>
       <p className="mt-2 text-2xl font-black text-[var(--text-primary)]">{value}</p>
+    </div>
+  );
+}
+
+function ProgressBar({ paid, total }: { paid: number; total: number }) {
+  const percent = total > 0 ? Math.min(100, Math.round((paid / total) * 100)) : 0;
+  return (
+    <div className="mt-4">
+      <div className="flex items-center justify-between text-xs font-bold text-[var(--text-secondary)]">
+        <span>{paid} confirmed</span>
+        <span>{total} max</span>
+      </div>
+      <div className="mt-2 h-2 rounded-full bg-white/10">
+        <div className="h-full rounded-full bg-[var(--accent-secondary-text)]" style={{ width: `${percent}%` }} />
+      </div>
     </div>
   );
 }
@@ -56,9 +133,17 @@ export function WekaMaweClient({ mode }: { mode: Mode }) {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState('');
+  const [messageTone, setMessageTone] = useState<Tone>('default');
   const [ign, setIgn] = useState('');
   const [phone, setPhone] = useState('');
   const edition = summary.edition;
+  const userRegistration = summary.userRegistration ?? null;
+  const isRegistered = Boolean(userRegistration);
+  const isPaid = userRegistration?.payment_status === 'paid';
+  const registrationOpen = isWekaMaweRegistrationOpen(edition);
+  const checkInOpen = isWekaMaweCheckInOpen(edition);
+  const entryFee = edition?.registration_fee_kes ?? 100;
+  const maxPlayers = edition?.max_players ?? 32;
 
   const load = async () => {
     setLoading(true);
@@ -71,6 +156,7 @@ export function WekaMaweClient({ mode }: { mode: Mode }) {
       setSummary(payload);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : 'Could not load Weka Mawe.');
+      setMessageTone('danger');
     } finally {
       setLoading(false);
     }
@@ -87,6 +173,8 @@ export function WekaMaweClient({ mode }: { mode: Mode }) {
 
     void (async () => {
       setSubmitting(true);
+      setMessage('Checking Paystack payment status...');
+      setMessageTone('default');
       try {
         const response = await authFetch(REGISTER_API_PATH, {
           method: 'POST',
@@ -95,9 +183,11 @@ export function WekaMaweClient({ mode }: { mode: Mode }) {
         const payload = await response.json();
         if (!response.ok) throw new Error(payload.error ?? 'Payment is not confirmed yet.');
         setSummary(payload);
-        setMessage('Payment confirmed. Your Weka Mawe slot is locked.');
+        setMessage('Paystack payment verified. Your Weka Mawe slot is locked.');
+        setMessageTone('success');
       } catch (error) {
         setMessage(error instanceof Error ? error.message : 'Payment is not confirmed yet.');
+        setMessageTone('warning');
       } finally {
         setSubmitting(false);
       }
@@ -117,21 +207,31 @@ export function WekaMaweClient({ mode }: { mode: Mode }) {
   const register = async () => {
     setSubmitting(true);
     setMessage('');
+    setMessageTone('default');
     try {
       const response = await authFetch(REGISTER_API_PATH, {
         method: 'POST',
         body: JSON.stringify({ ign, phone, whatsappNumber: phone }),
       });
       const payload = await response.json();
-      if (!response.ok) throw new Error(payload.error ?? 'Could not register.');
+      if (!response.ok) {
+        if (response.status === 401) {
+          throw new Error('Sign in first, then come back here to pay and lock your Weka Mawe slot.');
+        }
+        throw new Error(payload.error ?? 'Could not register.');
+      }
       if (payload.authorizationUrl) {
+        setMessage('Opening Paystack checkout. Do not close the payment tab until it redirects back.');
+        setMessageTone('default');
         window.location.href = payload.authorizationUrl;
         return;
       }
-      setMessage('Registration submitted.');
+      setMessage('Registration saved. Complete payment to lock your slot.');
+      setMessageTone('warning');
       await load();
     } catch (error) {
       setMessage(error instanceof Error ? error.message : 'Could not register.');
+      setMessageTone('danger');
     } finally {
       setSubmitting(false);
     }
@@ -140,14 +240,17 @@ export function WekaMaweClient({ mode }: { mode: Mode }) {
   const checkIn = async () => {
     setSubmitting(true);
     setMessage('');
+    setMessageTone('default');
     try {
       const response = await authFetch(CHECK_IN_API_PATH, { method: 'POST' });
       const payload = await response.json();
       if (!response.ok) throw new Error(payload.error ?? 'Could not check in.');
       setSummary(payload);
       setMessage('Checked in. You are bracket-ready.');
+      setMessageTone('success');
     } catch (error) {
       setMessage(error instanceof Error ? error.message : 'Could not check in.');
+      setMessageTone('danger');
     } finally {
       setSubmitting(false);
     }
@@ -156,114 +259,163 @@ export function WekaMaweClient({ mode }: { mode: Mode }) {
   return (
     <div className="page-base marketing-prototype-shell min-h-screen">
       <PlayMechiHomeHeader />
-      <main className="landing-shell py-12 md:py-16">
-        <section className="grid gap-8 lg:grid-cols-[1.25fr_0.75fr] lg:items-center">
+      <main className="landing-shell py-10 md:py-14">
+        <section className="grid gap-8 lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
           <div>
-            <p className="section-title">PlayMechi weekly bracket</p>
-            <h1 className="mt-4 text-4xl font-black leading-tight text-[var(--text-primary)] md:text-6xl">
-              {WEKA_MAWE_TITLE}
+            <div className="flex flex-wrap gap-2">
+              <Pill tone={registrationOpen ? 'success' : 'warning'}>
+                {registrationOpen ? 'Registration open' : 'Registration closed'}
+              </Pill>
+              <Pill>{WEKA_MAWE_GAME_LABEL}</Pill>
+              <Pill>KSh {entryFee}</Pill>
+            </div>
+            <h1 className="mt-5 max-w-4xl text-4xl font-black leading-tight text-[var(--text-primary)] md:text-6xl">
+              {mode === 'register' ? 'Register for Weka Mawe' : WEKA_MAWE_TITLE}
             </h1>
             <p className="mt-5 max-w-2xl text-base leading-8 text-[var(--text-secondary)] md:text-lg">
-              Weekly {WEKA_MAWE_GAME_LABEL} pressure on Mechi.club. Register, pay, check in,
-              then play a 32-player single-elimination bracket run by PlayMechi admin.
+              {mode === 'register'
+                ? 'Fill your eFootball name and WhatsApp number once, then complete Paystack checkout. A slot counts only after Paystack confirms payment.'
+                : 'The weekly PlayMechi eFootball bracket. Register online, pay KSh 100, check in on match day, and play through a 32-player single-elimination event.'}
             </p>
             <div className="mt-6 flex flex-wrap gap-3">
-              <Link href={WEKA_MAWE_REGISTER_PATH} className="btn-primary">
-                Register for KSh {edition?.registration_fee_kes ?? 100}
+              <Link href={WEKA_MAWE_REGISTER_PATH} className="btn-primary inline-flex items-center gap-2">
+                Register
+                <ArrowRight size={16} />
               </Link>
               <Link href={WEKA_MAWE_CHECK_IN_PATH} className="btn-outline">
                 Check In
               </Link>
               <Link href={WEKA_MAWE_BRACKET_PATH} className="btn-ghost">
-                View Bracket
+                Bracket
               </Link>
             </div>
           </div>
+
           <div className="rounded-lg border border-[var(--border-color)] bg-[var(--surface-soft)] p-5">
             <div className="flex items-center gap-3 text-[var(--accent-secondary-text)]">
               <Trophy size={20} />
               <p className="font-black uppercase tracking-[0.12em]">Current edition</p>
             </div>
             <h2 className="mt-4 text-2xl font-black text-[var(--text-primary)]">
-              {edition?.title ?? 'Weka Mawe edition loading'}
+              {edition?.title ?? (loading ? 'Loading Weka Mawe...' : 'No active edition')}
             </h2>
-            <div className="mt-4 space-y-3 text-sm font-semibold text-[var(--text-secondary)]">
+            <div className="mt-4 grid gap-3 text-sm font-semibold text-[var(--text-secondary)]">
               <p className="flex items-center gap-2">
-                <Clock3 size={16} /> {formatEatDateTime(edition?.starts_at)}
+                <CalendarDays size={16} /> {formatEatDateTime(edition?.starts_at) || 'Schedule pending'}
               </p>
               <p className="flex items-center gap-2">
-                <Gamepad2 size={16} /> {WEKA_MAWE_GAME_LABEL}
+                <Clock3 size={16} /> Check-in {formatEatDateTime(edition?.check_in_opens_at) || 'TBA'}
               </p>
               <p className="flex items-center gap-2">
-                <WalletCards size={16} /> KSh {edition?.registration_fee_kes ?? 100} entry
+                <WalletCards size={16} /> KSh {entryFee} via Paystack
               </p>
               <p className="flex items-center gap-2">
-                <Video size={16} /> Quarter-finals onward recorded
+                <Video size={16} /> Quarter-finals onward require recording
               </p>
             </div>
+            <ProgressBar paid={summary.totals.paid} total={maxPlayers} />
           </div>
         </section>
 
-        <section className="mt-10 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          <StatCard label="Paid players" value={`${summary.totals.paid}/${edition?.max_players ?? 32}`} />
-          <StatCard label="Slots left" value={summary.totals.slotsLeft} />
-          <StatCard label="Pending payment" value={summary.totals.pendingPayment} />
-          <StatCard label="Checked in" value={summary.totals.checkedIn} />
+        <section className="mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <StatCard icon={Users} label="Paid players" value={`${summary.totals.paid}/${maxPlayers}`} />
+          <StatCard icon={ShieldCheck} label="Slots left" value={summary.totals.slotsLeft} />
+          <StatCard icon={WalletCards} label="Pending payment" value={summary.totals.pendingPayment} />
+          <StatCard icon={CheckCircle2} label="Checked in" value={summary.totals.checkedIn} />
         </section>
 
         {message ? (
-          <div className="mt-6 rounded-lg border border-[rgba(50,224,196,0.25)] bg-[rgba(50,224,196,0.08)] p-4 text-sm font-semibold text-[var(--text-primary)]">
-            {message}
+          <div className={`mt-6 flex gap-3 rounded-lg border p-4 text-sm font-semibold ${toneClass(messageTone)}`}>
+            <AlertCircle size={18} className="mt-0.5 shrink-0" />
+            <p>{message}</p>
           </div>
         ) : null}
 
         {mode === 'register' ? (
-          <section className="mt-10 max-w-2xl rounded-lg border border-[var(--border-color)] bg-[var(--surface-soft)] p-5">
-            <h2 className="text-2xl font-black text-[var(--text-primary)]">Register</h2>
-            <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">
-              {isWekaMaweRegistrationOpen(edition)
-                ? 'Enter the exact eFootball name you will use on match day.'
-                : 'Registration is not open right now.'}
-            </p>
-            {summary.userRegistration ? (
-              <div className="mt-5 rounded-lg border border-[var(--border-color)] p-4">
-                <p className="font-black text-[var(--text-primary)]">
-                  Registered as {summary.userRegistration.ign}
-                </p>
-                <p className="mt-1 text-sm text-[var(--text-secondary)]">
-                  Payment: {summary.userRegistration.payment_status}
-                </p>
-                {summary.userRegistration.payment_authorization_url &&
-                summary.userRegistration.payment_status !== 'paid' ? (
-                  <a href={summary.userRegistration.payment_authorization_url} className="btn-primary mt-4">
-                    Complete Payment
-                  </a>
-                ) : null}
-              </div>
-            ) : (
-              <div className="mt-5 grid gap-4">
-                <input
-                  value={ign}
-                  onChange={(event) => setIgn(event.target.value)}
-                  placeholder="eFootball IGN"
-                  className="form-input"
-                />
-                <input
-                  value={phone}
-                  onChange={(event) => setPhone(event.target.value)}
-                  placeholder="WhatsApp / contact number"
-                  className="form-input"
-                />
-                <button
-                  type="button"
-                  onClick={register}
-                  disabled={submitting || loading || !isWekaMaweRegistrationOpen(edition)}
-                  className="btn-primary w-fit"
-                >
-                  {submitting ? 'Starting payment...' : `Register for KSh ${edition?.registration_fee_kes ?? 100}`}
-                </button>
-              </div>
-            )}
+          <section className="mt-10 grid gap-5 lg:grid-cols-[0.95fr_1.05fr]">
+            <div className="rounded-lg border border-[var(--border-color)] bg-[var(--surface-soft)] p-5">
+              <h2 className="text-2xl font-black text-[var(--text-primary)]">Your entry</h2>
+              <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">
+                Use the exact eFootball name you will play with. Your WhatsApp number is used only for match-day coordination.
+              </p>
+
+              {isRegistered ? (
+                <div className="mt-5 space-y-4">
+                  <div className="rounded-lg border border-[var(--border-color)] p-4">
+                    <p className="text-xs font-black uppercase tracking-[0.14em] text-[var(--text-soft)]">
+                      Registered gamer tag
+                    </p>
+                    <p className="mt-2 text-xl font-black text-[var(--text-primary)]">{userRegistration?.ign}</p>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      <Pill tone={paymentTone(userRegistration?.payment_status)}>
+                        {paymentLabel(userRegistration?.payment_status)}
+                      </Pill>
+                      {isPaid ? <Pill tone="success">Slot locked</Pill> : <Pill tone="warning">Slot not locked</Pill>}
+                    </div>
+                  </div>
+                  {!isPaid && userRegistration?.payment_authorization_url ? (
+                    <a href={userRegistration.payment_authorization_url} className="btn-primary inline-flex items-center gap-2">
+                      Complete Paystack Payment
+                      <ArrowRight size={16} />
+                    </a>
+                  ) : null}
+                  {userRegistration?.payment_reference ? (
+                    <p className="text-xs font-semibold text-[var(--text-soft)]">
+                      Payment ref: {userRegistration.payment_reference}
+                    </p>
+                  ) : null}
+                </div>
+              ) : (
+                <div className="mt-5 grid gap-4">
+                  <label className="grid gap-2">
+                    <span className="text-xs font-black uppercase tracking-[0.14em] text-[var(--text-soft)]">
+                      eFootball name
+                    </span>
+                    <input
+                      value={ign}
+                      onChange={(event) => setIgn(event.target.value)}
+                      placeholder="Example: gamer_mastaa19"
+                      className="form-input"
+                    />
+                  </label>
+                  <label className="grid gap-2">
+                    <span className="text-xs font-black uppercase tracking-[0.14em] text-[var(--text-soft)]">
+                      WhatsApp number
+                    </span>
+                    <input
+                      value={phone}
+                      onChange={(event) => setPhone(event.target.value)}
+                      placeholder="Example: 2547..."
+                      className="form-input"
+                    />
+                  </label>
+                  <button
+                    type="button"
+                    onClick={register}
+                    disabled={submitting || loading || !registrationOpen}
+                    className="btn-primary inline-flex w-fit items-center gap-2"
+                  >
+                    {submitting ? 'Opening checkout...' : `Pay KSh ${entryFee}`}
+                    <ArrowRight size={16} />
+                  </button>
+                </div>
+              )}
+            </div>
+
+            <div className="grid gap-3">
+              {[
+                ['Sign in', 'Your payment and bracket slot must attach to one Mechi account.'],
+                ['Fill entry', 'Add your eFootball name and WhatsApp contact.'],
+                ['Paystack checkout', 'Payment confirmation locks the slot. A saved form alone does not count.'],
+                ['Check in', 'Return on match day and check in before the deadline.'],
+              ].map(([title, body], index) => (
+                <div key={title} className="rounded-lg border border-[var(--border-color)] p-4">
+                  <p className="text-sm font-black text-[var(--accent-secondary-text)]">0{index + 1}</p>
+                  <p className="mt-2 font-black text-[var(--text-primary)]">{title}</p>
+                  <p className="mt-1 text-sm leading-6 text-[var(--text-secondary)]">{body}</p>
+                </div>
+              ))}
+            </div>
           </section>
         ) : null}
 
@@ -275,7 +427,7 @@ export function WekaMaweClient({ mode }: { mode: Mode }) {
             </p>
             <div className="mt-5 rounded-lg border border-[var(--border-color)] p-4">
               <p className="text-sm font-semibold text-[var(--text-secondary)]">
-                Registration: {summary.userRegistration?.payment_status ?? 'not registered'}
+                Registration: {paymentLabel(userRegistration?.payment_status)}
               </p>
               <p className="mt-2 text-sm font-semibold text-[var(--text-secondary)]">
                 Check-in: {summary.userCheckIn?.status ?? 'not checked in'}
@@ -288,7 +440,7 @@ export function WekaMaweClient({ mode }: { mode: Mode }) {
                 <button
                   type="button"
                   onClick={checkIn}
-                  disabled={submitting || loading || !isWekaMaweCheckInOpen(edition)}
+                  disabled={submitting || loading || !checkInOpen}
                   className="btn-primary mt-4"
                 >
                   {submitting ? 'Checking in...' : 'Check In Now'}
@@ -315,7 +467,7 @@ export function WekaMaweClient({ mode }: { mode: Mode }) {
                         </p>
                         <p className="mt-1 text-[var(--text-secondary)]">
                           {match.status}
-                          {match.recording_expected ? ` · recording ${match.recording_status}` : ''}
+                          {match.recording_expected ? ` - recording ${match.recording_status}` : ''}
                         </p>
                       </div>
                     ))}
@@ -328,15 +480,29 @@ export function WekaMaweClient({ mode }: { mode: Mode }) {
 
         {mode === 'landing' ? (
           <section className="mt-12 grid gap-4 md:grid-cols-4">
-            {['Register on Mechi.club', 'Check in on the website', 'Admin publishes bracket', 'Record QF to final'].map(
-              (step, index) => (
-                <div key={step} className="rounded-lg border border-[var(--border-color)] p-4">
-                  <p className="text-sm font-black text-[var(--accent-secondary-text)]">0{index + 1}</p>
-                  <p className="mt-2 font-black text-[var(--text-primary)]">{step}</p>
-                </div>
-              )
-            )}
+            {[
+              ['Register online', 'The event page stays here. The registration form lives on the register page.'],
+              ['Pay KSh 100', 'Your slot is counted only after Paystack confirms the transaction.'],
+              ['Check in', 'The website check-in window opens before the bracket starts.'],
+              ['Play bracket', 'Admin publishes the bracket and tracks recorded late rounds.'],
+            ].map(([step, body], index) => (
+              <div key={step} className="rounded-lg border border-[var(--border-color)] p-4">
+                <p className="text-sm font-black text-[var(--accent-secondary-text)]">0{index + 1}</p>
+                <p className="mt-2 font-black text-[var(--text-primary)]">{step}</p>
+                <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">{body}</p>
+              </div>
+            ))}
           </section>
+        ) : null}
+
+        {mode === 'register' && !isRegistered ? (
+          <div className="mt-8 flex items-start gap-3 rounded-lg border border-[var(--border-color)] bg-[var(--surface-soft)] p-4 text-sm text-[var(--text-secondary)]">
+            <LockKeyhole size={18} className="mt-0.5 shrink-0 text-[var(--accent-secondary-text)]" />
+            <p>
+              Already registered? Sign in with the same Mechi account. The page will show your current payment
+              status and checkout link.
+            </p>
+          </div>
         ) : null}
       </main>
       <FooterSection className="!pt-6 md:!pt-10" />

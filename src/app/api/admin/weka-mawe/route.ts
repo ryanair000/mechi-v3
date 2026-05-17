@@ -58,14 +58,17 @@ export async function POST(request: NextRequest) {
       if (!allowed.includes(status)) {
         return NextResponse.json({ error: 'Invalid edition status.' }, { status: 400 });
       }
+      const updates: Record<string, unknown> = {
+        status,
+        completed_at: status === 'completed' ? new Date().toISOString() : null,
+        updated_at: new Date().toISOString(),
+      };
+      if (status === 'locked' || status === 'live') {
+        updates.bracket_locked = true;
+      }
       const { error } = await supabase
         .from('weka_mawe_editions')
-        .update({
-          status,
-          bracket_locked: status === 'locked' || status === 'live' ? true : undefined,
-          completed_at: status === 'completed' ? new Date().toISOString() : null,
-          updated_at: new Date().toISOString(),
-        })
+        .update(updates)
         .eq('id', targetEditionId);
       if (error) return NextResponse.json({ error: error.message }, { status: 400 });
     } else if (action === 'update_registration') {

@@ -141,7 +141,56 @@ export async function startWekaMaweRegistration(params: {
     return { success: false, error: 'Weka Mawe is full for this edition.' };
   }
 
-  const reference = makePaymentReference('mechi_weka_mawe');
+  if (summary.userRegistration?.payment_status === 'paid') {
+    const { data, error } = await params.supabase
+      .from('weka_mawe_registrations')
+      .update({
+        ign: params.ign,
+        phone: params.phone || null,
+        whatsapp_number: params.whatsappNumber || params.phone || null,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', summary.userRegistration.id)
+      .select('*')
+      .single();
+
+    if (error || !data) {
+      return { success: false, error: error?.message ?? 'Could not update registration.' };
+    }
+
+    return { success: true, registration: data as WekaMaweRegistration, alreadyPaid: true };
+  }
+
+  if (
+    summary.userRegistration?.payment_status === 'pending_payment' &&
+    summary.userRegistration.payment_authorization_url
+  ) {
+    const { data, error } = await params.supabase
+      .from('weka_mawe_registrations')
+      .update({
+        ign: params.ign,
+        phone: params.phone || null,
+        whatsapp_number: params.whatsappNumber || params.phone || null,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', summary.userRegistration.id)
+      .select('*')
+      .single();
+
+    if (error || !data) {
+      return { success: false, error: error?.message ?? 'Could not update registration.' };
+    }
+
+    return {
+      success: true,
+      registration: data as WekaMaweRegistration,
+      authorizationUrl: summary.userRegistration.payment_authorization_url,
+      reference: summary.userRegistration.payment_reference,
+      reusedPendingPayment: true,
+    };
+  }
+
+  const reference = summary.userRegistration?.payment_reference || makePaymentReference('mechi_weka_mawe');
   const email = params.email || `${params.username || 'player'}@mechi.club`;
   const { initializeTournamentPayment } = await import('@/lib/paystack');
   const payment = await initializeTournamentPayment({

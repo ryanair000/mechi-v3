@@ -63,11 +63,18 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Contact phone is required.' }, { status: 400 });
     }
 
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('email')
+      .eq('id', access.profile.id)
+      .maybeSingle();
+    const email = cleanWekaMaweText(profile?.email, 160) || `${access.profile.username || 'player'}@mechi.club`;
+
     const result = await startWekaMaweRegistration({
       supabase,
       userId: access.profile.id,
       username: access.profile.username,
-      email: `${access.profile.username || 'player'}@mechi.club`,
+      email,
       phone,
       ign,
       whatsappNumber,

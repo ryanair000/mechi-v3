@@ -467,6 +467,12 @@ export async function POST(request: NextRequest) {
 
     after(async () => {
       try {
+        const paymentEvent =
+          registration.payment_status === 'paid'
+            ? existingRegistration?.payment_status === 'paid'
+              ? 'already_paid'
+              : 'confirmed'
+            : 'pending';
         await sendOnlineTournamentRegistrationTelegramNotification({
           eventTitle: WEEKEND_CUP_TITLE,
           username: profile.username,
@@ -486,6 +492,8 @@ export async function POST(request: NextRequest) {
           slots: gameSummary?.slots ?? gameConfig.slots,
           spotsLeft: gameSummary?.spotsLeft ?? Math.max(0, gameConfig.slots - 1),
           paymentStatus: registration.payment_status,
+          paymentEvent,
+          paymentReference,
           paymentLabel: getWeekendCupPaymentTierDisplay(paymentTier, game),
           entryFeeKes,
           checkedIn: gameSummary?.checkedIn ?? 0,

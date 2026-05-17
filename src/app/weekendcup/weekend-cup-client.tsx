@@ -592,7 +592,7 @@ export function WeekendCupClient() {
     >
       <PlayMechiHomeHeader />
 
-      <main className="page-container max-w-[940px] space-y-7 pb-10 pt-4 sm:pt-6">
+      <main className="page-container max-w-[940px] space-y-7 pb-10 pt-2 sm:pt-3">
         <section id="overview" className="space-y-4 px-1 sm:px-2">
           <div className="overflow-hidden rounded-[var(--radius-card)] border border-[var(--border-color)] bg-[rgba(12,20,34,0.82)] shadow-[var(--shadow-soft)]">
             <div className="relative aspect-[16/9] w-full sm:aspect-[16/7] lg:aspect-[21/6]">

@@ -314,7 +314,7 @@ export function HomeFloatingHeader({
           ) : null}
         </div>
 
-        <PageBreadcrumbs className="mt-3 px-1 sm:px-2" />
+        <PageBreadcrumbs className="mt-2 px-1 sm:px-2" />
       </div>
     </header>
   );

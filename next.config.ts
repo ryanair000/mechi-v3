@@ -40,6 +40,8 @@ const localActionOrigins = Array.from(
 const distDir = process.env.MECHI_NEXT_DIST_DIR;
 const isProductionBuild = process.env.NODE_ENV === "production";
 const sentryAuthToken = process.env.SENTRY_AUTH_TOKEN?.trim();
+const sentryOrg = process.env.SENTRY_ORG?.trim();
+const sentryProject = process.env.SENTRY_PROJECT?.trim();
 const postHogRegion = process.env.NEXT_PUBLIC_POSTHOG_REGION?.trim().toLowerCase() === "eu" ? "eu" : "us";
 const postHogProxyPath = normalizePostHogProxyPath(
   process.env.NEXT_PUBLIC_POSTHOG_PROXY_PATH
@@ -176,6 +178,9 @@ const nextConfig: NextConfig = {
 };
 
 export default withSentryConfig(nextConfig, {
+  org: sentryOrg,
+  project: sentryProject,
+  authToken: sentryAuthToken,
   tunnelRoute: "/api/monitoring",
   sourcemaps: {
     disable: !sentryAuthToken,

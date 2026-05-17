@@ -192,6 +192,9 @@ export function WeekendCupRegistrationClient() {
             registration?: WeekendCupPlayerRegistration;
             authorization_url?: string | null;
             paymentLabel?: string;
+            paymentCopy?: {
+              mpesaKenyanPhoneOnly?: string;
+            };
           })
         | { error?: string };
 
@@ -217,6 +220,9 @@ export function WeekendCupRegistrationClient() {
             ? `Entry request saved. Finish ${data.paymentLabel} payment in Paystack to lock your slot.`
             : 'Entry request saved. Finish payment in Paystack to lock your slot.'
         );
+        if (data.paymentCopy?.mpesaKenyanPhoneOnly) {
+          toast(data.paymentCopy.mpesaKenyanPhoneOnly, { duration: 8000 });
+        }
         window.location.href = data.authorization_url;
         return;
       }
@@ -330,6 +336,7 @@ export function WeekendCupRegistrationClient() {
             </h1>
             <p className="mt-3 max-w-xl text-sm leading-6 text-[var(--text-secondary)]">
               One entry per game. Payment is the only thing that locks the slot.
+              {' '}M-PESA needs a Kenyan Safaricom number; outside Kenya, use Paybill, Till, Airtel, card, or support.
             </p>
           </div>
 

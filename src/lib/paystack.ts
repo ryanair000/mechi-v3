@@ -72,6 +72,11 @@ export function normaliseKenyanPhone(phone: string): string {
   return digits;
 }
 
+export function getNormalisedKenyanMobilePhone(phone: string): string | null {
+  const normalised = normaliseKenyanPhone(phone);
+  return /^2547\d{8}$/.test(normalised) || /^2541\d{8}$/.test(normalised) ? normalised : null;
+}
+
 export function toPaystackAmount(amountKes: number): number {
   return Math.max(0, Math.round(amountKes * 100));
 }

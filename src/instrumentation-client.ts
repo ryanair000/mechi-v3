@@ -8,6 +8,8 @@ import {
 
 const dsn = process.env.NEXT_PUBLIC_SENTRY_DSN?.trim() || "";
 const sampleRate = Number(process.env.NEXT_PUBLIC_SENTRY_TRACES_SAMPLE_RATE ?? 0);
+const replaySessionSampleRate = Number(process.env.NEXT_PUBLIC_SENTRY_REPLAY_SESSION_SAMPLE_RATE ?? 0);
+const replayErrorSampleRate = Number(process.env.NEXT_PUBLIC_SENTRY_REPLAY_ERROR_SAMPLE_RATE ?? 0);
 const postHogCaptureInDev = process.env.NEXT_PUBLIC_POSTHOG_CAPTURE_IN_DEV === "true";
 
 Sentry.init({
@@ -17,7 +19,10 @@ Sentry.init({
     process.env.NEXT_PUBLIC_SENTRY_ENVIRONMENT?.trim() ||
     process.env.NEXT_PUBLIC_VERCEL_ENV?.trim() ||
     process.env.NODE_ENV,
+  integrations: [Sentry.replayIntegration({ maskAllText: true, blockAllMedia: true })],
   tracesSampleRate: Number.isFinite(sampleRate) ? sampleRate : 0,
+  replaysSessionSampleRate: Number.isFinite(replaySessionSampleRate) ? replaySessionSampleRate : 0,
+  replaysOnErrorSampleRate: Number.isFinite(replayErrorSampleRate) ? replayErrorSampleRate : 0,
   tunnel: "/api/monitoring",
 });
 

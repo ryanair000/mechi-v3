@@ -44,6 +44,7 @@ const SEGMENT_LABELS: Record<string, string> = {
   moderator: 'Moderator',
   mystery: 'Mystery Game',
   'online-gaming-tournament': 'PlayMechi Launch',
+  observability: 'Observability',
   ops: 'Ops',
   payment: 'Payment',
   payments: 'Payments',

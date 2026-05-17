@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
+  Activity,
   AtSign,
   BarChart2,
   ChevronRight,
@@ -54,6 +55,7 @@ const PRIMARY_ADMIN_NAV: AdminNavItem[] = [
 ];
 
 const TOOL_ADMIN_NAV: AdminNavItem[] = [
+  { href: '/admin/observability', label: 'Observability', icon: Activity, adminOnly: true },
   { href: '/moderator-signup', label: 'Staff Register', icon: UserPlus, adminOnly: true },
   { href: '/admin/email', label: 'Email', icon: Mail, adminOnly: true },
   { href: '/admin/whatsapp', label: 'WhatsApp', icon: MessageCircle, adminOnly: true },

@@ -10,9 +10,9 @@ import {
 } from '@/lib/config';
 import { sendWeekendCupPaymentReminderEmail } from '@/lib/email';
 import {
+  getNormalisedKenyanMobilePhone,
   initializeTournamentPayment,
   isPaystackConfigured,
-  normaliseKenyanPhone,
   verifyTournamentPayment,
 } from '@/lib/paystack';
 import { checkPersistentRateLimit, getClientIp, rateLimitResponse } from '@/lib/rateLimit';
@@ -422,6 +422,9 @@ export async function POST(request: NextRequest) {
     if (registration.payment_status !== 'paid') {
       const email = profile.email || `${profile.username}@mechi.club`;
       const callbackUrl = `${APP_URL}/weekendcup/payment/complete`;
+      const kenyanMobilePhone = getNormalisedKenyanMobilePhone(
+        profile.whatsapp_number ?? profile.phone ?? ''
+      );
       const initialized = await initializeTournamentPayment({
         amountKes: entryFeeKes,
         email,
@@ -436,7 +439,8 @@ export async function POST(request: NextRequest) {
           game,
           user_id: access.profile.id,
           payment_tier: paymentTier,
-          phone: normaliseKenyanPhone(profile.whatsapp_number ?? profile.phone ?? ''),
+          phone: kenyanMobilePhone,
+          mpesa_requires_kenyan_phone: !kenyanMobilePhone,
         },
       });
 
@@ -525,6 +529,7 @@ export async function POST(request: NextRequest) {
       paymentCopy: {
         pricingLine: WEEKEND_CUP_ENTRY_PRICING.pricingLineLabel,
         earlyBirdPolicy: WEEKEND_CUP_ENTRY_PRICING.earlyBirdPolicyLabel,
+        mpesaKenyanPhoneOnly: 'M-PESA needs a Kenyan Safaricom number. If your number is not Kenyan, use Paybill, Till, Airtel, card, or contact support.',
         registerUrl: `${APP_URL}${WEEKEND_CUP_REGISTRATION_PATH}`,
       },
     });

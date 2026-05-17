@@ -199,17 +199,19 @@ function isSeasonOneMysteryBallot(ballotSlug: string) {
 function getBallotHeading(ballot: WeekendCupBallot) {
   return isSeasonOneMysteryBallot(ballot.slug)
     ? 'Pick the mystery slot.'
-    : 'Vote the Season 2 PC game.';
+    : 'Vote the Season 2 console and PC game.';
 }
 
 function getBallotDescription(ballot: WeekendCupBallot) {
   return isSeasonOneMysteryBallot(ballot.slug)
     ? 'CODM, PUBG Mobile, and eFootball are already locked for Season 1. Choose one mystery game only. If your title is missing, drop it below and we can add it to the vote.'
-    : 'Season 2 is for PC players. Pick one headline game from Tekken 8, FC 26, NBA 2K26, Mortal Kombat 11, and Fortnite.';
+    : 'Season 2 is for console and PC players. Pick one headline game from Tekken 8, FC 26, NBA 2K26, Mortal Kombat 11, and Fortnite.';
 }
 
 function getBallotScopeLabel(ballot: WeekendCupBallot) {
-  return isSeasonOneMysteryBallot(ballot.slug) ? 'Mystery slot voting only' : 'Season 2 PC voting only';
+  return isSeasonOneMysteryBallot(ballot.slug)
+    ? 'Mystery slot voting only'
+    : 'Season 2 console and PC voting only';
 }
 
 type WeekendCupOptionCardProps = {

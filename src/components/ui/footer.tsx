@@ -28,6 +28,10 @@ export default function FooterSection({ className }: FooterSectionProps) {
   const links = isSwahili
     ? [
         {
+          title: 'Nyumbani',
+          href: '/',
+        },
+        {
           title: 'Jiunge Sasa',
           href: '/register',
         },
@@ -50,6 +54,10 @@ export default function FooterSection({ className }: FooterSectionProps) {
         },
       ]
     : [
+        {
+          title: 'Home',
+          href: '/',
+        },
         {
           title: 'Join Now',
           href: '/register',

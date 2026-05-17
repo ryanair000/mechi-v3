@@ -84,7 +84,7 @@ export function HeaderNotificationButton({ compact = false }: HeaderNotification
 
   return (
     <Link
-      href="/dashboard/notifications"
+      href="/notifications"
       aria-label={
         visibleUnreadCount > 0
           ? `Open notifications. ${visibleUnreadCount} unread.`

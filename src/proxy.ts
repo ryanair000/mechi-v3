@@ -127,6 +127,21 @@ const ADMIN_HOST_PATH_ALIASES: Record<string, string> = {
   '/rewards': '/admin/rewards',
 };
 
+const DASHBOARD_PATH_ALIASES: Record<string, string> = {
+  '/dashboard/notifications': '/notifications',
+  '/dashboard/inbox': '/inbox',
+  '/dashboard/matches': '/matches',
+  '/dashboard/challenges': '/challenges',
+  '/dashboard/lobbies': '/lobbies',
+  '/dashboard/queue': '/queue',
+  '/dashboard/profile': '/profile',
+  '/dashboard/profile/settings': '/profile/settings',
+  '/dashboard/rewards': '/rewards',
+  '/dashboard/socials': '/socials',
+  '/dashboard/streams': '/streams',
+  '/dashboard/tournaments': '/tournaments',
+};
+
 const PUBLIC_PREFIXES = [
   '/',
   '/manual-tests',
@@ -349,6 +364,10 @@ function applyApiIngressGuards(request: NextRequest) {
 
 function getAdminHostAlias(pathname: string) {
   return ADMIN_HOST_PATH_ALIASES[pathname] ?? null;
+}
+
+function getDashboardPathAlias(pathname: string) {
+  return DASHBOARD_PATH_ALIASES[pathname] ?? null;
 }
 
 function redirectToAppHost(pathname: string, request: NextRequest) {
@@ -626,6 +645,13 @@ export async function proxy(request: NextRequest) {
 
   if (guardedResponse) {
     return guardedResponse;
+  }
+
+  const dashboardPathAlias = getDashboardPathAlias(pathname);
+  if (dashboardPathAlias) {
+    const dashboardAliasUrl = request.nextUrl.clone();
+    dashboardAliasUrl.pathname = dashboardPathAlias;
+    return NextResponse.redirect(dashboardAliasUrl, 308);
   }
 
   if (pathname === '/tz/register' || pathname.startsWith('/tz/register/')) {

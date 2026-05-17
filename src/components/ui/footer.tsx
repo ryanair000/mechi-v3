@@ -11,6 +11,7 @@ import {
   FaYoutube,
 } from 'react-icons/fa6';
 import { BrandLogo } from '@/components/BrandLogo';
+import { CountryLanguageBar } from '@/components/CountryLanguageBar';
 import { useRegionalSettings } from '@/components/RegionalSettingsProvider';
 import {
   CUSTOMER_WHATSAPP_SUPPORT_NUMBER_LABEL,
@@ -103,6 +104,9 @@ export default function FooterSection({ className }: FooterSectionProps) {
               <span>{link.title}</span>
             </Link>
           ))}
+        </div>
+        <div className="my-8 flex justify-center">
+          <CountryLanguageBar />
         </div>
         <div className="my-8 flex flex-wrap justify-center gap-6 text-sm">
           <Link

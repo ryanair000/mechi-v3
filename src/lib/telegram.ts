@@ -255,8 +255,10 @@ export async function sendOnlineTournamentRegistrationTelegramNotification(param
   checkInCap?: number;
   checkInSpotsLeft?: number;
   registrationId?: string | null;
+  adminPath?: string | null;
 }): Promise<void> {
-  const adminUrl = `${ADMIN_URL}/admin/online-tournament`;
+  const adminPath = params.adminPath?.trim() || '/admin/online-tournament';
+  const adminUrl = `${ADMIN_URL}${adminPath.startsWith('/') ? adminPath : `/${adminPath}`}`;
   const paymentStatusLabel = params.paymentStatus
     ? params.paymentStatus.replaceAll('_', ' ')
     : null;
@@ -334,6 +336,75 @@ export async function sendOnlineTournamentRegistrationTelegramNotification(param
 
   await sendTelegramMessage(message, {
     operation: 'online-tournament-registration',
+    threadKey: 'registration',
+  });
+}
+
+export async function sendTournamentRegistrationTelegramNotification(params: {
+  eventTitle: string;
+  eventSlug: string;
+  username: string;
+  gameLabel: string;
+  platform?: string | null;
+  email?: string | null;
+  phone?: string | null;
+  paymentStatus: string;
+  paymentEvent: 'pending' | 'confirmed' | 'free' | 'updated';
+  paymentReference?: string | null;
+  entryFeeKes?: number | null;
+  registered?: number | null;
+  confirmed?: number | null;
+  slots?: number | null;
+  tournamentId?: string | null;
+}): Promise<void> {
+  const tournamentUrl = `${APP_URL}/t/${encodeURIComponent(params.eventSlug)}`;
+  const adminUrl = `${ADMIN_URL}/admin/tournaments`;
+  const heading =
+    params.paymentEvent === 'confirmed'
+      ? '<b>Tournament payment confirmed</b>'
+      : params.paymentEvent === 'free'
+        ? '<b>Free tournament registration confirmed</b>'
+        : params.paymentEvent === 'updated'
+          ? '<b>Tournament registration updated</b>'
+          : '<b>Tournament registration pending payment</b>';
+  const counts =
+    typeof params.registered === 'number' ||
+    typeof params.confirmed === 'number' ||
+    typeof params.slots === 'number'
+      ? [
+          typeof params.registered === 'number' ? `${params.registered} registered` : null,
+          typeof params.confirmed === 'number' ? `${params.confirmed} confirmed` : null,
+          typeof params.slots === 'number' ? `${params.slots} slots` : null,
+        ]
+          .filter(Boolean)
+          .join(' / ')
+      : null;
+
+  const message = [
+    heading,
+    '',
+    formatField('Event', params.eventTitle),
+    formatField('Player', params.username),
+    formatField('Game', params.gameLabel),
+    formatField('Platform', params.platform),
+    formatField('Email', params.email),
+    formatField('Phone', params.phone),
+    formatField('Payment', params.paymentStatus.replaceAll('_', ' ')),
+    typeof params.entryFeeKes === 'number'
+      ? formatField('Entry fee', `KSh ${params.entryFeeKes.toLocaleString()}`)
+      : null,
+    params.paymentReference?.trim() ? formatField('Payment ref', params.paymentReference.trim()) : null,
+    counts ? formatField('Counts', counts) : null,
+    params.tournamentId ? formatField('Tournament', params.tournamentId.slice(0, 8)) : null,
+    '',
+    formatTelegramLink('Open tournament', tournamentUrl),
+    formatTelegramLink('Open tournament admin', adminUrl),
+  ]
+    .filter((line): line is string => Boolean(line))
+    .join('\n');
+
+  await sendTelegramMessage(message, {
+    operation: 'tournament-registration',
     threadKey: 'registration',
   });
 }

@@ -27,6 +27,8 @@ export interface SupportBridgeResponse {
   escalation_reason: string | null;
 }
 
+export const SUPPORT_AWAY_MESSAGE = 'We are away right now. We will respond later.';
+
 function getBridgeBaseUrl() {
   return (process.env.MECHI_OPENCLAW_BRIDGE_URL ?? '').trim();
 }
@@ -101,10 +103,12 @@ function normalizeDisposition(value: unknown, hasReplyText: boolean): SupportBri
 
 function normalizeBridgeResponse(value: unknown): SupportBridgeResponse {
   const payload = (value ?? {}) as Record<string, unknown>;
-  const replyText =
+  const rawReplyText =
     typeof payload.reply_text === 'string' && payload.reply_text.trim().length > 0
       ? payload.reply_text.trim()
       : null;
+  const replyText =
+    rawReplyText && looksLikeProviderCapacityMessage(rawReplyText) ? SUPPORT_AWAY_MESSAGE : rawReplyText;
   const disposition = normalizeDisposition(payload.disposition, Boolean(replyText));
   const tags = Array.isArray(payload.tags)
     ? payload.tags.filter((tag): tag is string => typeof tag === 'string')
@@ -120,6 +124,22 @@ function normalizeBridgeResponse(value: unknown): SupportBridgeResponse {
         ? payload.escalation_reason.trim()
         : null,
   };
+}
+
+export function looksLikeProviderCapacityMessage(value: string | null | undefined) {
+  const normalized = value?.toLowerCase() ?? '';
+  return (
+    normalized.includes('chatgpt') ||
+    normalized.includes('openai') ||
+    normalized.includes('rate limit') ||
+    normalized.includes('rate-limit') ||
+    normalized.includes('rate_limited') ||
+    normalized.includes('too many requests') ||
+    normalized.includes('timed out') ||
+    normalized.includes('timeout') ||
+    normalized.includes('model overloaded') ||
+    normalized.includes('quota exceeded')
+  );
 }
 
 export async function requestSupportReply(

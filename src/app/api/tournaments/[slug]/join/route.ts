@@ -5,6 +5,7 @@ import { GAMES, getCanonicalGameKey, normalizeSelectedGameKeys } from '@/lib/con
 import { sendTournamentRegistrationConfirmedEmail } from '@/lib/email';
 import { createNotifications } from '@/lib/notifications';
 import { createServiceClient } from '@/lib/supabase';
+import { sendTournamentRegistrationTelegramNotification } from '@/lib/telegram';
 import {
   ACTIVE_TOURNAMENT_PLAYER_STATUSES,
   CONFIRMED_PAYMENT_STATUSES,
@@ -222,6 +223,28 @@ export async function POST(
           });
         });
       }
+      after(async () => {
+        try {
+          await sendTournamentRegistrationTelegramNotification({
+            eventTitle: tournament.title,
+            eventSlug: tournament.slug,
+            username: profile.username,
+            gameLabel: GAMES[tournament.game]?.label ?? tournament.game,
+            platform: tournament.platform,
+            email: profile.email,
+            phone: profile.phone,
+            paymentStatus: 'free',
+            paymentEvent: 'free',
+            entryFeeKes: tournament.entry_fee,
+            registered: (reservedCount ?? 0) + 1,
+            confirmed: (reservedCount ?? 0) + 1,
+            slots: tournament.size,
+            tournamentId: tournament.id,
+          });
+        } catch (error) {
+          console.error('[TournamentJoin Telegram] Notification error:', error);
+        }
+      });
       void tryClaimBounty(supabase, authUser.id, 'tournament_register').catch(() => null);
       return NextResponse.json({ status: 'joined', player });
     }
@@ -256,6 +279,29 @@ export async function POST(
     if (insertError || !pendingPlayer) {
       return NextResponse.json({ error: 'Could not reserve your slot' }, { status: 500 });
     }
+
+    after(async () => {
+      try {
+        await sendTournamentRegistrationTelegramNotification({
+          eventTitle: tournament.title,
+          eventSlug: tournament.slug,
+          username: profile.username,
+          gameLabel: GAMES[tournament.game]?.label ?? tournament.game,
+          platform: tournament.platform,
+          email: profile.email,
+          phone: profile.phone,
+          paymentStatus: 'pending',
+          paymentEvent: 'pending',
+          paymentReference: reference,
+          entryFeeKes: tournament.entry_fee,
+          registered: (reservedCount ?? 0) + 1,
+          slots: tournament.size,
+          tournamentId: tournament.id,
+        });
+      } catch (error) {
+        console.error('[TournamentJoin Telegram] Pending notification error:', error);
+      }
+    });
 
     const initialized = await initializeTournamentPayment({
       amountKes: tournament.entry_fee,

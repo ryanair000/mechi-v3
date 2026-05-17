@@ -10,7 +10,12 @@ import {
   classifySupportMessage,
   type SupportUserSummary,
 } from '@/lib/support-context';
-import { requestSupportReply, type SupportBridgeConversationMessage } from '@/lib/openclaw-bridge';
+import {
+  SUPPORT_AWAY_MESSAGE,
+  looksLikeProviderCapacityMessage,
+  requestSupportReply,
+  type SupportBridgeConversationMessage,
+} from '@/lib/openclaw-bridge';
 import { executeWhatsAppPlayerAction } from '@/lib/whatsapp-player-actions';
 import {
   extractInstagramIncomingMessages,
@@ -743,15 +748,23 @@ async function sendOutboundSupportMessage(params: {
   failureStatus?: SupportThreadStatus;
   escalationReason?: string | null;
 }) {
+  const source = typeof params.meta?.source === 'string' ? params.meta.source : '';
+  const outboundMessage =
+    (params.senderType === 'ai' || params.senderType === 'system') &&
+    (looksLikeProviderCapacityMessage(params.message) ||
+      source === 'bridge_error' ||
+      source === 'bridge_fallback')
+      ? SUPPORT_AWAY_MESSAGE
+      : params.message;
   const delivery =
     params.thread.channel === 'instagram'
       ? await sendSupportInstagramMessage({
           recipientId: params.thread.wa_id,
-          message: params.message,
+          message: outboundMessage,
         })
       : await sendSupportWhatsAppMessage({
           whatsappNumber: params.thread.wa_id || params.thread.phone || '',
-          message: params.message,
+          message: outboundMessage,
         });
 
   const nowIso = new Date().toISOString();
@@ -799,7 +812,7 @@ async function sendOutboundSupportMessage(params: {
     thread_id: params.thread.id,
     direction: 'outbound',
     sender_type: params.senderType,
-    body: params.message,
+    body: outboundMessage,
     message_type: params.messageType ?? 'text',
     provider_message_id: delivery.messageId ?? null,
     meta: deliveryMeta,

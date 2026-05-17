@@ -20,6 +20,7 @@ import {
   sendTournamentWinnerEmail,
 } from '@/lib/email';
 import { createNotifications } from '@/lib/notifications';
+import { sendTournamentRegistrationTelegramNotification } from '@/lib/telegram';
 import type {
   GameKey,
   Match,
@@ -164,12 +165,12 @@ export async function markTournamentPaymentPaidByReference(
 ): Promise<{ success: boolean; tournamentId?: string; error?: string }> {
   const { data: playerRaw, error: playerError } = await supabase
     .from('tournament_players')
-    .select('id, tournament_id, payment_status')
+    .select('id, tournament_id, user_id, payment_status')
     .eq('payment_ref', reference)
     .maybeSingle();
 
   const player = playerRaw as
-    | { id: string; tournament_id: string; payment_status: string }
+    | { id: string; tournament_id: string; user_id: string; payment_status: string }
     | null;
 
   if (playerError || !player) {
@@ -192,7 +193,76 @@ export async function markTournamentPaymentPaidByReference(
   }
 
   await maybeMarkTournamentFull(supabase, player.tournament_id);
+  await sendTournamentPaymentConfirmedTelegramNotification(supabase, {
+    tournamentId: player.tournament_id,
+    userId: player.user_id,
+    reference,
+  });
   return { success: true, tournamentId: player.tournament_id };
+}
+
+async function sendTournamentPaymentConfirmedTelegramNotification(
+  supabase: SupabaseClient,
+  params: {
+    tournamentId: string;
+    userId: string;
+    reference: string;
+  }
+) {
+  try {
+    const [tournamentResult, profileResult, countResult, confirmedResult] = await Promise.all([
+      supabase
+        .from('tournaments')
+        .select('id, slug, title, game, platform, entry_fee, size')
+        .eq('id', params.tournamentId)
+        .maybeSingle(),
+      supabase
+        .from('profiles')
+        .select('username, email, phone')
+        .eq('id', params.userId)
+        .maybeSingle(),
+      supabase
+        .from('tournament_players')
+        .select('id', { count: 'exact', head: true })
+        .eq('tournament_id', params.tournamentId),
+      supabase
+        .from('tournament_players')
+        .select('id', { count: 'exact', head: true })
+        .eq('tournament_id', params.tournamentId)
+        .in('payment_status', [...CONFIRMED_PAYMENT_STATUSES]),
+    ]);
+
+    const tournament = tournamentResult.data as
+      | Pick<Tournament, 'id' | 'slug' | 'title' | 'game' | 'platform' | 'entry_fee' | 'size'>
+      | null;
+    const profile = profileResult.data as
+      | { username?: string | null; email?: string | null; phone?: string | null }
+      | null;
+
+    if (!tournament || !profile?.username) {
+      return;
+    }
+
+    await sendTournamentRegistrationTelegramNotification({
+      eventTitle: tournament.title,
+      eventSlug: tournament.slug,
+      username: profile.username,
+      gameLabel: GAMES[tournament.game]?.label ?? tournament.game,
+      platform: tournament.platform,
+      email: profile.email,
+      phone: profile.phone,
+      paymentStatus: 'paid',
+      paymentEvent: 'confirmed',
+      paymentReference: params.reference,
+      entryFeeKes: tournament.entry_fee,
+      registered: countResult.count ?? null,
+      confirmed: confirmedResult.count ?? null,
+      slots: tournament.size,
+      tournamentId: tournament.id,
+    });
+  } catch (error) {
+    console.error('[TournamentPayment Telegram] Notification error:', error);
+  }
 }
 
 export async function markTournamentPaymentFailedByReference(

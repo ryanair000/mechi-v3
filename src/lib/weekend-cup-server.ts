@@ -2,6 +2,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { sendOnlineTournamentRegistrationEmail } from '@/lib/email';
 import { createNotification } from '@/lib/notifications';
 import { createServiceClient } from '@/lib/supabase';
+import { sendOnlineTournamentRegistrationTelegramNotification } from '@/lib/telegram';
 import {
   WEEKEND_CUP_BALLOTS,
   WEEKEND_CUP_ENTRY_PRICING,
@@ -526,7 +527,9 @@ export async function markWeekendCupPaymentPaidByReference(
 ): Promise<{ success: boolean; registrationId?: string; error?: string }> {
   const { data: registrationRaw, error: registrationError } = await supabase
     .from('online_tournament_registrations')
-    .select('id, user_id, game, in_game_username, email, eligibility_status, payment_status')
+    .select(
+      'id, user_id, game, in_game_username, email, eligibility_status, payment_status, entry_fee_kes, payment_tier, whatsapp_number, instagram_username, youtube_name, followed_instagram, subscribed_youtube'
+    )
     .eq('event_slug', WEEKEND_CUP_SLUG)
     .eq('payment_reference', reference)
     .maybeSingle();
@@ -540,6 +543,13 @@ export async function markWeekendCupPaymentPaidByReference(
         email: string | null;
         eligibility_status: string;
         payment_status: OnlineTournamentPaymentStatus;
+        entry_fee_kes: number | null;
+        payment_tier: string | null;
+        whatsapp_number: string | null;
+        instagram_username: string | null;
+        youtube_name: string | null;
+        followed_instagram: boolean | null;
+        subscribed_youtube: boolean | null;
       }
     | null;
 
@@ -595,11 +605,50 @@ export async function markWeekendCupPaymentPaidByReference(
 
     const { data: profileRaw } = await supabase
       .from('profiles')
-      .select('username, email')
+      .select('username, email, phone')
       .eq('id', registration.user_id)
       .maybeSingle();
-    const profile = profileRaw as { username?: string | null; email?: string | null } | null;
+    const profile = profileRaw as {
+      username?: string | null;
+      email?: string | null;
+      phone?: string | null;
+    } | null;
     const recipient = (registration.email ?? profile?.email ?? '').trim();
+
+    const summary = await getWeekendCupRegistrationSummary({ supabase });
+    const gameSummary = summary.games[registration.game];
+    try {
+      await sendOnlineTournamentRegistrationTelegramNotification({
+        eventTitle: WEEKEND_CUP_TITLE,
+        username: profile?.username?.trim() || 'player',
+        gameLabel: config.label,
+        inGameUsername: registration.in_game_username,
+        email: registration.email ?? profile?.email ?? null,
+        phone: profile?.phone ?? null,
+        whatsappNumber: registration.whatsapp_number ?? profile?.phone ?? null,
+        instagramUsername: registration.instagram_username,
+        youtubeName: registration.youtube_name,
+        followedInstagram: Boolean(registration.followed_instagram),
+        subscribedYoutube: Boolean(registration.subscribed_youtube),
+        eligibilityStatus: registration.eligibility_status,
+        registered: gameSummary?.registered ?? 0,
+        confirmed: gameSummary?.confirmed ?? 0,
+        pendingPayment: gameSummary?.pendingPayment ?? 0,
+        slots: gameSummary?.slots ?? config.slots,
+        spotsLeft: gameSummary?.spotsLeft ?? Math.max(0, config.slots - (gameSummary?.confirmed ?? 0)),
+        paymentStatus: 'paid',
+        paymentEvent: 'confirmed',
+        paymentReference: reference,
+        paymentLabel: registration.payment_tier,
+        entryFeeKes: registration.entry_fee_kes,
+        checkedIn: gameSummary?.checkedIn ?? 0,
+        checkInCap: gameSummary?.checkInCap ?? config.checkInCap,
+        checkInSpotsLeft: gameSummary?.checkInSpotsLeft ?? config.checkInCap,
+        registrationId: registration.id,
+      });
+    } catch (error) {
+      console.error('[WeekendCupPayment Telegram] Notification error:', error);
+    }
 
     if (recipient) {
       await sendOnlineTournamentRegistrationEmail({

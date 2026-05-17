@@ -1,5 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { makePaymentReference } from '@/lib/slug';
+import { sendOnlineTournamentRegistrationTelegramNotification } from '@/lib/telegram';
 import { APP_URL } from '@/lib/urls';
 import {
   WEKA_MAWE_ENTRY_FEE_KES,
@@ -238,6 +239,39 @@ export async function startWekaMaweRegistration(params: {
     return { success: false, error: error?.message ?? 'Could not save registration.' };
   }
 
+  try {
+    const latestSummary = await getWekaMaweSummary(params.supabase, params.userId);
+    await sendOnlineTournamentRegistrationTelegramNotification({
+      eventTitle: edition.title,
+      username: params.username,
+      gameLabel: 'eFootball',
+      inGameUsername: params.ign,
+      email: email,
+      phone: params.phone,
+      whatsappNumber: params.whatsappNumber || params.phone,
+      followedInstagram: false,
+      subscribedYoutube: false,
+      eligibilityStatus: 'pending',
+      registered: latestSummary.totals.registered,
+      confirmed: latestSummary.totals.paid,
+      pendingPayment: latestSummary.totals.pendingPayment,
+      slots: edition.max_players,
+      spotsLeft: latestSummary.totals.slotsLeft,
+      paymentStatus: 'pending_payment',
+      paymentEvent: 'pending',
+      paymentReference: reference,
+      paymentLabel: 'Weka Mawe entry',
+      entryFeeKes: edition.registration_fee_kes,
+      checkedIn: latestSummary.totals.checkedIn,
+      checkInCap: edition.max_players,
+      checkInSpotsLeft: Math.max(0, edition.max_players - latestSummary.totals.checkedIn),
+      registrationId: (data as WekaMaweRegistration).id,
+      adminPath: '/admin/weka-mawe',
+    });
+  } catch (telegramError) {
+    console.error('[Weka Mawe Telegram] Registration notification error:', telegramError);
+  }
+
   return {
     success: true,
     registration: data as WekaMaweRegistration,
@@ -247,6 +281,22 @@ export async function startWekaMaweRegistration(params: {
 }
 
 export async function markWekaMawePaymentPaidByReference(supabase: Db, reference: string) {
+  const { data: registrationRaw, error: registrationError } = await supabase
+    .from('weka_mawe_registrations')
+    .select('*')
+    .eq('payment_reference', reference)
+    .maybeSingle();
+
+  const registration = registrationRaw as WekaMaweRegistration | null;
+
+  if (registrationError || !registration) {
+    return { success: false, error: registrationError?.message ?? 'Payment record not found' };
+  }
+
+  if (registration.payment_status === 'paid') {
+    return { success: true };
+  }
+
   const { data, error } = await supabase
     .from('weka_mawe_registrations')
     .update({
@@ -255,12 +305,67 @@ export async function markWekaMawePaymentPaidByReference(supabase: Db, reference
       payment_confirmed_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     })
-    .eq('payment_reference', reference)
-    .select('id')
+    .eq('id', registration.id)
+    .in('payment_status', ['pending_payment', 'failed', 'manual_review'])
+    .select('*')
     .maybeSingle();
 
   if (error || !data) {
     return { success: false, error: error?.message ?? 'Payment record not found' };
+  }
+
+  try {
+    const { data: editionRaw } = await supabase
+      .from('weka_mawe_editions')
+      .select('*')
+      .eq('id', registration.edition_id)
+      .maybeSingle();
+    const edition = (editionRaw as WekaMaweEdition | null) ?? (await getCurrentWekaMaweEdition(supabase));
+    const profileResult = await supabase
+      .from('profiles')
+      .select('username, email, phone')
+      .eq('id', registration.user_id)
+      .maybeSingle();
+    const profile = profileResult.data as
+      | { username?: string | null; email?: string | null; phone?: string | null }
+      | null;
+    const latestSummary = await getWekaMaweSummary(supabase, registration.user_id);
+
+    await sendOnlineTournamentRegistrationTelegramNotification({
+      eventTitle: edition?.title ?? 'Weka Mawe',
+      username: profile?.username?.trim() || registration.ign,
+      gameLabel: 'eFootball',
+      inGameUsername: registration.ign,
+      email:
+        profile?.email ??
+        (registration as WekaMaweRegistration & { payment_email?: string | null }).payment_email ??
+        null,
+      phone: registration.phone ?? profile?.phone ?? null,
+      whatsappNumber: registration.whatsapp_number ?? registration.phone ?? profile?.phone ?? null,
+      followedInstagram: false,
+      subscribedYoutube: false,
+      eligibilityStatus: 'verified',
+      registered: latestSummary.totals.registered,
+      confirmed: latestSummary.totals.paid,
+      pendingPayment: latestSummary.totals.pendingPayment,
+      slots: edition?.max_players ?? WEKA_MAWE_MAX_PLAYERS,
+      spotsLeft: latestSummary.totals.slotsLeft,
+      paymentStatus: 'paid',
+      paymentEvent: 'confirmed',
+      paymentReference: reference,
+      paymentLabel: 'Weka Mawe entry',
+      entryFeeKes: registration.amount_kes,
+      checkedIn: latestSummary.totals.checkedIn,
+      checkInCap: edition?.max_players ?? WEKA_MAWE_MAX_PLAYERS,
+      checkInSpotsLeft: Math.max(
+        0,
+        (edition?.max_players ?? WEKA_MAWE_MAX_PLAYERS) - latestSummary.totals.checkedIn
+      ),
+      registrationId: registration.id,
+      adminPath: '/admin/weka-mawe',
+    });
+  } catch (telegramError) {
+    console.error('[Weka Mawe Telegram] Payment notification error:', telegramError);
   }
 
   return { success: true };

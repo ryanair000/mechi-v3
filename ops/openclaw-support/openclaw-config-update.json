@@ -1,0 +1,238 @@
+{
+  "agents": {
+    "default": "support",
+    "entries": [
+      {
+        "id": "control",
+        "name": "Mechi Control",
+        "workspace": "/home/ubuntu/.openclaw/workspace",
+        "model": "anthropic/claude-sonnet-4-20250514",
+        "thinkingDefault": "medium",
+        "tools": {
+          "profile": "coding"
+        }
+      },
+      {
+        "id": "support",
+        "name": "Mechi Support",
+        "workspace": "/home/ubuntu/.openclaw/workspace-support",
+        "model": "anthropic/claude-sonnet-4-20250514",
+        "thinkingDefault": "minimal",
+        "fastModeDefault": true,
+        "tools": {
+          "profile": "minimal"
+        }
+      },
+      {
+        "id": "community",
+        "name": "Mechi Community",
+        "workspace": "/home/ubuntu/.openclaw/workspace-community",
+        "model": "anthropic/claude-sonnet-4-20250514",
+        "thinkingDefault": "minimal",
+        "fastModeDefault": true,
+        "tools": {
+          "profile": "minimal"
+        }
+      },
+      {
+        "id": "socio",
+        "name": "Mechi Socio",
+        "workspace": "/home/ubuntu/.openclaw/workspace-growth",
+        "model": "anthropic/claude-sonnet-4-20250514",
+        "thinkingDefault": "minimal",
+        "fastModeDefault": true,
+        "tools": {
+          "profile": "minimal"
+        }
+      },
+      {
+        "id": "infra",
+        "name": "Mechi Infra",
+        "workspace": "/home/ubuntu/.openclaw/workspace-infra",
+        "model": "anthropic/claude-sonnet-4-20250514",
+        "thinkingDefault": "medium",
+        "tools": {
+          "profile": "coding"
+        }
+      },
+      {
+        "id": "billing",
+        "name": "Mechi Billing",
+        "workspace": "/home/ubuntu/.openclaw/workspace-billing",
+        "model": "anthropic/claude-sonnet-4-20250514",
+        "thinkingDefault": "minimal",
+        "fastModeDefault": true,
+        "tools": {
+          "profile": "minimal"
+        }
+      },
+      {
+        "id": "data",
+        "name": "Mechi Data",
+        "workspace": "/home/ubuntu/.openclaw/workspace-data",
+        "model": "anthropic/claude-sonnet-4-20250514",
+        "thinkingDefault": "minimal",
+        "fastModeDefault": true,
+        "tools": {
+          "profile": "minimal"
+        }
+      },
+      {
+        "id": "growth",
+        "name": "Mechi Growth",
+        "workspace": "/home/ubuntu/.openclaw/workspace-growth",
+        "model": "anthropic/claude-sonnet-4-20250514",
+        "thinkingDefault": "minimal",
+        "fastModeDefault": true,
+        "tools": {
+          "profile": "minimal"
+        }
+      }
+    ]
+  },
+  "channels": {
+    "telegram": {
+      "enabled": true,
+      "dmPolicy": "open",
+      "allowFrom": ["*"],
+      "streaming": {
+        "mode": "off"
+      },
+      "replyToMode": "first",
+      "timeoutSeconds": 60,
+      "groupPolicy": "open",
+      "groupAllowFrom": ["*"],
+      "groups": {
+        "-1003922946344": {
+          "enabled": true,
+          "requireMention": false,
+          "systemPrompt": "This is the internal Mechi OPS Telegram group. Route operator, repo, live registration, tournament, support, AWS, GitHub, and Obsidian questions to the control agent unless a specialist is explicitly named. Keep replies short, decisive, and ready to send."
+        },
+        "*": {
+          "requireMention": true,
+          "groupPolicy": "open"
+        }
+      },
+      "botToken": "8491975809:AAFFPYN8iWZn39wBwYrwWr_qmJgHF1He5h0",
+      "dmHistoryLimit": 50,
+      "historyLimit": 50
+    },
+    "whatsapp": {
+      "enabled": true,
+      "selfChatMode": false,
+      "defaultAccount": "default",
+      "dmPolicy": "open",
+      "allowFrom": ["*"],
+      "groupPolicy": "open",
+      "groupAllowFrom": ["*"],
+      "groups": {
+        "*": {
+          "requireMention": true
+        }
+      },
+      "accounts": {
+        "default": {
+          "enabled": true,
+          "name": "+254733638841 Mechi Support WhatsApp",
+          "authDir": "/home/ubuntu/.openclaw/credentials/whatsapp/default",
+          "selfChatMode": false,
+          "dmPolicy": "open",
+          "allowFrom": ["*"],
+          "groupPolicy": "open",
+          "groupAllowFrom": ["*"],
+          "groups": {
+            "*": {
+              "requireMention": true
+            }
+          }
+        }
+      }
+    }
+  },
+  "bindings": [
+    {
+      "type": "route",
+      "agentId": "control",
+      "comment": "Internal MECHI OPS Telegram group -> Mechi control",
+      "match": {
+        "channel": "telegram",
+        "peer": {
+          "kind": "group",
+          "id": "-1003922946344"
+        }
+      }
+    },
+    {
+      "type": "route",
+      "agentId": "control",
+      "comment": "Boss WhatsApp DM -> control",
+      "match": {
+        "channel": "whatsapp",
+        "accountId": "default",
+        "peer": {
+          "kind": "direct",
+          "id": "+254708355692"
+        }
+      }
+    },
+    {
+      "type": "route",
+      "agentId": "control",
+      "match": {
+        "channel": "whatsapp",
+        "accountId": "default",
+        "peer": {
+          "kind": "direct",
+          "id": "254708355692"
+        }
+      }
+    },
+    {
+      "type": "route",
+      "agentId": "control",
+      "match": {
+        "channel": "whatsapp",
+        "accountId": "default",
+        "peer": {
+          "kind": "direct",
+          "id": "254708355692@s.whatsapp.net"
+        }
+      }
+    },
+    {
+      "type": "route",
+      "agentId": "support",
+      "comment": "All other WhatsApp -> support",
+      "match": {
+        "channel": "whatsapp",
+        "accountId": "default"
+      }
+    },
+    {
+      "type": "route",
+      "agentId": "control",
+      "comment": "Boss Telegram DM -> control",
+      "match": {
+        "channel": "telegram",
+        "peer": {
+          "kind": "direct",
+          "id": "6806783421"
+        }
+      }
+    },
+    {
+      "type": "route",
+      "agentId": "control",
+      "match": {
+        "channel": "telegram",
+        "peer": {
+          "kind": "direct",
+          "id": "6738706706"
+        }
+      }
+    }
+  ],
+  "session": {
+    "dmScope": "per-account-channel-peer"
+  }
+}

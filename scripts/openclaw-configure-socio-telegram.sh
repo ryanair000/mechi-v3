@@ -47,6 +47,14 @@ CALLER_SOCIO_X_ACCESS_TOKEN_SECRET="${SOCIO_X_ACCESS_TOKEN_SECRET-}"
 CALLER_X_ACCESS_TOKEN_SECRET="${X_ACCESS_TOKEN_SECRET-}"
 CALLER_SOCIO_X_OAUTH2_ACCESS_TOKEN="${SOCIO_X_OAUTH2_ACCESS_TOKEN-}"
 CALLER_X_OAUTH2_ACCESS_TOKEN="${X_OAUTH2_ACCESS_TOKEN-}"
+CALLER_SOCIO_TIKTOK_ACCESS_TOKEN="${SOCIO_TIKTOK_ACCESS_TOKEN-}"
+CALLER_TIKTOK_ACCESS_TOKEN="${TIKTOK_ACCESS_TOKEN-}"
+CALLER_SOCIO_TIKTOK_CLIENT_KEY="${SOCIO_TIKTOK_CLIENT_KEY-}"
+CALLER_TIKTOK_CLIENT_KEY="${TIKTOK_CLIENT_KEY-}"
+CALLER_SOCIO_TIKTOK_CLIENT_SECRET="${SOCIO_TIKTOK_CLIENT_SECRET-}"
+CALLER_TIKTOK_CLIENT_SECRET="${TIKTOK_CLIENT_SECRET-}"
+CALLER_SOCIO_TIKTOK_PRIVACY_LEVEL="${SOCIO_TIKTOK_PRIVACY_LEVEL-}"
+CALLER_TIKTOK_PRIVACY_LEVEL="${TIKTOK_PRIVACY_LEVEL-}"
 CALLER_SOCIO_DISCORD_BOT_TOKEN="${SOCIO_DISCORD_BOT_TOKEN-}"
 CALLER_DISCORD_BOT_TOKEN="${DISCORD_BOT_TOKEN-}"
 CALLER_SOCIO_DISCORD_GUILD_ID="${SOCIO_DISCORD_GUILD_ID-}"
@@ -92,6 +100,10 @@ SOCIO_X_API_SECRET="${CALLER_SOCIO_X_API_SECRET:-${CALLER_X_API_SECRET:-${SOCIO_
 SOCIO_X_ACCESS_TOKEN="${CALLER_SOCIO_X_ACCESS_TOKEN:-${CALLER_X_ACCESS_TOKEN:-${SOCIO_X_ACCESS_TOKEN:-${X_ACCESS_TOKEN:-}}}}"
 SOCIO_X_ACCESS_TOKEN_SECRET="${CALLER_SOCIO_X_ACCESS_TOKEN_SECRET:-${CALLER_X_ACCESS_TOKEN_SECRET:-${SOCIO_X_ACCESS_TOKEN_SECRET:-${X_ACCESS_TOKEN_SECRET:-}}}}"
 SOCIO_X_OAUTH2_ACCESS_TOKEN="${CALLER_SOCIO_X_OAUTH2_ACCESS_TOKEN:-${CALLER_X_OAUTH2_ACCESS_TOKEN:-${SOCIO_X_OAUTH2_ACCESS_TOKEN:-${X_OAUTH2_ACCESS_TOKEN:-}}}}"
+SOCIO_TIKTOK_ACCESS_TOKEN="${CALLER_SOCIO_TIKTOK_ACCESS_TOKEN:-${CALLER_TIKTOK_ACCESS_TOKEN:-${SOCIO_TIKTOK_ACCESS_TOKEN:-${TIKTOK_ACCESS_TOKEN:-}}}}"
+SOCIO_TIKTOK_CLIENT_KEY="${CALLER_SOCIO_TIKTOK_CLIENT_KEY:-${CALLER_TIKTOK_CLIENT_KEY:-${SOCIO_TIKTOK_CLIENT_KEY:-${TIKTOK_CLIENT_KEY:-}}}}"
+SOCIO_TIKTOK_CLIENT_SECRET="${CALLER_SOCIO_TIKTOK_CLIENT_SECRET:-${CALLER_TIKTOK_CLIENT_SECRET:-${SOCIO_TIKTOK_CLIENT_SECRET:-${TIKTOK_CLIENT_SECRET:-}}}}"
+SOCIO_TIKTOK_PRIVACY_LEVEL="${CALLER_SOCIO_TIKTOK_PRIVACY_LEVEL:-${CALLER_TIKTOK_PRIVACY_LEVEL:-${SOCIO_TIKTOK_PRIVACY_LEVEL:-${TIKTOK_PRIVACY_LEVEL:-SELF_ONLY}}}}"
 SOCIO_DISCORD_BOT_TOKEN="${CALLER_SOCIO_DISCORD_BOT_TOKEN:-${CALLER_DISCORD_BOT_TOKEN:-${SOCIO_DISCORD_BOT_TOKEN:-${DISCORD_BOT_TOKEN:-}}}}"
 SOCIO_DISCORD_GUILD_ID="${CALLER_SOCIO_DISCORD_GUILD_ID:-${CALLER_DISCORD_GUILD_ID:-${SOCIO_DISCORD_GUILD_ID:-${DISCORD_GUILD_ID:-}}}}"
 SOCIO_DISCORD_USER_ID="${CALLER_SOCIO_DISCORD_USER_ID:-${CALLER_DISCORD_USER_ID:-${SOCIO_DISCORD_USER_ID:-${DISCORD_USER_ID:-}}}}"
@@ -224,7 +236,7 @@ copy_workspace "$GROWTH_WORKSPACE_SOURCE" "$SOCIO_WORKSPACE"
 ensure_xurl
 apply_telegram_empty_input_hotfix "$OPENCLAW_TELEGRAM_RUNTIME_FILE"
 
-node - "$OPENCLAW_HOME" "$SOCIO_WORKSPACE" "$SOCIO_INSTAGRAM_ACCESS_TOKEN" "$SOCIO_INSTAGRAM_BUSINESS_ACCOUNT_ID" "$SOCIO_FACEBOOK_USER_ACCESS_TOKEN" "$SOCIO_FACEBOOK_APP_ID" "$SOCIO_FACEBOOK_APP_SECRET" "$SOCIO_FACEBOOK_PAGE_ID" "$SOCIO_FACEBOOK_PAGE_ACCESS_TOKEN" "$SOCIO_FACEBOOK_GRAPH_API_VERSION" "$SOCIO_IMGUR_CLIENT_ID" "$SOCIO_X_API_KEY" "$SOCIO_X_API_SECRET" "$SOCIO_X_ACCESS_TOKEN" "$SOCIO_X_ACCESS_TOKEN_SECRET" "$SOCIO_X_OAUTH2_ACCESS_TOKEN" "$SOCIO_DISCORD_BOT_TOKEN" "$SOCIO_DISCORD_GUILD_ID" "$SOCIO_DISCORD_USER_ID" "$SOCIO_DISCORD_POST_CHANNEL_ID" "$SOCIO_DISCORD_WEBHOOK_URL" "$TELEGRAM_SOCIO_ALLOW_FROM" <<'NODE'
+node - "$OPENCLAW_HOME" "$SOCIO_WORKSPACE" "$SOCIO_INSTAGRAM_ACCESS_TOKEN" "$SOCIO_INSTAGRAM_BUSINESS_ACCOUNT_ID" "$SOCIO_FACEBOOK_USER_ACCESS_TOKEN" "$SOCIO_FACEBOOK_APP_ID" "$SOCIO_FACEBOOK_APP_SECRET" "$SOCIO_FACEBOOK_PAGE_ID" "$SOCIO_FACEBOOK_PAGE_ACCESS_TOKEN" "$SOCIO_FACEBOOK_GRAPH_API_VERSION" "$SOCIO_IMGUR_CLIENT_ID" "$SOCIO_X_API_KEY" "$SOCIO_X_API_SECRET" "$SOCIO_X_ACCESS_TOKEN" "$SOCIO_X_ACCESS_TOKEN_SECRET" "$SOCIO_X_OAUTH2_ACCESS_TOKEN" "$SOCIO_TIKTOK_ACCESS_TOKEN" "$SOCIO_TIKTOK_CLIENT_KEY" "$SOCIO_TIKTOK_CLIENT_SECRET" "$SOCIO_TIKTOK_PRIVACY_LEVEL" "$SOCIO_DISCORD_BOT_TOKEN" "$SOCIO_DISCORD_GUILD_ID" "$SOCIO_DISCORD_USER_ID" "$SOCIO_DISCORD_POST_CHANNEL_ID" "$SOCIO_DISCORD_WEBHOOK_URL" "$TELEGRAM_SOCIO_ALLOW_FROM" <<'NODE'
 const fs = require('node:fs');
 const path = require('node:path');
 
@@ -245,6 +257,10 @@ const [
   xAccessToken,
   xAccessTokenSecret,
   xOauth2AccessToken,
+  tiktokAccessToken,
+  tiktokClientKey,
+  tiktokClientSecret,
+  tiktokPrivacyLevel,
   discordBotToken,
   discordGuildId,
   discordUserId,
@@ -323,6 +339,22 @@ const passthroughKeys = [
   'PLAYMECHI_FACEBOOK_PAGE_ID',
   'PLAYMECHI_FACEBOOK_PAGE_ACCESS_TOKEN',
   'PLAYMECHI_FACEBOOK_PAGE_NAME',
+  'CHEZAHUB_TIKTOK_ACCESS_TOKEN',
+  'CHEZAHUB_TIKTOK_CLIENT_KEY',
+  'CHEZAHUB_TIKTOK_CLIENT_SECRET',
+  'CHEZAHUB_TIKTOK_USERNAME',
+  'CHEZAHUB_TIKTOK_PRIVACY_LEVEL',
+  'PLAYMECHI_TIKTOK_ACCESS_TOKEN',
+  'PLAYMECHI_TIKTOK_CLIENT_KEY',
+  'PLAYMECHI_TIKTOK_CLIENT_SECRET',
+  'PLAYMECHI_TIKTOK_USERNAME',
+  'PLAYMECHI_TIKTOK_PRIVACY_LEVEL',
+  'TIKTOK_DISABLE_DUET',
+  'TIKTOK_DISABLE_STITCH',
+  'TIKTOK_DISABLE_COMMENT',
+  'TIKTOK_BRAND_CONTENT_TOGGLE',
+  'TIKTOK_BRAND_ORGANIC_TOGGLE',
+  'TIKTOK_IS_AIGC',
   'SOCIO_S3_STAGING_BUCKET',
   'SOCIO_S3_STAGING_PREFIX',
   'CHEZAHUB_X_USERNAME',
@@ -351,6 +383,10 @@ const entries = [
   ['X_ACCESS_TOKEN', firstNonEmpty(xAccessToken, existingEnv.get('X_ACCESS_TOKEN'))],
   ['X_ACCESS_TOKEN_SECRET', firstNonEmpty(xAccessTokenSecret, existingEnv.get('X_ACCESS_TOKEN_SECRET'))],
   ['X_OAUTH2_ACCESS_TOKEN', firstNonEmpty(xOauth2AccessToken, existingEnv.get('X_OAUTH2_ACCESS_TOKEN'))],
+  ['TIKTOK_ACCESS_TOKEN', firstNonEmpty(tiktokAccessToken, existingEnv.get('TIKTOK_ACCESS_TOKEN'))],
+  ['TIKTOK_CLIENT_KEY', firstNonEmpty(tiktokClientKey, existingEnv.get('TIKTOK_CLIENT_KEY'))],
+  ['TIKTOK_CLIENT_SECRET', firstNonEmpty(tiktokClientSecret, existingEnv.get('TIKTOK_CLIENT_SECRET'))],
+  ['TIKTOK_PRIVACY_LEVEL', firstNonEmpty(tiktokPrivacyLevel, existingEnv.get('TIKTOK_PRIVACY_LEVEL'), 'SELF_ONLY')],
   ['DISCORD_BOT_TOKEN', firstNonEmpty(discordBotToken, existingEnv.get('DISCORD_BOT_TOKEN'))],
   ['DISCORD_GUILD_ID', firstNonEmpty(discordGuildId, existingEnv.get('DISCORD_GUILD_ID'))],
   ['DISCORD_USER_ID', firstNonEmpty(discordUserId, existingEnv.get('DISCORD_USER_ID'))],
@@ -494,6 +530,7 @@ const groupPrompt = [
   'If the Boss says socio ping, socio test, or socio help, do not publish anything; reply with a short readiness or command summary only.',
   'If the Boss asks to schedule a post, use the local mechi-social-exec scheduler immediately and reply with the queued job id, exact EAT time, target channels, and caption used.',
   'If the Boss names Facebook, X, Discord, or says post all, publish to those named channels too.',
+  'TikTok direct and draft publishing are paused. If the Boss asks for TikTok, say TikTok SMM automation is paused and ask whether to re-enable it.',
   'For explicit chezahub or playmechi commands, use the local mechi-social-exec publish-meta helpers so the publish target is deterministic.',
   'Use the installed instagram-content-studio or instagram-api skill for Instagram-only publishing when the brand is already clear.',
   'Use the local mechi-social-exec workspace skill for Mechi-specific caption shaping, Facebook publishing, Discord webhook posting, X readiness checks, and cross-channel reporting.',
@@ -524,6 +561,7 @@ if (topicId) {
     'If the Boss says socio post playmechi, publish to both Instagram and Facebook for the PlayMechi brand pair.',
     'If the Boss says socio post mechi or post mechi, treat Mechi as PlayMechi and publish to Instagram and Facebook for PlayMechi.',
     'If the Boss says socio instagram, socio facebook, socio x, socio instagram/facebook, or socio all, use those exact channel targets for the named brand.',
+    'TikTok direct and draft publishing are paused. If the Boss asks for TikTok, say TikTok SMM automation is paused and ask whether to re-enable it.',
     'If the Boss says socio ping, socio test, or socio help, do not publish anything; reply with a short readiness or command summary only.',
     'If the Boss asks to schedule a post, use the local mechi-social-exec scheduler immediately and reply with the queued job id, exact EAT time, target channels, and caption used.',
     'When the Boss drops a photo or video here without naming a brand, do not assume PlayMechi or ChezaHub blindly. Infer from the asset and CTA, and ask one short clarification if it is still ambiguous.',
@@ -677,6 +715,11 @@ if command -v xurl >/dev/null 2>&1; then
   echo "- x publishing CLI: xurl installed"
 else
   echo "- x publishing CLI: xurl not installed"
+fi
+if [ "$(saved_env_has_key TIKTOK_ACCESS_TOKEN)" = "1" ] || [ "$(saved_env_has_key PLAYMECHI_TIKTOK_ACCESS_TOKEN)" = "1" ]; then
+  echo "- tiktok publish env: token present"
+else
+  echo "- tiktok publish env: missing TIKTOK_ACCESS_TOKEN or PLAYMECHI_TIKTOK_ACCESS_TOKEN"
 fi
 if [ "$(saved_env_has_key DISCORD_BOT_TOKEN)" = "1" ] || [ "$(saved_env_has_key DISCORD_WEBHOOK_URL)" = "1" ]; then
   echo "- discord publish path: configured"

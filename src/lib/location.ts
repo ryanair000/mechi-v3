@@ -37,6 +37,19 @@ export const COUNTRY_LOCATION_MAP: Record<CountryKey, CountryDefinition> = {
     label: 'Ethiopia',
     regions: ['Addis Ababa', 'Adama', 'Bahir Dar', 'Hawassa', 'Mekelle', 'Dire Dawa', 'Jimma', 'Other'],
   },
+  united_states: {
+    label: 'United States',
+    regions: [
+      'California',
+      'Texas',
+      'Florida',
+      'New York',
+      'Georgia',
+      'Illinois',
+      'Washington',
+      'Other',
+    ],
+  },
 };
 
 export const COUNTRY_KEYS = Object.keys(COUNTRY_LOCATION_MAP) as CountryKey[];

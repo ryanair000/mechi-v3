@@ -53,6 +53,7 @@ The direct ClawHub archives for slugs `meta-ads` and `instagram` were not forced
   - current live `PlayMechi` Facebook page object is `Mechi` (`1074864009049646`) and the connected Instagram business account is `@playmechi` (`17841473808871423`)
 - X publishing requires the `xurl` CLI plus authenticated X account state, or another approved X credential bundle.
 - On 2026-05-11 EAT, `PlayMechi` X was bound on the live EC2 host with the real OAuth1 access token pair for `@playmechi`, and the direct signed X API readiness check for `/2/users/me` returned the `playmechi` account successfully.
+- TikTok video publishing helpers exist in the repo, but TikTok live SMM execution is paused by Boss instruction on 2026-05-17 EAT. X remains active for PlayMechi.
 - Discord publishing can use either `DISCORD_WEBHOOK_URL` or native Discord channel config backed by `DISCORD_BOT_TOKEN`.
 - Meta Ads skills require the correct Meta account/OAuth context and explicit Boss approval before any write, spend, budget, or campaign-state action.
 - OpenAI Codex model OAuth was repaired on 2026-05-03 EAT by removing the reused/expired profile, keeping the fresh `openai-codex` OAuth profile, and repointing active sessions to that profile.
@@ -101,7 +102,7 @@ Until that script is run and verified on EC2, this file's SMM-only live-state li
 - AWS CLI installed for infra work
 - Membrane CLI installed for Paystack skill auth
 - Cloudflared installed for Cloudinary/Instagram content studio local tunnel workflows
-- the growth workspace now carries `MECHI_SOCIAL_PLAYBOOK.md` plus local `mechi-social-exec` helpers for Facebook/Discord/X readiness checks
+- the growth workspace now carries `MECHI_SOCIAL_PLAYBOOK.md` plus local `mechi-social-exec` helpers for Facebook/Discord/TikTok/X readiness checks
 - the growth workspace now also carries direct local Meta publish helpers for explicit brand-pair commands:
   - `publish-instagram-photo.mjs`
   - `publish-instagram-video.mjs`

@@ -40,6 +40,7 @@ function normalizeChannels(value) {
       raw
         .split(/[,+/]/)
         .map((entry) => entry.trim())
+        .map((entry) => (entry === 'tiktokdraft' || entry === 'tiktok_draft' ? 'tiktok-draft' : entry))
         .filter(Boolean)
     )
   );
@@ -90,7 +91,7 @@ async function main() {
   const parsed = parseBrandCaptionMediaArgs(parsedChannels.rest);
   if (!parsed.brand || !parsed.media) {
     console.error(
-      `${usageFor('publish-social-photo.mjs', 'image')} --channels instagram|facebook|x|all|instagram/facebook`
+      `${usageFor('publish-social-photo.mjs', 'image')} --channels instagram|facebook|x|tiktok|tiktok-draft|all|instagram/facebook`
     );
     process.exit(1);
   }
@@ -106,6 +107,16 @@ async function main() {
       results.facebook = runChild('publish-facebook-photo.mjs', childArgs);
     } else if (channel === 'x') {
       results.x = runChild('publish-x-photo.mjs', childArgs);
+    } else if (channel === 'tiktok') {
+      results.tiktok = {
+        ok: false,
+        error: 'TikTok photo posting is not enabled in this helper yet. Use a video or publish TikTok manually.',
+      };
+    } else if (channel === 'tiktok-draft') {
+      results.tiktokDraft = {
+        ok: false,
+        error: 'TikTok draft upload is video-only in this helper. Use a video or publish the photo manually.',
+      };
     } else {
       results[channel] = {
         ok: false,

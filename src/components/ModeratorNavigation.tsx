@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
   ClipboardCheck,
+  CreditCard,
   LayoutDashboard,
   LogOut,
   MonitorPlay,
@@ -11,6 +12,7 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import { getModeratorLoginPath } from '@/lib/navigation';
+import type { ModeratorTournamentKey } from '@/lib/moderator-tournaments';
 import { ONLINE_TOURNAMENT_GAME_BY_KEY, type OnlineTournamentGameKey } from '@/lib/online-tournament';
 
 type ModeratorNavRole = 'admin' | 'moderator' | string;
@@ -22,7 +24,21 @@ type ModeratorNavItem = {
   label: string;
 };
 
-function getModeratorNavItems(assignedGame: OnlineTournamentGameKey): ModeratorNavItem[] {
+function getModeratorNavItems(
+  assignedGame: OnlineTournamentGameKey,
+  tournamentKey?: ModeratorTournamentKey
+): ModeratorNavItem[] {
+  if (tournamentKey === 'days_esports_tz_efootball') {
+    return [
+      {
+        href: '/moderators/tz',
+        label: 'TZ Payments',
+        icon: CreditCard,
+      },
+      { href: '/dashboard', label: 'Back to App', icon: LayoutDashboard },
+    ];
+  }
+
   const game = ONLINE_TOURNAMENT_GAME_BY_KEY[assignedGame];
   const gameParam = encodeURIComponent(assignedGame);
 
@@ -42,6 +58,11 @@ function getModeratorNavItems(assignedGame: OnlineTournamentGameKey): ModeratorN
       label: `${game.shortLabel} Tournament`,
       icon: MonitorPlay,
     },
+    {
+      href: '/moderators/tz',
+      label: 'TZ Payments',
+      icon: CreditCard,
+    },
     { href: '/dashboard', label: 'Back to App', icon: LayoutDashboard },
   ];
 }
@@ -55,15 +76,17 @@ export function ModeratorNavigation({
   assignedGame = 'codm',
   collapsed = false,
   role,
+  tournamentKey,
   variant = 'desktop',
 }: {
   assignedGame?: OnlineTournamentGameKey;
   collapsed?: boolean;
   role: ModeratorNavRole;
+  tournamentKey?: ModeratorTournamentKey;
   variant?: 'desktop' | 'mobile';
 }) {
   const pathname = usePathname();
-  const navItems = getModeratorNavItems(assignedGame);
+  const navItems = getModeratorNavItems(assignedGame, tournamentKey);
   const items = navItems.filter((item) => !item.adminOnly || role === 'admin');
 
   if (variant === 'mobile') {

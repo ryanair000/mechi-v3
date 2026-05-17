@@ -210,6 +210,53 @@ function getBrandConfig(input) {
         pageAccessToken: facebookPageAccessTokenNames,
       },
     },
+    tiktok: {
+      accessToken: envFirst([
+        ...buildScopedNames(brandKey, 'TIKTOK_ACCESS_TOKEN'),
+        'TIKTOK_ACCESS_TOKEN',
+      ]),
+      clientKey: envFirst([
+        ...buildScopedNames(brandKey, 'TIKTOK_CLIENT_KEY'),
+        'TIKTOK_CLIENT_KEY',
+      ]),
+      clientSecret: envFirst([
+        ...buildScopedNames(brandKey, 'TIKTOK_CLIENT_SECRET'),
+        'TIKTOK_CLIENT_SECRET',
+      ]),
+      username:
+        envFirst(buildScopedNames(brandKey, 'TIKTOK_USERNAME')) ||
+        (brandKey === 'playmechi' ? 'playmechi' : ''),
+      privacyLevel:
+        envFirst([
+          ...buildScopedNames(brandKey, 'TIKTOK_PRIVACY_LEVEL'),
+          'TIKTOK_PRIVACY_LEVEL',
+        ]) || 'SELF_ONLY',
+      disableDuet:
+        envFirst([...buildScopedNames(brandKey, 'TIKTOK_DISABLE_DUET'), 'TIKTOK_DISABLE_DUET']) === 'true',
+      disableStitch:
+        envFirst([...buildScopedNames(brandKey, 'TIKTOK_DISABLE_STITCH'), 'TIKTOK_DISABLE_STITCH']) === 'true',
+      disableComment:
+        envFirst([...buildScopedNames(brandKey, 'TIKTOK_DISABLE_COMMENT'), 'TIKTOK_DISABLE_COMMENT']) === 'true',
+      brandContentToggle:
+        envFirst([...buildScopedNames(brandKey, 'TIKTOK_BRAND_CONTENT_TOGGLE'), 'TIKTOK_BRAND_CONTENT_TOGGLE']) === 'true',
+      brandOrganicToggle:
+        envFirst([...buildScopedNames(brandKey, 'TIKTOK_BRAND_ORGANIC_TOGGLE'), 'TIKTOK_BRAND_ORGANIC_TOGGLE']) === 'true',
+      isAigc: envFirst([...buildScopedNames(brandKey, 'TIKTOK_IS_AIGC'), 'TIKTOK_IS_AIGC']) === 'true',
+      requiredNames: {
+        accessToken: [
+          ...buildScopedNames(brandKey, 'TIKTOK_ACCESS_TOKEN'),
+          'TIKTOK_ACCESS_TOKEN',
+        ],
+        clientKey: [
+          ...buildScopedNames(brandKey, 'TIKTOK_CLIENT_KEY'),
+          'TIKTOK_CLIENT_KEY',
+        ],
+        clientSecret: [
+          ...buildScopedNames(brandKey, 'TIKTOK_CLIENT_SECRET'),
+          'TIKTOK_CLIENT_SECRET',
+        ],
+      },
+    },
     imgurClientId: envFirst(['IMGUR_CLIENT_ID', ...buildScopedNames(brandKey, 'IMGUR_CLIENT_ID')]),
     cloudinary: {
       cloudName: envFirst(['CLOUDINARY_CLOUD_NAME']),
@@ -221,6 +268,7 @@ function getBrandConfig(input) {
   config.readiness = {
     instagram: Boolean(config.instagram.accessToken && config.instagram.businessAccountId),
     facebook: Boolean(config.facebook.pageId && config.facebook.pageAccessToken),
+    tiktok: Boolean(config.tiktok.accessToken),
     crossPostPair: Boolean(
       config.instagram.accessToken &&
         config.instagram.businessAccountId &&

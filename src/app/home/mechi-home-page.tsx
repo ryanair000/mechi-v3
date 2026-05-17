@@ -15,9 +15,33 @@ import {
 } from '@/lib/weekend-cup';
 
 export function MechiHomePageShell() {
-  const { locale } = useRegionalSettings();
+  const { country, locale } = useRegionalSettings();
   const isSwahili = locale === 'sw-TZ';
-  const homeFaqs: FaqItem[] = isSwahili
+  const isUnitedStates = country === 'united_states';
+  const homeFaqs: FaqItem[] = isUnitedStates
+    ? [
+        {
+          question: 'What is Mechi USA?',
+          answer:
+            'Mechi USA is the American landing lane for PlayMechi: competitive gaming profiles, community lobbies, skill-first brackets, and prize-backed events as the US player base opens up.',
+        },
+        {
+          question: 'Which games fit the USA version?',
+          answer:
+            'The first USA page keeps the current Mechi core: PUBG Mobile, CODM, eFootball, FC, fighting games, and community-voted mystery slots. It is built so US-focused games can be promoted without changing the app foundation.',
+        },
+        {
+          question: 'Can US players join Weekend Cup?',
+          answer:
+            'US players can create a Mechi account and follow the Weekend Cup flow, but event timing, payment availability, and prize eligibility should be checked on the event page before entering.',
+        },
+        {
+          question: 'How should players get updates?',
+          answer:
+            'Follow PlayMechi on Instagram, YouTube, X, Discord, and Twitch for the cleanest public updates while the USA community lane is being built out.',
+        },
+      ]
+    : isSwahili
     ? [
         {
           question: 'Ninajisajilije kwa Weekend Cup?',
@@ -78,14 +102,20 @@ export function MechiHomePageShell() {
         <LogoCloud3Section />
         <AnimatedSlideshowSection />
         <Faq5
-          badge={isSwahili ? 'Maswali ya Weekend Cup' : 'Weekend Cup FAQ'}
+          badge={
+            isSwahili ? 'Maswali ya Weekend Cup' : isUnitedStates ? 'USA FAQ' : 'Weekend Cup FAQ'
+          }
           heading={
-            isSwahili
+            isUnitedStates
+              ? 'What changes for players in the United States.'
+              : isSwahili
               ? `Majibu ya haraka kabla ya ${WEEKEND_CUP_TITLE}.`
               : `Quick answers before ${WEEKEND_CUP_TITLE}.`
           }
           description={
-            isSwahili
+            isUnitedStates
+              ? 'A dedicated USA entry point for Mechi, keeping the current tournament engine while making the promise clear for American players.'
+              : isSwahili
               ? 'Usajili, malipo ya kiingilio, kura ya mystery slot, na sehemu ya kufuatilia kila kinachoendelea kwenye Mechi.club.'
               : 'Registration, entry payment, mystery-slot voting, and where to follow the action on Mechi.club.'
           }

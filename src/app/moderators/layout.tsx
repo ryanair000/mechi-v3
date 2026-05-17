@@ -131,6 +131,7 @@ export default async function ModeratorsLayout({ children }: { children: React.R
       profile={{ role: profile.role, username: profile.username }}
       tournament={{
         game: moderatorTournament.game,
+        key: moderatorTournament.key,
         label: moderatorTournament.label,
         shortLabel: moderatorTournament.shortLabel,
       }}

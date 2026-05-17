@@ -1,5 +1,11 @@
 export type PlatformKey = 'ps' | 'xbox' | 'nintendo' | 'mobile' | 'pc';
-export type CountryKey = 'kenya' | 'tanzania' | 'uganda' | 'rwanda' | 'ethiopia';
+export type CountryKey =
+  | 'kenya'
+  | 'tanzania'
+  | 'uganda'
+  | 'rwanda'
+  | 'ethiopia'
+  | 'united_states';
 export type LobbyVisibility = 'public' | 'private';
 
 export type GameKey =

@@ -1,10 +1,10 @@
 import type { Metadata } from 'next';
 import { TanzaniaHomePage } from '@/app/tz/tanzania-home-page';
-import { WEEKEND_CUP_TITLE } from '@/lib/weekend-cup';
+import { TZ_TOURNAMENT } from '@/lib/tanzania-tournament';
 
 export const metadata: Metadata = {
-  title: 'Tanzania | Mechi.club',
-  description: `Toleo la Tanzania la Mechi.club kwa ${WEEKEND_CUP_TITLE}, tournaments, lobbies, na community ya gamers wa Afrika Mashariki.`,
+  title: 'Usajili wa Tanzania eFootball | Mechi.club',
+  description: `Usajili wa Tanzania kwa ${TZ_TOURNAMENT.swahiliTitle}, pamoja na maelekezo ya Airtel Money na msaada wa Days Esports.`,
   alternates: {
     canonical: '/tz',
   },

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import {
   getModeratorTournamentFromGameIds,
+  readModeratorTournamentKeyFromGameIds,
   type ModeratorTournamentOption,
 } from '@/lib/moderator-tournaments';
 import { ONLINE_TOURNAMENT_SLUG, type OnlineTournamentGameKey } from '@/lib/online-tournament';
@@ -77,7 +78,22 @@ export async function requireModeratorTournamentScope(
     };
   }
 
-  const assignment = getModeratorTournamentFromGameIds((data as { game_ids?: unknown } | null)?.game_ids);
+  const gameIds = (data as { game_ids?: unknown } | null)?.game_ids;
+  const assignmentKey = readModeratorTournamentKeyFromGameIds(gameIds);
+
+  if (assignmentKey === 'days_esports_tz_efootball') {
+    return {
+      profile: null,
+      response: NextResponse.json(
+        { error: 'Use the Tanzania moderator desk for this tournament' },
+        { status: 403 }
+      ),
+      assignment: null,
+      isAdmin: false,
+    };
+  }
+
+  const assignment = getModeratorTournamentFromGameIds(gameIds);
 
   if (!assignment) {
     return {

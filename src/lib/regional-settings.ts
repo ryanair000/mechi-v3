@@ -25,6 +25,7 @@ const COUNTRY_PHONE_PLACEHOLDERS: Record<CountryKey, string> = {
   uganda: '0701 234 567',
   rwanda: '0788 123 456',
   ethiopia: '0911 234 567',
+  united_states: '(555) 123-4567',
 };
 
 const ISO_COUNTRY_MAP: Record<string, CountryKey> = {
@@ -33,6 +34,7 @@ const ISO_COUNTRY_MAP: Record<string, CountryKey> = {
   RW: 'rwanda',
   TZ: 'tanzania',
   UG: 'uganda',
+  US: 'united_states',
 };
 
 const COUNTRY_HEADER_KEYS = [
@@ -150,6 +152,10 @@ export function getCountryFromAcceptLanguage(value: string | null | undefined): 
 
     if (tag.endsWith('-ug')) {
       return 'uganda';
+    }
+
+    if (tag.endsWith('-us')) {
+      return 'united_states';
     }
   }
 

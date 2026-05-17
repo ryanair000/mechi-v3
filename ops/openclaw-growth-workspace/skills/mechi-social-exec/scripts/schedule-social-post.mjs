@@ -56,7 +56,7 @@ async function main() {
   const parsed = parseArgs(process.argv.slice(2));
   if (!parsed.brand || !parsed.channels || !parsed.type || !parsed.media || !parsed.at) {
     console.error(
-      'Usage: node scripts/schedule-social-post.mjs --brand <chezahub|playmechi> --channels <instagram|facebook|x|all|instagram/facebook> --type <photo|video> --media <path-or-url> (--caption "text" | --caption-file ./caption.txt) --at <ISO-or-EAT-time>'
+      'Usage: node scripts/schedule-social-post.mjs --brand <chezahub|playmechi> --channels <instagram|facebook|x|tiktok|tiktok-draft|all|instagram/facebook> --type <photo|video> --media <path-or-url> (--caption "text" | --caption-file ./caption.txt) --at <ISO-or-EAT-time>'
     );
     process.exit(1);
   }

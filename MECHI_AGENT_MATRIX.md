@@ -6,7 +6,7 @@ This file defines the recommended OpenClaw agent roster for Mechi, the skills ea
 
 The EC2 OpenClaw gateway is currently pruned to one live agent:
 
-- `socio`: Boss private SMM/social execution lane, routed from the private `OPS` Telegram group and explicitly pinned on the `SMM` forum topic (`topicId=7`), reusing workspace `~/.openclaw/workspace-growth` for Instagram-first publishing plus named Facebook, X, and Discord cross-posts. Explicit operator commands now include `socio post chezahub` for the `ChezaHub` Instagram+Facebook pair and `socio post playmechi` for the `PlayMechi` Instagram+Facebook pair.
+- `socio`: Boss private SMM/social execution lane, routed from the private `OPS` Telegram group and explicitly pinned on the `SMM` forum topic (`topicId=7`), reusing workspace `~/.openclaw/workspace-growth` for Instagram-first publishing plus named Facebook, X, TikTok video, and Discord cross-posts. Explicit operator commands now include `socio post chezahub` for the `ChezaHub` Instagram+Facebook pair and `socio post playmechi` for the `PlayMechi` Instagram+Facebook pair.
 
 The 2026-05-10 cleanup removed these from the active host config and moved their state out of the hot path:
 
@@ -202,12 +202,12 @@ Rule: give each role the lowest tier that still lets it do its job.
 - Role: Boss private SMM and cross-channel social execution lane
 - Tool profile: `minimal`
 - Access tier: `Tier 1 - messaging`
-- Primary surfaces: private Telegram `OPS` group, PlayMechi Instagram publishing, named Facebook/X/Discord cross-posting, caption polishing, lightweight content execution
+- Primary surfaces: private Telegram `OPS` group, PlayMechi Instagram publishing, named Facebook/X/TikTok/Discord cross-posting, caption polishing, lightweight content execution
 - Skills:
   - Instagram feed publishing
   - Mechi-specific caption drafting and cleanup
   - image-first social execution
-  - cross-channel adaptation for Facebook, X, and Discord
+  - cross-channel adaptation for Facebook, X, TikTok, and Discord
   - permalink/report-back discipline
 - Required access:
   - OpenClaw model auth
@@ -219,6 +219,7 @@ Rule: give each role the lowest tier that still lets it do its job.
   - `FACEBOOK_PAGE_ID`
   - `FACEBOOK_PAGE_ACCESS_TOKEN`
   - X auth through `xurl` on the host or `X_OAUTH2_ACCESS_TOKEN`
+  - TikTok Content Posting API token with `video.upload` for inbox/manual approval, and `video.publish` for direct posting after review
   - `DISCORD_WEBHOOK_URL` or native Discord bot config using `DISCORD_BOT_TOKEN`
   - `cloudflared` plus the `instagram-content-studio` skill for local file uploads
   - local growth workspace skill `mechi-social-exec`

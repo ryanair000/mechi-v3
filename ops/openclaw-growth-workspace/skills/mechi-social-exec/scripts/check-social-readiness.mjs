@@ -7,6 +7,7 @@ import { verifyXCredentials } from './x-api-utils.mjs';
 const REQUIRED = {
   instagram: ['INSTAGRAM_ACCESS_TOKEN', 'INSTAGRAM_BUSINESS_ACCOUNT_ID'],
   facebook: ['FACEBOOK_PAGE_ID', 'FACEBOOK_PAGE_ACCESS_TOKEN'],
+  tiktok: [],
   x: [],
   discord: [],
   mediaStaging: [],
@@ -15,6 +16,14 @@ const REQUIRED = {
 const OPTIONAL = {
   instagram: ['IMGUR_CLIENT_ID'],
   facebook: ['FACEBOOK_APP_ID', 'FACEBOOK_APP_SECRET', 'FACEBOOK_USER_ACCESS_TOKEN'],
+  tiktok: [
+    'TIKTOK_ACCESS_TOKEN',
+    'PLAYMECHI_TIKTOK_ACCESS_TOKEN',
+    'CHEZAHUB_TIKTOK_ACCESS_TOKEN',
+    'TIKTOK_CLIENT_KEY',
+    'TIKTOK_CLIENT_SECRET',
+    'TIKTOK_PRIVACY_LEVEL',
+  ],
   x: ['X_API_KEY', 'X_API_SECRET', 'X_ACCESS_TOKEN', 'X_ACCESS_TOKEN_SECRET', 'X_OAUTH2_ACCESS_TOKEN'],
   discord: ['DISCORD_BOT_TOKEN', 'DISCORD_GUILD_ID', 'DISCORD_USER_ID', 'DISCORD_POST_CHANNEL_ID', 'DISCORD_WEBHOOK_URL'],
   mediaStaging: ['SOCIO_S3_STAGING_BUCKET', 'SOCIO_S3_STAGING_PREFIX', 'CLOUDINARY_CLOUD_NAME', 'CLOUDINARY_API_KEY', 'CLOUDINARY_API_SECRET'],
@@ -86,6 +95,15 @@ const report = {
             pageAccessTokenPresent: Boolean(config.facebook.pageAccessToken),
           },
         },
+        tiktok: {
+          username: config.tiktok.username,
+          privacyLevel: config.tiktok.privacyLevel,
+          required: {
+            accessTokenPresent: Boolean(config.tiktok.accessToken),
+            clientKeyPresent: Boolean(config.tiktok.clientKey),
+            clientSecretPresent: Boolean(config.tiktok.clientSecret),
+          },
+        },
       },
     ])
   ),
@@ -96,6 +114,10 @@ const report = {
   facebook: {
     required: collectPresence(REQUIRED.facebook),
     optional: collectPresence(OPTIONAL.facebook),
+  },
+  tiktok: {
+    required: collectPresence(REQUIRED.tiktok),
+    optional: collectPresence(OPTIONAL.tiktok),
   },
   x: {
     optional: collectPresence(OPTIONAL.x),
@@ -173,11 +195,13 @@ for (const [brandKey, config] of Object.entries(report.brands)) {
   console.log(`  ${brandKey}`);
   console.log(`    instagram ready: ${config.readiness.instagram ? 'yes' : 'no'}`);
   console.log(`    facebook ready: ${config.readiness.facebook ? 'yes' : 'no'}`);
+  console.log(`    tiktok ready: ${config.readiness.tiktok ? 'yes' : 'no'}`);
   console.log(`    instagram+facebook pair ready: ${config.readiness.crossPostPair ? 'yes' : 'no'}`);
 }
 
 renderSection('instagram', report.instagram);
 renderSection('facebook', report.facebook);
+renderSection('tiktok', report.tiktok);
 renderSection('x', report.x);
 renderSection('discord', report.discord);
 renderSection('mediaStaging', report.mediaStaging);

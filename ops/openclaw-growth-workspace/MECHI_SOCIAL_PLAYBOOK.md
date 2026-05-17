@@ -181,6 +181,17 @@ DM us to secure yours.
 - Prefer 0-2 hashtags.
 - If a link is present, cut fluff before trimming the CTA.
 
+### TikTok
+
+- TikTok is paused for live SMM execution until the Boss explicitly re-enables it.
+- Video-first. Use energetic captions, but do not over-explain what the viewer can already see.
+- Keep captions shorter than Instagram unless the post is a registration push.
+- Use 2-4 hashtags max.
+- Use `https://mechi.club/playmechi/register` only for active registration pushes.
+- TikTok API posting requires a valid Content Posting API token. If the app is not approved for public posting, use `SELF_ONLY` or hand off to native/manual posting.
+- `tiktok-draft` sends the video to the creator's TikTok inbox for manual app approval. Tell the Boss to open TikTok, tap the inbox notification, add sound/effects, paste or adjust the caption, and post.
+- If TikTok draft upload fails with a scope error, the PlayMechi TikTok token needs `video.upload`. If direct TikTok post fails with review/privacy errors, use `tiktok-draft` or keep direct posting on `SELF_ONLY` until TikTok review passes.
+
 ### Discord
 
 - More direct and community-like.
@@ -234,8 +245,9 @@ DM us to secure yours.
 - `socio instagram <brand>` means Instagram only for that brand.
 - `socio facebook <brand>` means Facebook only for that brand.
 - `socio x <brand>` means X only for that brand.
+- TikTok direct and draft commands are paused. If the Boss asks for TikTok, say TikTok SMM automation is paused and ask whether to re-enable it.
 - `socio instagram/facebook <brand>` means Instagram plus Facebook for that brand.
-- `socio all <brand>` means Instagram, Facebook, and X for that brand.
+- `socio all <brand>` means Instagram, Facebook, and X for that brand unless the Boss explicitly includes TikTok.
 - `socio ping` or `socio test` means return a short non-posting readiness reply for the current runtime.
 - `socio help` means return the supported command list without publishing anything.
 - `socio schedule ...` means create a scheduled post instead of publishing immediately. Do not ask for caption approval when brand, media, channels, and time are clear enough from the Boss's message.

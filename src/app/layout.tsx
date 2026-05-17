@@ -51,6 +51,8 @@ export async function generateMetadata(): Promise<Metadata> {
       'uganda',
       'rwanda',
       'ethiopia',
+      'united states',
+      'usa',
       'esports',
       '1v1',
       'competitive gaming',

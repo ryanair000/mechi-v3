@@ -102,7 +102,11 @@ export function ModeratorRegistrationClient({ mode = 'admin' }: { mode?: Registr
           data.staff.moderator_tournament_key ?? selectedTournament
         );
         toast.success(mode === 'public' ? 'Moderator account created' : 'Moderator access activated');
-        window.location.assign(`/moderators/check-in?game=${encodeURIComponent(tournament.game)}`);
+        window.location.assign(
+          tournament.key === 'days_esports_tz_efootball'
+            ? '/moderators/tz'
+            : `/moderators/check-in?game=${encodeURIComponent(tournament.game)}`
+        );
         return;
       }
 

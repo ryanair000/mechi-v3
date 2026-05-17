@@ -6,12 +6,35 @@ const COUNTRY_DIAL_CODES: Record<CountryKey, string> = {
   uganda: '256',
   rwanda: '250',
   ethiopia: '251',
+  united_states: '1',
+};
+
+const COUNTRY_SUBSCRIBER_LENGTHS: Record<CountryKey, number> = {
+  kenya: 9,
+  tanzania: 9,
+  uganda: 9,
+  rwanda: 9,
+  ethiopia: 9,
+  united_states: 10,
 };
 
 const SUPPORTED_DIAL_CODES = Object.values(COUNTRY_DIAL_CODES);
 
+function getSubscriberLengthForDialCode(dialCode: string): number | null {
+  const country = (Object.keys(COUNTRY_DIAL_CODES) as CountryKey[]).find(
+    (candidate) => COUNTRY_DIAL_CODES[candidate] === dialCode
+  );
+
+  return country ? COUNTRY_SUBSCRIBER_LENGTHS[country] : null;
+}
+
 function findDialCode(value: string): string | null {
-  return SUPPORTED_DIAL_CODES.find((dialCode) => value.startsWith(dialCode)) ?? null;
+  return (
+    SUPPORTED_DIAL_CODES.find((dialCode) => {
+      const subscriberLength = getSubscriberLengthForDialCode(dialCode);
+      return Boolean(subscriberLength && value.length === dialCode.length + subscriberLength);
+    }) ?? null
+  );
 }
 
 function normalizeLocalPhoneNumber(value: string): string {
@@ -33,7 +56,9 @@ function getSubscriberNumber(value: string): string | null {
   }
 
   const subscriberNumber = value.slice(dialCode.length);
-  return subscriberNumber.length === 9 ? subscriberNumber : null;
+  return subscriberNumber.length === getSubscriberLengthForDialCode(dialCode)
+    ? subscriberNumber
+    : null;
 }
 
 export function getCountryDialCode(country: CountryKey | null | undefined): string | null {
@@ -55,17 +80,22 @@ export function normalizePhoneNumber(
   }
 
   const supportedDialCode = findDialCode(digits);
-  if (supportedDialCode && digits.length === supportedDialCode.length + 9) {
+  if (supportedDialCode) {
     return digits;
   }
 
   const dialCode = getCountryDialCode(country ?? null);
+  const subscriberLength = country ? COUNTRY_SUBSCRIBER_LENGTHS[country] : 9;
   if (dialCode) {
-    if (digits.startsWith('0') && digits.length === 10) {
+    if (country === 'united_states' && digits.length === subscriberLength) {
+      return `${dialCode}${digits}`;
+    }
+
+    if (digits.startsWith('0') && digits.length === subscriberLength + 1) {
       return `${dialCode}${digits.slice(1)}`;
     }
 
-    if (digits.length === 9) {
+    if (digits.length === subscriberLength) {
       return `${dialCode}${digits}`;
     }
   }
@@ -84,7 +114,9 @@ export function isValidPhoneNumber(
   }
 
   const dialCode = findDialCode(normalized);
-  return Boolean(dialCode && normalized.length === dialCode.length + 9);
+  return Boolean(
+    dialCode && normalized.length === dialCode.length + (getSubscriberLengthForDialCode(dialCode) ?? 9)
+  );
 }
 
 export function getPhoneLookupVariants(

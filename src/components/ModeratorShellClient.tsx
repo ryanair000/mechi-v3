@@ -5,6 +5,7 @@ import { PanelLeftClose, PanelLeftOpen, ShieldCheck } from 'lucide-react';
 import { BrandLogo } from '@/components/BrandLogo';
 import { ModeratorNavigation } from '@/components/ModeratorNavigation';
 import { PageBreadcrumbs } from '@/components/PageBreadcrumbs';
+import type { ModeratorTournamentKey } from '@/lib/moderator-tournaments';
 import type { OnlineTournamentGameKey } from '@/lib/online-tournament';
 import { cn } from '@/lib/utils';
 import type { UserRole } from '@/types';
@@ -16,6 +17,7 @@ type ModeratorShellProfile = {
 
 type ModeratorShellTournament = {
   game: OnlineTournamentGameKey;
+  key?: ModeratorTournamentKey;
   label: string;
   shortLabel: string;
 };
@@ -103,6 +105,7 @@ export function ModeratorShellClient({ children, profile, tournament }: Moderato
               assignedGame={tournament.game}
               collapsed={sidebarCollapsed}
               role={profile.role}
+              tournamentKey={tournament.key}
             />
           </nav>
         </div>
@@ -120,7 +123,12 @@ export function ModeratorShellClient({ children, profile, tournament }: Moderato
             <span className="brand-chip-coral px-2.5 py-1">{tournament.shortLabel}</span>
           </div>
           <div className="border-t border-[var(--border-color)] px-4 pb-3 pt-3 sm:px-6">
-            <ModeratorNavigation assignedGame={tournament.game} role={profile.role} variant="mobile" />
+            <ModeratorNavigation
+              assignedGame={tournament.game}
+              role={profile.role}
+              tournamentKey={tournament.key}
+              variant="mobile"
+            />
           </div>
         </header>
 

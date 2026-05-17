@@ -71,6 +71,12 @@ const REGIONAL_ROUTE_CONFIGS: Array<{
     countryCode: 'UG',
     acceptLanguage: 'en-UG,en;q=0.9,sw;q=0.8',
   },
+  {
+    pathPrefix: '/usa',
+    country: 'united_states',
+    countryCode: 'US',
+    acceptLanguage: 'en-US,en;q=0.9',
+  },
 ];
 
 const ADMIN_PREFIXES = ['/admin', '/api/admin'];
@@ -371,6 +377,10 @@ function getPathWithoutRegionalPrefix(pathname: string, pathPrefix: string) {
   return pathname.slice(pathPrefix.length) || '/';
 }
 
+function shouldKeepExplicitRegionalPath(pathname: string) {
+  return pathname === '/tz/register' || pathname.startsWith('/tz/register/');
+}
+
 function withRegionalPreference(response: NextResponse, country: CountryKey) {
   response.cookies.set(
     REGIONAL_PREFERENCE_COOKIE_NAME,
@@ -395,7 +405,10 @@ function regionalPathResponse(
   request: NextRequest,
   route: (typeof REGIONAL_ROUTE_CONFIGS)[number]
 ) {
-  if (request.nextUrl.pathname === route.pathPrefix) {
+  if (
+    request.nextUrl.pathname === route.pathPrefix ||
+    shouldKeepExplicitRegionalPath(request.nextUrl.pathname)
+  ) {
     return withRegionalPreference(
       NextResponse.next({
         request: {

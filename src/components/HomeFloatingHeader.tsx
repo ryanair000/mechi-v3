@@ -159,7 +159,7 @@ export function HomeFloatingHeader({
                         <div className="grid gap-1">
                           {item.items.map((dropdownItem) => (
                             <Link
-                              key={`${item.label}-${dropdownItem.href}`}
+                              key={`${item.label}-${dropdownItem.href}-${dropdownItem.label}`}
                               href={dropdownItem.href}
                               className={DROPDOWN_LINK_CLASS}
                               role="menuitem"
@@ -255,7 +255,7 @@ export function HomeFloatingHeader({
                       <div className="grid gap-1 px-1 pb-2">
                         {item.items.map((dropdownItem) => (
                           <Link
-                            key={`${item.label}-${dropdownItem.href}`}
+                            key={`${item.label}-${dropdownItem.href}-${dropdownItem.label}`}
                             href={dropdownItem.href}
                             onClick={closeMobileMenu}
                             className={DROPDOWN_LINK_CLASS}

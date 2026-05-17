@@ -40,6 +40,7 @@ function normalizeChannels(value) {
       raw
         .split(/[,+/]/)
         .map((entry) => entry.trim())
+        .map((entry) => (entry === 'tiktokdraft' || entry === 'tiktok_draft' ? 'tiktok-draft' : entry))
         .filter(Boolean)
     )
   );
@@ -90,7 +91,7 @@ async function main() {
   const parsed = parseBrandCaptionMediaArgs(parsedChannels.rest);
   if (!parsed.brand || !parsed.media) {
     console.error(
-      `${usageFor('publish-social-video.mjs', 'video')} --channels instagram|facebook|x|all|instagram/facebook`
+      `${usageFor('publish-social-video.mjs', 'video')} --channels instagram|facebook|x|tiktok|tiktok-draft|all|instagram/facebook`
     );
     process.exit(1);
   }
@@ -106,6 +107,10 @@ async function main() {
       results.facebook = runChild('publish-facebook-video.mjs', childArgs);
     } else if (channel === 'x') {
       results.x = runChild('publish-x-video.mjs', childArgs);
+    } else if (channel === 'tiktok') {
+      results.tiktok = runChild('publish-tiktok-video.mjs', childArgs);
+    } else if (channel === 'tiktok-draft') {
+      results.tiktokDraft = runChild('publish-tiktok-draft-video.mjs', childArgs);
     } else {
       results[channel] = {
         ok: false,

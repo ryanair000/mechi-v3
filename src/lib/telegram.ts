@@ -315,10 +315,12 @@ export async function sendOnlineTournamentRegistrationTelegramNotification(param
       'Requests',
       `${params.registered} saved / ${params.confirmed} confirmed / ${params.pendingPayment} pending payment`
     ),
-    formatField(
-      'Confirmed slots',
-      `${params.confirmed}/${params.slots} confirmed, ${params.spotsLeft} left`
-    ),
+    params.slots > 0
+      ? formatField(
+          'Confirmed slots',
+          `${params.confirmed}/${params.slots} confirmed, ${params.spotsLeft} left`
+        )
+      : null,
     typeof params.checkInCap === 'number'
       ? formatField(
           'Check-ins',

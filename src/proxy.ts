@@ -660,6 +660,15 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(tanzaniaRegistrationUrl, 308);
   }
 
+  if (pathname.startsWith('/s/') && !pathname.startsWith('/s/match/') && !pathname.startsWith('/s/t/')) {
+    const profileUsername = pathname.slice('/s/'.length);
+    if (profileUsername && !profileUsername.includes('/')) {
+      const profileUrl = request.nextUrl.clone();
+      profileUrl.pathname = `/profile/${profileUsername}`;
+      return NextResponse.redirect(profileUrl, 308);
+    }
+  }
+
   const regionalRoute = getRegionalRouteForPathname(pathname);
   if (!adminHost && regionalRoute) {
     return regionalPathResponse(request, regionalRoute);

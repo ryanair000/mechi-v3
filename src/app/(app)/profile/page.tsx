@@ -247,12 +247,12 @@ export default function ProfilePage() {
 
   return (
     <div className="page-container space-y-5">
-      <section className="card overflow-hidden p-0">
-        <div className="relative h-36 bg-[var(--surface-strong)] sm:h-44">
+      <section className="card relative min-h-[300px] overflow-hidden p-0">
+        <div className="absolute inset-0 bg-[var(--surface-strong)]">
           {coverUrl ? (
             <Image src={coverUrl} alt="" fill sizes="(min-width: 1024px) 960px, 100vw" className="object-cover" />
           ) : null}
-          <div className="absolute inset-0 bg-gradient-to-t from-[var(--surface)] via-transparent to-transparent" />
+          <div className="absolute inset-0 bg-gradient-to-t from-[rgba(7,12,22,0.82)] via-[rgba(7,12,22,0.18)] to-transparent" />
           <label className="btn-outline absolute right-4 top-4 cursor-pointer text-xs">
             {uploadingMedia === 'cover' ? <Loader2 size={14} className="animate-spin" /> : <Camera size={14} />}
             Cover
@@ -265,8 +265,8 @@ export default function ProfilePage() {
           </label>
         </div>
 
-        <div className="flex flex-col gap-4 px-5 pb-5 sm:flex-row sm:items-end sm:justify-between sm:px-6 sm:pb-6">
-          <div className="-mt-10 flex items-end gap-4">
+        <div className="relative z-10 flex min-h-[300px] flex-col justify-end gap-4 px-5 pb-5 pt-24 sm:flex-row sm:items-end sm:justify-between sm:px-6 sm:pb-6">
+          <div className="flex items-end gap-4">
             <div className="relative flex h-20 w-20 items-center justify-center overflow-hidden rounded-[var(--radius-panel)] border border-[var(--border-color)] bg-[var(--surface-strong)] text-2xl font-black text-[var(--text-primary)] shadow-[var(--shadow-soft)]">
               {avatarUrl ? (
                 <Image src={avatarUrl} alt="" fill sizes="80px" className="object-cover" />

@@ -1,12 +1,16 @@
 'use client';
 
+import Image from 'next/image';
 import Link from 'next/link';
 import { ChevronRight, Home } from 'lucide-react';
 import { usePathname } from 'next/navigation';
+import { getGameLogoImage } from '@/lib/config';
 import { cn } from '@/lib/utils';
+import type { GameKey } from '@/types';
 
 type BreadcrumbItem = {
   href: string;
+  iconUrl?: string | null;
   label: string;
   current?: boolean;
 };
@@ -91,6 +95,36 @@ function formatSegment(segment: string) {
     .replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
 
+function getSegmentLogo(segment: string) {
+  const normalized = decodeURIComponent(segment).toLowerCase();
+  if (!['codm', 'efootball', 'freefire', 'pubgm'].includes(normalized)) {
+    return null;
+  }
+
+  return getGameLogoImage(normalized as GameKey);
+}
+
+function BreadcrumbLabel({ item }: { item: BreadcrumbItem }) {
+  if (!item.iconUrl) {
+    return item.label;
+  }
+
+  return (
+    <>
+      <span className="sr-only">{item.label}</span>
+      <span className="relative block h-4 w-24">
+        <Image
+          src={item.iconUrl}
+          alt=""
+          fill
+          sizes="96px"
+          className="object-contain object-left"
+        />
+      </span>
+    </>
+  );
+}
+
 function buildBreadcrumbItems(pathname: string): BreadcrumbItem[] {
   if (pathname === '/' || pathname === '/home') {
     return [{ href: '/', label: 'Home', current: true }];
@@ -109,6 +143,7 @@ function buildBreadcrumbItems(pathname: string): BreadcrumbItem[] {
 
     items.push({
       href,
+      iconUrl: getSegmentLogo(segment),
       label: formatSegment(segment),
     });
   }
@@ -143,16 +178,16 @@ export function PageBreadcrumbs({
             {item.current ? (
               <span
                 aria-current="page"
-                className="truncate font-[var(--font-display)] text-[0.72rem] font-black uppercase tracking-[0.14em] text-[var(--text-primary)]"
+                className="flex min-w-0 items-center truncate font-[var(--font-display)] text-[0.72rem] font-black uppercase tracking-[0.14em] text-[var(--text-primary)]"
               >
-                {item.label}
+                <BreadcrumbLabel item={item} />
               </span>
             ) : (
               <Link
                 href={item.href}
-                className="truncate font-[var(--font-display)] text-[0.72rem] font-bold uppercase tracking-[0.14em] text-[var(--text-soft)] transition-colors hover:text-[var(--text-primary)]"
+                className="flex min-w-0 items-center truncate font-[var(--font-display)] text-[0.72rem] font-bold uppercase tracking-[0.14em] text-[var(--text-soft)] transition-colors hover:text-[var(--text-primary)]"
               >
-                {item.label}
+                <BreadcrumbLabel item={item} />
               </Link>
             )}
 

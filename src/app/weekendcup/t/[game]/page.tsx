@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import FooterSection from '@/components/footer';
 import { WeekendCupHeader } from '@/components/WeekendCupHeader';
-import { getGameImage } from '@/lib/config';
+import { getGameImage, getGameLogoImage } from '@/lib/config';
 import {
   WEEKEND_CUP_GAME_BY_KEY,
   WEEKEND_CUP_GAMES,
@@ -44,7 +44,7 @@ function getWeekendCupDetailCopy(game: keyof typeof WEEKEND_CUP_GAME_BY_KEY) {
   return {
     kicker: 'Season 1 bracket',
     description:
-      'Lock your player tag, clear payment, and hold your slot before match day. Weekend Cup keeps the flow simple: register early, join the right WhatsApp room, then show up ready.',
+      'Lock your player tag, clear payment, and show up ready on match day.',
     primaryHref: `${WEEKEND_CUP_REGISTRATION_PATH}?game=${game}`,
     primaryLabel: 'Register',
   };
@@ -82,6 +82,7 @@ export default async function WeekendCupGameDetailPage({
   const config = WEEKEND_CUP_GAME_BY_KEY[game];
   const detailCopy = getWeekendCupDetailCopy(game);
   const detailImage = getWeekendCupDetailImage(game);
+  const gameLogo = getGameLogoImage(game);
   const paymentLine = isWeekendCupRegisterableGame(game) ? 'Entry from KSh 50' : 'Community vote';
 
   return (
@@ -107,9 +108,24 @@ export default async function WeekendCupGameDetailPage({
               <div className="space-y-4">
                 <p className="section-title">{detailCopy.kicker}</p>
                 <div>
-                  <h1 className="text-[clamp(2rem,4vw,3rem)] font-black leading-[0.96] text-[var(--text-primary)]">
-                    {config.label}
-                  </h1>
+                  {gameLogo ? (
+                    <>
+                      <h1 className="sr-only">{config.label}</h1>
+                      <div className="relative h-16 w-full max-w-[360px] sm:h-20">
+                        <Image
+                          src={gameLogo}
+                          alt={`${config.label} logo`}
+                          fill
+                          sizes="(min-width: 640px) 360px, 86vw"
+                          className="object-contain object-left"
+                        />
+                      </div>
+                    </>
+                  ) : (
+                    <h1 className="text-[clamp(2rem,4vw,3rem)] font-black leading-[0.96] text-[var(--text-primary)]">
+                      {config.label}
+                    </h1>
+                  )}
                   <p className="mt-3 max-w-xl text-sm leading-7 text-[var(--text-secondary)] sm:text-[0.98rem]">
                     {detailCopy.description}
                   </p>

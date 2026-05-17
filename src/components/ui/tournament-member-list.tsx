@@ -1,5 +1,6 @@
 'use client';
 
+import Image from 'next/image';
 import Link from 'next/link';
 import { CalendarClock, ExternalLink, Radio, Trophy, Users } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -11,6 +12,7 @@ export interface TournamentMemberListItem {
   anchorId?: string;
   detailHref: string;
   gameLabel: string;
+  gameLogoUrl?: string | null;
   id: string;
   liveHref?: string | null;
   liveLabel?: string | null;
@@ -39,6 +41,46 @@ function getInitial(value: string) {
   return value.trim().charAt(0).toUpperCase() || 'M';
 }
 
+function GameLogoMark({ item }: { item: TournamentMemberListItem }) {
+  return (
+    <div className="relative flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full border border-[var(--border-color)] bg-[var(--surface-strong)] p-1.5 text-xs font-black text-[var(--text-primary)]">
+      {item.gameLogoUrl ? (
+        <Image
+          src={item.gameLogoUrl}
+          alt=""
+          fill
+          sizes="40px"
+          className="object-contain p-2"
+        />
+      ) : (
+        getInitial(item.gameLabel)
+      )}
+      <span className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-[var(--surface)] bg-[var(--brand-teal)]" />
+    </div>
+  );
+}
+
+function GameLogoChip({ item }: { item: TournamentMemberListItem }) {
+  if (!item.gameLogoUrl) {
+    return <span className="brand-chip px-2 py-0.5">{item.gameLabel}</span>;
+  }
+
+  return (
+    <span className="brand-chip min-h-7 px-2.5 py-1" title={item.gameLabel}>
+      <span className="sr-only">{item.gameLabel}</span>
+      <span className="relative block h-4 w-20">
+        <Image
+          src={item.gameLogoUrl}
+          alt=""
+          fill
+          sizes="80px"
+          className="object-contain object-left"
+        />
+      </span>
+    </span>
+  );
+}
+
 function TournamentLine({ item }: { item: TournamentMemberListItem }) {
   const actionIsMuted = item.actionVariant === 'muted';
   const secondaryActionClassName =
@@ -50,10 +92,7 @@ function TournamentLine({ item }: { item: TournamentMemberListItem }) {
       className="grid gap-3 border-b border-[var(--border-color)] px-3 py-4 text-sm transition-colors last:border-b-0 hover:bg-[var(--surface-elevated)] sm:px-5 md:grid-cols-[minmax(0,1.35fr)_118px_150px_120px_168px] md:items-center md:gap-4"
     >
       <div className="flex min-w-0 items-start gap-3">
-        <div className="relative flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full border border-[var(--border-color)] bg-[var(--surface-strong)] text-xs font-black text-[var(--text-primary)]">
-          {getInitial(item.gameLabel)}
-          <span className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-[var(--surface)] bg-[var(--brand-teal)]" />
-        </div>
+        <GameLogoMark item={item} />
 
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
@@ -84,7 +123,7 @@ function TournamentLine({ item }: { item: TournamentMemberListItem }) {
           </div>
 
           <div className="mt-2 flex flex-wrap items-center gap-2">
-            <span className="brand-chip px-2 py-0.5">{item.gameLabel}</span>
+            <GameLogoChip item={item} />
             <span className="text-[11px] text-[var(--text-soft)]">{item.metaLabel}</span>
             {item.registeredLabel ? (
               <span className="rounded-md border border-[rgba(50,224,196,0.22)] bg-[rgba(50,224,196,0.1)] px-2 py-0.5 text-[10px] font-black text-[var(--accent-secondary-text)]">

@@ -28,6 +28,17 @@ function getModeratorNavItems(
   assignedGame: OnlineTournamentGameKey,
   tournamentKey?: ModeratorTournamentKey
 ): ModeratorNavItem[] {
+  if (tournamentKey === 'weka_mawe_efootball') {
+    return [
+      {
+        href: '/moderators/weka-mawe',
+        label: 'Weka Mawe Desk',
+        icon: ShieldCheck,
+      },
+      { href: '/dashboard', label: 'Back to App', icon: LayoutDashboard },
+    ];
+  }
+
   if (tournamentKey === 'days_esports_tz_efootball') {
     return [
       {

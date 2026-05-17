@@ -4,7 +4,8 @@ export type ModeratorTournamentKey =
   | 'playmechi_codm'
   | 'playmechi_pubgm'
   | 'playmechi_efootball'
-  | 'days_esports_tz_efootball';
+  | 'days_esports_tz_efootball'
+  | 'weka_mawe_efootball';
 
 export type ModeratorTournamentOption = {
   game: ModeratorTournamentGameKey;
@@ -37,6 +38,12 @@ export const MODERATOR_TOURNAMENTS: ModeratorTournamentOption[] = [
     key: 'days_esports_tz_efootball',
     label: 'Days Esports Tanzania',
     shortLabel: 'TZ eFootball',
+  },
+  {
+    game: 'efootball',
+    key: 'weka_mawe_efootball',
+    label: 'Weka Mawe eFootball',
+    shortLabel: 'Weka Mawe',
   },
 ];
 

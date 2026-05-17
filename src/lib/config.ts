@@ -152,12 +152,12 @@ const SCORE_REPORTED_GAMES = new Set<GameKey>(['fc26', 'efootball', 'nba2k26']);
 
 const GAME_ARTWORK: Partial<Record<GameKey, { header: string; capsule: string }>> = {
   efootball: {
-    header: '/game-artwork/efootball-header-photo.png',
-    capsule: '/game-artwork/efootball-capsule.webp',
+    header: '/images/playmechi/leaderboard/efootball-winners.png',
+    capsule: '/game-artwork/efootball-header-photo.png',
   },
   efootball_mobile: {
-    header: '/game-artwork/efootball-header-photo.png',
-    capsule: '/game-artwork/efootball-capsule.webp',
+    header: '/images/playmechi/leaderboard/efootball-winners.png',
+    capsule: '/game-artwork/efootball-header-photo.png',
   },
   fc26: {
     header: '/game-artwork/fc26-header.webp',
@@ -180,11 +180,11 @@ const GAME_ARTWORK: Partial<Record<GameKey, { header: string; capsule: string }>
     capsule: '/game-artwork/sf6-capsule.webp',
   },
   codm: {
-    header: '/game-artwork/codm-header.webp',
+    header: '/images/playmechi/leaderboard/codm-winners.png',
     capsule: '/game-artwork/codm-capsule.webp',
   },
   pubgm: {
-    header: '/game-artwork/pubgm-header.webp',
+    header: '/images/playmechi/leaderboard/pubgm-winners.png',
     capsule: '/game-artwork/pubgm-capsule.webp',
   },
   cs2: {
@@ -219,6 +219,17 @@ const GAME_ARTWORK: Partial<Record<GameKey, { header: string; capsule: string }>
     header: '/game-artwork/fortnite-header.jpg',
     capsule: '/game-artwork/fortnite-capsule.jpg',
   },
+};
+
+const GAME_LOGOS: Partial<Record<GameKey, string>> = {
+  codm: '/game-logos/codm.svg',
+  efootball: '/game-logos/efootball.svg',
+  efootball_mobile: '/game-logos/efootball.svg',
+  fc26: '/game-logos/fc26-white.png',
+  freefire: '/game-logos/freefire-white.png',
+  mk11: '/game-logos/mk11-real.png',
+  pubgm: '/game-logos/pubgm.svg',
+  tekken8: '/game-logos/tekken8-real.png',
 };
 
 export const LOBBY_MODE_OPTIONS: Partial<Record<GameKey, readonly string[]>> = {
@@ -309,6 +320,10 @@ export function getGameImage(gameKey: GameKey): string | null {
 
 export function getGameCapsuleImage(gameKey: GameKey): string | null {
   return GAME_ARTWORK[getCanonicalGameKey(gameKey)]?.capsule ?? null;
+}
+
+export function getGameLogoImage(gameKey: GameKey): string | null {
+  return GAME_LOGOS[getCanonicalGameKey(gameKey)] ?? null;
 }
 
 export function getGameRatingKey(game: GameKey): string {

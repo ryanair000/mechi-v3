@@ -1,5 +1,6 @@
 'use client';
 
+import Image from 'next/image';
 import Link from 'next/link';
 import { useCallback, useEffect, useState } from 'react';
 import { Trophy } from 'lucide-react';
@@ -20,6 +21,7 @@ import {
   type OnlineTournamentRegistrationSummary,
 } from '@/lib/online-tournament';
 import { getOnlineTournamentArenaHref } from '@/lib/online-tournament-ops';
+import { getGameLogoImage } from '@/lib/config';
 import {
   PRIMARY_UPCOMING_PLAYMECHI_TOURNAMENT,
   WEEKEND_CUP_ROUTE_ENABLED,
@@ -31,6 +33,7 @@ import {
   WEEKEND_CUP_REGISTRATION_PATH,
   WEEKEND_CUP_TITLE,
 } from '@/lib/weekend-cup';
+import type { GameKey } from '@/types';
 
 type OnlineTournamentUserRegistration = {
   game?: string | null;
@@ -123,6 +126,7 @@ export default function TournamentsPage() {
           anchorId: `weekendcup-${game.game}`,
           detailHref,
           gameLabel: game.label,
+          gameLogoUrl: getGameLogoImage(game.game as GameKey),
           id: `weekendcup-${game.game}`,
           metaLabel: isMysteryGame ? 'Mystery vote' : 'Paid entry',
           prizeLabel: getWeekendCupGamePrizeLabel(game),
@@ -153,6 +157,7 @@ export default function TournamentsPage() {
           anchorId: `playmechi-${game.game}`,
           detailHref: getOnlineTournamentArenaHref(game.game),
           gameLabel: game.label,
+          gameLogoUrl: getGameLogoImage(game.game as GameKey),
           id: `playmechi-${game.game}`,
           metaLabel: 'Free entry',
           prizeLabel: getOnlineTournamentGamePrizeLabel(game),
@@ -208,39 +213,50 @@ export default function TournamentsPage() {
       </div>
 
       {showUpcomingWeekendCup ? (
-        <section className="card circuit-panel p-5 sm:p-6">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-            <div className="max-w-3xl">
+        <section className="card circuit-panel overflow-hidden p-0">
+          <div className="grid gap-0 lg:grid-cols-[minmax(0,1fr)_300px]">
+            <div className="p-5 sm:p-6">
               <p className="section-title">Next Up</p>
               <h2 className="mt-3 text-2xl font-black leading-tight text-[var(--text-primary)] sm:text-3xl">
                 {PRIMARY_UPCOMING_PLAYMECHI_TOURNAMENT.title}
               </h2>
-              <p className="mt-3 text-sm leading-6 text-[var(--text-secondary)]">
-                {PRIMARY_UPCOMING_PLAYMECHI_TOURNAMENT.heroLabel} {PRIMARY_UPCOMING_PLAYMECHI_TOURNAMENT.prizePoolLabel}.{' '}
-                {PRIMARY_UPCOMING_PLAYMECHI_TOURNAMENT.pricingLabel}
+              <p className="mt-3 max-w-2xl text-sm leading-6 text-[var(--text-secondary)]">
+                3 games. 3 days. Starts 29 May. Entry from KSh 50.
               </p>
-              <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">
-                {PRIMARY_UPCOMING_PLAYMECHI_TOURNAMENT.confirmationLabel}
-              </p>
+
+              <div className="mt-4 flex flex-wrap gap-2">
+                <span className="brand-chip !rounded-[var(--radius-control)] px-3 py-1">
+                  {WEEKEND_CUP_PRIZE_POOL_LABEL}
+                </span>
+                <span className="brand-chip !rounded-[var(--radius-control)] px-3 py-1">
+                  Entry from KSh 50
+                </span>
+              </div>
+
+              <Link
+                href={PRIMARY_UPCOMING_PLAYMECHI_TOURNAMENT.publicPath}
+                className="btn-primary mt-5 w-full justify-center !rounded-[var(--radius-control)] sm:w-auto"
+              >
+                Open Weekend Cup
+              </Link>
             </div>
 
             <Link
               href={PRIMARY_UPCOMING_PLAYMECHI_TOURNAMENT.publicPath}
-              className="btn-primary w-full justify-center !rounded-[var(--radius-control)] sm:w-auto"
+              className="relative block min-h-[210px] border-t border-[var(--border-color)] lg:border-l lg:border-t-0"
+              aria-label="Open Weekend Cup"
             >
-              Open Weekend Cup
+              <Image
+                src="/images/playmechi/weekend-cup-poster.png"
+                alt="PlayMechi Weekend Cup Season 1 poster"
+                fill
+                priority
+                sizes="(min-width: 1024px) 300px, 100vw"
+                className="object-cover object-center"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-[#07111e]/28 via-transparent to-transparent" />
             </Link>
           </div>
-
-          <div className="mt-4 flex flex-wrap gap-2">
-            <span className="brand-chip !rounded-[var(--radius-control)] px-3 py-1">
-              {WEEKEND_CUP_PRIZE_POOL_LABEL}
-            </span>
-            <span className="brand-chip !rounded-[var(--radius-control)] px-3 py-1">
-              Entry from KSh 50
-            </span>
-          </div>
-
         </section>
       ) : null}
 

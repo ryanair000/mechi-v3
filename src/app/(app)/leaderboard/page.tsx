@@ -60,6 +60,22 @@ function formatCheckInTime(value: string | null | undefined) {
   }
 }
 
+function getLeaderboardProfileHref(entry: TournamentLeaderboardEntry, gameLabel: string) {
+  if (entry.username) {
+    return `/profile/${encodeURIComponent(entry.username)}`;
+  }
+
+  const params = new URLSearchParams({
+    detail: entry.detailText,
+    game: gameLabel,
+    latest: entry.latestLabel ?? 'Verified tournament result',
+    name: entry.name,
+    score: entry.scoreText,
+  });
+
+  return `/profile/player?${params.toString()}`;
+}
+
 function SummaryCard({
   icon: Icon,
   label,
@@ -266,81 +282,50 @@ export default function LeaderboardPage() {
                 </thead>
                 <tbody>
                   {activeBoard.leaderboard.map((entry) => {
-                    const profileHref = entry.username
-                      ? `/s/${encodeURIComponent(entry.username)}`
-                      : null;
+                    const profileHref = getLeaderboardProfileHref(entry, activeBoard.label);
 
                     return (
                     <tr
                       key={entry.id}
-                      className={`border-b border-[var(--border-color)] last:border-b-0 ${
-                        profileHref ? 'cursor-pointer transition hover:bg-[rgba(255,255,255,0.02)]' : ''
-                      }`}
+                      className="cursor-pointer border-b border-[var(--border-color)] transition last:border-b-0 hover:bg-[rgba(255,255,255,0.02)]"
                       onClick={() => {
-                        if (profileHref) {
-                          router.push(profileHref);
-                        }
+                        router.push(profileHref);
                       }}
                       onKeyDown={(event) => {
-                        if (!profileHref) {
-                          return;
-                        }
-
                         if (event.key === 'Enter' || event.key === ' ') {
                           event.preventDefault();
                           router.push(profileHref);
                         }
                       }}
-                      role={profileHref ? 'link' : undefined}
-                      tabIndex={profileHref ? 0 : undefined}
+                      role="link"
+                      tabIndex={0}
                     >
                       <td className="py-3 pr-3 text-sm font-black text-[var(--accent-secondary-text)]">
                         #{entry.rank}
                       </td>
                       <td className="px-3 py-3">
-                        {profileHref ? (
-                          <Link
-                            href={profileHref}
-                            onClick={(event) => event.stopPropagation()}
-                            className="group flex items-center gap-3 rounded-[var(--radius-card)] px-1 py-1 transition hover:bg-[rgba(255,255,255,0.03)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(50,224,196,0.35)]"
-                          >
-                            <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full border border-[var(--border-color)] bg-[var(--surface-elevated)] text-xs font-black text-[var(--text-primary)]">
-                              {entry.avatarUrl ? (
-                                // eslint-disable-next-line @next/next/no-img-element
-                                <img src={entry.avatarUrl} alt="" className="h-full w-full object-cover" />
-                              ) : (
-                                entry.name.charAt(0).toUpperCase()
-                              )}
-                            </div>
-                            <div className="min-w-0">
-                              <p className="truncate text-sm font-black text-[var(--text-primary)] transition group-hover:text-[var(--accent-secondary-text)]">
-                                {entry.name}
-                              </p>
-                              <p className="truncate text-xs text-[var(--text-secondary)]">
-                                {entry.detailText} | Open profile
-                              </p>
-                            </div>
-                          </Link>
-                        ) : (
-                          <div className="flex items-center gap-3">
-                            <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full border border-[var(--border-color)] bg-[var(--surface-elevated)] text-xs font-black text-[var(--text-primary)]">
-                              {entry.avatarUrl ? (
-                                // eslint-disable-next-line @next/next/no-img-element
-                                <img src={entry.avatarUrl} alt="" className="h-full w-full object-cover" />
-                              ) : (
-                                entry.name.charAt(0).toUpperCase()
-                              )}
-                            </div>
-                            <div className="min-w-0">
-                              <p className="truncate text-sm font-black text-[var(--text-primary)]">
-                                {entry.name}
-                              </p>
-                              <p className="truncate text-xs text-[var(--text-secondary)]">
-                                {entry.detailText}
-                              </p>
-                            </div>
+                        <Link
+                          href={profileHref}
+                          onClick={(event) => event.stopPropagation()}
+                          className="group flex items-center gap-3 rounded-[var(--radius-card)] px-1 py-1 transition hover:bg-[rgba(255,255,255,0.03)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(50,224,196,0.35)]"
+                        >
+                          <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full border border-[var(--border-color)] bg-[var(--surface-elevated)] text-xs font-black text-[var(--text-primary)]">
+                            {entry.avatarUrl ? (
+                              // eslint-disable-next-line @next/next/no-img-element
+                              <img src={entry.avatarUrl} alt="" className="h-full w-full object-cover" />
+                            ) : (
+                              entry.name.charAt(0).toUpperCase()
+                            )}
                           </div>
-                        )}
+                          <div className="min-w-0">
+                            <p className="truncate text-sm font-black text-[var(--text-primary)] transition group-hover:text-[var(--accent-secondary-text)]">
+                              {entry.name}
+                            </p>
+                            <p className="truncate text-xs text-[var(--text-secondary)]">
+                              {entry.detailText} | Open profile
+                            </p>
+                          </div>
+                        </Link>
                       </td>
                       <td className="px-3 py-3 text-sm font-black text-[var(--text-primary)]">
                         {entry.scoreText}

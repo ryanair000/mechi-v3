@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getRequestAccessProfile, hasAdminAccess } from '@/lib/access';
+import { getRequestAccessProfile, hasAdminAccess, hasModeratorAccess } from '@/lib/access';
+import { readModeratorTournamentKeyFromGameIds } from '@/lib/moderator-tournaments';
 import { createServiceClient } from '@/lib/supabase';
 import {
   advanceWekaMaweWinner,
@@ -14,19 +15,38 @@ import {
   type WekaMaweRoundKey,
 } from '@/lib/weka-mawe';
 
-async function requireAdmin(request: NextRequest) {
+async function requireWekaMaweOperator(request: NextRequest) {
   const profile = await getRequestAccessProfile(request);
-  if (!hasAdminAccess(profile)) {
+  if (!hasModeratorAccess(profile)) {
     return {
       profile: null,
       response: NextResponse.json({ error: 'Forbidden' }, { status: 403 }),
     };
   }
+
+  if (hasAdminAccess(profile)) {
+    return { profile, response: null };
+  }
+
+  const { data } = await createServiceClient()
+    .from('profiles')
+    .select('game_ids')
+    .eq('id', profile?.id)
+    .maybeSingle();
+  const tournamentKey = readModeratorTournamentKeyFromGameIds(data?.game_ids);
+
+  if (tournamentKey !== 'weka_mawe_efootball') {
+    return {
+      profile: null,
+      response: NextResponse.json({ error: 'Forbidden' }, { status: 403 }),
+    };
+  }
+
   return { profile, response: null };
 }
 
 export async function GET(request: NextRequest) {
-  const access = await requireAdmin(request);
+  const access = await requireWekaMaweOperator(request);
   if (access.response) return access.response;
 
   try {
@@ -38,7 +58,7 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  const access = await requireAdmin(request);
+  const access = await requireWekaMaweOperator(request);
   if (access.response) return access.response;
 
   try {

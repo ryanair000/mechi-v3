@@ -27,6 +27,7 @@ const HEADER_CONFIGS: Array<{
   },
   { matches: (pathname) => pathname.startsWith('/feed'), config: { eyebrow: 'PlayMechi', title: 'Feed' } },
   { matches: (pathname) => pathname.startsWith('/dashboard'), config: { eyebrow: 'App', title: 'Dashboard' } },
+  { matches: (pathname) => pathname.startsWith('/playmechi/weka-mawe'), config: { eyebrow: 'PlayMechi', title: 'Weka Mawe' } },
   { matches: (pathname) => pathname.startsWith('/leaderboard'), config: { eyebrow: 'Compete', title: 'Leaderboard' } },
   { matches: (pathname) => pathname.startsWith('/tournaments'), config: { eyebrow: 'Compete', title: 'Tournaments' } },
   { matches: (pathname) => pathname.startsWith('/community'), config: { eyebrow: 'Community', title: 'Community Chat' } },

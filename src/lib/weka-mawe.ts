@@ -1,245 +1,35 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { makePaymentReference } from '@/lib/slug';
+import { APP_URL } from '@/lib/urls';
+import {
+  WEKA_MAWE_ENTRY_FEE_KES,
+  WEKA_MAWE_MAX_PLAYERS,
+  WEKA_MAWE_REGISTER_PATH,
+  WEKA_MAWE_RECORDING_ROUNDS,
+  WEKA_MAWE_ROUNDS,
+  isWekaMaweCheckInOpen,
+  isWekaMaweRegistrationOpen,
+  type WekaMaweBracketMatch,
+  type WekaMaweCheckIn,
+  type WekaMaweEdition,
+  type WekaMaweEligibilityStatus,
+  type WekaMawePaymentStatus,
+  type WekaMaweRegistration,
+  type WekaMaweRecordingStatus,
+  type WekaMaweRoundKey,
+  type WekaMaweSummary,
+} from '@/lib/weka-mawe-shared';
 
-export const WEKA_MAWE_ENTRY_FEE_KES = 99;
-export const WEKA_MAWE_GAME = 'efootball_mobile';
-export const WEKA_MAWE_PLATFORM = 'mobile';
-export const WEKA_MAWE_MAX_PAIR_MATCHES_PER_SEASON = 2;
-export const WEKA_MAWE_QUEUE_EXPIRY_MINUTES = 15;
+export * from '@/lib/weka-mawe-shared';
 
-type Db = SupabaseClient<any, 'public', any>;
+type Db = SupabaseClient;
 
-export type WekaMaweSeason = {
-  id: string;
-  slug: string;
-  title: string;
-  starts_at: string;
-  ends_at: string;
-  status: string;
-  entry_fee_kes: number;
-  reward_title: string;
-  winner_user_id: string | null;
-};
-
-export type WekaMaweMatch = {
-  id: string;
-  season_id: string;
-  player_one_id: string;
-  player_two_id: string;
-  host_user_id: string;
-  room_code: string | null;
-  room_notes: string | null;
-  status: string;
-  final_player_one_score: number | null;
-  final_player_two_score: number | null;
-  winner_user_id: string | null;
-  matched_at: string;
-  player_one?: { id: string; username: string | null; game_ids?: Record<string, string> | null } | null;
-  player_two?: { id: string; username: string | null; game_ids?: Record<string, string> | null } | null;
-};
-
-export type WekaMaweLeaderboardRow = {
-  userId: string;
-  username: string;
-  played: number;
-  wins: number;
-  draws: number;
-  losses: number;
-  goalsFor: number;
-  goalsAgainst: number;
-  points: number;
-};
-
-function pad(value: number): string {
-  return value.toString().padStart(2, '0');
-}
-
-function nairobiLocalDate(date: Date): { year: number; month: number; day: number; dow: number } {
-  const parts = new Intl.DateTimeFormat('en-US', {
-    timeZone: 'Africa/Nairobi',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    weekday: 'short',
-  }).formatToParts(date);
-  const value = (type: string) => parts.find((part) => part.type === type)?.value ?? '';
-  const weekday = value('weekday');
-  const dow = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].indexOf(weekday);
-
-  return {
-    year: Number(value('year')),
-    month: Number(value('month')),
-    day: Number(value('day')),
-    dow: dow >= 0 ? dow : 0,
-  };
-}
-
-function addDaysLocal(date: { year: number; month: number; day: number }, days: number) {
-  const utcNoon = new Date(Date.UTC(date.year, date.month - 1, date.day + days, 12, 0, 0));
-  return nairobiLocalDate(utcNoon);
-}
-
-function nairobiMidnightUtc(date: { year: number; month: number; day: number }): Date {
-  return new Date(Date.UTC(date.year, date.month - 1, date.day, -3, 0, 0));
-}
-
-export function getCurrentWekaMaweWeek(now = new Date()) {
-  const today = nairobiLocalDate(now);
-  const startLocal = addDaysLocal(today, -today.dow);
-  const endLocal = addDaysLocal(startLocal, 7);
-  const startsAt = nairobiMidnightUtc(startLocal);
-  const endsAt = new Date(nairobiMidnightUtc(endLocal).getTime() - 1);
-  const slug = `weka-mawe-${startLocal.year}-${pad(startLocal.month)}-${pad(startLocal.day)}`;
-
-  return {
-    slug,
-    title: `Weka Mawe Weekly ${pad(startLocal.day)}/${pad(startLocal.month)}`,
-    startsAt,
-    endsAt,
-  };
-}
-
-export async function ensureCurrentWekaMaweSeason(supabase: Db): Promise<WekaMaweSeason> {
-  const week = getCurrentWekaMaweWeek();
-  const payload = {
-    slug: week.slug,
-    title: week.title,
-    game: WEKA_MAWE_GAME,
-    platform: WEKA_MAWE_PLATFORM,
-    starts_at: week.startsAt.toISOString(),
-    ends_at: week.endsAt.toISOString(),
-    status: 'active',
-    entry_fee_kes: WEKA_MAWE_ENTRY_FEE_KES,
-    reward_title: 'Original World Cup Jersey',
-    reward_description: 'Weekly jersey reward for the most active verified eFootball Mobile grinder.',
-    updated_at: new Date().toISOString(),
-  };
-
+export async function getCurrentWekaMaweEdition(supabase: Db): Promise<WekaMaweEdition | null> {
   const { data, error } = await supabase
-    .from('weka_mawe_seasons')
-    .upsert(payload, { onConflict: 'slug' })
-    .select('id, slug, title, starts_at, ends_at, status, entry_fee_kes, reward_title, winner_user_id')
-    .single();
-
-  if (error || !data) {
-    throw new Error(error?.message ?? 'Could not load Weka Mawe season');
-  }
-
-  return data as WekaMaweSeason;
-}
-
-export async function getPaidWekaMaweRegistration(
-  supabase: Db,
-  seasonId: string,
-  userId: string
-) {
-  const { data, error } = await supabase
-    .from('weka_mawe_registrations')
+    .from('weka_mawe_editions')
     .select('*')
-    .eq('season_id', seasonId)
-    .eq('user_id', userId)
-    .maybeSingle();
-
-  if (error) {
-    throw new Error(error.message);
-  }
-
-  if (!data || data.payment_status !== 'paid' || !data.is_eligible) {
-    return null;
-  }
-
-  return data;
-}
-
-export async function countPairMatches(
-  supabase: Db,
-  seasonId: string,
-  userA: string,
-  userB: string
-): Promise<number> {
-  const { count, error } = await supabase
-    .from('weka_mawe_matches')
-    .select('id', { count: 'exact', head: true })
-    .eq('season_id', seasonId)
-    .neq('status', 'void')
-    .or(
-      `and(player_one_id.eq.${userA},player_two_id.eq.${userB}),and(player_one_id.eq.${userB},player_two_id.eq.${userA})`
-    );
-
-  if (error) {
-    throw new Error(error.message);
-  }
-
-  return count ?? 0;
-}
-
-export async function tryPairWekaMaweQueue(supabase: Db, seasonId: string) {
-  const expiryIso = new Date(Date.now() - WEKA_MAWE_QUEUE_EXPIRY_MINUTES * 60 * 1000).toISOString();
-  await supabase
-    .from('weka_mawe_queue')
-    .update({ status: 'expired', updated_at: new Date().toISOString() })
-    .eq('season_id', seasonId)
-    .eq('status', 'waiting')
-    .lt('joined_at', expiryIso);
-
-  const { data: queueRows, error } = await supabase
-    .from('weka_mawe_queue')
-    .select('id, user_id, joined_at')
-    .eq('season_id', seasonId)
-    .eq('status', 'waiting')
-    .order('joined_at', { ascending: true })
-    .limit(20);
-
-  if (error || !queueRows || queueRows.length < 2) {
-    return null;
-  }
-
-  for (let i = 0; i < queueRows.length; i += 1) {
-    for (let j = i + 1; j < queueRows.length; j += 1) {
-      const left = queueRows[i] as { id: string; user_id: string };
-      const right = queueRows[j] as { id: string; user_id: string };
-      const pairCount = await countPairMatches(supabase, seasonId, left.user_id, right.user_id);
-      if (pairCount >= WEKA_MAWE_MAX_PAIR_MATCHES_PER_SEASON) {
-        continue;
-      }
-
-      const { data: match, error: matchError } = await supabase
-        .from('weka_mawe_matches')
-        .insert({
-          season_id: seasonId,
-          player_one_id: left.user_id,
-          player_two_id: right.user_id,
-          host_user_id: left.user_id,
-          status: 'waiting_for_room',
-        })
-        .select('*')
-        .single();
-
-      if (matchError || !match) {
-        throw new Error(matchError?.message ?? 'Could not create Weka Mawe match');
-      }
-
-      await supabase
-        .from('weka_mawe_queue')
-        .update({ status: 'matched', matched_at: new Date().toISOString(), updated_at: new Date().toISOString() })
-        .in('id', [left.id, right.id]);
-
-      return match as WekaMaweMatch;
-    }
-  }
-
-  return null;
-}
-
-export async function loadActiveWekaMaweMatch(supabase: Db, seasonId: string, userId: string) {
-  const { data, error } = await supabase
-    .from('weka_mawe_matches')
-    .select(
-      '*, player_one:player_one_id(id, username, game_ids), player_two:player_two_id(id, username, game_ids)'
-    )
-    .eq('season_id', seasonId)
-    .in('status', ['waiting_for_room', 'room_shared', 'awaiting_results', 'under_review', 'disputed'])
-    .or(`player_one_id.eq.${userId},player_two_id.eq.${userId}`)
-    .order('matched_at', { ascending: false })
+    .in('status', ['registration_open', 'check_in_open', 'locked', 'live'])
+    .order('starts_at', { ascending: true })
     .limit(1)
     .maybeSingle();
 
@@ -247,130 +37,453 @@ export async function loadActiveWekaMaweMatch(supabase: Db, seasonId: string, us
     throw new Error(error.message);
   }
 
-  return (data as WekaMaweMatch | null) ?? null;
+  if (data) {
+    return data as WekaMaweEdition;
+  }
+
+  const fallback = await supabase
+    .from('weka_mawe_editions')
+    .select('*')
+    .order('starts_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (fallback.error) {
+    throw new Error(fallback.error.message);
+  }
+
+  return (fallback.data as WekaMaweEdition | null) ?? null;
 }
 
-export async function buildWekaMaweLeaderboard(
-  supabase: Db,
-  seasonId: string
-): Promise<WekaMaweLeaderboardRow[]> {
-  const { data: matches, error } = await supabase
-    .from('weka_mawe_matches')
-    .select('player_one_id, player_two_id, final_player_one_score, final_player_two_score, winner_user_id')
-    .eq('season_id', seasonId)
-    .eq('status', 'verified');
+export async function getWekaMaweSummary(supabase: Db, userId?: string | null): Promise<WekaMaweSummary> {
+  const edition = await getCurrentWekaMaweEdition(supabase);
+  if (!edition) {
+    return {
+      edition: null,
+      registrations: [],
+      checkIns: [],
+      matches: [],
+      totals: { registered: 0, paid: 0, pendingPayment: 0, checkedIn: 0, slotsLeft: 0 },
+      userRegistration: null,
+      userCheckIn: null,
+    };
+  }
+
+  const [registrationsResult, checkInsResult, matchesResult] = await Promise.all([
+    supabase
+      .from('weka_mawe_registrations')
+      .select('*, user:user_id(id, username, email, phone)')
+      .eq('edition_id', edition.id)
+      .order('registered_at', { ascending: true }),
+    supabase
+      .from('weka_mawe_check_ins')
+      .select('*')
+      .eq('edition_id', edition.id)
+      .order('checked_in_at', { ascending: true }),
+    supabase
+      .from('weka_mawe_bracket_matches')
+      .select('*, player_one:player_one_user_id(id, username), player_two:player_two_user_id(id, username)')
+      .eq('edition_id', edition.id)
+      .order('round_index', { ascending: true })
+      .order('match_number', { ascending: true }),
+  ]);
+
+  if (registrationsResult.error) throw new Error(registrationsResult.error.message);
+  if (checkInsResult.error) throw new Error(checkInsResult.error.message);
+  if (matchesResult.error) throw new Error(matchesResult.error.message);
+
+  const registrations = (registrationsResult.data ?? []) as WekaMaweRegistration[];
+  const checkIns = (checkInsResult.data ?? []) as WekaMaweCheckIn[];
+  const matches = (matchesResult.data ?? []) as WekaMaweBracketMatch[];
+  const paid = registrations.filter(
+    (registration) =>
+      registration.payment_status === 'paid' && registration.eligibility_status !== 'disqualified'
+  ).length;
+  const pendingPayment = registrations.filter((registration) =>
+    ['pending_payment', 'manual_review'].includes(registration.payment_status)
+  ).length;
+
+  return {
+    edition,
+    registrations,
+    checkIns,
+    matches,
+    totals: {
+      registered: registrations.length,
+      paid,
+      pendingPayment,
+      checkedIn: checkIns.filter((checkIn) => checkIn.status === 'checked_in').length,
+      slotsLeft: Math.max(0, edition.max_players - paid),
+    },
+    userRegistration: userId
+      ? registrations.find((registration) => registration.user_id === userId) ?? null
+      : null,
+    userCheckIn: userId ? checkIns.find((checkIn) => checkIn.user_id === userId) ?? null : null,
+  };
+}
+
+export async function startWekaMaweRegistration(params: {
+  supabase: Db;
+  userId: string;
+  username: string;
+  email: string;
+  phone: string;
+  ign: string;
+  whatsappNumber: string;
+}) {
+  const edition = await getCurrentWekaMaweEdition(params.supabase);
+  if (!edition || !isWekaMaweRegistrationOpen(edition)) {
+    return { success: false, error: 'Weka Mawe registration is not open right now.' };
+  }
+
+  const summary = await getWekaMaweSummary(params.supabase, params.userId);
+  if (summary.totals.slotsLeft <= 0 && !summary.userRegistration) {
+    return { success: false, error: 'Weka Mawe is full for this edition.' };
+  }
+
+  const reference = makePaymentReference('mechi_weka_mawe');
+  const email = params.email || `${params.username || 'player'}@mechi.club`;
+  const { initializeTournamentPayment } = await import('@/lib/paystack');
+  const payment = await initializeTournamentPayment({
+    amountKes: edition.registration_fee_kes,
+    email,
+    reference,
+    callbackUrl: `${APP_URL}${WEKA_MAWE_REGISTER_PATH}`,
+    metadata: {
+      app: 'mechi',
+      source: 'mechi',
+      type: 'weka_mawe_registration',
+      edition_id: edition.id,
+      edition_slug: edition.slug,
+      user_id: params.userId,
+    },
+  });
+
+  if (!payment.success || !payment.authorizationUrl) {
+    return { success: false, error: payment.error ?? 'Could not start payment.' };
+  }
+
+  const payload = {
+    edition_id: edition.id,
+    user_id: params.userId,
+    ign: params.ign,
+    phone: params.phone || null,
+    whatsapp_number: params.whatsappNumber || params.phone || null,
+    payment_status: 'pending_payment' as WekaMawePaymentStatus,
+    amount_kes: edition.registration_fee_kes,
+    payment_reference: reference,
+    payment_email: email,
+    payment_access_code: payment.accessCode ?? null,
+    payment_authorization_url: payment.authorizationUrl,
+    eligibility_status: 'pending' as WekaMaweEligibilityStatus,
+    updated_at: new Date().toISOString(),
+  };
+
+  const { data, error } = await params.supabase
+    .from('weka_mawe_registrations')
+    .upsert(payload, { onConflict: 'edition_id,user_id' })
+    .select('*')
+    .single();
+
+  if (error || !data) {
+    return { success: false, error: error?.message ?? 'Could not save registration.' };
+  }
+
+  return {
+    success: true,
+    registration: data as WekaMaweRegistration,
+    authorizationUrl: payment.authorizationUrl,
+    reference,
+  };
+}
+
+export async function markWekaMawePaymentPaidByReference(supabase: Db, reference: string) {
+  const { data, error } = await supabase
+    .from('weka_mawe_registrations')
+    .update({
+      payment_status: 'paid',
+      eligibility_status: 'verified',
+      payment_confirmed_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    })
+    .eq('payment_reference', reference)
+    .select('id')
+    .maybeSingle();
+
+  if (error || !data) {
+    return { success: false, error: error?.message ?? 'Payment record not found' };
+  }
+
+  return { success: true };
+}
+
+export async function markWekaMawePaymentFailedByReference(supabase: Db, reference: string) {
+  const { data, error } = await supabase
+    .from('weka_mawe_registrations')
+    .update({ payment_status: 'failed', updated_at: new Date().toISOString() })
+    .eq('payment_reference', reference)
+    .neq('payment_status', 'paid')
+    .select('id')
+    .maybeSingle();
+
+  if (error || !data) {
+    return { success: false, error: error?.message ?? 'Payment record not found' };
+  }
+
+  return { success: true };
+}
+
+export async function verifyAndMarkWekaMawePayment(params: {
+  supabase: Db;
+  userId: string;
+  reference: string;
+}) {
+  const { data, error } = await params.supabase
+    .from('weka_mawe_registrations')
+    .select('id, user_id, amount_kes, payment_status')
+    .eq('payment_reference', params.reference)
+    .eq('user_id', params.userId)
+    .maybeSingle();
+
+  if (error || !data) {
+    return { success: false, error: 'Payment record not found.' };
+  }
+
+  if (data.payment_status === 'paid') {
+    return { success: true };
+  }
+
+  const { verifyTournamentPayment } = await import('@/lib/paystack');
+  const verified = await verifyTournamentPayment({
+    reference: params.reference,
+    expectedAmountKes: Number(data.amount_kes ?? WEKA_MAWE_ENTRY_FEE_KES),
+  });
+
+  if (!verified.success) {
+    return { success: false, error: verified.error ?? 'Payment is not complete yet.' };
+  }
+
+  return markWekaMawePaymentPaidByReference(params.supabase, params.reference);
+}
+
+export async function checkInWekaMawePlayer(params: { supabase: Db; userId: string }) {
+  const edition = await getCurrentWekaMaweEdition(params.supabase);
+  if (!edition || !isWekaMaweCheckInOpen(edition)) {
+    return { success: false, error: 'Weka Mawe check-in is not open right now.' };
+  }
+
+  const { data: registration, error } = await params.supabase
+    .from('weka_mawe_registrations')
+    .select('*')
+    .eq('edition_id', edition.id)
+    .eq('user_id', params.userId)
+    .maybeSingle();
+
+  if (error || !registration) {
+    return { success: false, error: 'Register and pay before checking in.' };
+  }
+
+  if (registration.payment_status !== 'paid') {
+    return { success: false, error: 'Payment must be confirmed before check-in.' };
+  }
+
+  if (registration.eligibility_status === 'disqualified') {
+    return { success: false, error: 'This registration is not eligible for check-in.' };
+  }
+
+  const { data, error: checkInError } = await params.supabase
+    .from('weka_mawe_check_ins')
+    .upsert(
+      {
+        edition_id: edition.id,
+        user_id: params.userId,
+        registration_id: registration.id,
+        status: 'checked_in',
+        checked_in_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: 'edition_id,user_id' }
+    )
+    .select('*')
+    .single();
+
+  if (checkInError || !data) {
+    return { success: false, error: checkInError?.message ?? 'Could not check in.' };
+  }
+
+  return { success: true, checkIn: data as WekaMaweCheckIn };
+}
+
+function nextRoundFor(round: WekaMaweRoundKey) {
+  const current = WEKA_MAWE_ROUNDS.find((candidate) => candidate.key === round);
+  if (!current) return null;
+  return WEKA_MAWE_ROUNDS.find((candidate) => candidate.index === current.index + 1) ?? null;
+}
+
+export async function generateWekaMaweBracket(supabase: Db, editionId: string) {
+  const { data: registrations, error } = await supabase
+    .from('weka_mawe_registrations')
+    .select('id, user_id, registered_at, payment_status, eligibility_status, check_in:weka_mawe_check_ins(id)')
+    .eq('edition_id', editionId)
+    .eq('payment_status', 'paid')
+    .neq('eligibility_status', 'disqualified')
+    .order('registered_at', { ascending: true });
 
   if (error) {
-    throw new Error(error.message);
+    return { success: false, error: error.message };
   }
 
-  const rows = new Map<string, WekaMaweLeaderboardRow>();
-  const playerIds = new Set<string>();
+  const checkedIn = ((registrations ?? []) as Array<{
+    id: string;
+    user_id: string;
+    check_in?: unknown[];
+  }>).filter((registration) => Array.isArray(registration.check_in) && registration.check_in.length > 0);
 
-  for (const match of (matches ?? []) as any[]) {
-    playerIds.add(match.player_one_id);
-    playerIds.add(match.player_two_id);
+  if (checkedIn.length < 2) {
+    return { success: false, error: 'At least two checked-in paid players are needed.' };
   }
 
-  if (playerIds.size > 0) {
-    const { data: profiles } = await supabase
-      .from('profiles')
-      .select('id, username')
-      .in('id', Array.from(playerIds));
+  await supabase.from('weka_mawe_bracket_matches').delete().eq('edition_id', editionId);
 
-    for (const profile of (profiles ?? []) as Array<{ id: string; username: string | null }>) {
-      rows.set(profile.id, {
-        userId: profile.id,
-        username: profile.username ?? 'Player',
-        played: 0,
-        wins: 0,
-        draws: 0,
-        losses: 0,
-        goalsFor: 0,
-        goalsAgainst: 0,
-        points: 0,
-      });
-    }
-  }
+  const players = checkedIn.slice(0, WEKA_MAWE_MAX_PLAYERS);
+  const rows = Array.from({ length: 16 }, (_, index) => {
+    const one = players[index * 2] ?? null;
+    const two = players[index * 2 + 1] ?? null;
+    const winner = one && !two ? one : null;
 
-  function row(userId: string) {
-    if (!rows.has(userId)) {
-      rows.set(userId, {
-        userId,
-        username: 'Player',
-        played: 0,
-        wins: 0,
-        draws: 0,
-        losses: 0,
-        goalsFor: 0,
-        goalsAgainst: 0,
-        points: 0,
-      });
-    }
-    return rows.get(userId)!;
-  }
-
-  for (const match of (matches ?? []) as any[]) {
-    const oneScore = Number(match.final_player_one_score ?? 0);
-    const twoScore = Number(match.final_player_two_score ?? 0);
-    const one = row(match.player_one_id);
-    const two = row(match.player_two_id);
-
-    one.played += 1;
-    two.played += 1;
-    one.goalsFor += oneScore;
-    one.goalsAgainst += twoScore;
-    two.goalsFor += twoScore;
-    two.goalsAgainst += oneScore;
-
-    if (oneScore === twoScore) {
-      one.draws += 1;
-      two.draws += 1;
-      one.points += 1;
-      two.points += 1;
-    } else if (oneScore > twoScore) {
-      one.wins += 1;
-      two.losses += 1;
-      one.points += 3;
-    } else {
-      two.wins += 1;
-      one.losses += 1;
-      two.points += 3;
-    }
-  }
-
-  return Array.from(rows.values()).sort((a, b) => {
-    const goalDiffA = a.goalsFor - a.goalsAgainst;
-    const goalDiffB = b.goalsFor - b.goalsAgainst;
-    return (
-      b.points - a.points ||
-      b.played - a.played ||
-      goalDiffB - goalDiffA ||
-      b.goalsFor - a.goalsFor ||
-      a.username.localeCompare(b.username)
-    );
+    return {
+      edition_id: editionId,
+      round_key: 'round_of_32' as WekaMaweRoundKey,
+      round_index: 1,
+      match_number: index + 1,
+      seed_one: index * 2 + 1,
+      seed_two: index * 2 + 2,
+      player_one_registration_id: one?.id ?? null,
+      player_two_registration_id: two?.id ?? null,
+      player_one_user_id: one?.user_id ?? null,
+      player_two_user_id: two?.user_id ?? null,
+      winner_registration_id: winner?.id ?? null,
+      winner_user_id: winner?.user_id ?? null,
+      status: winner ? 'completed' : one && two ? 'ready' : 'pending',
+      completed_at: winner ? new Date().toISOString() : null,
+      next_match_number: Math.floor(index / 2) + 1,
+      next_player_slot: (index % 2) + 1,
+      recording_expected: false,
+      recording_status: 'not_required' as WekaMaweRecordingStatus,
+    };
   });
+
+  const { error: insertError } = await supabase.from('weka_mawe_bracket_matches').insert(rows);
+  if (insertError) {
+    return { success: false, error: insertError.message };
+  }
+
+  await supabase
+    .from('weka_mawe_editions')
+    .update({ status: 'locked', bracket_locked: true, updated_at: new Date().toISOString() })
+    .eq('id', editionId);
+
+  for (const row of rows) {
+    if (row.winner_registration_id) {
+      await advanceWekaMaweWinner(supabase, {
+        editionId,
+        roundKey: row.round_key,
+        matchNumber: row.match_number,
+        winnerRegistrationId: row.winner_registration_id,
+      });
+    }
+  }
+
+  return { success: true };
 }
 
-export function winnerFromScore(
-  playerOneId: string,
-  playerTwoId: string,
+export async function advanceWekaMaweWinner(
+  supabase: Db,
+  params: {
+    editionId: string;
+    roundKey: WekaMaweRoundKey;
+    matchNumber: number;
+    winnerRegistrationId: string;
+  }
+) {
+  const round = WEKA_MAWE_ROUNDS.find((candidate) => candidate.key === params.roundKey);
+  const nextRound = nextRoundFor(params.roundKey);
+  if (!round || !nextRound) {
+    return { success: true };
+  }
+
+  const nextMatchNumber = Math.floor((params.matchNumber - 1) / 2) + 1;
+  const nextPlayerSlot = ((params.matchNumber - 1) % 2) + 1;
+  const { data: winnerRegistration } = await supabase
+    .from('weka_mawe_registrations')
+    .select('id, user_id')
+    .eq('id', params.winnerRegistrationId)
+    .maybeSingle();
+
+  if (!winnerRegistration) {
+    return { success: false, error: 'Winner registration was not found.' };
+  }
+
+  const recordingExpected = WEKA_MAWE_RECORDING_ROUNDS.has(nextRound.key);
+  const existing = await supabase
+    .from('weka_mawe_bracket_matches')
+    .select('*')
+    .eq('edition_id', params.editionId)
+    .eq('round_key', nextRound.key)
+    .eq('match_number', nextMatchNumber)
+    .maybeSingle();
+
+  const updates =
+    nextPlayerSlot === 1
+      ? {
+          player_one_registration_id: winnerRegistration.id,
+          player_one_user_id: winnerRegistration.user_id,
+        }
+      : {
+          player_two_registration_id: winnerRegistration.id,
+          player_two_user_id: winnerRegistration.user_id,
+        };
+
+  if (existing.data) {
+    const nextStatus =
+      (updates as { player_one_registration_id?: string }).player_one_registration_id ||
+      existing.data.player_one_registration_id
+        ? (updates as { player_two_registration_id?: string }).player_two_registration_id ||
+          existing.data.player_two_registration_id
+          ? 'ready'
+          : existing.data.status
+        : existing.data.status;
+    const { error } = await supabase
+      .from('weka_mawe_bracket_matches')
+      .update({ ...updates, status: nextStatus, updated_at: new Date().toISOString() })
+      .eq('id', existing.data.id);
+    return error ? { success: false, error: error.message } : { success: true };
+  }
+
+  const { error } = await supabase.from('weka_mawe_bracket_matches').insert({
+    edition_id: params.editionId,
+    round_key: nextRound.key,
+    round_index: nextRound.index,
+    match_number: nextMatchNumber,
+    ...updates,
+    status: 'pending',
+    next_match_number:
+      nextRound.key === 'final' ? null : Math.floor((nextMatchNumber - 1) / 2) + 1,
+    next_player_slot: nextRound.key === 'final' ? null : ((nextMatchNumber - 1) % 2) + 1,
+    recording_expected: recordingExpected,
+    recording_status: recordingExpected ? 'expected' : 'not_required',
+  });
+
+  return error ? { success: false, error: error.message } : { success: true };
+}
+
+export function getWinnerRegistrationIdFromScore(
+  match: Pick<WekaMaweBracketMatch, 'player_one_registration_id' | 'player_two_registration_id'>,
   playerOneScore: number,
   playerTwoScore: number
 ) {
   if (playerOneScore === playerTwoScore) return null;
-  return playerOneScore > playerTwoScore ? playerOneId : playerTwoId;
-}
-
-export function readNonNegativeScore(value: FormDataEntryValue | null): number | null {
-  const text = String(value ?? '').trim();
-  if (!/^\d+$/.test(text)) return null;
-  const score = Number(text);
-  return Number.isSafeInteger(score) ? score : null;
-}
-
-export function cleanShortText(value: unknown, maxLength = 120): string | null {
-  const text = String(value ?? '').trim();
-  if (!text) return null;
-  return text.slice(0, maxLength);
+  return playerOneScore > playerTwoScore
+    ? match.player_one_registration_id
+    : match.player_two_registration_id;
 }

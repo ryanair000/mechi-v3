@@ -22,14 +22,15 @@ export const blocksDesign = [
   {
     id: "weka-mawe-weekly",
     name: "Weka Mawe Weekly",
-    url: "/leaderboard",
+    url: "/playmechi/weka-mawe",
     imgSrc: "/images/playmechi/weka-mawe-weekly-poster.png",
   },
 ];
 
 export default function HeroSection() {
-  const { locale } = useRegionalSettings();
+  const { country, locale } = useRegionalSettings();
   const isSwahili = locale === "sw-TZ";
+  const isUnitedStates = country === "united_states";
 
   return (
     <section className="page-base relative overflow-hidden bg-transparent px-4 pb-5 pt-16 text-[var(--text-primary)] sm:pt-20">
@@ -45,7 +46,11 @@ export default function HeroSection() {
             </div>
             <p className="inline-block text-xs text-white sm:text-base">
               <span className="px-1 font-semibold">
-                {isSwahili ? "Weekend Cup Inaendelea Sasa!" : "Weekend Cup Live Now!"}
+                {isSwahili
+                  ? "Weekend Cup Inaendelea Sasa!"
+                  : isUnitedStates
+                    ? "USA Player Lane Now Open"
+                    : "Weekend Cup Live Now!"}
               </span>
             </p>
 
@@ -69,13 +74,13 @@ export default function HeroSection() {
             as="h1"
             className="text-4xl leading-[100%] text-[var(--text-primary)] sm:text-5xl xl:text-6xl 2xl:text-7xl"
           >
-            {isSwahili ? "Shindana." : "Compete."}{" "}
+            {isSwahili ? "Shindana." : isUnitedStates ? "Find Rivals." : "Compete."}{" "}
             <span className="bg-gradient-to-r from-red-500 to-orange-500 bg-clip-text font-semibold text-transparent">
-              {isSwahili ? "Shinda Zawadi." : "Win Prizes."}
+              {isSwahili ? "Shinda Zawadi." : isUnitedStates ? "Run Brackets." : "Win Prizes."}
             </span>{" "}
-            {isSwahili ? "Panda Ngazi." : "Level Up."}{" "}
+            {isSwahili ? "Panda Ngazi." : isUnitedStates ? "Build Rank." : "Level Up."}{" "}
             <span className="bg-gradient-to-r from-blue-400 to-blue-600 bg-clip-text font-semibold text-transparent">
-              {isSwahili ? "Tambulika." : "Get Recognized."}
+              {isSwahili ? "Tambulika." : isUnitedStates ? "Get Seen." : "Get Recognized."}
             </span>{" "}
           </TimelineContent>
 
@@ -85,6 +90,8 @@ export default function HeroSection() {
           >
             {isSwahili
               ? "Njoo PlayMechi, boresha uwezo wako, fuata zawadi halisi, na fanya jina lako lisikike. Ushindani safi, presha ya moja kwa moja, na nafasi ya kweli ya kuonekana."
+              : isUnitedStates
+                ? "Mechi is opening a USA lane for competitive players who want cleaner 1v1s, organized lobbies, community brackets, and a profile that travels with every win."
               : "Pull up to PlayMechi, sharpen your skill, chase real prizes, and make your name ring out. Clean competition, live pressure, and a real shot to get seen."}
           </TimelineContent>
         </article>

@@ -52,6 +52,7 @@ const PRIMARY_ADMIN_NAV: AdminNavItem[] = [
   { href: '/admin/support', label: 'Support', icon: Headset },
   { href: '/admin/tournaments', label: 'Tournaments', icon: Trophy },
   { href: '/admin/online-tournament', label: 'Online Event', icon: ClipboardList },
+  { href: '/admin/weka-mawe', label: 'Weka Mawe', icon: Swords },
 ];
 
 const TOOL_ADMIN_NAV: AdminNavItem[] = [

@@ -13,6 +13,10 @@ import {
   markWeekendCupPaymentFailedByReference,
   markWeekendCupPaymentPaidByReference,
 } from '@/lib/weekend-cup-server';
+import {
+  markWekaMawePaymentFailedByReference,
+  markWekaMawePaymentPaidByReference,
+} from '@/lib/weka-mawe';
 
 export const runtime = 'nodejs';
 
@@ -81,6 +85,13 @@ function classifyMechiPayment(event: PaystackWebhookEvent) {
     return { kind: 'weekend_cup' as const, reference };
   }
 
+  if (
+    reference.startsWith('mechi_weka_mawe') ||
+    (type === 'weka_mawe_registration' && (app === 'mechi' || source === 'mechi'))
+  ) {
+    return { kind: 'weka_mawe' as const, reference };
+  }
+
   return { kind: 'unknown' as const, reference };
 }
 
@@ -114,7 +125,9 @@ export async function POST(request: NextRequest) {
           ? await activateSubscriptionByReference(payment.reference, supabase)
           : payment.kind === 'weekend_cup'
             ? await markWeekendCupPaymentPaidByReference(supabase, payment.reference)
-            : await markTournamentPaymentPaidByReference(supabase, payment.reference);
+            : payment.kind === 'weka_mawe'
+              ? await markWekaMawePaymentPaidByReference(supabase, payment.reference)
+              : await markTournamentPaymentPaidByReference(supabase, payment.reference);
 
       if (!result.success) {
         console.error('[Paystack Webhook] Could not process successful payment', {
@@ -142,7 +155,9 @@ export async function POST(request: NextRequest) {
           ? await markSubscriptionPaymentFailedByReference(payment.reference, supabase)
           : payment.kind === 'weekend_cup'
             ? await markWeekendCupPaymentFailedByReference(supabase, payment.reference)
-            : await markTournamentPaymentFailedByReference(supabase, payment.reference);
+            : payment.kind === 'weka_mawe'
+              ? await markWekaMawePaymentFailedByReference(supabase, payment.reference)
+              : await markTournamentPaymentFailedByReference(supabase, payment.reference);
 
       if (!result.success) {
         console.error('[Paystack Webhook] Could not mark failed payment', {

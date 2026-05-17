@@ -7,10 +7,79 @@ import { getLoginPath, getRegisterPath } from '@/lib/navigation';
 const PLAYMECHI_SIGN_IN_PATH = getLoginPath();
 
 export function PlayMechiHomeHeader() {
-  const { locale } = useRegionalSettings();
+  const { country, locale } = useRegionalSettings();
   const isSwahili = locale === 'sw-TZ';
+  const isUnitedStates = country === 'united_states';
   const joinHref = getRegisterPath();
-  const navItems: HomeFloatingHeaderNavItem[] = isSwahili
+  const navItems: HomeFloatingHeaderNavItem[] = isUnitedStates
+    ? [
+        {
+          label: 'COMPETE',
+          items: [
+            {
+              href: '/weekendcup',
+              label: 'Weekend Cup',
+              description: 'Prize bracket and live schedule',
+            },
+            {
+              href: '/playmechi',
+              label: 'PlayMechi',
+              description: 'Community tournament hub',
+            },
+            {
+              href: '/dashboard',
+              label: 'Ladders',
+              description: 'Queue, matches, and ranking',
+            },
+          ],
+        },
+        {
+          label: 'COMMUNITY',
+          items: [
+            {
+              href: '/android-testers',
+              label: 'Android Beta',
+              description: 'Join the tester lane',
+            },
+            {
+              href: '/streams',
+              label: 'Streams',
+              description: 'Watch PlayMechi moments',
+            },
+          ],
+        },
+        {
+          label: 'JOIN',
+          items: [
+            {
+              href: '/register',
+              label: 'Create Account',
+              description: 'Build your player profile',
+            },
+            {
+              href: '/weekendcup/register',
+              label: 'Weekend Cup',
+              description: 'Lock a tournament slot',
+            },
+          ],
+        },
+        {
+          label: 'VOTE',
+          items: [
+            {
+              href: '/weekendcup#vote',
+              label: 'Mystery Game',
+              description: 'Pick a future bracket',
+            },
+            {
+              href: '/weekendcup#vote',
+              label: 'Console Season',
+              description: 'Help shape the next lineup',
+            },
+          ],
+        },
+      ]
+    : isSwahili
     ? [
         {
           label: 'TOURNAMENTS',
@@ -26,9 +95,9 @@ export function PlayMechiHomeHeader() {
               description: 'Bracket ya wiki hii',
             },
             {
-              href: '/leaderboard',
+              href: '/playmechi/weka-mawe',
               label: 'Weka Mawe',
-              description: 'Ubao wa wiki',
+              description: 'Bracket ya KSh 100',
             },
           ],
         },
@@ -61,9 +130,9 @@ export function PlayMechiHomeHeader() {
               description: 'Funga slot ya mashindano',
             },
             {
-              href: '/leaderboard',
+              href: '/playmechi/weka-mawe/register',
               label: 'Weka Mawe Weekly',
-              description: 'Ingia kwenye ubao wa wiki',
+              description: 'Funga slot ya KSh 100',
             },
           ],
         },
@@ -98,9 +167,9 @@ export function PlayMechiHomeHeader() {
               description: 'Weekend bracket, locked in',
             },
             {
-              href: '/leaderboard',
+              href: '/playmechi/weka-mawe',
               label: 'Weka Mawe',
-              description: 'Weekly leaderboard push',
+              description: 'Weekly KSh 100 bracket',
             },
           ],
         },
@@ -133,9 +202,9 @@ export function PlayMechiHomeHeader() {
               description: 'Lock your tournament slot',
             },
             {
-              href: '/leaderboard',
+              href: '/playmechi/weka-mawe/register',
               label: 'Weka Mawe Weekly',
-              description: 'Enter the weekly board',
+              description: 'Lock the KSh 100 slot',
             },
           ],
         },
@@ -161,7 +230,7 @@ export function PlayMechiHomeHeader() {
       navItems={navItems}
       signInHref={PLAYMECHI_SIGN_IN_PATH}
       joinHref={joinHref}
-      joinLabel={isSwahili ? 'JIUNGE' : 'JOIN'}
+      joinLabel={isSwahili ? 'JIUNGE' : isUnitedStates ? 'PLAY' : 'JOIN'}
       showRegionalControls={false}
       compact
       showLogo

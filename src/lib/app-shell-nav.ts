@@ -7,7 +7,6 @@ import {
   History,
   LayoutDashboard,
   MessageCircle,
-  MonitorPlay,
   type LucideIcon,
   Share2,
   ShieldCheck,
@@ -48,20 +47,6 @@ const LEADERBOARD_NAV_ITEM: AppNavItem = {
   href: '/leaderboard',
   label: 'Leaderboard',
   icon: Trophy,
-  matchMode: 'prefix',
-};
-
-const STREAM_NAV_ITEM: AppNavItem = {
-  href: '/streams',
-  label: 'Stream',
-  icon: MonitorPlay,
-  matchMode: 'prefix',
-};
-
-const INBOX_NAV_ITEM: AppNavItem = {
-  href: '/inbox',
-  label: 'Community Chat',
-  icon: MessageCircle,
   matchMode: 'prefix',
 };
 
@@ -147,9 +132,7 @@ const BOUNTIES_NAV_ITEM: AppNavItem = {
 
 export const SIDEBAR_PRIMARY_ITEMS: AppNavItem[] = [
   DASHBOARD_NAV_ITEM,
-  INBOX_NAV_ITEM,
   LEADERBOARD_NAV_ITEM,
-  STREAM_NAV_ITEM,
   TOURNAMENTS_NAV_ITEM,
   SOCIALS_NAV_ITEM,
 ];

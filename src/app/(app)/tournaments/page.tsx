@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useCallback, useEffect, useState } from 'react';
-import { CalendarDays, Clock3, Trophy, Users } from 'lucide-react';
+import { Trophy } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useAuthFetch } from '@/components/AuthProvider';
 import {
@@ -11,13 +11,11 @@ import {
 } from '@/components/ui/tournament-member-list';
 import {
   ONLINE_TOURNAMENT_CASH_PRIZE_POOL,
-  ONLINE_TOURNAMENT_ARENA_PATH,
   ONLINE_TOURNAMENT_GAMES,
   ONLINE_TOURNAMENT_REGISTRATION_API_PATH,
   ONLINE_TOURNAMENT_TITLE,
   ONLINE_TOURNAMENT_WHATSAPP_GROUP_URL,
   getFallbackOnlineTournamentSummary,
-  getOnlineTournamentTotals,
   type OnlineTournamentGameConfig,
   type OnlineTournamentRegistrationSummary,
 } from '@/lib/online-tournament';
@@ -112,7 +110,6 @@ export default function TournamentsPage() {
     WEEKEND_CUP_ROUTE_ENABLED &&
     PRIMARY_UPCOMING_PLAYMECHI_TOURNAMENT &&
     (status === 'all' || status === 'open');
-  const onlineTournamentTotals = getOnlineTournamentTotals(onlineTournament);
   const weekendCupItems: TournamentMemberListItem[] = showUpcomingWeekendCup
     ? WEEKEND_CUP_GAMES.map((game) => {
         const isMysteryGame = game.game === 'mystery';
@@ -246,65 +243,6 @@ export default function TournamentsPage() {
 
         </section>
       ) : null}
-
-      <section className="card circuit-panel overflow-hidden p-0">
-        <div className="grid lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)]">
-          <div
-            className="relative min-h-[260px] bg-cover bg-center"
-            style={{ backgroundImage: 'url(/dashboard-promos/playmechi-launch-mobile-gaming.jpg)' }}
-          >
-            <div className="absolute inset-0 bg-gradient-to-t from-black/82 via-black/30 to-transparent" />
-            <div className="absolute bottom-4 left-4 right-4">
-              <p className="section-title text-white/78">Previous Tournament</p>
-              <h2 className="mt-2 text-3xl font-black leading-tight text-white">
-                {ONLINE_TOURNAMENT_TITLE}
-              </h2>
-            </div>
-          </div>
-
-          <div className="space-y-5 p-5 sm:p-6">
-            <div className="flex flex-wrap items-center gap-4 text-sm text-[var(--text-secondary)]">
-              <span className="inline-flex items-center gap-1.5">
-                <CalendarDays size={15} className="text-[var(--brand-teal)]" />
-                8-10 May 2026
-              </span>
-              <span className="inline-flex items-center gap-1.5">
-                <Users size={15} className="text-[var(--brand-teal)]" />
-                {onlineTournamentTotals.registered} registered
-              </span>
-            </div>
-
-            <div className="inline-flex items-center gap-2 rounded-full border border-[rgba(96,165,250,0.24)] bg-[rgba(96,165,250,0.12)] px-3 py-1 text-xs font-black uppercase tracking-[0.14em] text-[#93c5fd]">
-              <Clock3 size={14} />
-              Previous tournament
-            </div>
-
-            <p className="max-w-2xl text-sm leading-7 text-[var(--text-secondary)]">
-              Launch weekend is wrapped, but the rooms, results, and recap trail are still open
-              if you want to revisit the first PlayMechi run.
-            </p>
-
-            <div className="grid gap-3 sm:grid-cols-3">
-              {ONLINE_TOURNAMENT_GAMES.map((game) => (
-                <div
-                  key={game.game}
-                  className="rounded-[var(--radius-panel)] border border-[var(--border-color)] bg-[var(--surface-elevated)] px-4 py-4 shadow-[var(--shadow-soft)]"
-                >
-                  <p className="text-sm font-black text-[var(--text-primary)]">{game.label}</p>
-                  <p className="mt-2 text-xs text-[var(--text-secondary)]">{game.dateLabel}</p>
-                  <p className="mt-3 text-xs font-semibold text-[var(--accent-secondary-text)]">
-                    {getOnlineTournamentGamePrizeLabel(game)}
-                  </p>
-                </div>
-              ))}
-            </div>
-
-            <Link href={ONLINE_TOURNAMENT_ARENA_PATH} className="btn-outline inline-flex !rounded-[var(--radius-control)]">
-              Open last tournament
-            </Link>
-          </div>
-        </div>
-      </section>
 
       {loading ? (
         <div className="card overflow-hidden">

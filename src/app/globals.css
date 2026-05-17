@@ -64,9 +64,10 @@
   --chart-4: oklch(0.371 0 0);
   --chart-5: oklch(0.269 0 0);
   --radius: 0.95rem;
+  --radius-shell: 1rem;
   --radius-control: 1rem;
-  --radius-panel: 1.35rem;
-  --radius-card: 1.7rem;
+  --radius-panel: var(--radius-shell);
+  --radius-card: var(--radius-shell);
   --radius-hero: 1.95rem;
   --sidebar: oklch(0.985 0 0);
   --sidebar-foreground: oklch(0.145 0 0);
@@ -243,7 +244,7 @@ html[data-theme='dark'] {
   }
 
   .nav-panel {
-    border-radius: var(--radius-card);
+    border-radius: var(--radius-shell);
     border-color: var(--border-color);
     background: linear-gradient(180deg, var(--surface-strong), var(--surface-soft));
     box-shadow: var(--shadow-soft);
@@ -418,7 +419,7 @@ html[data-theme='dark'] {
 
   .card {
     @apply border;
-    border-radius: var(--radius-card);
+    border-radius: var(--radius-shell);
     border-color: var(--border-color);
     background: linear-gradient(180deg, var(--surface-strong), var(--surface));
     box-shadow: var(--surface-highlight), var(--shadow-soft);
@@ -427,7 +428,7 @@ html[data-theme='dark'] {
 
   .card-hover {
     @apply cursor-pointer border;
-    border-radius: var(--radius-card);
+    border-radius: var(--radius-shell);
     border-color: var(--border-color);
     background: linear-gradient(180deg, var(--surface-strong), var(--surface));
     box-shadow: var(--surface-highlight), var(--shadow-soft);
@@ -513,7 +514,7 @@ html[data-theme='dark'] {
 
   .subtle-card {
     @apply border;
-    border-radius: var(--radius-panel);
+    border-radius: var(--radius-shell);
     border-color: var(--border-color);
     background: color-mix(in srgb, var(--surface-strong) 86%, transparent);
     box-shadow: none;
@@ -521,7 +522,7 @@ html[data-theme='dark'] {
 
   .subtle-stat-strip {
     @apply grid gap-3 border p-4 sm:p-5;
-    border-radius: var(--radius-card);
+    border-radius: var(--radius-shell);
     border-color: var(--border-color);
     background: color-mix(in srgb, var(--surface-strong) 88%, transparent);
     box-shadow: none;
@@ -758,7 +759,7 @@ html[data-theme='dark'] {
   }
 
   .page-base :is(.rounded-lg, .rounded-xl, .rounded-2xl, .rounded-3xl):not(.rounded-full) {
-    border-radius: var(--radius-panel);
+    border-radius: var(--radius-shell);
   }
 
   .avatar-shell {
@@ -999,15 +1000,17 @@ html[data-theme='dark'] {
   .manual-tests-shell {
     --radius: 0.5rem;
     --radius-control: 0.55rem;
-    --radius-panel: 0.5rem;
-    --radius-card: 0.5rem;
+    --radius-shell: 1rem;
+    --radius-panel: var(--radius-shell);
+    --radius-card: var(--radius-shell);
     --radius-hero: 0.8rem;
   }
 
   .marketing-prototype-shell {
     --radius-control: 0.4rem;
-    --radius-panel: 0.5rem;
-    --radius-card: 0.5rem;
+    --radius-shell: 1rem;
+    --radius-panel: var(--radius-shell);
+    --radius-card: var(--radius-shell);
     --radius-hero: 0.8rem;
     --radius-nav-shell: 1.75rem;
   }
@@ -1053,9 +1056,10 @@ html[data-theme='dark'] {
     --success-soft: rgba(50, 224, 196, 0.12);
     --warning-soft: rgba(251, 191, 36, 0.16);
     --radius: 0.5rem;
+    --radius-shell: 1rem;
     --radius-control: 1rem;
-    --radius-panel: 1.35rem;
-    --radius-card: 1.35rem;
+    --radius-panel: var(--radius-shell);
+    --radius-card: var(--radius-shell);
     --radius-hero: 1.35rem;
     position: relative;
     isolation: isolate;
@@ -1100,7 +1104,7 @@ html[data-theme='dark'] {
   .app-prototype-shell .card,
   .app-prototype-shell .card-hover,
   .app-prototype-shell .subtle-card {
-    border-radius: var(--radius-panel);
+    border-radius: var(--radius-shell);
     border-color: var(--border-color);
     background: var(--surface-strong);
     box-shadow: none;
@@ -1108,7 +1112,7 @@ html[data-theme='dark'] {
   }
 
   .app-prototype-shell .nav-panel {
-    border-radius: 0.5rem;
+    border-radius: var(--radius-shell);
     border-color: var(--border-color);
     background: var(--surface-strong);
     box-shadow: none;
@@ -1126,12 +1130,13 @@ html[data-theme='dark'] {
   }
 
   .app-prototype-shell .playmechi-tournament-desk {
-    --radius-panel: 1.35rem;
-    --radius-card: 1.35rem;
+    --radius-shell: 1rem;
+    --radius-panel: var(--radius-shell);
+    --radius-card: var(--radius-shell);
   }
 
   .app-prototype-shell .playmechi-tournament-desk :is(.rounded-lg, .rounded-xl, .rounded-2xl, .rounded-3xl):not(.rounded-full) {
-    border-radius: var(--radius-card);
+    border-radius: var(--radius-shell);
   }
 
   .app-prototype-shell .btn-primary,
@@ -1170,8 +1175,9 @@ html[data-theme='dark'] {
   }
 
   .weekend-cup-shell {
-    --radius-panel: 1.35rem;
-    --radius-card: 1.35rem;
+    --radius-shell: 1rem;
+    --radius-panel: var(--radius-shell);
+    --radius-card: var(--radius-shell);
     --radius-control: 1rem;
   }
 
@@ -1179,7 +1185,7 @@ html[data-theme='dark'] {
   .weekend-cup-shell .card,
   .weekend-cup-shell .card-hover,
   .weekend-cup-shell .subtle-card {
-    border-radius: var(--radius-panel);
+    border-radius: var(--radius-shell);
   }
 
   .weekend-cup-shell .btn-primary,
@@ -1251,7 +1257,7 @@ html[data-theme='dark'] {
   }
 
   .app-prototype-shell .subtle-stat-strip {
-    border-radius: 0.5rem;
+    border-radius: var(--radius-shell);
     border-color: var(--border-color);
     background: var(--surface-strong);
     padding: 0;
@@ -1324,13 +1330,13 @@ html[data-theme='dark'] {
   }
 
   .admin-prototype-shell .admin-sidebar-card {
-    border-radius: 0.55rem;
+    border-radius: var(--radius-shell);
     border: 1px solid var(--border-color);
     background: rgba(255, 255, 255, 0.03);
   }
 
   .admin-prototype-shell .admin-kpi-card {
-    border-radius: 0.5rem;
+    border-radius: var(--radius-shell);
     border: 1px solid var(--border-color);
     background: var(--surface-strong);
   }

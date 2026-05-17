@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import FooterSection from '@/components/footer';
 import { useAuth } from '@/components/AuthProvider';
-import { HomeFloatingHeader } from '@/components/HomeFloatingHeader';
+import { PlayMechiHomeHeader } from '@/app/home/playmechi-home-header';
 import { useRegionalSettings } from '@/components/RegionalSettingsProvider';
 import { CtaCard } from '@/components/ui/cta-card';
 import { Faq5 } from '@/components/ui/faq-5';
@@ -14,7 +14,6 @@ import { TestimonialCarousel } from '@/components/ui/profile-card-testimonial-ca
 import { getGameImage } from '@/lib/config';
 import { getLoginPath, getRegisterPath } from '@/lib/navigation';
 import {
-  ONLINE_TOURNAMENT_DISPUTE_PATH,
   ONLINE_TOURNAMENT_EVENT_DATES,
   ONLINE_TOURNAMENT_GAMES,
   ONLINE_TOURNAMENT_REGISTRATION_PATH,
@@ -79,25 +78,6 @@ export function OnlineTournamentClient() {
     ? ONLINE_TOURNAMENT_REGISTRATION_PATH
     : TOURNAMENT_SIGN_UP_PATH;
   const isSwahili = locale === 'sw-TZ';
-  const tournamentNavItems = isSwahili
-    ? [
-        { href: '#prizes', label: 'ZAWADI' },
-        { href: '#rules', label: 'SHERIA' },
-        { href: '#stream', label: 'STREAM' },
-        { href: ONLINE_TOURNAMENT_DISPUTE_PATH, label: 'RIPOTI' },
-        { href: '/blog', label: 'BLOG' },
-        { href: '/android-testers', label: 'ANDROID' },
-        { href: '/platform', label: 'MFUMO' },
-      ]
-    : [
-        { href: '#prizes', label: 'PRIZES' },
-        { href: '#rules', label: 'RULES' },
-        { href: '#stream', label: 'STREAM' },
-        { href: ONLINE_TOURNAMENT_DISPUTE_PATH, label: 'REPORT' },
-        { href: '/blog', label: 'BLOG' },
-        { href: '/android-testers', label: 'ANDROID' },
-        { href: '/platform', label: 'PLATFORM' },
-      ];
 
   const loadSummary = useCallback(async () => {
     setSummaryLoading(true);
@@ -125,11 +105,7 @@ export function OnlineTournamentClient() {
 
   return (
     <div className="page-base marketing-prototype-shell min-h-screen">
-      <HomeFloatingHeader
-        navItems={tournamentNavItems}
-        signInHref={TOURNAMENT_SIGN_IN_PATH}
-        joinHref={tournamentRegistrationHref}
-      />
+      <PlayMechiHomeHeader />
 
       <main className="landing-shell pb-8 pt-3 sm:pb-10 sm:pt-5">
         <section>

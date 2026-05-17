@@ -6,8 +6,6 @@ import { cn } from '@/lib/utils';
 import { useRegionalSettings } from '@/components/RegionalSettingsProvider';
 import type { CountryKey } from '@/types';
 
-const AUTO_COUNTRY_VALUE = '__auto__';
-
 function getSourceLabel(countrySource: string, locale: string) {
   const isSwahili = locale === 'sw-TZ';
 
@@ -35,7 +33,6 @@ export function CountryLanguageBar({
   const {
     country,
     countrySource,
-    isExplicitPreference,
     isUpdatingCountry,
     languageLabel,
     locale,
@@ -59,20 +56,14 @@ export function CountryLanguageBar({
       <div className="relative flex min-w-0 items-center gap-2">
         <Globe2 size={13} className="shrink-0 text-[var(--accent-secondary-text)]" />
         <select
-          value={isExplicitPreference ? country : AUTO_COUNTRY_VALUE}
+          value={country}
           onChange={(event) => {
-            const nextValue = event.target.value;
-            void setCountryPreference(
-              nextValue === AUTO_COUNTRY_VALUE ? null : (nextValue as CountryKey)
-            ).catch(() => undefined);
+            void setCountryPreference(event.target.value as CountryKey).catch(() => undefined);
           }}
           disabled={isUpdatingCountry}
           aria-label={isSwahili ? 'Badili nchi' : 'Switch country'}
           className="min-w-[8.5rem] appearance-none bg-transparent pr-5 text-[0.82rem] font-semibold text-[var(--text-primary)] outline-none"
         >
-          <option value={AUTO_COUNTRY_VALUE}>
-            {isSwahili ? 'Tambua moja kwa moja' : 'Auto detect'}
-          </option>
           {COUNTRY_OPTIONS.map((option) => (
             <option key={option.key} value={option.key}>
               {option.label}

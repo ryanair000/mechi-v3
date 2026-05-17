@@ -9,6 +9,15 @@ SUPPORT_MODEL="${MECHI_OPENCLAW_SUPPORT_MODEL:-$MODEL}"
 COMMUNITY_MODEL="${MECHI_OPENCLAW_COMMUNITY_MODEL:-$MODEL}"
 CONTROL_MODEL="${MECHI_OPENCLAW_CONTROL_MODEL:-$MODEL}"
 SOCIO_MODEL="${MECHI_OPENCLAW_SOCIO_MODEL:-$MODEL}"
+INFRA_MODEL="${MECHI_OPENCLAW_INFRA_MODEL:-$MODEL}"
+BILLING_MODEL="${MECHI_OPENCLAW_BILLING_MODEL:-$MODEL}"
+DATA_MODEL="${MECHI_OPENCLAW_DATA_MODEL:-$MODEL}"
+GROWTH_MODEL="${MECHI_OPENCLAW_GROWTH_MODEL:-$MODEL}"
+TELEGRAM_ALLOWED_IDS="${MECHI_OPENCLAW_TELEGRAM_ALLOWED_CHAT_IDS:-6806783421,6738706706}"
+TELEGRAM_OPS_GROUP_ID="${MECHI_OPENCLAW_TELEGRAM_OPS_GROUP_ID:--1003922946344}"
+TELEGRAM_OPS_ALLOWED_IDS="${MECHI_OPENCLAW_TELEGRAM_OPS_ALLOWED_IDS:-$TELEGRAM_ALLOWED_IDS}"
+TELEGRAM_OPS_GROUP_MENTION_REQUIRED="${MECHI_OPENCLAW_TELEGRAM_OPS_REQUIRE_MENTION:-false}"
+TELEGRAM_DEFAULT_GROUP_MENTION_REQUIRED="${MECHI_OPENCLAW_TELEGRAM_DEFAULT_GROUP_REQUIRE_MENTION:-true}"
 RESTART_SERVICES="${1:---restart}"
 
 copy_workspace() {
@@ -66,8 +75,11 @@ mkdir -p "$OPENCLAW_HOME"
 copy_workspace "$MECHI_REPO/ops/openclaw-support-workspace" "$OPENCLAW_HOME/workspace-support"
 copy_workspace "$MECHI_REPO/ops/openclaw-community-workspace" "$OPENCLAW_HOME/workspace-community"
 copy_workspace "$MECHI_REPO/ops/openclaw-growth-workspace" "$OPENCLAW_HOME/workspace-growth"
+copy_workspace "$MECHI_REPO/ops/openclaw-infra-workspace" "$OPENCLAW_HOME/workspace-infra"
+copy_workspace "$MECHI_REPO/ops/openclaw-billing-workspace" "$OPENCLAW_HOME/workspace-billing"
+copy_workspace "$MECHI_REPO/ops/openclaw-data-workspace" "$OPENCLAW_HOME/workspace-data"
 
-node - "$OPENCLAW_HOME" "$MECHI_REPO" "$CONTROL_MODEL" "$SUPPORT_MODEL" "$COMMUNITY_MODEL" "$SOCIO_MODEL" <<'NODE'
+node - "$OPENCLAW_HOME" "$MECHI_REPO" "$CONTROL_MODEL" "$SUPPORT_MODEL" "$COMMUNITY_MODEL" "$SOCIO_MODEL" "$INFRA_MODEL" "$BILLING_MODEL" "$DATA_MODEL" "$GROWTH_MODEL" "$TELEGRAM_ALLOWED_IDS" "$TELEGRAM_OPS_GROUP_ID" "$TELEGRAM_OPS_ALLOWED_IDS" "$TELEGRAM_OPS_GROUP_MENTION_REQUIRED" "$TELEGRAM_DEFAULT_GROUP_MENTION_REQUIRED" <<'NODE'
 const fs = require('node:fs');
 const path = require('node:path');
 
@@ -78,6 +90,15 @@ const [
   supportModel,
   communityModel,
   socioModel,
+  infraModel,
+  billingModel,
+  dataModel,
+  growthModel,
+  telegramAllowedIdsRaw,
+  telegramOpsGroupId,
+  telegramOpsAllowedIdsRaw,
+  telegramOpsGroupMentionRequiredRaw,
+  telegramDefaultGroupMentionRequiredRaw,
 ] = process.argv.slice(2);
 
 const configPath = path.join(openclawHome, 'openclaw.json');
@@ -95,6 +116,31 @@ function upsertAgent(list, agent) {
   return filtered;
 }
 
+function parseCsv(value) {
+  return String(value || '')
+    .split(',')
+    .map((entry) => entry.trim())
+    .filter(Boolean);
+}
+
+function parseBoolean(value, fallback) {
+  const normalized = String(value || '').trim().toLowerCase();
+  if (['1', 'true', 'yes', 'on'].includes(normalized)) return true;
+  if (['0', 'false', 'no', 'off'].includes(normalized)) return false;
+  return fallback;
+}
+
+const telegramAllowedIds = parseCsv(telegramAllowedIdsRaw);
+const telegramAllowedInts = telegramAllowedIds
+  .filter((entry) => /^-?\d+$/.test(entry))
+  .map((entry) => Number.parseInt(entry, 10));
+const telegramOpsAllowedIds = parseCsv(telegramOpsAllowedIdsRaw);
+const telegramOpsAllowedInts = telegramOpsAllowedIds
+  .filter((entry) => /^-?\d+$/.test(entry))
+  .map((entry) => Number.parseInt(entry, 10));
+const opsRequireMention = parseBoolean(telegramOpsGroupMentionRequiredRaw, false);
+const defaultGroupRequireMention = parseBoolean(telegramDefaultGroupMentionRequiredRaw, true);
+
 config.agents = objectOrEmpty(config.agents);
 config.agents.defaults = {
   ...objectOrEmpty(config.agents.defaults),
@@ -107,7 +153,6 @@ agents = upsertAgent(agents, {
   id: 'control',
   name: 'Mechi Control',
   workspace: mechiRepo,
-  repoRoot: mechiRepo,
   model: controlModel,
   thinkingDefault: 'medium',
   tools: { profile: 'coding' },
@@ -139,16 +184,73 @@ agents = upsertAgent(agents, {
   fastModeDefault: true,
   tools: { profile: 'minimal' },
 });
+agents = upsertAgent(agents, {
+  id: 'infra',
+  name: 'Mechi Infra',
+  workspace: path.join(openclawHome, 'workspace-infra'),
+  model: infraModel,
+  thinkingDefault: 'medium',
+  tools: { profile: 'coding' },
+});
+agents = upsertAgent(agents, {
+  id: 'billing',
+  name: 'Mechi Billing',
+  workspace: path.join(openclawHome, 'workspace-billing'),
+  model: billingModel,
+  thinkingDefault: 'minimal',
+  fastModeDefault: true,
+  tools: { profile: 'minimal' },
+});
+agents = upsertAgent(agents, {
+  id: 'data',
+  name: 'Mechi Data',
+  workspace: path.join(openclawHome, 'workspace-data'),
+  model: dataModel,
+  thinkingDefault: 'minimal',
+  fastModeDefault: true,
+  tools: { profile: 'minimal' },
+});
+agents = upsertAgent(agents, {
+  id: 'growth',
+  name: 'Mechi Growth',
+  workspace: path.join(openclawHome, 'workspace-growth'),
+  model: growthModel,
+  thinkingDefault: 'minimal',
+  fastModeDefault: true,
+  tools: { profile: 'minimal' },
+});
 config.agents.list = agents;
 
 config.channels = objectOrEmpty(config.channels);
 const telegram = objectOrEmpty(config.channels.telegram);
 telegram.enabled = telegram.enabled ?? true;
 telegram.dmPolicy = telegram.dmPolicy || 'allowlist';
-telegram.allowFrom = telegram.allowFrom || ['6806783421', '6738706706'];
+telegram.allowFrom = telegramAllowedIds.length ? telegramAllowedIds : ['6806783421', '6738706706'];
+telegram.dmHistoryLimit = telegram.dmHistoryLimit || 100;
+telegram.historyLimit = telegram.historyLimit || 100;
+delete telegram.dms;
+telegram.groupPolicy = telegram.groupPolicy || 'allowlist';
 telegram.streaming = telegram.streaming || { mode: 'off' };
 telegram.replyToMode = telegram.replyToMode || 'first';
 telegram.timeoutSeconds = telegram.timeoutSeconds || 120;
+const preservedTelegramGroups = { ...objectOrEmpty(telegram.groups) };
+delete preservedTelegramGroups['*'];
+telegram.groups = {
+  ...preservedTelegramGroups,
+  [telegramOpsGroupId]: {
+    enabled: true,
+    requireMention: opsRequireMention || defaultGroupRequireMention === false ? opsRequireMention : false,
+    allowFrom: telegramOpsAllowedInts.length ? telegramOpsAllowedInts : telegramAllowedInts,
+    systemPrompt: [
+      'This is the internal Mechi OPS Telegram group.',
+      'Route operator, repo, live registration, tournament, support, AWS, GitHub, and Obsidian questions to the control agent unless a specialist is explicitly named.',
+      'Keep replies short, decisive, and ready to send.',
+      'For live registrations use npm run ops:registrations -- --json; for live open tournaments use npm run ops:tournaments -- --json.',
+      'Use Weekend Cup as the default current tournament unless the sender clearly names the older PlayMechi Launch event.',
+      'Ask before destructive, money-moving, payout, account, public broadcast, or production infrastructure changes.',
+    ].join(' '),
+  },
+};
 config.channels.telegram = telegram;
 
 config.plugins = objectOrEmpty(config.plugins);
@@ -165,21 +267,23 @@ const keep = existingBindings.filter((binding) => {
   const channel = binding.match?.channel;
   if (channel !== 'telegram') return true;
   const peer = binding.match?.peer;
-  return !(peer?.kind === 'direct' && ['6806783421', '6738706706'].includes(String(peer.id)));
+  if (peer?.kind === 'group' && String(peer.id) === String(telegramOpsGroupId)) return false;
+  return !(peer?.kind === 'direct' && (telegramAllowedIds.length ? telegramAllowedIds : ['6806783421', '6738706706']).includes(String(peer.id)));
 });
+const telegramDmRoutes = (telegramAllowedIds.length ? telegramAllowedIds : ['6806783421', '6738706706']).map((id) => ({
+  type: 'route',
+  agentId: 'control',
+  comment: 'Approved Boss/operator Telegram DM -> Mechi control',
+  match: { channel: 'telegram', peer: { kind: 'direct', id } },
+}));
 config.bindings = [
   ...keep,
+  ...telegramDmRoutes,
   {
     type: 'route',
     agentId: 'control',
-    comment: 'Approved Boss/operator Telegram DM -> Mechi control',
-    match: { channel: 'telegram', peer: { kind: 'direct', id: '6806783421' } },
-  },
-  {
-    type: 'route',
-    agentId: 'control',
-    comment: 'Approved operator Telegram DM -> Mechi control',
-    match: { channel: 'telegram', peer: { kind: 'direct', id: '6738706706' } },
+    comment: 'Internal MECHI OPS Telegram group -> Mechi control',
+    match: { channel: 'telegram', peer: { kind: 'group', id: telegramOpsGroupId } },
   },
 ];
 

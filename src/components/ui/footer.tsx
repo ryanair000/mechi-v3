@@ -28,24 +28,17 @@ export default function FooterSection({ className }: FooterSectionProps) {
   const links = isSwahili
     ? [
         {
-          title: 'Jinsi Inavyofanya Kazi',
-          href: '/#how-it-works',
+          title: 'Jiunge Sasa',
+          href: '/register',
         },
         {
-          title: 'Bei',
-          href: '/pricing',
+          title: 'Bounties',
+          href: '/bounties',
         },
         {
-          title: 'Msaada',
-          href: '/support',
-        },
-        {
-          title: 'Ranki',
-          href: '/#ranks',
-        },
-        {
-          title: 'Tournaments',
-          href: '/tournaments',
+          title: 'Streams',
+          href: 'https://www.youtube.com/@playmechi',
+          external: true,
         },
         {
           title: 'Sera ya Faragha',
@@ -58,24 +51,17 @@ export default function FooterSection({ className }: FooterSectionProps) {
       ]
     : [
         {
-          title: 'How It Works',
-          href: '/#how-it-works',
+          title: 'Join Now',
+          href: '/register',
         },
         {
-          title: 'Pricing',
-          href: '/pricing',
+          title: 'Bounties',
+          href: '/bounties',
         },
         {
-          title: 'Support',
-          href: '/support',
-        },
-        {
-          title: 'Ranks',
-          href: '/#ranks',
-        },
-        {
-          title: 'Tournaments',
-          href: '/tournaments',
+          title: 'Streams',
+          href: 'https://www.youtube.com/@playmechi',
+          external: true,
         },
         {
           title: 'Privacy Policy',
@@ -103,6 +89,7 @@ export default function FooterSection({ className }: FooterSectionProps) {
             <Link
               key={index}
               href={link.href}
+              {...(link.external ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
               className="text-muted-foreground hover:text-primary block duration-150"
             >
               <span>{link.title}</span>

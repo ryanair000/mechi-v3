@@ -1,6 +1,6 @@
 ---
 name: playmechi-tournament-ops
-description: "Use for Mechi.club Online Gaming Tournament questions, PlayMechi WhatsApp/Telegram operator replies, player registration guidance, rules, schedule, prizes, stream details, and admin runbook context."
+description: "Use for PlayMechi Weekend Cup questions, Mechi.club Online Gaming Tournament questions, WhatsApp/Telegram replies, registration guidance, rules, schedule, prizes, stream details, and admin runbook context."
 metadata:
   owner: mechi
   version: "0.1.0"
@@ -8,24 +8,54 @@ metadata:
 
 # PlayMechi Tournament Ops
 
-Use this skill whenever a player, operator, admin, or WhatsApp group asks about the Mechi.club Online Gaming Tournament, PlayMechi tournament registration, PUBG Mobile, CODM, eFootball, prizes, schedule, rules, player slots, stream, or reward eligibility.
+Use this skill whenever a player, operator, admin, Telegram group, or WhatsApp group asks about PlayMechi Weekend Cup Season 1, the older Mechi.club Online Gaming Tournament, PlayMechi tournament registration, PUBG Mobile, CODM, eFootball, prizes, schedule, rules, player slots, stream, payments, or reward eligibility.
 
 ## Immediate WhatsApp Replies
 
-If a player says "How can I register?", "registration link", "I want to register", "register me", "how do I join", "join tournament", "sign up", "enter tournament", "want to register for tournament", or a typo like "oturnamnet", assume they mean PlayMechi and answer directly:
+If a player says "How can I register?", "registration link", "I want to register", "register me", "how do I join", "join tournament", "sign up", "enter tournament", "want to register for tournament", or a typo like "oturnamnet", assume they mean the current Weekend Cup unless they clearly name the older 8-10 May PlayMechi event. Answer directly:
 
 ```text
-Yes. Register for the PlayMechi tournament here:
-https://mechi.club/playmechi/register
+Register for PlayMechi Weekend Cup Season 1 here:
+https://mechi.club/weekendcup
 
-Pick PUBG Mobile, CODM, or eFootball, enter your exact in-game username, then submit your Instagram and YouTube names for reward verification.
+Pick your game, confirm your player details, then pay with Paystack to lock your slot.
 
-Matches start at 8:00 PM EAT from 8-10 May 2026.
+Season 1 runs 29-31 May 2026. PUBG, CODM, and eFootball are fixed; players are voting for the mystery game.
 ```
 
 Do not ask which tournament before giving this answer unless the message clearly names a different event.
 
-## Canonical Public Paths
+If the sender clearly asks about the older PlayMechi Launch / 8-10 May event, use:
+
+```text
+For the older PlayMechi tournament, register here:
+https://mechi.club/playmechi/register
+
+Pick PUBG Mobile, CODM, or eFootball, enter your exact in-game username, then submit your Instagram and YouTube names for reward verification.
+```
+
+## Current Featured Event: Weekend Cup
+
+- Tournament: PlayMechi Weekend Cup Season 1
+- Public vote/preview page: `/`
+- Registration path: `/weekendcup`
+- Legacy Weekend Cup registration alias: `/weekendcup/register`
+- Dates: Friday 29 May 2026 to Sunday 31 May 2026
+- Prize pool: up to KSh 7,500
+- Fixed games: PUBG Mobile, CODM, and eFootball
+- Mystery game: selected by player vote
+- Registration payment: Paystack
+- Players who registered for the older PlayMechi tournament can reuse synced details where available
+
+Weekend Cup entry fees:
+
+- Early Bird: CODM KSh 50, PUBG KSh 50, Mystery Game KSh 50, eFootball KSh 100
+- Phase 2: CODM KSh 75, PUBG KSh 75, Mystery Game KSh 75, eFootball KSh 125
+- Final Rush: CODM KSh 100, PUBG KSh 100, Mystery Game KSh 100, eFootball KSh 150
+
+Do not say a player is paid, confirmed, eligible, disqualified, or awarded unless live admin/payment data verifies it.
+
+## Older PlayMechi Public Paths
 
 - Main public homepage on Mechi: `/`
 - Public tournament path: `/playmechi`
@@ -62,7 +92,7 @@ For open or active platform tournaments unrelated to this campaign, use:
 npm run ops:tournaments -- --json
 ```
 
-## Fixed Event Facts
+## Older PlayMechi Fixed Event Facts
 
 - Tournament name: Mechi.club Online Gaming Tournament
 - Organizer: Mechi.club

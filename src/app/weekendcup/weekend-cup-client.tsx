@@ -14,7 +14,7 @@ import {
 } from 'lucide-react';
 import { useAuth, useAuthFetch } from '@/components/AuthProvider';
 import FooterSection from '@/components/footer';
-import { WeekendCupHeader } from '@/components/WeekendCupHeader';
+import { PlayMechiHomeHeader } from '@/app/home/playmechi-home-header';
 import { getGameImage } from '@/lib/config';
 import { getLoginPath, withQuery } from '@/lib/navigation';
 import { cn } from '@/lib/utils';
@@ -590,7 +590,7 @@ export function WeekendCupClient() {
       className="weekend-cup-shell app-prototype-shell page-base min-h-screen bg-[radial-gradient(circle_at_top,rgba(50,224,196,0.08),transparent_32%),linear-gradient(180deg,#07111e_0%,#050b13_100%)]"
       style={DASHBOARD_FONT_STYLE}
     >
-      <WeekendCupHeader />
+      <PlayMechiHomeHeader />
 
       <main className="page-container max-w-[940px] space-y-7 pb-10 pt-4 sm:pt-6">
         <section id="overview" className="space-y-4 px-1 sm:px-2">

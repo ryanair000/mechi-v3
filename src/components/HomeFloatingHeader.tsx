@@ -8,6 +8,7 @@ import { BrandLogo } from '@/components/BrandLogo';
 import { PageBreadcrumbs } from '@/components/PageBreadcrumbs';
 import { useRegionalSettings } from '@/components/RegionalSettingsProvider';
 import { ThemeToggle } from '@/components/ThemeToggle';
+import { HeaderNotificationButton } from '@/components/HeaderNotificationButton';
 
 type NavLinkItem = {
   href: string;
@@ -45,11 +46,13 @@ const SIGN_IN_BUTTON_CLASS =
 const JOIN_BUTTON_CLASS =
   'btn-primary min-h-[2.3rem] rounded-[0.85rem] px-[1.125rem] shadow-none font-[var(--font-display)] text-[0.88rem] font-extrabold uppercase tracking-[0.16em] text-[#08111d]';
 const DROPDOWN_PANEL_CLASS =
-  'pointer-events-none invisible absolute left-1/2 top-[calc(100%+0.65rem)] z-50 min-w-[15rem] -translate-x-1/2 rounded-[1rem] border border-[rgba(129,148,178,0.18)] bg-[rgba(11,20,36,0.96)] p-2 opacity-0 shadow-[0_20px_60px_rgba(2,8,23,0.45)] backdrop-blur-xl transition-all duration-200 group-hover:pointer-events-auto group-hover:visible group-hover:translate-y-0 group-hover:opacity-100 group-focus-within:pointer-events-auto group-focus-within:visible group-focus-within:translate-y-0 group-focus-within:opacity-100';
+  'pointer-events-none invisible absolute left-1/2 top-full z-50 min-w-[15rem] -translate-x-1/2 pt-2 opacity-0 transition-all duration-200 group-hover:pointer-events-auto group-hover:visible group-hover:opacity-100 group-focus-within:pointer-events-auto group-focus-within:visible group-focus-within:opacity-100';
 const COMPACT_DROPDOWN_PANEL_CLASS =
-  'pointer-events-none invisible absolute left-0 top-[calc(100%+0.65rem)] z-50 min-w-[11.25rem] rounded-[1rem] border border-[rgba(129,148,178,0.18)] bg-[rgba(11,20,36,0.96)] p-2 opacity-0 shadow-[0_20px_60px_rgba(2,8,23,0.45)] backdrop-blur-xl transition-all duration-200 group-hover:pointer-events-auto group-hover:visible group-hover:translate-y-0 group-hover:opacity-100 group-focus-within:pointer-events-auto group-focus-within:visible group-focus-within:translate-y-0 group-focus-within:opacity-100';
+  'pointer-events-none invisible absolute left-0 top-full z-50 min-w-[11.25rem] pt-2 opacity-0 transition-all duration-200 group-hover:pointer-events-auto group-hover:visible group-hover:opacity-100 group-focus-within:pointer-events-auto group-focus-within:visible group-focus-within:opacity-100';
 const DROPDOWN_LINK_CLASS =
   'flex rounded-[0.85rem] px-3 py-2.5 text-left transition-colors hover:bg-[rgba(50,224,196,0.1)] focus-visible:bg-[rgba(50,224,196,0.1)] focus-visible:outline-none';
+const DROPDOWN_PANEL_INNER_CLASS =
+  'rounded-[1rem] border border-[rgba(129,148,178,0.18)] bg-[rgba(11,20,36,0.96)] p-2 shadow-[0_20px_60px_rgba(2,8,23,0.45)] backdrop-blur-xl';
 
 function isDropdownNavItem(item: HomeFloatingHeaderNavItem): item is NavDropdownItem {
   return 'items' in item;
@@ -152,29 +155,31 @@ export function HomeFloatingHeader({
                       <ChevronDown size={15} className="transition-transform duration-200 group-hover:rotate-180 group-focus-within:rotate-180" />
                     </button>
                     <div className={dropdownPanelClass} role="menu" aria-label={item.label}>
-                      <div className="grid gap-1">
-                        {item.items.map((dropdownItem) => (
-                          <Link
-                            key={`${item.label}-${dropdownItem.href}`}
-                            href={dropdownItem.href}
-                            className={DROPDOWN_LINK_CLASS}
-                            role="menuitem"
-                          >
-                            <span className="flex flex-col items-start">
-                              <span
-                                className="font-[var(--font-display)] text-[0.9rem] font-bold tracking-[0.01em] text-[var(--text-primary)]"
-                                style={DISPLAY_FONT_STYLE}
-                              >
-                                {dropdownItem.label}
-                              </span>
-                              {dropdownItem.description ? (
-                                <span className="mt-1 text-[0.72rem] font-medium tracking-[0.02em] text-[var(--text-soft)]">
-                                  {dropdownItem.description}
+                      <div className={DROPDOWN_PANEL_INNER_CLASS}>
+                        <div className="grid gap-1">
+                          {item.items.map((dropdownItem) => (
+                            <Link
+                              key={`${item.label}-${dropdownItem.href}`}
+                              href={dropdownItem.href}
+                              className={DROPDOWN_LINK_CLASS}
+                              role="menuitem"
+                            >
+                              <span className="flex flex-col items-start">
+                                <span
+                                  className="font-[var(--font-display)] text-[0.9rem] font-bold tracking-[0.01em] text-[var(--text-primary)]"
+                                  style={DISPLAY_FONT_STYLE}
+                                >
+                                  {dropdownItem.label}
                                 </span>
-                              ) : null}
-                            </span>
-                          </Link>
-                        ))}
+                                {dropdownItem.description ? (
+                                  <span className="mt-1 text-[0.72rem] font-medium tracking-[0.02em] text-[var(--text-soft)]">
+                                    {dropdownItem.description}
+                                  </span>
+                                ) : null}
+                              </span>
+                            </Link>
+                          ))}
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -192,6 +197,7 @@ export function HomeFloatingHeader({
             </div>
 
             <div className={`ml-auto flex items-center ${actionGapClass} ${actionOffsetClass}`}>
+              {user ? <HeaderNotificationButton compact={compact} /> : null}
               <ThemeToggle className={themeToggleClass} />
               <div className={`hidden items-center sm:flex ${actionGapClass}`}>
                 <Link

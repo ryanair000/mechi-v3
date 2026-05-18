@@ -42,7 +42,7 @@ export default function DashboardPage() {
       </div>
 
       <div className="hidden lg:block">
-        <div className="flex min-h-screen items-start overflow-hidden px-3 pb-8 pt-12 sm:px-5 sm:pt-14 md:items-center md:pt-16 lg:px-7 lg:pt-20">
+        <div className="flex min-h-screen items-start overflow-hidden px-3 pb-8 pt-5 sm:px-5 sm:pt-6 md:pt-7 lg:px-7 lg:pt-8">
           <BlogPosts
             backgroundLabel="MECHI"
             backgroundPosition="left"

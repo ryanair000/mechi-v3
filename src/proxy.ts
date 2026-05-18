@@ -400,6 +400,10 @@ function shouldKeepExplicitRegionalPath(pathname: string) {
   return (
     pathname === '/tz/register' ||
     pathname.startsWith('/tz/register/') ||
+    pathname === '/tz/esportsday' ||
+    pathname.startsWith('/tz/esportsday/') ||
+    pathname === '/tz/daysesports' ||
+    pathname.startsWith('/tz/daysesports/') ||
     pathname === '/tz/daysesports/register' ||
     pathname.startsWith('/tz/daysesports/register/')
   );
@@ -656,7 +660,7 @@ export async function proxy(request: NextRequest) {
 
   if (pathname === '/tz/register' || pathname.startsWith('/tz/register/')) {
     const tanzaniaRegistrationUrl = request.nextUrl.clone();
-    tanzaniaRegistrationUrl.pathname = '/tz/daysesports/register';
+    tanzaniaRegistrationUrl.pathname = '/tz/esportsday/register';
     return NextResponse.redirect(tanzaniaRegistrationUrl, 308);
   }
 

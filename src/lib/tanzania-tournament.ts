@@ -11,7 +11,8 @@ export const TZ_TOURNAMENT = {
   paymentNumber: '+255687698141',
   supportNumber: '+255687698141',
   whatsappNumber: '255687698141',
-  registrationPath: '/tz/daysesports/register',
+  eventPath: '/tz/esportsday',
+  registrationPath: '/tz/esportsday/register',
   moderatorPath: '/moderators/tz',
 } as const;
 

@@ -74,9 +74,9 @@ export function TanzaniaRegistrationClient() {
     <main className="page-base min-h-screen bg-[#07111f] text-white" data-theme="dark">
       <section className="border-b border-white/10 bg-[#0b1524] px-4 py-4 sm:px-6 lg:px-8">
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-4">
-          <Link href="/tz" className="btn-ghost min-h-10 px-3 py-2 text-sm">
+          <Link href={TZ_TOURNAMENT.eventPath} className="btn-ghost min-h-10 px-3 py-2 text-sm">
             <ArrowLeft size={15} />
-            Rudi Mechi TZ
+            Rudi kwa tournament
           </Link>
           <p className="text-right text-xs font-bold uppercase tracking-[0.14em] text-white/55">
             Days Esports Tanzania

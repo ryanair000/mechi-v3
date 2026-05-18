@@ -322,6 +322,7 @@ export function CodmModeratorClient() {
   const [actingOn, setActingOn] = useState<string | null>(null);
   const [query, setQuery] = useState('');
   const [rosterMode, setRosterMode] = useState<TournamentModeratorRosterMode>('unverified');
+  const [selectedRosterId, setSelectedRosterId] = useState<string | null>(null);
   const [registrationNotes, setRegistrationNotes] = useState<Record<string, string>>({});
   const [paymentDrafts, setPaymentDrafts] = useState<Record<string, PaymentDraft>>({});
   const [submissionNotes, setSubmissionNotes] = useState<Record<string, string>>({});
@@ -430,6 +431,10 @@ export function CodmModeratorClient() {
   const filteredRoster = useMemo(() => {
     return filterTournamentModeratorRoster(registrations, rosterMode, query);
   }, [query, registrations, rosterMode]);
+  const selectedRegistration =
+    filteredRoster.find((registration) => registration.id === selectedRosterId) ??
+    filteredRoster[0] ??
+    null;
 
   const patchOps = async (
     actionKey: string,
@@ -799,7 +804,333 @@ export function CodmModeratorClient() {
               </div>
             </div>
 
-            <div className="mt-4 overflow-x-auto">
+            <div className="mt-4 grid gap-4 xl:grid-cols-[minmax(280px,0.82fr)_minmax(0,1.18fr)]">
+              <div className="max-h-[640px] space-y-2 overflow-y-auto pr-1">
+                {filteredRoster.length === 0 ? (
+                  <div className="rounded-lg border border-dashed border-[var(--border-color)] px-4 py-8 text-center text-sm text-[var(--text-secondary)]">
+                    No {activeConfig.shortLabel} players match this view.
+                  </div>
+                ) : (
+                  filteredRoster.map((registration) => {
+                    const isSelected = selectedRegistration?.id === registration.id;
+                    const isBanned = Boolean(registration.user?.is_banned);
+                    return (
+                      <button
+                        key={registration.id}
+                        type="button"
+                        onClick={() => setSelectedRosterId(registration.id)}
+                        className={`w-full rounded-lg border px-3 py-3 text-left transition-colors ${
+                          isSelected
+                            ? 'border-[rgba(50,224,196,0.55)] bg-[rgba(50,224,196,0.1)]'
+                            : 'border-[var(--border-color)] bg-[var(--surface)] hover:bg-[var(--surface-elevated)]'
+                        }`}
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            <p className="truncate text-sm font-black text-[var(--text-primary)]">
+                              {getPlayerLabel(registration)}
+                            </p>
+                            <p className="mt-1 truncate text-xs text-[var(--text-soft)]">
+                              UID {registration.game_uid || 'n/a'} - {formatOnlineTournamentLobby(registration)}
+                            </p>
+                          </div>
+                          <StatusPill status={registration.payment_status} />
+                        </div>
+                        <div className="mt-2 flex flex-wrap gap-1.5">
+                          <StatusPill status={registration.check_in_status} />
+                          <StatusPill status={registration.eligibility_status} />
+                          {isTournamentReadyCheckedIn(registration) ? <MetaPill label="ready" /> : null}
+                          {isBanned ? <MetaPill label="banned" tone="danger" /> : null}
+                        </div>
+                      </button>
+                    );
+                  })
+                )}
+              </div>
+
+              <div className="rounded-lg border border-[var(--border-color)] bg-[var(--surface)] p-4">
+                {selectedRegistration ? (
+                  (() => {
+                    const registration = selectedRegistration;
+                    const isActingRegistration = actingOn === registration.id;
+                    const isActingAccount = actingOn === `account-${registration.id}`;
+                    const isActing = isActingRegistration || isActingAccount;
+                    const isVerified = registration.eligibility_status === 'verified';
+                    const paymentDraft = paymentDrafts[registration.id] ?? {
+                      payment_status: registration.payment_status,
+                      payment_tier: registration.payment_tier ?? '',
+                      entry_fee_kes:
+                        registration.entry_fee_kes !== null && registration.entry_fee_kes !== undefined
+                          ? String(registration.entry_fee_kes)
+                          : '',
+                      payment_reference: registration.payment_reference ?? '',
+                      payment_note: registration.payment_note ?? '',
+                    };
+                    const isProtectedAccount =
+                      registration.user?.role === 'moderator' || registration.user?.role === 'admin';
+                    const isBanned = Boolean(registration.user?.is_banned);
+                    const showDeviceSerial = requiresTournamentDeviceSerialLast6(registration.game);
+
+                    return (
+                      <div className="space-y-4">
+                        <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                          <div>
+                            <p className="text-xs font-bold uppercase tracking-[0.14em] text-[var(--text-soft)]">
+                              Selected player
+                            </p>
+                            <h3 className="mt-2 text-2xl font-black text-[var(--text-primary)]">
+                              {getPlayerLabel(registration)}
+                            </h3>
+                            <p className="mt-1 text-sm text-[var(--text-secondary)]">
+                              UID {registration.game_uid || 'n/a'} - {registration.whatsapp_number || registration.phone || 'No WhatsApp'}
+                            </p>
+                          </div>
+                          <div className="flex flex-wrap gap-1.5 md:justify-end">
+                            <StatusPill status={registration.check_in_status} />
+                            <StatusPill status={registration.eligibility_status} />
+                            <StatusPill status={registration.payment_status} />
+                            {registration.payment_tier ? (
+                              <MetaPill label={getOnlineTournamentPaymentTierLabel(registration.payment_tier)} />
+                            ) : null}
+                            {isBanned ? <MetaPill label="banned" tone="danger" /> : null}
+                            {isProtectedAccount ? <MetaPill label={registration.user?.role ?? 'staff'} /> : null}
+                          </div>
+                        </div>
+
+                        <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+                          {[
+                            ['Lobby', formatOnlineTournamentLobby(registration)],
+                            ['Device', registration.device_model || 'n/a'],
+                            ['Serial', showDeviceSerial ? registration.device_serial_last6 || 'n/a' : 'Not required'],
+                            [
+                              'Checked in',
+                              registration.checked_in_at ? formatDateTime(registration.checked_in_at) : 'Not checked in',
+                            ],
+                          ].map(([label, value]) => (
+                            <div
+                              key={label}
+                              className="rounded-md border border-[var(--border-color)] bg-[var(--surface-elevated)] px-3 py-2"
+                            >
+                              <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--text-soft)]">
+                                {label}
+                              </p>
+                              <p className="mt-1 break-words text-sm font-bold text-[var(--text-primary)]">
+                                {value}
+                              </p>
+                            </div>
+                          ))}
+                        </div>
+
+                        <div className="flex flex-wrap gap-2">
+                          {!isOnlineTournamentPaidStatus(registration.payment_status) ? (
+                            <button
+                              type="button"
+                              disabled={isActing}
+                              onClick={() => void patchRegistration(registration, { payment_status: 'paid' })}
+                              className="btn-primary min-h-9 px-3 py-2 text-xs"
+                            >
+                              {isActing ? <Loader2 size={13} className="animate-spin" /> : <CheckCircle2 size={13} />}
+                              Mark paid
+                            </button>
+                          ) : null}
+                          {isVerified ? (
+                            <span className="inline-flex min-h-9 items-center gap-2 rounded-md border border-[rgba(50,224,196,0.2)] bg-[rgba(50,224,196,0.1)] px-3 py-2 text-xs font-bold text-[var(--accent-secondary-text)]">
+                              <CheckCircle2 size={13} />
+                              Verified
+                            </span>
+                          ) : (
+                            <button
+                              type="button"
+                              disabled={isActing}
+                              onClick={() => void patchRegistration(registration, { eligibility_status: 'verified' })}
+                              className="btn-primary min-h-9 px-3 py-2 text-xs"
+                            >
+                              {isActing ? <Loader2 size={13} className="animate-spin" /> : <CheckCircle2 size={13} />}
+                              Verify
+                            </button>
+                          )}
+                          <button
+                            type="button"
+                            disabled={isActing}
+                            onClick={() =>
+                              void patchRegistration(registration, {
+                                check_in_status: registration.check_in_status === 'no_show' ? 'registered' : 'no_show',
+                              })
+                            }
+                            className="btn-ghost min-h-9 px-3 py-2 text-xs"
+                          >
+                            {registration.check_in_status === 'no_show' ? <UserCheck size={13} /> : <UserX size={13} />}
+                            {registration.check_in_status === 'no_show' ? 'Restore' : 'No-show'}
+                          </button>
+                          <button
+                            type="button"
+                            disabled={isActing || isProtectedAccount}
+                            onClick={() => void patchUserAccount(registration, isBanned ? 'unban' : 'ban')}
+                            className={
+                              isBanned
+                                ? 'btn-ghost min-h-9 px-3 py-2 text-xs'
+                                : 'btn-ghost min-h-9 px-3 py-2 text-xs text-red-200'
+                            }
+                            title={isProtectedAccount ? 'Staff accounts are managed from the admin user panel' : undefined}
+                          >
+                            {isActingAccount ? (
+                              <Loader2 size={13} className="animate-spin" />
+                            ) : isBanned ? (
+                              <ShieldCheck size={13} />
+                            ) : (
+                              <Ban size={13} />
+                            )}
+                            {isBanned ? 'Unban' : 'Ban'}
+                          </button>
+                        </div>
+
+                        <div className="grid gap-2 md:grid-cols-3">
+                          <select
+                            value={paymentDraft.payment_status}
+                            onChange={(event) =>
+                              setPaymentDrafts((current) => ({
+                                ...current,
+                                [registration.id]: {
+                                  ...paymentDraft,
+                                  payment_status: event.target.value as OnlineTournamentPaymentStatus,
+                                },
+                              }))
+                            }
+                            className="input min-h-9 text-xs"
+                          >
+                            {['pending_payment', 'paid', 'manual_review', 'failed', 'refunded'].map((status) => (
+                              <option key={status} value={status}>
+                                {status.replaceAll('_', ' ')}
+                              </option>
+                            ))}
+                          </select>
+                          <select
+                            value={paymentDraft.payment_tier}
+                            onChange={(event) =>
+                              setPaymentDrafts((current) => ({
+                                ...current,
+                                [registration.id]: {
+                                  ...paymentDraft,
+                                  payment_tier: event.target.value as OnlineTournamentPaymentTier | '',
+                                },
+                              }))
+                            }
+                            className="input min-h-9 text-xs"
+                          >
+                            <option value="">Auto / not set</option>
+                            {ONLINE_TOURNAMENT_PAYMENT_TIERS.map((tier) => (
+                              <option key={tier} value={tier}>
+                                {getOnlineTournamentPaymentTierLabel(tier)}
+                              </option>
+                            ))}
+                          </select>
+                          <input
+                            value={paymentDraft.entry_fee_kes}
+                            onChange={(event) =>
+                              setPaymentDrafts((current) => ({
+                                ...current,
+                                [registration.id]: {
+                                  ...paymentDraft,
+                                  entry_fee_kes: event.target.value,
+                                },
+                              }))
+                            }
+                            className="input min-h-9 text-xs"
+                            inputMode="numeric"
+                            placeholder="KSh amount"
+                          />
+                        </div>
+
+                        <div className="grid gap-2 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]">
+                          <input
+                            value={paymentDraft.payment_reference}
+                            onChange={(event) =>
+                              setPaymentDrafts((current) => ({
+                                ...current,
+                                [registration.id]: {
+                                  ...paymentDraft,
+                                  payment_reference: event.target.value,
+                                },
+                              }))
+                            }
+                            className="input min-h-9 text-xs"
+                            placeholder="Payment reference"
+                          />
+                          <input
+                            value={paymentDraft.payment_note}
+                            onChange={(event) =>
+                              setPaymentDrafts((current) => ({
+                                ...current,
+                                [registration.id]: {
+                                  ...paymentDraft,
+                                  payment_note: event.target.value,
+                                },
+                              }))
+                            }
+                            className="input min-h-9 text-xs"
+                            placeholder="Payment note"
+                          />
+                          <button
+                            type="button"
+                            disabled={isActing}
+                            onClick={() =>
+                              void patchRegistration(registration, {
+                                payment_status: paymentDraft.payment_status,
+                                payment_tier: paymentDraft.payment_tier || null,
+                                entry_fee_kes: paymentDraft.entry_fee_kes
+                                  ? Number(paymentDraft.entry_fee_kes)
+                                  : null,
+                                payment_reference: paymentDraft.payment_reference || null,
+                                payment_note: paymentDraft.payment_note || null,
+                              })
+                            }
+                            className="btn-ghost min-h-9 px-3 py-2 text-xs"
+                          >
+                            Save payment
+                          </button>
+                        </div>
+
+                        <div className="grid gap-2 md:grid-cols-[minmax(0,1fr)_auto]">
+                          <input
+                            value={registrationNotes[registration.id] ?? ''}
+                            onChange={(event) =>
+                              setRegistrationNotes((current) => ({
+                                ...current,
+                                [registration.id]: event.target.value,
+                              }))
+                            }
+                            className="input min-h-9 text-xs"
+                            placeholder="Moderator note"
+                          />
+                          <button
+                            type="button"
+                            disabled={isActing}
+                            onClick={() =>
+                              void patchRegistration(registration, {
+                                admin_note: registrationNotes[registration.id] ?? '',
+                              })
+                            }
+                            className="btn-ghost min-h-9 px-3 py-2 text-xs"
+                          >
+                            Save note
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })()
+                ) : (
+                  <div className="rounded-lg border border-dashed border-[var(--border-color)] px-4 py-10 text-center text-sm text-[var(--text-secondary)]">
+                    Pick a player to view details and moderation controls.
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <details className="mt-4 rounded-lg border border-[var(--border-color)] bg-[var(--surface)]">
+              <summary className="cursor-pointer px-4 py-3 text-xs font-black uppercase tracking-[0.14em] text-[var(--text-soft)]">
+                Advanced roster table
+              </summary>
+              <div className="overflow-x-auto px-3 pb-3">
               <table className="w-full min-w-[980px] border-separate border-spacing-y-2 text-left">
                 <thead>
                   <tr className="text-xs uppercase tracking-[0.12em] text-[var(--text-soft)]">
@@ -1133,7 +1464,8 @@ export function CodmModeratorClient() {
                   )}
                 </tbody>
               </table>
-            </div>
+              </div>
+            </details>
           </section>
 
           {activeGameIsBattleRoyale ? (

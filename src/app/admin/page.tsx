@@ -16,6 +16,8 @@ import { shouldHideE2EFixtures } from '@/lib/e2e-fixtures';
 import { expireWaitingQueueEntries, getQueueExpiryCutoffIso } from '@/lib/queue';
 import { createServiceClient } from '@/lib/supabase';
 import { verifyToken } from '@/lib/auth';
+import { WEEKEND_CUP_SLUG } from '@/lib/weekend-cup';
+import { getWekaMaweSummary } from '@/lib/weka-mawe';
 import type { AuditLog } from '@/types';
 
 interface AdminOverviewData {
@@ -37,6 +39,18 @@ interface AdminOverviewData {
   liveLobbies: number;
   overdueLobbies: number;
   pendingPayouts: number;
+  supportOpenThreads: number;
+  supportHumanThreads: number;
+  weekendCupRegistered: number;
+  weekendCupPaid: number;
+  weekendCupPendingPayment: number;
+  weekendCupCheckedIn: number;
+  wekaMaweRegistered: number;
+  wekaMawePaid: number;
+  wekaMawePendingPayment: number;
+  wekaMaweCheckedIn: number;
+  wekaMaweSlotsLeft: number;
+  wekaMaweStatus: string;
   recentLogs: AuditLog[];
   role: string;
 }
@@ -61,6 +75,18 @@ function buildEmptyOverview(role = 'moderator'): AdminOverviewData {
     liveLobbies: 0,
     overdueLobbies: 0,
     pendingPayouts: 0,
+    supportOpenThreads: 0,
+    supportHumanThreads: 0,
+    weekendCupRegistered: 0,
+    weekendCupPaid: 0,
+    weekendCupPendingPayment: 0,
+    weekendCupCheckedIn: 0,
+    wekaMaweRegistered: 0,
+    wekaMawePaid: 0,
+    wekaMawePendingPayment: 0,
+    wekaMaweCheckedIn: 0,
+    wekaMaweSlotsLeft: 0,
+    wekaMaweStatus: 'No edition',
     recentLogs: [],
     role,
   };
@@ -185,6 +211,13 @@ async function getOverviewData(): Promise<AdminOverviewData> {
     { count: liveLobbies },
     { count: overdueLobbies },
     { count: pendingPayouts },
+    { count: supportOpenThreads },
+    { count: supportHumanThreads },
+    { count: weekendCupRegistered },
+    { count: weekendCupPaid },
+    { count: weekendCupPendingPayment },
+    { count: weekendCupCheckedIn },
+    wekaMaweSummaryResult,
     prizeResult,
     logsResult,
   ] = await Promise.all([
@@ -215,6 +248,28 @@ async function getOverviewData(): Promise<AdminOverviewData> {
     lobbyCountQuery('in_progress'),
     overdueLobbiesQuery(),
     tournamentCountQuery(undefined, 'pending'),
+    supabase.from('support_threads').select('id', { count: 'exact', head: true }).in('status', ['open', 'waiting_on_human']),
+    supabase.from('support_threads').select('id', { count: 'exact', head: true }).eq('status', 'waiting_on_human'),
+    supabase.from('online_tournament_registrations').select('id', { count: 'exact', head: true }).eq('event_slug', WEEKEND_CUP_SLUG),
+    supabase
+      .from('online_tournament_registrations')
+      .select('id', { count: 'exact', head: true })
+      .eq('event_slug', WEEKEND_CUP_SLUG)
+      .eq('payment_status', 'paid'),
+    supabase
+      .from('online_tournament_registrations')
+      .select('id', { count: 'exact', head: true })
+      .eq('event_slug', WEEKEND_CUP_SLUG)
+      .in('payment_status', ['pending_payment', 'manual_review']),
+    supabase
+      .from('online_tournament_registrations')
+      .select('id', { count: 'exact', head: true })
+      .eq('event_slug', WEEKEND_CUP_SLUG)
+      .eq('check_in_status', 'checked_in'),
+    getWekaMaweSummary(supabase).catch((error) => {
+      console.error('[AdminOverview] Weka Mawe summary error:', error);
+      return null;
+    }),
     completedTournamentPrizeQuery(),
     role === 'admin'
       ? supabase
@@ -254,6 +309,18 @@ async function getOverviewData(): Promise<AdminOverviewData> {
     liveLobbies: liveLobbies ?? 0,
     overdueLobbies: overdueLobbies ?? 0,
     pendingPayouts: pendingPayouts ?? 0,
+    supportOpenThreads: supportOpenThreads ?? 0,
+    supportHumanThreads: supportHumanThreads ?? 0,
+    weekendCupRegistered: weekendCupRegistered ?? 0,
+    weekendCupPaid: weekendCupPaid ?? 0,
+    weekendCupPendingPayment: weekendCupPendingPayment ?? 0,
+    weekendCupCheckedIn: weekendCupCheckedIn ?? 0,
+    wekaMaweRegistered: wekaMaweSummaryResult?.totals.registered ?? 0,
+    wekaMawePaid: wekaMaweSummaryResult?.totals.paid ?? 0,
+    wekaMawePendingPayment: wekaMaweSummaryResult?.totals.pendingPayment ?? 0,
+    wekaMaweCheckedIn: wekaMaweSummaryResult?.totals.checkedIn ?? 0,
+    wekaMaweSlotsLeft: wekaMaweSummaryResult?.totals.slotsLeft ?? 0,
+    wekaMaweStatus: wekaMaweSummaryResult?.edition?.status.replace(/_/g, ' ') ?? 'No edition',
     recentLogs: (logsResult.data ?? []) as AuditLog[],
     role,
   };
@@ -335,6 +402,32 @@ export default async function AdminOverviewPage() {
       label: 'Prize paid out',
       value: `KSh ${overview.totalPrizeDistributed.toLocaleString()}`,
       detail: `${overview.bannedUsers.toLocaleString()} accounts currently suspended`,
+    },
+  ];
+  const mechiOpsCards = [
+    {
+      href: '/admin/weekendcup',
+      title: 'Weekend Cup',
+      value: overview.weekendCupRegistered.toLocaleString(),
+      label: 'registrations',
+      detail: `${overview.weekendCupPaid.toLocaleString()} paid, ${overview.weekendCupPendingPayment.toLocaleString()} pending payment, ${overview.weekendCupCheckedIn.toLocaleString()} checked in.`,
+      icon: Trophy,
+    },
+    {
+      href: '/admin/weka-mawe',
+      title: 'Weka Mawe',
+      value: overview.wekaMaweRegistered.toLocaleString(),
+      label: overview.wekaMaweStatus,
+      detail: `${overview.wekaMawePaid.toLocaleString()} paid, ${overview.wekaMawePendingPayment.toLocaleString()} pending, ${overview.wekaMaweSlotsLeft.toLocaleString()} slots left.`,
+      icon: Swords,
+    },
+    {
+      href: '/admin/support',
+      title: 'Support',
+      value: overview.supportHumanThreads.toLocaleString(),
+      label: 'human handoffs',
+      detail: `${overview.supportOpenThreads.toLocaleString()} open support threads need visibility across WhatsApp, Instagram, and site inbox.`,
+      icon: Headset,
     },
   ];
 
@@ -499,6 +592,46 @@ export default async function AdminOverviewPage() {
             <p className="mt-1 text-xs text-[var(--text-secondary)]">{detail}</p>
           </div>
         ))}
+      </section>
+
+      <section className="card p-5">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <p className="section-title">Mechi live ops</p>
+            <h2 className="mt-2 text-xl font-black text-[var(--text-primary)]">
+              Current event pulse
+            </h2>
+          </div>
+          <p className="max-w-xl text-sm leading-6 text-[var(--text-secondary)]">
+            Minimal numbers only: registrations, payment pressure, check-in readiness, and support risk.
+          </p>
+        </div>
+
+        <div className="mt-4 grid gap-3 lg:grid-cols-3">
+          {mechiOpsCards.map(({ href, title, value, label, detail, icon: Icon }) => (
+            <Link
+              key={href}
+              href={href}
+              className="rounded-[0.7rem] border border-[var(--border-color)] bg-[var(--surface-elevated)] p-4 transition-colors hover:bg-[var(--surface)]"
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-sm font-black text-[var(--text-primary)]">{title}</p>
+                  <p className="mt-2 text-3xl font-black leading-none text-[var(--accent-secondary-text)]">
+                    {value}
+                  </p>
+                </div>
+                <div className="flex h-10 w-10 items-center justify-center rounded-md border border-[rgba(50,224,196,0.18)] bg-[rgba(50,224,196,0.08)] text-[var(--accent-secondary-text)]">
+                  <Icon size={17} />
+                </div>
+              </div>
+              <p className="mt-2 text-[11px] font-bold uppercase tracking-[0.14em] text-[var(--text-soft)]">
+                {label}
+              </p>
+              <p className="mt-3 text-sm leading-6 text-[var(--text-secondary)]">{detail}</p>
+            </Link>
+          ))}
+        </div>
       </section>
 
       <section className="grid gap-5 xl:grid-cols-[minmax(0,1.02fr)_minmax(320px,0.98fr)]">

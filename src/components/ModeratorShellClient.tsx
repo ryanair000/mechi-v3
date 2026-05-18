@@ -29,7 +29,7 @@ type ModeratorShellClientProps = {
 };
 
 export function ModeratorShellClient({ children, profile, tournament }: ModeratorShellClientProps) {
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(true);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const toggleLabel = sidebarCollapsed ? 'Expand moderator sidebar' : 'Collapse moderator sidebar';
 
   return (

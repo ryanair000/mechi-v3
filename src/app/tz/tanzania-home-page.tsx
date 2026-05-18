@@ -1,141 +1,195 @@
 import Link from 'next/link';
-import { ArrowRight, MessageCircle, Phone, ShieldCheck } from 'lucide-react';
+import type { ReactNode } from 'react';
+import {
+  ArrowRight,
+  CalendarDays,
+  CheckCircle2,
+  CircleDollarSign,
+  Gamepad2,
+  MessageCircle,
+  Phone,
+  ShieldCheck,
+  Trophy,
+  Users,
+  WalletCards,
+  type LucideIcon,
+} from 'lucide-react';
+import FooterSection from '@/components/footer';
+import { PlayMechiHomeHeader } from '@/app/home/playmechi-home-header';
 import {
   TZ_TOURNAMENT,
   getTanzaniaTournamentCallUrl,
   getTanzaniaTournamentWhatsappUrl,
 } from '@/lib/tanzania-tournament';
 
+function EventPill({ children }: { children: ReactNode }) {
+  return (
+    <span className="inline-flex items-center rounded-full border border-[var(--border-color)] bg-[var(--surface-soft)] px-3 py-1 text-xs font-black text-[var(--text-primary)]">
+      {children}
+    </span>
+  );
+}
+
+function StatCard({
+  icon: Icon,
+  label,
+  value,
+}: {
+  icon: LucideIcon;
+  label: string;
+  value: string;
+}) {
+  return (
+    <div className="rounded-lg border border-[var(--border-color)] bg-[var(--surface-soft)] p-4">
+      <Icon size={18} className="text-[var(--accent-secondary-text)]" />
+      <p className="mt-3 text-[0.68rem] font-black uppercase tracking-[0.14em] text-[var(--text-soft)]">
+        {label}
+      </p>
+      <p className="mt-2 text-xl font-black text-[var(--text-primary)]">{value}</p>
+    </div>
+  );
+}
+
 export function TanzaniaHomePage() {
   return (
-    <main className="page-base min-h-screen bg-[#07111f] text-white" data-theme="dark">
-      <section
-        className="relative min-h-[88vh] overflow-hidden bg-cover bg-center"
-        style={{ backgroundImage: "url('/game-artwork/efootball_mobile-header.webp')" }}
-      >
-        <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(4,9,17,0.96),rgba(4,9,17,0.72),rgba(4,9,17,0.38))]" />
-        <div className="relative mx-auto flex min-h-[88vh] w-full max-w-6xl flex-col justify-between px-4 py-5 sm:px-6 lg:px-8">
-          <header className="flex items-center justify-between gap-4">
-            <Link href="/" className="text-lg font-black tracking-[0.08em]">
-              MECHI.CLUB
-            </Link>
-            <Link href={TZ_TOURNAMENT.registrationPath} className="btn-primary min-h-10 px-4 py-2 text-sm">
-              Jisajili
-              <ArrowRight size={15} />
-            </Link>
-          </header>
-
-          <div className="max-w-3xl py-12">
-            <p className="brand-kicker text-[var(--accent-secondary-text)]">Tanzania</p>
-            <h1 className="mt-4 text-4xl font-black leading-tight text-white sm:text-6xl">
+    <div className="page-base marketing-prototype-shell min-h-screen">
+      <PlayMechiHomeHeader />
+      <main className="landing-shell py-10 md:py-14">
+        <section className="grid gap-8 lg:grid-cols-[1.08fr_0.92fr] lg:items-center">
+          <div>
+            <div className="flex flex-wrap gap-2">
+              <EventPill>Tanzania</EventPill>
+              <EventPill>{TZ_TOURNAMENT.game}</EventPill>
+              <EventPill>{TZ_TOURNAMENT.entryFeeLabel}</EventPill>
+            </div>
+            <p className="brand-kicker mt-6 text-[var(--accent-secondary-text)]">
+              Days Esports x Mechi.club
+            </p>
+            <h1 className="mt-4 max-w-4xl text-4xl font-black leading-tight text-[var(--text-primary)] md:text-6xl">
               {TZ_TOURNAMENT.swahiliTitle}
             </h1>
-            <p className="mt-5 max-w-2xl text-base leading-8 text-white/78 sm:text-lg">
-              Usajili wa mashindano ya eFootball Mobile kwa wachezaji wa Tanzania. Jisajili
-              kupitia Mechi, lipa kiingilio kwa Airtel Money, kisha tuma screenshot ya malipo
-              kwa Days Esports ili uthibitishwe.
+            <p className="mt-5 max-w-2xl text-base leading-8 text-[var(--text-secondary)] md:text-lg">
+              Tournament ya eFootball Mobile kwa wachezaji wa Tanzania. Jisajili kupitia Mechi,
+              lipa {TZ_TOURNAMENT.entryFeeLabel} kwa Airtel Money, kisha tuma screenshot WhatsApp
+              kwa Days Esports ili slot yako ithibitishwe.
             </p>
-            <div className="mt-7 flex flex-col gap-3 sm:flex-row">
-              <Link href={TZ_TOURNAMENT.registrationPath} className="btn-primary justify-center">
-                Fungua usajili
+            <div className="mt-6 flex flex-wrap gap-3">
+              <Link href={TZ_TOURNAMENT.registrationPath} className="btn-primary inline-flex items-center gap-2">
+                Jisajili
                 <ArrowRight size={16} />
               </Link>
               <a
-                href={getTanzaniaTournamentWhatsappUrl('Habari Days Esports, nahitaji msaada kuhusu usajili wa tournament ya Tanzania.')}
-                className="btn-ghost justify-center border-white/20 bg-white/8 text-white hover:bg-white/12"
+                href={getTanzaniaTournamentWhatsappUrl('Habari Days Esports, nahitaji msaada kuhusu usajili wa Esports Day Tanzania.')}
+                className="btn-outline inline-flex items-center gap-2"
               >
                 <MessageCircle size={16} />
-                Tuma WhatsApp
+                WhatsApp
               </a>
             </div>
           </div>
 
-          <div className="grid gap-3 pb-4 sm:grid-cols-3">
-            {[
-              ['Kiingilio', TZ_TOURNAMENT.entryFeeLabel],
-              ['Malipo', TZ_TOURNAMENT.paymentMethod],
-              ['Namba', TZ_TOURNAMENT.paymentNumber],
-            ].map(([label, value]) => (
-              <div key={label} className="rounded-lg border border-white/14 bg-black/28 px-4 py-3 backdrop-blur">
-                <p className="text-xs font-bold uppercase tracking-[0.14em] text-white/55">{label}</p>
-                <p className="mt-1 text-lg font-black text-white">{value}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      <section className="border-y border-white/10 bg-[#0b1524] px-4 py-10 sm:px-6 lg:px-8">
-        <div className="mx-auto grid max-w-6xl gap-5 lg:grid-cols-[1.1fr_0.9fr]">
-          <div className="rounded-lg border border-white/10 bg-white/[0.04] p-5 sm:p-6">
-            <p className="section-title text-[var(--accent-secondary-text)]">Maelekezo ya malipo</p>
-            <h2 className="mt-3 text-2xl font-black text-white">Lipa kabla ya kuthibitishwa</h2>
-            <div className="mt-5 space-y-3 text-sm leading-7 text-white/72">
-              <p>
-                Kiingilio ni <strong className="text-white">{TZ_TOURNAMENT.entryFeeLabel}</strong>.
+          <div className="rounded-lg border border-[var(--border-color)] bg-[var(--surface-soft)] p-5">
+            <div className="overflow-hidden rounded-lg border border-[var(--border-color)] bg-black">
+              <div
+                className="aspect-[4/3] bg-cover bg-center"
+                style={{ backgroundImage: "url('/game-artwork/efootball_mobile-header.webp')" }}
+              />
+            </div>
+            <div className="mt-5 flex items-center gap-3 text-[var(--accent-secondary-text)]">
+              <Trophy size={20} />
+              <p className="font-black uppercase tracking-[0.12em]">Event brief</p>
+            </div>
+            <h2 className="mt-3 text-2xl font-black text-[var(--text-primary)]">
+              Manual payment confirmation
+            </h2>
+            <div className="mt-4 grid gap-3 text-sm font-semibold text-[var(--text-secondary)]">
+              <p className="flex items-center gap-2">
+                <WalletCards size={16} /> {TZ_TOURNAMENT.paymentMethod}: {TZ_TOURNAMENT.paymentNumber}
               </p>
-              <p>
-                Lipa kupitia <strong className="text-white">{TZ_TOURNAMENT.paymentMethod}</strong>{' '}
-                kwenda <strong className="text-white">{TZ_TOURNAMENT.paymentNumber}</strong>.
+              <p className="flex items-center gap-2">
+                <MessageCircle size={16} /> Send screenshot: {TZ_TOURNAMENT.supportNumber}
               </p>
-              <p>
-                Baada ya kulipa, tuma screenshot ya ujumbe wa muamala kwenye WhatsApp ya{' '}
-                <strong className="text-white">{TZ_TOURNAMENT.supportNumber}</strong> ili Days
-                Esports wathibitishe nafasi yako.
+              <p className="flex items-center gap-2">
+                <CalendarDays size={16} /> Slot confirmed by moderator after payment review
               </p>
             </div>
           </div>
+        </section>
 
-          <div className="rounded-lg border border-white/10 bg-white/[0.04] p-5 sm:p-6">
-            <p className="section-title text-[var(--accent-secondary-text)]">Msaada</p>
-            <h2 className="mt-3 text-2xl font-black text-white">Unahitaji kuuliza?</h2>
-            <p className="mt-4 text-sm leading-7 text-white/72">
-              Kwa uthibitisho wa malipo, msaada wa usajili, au maswali ya mashindano, tumia namba
-              hii hii ya Days Esports.
-            </p>
-            <div className="mt-5 flex flex-col gap-3 sm:flex-row lg:flex-col">
-              <a href={getTanzaniaTournamentWhatsappUrl()} className="btn-primary justify-center">
-                <MessageCircle size={16} />
-                Tuma WhatsApp
-              </a>
-              <a href={getTanzaniaTournamentCallUrl()} className="btn-ghost justify-center">
+        <section className="mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <StatCard icon={Users} label="Players" value="Tanzania only" />
+          <StatCard icon={Gamepad2} label="Game" value={TZ_TOURNAMENT.game} />
+          <StatCard icon={CircleDollarSign} label="Entry" value={TZ_TOURNAMENT.entryFeeLabel} />
+          <StatCard icon={ShieldCheck} label="Confirm" value="WhatsApp screenshot" />
+        </section>
+
+        <section className="mt-12 grid gap-5 lg:grid-cols-[0.95fr_1.05fr]">
+          <div className="rounded-lg border border-[var(--border-color)] bg-[var(--surface-soft)] p-5">
+            <p className="section-title text-[var(--accent-secondary-text)]">Malipo</p>
+            <h2 className="mt-3 text-2xl font-black text-[var(--text-primary)]">
+              Lipa kabla slot haijathibitishwa
+            </h2>
+            <div className="mt-5 space-y-3 text-sm leading-7 text-[var(--text-secondary)]">
+              <p>
+                Kiingilio ni <strong className="text-[var(--text-primary)]">{TZ_TOURNAMENT.entryFeeLabel}</strong>.
+              </p>
+              <p>
+                Tumia <strong className="text-[var(--text-primary)]">{TZ_TOURNAMENT.paymentMethod}</strong>{' '}
+                kwenda <strong className="text-[var(--text-primary)]">{TZ_TOURNAMENT.paymentNumber}</strong>.
+              </p>
+              <p>
+                Baada ya kulipa, tuma screenshot ya muamala WhatsApp{' '}
+                <strong className="text-[var(--text-primary)]">{TZ_TOURNAMENT.supportNumber}</strong>.
+              </p>
+            </div>
+            <div className="mt-6 flex flex-wrap gap-3">
+              <Link href={TZ_TOURNAMENT.registrationPath} className="btn-primary">
+                Fungua fomu
+                <ArrowRight size={16} />
+              </Link>
+              <a href={getTanzaniaTournamentCallUrl()} className="btn-ghost">
                 <Phone size={16} />
                 Piga simu
               </a>
             </div>
           </div>
-        </div>
-      </section>
 
-      <section className="px-4 py-10 sm:px-6 lg:px-8">
-        <div className="mx-auto max-w-6xl">
-          <div className="mb-5 flex items-center gap-2 text-[var(--accent-secondary-text)]">
-            <ShieldCheck size={18} />
-            <p className="section-title">Hatua za mchezaji</p>
-          </div>
-          <div className="grid gap-4 md:grid-cols-3">
+          <div className="grid gap-3">
             {[
-              ['1', 'Jaza fomu ya usajili', 'Weka jina lako, namba ya simu, WhatsApp, na jina lako la ndani ya eFootball Mobile.'],
-              ['2', 'Lipa TSH 5,000', `Tumia Airtel Money kwenda ${TZ_TOURNAMENT.paymentNumber}.`],
-              ['3', 'Tuma screenshot', `Tuma uthibitisho wa muamala kwa WhatsApp ${TZ_TOURNAMENT.supportNumber}.`],
-            ].map(([step, title, body]) => (
-              <div key={step} className="rounded-lg border border-white/10 bg-white/[0.04] p-5">
-                <span className="inline-flex h-9 w-9 items-center justify-center rounded-md bg-[var(--accent-primary)] text-sm font-black text-black">
-                  {step}
-                </span>
-                <h3 className="mt-4 text-lg font-black text-white">{title}</h3>
-                <p className="mt-2 text-sm leading-7 text-white/68">{body}</p>
+              ['Jisajili kwenye Mechi', 'Weka jina kamili, namba ya simu, WhatsApp, na jina lako la eFootball Mobile.'],
+              ['Lipa Airtel Money', `Tuma ${TZ_TOURNAMENT.entryFeeLabel} kwenda ${TZ_TOURNAMENT.paymentNumber}.`],
+              ['Tuma screenshot', `Tuma uthibitisho wa muamala WhatsApp ${TZ_TOURNAMENT.supportNumber}.`],
+              ['Subiri confirmation', 'Moderator wa Days Esports ataweka payment status na kuthibitisha slot yako.'],
+            ].map(([title, body], index) => (
+              <div key={title} className="rounded-lg border border-[var(--border-color)] p-4">
+                <p className="text-sm font-black text-[var(--accent-secondary-text)]">0{index + 1}</p>
+                <p className="mt-2 font-black text-[var(--text-primary)]">{title}</p>
+                <p className="mt-1 text-sm leading-6 text-[var(--text-secondary)]">{body}</p>
               </div>
             ))}
           </div>
-          <div className="mt-7">
-            <Link href={TZ_TOURNAMENT.registrationPath} className="btn-primary">
+        </section>
+
+        <section className="mt-10 rounded-lg border border-[var(--border-color)] bg-[var(--surface-soft)] p-5">
+          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+            <div>
+              <div className="flex items-center gap-2 text-[var(--accent-secondary-text)]">
+                <CheckCircle2 size={18} />
+                <p className="section-title">Match-ready checklist</p>
+              </div>
+              <p className="mt-3 max-w-3xl text-sm leading-7 text-[var(--text-secondary)]">
+                Hakikisha jina la eFootball na Konami ID ziko sawa. Details zisipolingana zinaweza
+                kuchelewesha confirmation siku ya kupanga matches.
+              </p>
+            </div>
+            <Link href={TZ_TOURNAMENT.registrationPath} className="btn-primary shrink-0">
               Jisajili sasa
               <ArrowRight size={16} />
             </Link>
           </div>
-        </div>
-      </section>
-    </main>
+        </section>
+      </main>
+      <FooterSection className="!pt-6 md:!pt-10" />
+    </div>
   );
 }

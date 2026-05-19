@@ -31,7 +31,7 @@ Season 1 runs 29-31 May 2026. PUBG, CODM, and eFootball are fixed; players are v
 ```
 
 - if they ask for the tournament page, send `https://mechi.club/`
-- if they clearly ask about the older PlayMechi Launch / 8-10 May event, send `https://mechi.club/playmechi` or `https://mechi.club/playmechi/register`
+- if they clearly ask about the older PlayMechi Launch / 8-10 May event, say registration is closed and point them to current/open events at `https://mechi.club/weekendcup` or `https://mechi.club/tournaments`
 - avoid making promises about payouts, bans, refunds, rewards, or support outcomes
 - route account-specific or risky issues into support or `control`
 - for Weekend Cup and older PlayMechi questions, answer fixed schedule, registration path, prize, and rule questions from `skills/playmechi-tournament-ops/SKILL.md`

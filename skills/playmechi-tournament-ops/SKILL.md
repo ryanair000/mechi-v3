@@ -28,10 +28,11 @@ Do not ask which tournament before giving this answer unless the message clearly
 If the sender clearly asks about the older PlayMechi Launch / 8-10 May event, use:
 
 ```text
-For the older PlayMechi tournament, register here:
-https://mechi.club/playmechi/register
+PlayMechi Launch registration is closed.
 
-Pick PUBG Mobile, CODM, or eFootball, enter your exact in-game username, then submit your Instagram and YouTube names for reward verification.
+Current/open events are here:
+https://mechi.club/weekendcup
+https://mechi.club/tournaments
 ```
 
 ## Current Featured Event: Weekend Cup
@@ -59,7 +60,7 @@ Do not say a player is paid, confirmed, eligible, disqualified, or awarded unles
 
 - Main public homepage on Mechi: `/`
 - Public tournament path: `/playmechi`
-- Tournament registration path: `/playmechi/register`
+- Tournament registration path: closed; do not send `/playmechi/register` for new registrations
 - Legacy tournament path still supported: `/online-gaming-tournament`
 - Admin control page: `/admin/online-tournament`
 - Public registration API: `/api/events/mechi-online-gaming-tournament/register`
@@ -159,7 +160,7 @@ Players must provide:
 - Instagram username used to follow PlayMechi
 - YouTube account or channel name used to subscribe to PlayMechi
 
-Players register through Mechi at `/playmechi/register`. They may need to create or sign into a Mechi account first.
+PlayMechi Launch registration is closed. Players looking for new events should use `/weekendcup` or `/tournaments`.
 
 ## Reward Eligibility Rule
 

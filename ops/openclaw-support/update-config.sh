@@ -16,7 +16,7 @@ cat openclaw.json | jq '
   .channels.whatsapp.accounts.default.dmPolicy = "open" |
   .channels.whatsapp.accounts.default.allowFrom = ["*"] |
   .agents.entries = [
-    (.agents.entries[] | if .id == "support" then .model = "anthropic/claude-sonnet-4-20250514" | .thinkingDefault = "minimal" | .fastModeDefault = true else . end),
+    (.agents.entries[] | if .id == "support" then .model = "anthropic/claude-sonnet-4-20250514" | .thinkingDefault = "low" | .fastModeDefault = true else . end),
     (.agents.entries[] | if .id == "control" then .model = "anthropic/claude-sonnet-4-20250514" else . end),
     (.agents.entries[] | if .id == "community" then .model = "anthropic/claude-sonnet-4-20250514" else . end)
   ] |

@@ -165,7 +165,7 @@ export async function POST(request: NextRequest) {
     );
     const finalRedirectTo = getPostLoginRedirectPath(result.profile, redirectTo);
     const response = isJsonRequest
-      ? NextResponse.json({ token, user, redirect_to: finalRedirectTo })
+      ? NextResponse.json({ user, redirect_to: finalRedirectTo })
       : NextResponse.redirect(new URL(finalRedirectTo, requestOrigin), { status: 303 });
 
     applyAuthCookie(response, token);

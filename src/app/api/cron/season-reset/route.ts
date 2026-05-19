@@ -4,8 +4,16 @@ import { getRankDivision, TRACKED_RANKED_GAMES } from '@/lib/gamification';
 import { getGameRatingKey } from '@/lib/config';
 
 export async function POST(request: NextRequest) {
-  const secret = process.env.CRON_SECRET;
-  if (secret && request.headers.get('x-cron-secret') !== secret) {
+  const secret = process.env.CRON_SECRET?.trim();
+  if (!secret) {
+    console.error('[Season Reset] CRON_SECRET is not configured');
+    return NextResponse.json({ error: 'Season reset is not configured' }, { status: 503 });
+  }
+
+  const authorized =
+    request.headers.get('authorization') === `Bearer ${secret}` ||
+    request.headers.get('x-cron-secret') === secret;
+  if (!authorized) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 

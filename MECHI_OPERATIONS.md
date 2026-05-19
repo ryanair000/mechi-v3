@@ -86,7 +86,7 @@ Public paths:
 - Weekend Cup vote/preview: `/`
 - Weekend Cup registration: `/weekendcup`
 - Weekend Cup legacy registration alias: `/weekendcup/register`
-- Older PlayMechi event remains isolated at `/playmechi` and `/playmechi/register`
+- Older PlayMechi event remains isolated at `/playmechi`, but registration is closed. Do not send `/playmechi/register` as a current registration link.
 
 Weekend Cup fixed facts:
 
@@ -103,12 +103,12 @@ Weekend Cup fixed facts:
 Support default:
 
 - Generic "how do I register for the tournament?" should answer with `https://mechi.club/weekendcup`.
-- If the sender clearly names the older PlayMechi Launch / 8-10 May event, use `https://mechi.club/playmechi/register`.
+- If the sender clearly names the older PlayMechi Launch / 8-10 May event, say registration is closed and point them to current/open events at `https://mechi.club/weekendcup` or `https://mechi.club/tournaments`.
 - Do not confirm paid status unless Paystack/live data verifies it.
 
 ## Older PlayMechi Online Gaming Tournament
 
-The older Mechi.club Online Gaming Tournament remains available at `/playmechi`; player registration is `/playmechi/register`; admin control is `/admin/online-tournament`.
+The older Mechi.club Online Gaming Tournament remains available at `/playmechi`; player registration is closed; admin control is `/admin/online-tournament`.
 
 Fixed event facts:
 

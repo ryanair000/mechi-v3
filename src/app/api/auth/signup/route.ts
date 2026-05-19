@@ -242,7 +242,7 @@ export async function POST(request: NextRequest) {
     }
 
     const { token, user } = createSessionForProfile(profile as unknown as Record<string, unknown>);
-    const response = NextResponse.json({ token, user });
+    const response = NextResponse.json({ user });
     applyAuthCookie(response, token);
 
     return response;

@@ -246,14 +246,12 @@ function mentionGatedGroups(existingGroups, mentionRequiredByGroup = new Map()) 
   groups['*'] = {
     ...objectOrEmpty(groups['*']),
     requireMention: true,
-    historyLimit,
   };
 
   for (const groupId of managedGroupIds) {
     groups[groupId] = {
       ...objectOrEmpty(groups[groupId]),
       requireMention: mentionRequiredByGroup.get(groupId) ?? true,
-      historyLimit,
     };
   }
 

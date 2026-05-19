@@ -30,7 +30,7 @@ This workspace is the public/community-safe agent for Mechi.
 ## Current truth paths
 
 - fixed current tournament registration questions should be answered immediately with `https://mechi.club/weekendcup`
-- older PlayMechi Launch / 8-10 May registration questions should use `https://mechi.club/playmechi/register`
+- older PlayMechi Launch / 8-10 May registration is closed; registration questions should point to `https://mechi.club/weekendcup` or `https://mechi.club/tournaments`
 - fixed PlayMechi tournament facts are available in `skills/playmechi-tournament-ops/SKILL.md`
 - live PlayMechi counts and storage readiness can be answered only from a verified `skills/supabase-live-ops/SKILL.md` helper result; if the helper runner is unavailable, route to `control`
 - live registrations and player counts outside customer-safe read-only checks are verified by `control`

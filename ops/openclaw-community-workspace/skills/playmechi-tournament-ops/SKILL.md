@@ -43,7 +43,7 @@ Do not ask which tournament before giving this answer unless the message clearly
 - Homepage and Weekend Cup vote page: `mechi.club`
 - Weekend Cup registration: `mechi.club/weekendcup`
 - Older PlayMechi page: `mechi.club/playmechi`
-- Older PlayMechi registration: `mechi.club/playmechi/register`
+- Older PlayMechi registration: closed; do not send `mechi.club/playmechi/register` for new registrations
 - PUBG Mobile WhatsApp group: `https://chat.whatsapp.com/HDZwDyft00kIVHb6vYVbJv`
 - CODM WhatsApp group: `https://chat.whatsapp.com/JmizQcphVYR2LiRYcrHEaC`
 - eFootball WhatsApp group: `https://chat.whatsapp.com/Cf9R0k2dPeP683wpNnib1N`

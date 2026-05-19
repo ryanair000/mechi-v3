@@ -162,7 +162,7 @@ agents = upsertAgent(agents, {
   name: 'Mechi Support',
   workspace: path.join(openclawHome, 'workspace-support'),
   model: supportModel,
-  thinkingDefault: 'minimal',
+  thinkingDefault: 'low',
   fastModeDefault: true,
   tools: { profile: 'minimal' },
 });
@@ -171,7 +171,7 @@ agents = upsertAgent(agents, {
   name: 'Mechi Community',
   workspace: path.join(openclawHome, 'workspace-community'),
   model: communityModel,
-  thinkingDefault: 'minimal',
+  thinkingDefault: 'low',
   fastModeDefault: true,
   tools: { profile: 'minimal' },
 });
@@ -180,7 +180,7 @@ agents = upsertAgent(agents, {
   name: 'Mechi Socio',
   workspace: path.join(openclawHome, 'workspace-growth'),
   model: socioModel,
-  thinkingDefault: 'minimal',
+  thinkingDefault: 'low',
   fastModeDefault: true,
   tools: { profile: 'minimal' },
 });
@@ -197,7 +197,7 @@ agents = upsertAgent(agents, {
   name: 'Mechi Billing',
   workspace: path.join(openclawHome, 'workspace-billing'),
   model: billingModel,
-  thinkingDefault: 'minimal',
+  thinkingDefault: 'low',
   fastModeDefault: true,
   tools: { profile: 'minimal' },
 });
@@ -206,7 +206,7 @@ agents = upsertAgent(agents, {
   name: 'Mechi Data',
   workspace: path.join(openclawHome, 'workspace-data'),
   model: dataModel,
-  thinkingDefault: 'minimal',
+  thinkingDefault: 'low',
   fastModeDefault: true,
   tools: { profile: 'minimal' },
 });
@@ -215,7 +215,7 @@ agents = upsertAgent(agents, {
   name: 'Mechi Growth',
   workspace: path.join(openclawHome, 'workspace-growth'),
   model: growthModel,
-  thinkingDefault: 'minimal',
+  thinkingDefault: 'low',
   fastModeDefault: true,
   tools: { profile: 'minimal' },
 });

@@ -10,7 +10,7 @@ Use this file when `growth` or `socio` needs to write, format, or publish Mechi 
 - Public links:
   - main site: `https://mechi.club`
   - PlayMechi page: `https://mechi.club/playmechi`
-  - registration link when relevant: `https://mechi.club/playmechi/register`
+  - registration link when relevant: use `https://mechi.club/weekendcup` for Weekend Cup or `https://mechi.club/tournaments` for open tournaments; PlayMechi Launch registration is closed
 - Public handle: `@playmechi`
 
 ## Brand routing
@@ -100,7 +100,7 @@ CTA here.
 
 ## CTA rules
 
-- Registration push: use `https://mechi.club/playmechi/register`
+- Registration push: use `https://mechi.club/weekendcup` for Weekend Cup or `https://mechi.club/tournaments` for open tournaments
 - General discovery or recap: use `https://mechi.club/playmechi`
 - Clips, highlights, and community flex posts do not need a link every time.
 
@@ -187,7 +187,7 @@ DM us to secure yours.
 - Video-first. Use energetic captions, but do not over-explain what the viewer can already see.
 - Keep captions shorter than Instagram unless the post is a registration push.
 - Use 2-4 hashtags max.
-- Use `https://mechi.club/playmechi/register` only for active registration pushes.
+- Do not use `https://mechi.club/playmechi/register` for active registration pushes; PlayMechi Launch registration is closed.
 - TikTok API posting requires a valid Content Posting API token. If the app is not approved for public posting, use `SELF_ONLY` or hand off to native/manual posting.
 - `tiktok-draft` sends the video to the creator's TikTok inbox for manual app approval. Tell the Boss to open TikTok, tap the inbox notification, add sound/effects, paste or adjust the caption, and post.
 - If TikTok draft upload fails with a scope error, the PlayMechi TikTok token needs `video.upload`. If direct TikTok post fails with review/privacy errors, use `tiktok-draft` or keep direct posting on `SELF_ONLY` until TikTok review passes.

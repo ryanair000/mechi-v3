@@ -17,7 +17,7 @@
         "name": "Mechi Support",
         "workspace": "/home/ubuntu/.openclaw/workspace-support",
         "model": "anthropic/claude-sonnet-4-20250514",
-        "thinkingDefault": "minimal",
+        "thinkingDefault": "low",
         "fastModeDefault": true,
         "tools": {
           "profile": "minimal"
@@ -28,7 +28,7 @@
         "name": "Mechi Community",
         "workspace": "/home/ubuntu/.openclaw/workspace-community",
         "model": "anthropic/claude-sonnet-4-20250514",
-        "thinkingDefault": "minimal",
+        "thinkingDefault": "low",
         "fastModeDefault": true,
         "tools": {
           "profile": "minimal"
@@ -39,7 +39,7 @@
         "name": "Mechi Socio",
         "workspace": "/home/ubuntu/.openclaw/workspace-growth",
         "model": "anthropic/claude-sonnet-4-20250514",
-        "thinkingDefault": "minimal",
+        "thinkingDefault": "low",
         "fastModeDefault": true,
         "tools": {
           "profile": "minimal"
@@ -60,7 +60,7 @@
         "name": "Mechi Billing",
         "workspace": "/home/ubuntu/.openclaw/workspace-billing",
         "model": "anthropic/claude-sonnet-4-20250514",
-        "thinkingDefault": "minimal",
+        "thinkingDefault": "low",
         "fastModeDefault": true,
         "tools": {
           "profile": "minimal"
@@ -71,7 +71,7 @@
         "name": "Mechi Data",
         "workspace": "/home/ubuntu/.openclaw/workspace-data",
         "model": "anthropic/claude-sonnet-4-20250514",
-        "thinkingDefault": "minimal",
+        "thinkingDefault": "low",
         "fastModeDefault": true,
         "tools": {
           "profile": "minimal"
@@ -82,7 +82,7 @@
         "name": "Mechi Growth",
         "workspace": "/home/ubuntu/.openclaw/workspace-growth",
         "model": "anthropic/claude-sonnet-4-20250514",
-        "thinkingDefault": "minimal",
+        "thinkingDefault": "low",
         "fastModeDefault": true,
         "tools": {
           "profile": "minimal"

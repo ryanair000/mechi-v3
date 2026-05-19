@@ -13,6 +13,14 @@ import {
 } from '@/lib/online-tournament';
 import { PLANS } from '@/lib/plans';
 import { APP_URL } from '@/lib/urls';
+import {
+  WEEKEND_CUP_ENTRY_PRICING,
+  WEEKEND_CUP_EVENT_DATES,
+  WEEKEND_CUP_GAMES,
+  WEEKEND_CUP_PUBLIC_PATH,
+  WEEKEND_CUP_REGISTRATION_PATH,
+  WEEKEND_CUP_TITLE,
+} from '@/lib/weekend-cup';
 import type {
   GameKey,
   PlatformKey,
@@ -20,8 +28,8 @@ import type {
   SupportThreadStatus,
 } from '@/types';
 
-const GAME_ENQUIRIES_WHATSAPP = '+254104003156';
-const EXTERNAL_ENQUIRIES_REPLY = `For games, gift cards, Fortnite, or anything outside Mechi, please DM ${GAME_ENQUIRIES_WHATSAPP}.`;
+const EXTERNAL_ENQUIRIES_REPLY =
+  "I can help from this Mechi WhatsApp. Tell me the exact game, item, or payment issue here and I'll check the next step for you.";
 
 export interface SupportUserSummary {
   id: string;
@@ -134,6 +142,12 @@ const EXTERNAL_ENQUIRY_TOPIC_PATTERNS = [
   /\bvbucks?\b/i,
   /\bfortnite\b/i,
   /\b(psn|playstation|xbox|steam|roblox|google play|itunes|apple)\s+(gift\s*)?cards?\b/i,
+];
+
+const TOURNAMENT_PAYMENT_SUPPORT_PATTERNS = [
+  /\b(payment|pay|paid|paystack|mpesa|m-?pesa|checkout)\b.{0,80}\b(not working|failed|error|issue|problem|stuck|help|confirm|confirmed)\b/i,
+  /\b(not working|failed|error|issue|problem|stuck|help|confirm|confirmed)\b.{0,80}\b(payment|pay|paid|paystack|mpesa|m-?pesa|checkout)\b/i,
+  /\b(register|registration|slot|weekend cup|playmechi|pubg|codm|free fire|efootball)\b.{0,80}\b(not working|failed|error|issue|problem|stuck|confirm|confirmed)\b/i,
 ];
 
 const BLOCKED_PATTERNS: Array<{
@@ -258,6 +272,10 @@ function isExternalSalesEnquiry(text: string) {
   return matchesAny(text, EXTERNAL_ENQUIRY_TOPIC_PATTERNS) && !hasMechiContext;
 }
 
+function isTournamentPaymentSupport(text: string) {
+  return matchesAny(text, TOURNAMENT_PAYMENT_SUPPORT_PATTERNS);
+}
+
 function summarizePlanLines() {
   return (Object.values(PLANS) as Array<(typeof PLANS)[keyof typeof PLANS]>)
     .map((plan) => {
@@ -293,6 +311,21 @@ function summarizePlayMechiTournament() {
   ].join('\n');
 }
 
+function summarizeWeekendCup() {
+  const schedule = WEEKEND_CUP_GAMES.map(
+    (game) =>
+      `${game.label}: ${game.dateLabel} at ${game.timeLabel}, slots ${game.slots}, ${game.format}, ${game.matchCount}, prizes ${game.firstPrize}, ${game.secondPrize}, ${game.thirdPrize || 'No 3rd prize'}.`
+  ).join('\n');
+
+  return [
+    `${WEEKEND_CUP_TITLE}: current open PlayMechi event running ${WEEKEND_CUP_EVENT_DATES}.`,
+    `Registration: ${APP_URL}${WEEKEND_CUP_REGISTRATION_PATH}. Public page: ${APP_URL}${WEEKEND_CUP_PUBLIC_PATH}.`,
+    `Entry: ${WEEKEND_CUP_ENTRY_PRICING.pricingLineLabel}. Payment through Paystack secures the slot after confirmation.`,
+    `Schedule:\n${schedule}`,
+    'If payment or registration fails, keep the player on this same WhatsApp, ask for the exact error, and escalate internally after acknowledging.',
+  ].join('\n');
+}
+
 type SupportContextChannel = 'whatsapp' | 'instagram';
 
 export function buildSupportSystemPrompt(channel: SupportContextChannel = 'whatsapp') {
@@ -307,14 +340,14 @@ export function buildSupportSystemPrompt(channel: SupportContextChannel = 'whats
     'Reply in a warm, short, confident tone that feels helpful and current, but do not use slang overload.',
     `Format replies for ${channelLabel} so they are easy to scan on mobile.`,
     'Start with the direct answer first.',
-    'If someone asks how to register, asks for the registration link, says "register me", or says they want to register, join, enter, or sign up for the tournament, assume they mean PlayMechi and give the PlayMechi registration link immediately.',
-    'For PlayMechi schedule, prize, stream, rule, and registration questions, answer from the supplied PlayMechi context instead of asking which tournament.',
+    'If someone asks how to register, asks for the registration link, says "register me", or says they want to register, join, enter, or sign up for the tournament, assume they mean the current PlayMechi Weekend Cup and give the Weekend Cup registration link immediately.',
+    'For Weekend Cup schedule, prize, payment, rule, and registration questions, answer from the supplied Weekend Cup context instead of asking which tournament.',
     'Use short paragraphs and only a small bullet list when it genuinely helps.',
     'Use plain mobile-friendly emphasis sparingly for labels, not for every line.',
     'Do not use markdown tables, hashtags, or long walls of text.',
     channelActionLine,
     'You are not allowed to process money, refunds, payouts, subscription cancellations, bans, disputes, or account-changing actions.',
-    `If someone asks about games, gift cards, Fortnite, V-Bucks, or anything outside Mechi, reply exactly: "${EXTERNAL_ENQUIRIES_REPLY}" Do not negotiate prices or collect payment details.`,
+    `If someone asks about games, gift cards, Fortnite, V-Bucks, or anything outside Mechi, keep them on this same WhatsApp and reply exactly: "${EXTERNAL_ENQUIRIES_REPLY}" Do not redirect to another number, negotiate prices, or collect payment details.`,
     'If the user needs anything operational, risky, or policy-sensitive, return disposition "escalate".',
     'If the user is asking an informational question and the answer is supported by the supplied Mechi context, return disposition "reply".',
     'If you need one missing detail to answer safely, return disposition "clarify" with a short question.',
@@ -351,8 +384,9 @@ export function buildMechiSupportContext(
     '- Elite organizers can run auto prize pools from paid entries or set a specified prize pool up front, and the first three Elite tournaments each month do not carry platform cost.',
     '- FC26 and eFootball score reporting use scorelines. Matching score reports can confirm either a win or a draw. Mismatched reports go to dispute review.',
     '- WhatsApp alerts are optional backup notifications when a player has them enabled in profile.',
-    `- Games, gift cards, Fortnite, V-Bucks, and other non-Mechi enquiries are handled on WhatsApp at ${GAME_ENQUIRIES_WHATSAPP}. Tell people to DM that number and do not collect payment details.`,
-    `PlayMechi tournament:\n${summarizePlayMechiTournament()}`,
+    '- Games, gift cards, Fortnite, V-Bucks, and other non-Mechi enquiries stay on this WhatsApp. Ask for the exact item or issue, do not redirect to another number, and do not collect payment details.',
+    `Current PlayMechi Weekend Cup:\n${summarizeWeekendCup()}`,
+    `Older PlayMechi Launch tournament:\n${summarizePlayMechiTournament()}`,
     channelCapabilityLine,
     `Supported 1v1 games: ${oneOnOneGames}.`,
     `Supported lobby games: ${lobbyGames}.`,
@@ -367,7 +401,7 @@ function acknowledgementFor(reason: SupportClassification['reason']) {
     case 'requested_human':
       return "I'm looping in the Mechi support team. Drop any extra details here and they'll pick it up.";
     case 'blocked_topic':
-      return "That needs a human from Mechi to handle properly, so I've pushed this into the support inbox.";
+      return "I've reported this to the Mechi team. Please wait here while we check it and reply in this chat.";
     case 'banned_account':
       return "This needs a human Mechi agent to review, so I've handed it to the support inbox.";
     case 'blocked_thread':
@@ -444,11 +478,21 @@ export function classifySupportMessage(params: {
 
   if (isExternalSalesEnquiry(body)) {
     return {
-      route: 'auto_reply',
+      route: 'human',
       priority: 'normal',
       reason: 'external_sales_enquiry',
       acknowledgement: acknowledgementFor('external_sales_enquiry'),
       tags: [...new Set([...tags, 'game_enquiry', 'external_enquiry'])],
+    };
+  }
+
+  if (isTournamentPaymentSupport(body)) {
+    return {
+      route: 'ai',
+      priority: 'urgent',
+      reason: 'ai_safe',
+      acknowledgement: '',
+      tags: [...new Set([...tags, 'playmechi', 'payment_help'])],
     };
   }
 

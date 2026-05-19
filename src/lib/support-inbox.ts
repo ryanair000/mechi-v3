@@ -1012,6 +1012,7 @@ async function handleInboundSupportMessage(message: NormalizedSupportMessage) {
       ? await executeWhatsAppPlayerAction({
           body: message.body,
           user: userSummary,
+          phone: thread.phone ?? thread.wa_id ?? null,
         })
       : { handled: false as const };
 

@@ -1,6 +1,9 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { sendOnlineTournamentRegistrationEmail } from '@/lib/email';
+import {
+  sendWeekendCupPaymentConfirmedEmail,
+} from '@/lib/email';
 import { createNotification } from '@/lib/notifications';
+import { getPhoneLookupVariants } from '@/lib/phone';
 import { createServiceClient } from '@/lib/supabase';
 import { sendOnlineTournamentRegistrationTelegramNotification } from '@/lib/telegram';
 import {
@@ -8,7 +11,6 @@ import {
   WEEKEND_CUP_ENTRY_PRICING,
   WEEKEND_CUP_GAME_BY_KEY,
   WEEKEND_CUP_GAMES,
-  WEEKEND_CUP_REGISTRATION_PATH,
   WEEKEND_CUP_SLUG,
   WEEKEND_CUP_TITLE,
   getWeekendCupFallbackSummary,
@@ -521,6 +523,81 @@ export function buildWeekendCupRegisterPayload(params: {
   } satisfies WeekendCupPlayerRegistration;
 }
 
+export async function getWeekendCupRegistrationStatusForSupport(params: {
+  supabase?: SupabaseClient;
+  userId?: string | null;
+  phone?: string | null;
+  game?: OnlineTournamentGameKey | null;
+}): Promise<
+  | {
+      status: 'found';
+      registration: WeekendCupPlayerRegistration;
+      confirmedSlotNumber: number | null;
+    }
+  | { status: 'not_found' }
+  | { status: 'error'; error: string }
+> {
+  const supabase = params.supabase ?? createServiceClient();
+  const phoneVariants = params.phone ? getPhoneLookupVariants(params.phone, 'kenya') : [];
+
+  let query = supabase
+    .from('online_tournament_registrations')
+    .select(
+      'id, user_id, game, in_game_username, instagram_username, youtube_name, followed_instagram, subscribed_youtube, reward_eligible, eligibility_status, check_in_status, entry_fee_kes, payment_tier, payment_status, payment_reference, payment_confirmed_at, payment_note, game_uid, whatsapp_number, device_model, device_serial_last6, checked_in_at, created_at, updated_at'
+    )
+    .eq('event_slug', WEEKEND_CUP_SLUG)
+    .neq('eligibility_status', 'disqualified')
+    .order('created_at', { ascending: false });
+
+  if (params.game && isWeekendCupGame(params.game)) {
+    query = query.eq('game', params.game);
+  }
+
+  if (params.userId) {
+    query = query.eq('user_id', params.userId);
+  } else if (phoneVariants.length) {
+    query = query.in('whatsapp_number', phoneVariants);
+  } else {
+    return { status: 'not_found' };
+  }
+
+  const { data, error } = await query.limit(1);
+  if (error) {
+    if (isMissingWeekendCupRegistrationSchemaError(error)) {
+      return { status: 'not_found' };
+    }
+
+    return { status: 'error', error: 'Could not load Weekend Cup registration status' };
+  }
+
+  const row = (data?.[0] ?? null) as WeekendCupRegistrationRow | null;
+  if (!row || !isWeekendCupGame(row.game)) {
+    return { status: 'not_found' };
+  }
+
+  const registration = buildWeekendCupRegisterPayload({ row });
+  let confirmedSlotNumber: number | null = null;
+
+  if (registration.payment_status === 'paid') {
+    const { data: paidRows, error: paidError } = await supabase
+      .from('online_tournament_registrations')
+      .select('id, payment_confirmed_at, created_at')
+      .eq('event_slug', WEEKEND_CUP_SLUG)
+      .eq('game', registration.game)
+      .eq('payment_status', 'paid')
+      .neq('eligibility_status', 'disqualified')
+      .order('payment_confirmed_at', { ascending: true, nullsFirst: false })
+      .order('created_at', { ascending: true });
+
+    if (!paidError) {
+      const index = (paidRows ?? []).findIndex((candidate) => candidate.id === registration.id);
+      confirmedSlotNumber = index >= 0 ? index + 1 : null;
+    }
+  }
+
+  return { status: 'found', registration, confirmedSlotNumber };
+}
+
 export async function markWeekendCupPaymentPaidByReference(
   supabase: SupabaseClient,
   reference: string
@@ -651,7 +728,7 @@ export async function markWeekendCupPaymentPaidByReference(
     }
 
     if (recipient) {
-      await sendOnlineTournamentRegistrationEmail({
+      await sendWeekendCupPaymentConfirmedEmail({
         to: recipient,
         username: profile?.username?.trim() || 'player',
         eventTitle: WEEKEND_CUP_TITLE,
@@ -659,14 +736,8 @@ export async function markWeekendCupPaymentPaidByReference(
         dateLabel: config.dateLabel,
         timeLabel: config.timeLabel,
         inGameUsername: registration.in_game_username,
-        format: config.format,
-        matchCount: config.matchCount,
-        scoring: config.scoring,
-        firstPrize: config.firstPrize,
-        secondPrize: config.secondPrize,
-        thirdPrize: config.thirdPrize || 'No 3rd prize',
-        eligibilityStatus: registration.eligibility_status,
-        registrationUrl: `${APP_URL}${WEEKEND_CUP_REGISTRATION_PATH}`,
+        slotNumber: gameSummary?.confirmed ?? null,
+        dashboardUrl: `${APP_URL}/weekendcup/dashboard?game=${encodeURIComponent(registration.game)}`,
         whatsappGroupUrl: config.whatsappGroupUrl,
       });
     }

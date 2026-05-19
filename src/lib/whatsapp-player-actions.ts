@@ -16,6 +16,19 @@ import {
   isOnlineTournamentRegistrationClosed,
 } from '@/lib/online-tournament';
 import {
+  WEEKEND_CUP_GAME_BY_KEY,
+  WEEKEND_CUP_GAMES,
+  WEEKEND_CUP_PUBLIC_PATH,
+  WEEKEND_CUP_REGISTRATION_PATH,
+  WEEKEND_CUP_TITLE,
+  getWeekendCupPaymentTierDisplay,
+  getWeekendCupWindowState,
+  isWeekendCupGame,
+} from '@/lib/weekend-cup';
+import {
+  getWeekendCupRegistrationStatusForSupport,
+} from '@/lib/weekend-cup-server';
+import {
   getPlayerDashboardSnapshot,
   joinQueueForUser,
   leaveQueueForUser,
@@ -39,7 +52,9 @@ type PlayerActionName =
   | 'playmechi_prizes'
   | 'playmechi_rules'
   | 'playmechi_groups'
-  | 'playmechi_stream';
+  | 'playmechi_stream'
+  | 'weekend_cup_registration_status'
+  | 'weekend_cup_payment_help';
 
 type ParsedPlayerAction = {
   action: PlayerActionName;
@@ -100,6 +115,18 @@ const PLAYMECHI_REGISTER_PATTERNS = [
   /\bregistration link\b/i,
   /\bsend (me )?(the )?(register|registration|signup|sign ?up) link\b/i,
   /\b(register|registration|signup|sign ?up) (please|pls)\b/i,
+];
+const WEEKEND_CUP_REGISTRATION_STATUS_PATTERNS = [
+  /\b(am i|i am|im|i'm)\b.{0,40}\bregistered\b/i,
+  /\b(confirm|check|verify)\b.{0,40}\b(my )?(registration|slot|payment)\b/i,
+  /\b(my )?(slot|slot number|registration status|payment status)\b/i,
+  /\bhave i registered\b/i,
+  /\bdid i register\b/i,
+];
+const WEEKEND_CUP_PAYMENT_HELP_PATTERNS = [
+  /\b(payment|pay|paid|paystack|mpesa|m-?pesa|checkout)\b.{0,80}\b(not working|failed|error|issue|problem|stuck|help|confirm|confirmed)\b/i,
+  /\b(not working|failed|error|issue|problem|stuck|help|confirm|confirmed)\b.{0,80}\b(payment|pay|paid|paystack|mpesa|m-?pesa|checkout)\b/i,
+  /\b(register|registration|slot|weekend cup|playmechi|pubg|codm|free fire|efootball)\b.{0,80}\b(not working|failed|error|issue|problem|stuck)\b/i,
 ];
 const PLAYMECHI_SCHEDULE_PATTERNS = [/\bschedule\b/i, /\btime\b/i, /\bdate\b/i, /\bwhen\b/i, /\bmatch day\b/i];
 const PLAYMECHI_PRIZE_PATTERNS = [/\bprizes?\b/i, /\brewards?\b/i, /\bpool\b/i, /\buc\b/i, /\bcp\b/i, /\bcoins?\b/i];
@@ -203,6 +230,14 @@ function parsePlayerAction(body: string): ParsedPlayerAction | null {
     (matchesAny(normalized, TOURNAMENT_PATTERNS) &&
       (!game || isOnlineTournamentGame(game)));
 
+  if (matchesAny(normalized, WEEKEND_CUP_REGISTRATION_STATUS_PATTERNS)) {
+    return { action: 'weekend_cup_registration_status', game, platform };
+  }
+
+  if (matchesAny(normalized, WEEKEND_CUP_PAYMENT_HELP_PATTERNS)) {
+    return { action: 'weekend_cup_payment_help', game, platform };
+  }
+
   if (matchesAny(normalized, PLAYMECHI_REGISTER_PATTERNS)) {
     return { action: 'playmechi_register', game, platform };
   }
@@ -300,33 +335,93 @@ function requireLinkedAccountMessage() {
 }
 
 function formatPlayMechiRegistrationMessage(game: GameKey | null) {
-  const tournamentGame = game && isOnlineTournamentGame(game) ? ONLINE_TOURNAMENT_GAME_BY_KEY[game] : null;
-  const openGames = ONLINE_TOURNAMENT_GAMES.filter(
-    (config) => !isOnlineTournamentRegistrationClosed(config)
+  const weekendGame = game && isWeekendCupGame(game) ? WEEKEND_CUP_GAME_BY_KEY[game] : null;
+  const openGames = WEEKEND_CUP_GAMES.filter(
+    (config) => getWeekendCupWindowState(config).isRegistrationOpen
   );
 
-  if (tournamentGame && isOnlineTournamentRegistrationClosed(tournamentGame)) {
+  if (weekendGame && !getWeekendCupWindowState(weekendGame).isRegistrationOpen) {
     const openGameLabel = openGames.map((config) => config.label).join(', ');
 
     return [
-      `${tournamentGame.label} registration is full now.`,
+      `${weekendGame.label} registration is closed now.`,
       openGameLabel
         ? `You can still register for ${openGameLabel} here:`
-        : 'Registration page:',
-      `${APP_URL}${ONLINE_TOURNAMENT_REGISTRATION_PATH}`,
+        : 'Current events page:',
+      `${APP_URL}${WEEKEND_CUP_PUBLIC_PATH}`,
     ].join('\n');
   }
 
-  const gameLabel = tournamentGame
-    ? tournamentGame.label
-    : openGames.map((config) => config.label).join(', ') || ONLINE_TOURNAMENT_GAME_LIST_LABEL;
+  const gameLabel = weekendGame
+    ? weekendGame.label
+    : openGames.map((config) => config.label).join(', ') || 'PUBG Mobile, CODM, eFootball, and Free Fire';
 
   return [
-    `Yes. Register for ${ONLINE_TOURNAMENT_TITLE} here:`,
-    `${APP_URL}${ONLINE_TOURNAMENT_REGISTRATION_PATH}`,
+    `Register for ${WEEKEND_CUP_TITLE} here:`,
+    `${APP_URL}${WEEKEND_CUP_REGISTRATION_PATH}`,
     '',
-    `Pick ${gameLabel}, confirm your game tag, then join the WhatsApp group shown after registration.`,
-    'Matches start at 8:00 PM EAT from 8-10 May 2026.',
+    `Pick ${gameLabel}, confirm your game tag, then pay with Paystack to lock your slot.`,
+    'Season 1 runs 29-31 May 2026.',
+  ].join('\n');
+}
+
+function formatWeekendCupAvailabilityMessage() {
+  const openGames = WEEKEND_CUP_GAMES.filter(
+    (config) => getWeekendCupWindowState(config).isRegistrationOpen
+  );
+  const gameLine = openGames.length
+    ? `Open now: ${openGames.map((config) => config.label).join(', ')}.`
+    : 'Registration is not open for the fixed games right now.';
+
+  return [
+    `I checked the ${WEEKEND_CUP_TITLE} registration setup.`,
+    gameLine,
+    '',
+    `Please try again here: ${APP_URL}${WEEKEND_CUP_REGISTRATION_PATH}`,
+    '',
+    "If Paystack still fails, stay here. I've reported the issue to the Mechi team and we'll reply in this chat.",
+  ].join('\n');
+}
+
+function formatWeekendCupStatusMessage(
+  result: Awaited<ReturnType<typeof getWeekendCupRegistrationStatusForSupport>>
+) {
+  if (result.status === 'not_found') {
+    return [
+      "I don't see a Weekend Cup registration linked to this WhatsApp yet.",
+      '',
+      `Register here: ${APP_URL}${WEEKEND_CUP_REGISTRATION_PATH}`,
+      '',
+      'Use the same WhatsApp number on your Mechi profile so I can confirm it here next time.',
+    ].join('\n');
+  }
+
+  if (result.status === 'error') {
+    return [
+      "I couldn't confirm your registration from here right now.",
+      "I've reported it to the Mechi team. Please wait here while we check and reply in this chat.",
+    ].join('\n');
+  }
+
+  const registration = result.registration;
+  const config = WEEKEND_CUP_GAME_BY_KEY[registration.game];
+  const paymentLabel =
+    registration.payment_tier && isWeekendCupGame(registration.game)
+      ? getWeekendCupPaymentTierDisplay(registration.payment_tier, registration.game)
+      : 'Weekend Cup entry';
+  const slotLine =
+    registration.payment_status === 'paid'
+      ? `Confirmed slot: #${result.confirmedSlotNumber ?? 'pending'} for ${config.label}.`
+      : `Registration received for ${config.label}, but the slot is not secured until payment clears.`;
+
+  return [
+    slotLine,
+    `Game tag: ${registration.in_game_username}`,
+    `Payment: ${registration.payment_status === 'paid' ? 'paid and secured' : `pending (${paymentLabel})`}`,
+    '',
+    registration.payment_status === 'paid'
+      ? `Dashboard: ${APP_URL}/weekendcup/dashboard?game=${registration.game}`
+      : `Complete payment or retry here: ${APP_URL}${WEEKEND_CUP_REGISTRATION_PATH}?game=${registration.game}`,
   ].join('\n');
 }
 
@@ -557,6 +652,7 @@ function formatTournamentMessage(result: Awaited<ReturnType<typeof listOpenTourn
 export async function executeWhatsAppPlayerAction(params: {
   body: string | null | undefined;
   user: SupportUserSummary | null;
+  phone?: string | null;
 }): Promise<WhatsAppPlayerActionResult> {
   const parsed = parsePlayerAction(String(params.body ?? ''));
   if (!parsed) {
@@ -617,6 +713,40 @@ export async function executeWhatsAppPlayerAction(params: {
         source: 'whatsapp_action',
         action: parsed.action,
         game: parsed.game,
+      },
+    };
+  }
+
+  if (parsed.action === 'weekend_cup_payment_help') {
+    return {
+      handled: true,
+      message: formatWeekendCupAvailabilityMessage(),
+      senderType: 'ai',
+      meta: {
+        source: 'whatsapp_action',
+        action: parsed.action,
+        game: parsed.game,
+        payment_help: true,
+      },
+    };
+  }
+
+  if (parsed.action === 'weekend_cup_registration_status') {
+    const result = await getWeekendCupRegistrationStatusForSupport({
+      userId: params.user?.id ?? null,
+      phone: params.phone ?? params.user?.whatsapp_number ?? params.user?.phone ?? null,
+      game: parsed.game && isWeekendCupGame(parsed.game) ? parsed.game : null,
+    });
+
+    return {
+      handled: true,
+      message: formatWeekendCupStatusMessage(result),
+      senderType: result.status === 'error' ? 'system' : 'ai',
+      meta: {
+        source: 'whatsapp_action',
+        action: parsed.action,
+        game: parsed.game,
+        result: result.status,
       },
     };
   }

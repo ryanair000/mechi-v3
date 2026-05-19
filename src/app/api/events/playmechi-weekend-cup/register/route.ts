@@ -8,7 +8,7 @@ import {
   normalizeGameIdKeys,
   normalizeSelectedGameKeys,
 } from '@/lib/config';
-import { sendWeekendCupPaymentReminderEmail } from '@/lib/email';
+import { sendWeekendCupRegistrationReceivedEmail } from '@/lib/email';
 import {
   getNormalisedKenyanMobilePhone,
   initializeTournamentPayment,
@@ -505,11 +505,11 @@ export async function POST(request: NextRequest) {
         console.error('[WeekendCupRegistration Telegram] Notification error:', error);
       }
 
-      const reminderRecipient = (profile.email ?? '').trim();
-      if (authorizationUrl && reminderRecipient) {
+      const registrationEmailRecipient = (profile.email ?? '').trim();
+      if (registrationEmailRecipient) {
         try {
-          await sendWeekendCupPaymentReminderEmail({
-            to: reminderRecipient,
+          await sendWeekendCupRegistrationReceivedEmail({
+            to: registrationEmailRecipient,
             username: profile.username,
             eventTitle: WEEKEND_CUP_TITLE,
             gameLabel: gameConfig.label,
@@ -522,7 +522,7 @@ export async function POST(request: NextRequest) {
             registrationUrl: `${APP_URL}${WEEKEND_CUP_REGISTRATION_PATH}?game=${encodeURIComponent(game)}`,
           });
         } catch (error) {
-          console.error('[WeekendCupRegistration Email] Reminder error:', error);
+          console.error('[WeekendCupRegistration Email] Registration received error:', error);
         }
       }
     });

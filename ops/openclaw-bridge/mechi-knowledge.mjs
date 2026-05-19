@@ -3,8 +3,8 @@ const APP_URL = normalizeUrl(
     process.env.NEXT_PUBLIC_BASE_URL ||
     'https://mechi.club'
 );
-const GAME_ENQUIRIES_WHATSAPP = '+254104003156';
-const EXTERNAL_ENQUIRIES_REPLY = `For games, gift cards, Fortnite, or anything outside Mechi, please DM ${GAME_ENQUIRIES_WHATSAPP}.`;
+const EXTERNAL_ENQUIRIES_REPLY =
+  "I can help from this Mechi WhatsApp. Tell me the exact game, item, or payment issue here and I'll check the next step for you.";
 const WEEKEND_CUP_REGISTER_URL = `${APP_URL}/weekendcup`;
 const WEEKEND_CUP_PAGE_URL = `${APP_URL}/`;
 const PLAYMECHI_REGISTER_URL = `${APP_URL}/playmechi/register`;
@@ -169,7 +169,8 @@ export function buildMechiBridgeContext(options = {}) {
     ...PLAYMECHI_FACT_LINES.map((line) => `- ${line}`),
     'Older PlayMechi registration reply:',
     PLAYMECHI_REGISTER_REPLY,
-    `- Games, gift cards, Fortnite, V-Bucks, and other non-Mechi enquiries are handled on WhatsApp at ${GAME_ENQUIRIES_WHATSAPP}. Reply with: "${EXTERNAL_ENQUIRIES_REPLY}" Do not negotiate prices or collect payment details.`,
+    `- Games, gift cards, Fortnite, V-Bucks, and other non-Mechi enquiries stay on this WhatsApp. Reply with: "${EXTERNAL_ENQUIRIES_REPLY}" Do not redirect to another number, negotiate prices, or collect payment details.`,
+    '- For payment, registration, slot, dispute, or admin-sensitive issues, acknowledge immediately: "I\'ve reported this to the Mechi team. Please wait here while we check it and reply in this chat."',
     '- Never invent payment confirmations, refunds, payouts, ban outcomes, match rulings, or live registration counts.',
     '- For operator live tournament availability, the control agent should verify with npm run ops:tournaments -- --json before answering.',
     '- If you are not the control agent and cannot run live tools, route live tournament availability to control instead of sending operators to inspect the public page first.',
@@ -197,7 +198,7 @@ export function buildMechiBridgeSystemPrompt(channel = 'support') {
     `If someone asks how to register, asks for the registration link, says "register me", or says they want to register, join, enter, or sign up for the tournament without naming an older event, assume they mean Weekend Cup and reply with: ${WEEKEND_CUP_REGISTER_REPLY}`,
     'For Weekend Cup schedule, pricing, mystery-game vote, payment, stream, rule, and registration questions, answer from the supplied Weekend Cup facts.',
     'For older PlayMechi Launch / 8-10 May questions, answer from the supplied older PlayMechi facts.',
-    `If someone asks about games, gift cards, Fortnite, V-Bucks, or anything outside Mechi, reply exactly: "${EXTERNAL_ENQUIRIES_REPLY}" Do not collect payment details.`,
+    `If someone asks about games, gift cards, Fortnite, V-Bucks, or anything outside Mechi, keep them on this same WhatsApp and reply exactly: "${EXTERNAL_ENQUIRIES_REPLY}" Do not collect payment details or redirect to another number.`,
     'Escalate or ask for one missing detail when the request is account-sensitive, risky, or unsupported by the supplied context.',
     'Do not invent product policy, prices, live counts, payment state, payouts, bans, refunds, tournament rulings, or account changes.',
   ].join('\n');

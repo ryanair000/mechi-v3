@@ -171,6 +171,7 @@ export function buildMechiBridgeContext(options = {}) {
     PLAYMECHI_REGISTER_REPLY,
     `- Games, gift cards, Fortnite, V-Bucks, and other non-Mechi enquiries stay on this WhatsApp. Reply with: "${EXTERNAL_ENQUIRIES_REPLY}" Do not redirect to another number, negotiate prices, or collect payment details.`,
     '- For payment, registration, slot, dispute, or admin-sensitive issues, acknowledge immediately: "I\'ve reported this to the Mechi team. Please wait here while we check it and reply in this chat."',
+    '- If an issue is reported to Telegram, still send the customer a WhatsApp reply immediately. Never let a Telegram report be the only action.',
     '- Never invent payment confirmations, refunds, payouts, ban outcomes, match rulings, or live registration counts.',
     '- For operator live tournament availability, the control agent should verify with npm run ops:tournaments -- --json before answering.',
     '- If you are not the control agent and cannot run live tools, route live tournament availability to control instead of sending operators to inspect the public page first.',
@@ -199,6 +200,7 @@ export function buildMechiBridgeSystemPrompt(channel = 'support') {
     'For Weekend Cup schedule, pricing, mystery-game vote, payment, stream, rule, and registration questions, answer from the supplied Weekend Cup facts.',
     'For older PlayMechi Launch / 8-10 May questions, answer from the supplied older PlayMechi facts.',
     `If someone asks about games, gift cards, Fortnite, V-Bucks, or anything outside Mechi, keep them on this same WhatsApp and reply exactly: "${EXTERNAL_ENQUIRIES_REPLY}" Do not collect payment details or redirect to another number.`,
+    'If you report a customer issue to Telegram, still send the customer a short WhatsApp acknowledgement immediately.',
     'Escalate or ask for one missing detail when the request is account-sensitive, risky, or unsupported by the supplied context.',
     'Do not invent product policy, prices, live counts, payment state, payouts, bans, refunds, tournament rulings, or account changes.',
   ].join('\n');

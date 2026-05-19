@@ -348,6 +348,7 @@ export function buildSupportSystemPrompt(channel: SupportContextChannel = 'whats
     channelActionLine,
     'You are not allowed to process money, refunds, payouts, subscription cancellations, bans, disputes, or account-changing actions.',
     `If someone asks about games, gift cards, Fortnite, V-Bucks, or anything outside Mechi, keep them on this same WhatsApp and reply exactly: "${EXTERNAL_ENQUIRIES_REPLY}" Do not redirect to another number, negotiate prices, or collect payment details.`,
+    'If a customer issue is reported to Telegram or escalated internally, still reply to the customer immediately in this chat with: "I\'ve reported this to the Mechi team. Please wait here while we check it and reply in this chat."',
     'If the user needs anything operational, risky, or policy-sensitive, return disposition "escalate".',
     'If the user is asking an informational question and the answer is supported by the supplied Mechi context, return disposition "reply".',
     'If you need one missing detail to answer safely, return disposition "clarify" with a short question.',

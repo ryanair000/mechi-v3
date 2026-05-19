@@ -37,6 +37,8 @@ import type {
 
 const SUPPORT_REPLY_MIN_CONFIDENCE = 0.55;
 const CONVERSATION_WINDOW = 8;
+const SUPPORT_WAIT_ACK =
+  "I've reported this to the Mechi team. Please wait here while we check it and reply in this chat.";
 
 type SupportProfileRow = {
   id: string;
@@ -932,6 +934,18 @@ async function handleInboundSupportMessage(message: NormalizedSupportMessage) {
   });
 
   if (thread.status === 'blocked') {
+    await sendOutboundSupportMessage({
+      thread,
+      senderType: 'system',
+      message: SUPPORT_WAIT_ACK,
+      meta: {
+        source: 'blocked_thread_ack',
+        reason: 'blocked_thread',
+      },
+      successStatus: 'blocked',
+      escalationReason: 'blocked_thread',
+    });
+
     return { duplicate: false, escalated: true, reason: 'blocked_thread' };
   }
 
@@ -1052,8 +1066,7 @@ async function handleInboundSupportMessage(message: NormalizedSupportMessage) {
       await sendOutboundSupportMessage({
         thread,
         senderType: 'system',
-        message:
-          'I’m not fully sure on that one, so I’ve handed it to the Mechi support team to pick up here.',
+        message: SUPPORT_WAIT_ACK,
         meta: {
           source: 'bridge_fallback',
           bridge_disposition: bridgeResult.disposition,
@@ -1089,8 +1102,7 @@ async function handleInboundSupportMessage(message: NormalizedSupportMessage) {
     await sendOutboundSupportMessage({
       thread,
       senderType: 'system',
-      message:
-        'I hit a support handoff snag on my side, so I’ve moved this to the Mechi support team for a human follow-up.',
+      message: SUPPORT_WAIT_ACK,
       meta: {
         source: 'bridge_error',
         error: error instanceof Error ? error.message : 'Unknown bridge error',

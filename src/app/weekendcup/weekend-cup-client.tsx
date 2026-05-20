@@ -26,10 +26,12 @@ import {
   WEEKEND_CUP_PRIZE_POOL_LABEL,
   WEEKEND_CUP_PROMO_IMAGE,
   WEEKEND_CUP_PUBLIC_PATH,
+  WEEKEND_CUP_REGISTERABLE_GAMES,
   WEEKEND_CUP_REGISTRATION_PATH,
   WEEKEND_CUP_STREAM_LABEL,
   WEEKEND_CUP_VOTING_DISABLED_MESSAGE,
   WEEKEND_CUP_VOTING_ENABLED,
+  getWeekendCupGamePricingLine,
 } from '@/lib/weekend-cup';
 
 type WeekendCupBallotOption = {
@@ -652,6 +654,47 @@ export function WeekendCupClient() {
               >
                 Open registration
               </Link>
+            </div>
+
+            <div className={`w-full border border-white/10 bg-[rgba(10,18,32,0.72)] p-4 text-left shadow-[0_18px_70px_rgba(0,0,0,0.18)] sm:p-5 ${DASHBOARD_INNER_RADIUS_CLASS}`}>
+              <div className="flex flex-wrap items-end justify-between gap-3">
+                <div>
+                  <p className="section-title">Weekend Cup registration</p>
+                  <h2 className="mt-2 text-[1.35rem] font-black leading-tight text-[var(--text-primary)] sm:text-[1.65rem]">
+                    Pick your Season 1 game.
+                  </h2>
+                </div>
+                <span className={`brand-chip ${DASHBOARD_CONTROL_RADIUS_CLASS} !px-3 !py-1 !text-[0.74rem]`}>
+                  Payment locks slot
+                </span>
+              </div>
+
+              <div className="mt-4 grid gap-2 sm:grid-cols-2">
+                {WEEKEND_CUP_REGISTERABLE_GAMES.map((game) => (
+                  <Link
+                    key={game.game}
+                    href={withQuery(WEEKEND_CUP_REGISTRATION_PATH, { game: game.game })}
+                    className={`group flex min-h-[92px] items-center justify-between gap-3 border border-white/10 bg-[rgba(255,255,255,0.03)] px-4 py-3 transition hover:border-[rgba(50,224,196,0.45)] hover:bg-[rgba(50,224,196,0.1)] ${DASHBOARD_INNER_RADIUS_CLASS}`}
+                  >
+                    <span className="min-w-0">
+                      <span className="block text-sm font-black text-[var(--text-primary)]">
+                        {game.label}
+                      </span>
+                      <span className="mt-1 block text-xs leading-5 text-[var(--text-secondary)]">
+                        {game.dateLabel} at {game.timeLabel}
+                      </span>
+                      <span className="mt-1 block text-xs font-bold text-[var(--accent-secondary-text)]">
+                        {getWeekendCupGamePricingLine(game.game)}
+                      </span>
+                    </span>
+                    <ArrowRight
+                      size={18}
+                      className="shrink-0 text-[var(--accent-secondary-text)] transition group-hover:translate-x-0.5"
+                      aria-hidden="true"
+                    />
+                  </Link>
+                ))}
+              </div>
             </div>
           </div>
         </section>

@@ -661,11 +661,11 @@ export function WeekendCupClient() {
                 <div>
                   <p className="section-title">Weekend Cup registration</p>
                   <h2 className="mt-2 text-[1.35rem] font-black leading-tight text-[var(--text-primary)] sm:text-[1.65rem]">
-                    Pick your Season 1 game.
+                    Lock in your Season 1 game.
                   </h2>
                 </div>
                 <span className={`brand-chip ${DASHBOARD_CONTROL_RADIUS_CLASS} !px-3 !py-1 !text-[0.74rem]`}>
-                  Payment locks slot
+                  Pay. Slot secured.
                 </span>
               </div>
 

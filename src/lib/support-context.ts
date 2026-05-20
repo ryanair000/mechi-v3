@@ -320,6 +320,7 @@ function summarizeWeekendCup() {
   return [
     `${WEEKEND_CUP_TITLE}: current open PlayMechi event running ${WEEKEND_CUP_EVENT_DATES}.`,
     `Registration: ${APP_URL}${WEEKEND_CUP_REGISTRATION_PATH}. Public page: ${APP_URL}${WEEKEND_CUP_PUBLIC_PATH}.`,
+    'Mobile Games Cup voting is closed. Free Fire is confirmed as the Season 1 mystery game and registration is open now.',
     `Entry: ${WEEKEND_CUP_ENTRY_PRICING.pricingLineLabel}. Payment through Paystack secures the slot after confirmation.`,
     `Schedule:\n${schedule}`,
     'If payment or registration fails, keep the player on this same WhatsApp, ask for the exact error, and escalate internally after acknowledging.',

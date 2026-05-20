@@ -13,14 +13,14 @@ const PLAYMECHI_YOUTUBE_URL = 'https://www.youtube.com/@playmechi';
 
 const WEEKEND_CUP_FACT_LINES = [
   'Current featured event: PlayMechi Weekend Cup Season 1.',
-  `Registration link: ${WEEKEND_CUP_REGISTER_URL}. Public vote/preview page: ${WEEKEND_CUP_PAGE_URL}.`,
+  `Registration link: ${WEEKEND_CUP_REGISTER_URL}. Public preview page: ${WEEKEND_CUP_PAGE_URL}.`,
   'Dates: Friday 29 May 2026 to Sunday 31 May 2026.',
   'Prize pool: up to KSh 7,500. Stream: live on Mechi.',
-  'Fixed games: PUBG Mobile on Friday 29 May, CODM on Saturday 30 May, eFootball on Sunday 31 May.',
-  'Mystery game: players vote for the fourth Weekend Cup game. Voting options do not include PUBG, CODM, or eFootball because those are already fixed.',
-  'Entry fees via Paystack. Early Bird: CODM KSh 50, PUBG KSh 50, Mystery Game KSh 50, eFootball KSh 100.',
-  'Phase 2: CODM KSh 75, PUBG KSh 75, Mystery Game KSh 75, eFootball KSh 125.',
-  'Final Rush: CODM KSh 100, PUBG KSh 100, Mystery Game KSh 100, eFootball KSh 150.',
+  'Confirmed games: PUBG Mobile on Friday 29 May, CODM on Saturday 30 May, eFootball on Sunday 31 May, and Free Fire on Sunday 31 May.',
+  'Mobile Games Cup mystery voting is closed. Free Fire is the confirmed mystery game and players can register for Free Fire now.',
+  'Entry fees via Paystack. Early Bird: CODM KSh 50, PUBG KSh 50, Free Fire KSh 50, eFootball KSh 100.',
+  'Phase 2: CODM KSh 75, PUBG KSh 75, Free Fire KSh 75, eFootball KSh 125.',
+  'Final Rush: CODM KSh 100, PUBG KSh 100, Free Fire KSh 100, eFootball KSh 150.',
   'Players who registered for PlayMechi can reuse the same details; Weekend Cup registration pre-fills from their latest PlayMechi registration/check-in profile where available.',
   'Payment state: Paystack payment confirms the slot. Do not tell a player they are confirmed unless payment status is verified.',
 ];
@@ -28,7 +28,7 @@ const WEEKEND_CUP_FACT_LINES = [
 const WEEKEND_CUP_REGISTER_REPLY = [
   `Register for PlayMechi Weekend Cup Season 1 here: ${WEEKEND_CUP_REGISTER_URL}`,
   'Pick your game, confirm your player details, then pay with Paystack to lock your slot.',
-  'Season 1 runs 29-31 May 2026. PUBG, CODM, and eFootball are fixed; players are voting for the mystery game.',
+  'Season 1 runs 29-31 May 2026. PUBG, CODM, eFootball, and Free Fire are confirmed. Free Fire registration is open.',
 ].join('\n');
 
 const PLAYMECHI_FACT_LINES = [
@@ -197,7 +197,7 @@ export function buildMechiBridgeSystemPrompt(channel = 'support') {
     'Answer from the supplied Mechi context when possible.',
     'Keep replies concise, practical, brand-safe, and mobile-friendly.',
     `If someone asks how to register, asks for the registration link, says "register me", or says they want to register, join, enter, or sign up for the tournament without naming an older event, assume they mean Weekend Cup and reply with: ${WEEKEND_CUP_REGISTER_REPLY}`,
-    'For Weekend Cup schedule, pricing, mystery-game vote, payment, stream, rule, and registration questions, answer from the supplied Weekend Cup facts.',
+    'For Weekend Cup schedule, pricing, Free Fire, payment, stream, rule, and registration questions, answer from the supplied Weekend Cup facts.',
     'For older PlayMechi Launch / 8-10 May questions, answer from the supplied older PlayMechi facts.',
     `If someone asks about games, gift cards, Fortnite, V-Bucks, or anything outside Mechi, keep them on this same WhatsApp and reply exactly: "${EXTERNAL_ENQUIRIES_REPLY}" Do not collect payment details or redirect to another number.`,
     'If you report a customer issue to Telegram, still send the customer a short WhatsApp acknowledgement immediately.',

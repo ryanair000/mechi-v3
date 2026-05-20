@@ -113,14 +113,14 @@ export const WEEKEND_CUP_STREAM_LABEL = 'Live on Mechi';
 export const WEEKEND_CUP_MAX_VOTE_SELECTIONS = 5;
 export const WEEKEND_CUP_ACTIVE_PAYMENT_TIER: OnlineTournamentPaymentTier = 'early_bird';
 export const WEEKEND_CUP_HERO_LINE =
-  'Register for the fixed games now, then vote for the mystery slot.';
+  'Free Fire is confirmed for the Mobile Games Cup. Register now and lock your slot.';
 export const WEEKEND_CUP_SERIES_TITLE = 'PlayMechi Weekend Cup 2026';
 export const WEEKEND_CUP_CHECK_IN_BLOCKED_MESSAGE =
   'Your registration is pending payment confirmation. Complete payment before check-in.';
 export const WEEKEND_CUP_REGISTRATION_DISABLED_MESSAGE =
   'Weekend Cup registration is not available right now.';
 export const WEEKEND_CUP_VOTING_DISABLED_MESSAGE =
-  'Weekend Cup voting is paused right now. Try again in a bit.';
+  'Mobile Games Cup voting is closed. Free Fire is confirmed for Season 1.';
 export const WEEKEND_CUP_PENDING_PAYMENT_HELP_COPY =
   'Payment confirms the slot after it clears. Pending players do not count as confirmed.';
 export const WEEKEND_CUP_SUPPORT_NUMBER_LABEL = CUSTOMER_WHATSAPP_SUPPORT_NUMBER_LABEL;
@@ -266,11 +266,11 @@ export const WEEKEND_CUP_TOTAL_SLOTS = WEEKEND_CUP_GAMES.reduce(
 export const WEEKEND_CUP_BALLOTS: WeekendCupBallotSeed[] = [
   {
     slug: 'weekend-cup-1-mobile',
-    title: 'Mystery Game Vote',
-    subtitle: 'Pick the fourth Season 1 game',
+    title: 'Mobile Games Cup confirmed',
+    subtitle: 'Free Fire won the Season 1 mystery slot',
     dateLabel: '29-31 May 2026',
-    themeLabel: 'Mystery slot',
-    status: 'open',
+    themeLabel: 'Free Fire confirmed',
+    status: 'locked',
     options: [
       {
         slug: 'bloodstrike',

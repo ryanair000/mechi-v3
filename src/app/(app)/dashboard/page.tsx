@@ -12,7 +12,7 @@ const dashboardPosts = [
     id: 1,
     title: WEEKEND_CUP_TITLE,
     category: 'weekend cup live',
-    description: `Vote the mystery slot and lock your entry for ${WEEKEND_CUP_EVENT_DATES}.`,
+    description: `Free Fire is confirmed. Lock your Weekend Cup entry for ${WEEKEND_CUP_EVENT_DATES}.`,
     imageUrl: WEEKEND_CUP_PROMO_IMAGE,
     href: WEEKEND_CUP_PUBLIC_PATH,
   },

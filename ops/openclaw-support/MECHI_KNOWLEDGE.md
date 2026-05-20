@@ -1,4 +1,4 @@
-# Mechi Platform Knowledge Base
+﻿# Mechi Platform Knowledge Base
 
 ## About Mechi
 
@@ -30,7 +30,7 @@ Mechi is a competitive gaming platform for mobile and console esports in East Af
 | PUBG Mobile | Friday 29 May 2026 | 8:00 PM EAT | 80 | Solo BR, 3 matches |
 | CODM | Saturday 30 May 2026 | 8:00 PM EAT | 80 | Solo BR, 3 matches |
 | eFootball | Sunday 31 May 2026 | 7:30 PM EAT | 16 | 1v1 knockout bracket |
-| Mystery Game | TBA after voting | TBA | 80 | Community-voted |
+| Free Fire | Sunday 31 May 2026, 8:00 PM EAT | Solo battle royale | 80 | Confirmed mystery game |
 
 ### Entry Fees (per game)
 - **Early Bird**: KSh 50 (PUBG/CODM/Mystery), KSh 100 (eFootball)
@@ -221,10 +221,10 @@ Matches: 29-31 May at 8:00 PM EAT.
 ### Tournament Info
 ```
 PlayMechi Weekend Cup Season 1
-📅 29-31 May 2026
-🎮 PUBG Mobile, CODM, eFootball
-💰 Prize pool up to KSh 7,500
-💵 Entry from KSh 50
+ðŸ“… 29-31 May 2026
+ðŸŽ® PUBG Mobile, CODM, eFootball
+ðŸ’° Prize pool up to KSh 7,500
+ðŸ’µ Entry from KSh 50
 
 Register: mechi.club/weekendcup/register
 ```
@@ -247,3 +247,4 @@ PUBG: https://chat.whatsapp.com/HDZwDyft00kIVHb6vYVbJv
 CODM: https://chat.whatsapp.com/JmizQcphVYR2LiRYcrHEaC
 eFootball: https://chat.whatsapp.com/Cf9R0k2dPeP683wpNnib1N
 ```
+

@@ -29,7 +29,7 @@ const PLAYMECHI_FEED_POSTS: FeedPostProps[] = [
     publishedAt: 'Pinned for this week',
     title: `${WEEKEND_CUP_TITLE} is open.`,
     body:
-      `Register early, vote the mystery slot, and keep your squad ready for ${WEEKEND_CUP_EVENT_DATES}.\n\nThis phone feed is where PlayMechi can drop the clean next move first, without forcing players to bounce between story bubbles, timers, and scattered links.`,
+      `Register early, lock your Free Fire slot, and keep your squad ready for ${WEEKEND_CUP_EVENT_DATES}.\n\nFree Fire is confirmed for the Mobile Games Cup, so players can register now without waiting on voting.`,
     imageSrc: '/images/weekendcup/season-1-promo.png',
     imageAlt: 'PlayMechi Weekend Cup Season 1 poster',
     primaryAction: {
@@ -44,7 +44,7 @@ const PLAYMECHI_FEED_POSTS: FeedPostProps[] = [
     metrics: [
       { icon: CalendarClock, label: 'Dates', value: WEEKEND_CUP_EVENT_DATES },
       { icon: Trophy, label: 'Prize pool', value: WEEKEND_CUP_PRIZE_POOL_LABEL },
-      { icon: Users, label: 'Format', value: 'PUBGM, CODM, eFootball' },
+      { icon: Users, label: 'Format', value: 'PUBGM, CODM, eFootball, Free Fire' },
     ],
     tags: ['Official', 'Weekend Cup', 'Season 1'],
     pinned: true,

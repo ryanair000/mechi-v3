@@ -50,12 +50,30 @@ const UUID_PATTERN =
 
 type WeekendCupResolvedBallot = {
   id: string;
+  status?: 'open' | 'review' | 'locked';
 };
 
 type WeekendCupResolvedOption = {
   id: string;
   ballot_id: string;
 };
+
+async function getBallotById(
+  supabase: ReturnType<typeof createServiceClient>,
+  ballotId: string
+): Promise<WeekendCupResolvedBallot | null> {
+  const { data, error } = await supabase
+    .from('weekend_cup_ballots')
+    .select('id, status')
+    .eq('id', ballotId)
+    .maybeSingle();
+
+  if (error) {
+    throw error;
+  }
+
+  return data as WeekendCupResolvedBallot | null;
+}
 
 async function getUserBallotVoteCount(
   supabase: ReturnType<typeof createServiceClient>,
@@ -225,6 +243,14 @@ export async function POST(request: NextRequest) {
       const option = await resolveVoteOption(supabase, optionId);
       if (!option) {
         return NextResponse.json({ error: 'That Weekend Cup vote option was not found' }, { status: 404 });
+      }
+
+      const ballot = await getBallotById(supabase, option.ballot_id);
+      if (ballot?.status === 'locked') {
+        return NextResponse.json(
+          { error: 'Mobile Games Cup voting is closed. Free Fire is confirmed and registration is open.' },
+          { status: 400 }
+        );
       }
 
       const { data: existingVote } = await supabase

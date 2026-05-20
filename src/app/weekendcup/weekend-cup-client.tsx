@@ -198,19 +198,19 @@ function isSeasonOneMysteryBallot(ballotSlug: string) {
 
 function getBallotHeading(ballot: WeekendCupBallot) {
   return isSeasonOneMysteryBallot(ballot.slug)
-    ? 'Pick the mystery slot.'
+    ? 'Free Fire is confirmed.'
     : 'Vote the Season 2 console and PC game.';
 }
 
 function getBallotDescription(ballot: WeekendCupBallot) {
   return isSeasonOneMysteryBallot(ballot.slug)
-    ? 'CODM, PUBG Mobile, and eFootball are already locked for Season 1. Choose one mystery game only. If your title is missing, drop it below and we can add it to the vote.'
+    ? 'Mobile Games Cup voting is closed. Free Fire is the confirmed Season 1 mystery game, and registration is open now.'
     : 'Season 2 is for console and PC players. Pick one headline game from Tekken 8, FC 26, NBA 2K26, Mortal Kombat 11, and Fortnite.';
 }
 
 function getBallotScopeLabel(ballot: WeekendCupBallot) {
   return isSeasonOneMysteryBallot(ballot.slug)
-    ? 'Mystery slot voting only'
+    ? 'Free Fire confirmed'
     : 'Season 2 console and PC voting only';
 }
 
@@ -294,7 +294,7 @@ function WeekendCupSuggestionCard({
         <div className="space-y-2">
           <p className="section-title">Suggest a game</p>
           <p className="text-sm leading-6 text-[var(--text-secondary)]">
-            Missing your pick? Add it here and we can slot it into the mystery-game vote.
+            Missing your pick? Add it here and we can consider it for a future Weekend Cup vote.
           </p>
         </div>
 
@@ -619,8 +619,8 @@ export function WeekendCupClient() {
             </h1>
             <p className="mx-auto max-w-3xl text-[0.92rem] leading-7 text-[var(--text-secondary)] sm:text-[1rem]">
               Season 1 runs on <strong>{WEEKEND_CUP_EVENT_DATES}</strong>. PUBG Mobile locks Friday,
-              CODM runs Saturday, eFootball closes Sunday, and players are deciding the one final
-              mystery slot before the lineup closes.
+              CODM runs Saturday, and Sunday closes with eFootball plus Free Fire. Mobile Games Cup
+              voting is closed and Free Fire is confirmed.
             </p>
 
             <div className="flex flex-wrap justify-center gap-2">
@@ -641,10 +641,10 @@ export function WeekendCupClient() {
 
             <div className="flex flex-wrap justify-center gap-3">
               <Link
-                href={user ? '#vote' : signInHref}
+                href={WEEKEND_CUP_REGISTRATION_PATH}
                 className={`btn-primary min-h-11 px-4 py-2 text-[0.9rem] ${DASHBOARD_CONTROL_RADIUS_CLASS}`}
               >
-                {user ? 'Vote now' : 'Sign in to vote'}
+                Register Free Fire
               </Link>
               <Link
                 href={WEEKEND_CUP_REGISTRATION_PATH}

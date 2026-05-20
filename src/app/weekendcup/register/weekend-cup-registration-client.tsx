@@ -251,8 +251,8 @@ export function WeekendCupRegistrationClient() {
               Registration is opening.
             </h1>
             <p className="mt-4 max-w-2xl text-base leading-7 text-[var(--text-secondary)]">
-              {WEEKEND_CUP_REGISTRATION_DISABLED_MESSAGE} Vote first, shape the lineup,
-              then return when the desk opens to lock your player entry.
+              {WEEKEND_CUP_REGISTRATION_DISABLED_MESSAGE} Free Fire is confirmed for the Mobile
+              Games Cup. Return when the desk opens to lock your player entry.
             </p>
             <div className="mt-5 flex flex-wrap gap-2">
               {[
@@ -268,10 +268,10 @@ export function WeekendCupRegistrationClient() {
             </div>
             <div className="mt-6 flex flex-wrap gap-3">
               <Link
-                href={`${WEEKEND_CUP_PUBLIC_PATH}#vote`}
+                href={WEEKEND_CUP_PUBLIC_PATH}
                 className={`btn-primary ${DASHBOARD_CONTROL_RADIUS_CLASS}`}
               >
-                Vote first
+                View lineup
               </Link>
               <a href={WEEKEND_CUP_SUPPORT_URL} className={`btn-outline ${DASHBOARD_CONTROL_RADIUS_CLASS}`}>
                 <MessageCircle size={14} />
@@ -301,7 +301,7 @@ export function WeekendCupRegistrationClient() {
               Sign in to register.
             </h1>
             <p className="mt-4 max-w-2xl text-base leading-7 text-[var(--text-secondary)]">
-              Registration is open. Use your Mechi account so your vote, player details,
+              Registration is open. Use your Mechi account so your player details,
               payment status, and check-in all stay tied to the same profile.
             </p>
             <div className="mt-6 flex flex-wrap gap-3">

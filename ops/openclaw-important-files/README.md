@@ -1,4 +1,4 @@
-# OpenClaw Important Files
+﻿# OpenClaw Important Files
 
 This folder is the quick handoff pack for restoring the Mechi OpenClaw production posture on EC2.
 
@@ -25,7 +25,7 @@ https://mechi.club/weekendcup
 
 Pick your game, confirm your player details, then pay with Paystack to lock your slot.
 
-Season 1 runs 29-31 May 2026. PUBG, CODM, and eFootball are fixed; players are voting for the mystery game.
+Season 1 runs 29-31 May 2026. PUBG, CODM, eFootball, and Free Fire are confirmed. Free Fire registration is open; Mobile Games Cup voting is closed.
 ```
 
 ## Safety Defaults
@@ -35,4 +35,5 @@ Season 1 runs 29-31 May 2026. PUBG, CODM, and eFootball are fixed; players are v
 - Configured customer WhatsApp groups can run no-mention Weekend Cup FAQ replies when exact JIDs are provided.
 - MECHI OPS Telegram can run no-tag replies for approved operator IDs only.
 - No bulk WhatsApp sends, cold DMs, repeated identical messages, or invite spam.
+
 

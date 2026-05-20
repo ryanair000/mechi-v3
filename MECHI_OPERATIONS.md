@@ -83,7 +83,7 @@ The current public home campaign is PlayMechi Weekend Cup Season 1.
 
 Public paths:
 
-- Weekend Cup vote/preview: `/`
+- Weekend Cup preview: `/`
 - Weekend Cup registration: `/weekendcup`
 - Weekend Cup legacy registration alias: `/weekendcup/register`
 - Older PlayMechi event remains isolated at `/playmechi`, but registration is closed. Do not send `/playmechi/register` as a current registration link.
@@ -92,12 +92,12 @@ Weekend Cup fixed facts:
 
 - Dates: Friday 29 May 2026 to Sunday 31 May 2026
 - Prize pool: up to KSh 7,500
-- Fixed games: PUBG Mobile, CODM, and eFootball
-- Mystery game: chosen by player vote
+- Confirmed games: PUBG Mobile, CODM, eFootball, and Free Fire
+- Mobile Games Cup voting is closed; Free Fire is the confirmed Season 1 mystery game
 - Registration payment: Paystack
-- Early Bird: CODM KSh 50, PUBG KSh 50, Mystery Game KSh 50, eFootball KSh 100
-- Phase 2: CODM KSh 75, PUBG KSh 75, Mystery Game KSh 75, eFootball KSh 125
-- Final Rush: CODM KSh 100, PUBG KSh 100, Mystery Game KSh 100, eFootball KSh 150
+- Early Bird: CODM KSh 50, PUBG KSh 50, Free Fire KSh 50, eFootball KSh 100
+- Phase 2: CODM KSh 75, PUBG KSh 75, Free Fire KSh 75, eFootball KSh 125
+- Final Rush: CODM KSh 100, PUBG KSh 100, Free Fire KSh 100, eFootball KSh 150
 - Players who registered for the older PlayMechi tournament can reuse synced details where available.
 
 Support default:

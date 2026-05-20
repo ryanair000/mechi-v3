@@ -68,12 +68,12 @@ export function PlayMechiHomeHeader() {
           ],
         },
         {
-          label: 'POLL',
+          label: 'CUP',
           items: [
             {
-              href: '/weekendcup#vote',
-              label: 'Weekend Cup Mystery Game Mobile',
-              description: 'Piga kura ya mystery slot',
+              href: '/weekendcup/register?game=freefire',
+              label: 'Free Fire Weekend Cup',
+              description: 'Free Fire imethibitishwa',
             },
             {
               href: '/weekendcup#vote',
@@ -140,12 +140,12 @@ export function PlayMechiHomeHeader() {
           ],
         },
         {
-          label: 'POLL',
+          label: 'CUP',
           items: [
             {
-              href: '/weekendcup#vote',
-              label: 'Weekend Cup Mystery Game Mobile',
-              description: 'Vote the mystery slot',
+              href: '/weekendcup/register?game=freefire',
+              label: 'Free Fire Weekend Cup',
+              description: 'Free Fire confirmed',
             },
             {
               href: '/weekendcup#vote',

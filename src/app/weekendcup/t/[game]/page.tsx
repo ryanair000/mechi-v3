@@ -33,11 +33,11 @@ function getWeekendCupDetailImage(game: string) {
 function getWeekendCupDetailCopy(game: keyof typeof WEEKEND_CUP_GAME_BY_KEY) {
   if (game === 'mystery') {
     return {
-      kicker: 'Mystery slot',
+      kicker: 'Free Fire confirmed',
       description:
-        'PUBG Mobile, CODM, and eFootball are already locked for Season 1. The community decides the one final game, then the full rules and schedule drop after voting closes.',
-      primaryHref: `${WEEKEND_CUP_PUBLIC_PATH}#vote`,
-      primaryLabel: 'Vote now',
+        'Mobile Games Cup voting is closed. Free Fire is confirmed for Season 1 and registration is open.',
+      primaryHref: `${WEEKEND_CUP_REGISTRATION_PATH}?game=freefire`,
+      primaryLabel: 'Register Free Fire',
     };
   }
 

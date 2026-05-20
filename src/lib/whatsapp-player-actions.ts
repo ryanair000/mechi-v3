@@ -361,7 +361,7 @@ function formatPlayMechiRegistrationMessage(game: GameKey | null) {
     `${APP_URL}${WEEKEND_CUP_REGISTRATION_PATH}`,
     '',
     `Pick ${gameLabel}, confirm your game tag, then pay with Paystack to lock your slot.`,
-    'Season 1 runs 29-31 May 2026.',
+    'Season 1 runs 29-31 May 2026. Free Fire is confirmed and registration is open.',
   ].join('\n');
 }
 

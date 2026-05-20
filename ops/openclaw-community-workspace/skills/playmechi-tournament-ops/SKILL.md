@@ -1,4 +1,4 @@
----
+﻿---
 name: playmechi-tournament-ops
 description: "Community-safe static FAQ and announcement context for PlayMechi tournaments."
 metadata:
@@ -20,7 +20,7 @@ https://mechi.club/weekendcup
 
 Pick your game, confirm your player details, then pay with Paystack to lock your slot.
 
-Season 1 runs 29-31 May 2026. PUBG, CODM, and eFootball are fixed; players are voting for the mystery game.
+Season 1 runs 29-31 May 2026. PUBG, CODM, eFootball, and Free Fire are confirmed. Free Fire registration is open; Mobile Games Cup voting is closed.
 ```
 
 If they ask "what tournament", "details", or "which games":
@@ -33,7 +33,7 @@ PUBG Mobile: Fri 29 May
 CODM: Sat 30 May
 eFootball: Sun 31 May
 
-Players are voting for the mystery game. Register: https://mechi.club/weekendcup
+Free Fire is confirmed as the Mobile Games Cup mystery game. Register: https://mechi.club/weekendcup
 ```
 
 Do not ask which tournament before giving this answer unless the message clearly names a different event.
@@ -57,15 +57,15 @@ Do not ask which tournament before giving this answer unless the message clearly
 - Prize pool: up to KSh 7,500
 - Stream: live on Mechi
 - Fixed games: PUBG Mobile, CODM, eFootball
-- Mystery game: selected by player vote
+- Free Fire: confirmed mystery game, registration open
 - Registration/payment: Paystack confirms the slot
 - Players who registered for PlayMechi can reuse synced details where available
 
 ## Weekend Cup Entry Fees
 
-- Early Bird: CODM KSh 50, PUBG KSh 50, Mystery Game KSh 50, eFootball KSh 100
-- Phase 2: CODM KSh 75, PUBG KSh 75, Mystery Game KSh 75, eFootball KSh 125
-- Final Rush: CODM KSh 100, PUBG KSh 100, Mystery Game KSh 100, eFootball KSh 150
+- Early Bird: CODM KSh 50, PUBG KSh 50, Free Fire KSh 50, eFootball KSh 100
+- Phase 2: CODM KSh 75, PUBG KSh 75, Free Fire KSh 75, eFootball KSh 125
+- Final Rush: CODM KSh 100, PUBG KSh 100, Free Fire KSh 100, eFootball KSh 150
 
 Do not say a player is paid or confirmed unless live payment status is verified.
 
@@ -97,3 +97,5 @@ Do not say a player is paid or confirmed unless live payment status is verified.
 - Do not promise payouts, eligibility, disqualification outcomes, payment confirmations, or admin decisions.
 - Route account-specific, dispute, payout, payment, or live slot-count questions to `control` or `support`.
 - If an operator/admin WhatsApp group asks, route to `control`.
+
+

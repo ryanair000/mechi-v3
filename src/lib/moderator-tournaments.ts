@@ -1,9 +1,14 @@
-export type ModeratorTournamentGameKey = 'pubgm' | 'codm' | 'efootball';
+export type ModeratorTournamentGameKey = 'pubgm' | 'codm' | 'efootball' | 'freefire';
 
 export type ModeratorTournamentKey =
   | 'playmechi_codm'
   | 'playmechi_pubgm'
   | 'playmechi_efootball'
+  | 'playmechi_freefire'
+  | 'weekendcup_pubgm'
+  | 'weekendcup_codm'
+  | 'weekendcup_efootball'
+  | 'weekendcup_freefire'
   | 'days_esports_tz_efootball'
   | 'weka_mawe_efootball';
 
@@ -32,6 +37,36 @@ export const MODERATOR_TOURNAMENTS: ModeratorTournamentOption[] = [
     key: 'playmechi_efootball',
     label: 'PlayMechi eFootball',
     shortLabel: 'eFootball',
+  },
+  {
+    game: 'freefire',
+    key: 'playmechi_freefire',
+    label: 'PlayMechi Free Fire',
+    shortLabel: 'Free Fire',
+  },
+  {
+    game: 'pubgm',
+    key: 'weekendcup_pubgm',
+    label: 'Weekend Cup PUBG',
+    shortLabel: 'WC PUBG',
+  },
+  {
+    game: 'codm',
+    key: 'weekendcup_codm',
+    label: 'Weekend Cup CODM',
+    shortLabel: 'WC CODM',
+  },
+  {
+    game: 'efootball',
+    key: 'weekendcup_efootball',
+    label: 'Weekend Cup eFootball',
+    shortLabel: 'WC eFootball',
+  },
+  {
+    game: 'freefire',
+    key: 'weekendcup_freefire',
+    label: 'Weekend Cup Free Fire',
+    shortLabel: 'WC Free Fire',
   },
   {
     game: 'efootball',

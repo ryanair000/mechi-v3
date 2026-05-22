@@ -15,8 +15,8 @@ export default function FeedTab() {
               PlayMechi on phone should feel like a feed, not a maze.
             </Text>
             <Text selectable style={styles.heroBody}>
-              21st.dev inspired the card direction here: bold media, clean author meta, short copy,
-              and obvious actions. No stories. No progress line. No timed behavior.
+              Official tournament updates, community highlights, and PlayMechi announcements in one
+              phone-first feed.
             </Text>
           </View>
         </View>

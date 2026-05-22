@@ -31,10 +31,10 @@ export type TournamentGameConfig = {
 
 const DEVICE_SERIAL_LAST6_REGEX = /^[A-Z0-9]{6}$/;
 
-export const TOURNAMENT_TITLE = 'Playmechi Launch';
+export const TOURNAMENT_TITLE = 'Weekend Cup Season 1';
 export const TOURNAMENT_PUBLIC_URL = 'https://mechi.club/playmechi';
 export const TOURNAMENT_REGISTER_URL = 'https://mechi.club/playmechi/register';
-export const TOURNAMENT_DATES = '8-10 May 2026';
+export const TOURNAMENT_DATES = '29-31 May 2026';
 export const TOURNAMENT_TIME = '8:00 PM EAT';
 export const TOURNAMENT_TOTAL_SLOTS = 600;
 export const TOURNAMENT_TOTAL_CHECK_IN_CAP = 216;
@@ -50,10 +50,10 @@ export const TOURNAMENT_GAMES: TournamentGameConfig[] = [
     game: 'pubgm',
     label: 'PUBG Mobile',
     shortLabel: 'PUBG',
-    dateLabel: 'Friday 8 May 2026',
+    dateLabel: 'Friday 29 May 2026',
     timeLabel: TOURNAMENT_TIME,
-    matchStartsAt: '2026-05-08T20:00:00+03:00',
-    registrationClosesAt: '2026-05-08T19:30:00+03:00',
+    matchStartsAt: '2026-05-29T20:00:00+03:00',
+    registrationClosesAt: '2026-05-29T19:30:00+03:00',
     slots: 200,
     checkInCap: 100,
     format: 'Individual Battle Royale tournament room',
@@ -68,10 +68,10 @@ export const TOURNAMENT_GAMES: TournamentGameConfig[] = [
     game: 'codm',
     label: 'Call of Duty Mobile',
     shortLabel: 'CODM',
-    dateLabel: 'Saturday 9 May 2026',
+    dateLabel: 'Saturday 30 May 2026',
     timeLabel: TOURNAMENT_TIME,
-    matchStartsAt: '2026-05-09T20:00:00+03:00',
-    registrationClosesAt: '2026-05-09T19:30:00+03:00',
+    matchStartsAt: '2026-05-30T20:00:00+03:00',
+    registrationClosesAt: '2026-05-30T19:30:00+03:00',
     slots: 200,
     checkInCap: 100,
     format: 'Individual Battle Royale tournament room',
@@ -119,10 +119,10 @@ export const TOURNAMENT_GAMES: TournamentGameConfig[] = [
     game: 'efootball',
     label: 'eFootball',
     shortLabel: 'eFootball',
-    dateLabel: 'Sunday 10 May 2026',
+    dateLabel: 'Sunday 31 May 2026',
     timeLabel: TOURNAMENT_TIME,
-    matchStartsAt: '2026-05-10T20:00:00+03:00',
-    registrationClosesAt: '2026-05-10T19:30:00+03:00',
+    matchStartsAt: '2026-05-31T20:00:00+03:00',
+    registrationClosesAt: '2026-05-31T19:30:00+03:00',
     slots: 200,
     checkInCap: 16,
     format: '1v1 knockout bracket with bronze match',

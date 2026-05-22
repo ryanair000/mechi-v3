@@ -461,7 +461,14 @@ function formatPlayMechiPrizeMessage(game: GameKey | null) {
   return getTournamentGamesForReply(game)
     .map(
       (config) =>
-        `${config.label}\n1st: ${config.firstPrize}\n2nd: ${config.secondPrize}\n3rd: ${config.thirdPrize ?? 'No 3rd prize'}`
+        [
+          `${config.label}`,
+          `1st: ${config.firstPrize}`,
+          `2nd: ${config.secondPrize}`,
+          `3rd: ${config.thirdPrize ?? 'No 3rd prize'}`,
+          ...(config.fourthPrize ? [`4th: ${config.fourthPrize}`] : []),
+          ...(config.fifthPrize ? [`5th: ${config.fifthPrize}`] : []),
+        ].join('\n')
     )
     .join('\n\n');
 }

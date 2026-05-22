@@ -53,7 +53,7 @@ export const UPCOMING_PLAYMECHI_TOURNAMENTS: UpcomingPlayMechiTournament[] = [
       label: game.label,
       dateLabel: game.dateLabel,
       slots: game.slots,
-      prizes: [game.firstPrize, game.secondPrize, game.thirdPrize].filter(
+      prizes: [game.firstPrize, game.secondPrize, game.thirdPrize, game.fourthPrize, game.fifthPrize].filter(
         (prize): prize is string => Boolean(prize)
       ),
     })),

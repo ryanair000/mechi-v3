@@ -39,12 +39,17 @@ export type OnlineTournamentGameConfig = {
   registrationClosed?: boolean;
   slots: number;
   checkInCap: number;
+  earlyBirdSlots?: number;
+  regularSlots?: number;
+  lateSlots?: number;
   format: string;
   matchCount: string;
   scoring: string;
   firstPrize: string;
   secondPrize: string;
   thirdPrize: string;
+  fourthPrize?: string;
+  fifthPrize?: string;
   whatsappGroupUrl: string;
   deskRules?: {
     heading: string;

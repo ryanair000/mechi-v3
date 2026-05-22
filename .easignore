@@ -1,5 +1,11 @@
 node_modules
 apps/android/node_modules
+apps/android/android
+apps/android/android/**
+apps/android/.expo
+apps/android/.codex-logs
+apps/android/expo-qr.png
+apps/android/google-play-service-account.json
 apps/marketing/node_modules
 .next
 .next-*

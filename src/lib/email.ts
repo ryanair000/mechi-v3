@@ -699,7 +699,7 @@ function baseLayout(title: string, content: string): string {
     .header { background: radial-gradient(circle at top left, rgba(50, 224, 196, 0.18), transparent 34%), radial-gradient(circle at top right, rgba(255, 107, 107, 0.16), transparent 30%), linear-gradient(135deg, #10182c 0%, #0b1121 64%, #17233b 100%); padding: 28px 30px 30px; }
     .brand-row { width: 100%; }
     .label-pill { display: inline-block; padding: 6px 12px; border-radius: 999px; background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(255, 255, 255, 0.12); color: #d8e6f6; font-size: 11px; font-weight: 900; letter-spacing: 0.12em; text-transform: uppercase; }
-    .logo { display: inline-block; height: 52px; width: 52px; border-radius: 18px; vertical-align: middle; }
+    .logo { display: inline-block; height: 52px; width: 52px; border-radius: 18px; object-fit: contain; background: #ffffff; padding: 4px; vertical-align: middle; }
     .brand-wrap { padding-top: 16px; }
     .brand { color: #ffffff; display: inline-block; font-size: 31px; font-weight: 900; letter-spacing: -0.03em; line-height: 1; margin: 0 0 0 12px; vertical-align: middle; }
     .brand-mark { color: #ff6b6b; }

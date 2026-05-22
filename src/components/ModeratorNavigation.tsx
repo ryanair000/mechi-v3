@@ -9,6 +9,7 @@ import {
   LogOut,
   MonitorPlay,
   ShieldCheck,
+  Trophy,
   type LucideIcon,
 } from 'lucide-react';
 import { getModeratorLoginPath } from '@/lib/navigation';
@@ -50,8 +51,40 @@ function getModeratorNavItems(
     ];
   }
 
+  const isWeekendCup = tournamentKey?.startsWith('weekendcup_');
   const game = ONLINE_TOURNAMENT_GAME_BY_KEY[assignedGame];
   const gameParam = encodeURIComponent(assignedGame);
+
+  if (isWeekendCup) {
+    const items: ModeratorNavItem[] = [
+      {
+        href: '/moderators/weekendcup',
+        label: 'Weekend Cup Desk',
+        icon: Trophy,
+      },
+      {
+        href: `/moderators/weekendcup/lobbies?game=${gameParam}`,
+        label: `${game.shortLabel} Lobbies`,
+        icon: MonitorPlay,
+      },
+      {
+        href: `/moderators/weekendcup/scores?game=${gameParam}`,
+        label: `${game.shortLabel} Scores`,
+        icon: ClipboardCheck,
+      },
+    ];
+
+    if (assignedGame === 'efootball') {
+      items.push({
+        href: '/moderators/weekendcup/bracket',
+        label: 'eFootball Bracket',
+        icon: Trophy,
+      });
+    }
+
+    items.push({ href: '/dashboard', label: 'Back to App', icon: LayoutDashboard });
+    return items;
+  }
 
   return [
     {
@@ -68,6 +101,11 @@ function getModeratorNavItems(
       href: `/moderators/tournament?game=${gameParam}`,
       label: `${game.shortLabel} Tournament`,
       icon: MonitorPlay,
+    },
+    {
+      href: '/moderators/weekendcup',
+      label: 'Weekend Cup',
+      icon: Trophy,
     },
     {
       href: '/moderators/tz',

@@ -85,6 +85,72 @@ const CAMPAIGNS = {
       };
     },
   },
+  leaderboard_scores_updated: {
+    subject: 'Leaderboard scores are updated on Mechi',
+    title: 'Leaderboard scores have been updated.',
+    previewTitle: 'Leaderboard update',
+    ctaLabel: 'View Leaderboard',
+    render: (username) => {
+      const leaderboardUrl = escapeUrl(`${APP_URL}/leaderboard`);
+      const dashboardUrl = escapeUrl(`${APP_URL}/dashboard`);
+      const rewardsUrl = escapeUrl(`${APP_URL}/rewards`);
+      return {
+        bodyIntro: `Hey ${escapeHtml(username || 'Player')}, the Mechi leaderboard scores have been refreshed across the active game boards.`,
+        bodyExtra:
+          'Open the leaderboard to check where your profile stands, see who is moving, and line up your next match if you want to climb.',
+        bodyClose:
+          'Every clean result matters. Keep playing, report scores properly, and let the board show the work.',
+        ctaUrl: leaderboardUrl,
+        infoRows: [
+          ['Update', 'Leaderboard scores refreshed'],
+          ['Action', 'Check your game board'],
+          ['Next move', 'Play clean matches and report results'],
+        ],
+        miniCards: [
+          ['Boards', 'Updated'],
+          ['Games', 'All active games'],
+          ['Link', 'Leaderboard'],
+        ],
+        secondaryLinks: [
+          ['Open dashboard', dashboardUrl],
+          ['Check rewards', rewardsUrl],
+        ],
+      };
+    },
+  },
+  weekend_cup_weka_mawe_push: {
+    subject: 'Weekend Cup and Weka Mawe registrations are closing soon',
+    title: 'Weekend Cup and Weka Mawe are moving. Lock in.',
+    previewTitle: 'Tournament update',
+    ctaLabel: 'Register Now',
+    render: (username) => {
+      const weekendCupUrl = escapeUrl(`${APP_URL}/weekendcup`);
+      const wekaMaweUrl = escapeUrl(`${APP_URL}/playmechi/weka-mawe/register`);
+      const voteUrl = escapeUrl(`${APP_URL}/#vote`);
+      return {
+        bodyIntro: `Hey ${escapeHtml(username || 'Player')}, quick PlayMechi update: Weekend Cup registrations are open, Weka Mawe registration is live, and both clocks are moving.`,
+        bodyExtra:
+          'Weekend Cup Season 1 runs 29-31 May with PUBG Mobile, CODM, eFootball, and Free Fire. Entry starts from KSh 50, Paystack locks the slot, and registrations close by game before match time.\n\nWeka Mawe is the eFootball weekly challenge on 24 May. Entry is KSh 100, the cap is 32 players, and registration closes at 1:30 PM EAT.\n\nSeason 2 console and PC voting is also live. Fortnite is leading right now, so vote if you want the next cup to go your way.',
+        bodyClose:
+          'Do not wait for the group chat to get loud. Register, vote, and keep your game tag clean.',
+        ctaUrl: weekendCupUrl,
+        infoRows: [
+          ['Weekend Cup S1', '29-31 May, entry from KSh 50'],
+          ['Weka Mawe', '24 May, eFootball, KSh 100'],
+          ['Season 2 vote', 'Fortnite leads the console and PC vote'],
+        ],
+        miniCards: [
+          ['Weekend Cup', 'Open'],
+          ['Weka Mawe', 'Live'],
+          ['Vote', 'Fortnite leads'],
+        ],
+        secondaryLinks: [
+          ['Weka Mawe registration', wekaMaweUrl],
+          ['Vote for Season 2', voteUrl],
+        ],
+      };
+    },
+  },
 };
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -100,6 +166,7 @@ function parseArgs(argv) {
     dryRun: false,
     delayMs: 350,
     limit: null,
+    skip: 0,
     only: [],
   };
 
@@ -125,6 +192,18 @@ function parseArgs(argv) {
         const parsed = Number.parseInt(next, 10);
         if (Number.isFinite(parsed) && parsed > 0) {
           options.limit = parsed;
+        }
+        index += 1;
+      }
+      continue;
+    }
+
+    if (arg === '--skip') {
+      const next = argv[index + 1];
+      if (next) {
+        const parsed = Number.parseInt(next, 10);
+        if (Number.isFinite(parsed) && parsed > 0) {
+          options.skip = parsed;
         }
         index += 1;
       }
@@ -256,7 +335,7 @@ function buildCampaignHtml(campaignKey, username) {
     .topline { height: 8px; background: linear-gradient(90deg, #32e0c4 0%, #32e0c4 42%, #ff6b6b 58%, #ff6b6b 100%); }
     .header { background: radial-gradient(circle at top left, rgba(50, 224, 196, 0.18), transparent 34%), radial-gradient(circle at top right, rgba(255, 107, 107, 0.16), transparent 30%), linear-gradient(135deg, #10182c 0%, #0b1121 64%, #17233b 100%); padding: 28px 30px 30px; }
     .label-pill { display: inline-block; padding: 6px 12px; border-radius: 999px; background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(255, 255, 255, 0.12); color: #d8e6f6; font-size: 11px; font-weight: 900; letter-spacing: 0.12em; text-transform: uppercase; }
-    .logo { display: inline-block; height: 52px; width: 52px; border-radius: 18px; vertical-align: middle; }
+    .logo { display: inline-block; height: 52px; width: 52px; border-radius: 18px; object-fit: contain; background: #ffffff; padding: 4px; vertical-align: middle; }
     .brand { color: #ffffff; display: inline-block; font-size: 31px; font-weight: 900; letter-spacing: -0.03em; line-height: 1; margin: 0 0 0 12px; vertical-align: middle; }
     .brand-mark { color: #ff6b6b; }
     .tagline { color: #d8e6f6; margin: 18px 0 0; font-size: 14px; line-height: 1.72; max-width: 520px; }
@@ -413,11 +492,13 @@ async function loadRecipients(options) {
   }
 
   const recipients = Array.from(deduped.values());
+  const selectedRecipients = options.skip > 0 ? recipients.slice(options.skip) : recipients;
+
   if (options.limit) {
-    return recipients.slice(0, options.limit);
+    return selectedRecipients.slice(0, options.limit);
   }
 
-  return recipients;
+  return selectedRecipients;
 }
 
 function wait(ms) {
@@ -436,6 +517,11 @@ function timestampLabel() {
     pad(now.getMinutes()),
     pad(now.getSeconds()),
   ].join('');
+}
+
+function campaignOutputPath(campaignKey, label = timestampLabel()) {
+  const safeCampaign = String(campaignKey || 'campaign').replace(/[^a-z0-9_-]+/gi, '-');
+  return path.join(RESULTS_DIR, `${safeCampaign}-${label}.json`);
 }
 
 async function main() {
@@ -458,6 +544,8 @@ async function main() {
     sent: [],
     failed: [],
   };
+  const runLabel = timestampLabel();
+  const checkpointPath = campaignOutputPath(options.campaign, `${runLabel}-checkpoint`);
 
   if (options.dryRun) {
     console.log(JSON.stringify(summary, null, 2));
@@ -483,6 +571,7 @@ async function main() {
         messageId: info.messageId || null,
       });
       if ((index + 1) % 25 === 0 || index === recipients.length - 1) {
+        fs.writeFileSync(checkpointPath, JSON.stringify(summary, null, 2), 'utf8');
         console.log(`Sent ${index + 1}/${recipients.length}`);
       }
     } catch (error) {
@@ -491,6 +580,7 @@ async function main() {
         username: recipient.username,
         error: error instanceof Error ? error.message : String(error),
       });
+      fs.writeFileSync(checkpointPath, JSON.stringify(summary, null, 2), 'utf8');
       console.error(`Failed ${recipient.email}: ${summary.failed[summary.failed.length - 1].error}`);
     }
 
@@ -503,7 +593,7 @@ async function main() {
     transporter.close();
   }
 
-  const outputPath = path.join(RESULTS_DIR, `welcome-backfill-${timestampLabel()}.json`);
+  const outputPath = campaignOutputPath(options.campaign, runLabel);
   fs.writeFileSync(outputPath, JSON.stringify(summary, null, 2), 'utf8');
   console.log(
     JSON.stringify(

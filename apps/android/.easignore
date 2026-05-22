@@ -3,6 +3,8 @@ node_modules
 .playwright-cli
 .codex-logs
 output
+android
+android/**
 android/.gradle
 android/.gradle/**
 android/.kotlin
@@ -11,6 +13,8 @@ android/build
 android/build/**
 android/app/build
 android/app/build/**
+android/app/.cxx
+android/app/.cxx/**
 android/local.properties
 expo-qr.png
 google-play-service-account.json

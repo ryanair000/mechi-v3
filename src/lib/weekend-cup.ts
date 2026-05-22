@@ -107,8 +107,8 @@ export const WEEKEND_CUP_VOTING_ENABLED = true;
 export const WEEKEND_CUP_EVENT_DATES = '29-31 May 2026';
 export const WEEKEND_CUP_REGISTRATION_OPENS_AT = '2026-05-13T00:00:00+03:00';
 export const WEEKEND_CUP_REGISTRATION_OPENS_LABEL = 'Open now';
-export const WEEKEND_CUP_CASH_PRIZE_POOL = 7500;
-export const WEEKEND_CUP_PRIZE_POOL_LABEL = 'Prize Pool Upto Ksh.7500';
+export const WEEKEND_CUP_CASH_PRIZE_POOL = 11000;
+export const WEEKEND_CUP_PRIZE_POOL_LABEL = 'Prize Pool Upto KSh 11,000';
 export const WEEKEND_CUP_STREAM_LABEL = 'Live on Mechi';
 export const WEEKEND_CUP_MAX_VOTE_SELECTIONS = 5;
 export const WEEKEND_CUP_ACTIVE_PAYMENT_TIER: OnlineTournamentPaymentTier = 'early_bird';
@@ -160,7 +160,7 @@ export const WEEKEND_CUP_ENTRY_PRICING = {
   earlyBirdKes: 50,
   regularKes: 75,
   lateKes: 100,
-  earlyBirdPaidLimit: 12,
+  earlyBirdPaidLimit: 68,
   entryFromLabel: 'Entry from KSh 50',
   earlyBirdLabel: 'Early Bird',
   regularLabel: 'Phase 2',
@@ -184,12 +184,17 @@ export const WEEKEND_CUP_GAMES: OnlineTournamentGameConfig[] = [
     registrationClosesAt: '2026-05-29T19:00:00+03:00',
     slots: 80,
     checkInCap: 80,
+    earlyBirdSlots: 20,
+    regularSlots: 40,
+    lateSlots: 20,
     format: 'Solo battle royale room',
     matchCount: '3 matches',
     scoring: '1 kill = 1 point. Top fraggers run it up.',
-    firstPrize: 'KSh 1,500',
+    firstPrize: 'KSh 1,250',
     secondPrize: 'KSh 1,000',
     thirdPrize: 'KSh 500',
+    fourthPrize: '60 UC',
+    fifthPrize: '60 UC',
     whatsappGroupUrl: 'https://chat.whatsapp.com/HDZwDyft00kIVHb6vYVbJv',
   },
   {
@@ -202,12 +207,17 @@ export const WEEKEND_CUP_GAMES: OnlineTournamentGameConfig[] = [
     registrationClosesAt: '2026-05-30T19:00:00+03:00',
     slots: 80,
     checkInCap: 80,
+    earlyBirdSlots: 20,
+    regularSlots: 40,
+    lateSlots: 20,
     format: 'Solo battle royale room',
     matchCount: '3 matches',
     scoring: '1 kill = 3 points. Placement matters too.',
-    firstPrize: 'KSh 1,500',
+    firstPrize: 'KSh 1,250',
     secondPrize: 'KSh 1,000',
     thirdPrize: 'KSh 500',
+    fourthPrize: '80 CP',
+    fifthPrize: '30 CP',
     whatsappGroupUrl: 'https://chat.whatsapp.com/JmizQcphVYR2LiRYcrHEaC',
   },
   {
@@ -218,14 +228,18 @@ export const WEEKEND_CUP_GAMES: OnlineTournamentGameConfig[] = [
     timeLabel: '7:30 PM EAT',
     matchStartsAt: '2026-05-31T19:30:00+03:00',
     registrationClosesAt: '2026-05-31T19:00:00+03:00',
-    slots: 16,
-    checkInCap: 16,
-    format: '1v1 knockout bracket',
-    matchCount: 'Round of 16 to final',
-    scoring: 'Single-leg bracket. If it is level, settle it clean in extra time or pens.',
+    slots: 32,
+    checkInCap: 32,
+    earlyBirdSlots: 8,
+    regularSlots: 16,
+    lateSlots: 8,
+    format: '1v1 knockout bracket with bronze match',
+    matchCount: 'Round of 32 to final',
+    scoring: 'Single-leg bracket. If it is level, settle it clean in extra time or pens. Bronze match determines 3rd and 4th place.',
     firstPrize: 'KSh 1,000',
     secondPrize: 'KSh 500',
-    thirdPrize: '',
+    thirdPrize: '315 eFootball Coins',
+    fourthPrize: '137 eFootball Coins',
     whatsappGroupUrl: 'https://chat.whatsapp.com/Cf9R0k2dPeP683wpNnib1N',
   },
   {
@@ -238,6 +252,9 @@ export const WEEKEND_CUP_GAMES: OnlineTournamentGameConfig[] = [
     registrationClosesAt: '2026-05-31T19:00:00+03:00',
     slots: 80,
     checkInCap: 80,
+    earlyBirdSlots: 20,
+    regularSlots: 40,
+    lateSlots: 20,
     format: 'Solo battle royale room',
     matchCount: '3 matches',
     scoring: '1 kill = 1 point. Top fraggers run it up.',

@@ -2,6 +2,8 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Alert,
+  AppState,
+  type AppStateStatus,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -28,6 +30,7 @@ import { colors, radii, spacing } from '../../src/theme';
 import type { CommunityMessage, CommunityMessageType } from '../../src/types';
 
 const COMMUNITY_QUERY_KEY = ['community-room'];
+const COMMUNITY_REFETCH_INTERVAL_MS = 15_000;
 
 function formatTime(value: string) {
   return new Date(value).toLocaleTimeString('en-KE', {
@@ -97,11 +100,12 @@ export default function CommunityTab() {
   const [input, setInput] = useState('');
   const [composerMode, setComposerMode] = useState<'text' | 'announcement'>('text');
   const [error, setError] = useState<string | null>(null);
+  const [isAppActive, setIsAppActive] = useState(AppState.currentState === 'active');
 
   const roomQuery = useQuery({
     queryKey: COMMUNITY_QUERY_KEY,
     queryFn: () => getCommunityRoom(),
-    refetchInterval: 5_000,
+    refetchInterval: isAppActive ? COMMUNITY_REFETCH_INTERVAL_MS : false,
   });
 
   const room = roomQuery.data?.room ?? null;
@@ -115,6 +119,15 @@ export default function CommunityTab() {
   );
   const isMuted = isFuture(roomQuery.data?.state.mute_until);
   const isLocked = Boolean(room?.is_locked);
+
+  useEffect(() => {
+    function handleAppStateChange(state: AppStateStatus) {
+      setIsAppActive(state === 'active');
+    }
+
+    const subscription = AppState.addEventListener('change', handleAppStateChange);
+    return () => subscription.remove();
+  }, []);
 
   useEffect(() => {
     if (!canModerate && composerMode !== 'text') {
@@ -260,7 +273,7 @@ export default function CommunityTab() {
               {roomQuery.data?.member_count ?? 0} joined
             </Text>
             <Text style={styles.headerSync}>
-              {roomQuery.isFetching && !roomQuery.isLoading ? 'Syncing...' : 'Live poll 5s'}
+              {roomQuery.isFetching && !roomQuery.isLoading ? 'Syncing...' : 'Live sync 15s'}
             </Text>
           </View>
         </View>

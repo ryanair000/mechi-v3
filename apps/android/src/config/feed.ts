@@ -41,7 +41,7 @@ export const PLAYMECHI_FEED_POSTS: FeedPost[] = [
     pinned: true,
     metrics: [
       { icon: 'calendar-outline', label: 'Dates', value: '29-31 May 2026' },
-      { icon: 'trophy-outline', label: 'Prize pool', value: 'Up to KSh 7,500' },
+      { icon: 'trophy-outline', label: 'Prize pool', value: 'KSh 6,000' },
       { icon: 'people-outline', label: 'Format', value: 'PUBGM, CODM, eFootball' },
     ],
     primaryAction: {

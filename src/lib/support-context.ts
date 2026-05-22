@@ -314,7 +314,7 @@ function summarizePlayMechiTournament() {
 function summarizeWeekendCup() {
   const schedule = WEEKEND_CUP_GAMES.map(
     (game) =>
-      `${game.label}: ${game.dateLabel} at ${game.timeLabel}, slots ${game.slots}, ${game.format}, ${game.matchCount}, prizes ${game.firstPrize}, ${game.secondPrize}, ${game.thirdPrize || 'No 3rd prize'}.`
+      `${game.label}: ${game.dateLabel} at ${game.timeLabel}, slots ${game.slots} (EB ${game.earlyBirdSlots ?? '?'}/Reg ${game.regularSlots ?? '?'}/Late ${game.lateSlots ?? '?'}), ${game.format}, ${game.matchCount}, prizes ${game.firstPrize}, ${game.secondPrize}, ${game.thirdPrize || 'No 3rd prize'}${game.fourthPrize ? `, ${game.fourthPrize}` : ''}${game.fifthPrize ? `, ${game.fifthPrize}` : ''}.`
   ).join('\n');
 
   return [

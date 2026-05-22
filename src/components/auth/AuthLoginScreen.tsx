@@ -7,9 +7,11 @@ import toast from 'react-hot-toast';
 import { Eye, EyeOff, Loader2, UserCheck } from 'lucide-react';
 import { ActionFeedback, type ActionFeedbackState } from '@/components/ActionFeedback';
 import { useAuth } from '@/components/AuthProvider';
+import { ModeratorRoleDialog } from '@/components/ModeratorRoleDialog';
 import { useRegionalSettings } from '@/components/RegionalSettingsProvider';
 import { FullScreenSignup } from '@/components/ui/full-screen-signup';
 import { getPostLoginRedirectPath } from '@/lib/navigation';
+import type { AuthUser } from '@/types';
 
 type LoginMethod = 'phone' | 'username' | 'email';
 
@@ -106,13 +108,15 @@ export function AuthLoginScreen({
   const [submitting, setSubmitting] = useState(false);
   const [sendingMagicLink, setSendingMagicLink] = useState(false);
   const [feedback, setFeedback] = useState<ActionFeedbackState | null>(null);
+  const [showModeratorDialog, setShowModeratorDialog] = useState(false);
+  const [loggedInUser, setLoggedInUser] = useState<AuthUser | null>(null);
   const identifierInputId = `login-${loginMethod}-identifier`;
 
   useEffect(() => {
-    if (!authLoading && user) {
+    if (!authLoading && user && !showModeratorDialog) {
       router.replace(getPostLoginRedirectPath(user, nextPath));
     }
-  }, [authLoading, nextPath, router, user]);
+  }, [authLoading, nextPath, router, showModeratorDialog, user]);
 
   useEffect(() => {
     setFeedback(null);
@@ -170,11 +174,6 @@ export function AuthLoginScreen({
         return;
       }
 
-      const redirectPath = getPostLoginRedirectPath(
-        data.user,
-        typeof data.redirect_to === 'string' ? data.redirect_to : nextPath
-      );
-
       login(data.token, data.user);
       setFeedback({
         tone: 'success',
@@ -186,7 +185,18 @@ export function AuthLoginScreen({
       toast.success(
         isSwahili ? `Karibu tena, ${data.user.username}!` : `Welcome back, ${data.user.username}!`
       );
-      window.location.assign(redirectPath);
+      if (data.user?.role === 'moderator' || data.user?.role === 'admin') {
+        setLoggedInUser(data.user);
+        setShowModeratorDialog(true);
+        return;
+      }
+
+      window.location.assign(
+        getPostLoginRedirectPath(
+          data.user,
+          typeof data.redirect_to === 'string' ? data.redirect_to : nextPath
+        )
+      );
     } catch {
       setFeedback({
         tone: 'error',
@@ -286,6 +296,7 @@ export function AuthLoginScreen({
   };
 
   return (
+    <>
     <FullScreenSignup
       title=""
       subtitle=""
@@ -436,5 +447,11 @@ export function AuthLoginScreen({
         </p>
       </div>
     </FullScreenSignup>
+    <ModeratorRoleDialog
+      isOpen={showModeratorDialog}
+      onClose={() => setShowModeratorDialog(false)}
+      username={loggedInUser?.username ?? 'moderator'}
+    />
+    </>
   );
 }

@@ -10,6 +10,7 @@ import {
 import {
   requireModeratorTournamentScope,
 } from '@/lib/moderator-tournament-access';
+import type { ModeratorTournamentGameKey } from '@/lib/moderator-tournaments';
 import { ONLINE_TOURNAMENT_SLUG, isOnlineTournamentGame } from '@/lib/online-tournament';
 import { createServiceClient } from '@/lib/supabase';
 
@@ -42,7 +43,7 @@ async function readScopedGameForRecord(params: {
 
 async function validateModeratorActionScope(params: {
   body: Record<string, unknown>;
-  assignedGame: 'pubgm' | 'codm' | 'efootball';
+  assignedGame: ModeratorTournamentGameKey;
 }) {
   const action = cleanText(params.body.action, 60);
 
@@ -139,7 +140,7 @@ async function validateModeratorActionScope(params: {
 
 function toScopedResponse(
   responsePayload: OnlineTournamentOpsDashboardState,
-  assignedGame: 'pubgm' | 'codm' | 'efootball',
+  assignedGame: ModeratorTournamentGameKey,
   status = 200
 ) {
   return NextResponse.json(

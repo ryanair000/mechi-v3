@@ -66,7 +66,7 @@ export type TournamentCheckInPayload = {
 
 export type TournamentResultPayload =
   | {
-      game: Extract<OnlineTournamentGameKey, 'pubgm' | 'codm'>;
+      game: Extract<OnlineTournamentGameKey, 'pubgm' | 'codm' | 'freefire'>;
       uri: string;
       name?: string | null;
       mimeType?: string | null;
@@ -95,6 +95,24 @@ export type PushTokenPayload = {
 export type TournamentStateResponse = OnlineTournamentPlayerState & {
   warning?: string;
 };
+
+function toTournamentStateResponse(
+  response: OnlineTournamentRegistrationSummary | TournamentStateResponse
+): TournamentStateResponse {
+  if ('myRegistrations' in response) {
+    return response;
+  }
+
+  return {
+    roster: [],
+    myRegistrations: response.registrations ?? [],
+    rooms: [],
+    fixtures: [],
+    standings: {},
+    mySubmissions: [],
+    payouts: [],
+  };
+}
 
 export type CommunityMessagePayload = {
   message: string;
@@ -157,13 +175,13 @@ export function patchProfile(payload: ProfilePatchPayload) {
 
 export function getTournamentRegistrationSummary() {
   return apiRequest<OnlineTournamentRegistrationSummary>(
-    '/api/events/mechi-online-gaming-tournament/register'
+    '/api/events/playmechi-weekend-cup/register'
   );
 }
 
 export function registerForTournament(payload: TournamentRegistrationPayload) {
   return apiRequest<OnlineTournamentRegistrationSummary>(
-    '/api/events/mechi-online-gaming-tournament/register',
+    '/api/events/playmechi-weekend-cup/register',
     {
       method: 'POST',
       body: payload,
@@ -172,14 +190,14 @@ export function registerForTournament(payload: TournamentRegistrationPayload) {
 }
 
 export function getTournamentState() {
-  return apiRequest<TournamentStateResponse>(
-    '/api/events/mechi-online-gaming-tournament/state'
-  );
+  return apiRequest<OnlineTournamentRegistrationSummary | TournamentStateResponse>(
+    '/api/events/playmechi-weekend-cup/state'
+  ).then(toTournamentStateResponse);
 }
 
 export function checkInTournament(payload: TournamentCheckInPayload) {
-  return apiRequest<TournamentStateResponse>(
-    '/api/events/mechi-online-gaming-tournament/state',
+  return apiRequest<OnlineTournamentRegistrationSummary | TournamentStateResponse>(
+    '/api/events/playmechi-weekend-cup/state',
     {
       method: 'POST',
       body: {
@@ -187,7 +205,7 @@ export function checkInTournament(payload: TournamentCheckInPayload) {
         ...payload,
       },
     }
-  );
+  ).then(toTournamentStateResponse);
 }
 
 export function submitTournamentResult(payload: TournamentResultPayload) {

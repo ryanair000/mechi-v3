@@ -31,14 +31,14 @@ export type TournamentGameConfig = {
 
 const DEVICE_SERIAL_LAST6_REGEX = /^[A-Z0-9]{6}$/;
 
-export const TOURNAMENT_TITLE = 'Weekend Cup Season 1';
-export const TOURNAMENT_PUBLIC_URL = 'https://mechi.club/playmechi';
-export const TOURNAMENT_REGISTER_URL = 'https://mechi.club/playmechi/register';
+export const TOURNAMENT_TITLE = 'PlayMechi Weekend Cup Season 1';
+export const TOURNAMENT_PUBLIC_URL = 'https://mechi.club/weekendcup';
+export const TOURNAMENT_REGISTER_URL = 'https://mechi.club/weekendcup/register';
 export const TOURNAMENT_DATES = '29-31 May 2026';
 export const TOURNAMENT_TIME = '8:00 PM EAT';
-export const TOURNAMENT_TOTAL_SLOTS = 600;
-export const TOURNAMENT_TOTAL_CHECK_IN_CAP = 216;
-export const TOURNAMENT_PRIZE_POOL = 'KSh 6,000';
+export const TOURNAMENT_TOTAL_SLOTS = 256;
+export const TOURNAMENT_TOTAL_CHECK_IN_CAP = 256;
+export const TOURNAMENT_PRIZE_POOL = 'Prize Pool Upto Ksh.7500';
 export const PLAYMECHI_INSTAGRAM_URL = 'https://www.instagram.com/playmechi/';
 export const PLAYMECHI_YOUTUBE_URL = 'https://www.youtube.com/@playmechi';
 export const PLAYMECHI_SUPPORT_LABEL = '+254 733 638 841';
@@ -53,15 +53,15 @@ export const TOURNAMENT_GAMES: TournamentGameConfig[] = [
     dateLabel: 'Friday 29 May 2026',
     timeLabel: TOURNAMENT_TIME,
     matchStartsAt: '2026-05-29T20:00:00+03:00',
-    registrationClosesAt: '2026-05-29T19:30:00+03:00',
-    slots: 200,
-    checkInCap: 100,
-    format: 'Individual Battle Royale tournament room',
+    registrationClosesAt: '2026-05-29T19:00:00+03:00',
+    slots: 80,
+    checkInCap: 80,
+    format: 'Solo battle royale room',
     matchCount: '3 matches',
-    scoring: '1 kill = 1 point. No placement points.',
+    scoring: '1 kill = 1 point. Top fraggers run it up.',
     firstPrize: 'KSh 1,500',
     secondPrize: 'KSh 1,000',
-    thirdPrize: '60 UC',
+    thirdPrize: 'KSh 500',
     whatsappGroupUrl: 'https://chat.whatsapp.com/HDZwDyft00kIVHb6vYVbJv',
   },
   {
@@ -71,15 +71,15 @@ export const TOURNAMENT_GAMES: TournamentGameConfig[] = [
     dateLabel: 'Saturday 30 May 2026',
     timeLabel: TOURNAMENT_TIME,
     matchStartsAt: '2026-05-30T20:00:00+03:00',
-    registrationClosesAt: '2026-05-30T19:30:00+03:00',
-    slots: 200,
-    checkInCap: 100,
-    format: 'Individual Battle Royale tournament room',
+    registrationClosesAt: '2026-05-30T19:00:00+03:00',
+    slots: 80,
+    checkInCap: 80,
+    format: 'Solo battle royale room',
     matchCount: '3 matches',
-    scoring: '1 kill = 3 points. Placement: #1 20, #2 15, #3 10, #4 5, #5-25 3.',
-    firstPrize: 'KSh 1,200',
-    secondPrize: 'KSh 800',
-    thirdPrize: '80 CP',
+    scoring: '1 kill = 3 points. Placement matters too.',
+    firstPrize: 'KSh 1,500',
+    secondPrize: 'KSh 1,000',
+    thirdPrize: 'KSh 500',
     whatsappGroupUrl: 'https://chat.whatsapp.com/JmizQcphVYR2LiRYcrHEaC',
     deskRules: {
       heading: 'CODM Battle Royale rules',
@@ -120,18 +120,36 @@ export const TOURNAMENT_GAMES: TournamentGameConfig[] = [
     label: 'eFootball',
     shortLabel: 'eFootball',
     dateLabel: 'Sunday 31 May 2026',
-    timeLabel: TOURNAMENT_TIME,
-    matchStartsAt: '2026-05-31T20:00:00+03:00',
-    registrationClosesAt: '2026-05-31T19:30:00+03:00',
-    slots: 200,
+    timeLabel: '7:30 PM EAT',
+    matchStartsAt: '2026-05-31T19:30:00+03:00',
+    registrationClosesAt: '2026-05-31T19:00:00+03:00',
+    slots: 16,
     checkInCap: 16,
-    format: '1v1 knockout bracket with bronze match',
+    format: '1v1 knockout bracket',
     matchCount: 'Round of 16 to final',
-    scoring: 'One leg per fixture. Draws go to extra time, penalties, or golden goal replay.',
+    scoring: 'Single-leg bracket. If it is level, settle it clean in extra time or pens.',
     firstPrize: 'KSh 1,000',
     secondPrize: 'KSh 500',
-    thirdPrize: '315 Coins',
+    thirdPrize: '',
     whatsappGroupUrl: 'https://chat.whatsapp.com/Cf9R0k2dPeP683wpNnib1N',
+  },
+  {
+    game: 'freefire',
+    label: 'Free Fire',
+    shortLabel: 'Free Fire',
+    dateLabel: 'Sunday 31 May 2026',
+    timeLabel: TOURNAMENT_TIME,
+    matchStartsAt: '2026-05-31T20:00:00+03:00',
+    registrationClosesAt: '2026-05-31T19:00:00+03:00',
+    slots: 80,
+    checkInCap: 80,
+    format: 'Solo battle royale room',
+    matchCount: '3 matches',
+    scoring: '1 kill = 1 point. Top fraggers run it up.',
+    firstPrize: 'KSh 1,500',
+    secondPrize: 'KSh 1,000',
+    thirdPrize: 'KSh 500',
+    whatsappGroupUrl: PLAYMECHI_SUPPORT_URL,
   },
 ];
 
@@ -144,7 +162,7 @@ export const TOURNAMENT_GAME_BY_KEY = TOURNAMENT_GAMES.reduce(
 );
 
 export const TOURNAMENT_RULES = [
-  'Registration is free and fully online.',
+  'Registration and payment confirmation happen on mechi.club.',
   'Use the exact in-game username you register with.',
   'Join on time. Late players may be disqualified.',
   'Cheating, teaming, scripts, emulator abuse, and unfair tools are banned.',
@@ -154,7 +172,7 @@ export const TOURNAMENT_RULES = [
 ];
 
 export function isTournamentGame(value: unknown): value is OnlineTournamentGameKey {
-  return value === 'pubgm' || value === 'codm' || value === 'efootball';
+  return value === 'pubgm' || value === 'codm' || value === 'efootball' || value === 'freefire';
 }
 
 export function getTournamentGame(value: OnlineTournamentGameKey) {
@@ -294,7 +312,7 @@ export function formatStatus(value: string | null | undefined) {
 }
 
 export function isBattleRoyaleTournamentGame(game: OnlineTournamentGameKey) {
-  return game === 'pubgm' || game === 'codm';
+  return game === 'pubgm' || game === 'codm' || game === 'freefire';
 }
 
 export function getPrizeLabels(game: OnlineTournamentGameKey) {

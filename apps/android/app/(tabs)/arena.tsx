@@ -425,12 +425,6 @@ export default function ArenaTab() {
   });
 
   async function pickScreenshot() {
-    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!permission.granted) {
-      setError('Allow photo access to upload proof.');
-      return;
-    }
-
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       quality: 0.82,
@@ -553,30 +547,14 @@ export default function ArenaTab() {
         <EfootballFixtures fixtures={activeFixtures} myRegistrationIds={myRegistrationIds} />
       )}
 
-      <ResultUploadCard
-        activeGame={activeGame}
-        registration={myRegistration}
-        matchNumber={matchNumber}
-        kills={kills}
-        placement={placement}
-        fixtureId={selectedFixtureId}
-        fixtures={selectableFixtures}
-        player1Score={player1Score}
-        player2Score={player2Score}
-        screenshot={screenshot}
-        uploading={uploadMutation.isPending}
-        canUpload={canUploadBattleRoyale || canUploadEfootball}
-        onMatchNumberChange={setMatchNumber}
-        onKillsChange={setKills}
-        onPlacementChange={setPlacement}
-        onFixtureChange={setFixtureId}
-        onPlayer1ScoreChange={setPlayer1Score}
-        onPlayer2ScoreChange={setPlayer2Score}
-        onPickScreenshot={() => void pickScreenshot()}
-        onUpload={() => uploadMutation.mutate()}
-      />
-
-      <MySubmissions submissions={activeSubmissions} />
+      <Card>
+        <SectionTitle title="Weekend Cup results" />
+        <Text style={textStyles.muted}>
+          Weekend Cup screenshots and score checks are handled by the match desk while the new
+          results API is being prepared. Keep your screenshots ready and follow the WhatsApp group
+          or moderator instructions for your game.
+        </Text>
+      </Card>
       <PrizePanel activeGame={activeGame} state={state} />
     </Screen>
   );

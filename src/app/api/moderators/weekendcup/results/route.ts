@@ -14,6 +14,14 @@ function readInteger(value: unknown): number | null {
   return null;
 }
 
+function readPrizeValueKes(value: unknown): number {
+  if (typeof value === 'number' && Number.isFinite(value)) return value;
+  if (typeof value !== 'string') return 0;
+
+  const parsed = parseInt(value.replace(/[^\d]/g, ''), 10);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
 const PRIZE_STATUSES: WeekendCupPrizeStatus[] = ['pending', 'processing', 'paid', 'failed'];
 
 function isPrizeStatus(value: unknown): value is WeekendCupPrizeStatus {
@@ -129,6 +137,7 @@ export async function POST(request: NextRequest) {
   const resultsToInsert = ranked.map((player, index) => {
     const rank = index + 1;
     const prize = prizes.find((p) => p.rank === rank);
+    const prizeValueKes = readPrizeValueKes(prize?.value);
     return {
       event_slug: WEEKEND_CUP_SLUG,
       game,
@@ -136,8 +145,8 @@ export async function POST(request: NextRequest) {
       final_rank: rank,
       total_kills: player.total_kills,
       total_points: player.total_points,
-      prize_type: prize && prize.value > 0 ? 'cash' : 'none',
-      prize_value_kes: prize?.value ?? 0,
+      prize_type: prizeValueKes > 0 ? 'cash' : 'none',
+      prize_value_kes: prizeValueKes,
       prize_status: 'pending' as const,
     };
   });

@@ -94,7 +94,9 @@ export const WEEKEND_CUP_ROUND_LABELS: Record<number, string> = {
   6: 'Final',
 };
 
-export const WEEKEND_CUP_BR_SCORING: Record<OnlineTournamentGameKey, {
+type WeekendCupScoredGameKey = Exclude<OnlineTournamentGameKey, 'mystery'>;
+
+export const WEEKEND_CUP_BR_SCORING: Record<WeekendCupScoredGameKey, {
   killPoints: number;
   placementPoints: Record<number, number>;
   matchCount: number;
@@ -132,6 +134,10 @@ export function calculateBRMatchPoints(
   kills: number,
   placement: number | null
 ): { killPoints: number; placementPoints: number; totalPoints: number } {
+  if (game === 'mystery') {
+    return { killPoints: 0, placementPoints: 0, totalPoints: 0 };
+  }
+
   const scoring = WEEKEND_CUP_BR_SCORING[game];
   if (!scoring || game === 'efootball') {
     return { killPoints: 0, placementPoints: 0, totalPoints: 0 };

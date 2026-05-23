@@ -7,7 +7,6 @@ import { Loader2, Save, RefreshCw, Trophy } from 'lucide-react';
 import { useAuthFetch } from '@/components/AuthProvider';
 import { WEEKEND_CUP_GAMES, WEEKEND_CUP_SLUG, isWeekendCupGame } from '@/lib/weekend-cup';
 import { WEEKEND_CUP_BR_SCORING, calculateBRMatchPoints } from '@/lib/weekend-cup-match-day';
-import type { OnlineTournamentGameKey } from '@/lib/online-tournament';
 
 type Registration = {
   id: string;
@@ -31,7 +30,7 @@ export default function WeekendCupScoresPage() {
   const gameParam = searchParams.get('game') ?? '';
   const game = isWeekendCupGame(gameParam) ? gameParam : 'pubgm';
   const gameConfig = WEEKEND_CUP_GAMES.find((g) => g.game === game);
-  const scoring = WEEKEND_CUP_BR_SCORING[game as OnlineTournamentGameKey];
+  const scoring = game === 'mystery' ? WEEKEND_CUP_BR_SCORING.pubgm : WEEKEND_CUP_BR_SCORING[game];
 
   const [registrations, setRegistrations] = useState<Registration[]>([]);
   const [scores, setScores] = useState<Record<string, ScoreEntry>>({});
@@ -95,7 +94,7 @@ export default function WeekendCupScoresPage() {
       const current = prev[registrationId] ?? { registration_id: registrationId, kills: 0, placement: null, total_points: 0 };
       const updated = { ...current, [field]: numValue };
       const points = calculateBRMatchPoints(
-        game as OnlineTournamentGameKey,
+        game,
         updated.kills,
         updated.placement
       );

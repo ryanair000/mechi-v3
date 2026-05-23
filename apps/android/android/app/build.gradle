@@ -2,6 +2,8 @@ apply plugin: "com.android.application"
 apply plugin: "org.jetbrains.kotlin.android"
 apply plugin: "com.facebook.react"
 
+import com.android.build.api.artifact.SingleArtifact
+
 def projectRoot = rootDir.getAbsoluteFile().getParentFile().getAbsolutePath()
 
 /**
@@ -92,8 +94,8 @@ android {
         applicationId 'com.mechi.app'
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 5
-        versionName "1.0.4"
+        versionCode 18
+        versionName "1.0.5"
 
         buildConfigField "String", "REACT_NATIVE_RELEASE_LEVEL", "\"${findProperty('reactNativeReleaseLevel') ?: 'stable'}\""
     }
@@ -137,6 +139,57 @@ android {
     }
     androidResources {
         ignoreAssetsPattern '!.svn:!.git:!.ds_store:!*.scc:!CVS:!thumbs.db:!picasa.ini:!*~'
+    }
+}
+
+def blockedMergedPermissions = [
+    'android.permission.READ_EXTERNAL_STORAGE',
+    'android.permission.WRITE_EXTERNAL_STORAGE',
+    'android.permission.READ_MEDIA_IMAGES',
+    'android.permission.READ_MEDIA_VIDEO',
+    'android.permission.READ_MEDIA_AUDIO',
+    'android.permission.CAMERA',
+    'android.permission.RECORD_AUDIO',
+    'android.permission.SYSTEM_ALERT_WINDOW',
+]
+
+abstract class StripBlockedPermissionsTask extends DefaultTask {
+    @InputFile
+    abstract RegularFileProperty getInputManifest()
+
+    @OutputFile
+    abstract RegularFileProperty getOutputManifest()
+
+    @Input
+    abstract ListProperty<String> getBlockedPermissions()
+
+    @TaskAction
+    void stripPermissions() {
+        def manifestText = inputManifest.get().asFile.getText('UTF-8')
+        blockedPermissions.get().each { permission ->
+            def escapedPermission = java.util.regex.Pattern.quote(permission)
+            manifestText = manifestText.replaceAll(
+                /(?m)^\s*<uses-permission(?:-[^\s>]+)?\s+[^>]*android:name="${escapedPermission}"[^>]*\/>.*(?:\r?\n)?/,
+                ''
+            )
+        }
+        outputManifest.get().asFile.write(manifestText, 'UTF-8')
+    }
+}
+
+androidComponents {
+    onVariants(selector().all()) { variant ->
+        def capitalizedVariant = variant.name.capitalize()
+        def stripTask = tasks.register("strip${capitalizedVariant}BlockedPermissions", StripBlockedPermissionsTask) {
+            blockedPermissions.set(blockedMergedPermissions)
+        }
+
+        variant.artifacts.use(stripTask)
+            .wiredWithFiles(
+                { it.inputManifest },
+                { it.outputManifest }
+            )
+            .toTransform(SingleArtifact.MERGED_MANIFEST.INSTANCE)
     }
 }
 

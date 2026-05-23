@@ -21,7 +21,7 @@ export type GameKey =
   | 'fortnite'
   | 'rocketleague';
 
-export type OnlineTournamentGameKey = Extract<GameKey, 'pubgm' | 'codm' | 'efootball'>;
+export type OnlineTournamentGameKey = Extract<GameKey, 'pubgm' | 'codm' | 'efootball' | 'freefire'>;
 
 export type UserRole = 'user' | 'moderator' | 'admin';
 export type CommunityMessageType = 'text' | 'announcement' | 'system';
@@ -76,6 +76,8 @@ export type ApiErrorBody = {
 
 export type OnlineTournamentGameRegistrationCount = {
   registered: number;
+  confirmed?: number;
+  pendingPayment?: number;
   slots: number;
   spotsLeft: number;
   full: boolean;
@@ -105,6 +107,12 @@ export type OnlineTournamentRegistration = {
   tournament_lobby_assigned_at?: string | null;
   checked_in_at?: string | null;
   admin_note?: string | null;
+  entry_fee_kes?: number | null;
+  payment_tier?: string | null;
+  payment_status?: string | null;
+  payment_reference?: string | null;
+  payment_confirmed_at?: string | null;
+  payment_note?: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -121,7 +129,7 @@ export type OnlineTournamentSafeRegistration = OnlineTournamentRegistration & {
 
 export type OnlineTournamentRoom = {
   id: string;
-  game: Extract<OnlineTournamentGameKey, 'pubgm' | 'codm'>;
+  game: Extract<OnlineTournamentGameKey, 'pubgm' | 'codm' | 'freefire'>;
   match_number: number;
   title: string | null;
   map_name: string | null;

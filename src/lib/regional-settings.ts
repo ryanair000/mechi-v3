@@ -124,6 +124,7 @@ export function getCountryFromAcceptLanguage(value: string | null | undefined): 
     return null;
   }
 
+  // Browser language is often en-US globally, so don't let it override the East Africa default.
   const languageTags = normalizedValue
     .split(',')
     .map((segment) => segment.split(';')[0]?.trim())
@@ -152,10 +153,6 @@ export function getCountryFromAcceptLanguage(value: string | null | undefined): 
 
     if (tag.endsWith('-ug')) {
       return 'uganda';
-    }
-
-    if (tag.endsWith('-us')) {
-      return 'united_states';
     }
   }
 

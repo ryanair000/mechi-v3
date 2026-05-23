@@ -388,6 +388,10 @@ function getRegionalRouteForCountry(country: CountryKey | null) {
   return REGIONAL_ROUTE_CONFIGS.find((route) => route.country === country) ?? null;
 }
 
+function getDefaultRegionalRoute() {
+  return REGIONAL_ROUTE_CONFIGS.find((route) => route.country === 'kenya') ?? REGIONAL_ROUTE_CONFIGS[0];
+}
+
 function getPathWithoutRegionalPrefix(pathname: string, pathPrefix: string) {
   if (pathname === pathPrefix) {
     return '/';
@@ -696,9 +700,7 @@ export async function proxy(request: NextRequest) {
 
   if (!adminHost && pathname === '/') {
     const ipRegionalRoute = getRegionalRouteForCountry(getCountryFromIpHeaders(request.headers));
-    if (ipRegionalRoute) {
-      return redirectRegionalVisitor(request, ipRegionalRoute);
-    }
+    return redirectRegionalVisitor(request, ipRegionalRoute ?? getDefaultRegionalRoute());
   }
 
   if (pathname === '/moderators/register' || pathname === '/admin/moderators/register') {

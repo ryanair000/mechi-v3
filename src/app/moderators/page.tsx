@@ -13,10 +13,10 @@ export const metadata: Metadata = {
   description: 'Independent Mechi moderator workspace for tournament check-ins, lobbies, rooms, results, and standings.',
 };
 
-async function shouldUseTanzaniaDesk() {
+async function getAssignedModeratorHome() {
   const token = (await cookies()).get('auth_token')?.value;
   const payload = token ? verifyToken(token) : null;
-  if (!payload?.sub) return false;
+  if (!payload?.sub) return null;
 
   const supabase = createServiceClient();
   const { data } = await supabase
@@ -25,15 +25,24 @@ async function shouldUseTanzaniaDesk() {
     .eq('id', payload.sub)
     .maybeSingle();
 
-  return (
-    readModeratorTournamentKeyFromGameIds((data as { game_ids?: unknown } | null)?.game_ids) ===
-    'days_esports_tz_efootball'
+  const tournamentKey = readModeratorTournamentKeyFromGameIds(
+    (data as { game_ids?: unknown } | null)?.game_ids
   );
+
+  if (!tournamentKey) return null;
+  if (tournamentKey === 'days_esports_tz_efootball') return '/moderators/tz';
+  if (tournamentKey === 'weka_mawe_efootball') return '/moderators/weka-mawe';
+  if (tournamentKey.startsWith('weekendcup_') || tournamentKey.startsWith('playmechi_')) {
+    return '/moderators/weekendcup';
+  }
+
+  return null;
 }
 
 export default async function ModeratorsPage() {
-  if (await shouldUseTanzaniaDesk()) {
-    redirect('/moderators/tz');
+  const assignedHome = await getAssignedModeratorHome();
+  if (assignedHome) {
+    redirect(assignedHome);
   }
 
   return (

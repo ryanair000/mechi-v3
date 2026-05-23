@@ -151,7 +151,7 @@ export default function AccountTab() {
                   website.
                 </Text>
                 <Button
-                  label="Open registration website"
+                  label="Register for Weekend Cup"
                   icon="globe-outline"
                   onPress={() => void openTournamentRegistration()}
                 />

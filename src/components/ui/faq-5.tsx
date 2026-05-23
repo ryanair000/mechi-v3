@@ -65,8 +65,8 @@ export const Faq5 = ({
   const resolvedDescription =
     description ??
     (isSwahili
-      ? 'Haya ndiyo mambo ambayo players wengi huuliza kabla ya kujiunga na Playmechi Launch.'
-      : 'Everything players usually ask before joining Playmechi Launch.');
+      ? 'Haya ndiyo mambo ambayo players wengi huuliza kabla ya kujiunga na PlayMechi Launch.'
+      : 'Everything players usually ask before joining PlayMechi Launch.');
   const resolvedFaqs =
     faqs ??
     (isSwahili

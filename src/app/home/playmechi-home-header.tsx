@@ -18,7 +18,7 @@ export function PlayMechiHomeHeader() {
             {
               href: '/playmechi',
               label: 'PlayMechi',
-              description: 'Njia ya tournament ya uzinduzi',
+              description: 'Tournament iliyopita',
             },
             {
               href: '/weekendcup',
@@ -35,6 +35,11 @@ export function PlayMechiHomeHeader() {
         {
           label: 'MFUMO',
           items: [
+            {
+              href: '/how-mechi-works',
+              label: 'Jinsi Mechi Inavyofanya Kazi',
+              description: 'Maelezo rahisi kwa players',
+            },
             {
               href: '/dashboard',
               label: 'Dashibodi',
@@ -90,7 +95,7 @@ export function PlayMechiHomeHeader() {
             {
               href: '/playmechi',
               label: 'PlayMechi',
-              description: 'Main event, ready to run',
+              description: 'Previous launch event',
             },
             {
               href: '/weekendcup',
@@ -107,6 +112,11 @@ export function PlayMechiHomeHeader() {
         {
           label: 'PLATFORM',
           items: [
+            {
+              href: '/how-mechi-works',
+              label: 'How Mechi Works',
+              description: 'Clear player guide',
+            },
             {
               href: '/dashboard',
               label: 'Dashboard',

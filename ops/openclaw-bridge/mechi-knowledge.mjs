@@ -32,7 +32,7 @@ const WEEKEND_CUP_REGISTER_REPLY = [
 ].join('\n');
 
 const PLAYMECHI_FACT_LINES = [
-  'Previous/ongoing PlayMechi tournament: Playmechi Launch / Mechi.club Online Gaming Tournament.',
+  'Previous/ongoing PlayMechi tournament: PlayMechi Launch / Mechi.club Online Gaming Tournament.',
   `Registration link: ${PLAYMECHI_REGISTER_URL}. Tournament page: ${PLAYMECHI_PAGE_URL}.`,
   'Registration is free. Total slots: 216 players. Cash prize pool: KSh 6,000.',
   'Games: PUBG Mobile, CODM, and eFootball.',

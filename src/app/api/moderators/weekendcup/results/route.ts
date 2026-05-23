@@ -8,12 +8,6 @@ function cleanText(value: unknown, maxLength = 100): string {
   return typeof value === 'string' ? value.trim().slice(0, maxLength) : '';
 }
 
-function readInteger(value: unknown): number | null {
-  if (typeof value === 'number' && Number.isInteger(value)) return value;
-  if (typeof value === 'string' && /^\d+$/.test(value)) return parseInt(value, 10);
-  return null;
-}
-
 function readPrizeValueKes(value: unknown): number {
   if (typeof value === 'number' && Number.isFinite(value)) return value;
   if (typeof value !== 'string') return 0;

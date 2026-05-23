@@ -295,7 +295,7 @@ export function WeekendCupDashboardClient() {
             href={`${WEEKEND_CUP_REGISTRATION_PATH}?game=${encodeURIComponent(selectedConfig.game)}`}
             className="btn-ghost"
           >
-            {currentRegistration ? 'Edit entry' : 'Open registration'}
+            {currentRegistration ? 'Edit entry' : 'Register for Weekend Cup'}
           </Link>
         </div>
       </section>
@@ -365,6 +365,16 @@ export function WeekendCupDashboardClient() {
               <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">
                 {availabilityLabel} | {paymentLabel}
               </p>
+              <div className="mt-4 rounded-[var(--radius-panel)] border border-[var(--border-color)] bg-[rgba(255,255,255,0.03)] p-4">
+                <p className="text-sm font-black text-[var(--text-primary)]">
+                  What happens after I pay?
+                </p>
+                <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">
+                  Paystack redirects you back to Mechi, then this dashboard updates from pending
+                  payment to paid once confirmation lands. Paid players keep the slot and return
+                  here for match-day check-in.
+                </p>
+              </div>
               {currentRegistration?.payment_note ? (
                 <p className="mt-2 text-sm leading-6 text-[var(--text-soft)]">
                   {currentRegistration.payment_note}
@@ -407,7 +417,7 @@ export function WeekendCupDashboardClient() {
 
               <a href={WEEKEND_CUP_SUPPORT_URL} className="btn-outline">
                 <MessageCircle size={14} />
-                Payment help
+                Need help?
               </a>
             </div>
           </div>

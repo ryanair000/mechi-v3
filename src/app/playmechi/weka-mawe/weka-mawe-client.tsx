@@ -19,20 +19,25 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import FooterSection from '@/components/footer';
+import { TournamentFacts } from '@/components/TournamentFacts';
 import { useAuthFetch } from '@/components/AuthProvider';
 import { PlayMechiHomeHeader } from '@/app/home/playmechi-home-header';
 import {
   WEKA_MAWE_BRACKET_PATH,
   WEKA_MAWE_CHECK_IN_PATH,
   WEKA_MAWE_GAME_LABEL,
+  WEKA_MAWE_PUBLIC_PATH,
   WEKA_MAWE_REGISTER_PATH,
   WEKA_MAWE_TITLE,
   formatEatDateTime,
   isWekaMaweCheckInOpen,
   isWekaMaweRegistrationOpen,
+  type WekaMaweEdition,
   type WekaMawePaymentStatus,
   type WekaMaweSummary,
 } from '@/lib/weka-mawe-shared';
+import { getPlayMechiSupportLabel } from '@/lib/tournament-facts';
+import { getCustomerWhatsAppSupportUrl } from '@/lib/social-links';
 
 type Mode = 'landing' | 'register' | 'check-in' | 'bracket';
 type Tone = 'default' | 'success' | 'warning' | 'danger';
@@ -40,6 +45,9 @@ type Tone = 'default' | 'success' | 'warning' | 'danger';
 const API_PATH = '/api/weka-mawe/current-edition';
 const REGISTER_API_PATH = '/api/weka-mawe/register';
 const CHECK_IN_API_PATH = '/api/weka-mawe/check-in';
+const WEKA_MAWE_SUPPORT_URL = getCustomerWhatsAppSupportUrl(
+  'Hi PlayMechi, I need Weka Mawe payment help.'
+);
 
 function initialSummary(): WekaMaweSummary {
   return {
@@ -126,6 +134,108 @@ function ProgressBar({ paid, total }: { paid: number; total: number }) {
   );
 }
 
+function getTournamentDisplayStatus({
+  loading,
+  edition,
+  registrationOpen,
+  checkInOpen,
+  slotsLeft,
+}: {
+  loading: boolean;
+  edition: WekaMaweEdition | null;
+  registrationOpen: boolean;
+  checkInOpen: boolean;
+  slotsLeft: number;
+}) {
+  if (loading) {
+    return {
+      label: 'Loading tournament',
+      tone: 'default' as Tone,
+      primaryHref: WEKA_MAWE_PUBLIC_PATH,
+      primaryLabel: 'Loading tournament',
+    };
+  }
+
+  if (!edition) {
+    return {
+      label: 'Schedule pending',
+      tone: 'warning' as Tone,
+      primaryHref: WEKA_MAWE_PUBLIC_PATH,
+      primaryLabel: 'View updates',
+    };
+  }
+
+  if (registrationOpen) {
+    return slotsLeft > 0
+      ? {
+          label: 'Registration open',
+          tone: 'success' as Tone,
+          primaryHref: WEKA_MAWE_REGISTER_PATH,
+          primaryLabel: 'Register for Weka Mawe',
+        }
+      : {
+          label: 'Slots full',
+          tone: 'warning' as Tone,
+          primaryHref: WEKA_MAWE_BRACKET_PATH,
+          primaryLabel: 'View bracket',
+        };
+  }
+
+  if (checkInOpen) {
+    return {
+      label: 'Check-in open',
+      tone: 'success' as Tone,
+      primaryHref: WEKA_MAWE_CHECK_IN_PATH,
+      primaryLabel: 'Check in',
+    };
+  }
+
+  switch (edition.status) {
+    case 'draft':
+      return {
+        label: 'Schedule pending',
+        tone: 'warning' as Tone,
+        primaryHref: WEKA_MAWE_PUBLIC_PATH,
+        primaryLabel: 'View updates',
+      };
+    case 'locked':
+      return {
+        label: 'Bracket locked',
+        tone: 'warning' as Tone,
+        primaryHref: WEKA_MAWE_BRACKET_PATH,
+        primaryLabel: 'View bracket',
+      };
+    case 'live':
+      return {
+        label: 'Live now',
+        tone: 'success' as Tone,
+        primaryHref: WEKA_MAWE_BRACKET_PATH,
+        primaryLabel: 'View bracket',
+      };
+    case 'completed':
+      return {
+        label: 'Completed',
+        tone: 'default' as Tone,
+        primaryHref: WEKA_MAWE_BRACKET_PATH,
+        primaryLabel: 'View results',
+      };
+    case 'cancelled':
+      return {
+        label: 'Cancelled',
+        tone: 'danger' as Tone,
+        primaryHref: WEKA_MAWE_PUBLIC_PATH,
+        primaryLabel: 'View updates',
+      };
+    default:
+      return {
+        label: 'Registration closed',
+        tone: 'warning' as Tone,
+        primaryHref: WEKA_MAWE_BRACKET_PATH,
+        primaryLabel: 'View bracket',
+      };
+  }
+}
+
 export function WekaMaweClient({ mode }: { mode: Mode }) {
   const authFetch = useAuthFetch();
   const searchParams = useSearchParams();
@@ -144,6 +254,48 @@ export function WekaMaweClient({ mode }: { mode: Mode }) {
   const checkInOpen = isWekaMaweCheckInOpen(edition);
   const entryFee = edition?.registration_fee_kes ?? 100;
   const maxPlayers = edition?.max_players ?? 32;
+  const deadlineFactValue = loading
+    ? 'Loading deadline...'
+    : formatEatDateTime(edition?.registration_closes_at) || 'Registration close TBA';
+  const slotsFactValue = loading
+    ? 'Loading slots...'
+    : edition
+      ? `${summary.totals.slotsLeft}/${maxPlayers} slots left`
+      : 'Slots TBA';
+  const checkInFactValue = loading
+    ? 'Loading check-in...'
+    : formatEatDateTime(edition?.check_in_opens_at) || 'Check-in TBA';
+  const tournamentFacts = [
+    { label: 'Game', value: WEKA_MAWE_GAME_LABEL },
+    { label: 'Entry fee', value: `KSh ${entryFee}` },
+    { label: 'Prize pool', value: 'Winner payout announced by PlayMechi ops per edition' },
+    { label: 'Deadline', value: deadlineFactValue },
+    { label: 'Slots', value: slotsFactValue },
+    { label: 'Check-in time', value: checkInFactValue },
+    {
+      label: 'Match rules',
+      value: '32-player eFootball bracket. Quarter-finals onward require recording.',
+    },
+    { label: 'Payout method', value: 'Paystack-confirmed entry; payout handled by PlayMechi ops' },
+    { label: 'Support contact', value: getPlayMechiSupportLabel() },
+  ];
+  const displayStatus = getTournamentDisplayStatus({
+    loading,
+    edition,
+    registrationOpen,
+    checkInOpen,
+    slotsLeft: summary.totals.slotsLeft,
+  });
+  const scheduleLabel = loading
+    ? 'Loading schedule...'
+    : formatEatDateTime(edition?.starts_at) || 'Schedule pending';
+  const checkInLabel = loading
+    ? 'Loading check-in...'
+    : formatEatDateTime(edition?.check_in_opens_at) || 'Check-in TBA';
+  const slotsLeftValue = loading ? '...' : edition ? summary.totals.slotsLeft : 'TBA';
+  const paidPlayersValue = loading ? '...' : `${summary.totals.paid}/${maxPlayers}`;
+  const pendingPaymentValue = loading ? '...' : summary.totals.pendingPayment;
+  const checkedInValue = loading ? '...' : summary.totals.checkedIn;
 
   const load = async () => {
     setLoading(true);
@@ -263,9 +415,7 @@ export function WekaMaweClient({ mode }: { mode: Mode }) {
         <section className="grid gap-8 lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
           <div>
             <div className="flex flex-wrap gap-2">
-              <Pill tone={registrationOpen ? 'success' : 'warning'}>
-                {registrationOpen ? 'Registration open' : 'Registration closed'}
-              </Pill>
+              <Pill tone={displayStatus.tone}>{displayStatus.label}</Pill>
               <Pill>{WEKA_MAWE_GAME_LABEL}</Pill>
               <Pill>KSh {entryFee}</Pill>
             </div>
@@ -278,8 +428,11 @@ export function WekaMaweClient({ mode }: { mode: Mode }) {
                 : 'The weekly PlayMechi eFootball bracket. Register online, pay KSh 100, check in on match day, and play through a 32-player single-elimination event.'}
             </p>
             <div className="mt-6 flex flex-wrap gap-3">
-              <Link href={WEKA_MAWE_REGISTER_PATH} className="btn-primary inline-flex items-center gap-2">
-                Register
+              <Link
+                href={displayStatus.primaryHref}
+                className="btn-primary inline-flex items-center gap-2"
+              >
+                {displayStatus.primaryLabel}
                 <ArrowRight size={16} />
               </Link>
               <Link href={WEKA_MAWE_CHECK_IN_PATH} className="btn-outline">
@@ -301,10 +454,10 @@ export function WekaMaweClient({ mode }: { mode: Mode }) {
             </h2>
             <div className="mt-4 grid gap-3 text-sm font-semibold text-[var(--text-secondary)]">
               <p className="flex items-center gap-2">
-                <CalendarDays size={16} /> {formatEatDateTime(edition?.starts_at) || 'Schedule pending'}
+                <CalendarDays size={16} /> {scheduleLabel}
               </p>
               <p className="flex items-center gap-2">
-                <Clock3 size={16} /> Check-in {formatEatDateTime(edition?.check_in_opens_at) || 'TBA'}
+                <Clock3 size={16} /> Check-in {checkInLabel}
               </p>
               <p className="flex items-center gap-2">
                 <WalletCards size={16} /> KSh {entryFee} via Paystack
@@ -313,21 +466,46 @@ export function WekaMaweClient({ mode }: { mode: Mode }) {
                 <Video size={16} /> Quarter-finals onward require recording
               </p>
             </div>
-            <ProgressBar paid={summary.totals.paid} total={maxPlayers} />
+            {loading || !edition ? null : <ProgressBar paid={summary.totals.paid} total={maxPlayers} />}
           </div>
         </section>
 
+        <TournamentFacts
+          title="Weka Mawe tournament facts"
+          facts={tournamentFacts}
+          className="mt-8 rounded-lg border border-[var(--border-color)] bg-[var(--surface-soft)] p-5"
+        />
+
+        <section className="mt-8 rounded-lg border border-[var(--border-color)] bg-[var(--surface-soft)] p-5">
+          <h2 className="text-2xl font-black text-[var(--text-primary)]">
+            What happens after I pay?
+          </h2>
+          <p className="mt-2 max-w-3xl text-sm leading-6 text-[var(--text-secondary)]">
+            Paystack redirects you back to Mechi. Once confirmation lands, your Weka Mawe entry
+            changes to paid, your slot is locked, and you can return for check-in before the
+            bracket starts.
+          </p>
+          <a href={WEKA_MAWE_SUPPORT_URL} className="btn-outline mt-4 inline-flex">
+            Need help?
+          </a>
+        </section>
+
         <section className="mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          <StatCard icon={Users} label="Paid players" value={`${summary.totals.paid}/${maxPlayers}`} />
-          <StatCard icon={ShieldCheck} label="Slots left" value={summary.totals.slotsLeft} />
-          <StatCard icon={WalletCards} label="Pending payment" value={summary.totals.pendingPayment} />
-          <StatCard icon={CheckCircle2} label="Checked in" value={summary.totals.checkedIn} />
+          <StatCard icon={Users} label="Paid players" value={paidPlayersValue} />
+          <StatCard icon={ShieldCheck} label="Slots left" value={slotsLeftValue} />
+          <StatCard icon={WalletCards} label="Pending payment" value={pendingPaymentValue} />
+          <StatCard icon={CheckCircle2} label="Checked in" value={checkedInValue} />
         </section>
 
         {message ? (
-          <div className={`mt-6 flex gap-3 rounded-lg border p-4 text-sm font-semibold ${toneClass(messageTone)}`}>
+          <div className={`mt-6 flex flex-col gap-3 rounded-lg border p-4 text-sm font-semibold sm:flex-row sm:items-start sm:justify-between ${toneClass(messageTone)}`}>
+            <div className="flex gap-3">
             <AlertCircle size={18} className="mt-0.5 shrink-0" />
             <p>{message}</p>
+            </div>
+            <a href={WEKA_MAWE_SUPPORT_URL} className="shrink-0 font-black underline underline-offset-4">
+              Need help?
+            </a>
           </div>
         ) : null}
 
@@ -364,6 +542,9 @@ export function WekaMaweClient({ mode }: { mode: Mode }) {
                       Payment ref: {userRegistration.payment_reference}
                     </p>
                   ) : null}
+                  <a href={WEKA_MAWE_SUPPORT_URL} className="btn-outline inline-flex w-fit">
+                    Need help?
+                  </a>
                 </div>
               ) : (
                 <div className="mt-5 grid gap-4">

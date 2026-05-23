@@ -107,6 +107,13 @@ export default function BountiesPage() {
         <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
           <div className="max-w-2xl">
             <p className="section-title">Bounties</p>
+            <h1 className="mt-3 text-[1.55rem] font-black leading-[1.05] text-[var(--text-primary)] sm:text-[2rem]">
+              Cash challenges and weekly rewards
+            </h1>
+            <p className="mt-3 text-sm leading-6 text-[var(--text-secondary)]">
+              Bounties reward real activity on Mechi: match streaks, tournament runs,
+              profile milestones, sharing, streams, and leaderboard pushes.
+            </p>
           </div>
 
           <button

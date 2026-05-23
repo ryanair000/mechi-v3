@@ -111,7 +111,7 @@ export function WeekendCupPaymentCompleteClient() {
             </Link>
             <a href={WEEKEND_CUP_SUPPORT_URL} className="btn-outline !rounded-[var(--radius-control)]">
               <MessageCircle size={14} />
-              Payment help
+              Need help?
             </a>
           </div>
         </section>

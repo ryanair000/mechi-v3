@@ -14,6 +14,7 @@ import {
   Trophy,
   UserRoundCheck,
 } from 'lucide-react';
+import { TournamentFacts } from '@/components/TournamentFacts';
 import {
   TZ_TOURNAMENT,
   getTanzaniaTournamentCallUrl,
@@ -28,6 +29,17 @@ type SubmitState =
 export function TanzaniaRegistrationClient() {
   const [state, setState] = useState<SubmitState>({ status: 'idle', message: '' });
   const [submitting, setSubmitting] = useState(false);
+  const tournamentFacts = [
+    { label: 'Game', value: TZ_TOURNAMENT.game },
+    { label: 'Entry fee', value: TZ_TOURNAMENT.entryFeeLabel },
+    { label: 'Prize pool', value: TZ_TOURNAMENT.prizePoolLabel },
+    { label: 'Deadline', value: TZ_TOURNAMENT.deadlineLabel },
+    { label: 'Slots', value: TZ_TOURNAMENT.slotsLabel },
+    { label: 'Check-in time', value: TZ_TOURNAMENT.checkInLabel },
+    { label: 'Match rules', value: TZ_TOURNAMENT.rulesLabel },
+    { label: 'Payout method', value: TZ_TOURNAMENT.payoutMethodLabel },
+    { label: 'Support contact', value: TZ_TOURNAMENT.supportNumber },
+  ];
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -223,6 +235,11 @@ export function TanzaniaRegistrationClient() {
                 ))}
               </div>
             </div>
+            <TournamentFacts
+              title="Tournament facts"
+              facts={tournamentFacts}
+              className="rounded-lg border border-white/10 bg-white/[0.04] p-5"
+            />
             <div className="rounded-lg border border-white/10 bg-white/[0.04] p-5">
               <div className="flex items-center gap-2 text-[var(--accent-secondary-text)]">
                 <ShieldCheck size={17} />

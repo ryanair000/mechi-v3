@@ -1,8 +1,9 @@
 import type { Metadata } from 'next';
 import Image from 'next/image';
 import Link from 'next/link';
-import { notFound } from 'next/navigation';
+import { notFound, permanentRedirect } from 'next/navigation';
 import FooterSection from '@/components/footer';
+import { TournamentFacts } from '@/components/TournamentFacts';
 import { WeekendCupHeader } from '@/components/WeekendCupHeader';
 import { getGameImage, getGameLogoImage } from '@/lib/config';
 import {
@@ -17,6 +18,7 @@ import {
   isWeekendCupGame,
   isWeekendCupRegisterableGame,
 } from '@/lib/weekend-cup';
+import { getWeekendCupGameFacts } from '@/lib/tournament-facts';
 
 type WeekendCupDetailPageProps = {
   params: Promise<{ game: string }>;
@@ -37,7 +39,7 @@ function getWeekendCupDetailCopy(game: keyof typeof WEEKEND_CUP_GAME_BY_KEY) {
       description:
         'Mobile Games Cup voting is closed. Free Fire is confirmed for Season 1 and registration is open.',
       primaryHref: `${WEEKEND_CUP_REGISTRATION_PATH}?game=freefire`,
-      primaryLabel: 'Register Free Fire',
+      primaryLabel: 'Register for Weekend Cup',
     };
   }
 
@@ -46,7 +48,7 @@ function getWeekendCupDetailCopy(game: keyof typeof WEEKEND_CUP_GAME_BY_KEY) {
     description:
       'Lock your player tag, clear payment, and show up ready on match day.',
     primaryHref: `${WEEKEND_CUP_REGISTRATION_PATH}?game=${game}`,
-    primaryLabel: 'Register',
+    primaryLabel: 'Register for Weekend Cup',
   };
 }
 
@@ -58,6 +60,15 @@ export async function generateMetadata({
   params,
 }: WeekendCupDetailPageProps): Promise<Metadata> {
   const { game } = await params;
+  if (game === 'pubg') {
+    return {
+      title: `PUBG Mobile | ${WEEKEND_CUP_TITLE}`,
+      alternates: {
+        canonical: '/weekendcup/t/pubgm',
+      },
+    };
+  }
+
   if (!isWeekendCupGame(game)) {
     return {
       title: `Tournament | ${WEEKEND_CUP_TITLE}`,
@@ -68,6 +79,9 @@ export async function generateMetadata({
   return {
     title: `${config.label} | ${WEEKEND_CUP_TITLE}`,
     description: `${config.label} on ${config.dateLabel} at ${config.timeLabel}. ${config.format}`,
+    alternates: {
+      canonical: `/weekendcup/t/${game}`,
+    },
   };
 }
 
@@ -75,6 +89,10 @@ export default async function WeekendCupGameDetailPage({
   params,
 }: WeekendCupDetailPageProps) {
   const { game } = await params;
+  if (game === 'pubg') {
+    permanentRedirect('/weekendcup/t/pubgm');
+  }
+
   if (!isWeekendCupGame(game)) {
     notFound();
   }
@@ -165,6 +183,11 @@ export default async function WeekendCupGameDetailPage({
                   </div>
                 </div>
 
+                <TournamentFacts
+                  title={`${config.label} tournament facts`}
+                  facts={getWeekendCupGameFacts(config)}
+                />
+
                 {isWeekendCupRegisterableGame(game) ? (
                   <div className="rounded-[var(--radius-panel)] border border-[rgba(50,224,196,0.22)] bg-[rgba(50,224,196,0.08)] p-4">
                     <p className="text-[10px] font-black uppercase tracking-[0.14em] text-[var(--accent-secondary-text)]">
@@ -172,6 +195,17 @@ export default async function WeekendCupGameDetailPage({
                     </p>
                     <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">
                       {WEEKEND_CUP_PENDING_PAYMENT_HELP_COPY}
+                    </p>
+                  </div>
+                ) : null}
+                {isWeekendCupRegisterableGame(game) ? (
+                  <div className="rounded-[var(--radius-panel)] border border-white/10 bg-[rgba(255,255,255,0.03)] p-4">
+                    <p className="text-[10px] font-black uppercase tracking-[0.14em] text-[var(--text-soft)]">
+                      What happens after I pay?
+                    </p>
+                    <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">
+                      Paystack confirms the transaction, then your Weekend Cup dashboard shows the
+                      slot as paid and tells you when to check in for match day.
                     </p>
                   </div>
                 ) : null}

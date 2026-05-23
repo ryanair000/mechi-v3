@@ -125,15 +125,19 @@ export default async function ModeratorsLayout({ children }: { children: React.R
 
   const moderatorTournament =
     profile.moderatorTournament ?? getModeratorTournamentByKey(DEFAULT_MODERATOR_TOURNAMENT_KEY);
+  const displayTournament =
+    moderatorTournament.key.startsWith('playmechi_')
+      ? getModeratorTournamentByKey(`weekendcup_${moderatorTournament.game}`)
+      : moderatorTournament;
 
   return (
     <ModeratorShellClient
       profile={{ role: profile.role, username: profile.username }}
       tournament={{
-        game: moderatorTournament.game,
-        key: moderatorTournament.key,
-        label: moderatorTournament.label,
-        shortLabel: moderatorTournament.shortLabel,
+        game: displayTournament.game,
+        key: displayTournament.key,
+        label: displayTournament.label,
+        shortLabel: displayTournament.shortLabel,
       }}
     >
       {children}

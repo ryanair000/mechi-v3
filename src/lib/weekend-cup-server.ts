@@ -8,13 +8,16 @@ import { createServiceClient } from '@/lib/supabase';
 import { sendOnlineTournamentRegistrationTelegramNotification } from '@/lib/telegram';
 import {
   WEEKEND_CUP_BALLOTS,
+  WEEKEND_CUP_BREAK_EVEN_REFERENCE_TIER,
   WEEKEND_CUP_ENTRY_PRICING,
   WEEKEND_CUP_GAME_BY_KEY,
   WEEKEND_CUP_GAMES,
   WEEKEND_CUP_SLUG,
   WEEKEND_CUP_TITLE,
+  getWeekendCupBreakEvenNeeded,
   getWeekendCupFallbackSummary,
   getWeekendCupGameRegistrationCounts,
+  getWeekendCupPaymentTierLabel,
   isWeekendCupGame,
   isWeekendCupPaidStatus,
   type WeekendCupPlayerRegistration,
@@ -30,6 +33,17 @@ import { APP_URL } from '@/lib/urls';
 
 type WeekendCupRegistrationRow = WeekendCupPlayerRegistration & {
   user_id: string;
+};
+
+export type WeekendCupBreakEvenRow = {
+  game: OnlineTournamentGameKey;
+  label: string;
+  confirmed: number;
+  revenueKes: number;
+  targetKes: number;
+  shortfallKes: number;
+  referenceFeeKes: number;
+  neededPayments: number;
 };
 
 type WeekendCupPrefillRow = WeekendCupRegistrationPrefill & {
@@ -311,6 +325,67 @@ function getFallbackBallotState(userId?: string | null) {
       suggestionNote: null,
     })),
   }));
+}
+
+export async function getWeekendCupBreakEvenSummary(params?: {
+  supabase?: SupabaseClient;
+}): Promise<WeekendCupBreakEvenRow[]> {
+  const supabase = params?.supabase ?? createServiceClient();
+  const { data, error } = await supabase
+    .from('online_tournament_registrations')
+    .select('game,payment_status,entry_fee_kes,eligibility_status')
+    .eq('event_slug', WEEKEND_CUP_SLUG);
+
+  if (error) {
+    throw error;
+  }
+
+  const rowsByGame = new Map<OnlineTournamentGameKey, { confirmed: number; revenueKes: number }>();
+  for (const game of WEEKEND_CUP_GAMES) {
+    rowsByGame.set(game.game, { confirmed: 0, revenueKes: 0 });
+  }
+
+  for (const row of data ?? []) {
+    if (row.eligibility_status === 'disqualified' || row.payment_status !== 'paid') {
+      continue;
+    }
+
+    if (!isWeekendCupGame(row.game)) {
+      continue;
+    }
+
+    const gameTotals = rowsByGame.get(row.game) ?? { confirmed: 0, revenueKes: 0 };
+    gameTotals.confirmed += 1;
+    gameTotals.revenueKes += Number(row.entry_fee_kes ?? 0);
+    rowsByGame.set(row.game, gameTotals);
+  }
+
+  return WEEKEND_CUP_GAMES.map((game) => {
+    const totals = rowsByGame.get(game.game) ?? { confirmed: 0, revenueKes: 0 };
+    const breakEven = getWeekendCupBreakEvenNeeded({
+      game: game.game,
+      confirmedRevenueKes: totals.revenueKes,
+      referenceTier: WEEKEND_CUP_BREAK_EVEN_REFERENCE_TIER,
+    });
+
+    return {
+      game: game.game,
+      label: game.label,
+      confirmed: totals.confirmed,
+      revenueKes: totals.revenueKes,
+      targetKes: breakEven.targetKes,
+      shortfallKes: breakEven.shortfallKes,
+      referenceFeeKes: breakEven.referenceFeeKes,
+      neededPayments: breakEven.neededPayments,
+    };
+  });
+}
+
+export function formatWeekendCupBreakEvenLines(rows: WeekendCupBreakEvenRow[]) {
+  const tierLabel = getWeekendCupPaymentTierLabel(WEEKEND_CUP_BREAK_EVEN_REFERENCE_TIER);
+  return rows.map((row) =>
+    `${row.label}: ${row.neededPayments} more paid at ${tierLabel} KSh ${row.referenceFeeKes.toLocaleString('en-KE')} to cover KSh ${row.shortfallKes.toLocaleString('en-KE')}`
+  );
 }
 
 export async function ensureWeekendCupBallotSeeds(params?: {
@@ -692,7 +767,10 @@ export async function markWeekendCupPaymentPaidByReference(
     } | null;
     const recipient = (registration.email ?? profile?.email ?? '').trim();
 
-    const summary = await getWeekendCupRegistrationSummary({ supabase });
+    const [summary, breakEvenRows] = await Promise.all([
+      getWeekendCupRegistrationSummary({ supabase }),
+      getWeekendCupBreakEvenSummary({ supabase }),
+    ]);
     const gameSummary = summary.games[registration.game];
     try {
       await sendOnlineTournamentRegistrationTelegramNotification({
@@ -721,6 +799,7 @@ export async function markWeekendCupPaymentPaidByReference(
         checkedIn: gameSummary?.checkedIn ?? 0,
         checkInCap: gameSummary?.checkInCap ?? config.checkInCap,
         checkInSpotsLeft: gameSummary?.checkInSpotsLeft ?? config.checkInCap,
+        breakEvenLines: formatWeekendCupBreakEvenLines(breakEvenRows),
         registrationId: registration.id,
       });
     } catch (error) {

@@ -254,6 +254,7 @@ export async function sendOnlineTournamentRegistrationTelegramNotification(param
   checkedIn?: number;
   checkInCap?: number;
   checkInSpotsLeft?: number;
+  breakEvenLines?: string[];
   registrationId?: string | null;
   adminPath?: string | null;
 }): Promise<void> {
@@ -328,6 +329,9 @@ export async function sendOnlineTournamentRegistrationTelegramNotification(param
             params.checkInSpotsLeft ?? Math.max(0, params.checkInCap - (params.checkedIn ?? 0))
           } left`
         )
+      : null,
+    params.breakEvenLines?.length
+      ? formatBlockField('Break-even', params.breakEvenLines.join('\n'), 900)
       : null,
     params.registrationId ? formatField('Registration', params.registrationId.slice(0, 8)) : null,
     '',

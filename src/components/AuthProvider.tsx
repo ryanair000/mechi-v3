@@ -9,6 +9,7 @@ const AUTH_REFRESH_TIMEOUT_MS = 8000;
 const PUBLIC_AUTH_REFRESH_SKIP_PREFIXES = [
   '/',
   '/android-testers',
+  '/bounties',
   '/leaderboard',
   '/login',
   '/manual-tests',

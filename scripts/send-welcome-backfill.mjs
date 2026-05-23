@@ -151,6 +151,45 @@ const CAMPAIGNS = {
       };
     },
   },
+  weekend_cup_phase2_push: {
+    subject: 'Weekend Cup is almost here. Early Bird slots are almost gone.',
+    title: 'Weekend Cup is almost here. Lock your game now.',
+    previewTitle: 'Weekend Cup alert',
+    ctaLabel: 'Register for Weekend Cup',
+    render: (username) => {
+      const weekendCupUrl = escapeUrl(`${APP_URL}/weekendcup`);
+      const pubgUrl = escapeUrl(`${APP_URL}/weekendcup?game=pubgm`);
+      const codmUrl = escapeUrl(`${APP_URL}/weekendcup?game=codm`);
+      const efootballUrl = escapeUrl(`${APP_URL}/weekendcup?game=efootball`);
+      const freefireUrl = escapeUrl(`${APP_URL}/weekendcup?game=freefire`);
+      const supportUrl = escapeUrl('https://wa.me/254733638841?text=Hi%20PlayMechi%2C%20I%20need%20Weekend%20Cup%20registration%20help.');
+      return {
+        bodyIntro: `Hey ${escapeHtml(username || 'Player')}, PlayMechi Weekend Cup Season 1 is almost here. Early Bird slots are finishing, and the next phase is the one to catch before final rush pricing kicks in.`,
+        bodyExtra:
+          'Weekend Cup runs 29-31 May with PUBG Mobile, CODM, eFootball, and Free Fire. Registration is paid through Paystack, and your slot only becomes confirmed after payment clears.\n\nNext phase prices: PUBG Mobile KSh 75, CODM KSh 75, Free Fire KSh 75, and eFootball KSh 125. Register now, pick your game, use your exact in-game name, and keep your WhatsApp reachable for match updates.',
+        bodyClose:
+          'Need help registering or confirming payment? WhatsApp support is +254 733 638 841.',
+        ctaUrl: weekendCupUrl,
+        infoRows: [
+          ['Weekend Cup S1', '29-31 May 2026'],
+          ['Next phase prices', 'PUBG/CODM/Free Fire KSh 75, eFootball KSh 125'],
+          ['Support', '+254 733 638 841'],
+        ],
+        miniCards: [
+          ['PUBG Mobile', 'KSh 75 next phase'],
+          ['CODM', 'KSh 75 next phase'],
+          ['eFootball', 'KSh 125 next phase'],
+        ],
+        secondaryLinks: [
+          ['PUBG registration', pubgUrl],
+          ['CODM registration', codmUrl],
+          ['eFootball registration', efootballUrl],
+          ['Free Fire registration', freefireUrl],
+          ['WhatsApp support', supportUrl],
+        ],
+      };
+    },
+  },
 };
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);

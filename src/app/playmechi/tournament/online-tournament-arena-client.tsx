@@ -18,6 +18,7 @@ import {
   Upload,
 } from 'lucide-react';
 import { useAuth, useAuthFetch } from '@/components/AuthProvider';
+import { TournamentFacts } from '@/components/TournamentFacts';
 import { getLoginPath, getRegisterPath } from '@/lib/navigation';
 import {
   ONLINE_TOURNAMENT_ARENA_PATH,
@@ -45,6 +46,7 @@ import type {
   OnlineTournamentSafeRegistration,
   OnlineTournamentSafeStanding,
 } from '@/lib/online-tournament-store';
+import { getOnlineTournamentGameFacts } from '@/lib/tournament-facts';
 
 type PlayerRoom = OnlineTournamentPlayerState['rooms'][number];
 type ResultSubmission = OnlineTournamentPlayerState['mySubmissions'][number];
@@ -679,6 +681,11 @@ export function OnlineTournamentArenaClient({
         isCheckInRoute={isCheckInRoute}
         checkInHref={checkInHref}
         registrationHref={registrationHref}
+      />
+
+      <TournamentFacts
+        title={`${activeConfig.label} tournament facts`}
+        facts={getOnlineTournamentGameFacts(activeConfig)}
       />
 
       <TournamentRulesPanel activeGame={activeGame} />

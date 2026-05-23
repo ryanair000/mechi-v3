@@ -51,7 +51,8 @@ function getModeratorNavItems(
     ];
   }
 
-  const isWeekendCup = tournamentKey?.startsWith('weekendcup_');
+  const isWeekendCup =
+    tournamentKey?.startsWith('weekendcup_') || tournamentKey?.startsWith('playmechi_');
   const game = ONLINE_TOURNAMENT_GAME_BY_KEY[assignedGame];
   const gameParam = encodeURIComponent(assignedGame);
 
@@ -62,16 +63,6 @@ function getModeratorNavItems(
         label: 'Weekend Cup Desk',
         icon: Trophy,
       },
-      {
-        href: `/moderators/weekendcup/lobbies?game=${gameParam}`,
-        label: `${game.shortLabel} Lobbies`,
-        icon: MonitorPlay,
-      },
-      {
-        href: `/moderators/weekendcup/scores?game=${gameParam}`,
-        label: `${game.shortLabel} Scores`,
-        icon: ClipboardCheck,
-      },
     ];
 
     if (assignedGame === 'efootball') {
@@ -80,6 +71,19 @@ function getModeratorNavItems(
         label: 'eFootball Bracket',
         icon: Trophy,
       });
+    } else {
+      items.push(
+        {
+          href: `/moderators/weekendcup/lobbies?game=${gameParam}`,
+          label: `${game.shortLabel} Lobbies`,
+          icon: MonitorPlay,
+        },
+        {
+          href: `/moderators/weekendcup/scores?game=${gameParam}`,
+          label: `${game.shortLabel} Scores`,
+          icon: ClipboardCheck,
+        }
+      );
     }
 
     items.push({ href: '/dashboard', label: 'Back to App', icon: LayoutDashboard });

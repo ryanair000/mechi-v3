@@ -5,8 +5,12 @@ import { useSearchParams } from 'next/navigation';
 import toast from 'react-hot-toast';
 import { Loader2, Save, RefreshCw, Trophy } from 'lucide-react';
 import { useAuthFetch } from '@/components/AuthProvider';
-import { WEEKEND_CUP_GAMES, WEEKEND_CUP_SLUG, isWeekendCupGame } from '@/lib/weekend-cup';
-import { WEEKEND_CUP_BR_SCORING, calculateBRMatchPoints } from '@/lib/weekend-cup-match-day';
+import { WEEKEND_CUP_GAMES, isWeekendCupGame } from '@/lib/weekend-cup';
+import {
+  WEEKEND_CUP_BR_SCORING,
+  calculateBRMatchPoints,
+  type WeekendCupBRGameKey,
+} from '@/lib/weekend-cup-match-day';
 
 type Registration = {
   id: string;
@@ -30,7 +34,10 @@ export default function WeekendCupScoresPage() {
   const gameParam = searchParams.get('game') ?? '';
   const game = isWeekendCupGame(gameParam) ? gameParam : 'pubgm';
   const gameConfig = WEEKEND_CUP_GAMES.find((g) => g.game === game);
-  const scoring = game === 'mystery' ? WEEKEND_CUP_BR_SCORING.pubgm : WEEKEND_CUP_BR_SCORING[game];
+  const scoring =
+    game in WEEKEND_CUP_BR_SCORING
+      ? WEEKEND_CUP_BR_SCORING[game as WeekendCupBRGameKey]
+      : undefined;
 
   const [registrations, setRegistrations] = useState<Registration[]>([]);
   const [scores, setScores] = useState<Record<string, ScoreEntry>>({});
@@ -93,11 +100,7 @@ export default function WeekendCupScoresPage() {
     setScores((prev) => {
       const current = prev[registrationId] ?? { registration_id: registrationId, kills: 0, placement: null, total_points: 0 };
       const updated = { ...current, [field]: numValue };
-      const points = calculateBRMatchPoints(
-        game,
-        updated.kills,
-        updated.placement
-      );
+      const points = calculateBRMatchPoints(game, updated.kills, updated.placement);
       updated.total_points = points.totalPoints;
       return { ...prev, [registrationId]: updated };
     });

@@ -303,7 +303,7 @@ function summarizeTournament(row, playerCounts) {
 function formatSummary(summary, options) {
   const lines = [
     `Verified at: ${summary.verifiedAtEat}`,
-    `Open registration tournaments: ${summary.counts.open}`,
+    `Registration-open tournaments: ${summary.counts.open}`,
     `Active/in-progress tournaments: ${summary.counts.active}`,
   ];
 

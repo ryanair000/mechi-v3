@@ -12,10 +12,10 @@ const BETA_PLAYER_CAP = 100;
 const WEEKEND_CUP_SLUG = 'playmechi-weekend-cup-season-1-2026-05-29';
 const SEASON_2_BALLOT_SLUG = 'weekend-cup-2-pc';
 const WEEKEND_CUP_GAMES = [
-  { game: 'pubgm', label: 'PUBG Mobile', slots: 80, checkInCap: 80 },
-  { game: 'codm', label: 'CODM', slots: 80, checkInCap: 80 },
-  { game: 'efootball', label: 'eFootball', slots: 16, checkInCap: 16 },
-  { game: 'freefire', label: 'Free Fire', slots: 80, checkInCap: 80 },
+  { game: 'pubgm', label: 'PUBG Mobile', slots: 80, checkInCap: 80, breakEvenKes: 2750, phase2FeeKes: 75 },
+  { game: 'codm', label: 'CODM', slots: 80, checkInCap: 80, breakEvenKes: 2750, phase2FeeKes: 75 },
+  { game: 'efootball', label: 'eFootball', slots: 16, checkInCap: 16, breakEvenKes: 1500, phase2FeeKes: 125 },
+  { game: 'freefire', label: 'Free Fire', slots: 80, checkInCap: 80, breakEvenKes: 2500, phase2FeeKes: 75 },
 ];
 const TELEGRAM_LIMIT = 3900;
 
@@ -237,7 +237,7 @@ async function getWeekendCupSummary() {
   const url = new URL('/rest/v1/online_tournament_registrations', supabaseUrl);
   url.searchParams.set(
     'select',
-    'game,payment_status,eligibility_status,check_in_status,created_at'
+    'game,payment_status,entry_fee_kes,eligibility_status,check_in_status,created_at'
   );
   url.searchParams.set('event_slug', `eq.${WEEKEND_CUP_SLUG}`);
   url.searchParams.set('order', 'created_at.desc');
@@ -252,6 +252,11 @@ async function getWeekendCupSummary() {
         confirmed: 0,
         pendingPayment: 0,
         checkedIn: 0,
+        revenueKes: 0,
+        breakEvenKes: game.breakEvenKes,
+        phase2FeeKes: game.phase2FeeKes,
+        breakEvenShortfallKes: game.breakEvenKes,
+        breakEvenNeededPayments: Math.ceil(game.breakEvenKes / game.phase2FeeKes),
         spotsLeft: game.slots,
         checkInSpotsLeft: game.checkInCap,
       },
@@ -264,7 +269,10 @@ async function getWeekendCupSummary() {
     if (!game) continue;
 
     game.registered += 1;
-    if (row.payment_status === 'paid') game.confirmed += 1;
+    if (row.payment_status === 'paid') {
+      game.confirmed += 1;
+      game.revenueKes += Number(row.entry_fee_kes ?? 0);
+    }
     if (row.payment_status === 'pending_payment' || row.payment_status === 'manual_review') {
       game.pendingPayment += 1;
     }
@@ -276,6 +284,8 @@ async function getWeekendCupSummary() {
   for (const game of Object.values(byGame)) {
     game.spotsLeft = Math.max(0, game.slots - game.confirmed);
     game.checkInSpotsLeft = Math.max(0, game.checkInCap - game.checkedIn);
+    game.breakEvenShortfallKes = Math.max(0, game.breakEvenKes - game.revenueKes);
+    game.breakEvenNeededPayments = Math.ceil(game.breakEvenShortfallKes / Math.max(1, game.phase2FeeKes));
   }
 
   const games = WEEKEND_CUP_GAMES.map((game) => byGame[game.game]);
@@ -407,7 +417,13 @@ function formatReport(report) {
     'Weekend Cup S1',
     `- Registrations: ${report.weekendCup.registered} total, ${report.weekendCup.confirmed} paid, ${report.weekendCup.pendingPayment} pending`,
     `- Confirmed spots left: ${report.weekendCup.spotsLeft}`,
+    '- Break-even needed at Phase 2 price:',
   );
+  for (const game of report.weekendCup.games) {
+    lines.push(
+      `  ${game.label}: ${game.breakEvenNeededPayments} more paid (short KSh ${game.breakEvenShortfallKes.toLocaleString('en-KE')})`
+    );
+  }
   if (report.weekendCup.latestAtEat) {
     lines.push(`- Latest entry: ${report.weekendCup.latestAtEat}`);
   }

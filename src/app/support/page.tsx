@@ -34,11 +34,11 @@ const supportCards = [
     description:
       'Use this if you are trying to enter Weekend Cup, your slot looks unclear, or you need the direct register route again.',
     href: WEEKEND_CUP_REGISTRATION_PATH,
-    label: 'Open registration',
+    label: 'Register for Weekend Cup',
     icon: UserRoundCheck,
   },
   {
-    title: 'Payment help',
+    title: 'Need help with payment?',
     description:
       'If you paid and the slot still looks pending, start here first. We can check the payment trail and tell you the next move.',
     href: WEEKEND_CUP_SUPPORT_URL,

@@ -63,7 +63,7 @@ export type OnlineTournamentGameConfig = {
 export const ONLINE_TOURNAMENT_DEVICE_SERIAL_LAST6_REGEX = /^[A-Z0-9]{6}$/;
 
 export const ONLINE_TOURNAMENT_SLUG = 'mechi-club-online-gaming-tournament-2026-05';
-export const ONLINE_TOURNAMENT_TITLE = 'Playmechi Launch';
+export const ONLINE_TOURNAMENT_TITLE = 'PlayMechi Launch';
 export const ONLINE_TOURNAMENT_PUBLIC_PATH = '/playmechi';
 export const ONLINE_TOURNAMENT_ARENA_PATH = `${ONLINE_TOURNAMENT_PUBLIC_PATH}/tournament`;
 export const ONLINE_TOURNAMENT_CHECK_IN_PATH = `${ONLINE_TOURNAMENT_PUBLIC_PATH}/check-in`;

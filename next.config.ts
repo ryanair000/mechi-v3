@@ -79,6 +79,7 @@ const nextConfig: NextConfig = {
     tsconfigPath: isProductionBuild ? "tsconfig.build.json" : "tsconfig.json",
   },
   images: {
+    qualities: [75, 94],
     remotePatterns: [
       {
         protocol: "https",

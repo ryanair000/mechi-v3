@@ -28,7 +28,7 @@ export default function ModeratorLoginPage({
       footerLinkLabel="Staff sign-up"
       footerPrompt="Need staff access?"
       sideTitle="Moderator desk sign in."
-      sideDescription="Moderators and admins sign in here to run the CODM desk, review check-ins, and manage live lobby flow."
+      sideDescription="Moderators and admins sign in here to run assigned tournament desks, review payments, manage lobbies, enter scores, and handle bracket flow."
     />
   );
 }

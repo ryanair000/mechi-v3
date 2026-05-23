@@ -94,9 +94,9 @@ export const WEEKEND_CUP_ROUND_LABELS: Record<number, string> = {
   6: 'Final',
 };
 
-type WeekendCupScoredGameKey = Exclude<OnlineTournamentGameKey, 'mystery'>;
+export type WeekendCupBRGameKey = 'pubgm' | 'codm' | 'freefire' | 'efootball';
 
-export const WEEKEND_CUP_BR_SCORING: Record<WeekendCupScoredGameKey, {
+export const WEEKEND_CUP_BR_SCORING: Record<WeekendCupBRGameKey, {
   killPoints: number;
   placementPoints: Record<number, number>;
   matchCount: number;
@@ -130,15 +130,11 @@ export const WEEKEND_CUP_BR_SCORING: Record<WeekendCupScoredGameKey, {
 };
 
 export function calculateBRMatchPoints(
-  game: OnlineTournamentGameKey,
+  game: WeekendCupBRGameKey | string,
   kills: number,
   placement: number | null
 ): { killPoints: number; placementPoints: number; totalPoints: number } {
-  if (game === 'mystery') {
-    return { killPoints: 0, placementPoints: 0, totalPoints: 0 };
-  }
-
-  const scoring = WEEKEND_CUP_BR_SCORING[game];
+  const scoring = WEEKEND_CUP_BR_SCORING[game as WeekendCupBRGameKey];
   if (!scoring || game === 'efootball') {
     return { killPoints: 0, placementPoints: 0, totalPoints: 0 };
   }
@@ -162,8 +158,6 @@ export function generateBracketMatches(playerCount: number): Array<{
   if (playerCount <= 0) return matches;
 
   const effectiveCount = Math.min(playerCount, 32);
-  let currentRound = 1;
-  let matchesInRound = Math.ceil(effectiveCount / 2);
 
   if (effectiveCount <= 2) {
     matches.push({ round: WEEKEND_CUP_BRACKET_ROUNDS.FINAL, match_number: 1, is_bronze_match: false });

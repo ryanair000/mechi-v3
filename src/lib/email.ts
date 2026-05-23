@@ -1741,7 +1741,7 @@ export async function sendWeekendCupPaymentReminderEmail(params: {
     </div>
     <p class="note">Your registration only becomes successful after Paystack confirms the payment.</p>
     <a href="${escapeUrl(params.checkoutUrl)}" class="btn">Complete payment</a>
-    <p><a href="${escapeUrl(params.registrationUrl)}" class="secondary-link">Open registration page</a></p>
+    <p><a href="${escapeUrl(params.registrationUrl)}" class="secondary-link">Register for Weekend Cup</a></p>
   `;
 
   try {
@@ -1805,7 +1805,7 @@ export async function sendWeekendCupRegistrationReceivedEmail(params: {
     </div>
     <p class="note">Your slot is secured after Paystack confirms payment. We will email you again when the slot is locked.</p>
     ${checkoutLink}
-    <p><a href="${escapeUrl(params.registrationUrl)}" class="secondary-link">Open registration page</a></p>
+    <p><a href="${escapeUrl(params.registrationUrl)}" class="secondary-link">Register for Weekend Cup</a></p>
   `;
 
   try {

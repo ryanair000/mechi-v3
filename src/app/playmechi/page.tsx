@@ -3,9 +3,9 @@ import { OnlineTournamentClient } from '@/app/online-gaming-tournament/online-to
 import { ONLINE_TOURNAMENT_TITLE } from '@/lib/online-tournament';
 
 export const metadata: Metadata = {
-  title: `${ONLINE_TOURNAMENT_TITLE} | Mechi.club`,
+  title: `${ONLINE_TOURNAMENT_TITLE} Archive | Mechi.club`,
   description:
-    'Register for Playmechi Launch featuring PUBG Mobile, Call of Duty Mobile, and eFootball.',
+    'View the previous PlayMechi Launch tournament featuring PUBG Mobile, Call of Duty Mobile, and eFootball.',
 };
 
 export default function PlayMechiPage() {

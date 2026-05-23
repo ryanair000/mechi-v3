@@ -10,6 +10,7 @@ import {
   GOOGLE_ANALYTICS_ID,
   getGoogleAnalyticsConfigScript,
 } from '@/lib/analytics';
+import { APP_URL } from '@/lib/urls';
 import { getRequestRegionalSettings } from '@/lib/regional-settings-server';
 import {
   DARK_THEME_COLOR,
@@ -117,6 +118,36 @@ const themeScript = `
   })();
 `;
 
+const organizationJsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'Organization',
+  name: 'Mechi',
+  url: APP_URL,
+  logo: `${APP_URL}/icon.png`,
+  sameAs: [
+    'https://www.instagram.com/playmechi',
+    'https://www.facebook.com/playmechi',
+    'https://www.x.com/playmechi',
+    'https://www.youtube.com/@playmechi',
+    'https://www.twitch.tv/playmechi',
+  ],
+};
+
+const websiteJsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'WebSite',
+  name: 'Mechi.club',
+  url: APP_URL,
+  publisher: {
+    '@type': 'Organization',
+    name: 'Mechi',
+  },
+};
+
+function toJsonLd(value: unknown) {
+  return JSON.stringify(value).replace(/</g, '\\u003c');
+}
+
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const regionalSettings = await getRequestRegionalSettings();
 
@@ -132,6 +163,14 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <Script id="mechi-theme-init" strategy="beforeInteractive">
           {themeScript}
         </Script>
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: toJsonLd(organizationJsonLd) }}
+        />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: toJsonLd(websiteJsonLd) }}
+        />
       </head>
       <body>
         <AppProviders initialRegionalSettings={regionalSettings}>{children}</AppProviders>

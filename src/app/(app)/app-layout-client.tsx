@@ -10,7 +10,7 @@ import { Sidebar } from '@/components/Sidebar';
 import { BrandLogo } from '@/components/BrandLogo';
 import { getLoginPath } from '@/lib/navigation';
 
-const PUBLIC_APP_PATHS = new Set(['/leaderboard', '/tournaments']);
+const PUBLIC_APP_PATHS = new Set(['/bounties', '/leaderboard', '/tournaments']);
 
 function isPublicAppPath(pathname: string) {
   return PUBLIC_APP_PATHS.has(pathname);
@@ -32,7 +32,7 @@ export function AppLayoutClient({ children }: { children: React.ReactNode }) {
     }
   }, [loading, pathname, publicAppPath, router, searchParams, user]);
 
-  if (loading) {
+  if (loading && !publicAppPath) {
     return (
       <div className="page-base flex min-h-screen items-center justify-center px-4">
         <div className="card flex min-w-[220px] flex-col items-center gap-3 px-6 py-6 text-center">

@@ -54,7 +54,7 @@ export default async function WeekendCupSuggestCompletePage({
             </Link>
             <Link href={WEEKEND_CUP_REGISTRATION_PATH} className="btn-primary !rounded-[var(--radius-control)]">
               <ArrowRight size={14} />
-              Open registration
+              Register for Weekend Cup
             </Link>
             <a href={WEEKEND_CUP_SUPPORT_URL} className="btn-ghost !rounded-[var(--radius-control)]">
               <MessageCircle size={14} />

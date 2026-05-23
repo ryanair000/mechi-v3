@@ -31,5 +31,5 @@
 - This event is staged as the next PlayMechi tournament.
 - The Weekend Cup series starts on `29-31 May 2026`, and the next seasons follow on a two-week cadence.
 - The public route for this staged event is `mechi.club/weekendcup`.
-- The current live `/playmechi` flow remains on the ongoing `Playmechi Launch` event.
+- The current live `/playmechi` flow remains on the ongoing `PlayMechi Launch` event.
 - Public tournament discovery should show Weekend Cup Season 1 as upcoming without hijacking the current registration, check-in, moderator, or payout flow.

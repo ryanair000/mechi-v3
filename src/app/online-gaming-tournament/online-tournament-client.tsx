@@ -11,8 +11,10 @@ import { Features } from '@/components/ui/features-4';
 import { GlassBlogCard } from '@/components/ui/glass-blog-card-shadcnui';
 import { Hero1 } from '@/components/ui/hero-with-text-and-two-button';
 import { TestimonialCarousel } from '@/components/ui/profile-card-testimonial-carousel';
+import { TournamentFacts } from '@/components/TournamentFacts';
 import { getGameImage } from '@/lib/config';
-import { getLoginPath, getRegisterPath } from '@/lib/navigation';
+import { getRegisterPath } from '@/lib/navigation';
+import { getOnlineTournamentGameFacts } from '@/lib/tournament-facts';
 import {
   ONLINE_TOURNAMENT_EVENT_DATES,
   ONLINE_TOURNAMENT_GAMES,
@@ -41,7 +43,6 @@ type RegistrationSummary = {
 };
 
 const API_PATH = '/api/events/mechi-online-gaming-tournament/register';
-const TOURNAMENT_SIGN_IN_PATH = getLoginPath(ONLINE_TOURNAMENT_REGISTRATION_PATH);
 const TOURNAMENT_SIGN_UP_PATH = getRegisterPath({
   next: ONLINE_TOURNAMENT_REGISTRATION_PATH,
 });
@@ -149,6 +150,15 @@ export function OnlineTournamentClient() {
                     { label: isSwahili ? 'Nafasi ya 2' : '2nd place', value: game.secondPrize },
                     { label: isSwahili ? 'Nafasi ya 3' : '3rd place', value: game.thirdPrize },
                   ]}
+                />
+              ))}
+            </div>
+            <div className="mt-6 grid gap-5">
+              {ONLINE_TOURNAMENT_GAMES.map((game) => (
+                <TournamentFacts
+                  key={`${game.game}-facts`}
+                  title={`${game.label} tournament facts`}
+                  facts={getOnlineTournamentGameFacts(game)}
                 />
               ))}
             </div>

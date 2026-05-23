@@ -37,6 +37,10 @@ export default function FooterSection({ className }: FooterSectionProps) {
           href: '/register',
         },
         {
+          title: 'Jinsi Mechi Inavyofanya Kazi',
+          href: '/how-mechi-works',
+        },
+        {
           title: 'Bounties',
           href: '/bounties',
         },
@@ -62,6 +66,10 @@ export default function FooterSection({ className }: FooterSectionProps) {
         {
           title: 'Join Now',
           href: '/register',
+        },
+        {
+          title: 'How Mechi Works',
+          href: '/how-mechi-works',
         },
         {
           title: 'Bounties',

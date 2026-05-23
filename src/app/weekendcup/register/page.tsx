@@ -9,6 +9,9 @@ import {
 export const metadata: Metadata = {
   title: `Register | ${WEEKEND_CUP_TITLE}`,
   description: `${WEEKEND_CUP_TITLE} registration is open for ${WEEKEND_CUP_EVENT_DATES}. Pay now to confirm your Weekend Cup slot.`,
+  alternates: {
+    canonical: '/weekendcup/register',
+  },
 };
 
 export default function WeekendCupRegisterPage() {

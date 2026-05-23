@@ -7,6 +7,7 @@ import toast from 'react-hot-toast';
 import { CheckCircle2, Loader2, MessageCircle } from 'lucide-react';
 import { useAuth, useAuthFetch } from '@/components/AuthProvider';
 import FooterSection from '@/components/footer';
+import { TournamentFacts } from '@/components/TournamentFacts';
 import { WeekendCupHeader } from '@/components/WeekendCupHeader';
 import { getLoginPath, getRegisterPath, getSafeNextPath, withQuery } from '@/lib/navigation';
 import {
@@ -29,6 +30,7 @@ import {
   type WeekendCupPlayerRegistration,
   type WeekendCupRegistrationSummary,
 } from '@/lib/weekend-cup';
+import { getWeekendCupGameFacts } from '@/lib/tournament-facts';
 
 const API_PATH = '/api/events/playmechi-weekend-cup/register';
 
@@ -68,7 +70,9 @@ export function WeekendCupRegistrationClient() {
   const searchParams = useSearchParams();
   const authFetch = useAuthFetch();
   const { clearLocalAuth, user, loading: authLoading } = useAuth();
-  const [registrationOpen, setRegistrationOpen] = useState(false);
+  const [registrationOpen, setRegistrationOpen] = useState(() =>
+    WEEKEND_CUP_REGISTRATION_ENABLED && isWeekendCupRegistrationOpen()
+  );
   const [summary, setSummary] = useState<WeekendCupRegistrationSummary>(
     getWeekendCupFallbackSummary
   );
@@ -248,11 +252,11 @@ export function WeekendCupRegistrationClient() {
           <section className="px-1 py-8 sm:px-2 sm:py-10">
             <p className="section-title">Weekend Cup registration</p>
             <h1 className="mt-2 max-w-3xl text-4xl font-black leading-tight text-[var(--text-primary)] sm:text-5xl">
-              Registration is opening.
+              Registration is temporarily paused.
             </h1>
             <p className="mt-4 max-w-2xl text-base leading-7 text-[var(--text-secondary)]">
               {WEEKEND_CUP_REGISTRATION_DISABLED_MESSAGE} Free Fire is confirmed for the Mobile
-              Games Cup. Return when the desk opens to lock your player entry.
+              Games Cup. Use the lineup page for the latest match timing and support path.
             </p>
             <div className="mt-5 flex flex-wrap gap-2">
               {[
@@ -275,7 +279,7 @@ export function WeekendCupRegistrationClient() {
               </Link>
               <a href={WEEKEND_CUP_SUPPORT_URL} className={`btn-outline ${DASHBOARD_CONTROL_RADIUS_CLASS}`}>
                 <MessageCircle size={14} />
-                Payment question
+                Need help?
               </a>
             </div>
           </section>
@@ -398,6 +402,16 @@ export function WeekendCupRegistrationClient() {
                     ) : null}
                   </div>
                 </div>
+
+                <div className="rounded-[var(--radius-panel)] border border-white/10 px-4 py-3">
+                  <p className="text-xs font-black uppercase tracking-[0.14em] text-[var(--text-soft)]">
+                    What happens after I pay?
+                  </p>
+                  <p className="mt-2 text-xs leading-5 text-[var(--text-secondary)]">
+                    Paystack sends you back to Mechi. Your entry moves to paid after confirmation,
+                    then the dashboard shows the booked slot and check-in timing.
+                  </p>
+                </div>
               </aside>
 
               <div className="space-y-4">
@@ -420,6 +434,11 @@ export function WeekendCupRegistrationClient() {
                     </span>
                   ) : null}
                 </div>
+
+                <TournamentFacts
+                  title={`${selectedConfig.label} tournament facts`}
+                  facts={getWeekendCupGameFacts(selectedConfig)}
+                />
 
                 <div className="grid gap-3 md:grid-cols-2">
                   <div>
@@ -508,7 +527,7 @@ export function WeekendCupRegistrationClient() {
                     )}
                   </button>
                   <a href={WEEKEND_CUP_SUPPORT_URL} className="text-sm font-bold text-[var(--text-secondary)] hover:text-[var(--text-primary)]">
-                    Payment help
+                    Need help?
                   </a>
                 </div>
               </div>

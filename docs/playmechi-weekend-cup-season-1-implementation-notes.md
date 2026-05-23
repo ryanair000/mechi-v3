@@ -2,7 +2,7 @@
 
 ## Scope
 
-- Keep the current live `/playmechi` tournament flow intact for the ongoing `Playmechi Launch` event.
+- Keep the current live `/playmechi` tournament flow intact for the ongoing `PlayMechi Launch` event.
 - Stage `PlayMechi Weekend Cup Season 1` on its own route family at `/weekendcup`.
 - Use manual payment confirmation for Weekend Cup without forcing the live free-entry flow to change behavior.
 - Expose the Weekend Cup as an upcoming tournament on `/tournaments`.
@@ -81,7 +81,7 @@
 
 ## Live tournament protection
 
-- The current `Playmechi Launch` event stays on the existing `/playmechi` route and config.
+- The current `PlayMechi Launch` event stays on the existing `/playmechi` route and config.
 - Weekend Cup logic is isolated by:
   - its own slug
   - its own public routes
@@ -107,7 +107,7 @@
 
 - Public upcoming flow:
   - Open `/tournaments`
-  - Confirm the ongoing `Playmechi Launch` listing still appears
+  - Confirm the ongoing `PlayMechi Launch` listing still appears
   - Confirm the upcoming Weekend Cup card links to `/weekendcup`
 - Weekend Cup public page:
   - Open `/weekendcup`

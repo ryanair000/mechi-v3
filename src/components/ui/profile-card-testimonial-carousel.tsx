@@ -18,14 +18,6 @@ interface Testimonial {
 
 const testimonials: Testimonial[] = [
   {
-    name: 'Kabaka Mwangi',
-    title: 'Streamer',
-    description:
-      'Kabaka is on the PlayMechi stream all three nights, calling the big plays, the clutch moments, and every winner live on YouTube.',
-    initials: 'KM',
-    youtubeUrl: 'https://www.youtube.com/@playmechi',
-  },
-  {
     name: 'Ephrem Gichuhi',
     title: 'Manager',
     description:

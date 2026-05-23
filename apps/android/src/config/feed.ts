@@ -45,7 +45,7 @@ export const PLAYMECHI_FEED_POSTS: FeedPost[] = [
       { icon: 'people-outline', label: 'Format', value: 'PUBGM, CODM, eFootball' },
     ],
     primaryAction: {
-      label: 'Open registration',
+      label: 'Register for Weekend Cup',
       kind: 'external',
       href: TOURNAMENT_REGISTER_URL,
     },

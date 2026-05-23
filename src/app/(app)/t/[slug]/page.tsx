@@ -20,6 +20,7 @@ import { ActionFeedback, type ActionFeedbackState } from '@/components/ActionFee
 import { GameCover } from '@/components/GameCover';
 import { LiveBadge } from '@/components/LiveBadge';
 import { ShareMenu } from '@/components/ShareMenu';
+import { TournamentFacts } from '@/components/TournamentFacts';
 import { useAuthFetch } from '@/components/AuthProvider';
 import { getRoundLabel } from '@/lib/bracket';
 import { GAMES, PLATFORMS } from '@/lib/config';
@@ -34,6 +35,7 @@ import {
   getTournamentCheckInDate,
   parseTournamentSchedule,
 } from '@/lib/tournament-schedule';
+import { getPlayMechiSupportLabel } from '@/lib/tournament-facts';
 import type { GameKey, LiveStream, Tournament, TournamentMatch, TournamentPlayer } from '@/types';
 
 type TournamentDetail = Tournament & {
@@ -366,6 +368,11 @@ function TournamentDetailContent() {
     getTournamentCheckInDate(scheduledKickoff),
     '1 hour before kickoff'
   );
+  const prizePoolLabel = getTournamentPrizePoolLabel({
+    prizePool: tournament.prize_pool,
+    entryFee: tournament.entry_fee,
+    prizePoolMode: tournament.prize_pool_mode,
+  });
   const shareText = tournamentShareText(
     tournament.title,
     game?.label ?? tournament.game,
@@ -444,15 +451,27 @@ function TournamentDetailContent() {
           <StatCard
             icon={<Trophy size={15} />}
             label="Prize pool"
-            value={getTournamentPrizePoolLabel({
-              prizePool: tournament.prize_pool,
-              entryFee: tournament.entry_fee,
-              prizePoolMode: tournament.prize_pool_mode,
-            })}
+            value={prizePoolLabel}
           />
           <StatCard icon={<Clock size={15} />} label="Slots left" value={String(tournament.slots_left)} />
         </div>
       </div>
+
+      <TournamentFacts
+        title="Tournament facts"
+        facts={[
+          { label: 'Game', value: game?.label ?? tournament.game },
+          { label: 'Entry fee', value: tournament.entry_fee > 0 ? `KES ${tournament.entry_fee}` : 'Free' },
+          { label: 'Prize pool', value: prizePoolLabel },
+          { label: 'Deadline', value: scheduledKickoff ? `Before kickoff: ${scheduleLabel}` : 'Before slots fill' },
+          { label: 'Slots', value: `${tournament.confirmed_count}/${tournament.size} players; ${tournament.slots_left} left` },
+          { label: 'Check-in time', value: checkInLabel },
+          { label: 'Match rules', value: tournament.rules?.trim() || 'Organizer rules apply before the bracket starts.' },
+          { label: 'Payout method', value: 'Mechi verifies results before organizer/admin payout' },
+          { label: 'Support contact', value: getPlayMechiSupportLabel() },
+        ]}
+        className="card mb-5 p-5"
+      />
 
       {actionFeedback ? (
         <ActionFeedback

@@ -15,6 +15,7 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import FooterSection from '@/components/footer';
+import { TournamentFacts } from '@/components/TournamentFacts';
 import { PlayMechiHomeHeader } from '@/app/home/playmechi-home-header';
 import {
   TZ_TOURNAMENT,
@@ -51,6 +52,18 @@ function StatCard({
 }
 
 export function TanzaniaHomePage() {
+  const tournamentFacts = [
+    { label: 'Game', value: TZ_TOURNAMENT.game },
+    { label: 'Entry fee', value: TZ_TOURNAMENT.entryFeeLabel },
+    { label: 'Prize pool', value: TZ_TOURNAMENT.prizePoolLabel },
+    { label: 'Deadline', value: TZ_TOURNAMENT.deadlineLabel },
+    { label: 'Slots', value: TZ_TOURNAMENT.slotsLabel },
+    { label: 'Check-in time', value: TZ_TOURNAMENT.checkInLabel },
+    { label: 'Match rules', value: TZ_TOURNAMENT.rulesLabel },
+    { label: 'Payout method', value: TZ_TOURNAMENT.payoutMethodLabel },
+    { label: 'Support contact', value: TZ_TOURNAMENT.supportNumber },
+  ];
+
   return (
     <div className="page-base marketing-prototype-shell min-h-screen">
       <PlayMechiHomeHeader />
@@ -122,6 +135,12 @@ export function TanzaniaHomePage() {
           <StatCard icon={CircleDollarSign} label="Entry" value={TZ_TOURNAMENT.entryFeeLabel} />
           <StatCard icon={ShieldCheck} label="Confirm" value="WhatsApp screenshot" />
         </section>
+
+        <TournamentFacts
+          title="Tournament facts"
+          facts={tournamentFacts}
+          className="mt-8 rounded-lg border border-[var(--border-color)] bg-[var(--surface-soft)] p-5"
+        />
 
         <section className="mt-12 grid gap-5 lg:grid-cols-[0.95fr_1.05fr]">
           <div className="rounded-lg border border-[var(--border-color)] bg-[var(--surface-soft)] p-5">

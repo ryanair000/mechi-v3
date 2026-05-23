@@ -15,6 +15,7 @@ import {
 import { useAuth, useAuthFetch } from '@/components/AuthProvider';
 import FooterSection from '@/components/footer';
 import { PlayMechiHomeHeader } from '@/app/home/playmechi-home-header';
+import { TournamentFacts } from '@/components/TournamentFacts';
 import { getGameImage } from '@/lib/config';
 import { getLoginPath, withQuery } from '@/lib/navigation';
 import { cn } from '@/lib/utils';
@@ -33,6 +34,7 @@ import {
   WEEKEND_CUP_VOTING_ENABLED,
   getWeekendCupGamePricingLine,
 } from '@/lib/weekend-cup';
+import { getWeekendCupGameFacts } from '@/lib/tournament-facts';
 
 type WeekendCupBallotOption = {
   id: string;
@@ -242,11 +244,13 @@ function WeekendCupOptionCard({
         />
       ) : null}
       <div className="absolute inset-0 bg-gradient-to-t from-black/86 via-black/24 to-black/10" />
-      <div className="absolute inset-x-0 top-0 flex items-center justify-end p-2.5">
-        <span className="rounded-[var(--radius-control)] border border-white/14 bg-black/32 px-2 py-1 text-[0.68rem] font-black uppercase text-white/88">
-          {option.votes} votes
-        </span>
-      </div>
+      {option.votes > 0 ? (
+        <div className="absolute inset-x-0 top-0 flex items-center justify-end p-2.5">
+          <span className="rounded-[var(--radius-control)] border border-white/14 bg-black/32 px-2 py-1 text-[0.68rem] font-black uppercase text-white/88">
+            {option.votes} {option.votes === 1 ? 'vote' : 'votes'}
+          </span>
+        </div>
+      ) : null}
 
       <div className="relative z-10 space-y-2.5 p-3.5">
         <h4 className="text-[1.1rem] font-black leading-tight text-white sm:text-[1.32rem]">
@@ -646,13 +650,13 @@ export function WeekendCupClient() {
                 href={WEEKEND_CUP_REGISTRATION_PATH}
                 className={`btn-primary min-h-11 px-4 py-2 text-[0.9rem] ${DASHBOARD_CONTROL_RADIUS_CLASS}`}
               >
-                Register Free Fire
+                Register for Weekend Cup
               </Link>
               <Link
                 href={WEEKEND_CUP_REGISTRATION_PATH}
                 className={`btn-outline min-h-11 px-4 py-2 text-[0.9rem] ${DASHBOARD_CONTROL_RADIUS_CLASS}`}
               >
-                Open registration
+                View tournament desk
               </Link>
             </div>
 
@@ -695,6 +699,16 @@ export function WeekendCupClient() {
                   </Link>
                 ))}
               </div>
+
+              <div className="mt-5 grid gap-5">
+                {WEEKEND_CUP_REGISTERABLE_GAMES.map((game) => (
+                  <TournamentFacts
+                    key={`${game.game}-facts`}
+                    title={`${game.label} tournament facts`}
+                    facts={getWeekendCupGameFacts(game)}
+                  />
+                ))}
+              </div>
             </div>
           </div>
         </section>
@@ -722,11 +736,13 @@ export function WeekendCupClient() {
                         ? 'No picks yet'
                         : `${selectedCount} ${selectedCount === 1 ? 'pick' : 'picks'} locked`}
                     </span>
-                    <span
-                      className={`brand-chip ${DASHBOARD_CONTROL_RADIUS_CLASS} !px-3 !py-1 !text-[0.76rem]`}
-                    >
-                      {ballot.totalVotes} votes cast
-                    </span>
+                    {ballot.totalVotes > 0 ? (
+                      <span
+                        className={`brand-chip ${DASHBOARD_CONTROL_RADIUS_CLASS} !px-3 !py-1 !text-[0.76rem]`}
+                      >
+                        {ballot.totalVotes} {ballot.totalVotes === 1 ? 'vote' : 'votes'} cast
+                      </span>
+                    ) : null}
                     <span
                       className={`brand-chip ${DASHBOARD_CONTROL_RADIUS_CLASS} !px-3 !py-1 !text-[0.76rem]`}
                     >

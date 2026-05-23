@@ -500,7 +500,7 @@ export default function ArenaTab() {
         </Text>
         <View style={styles.actionGrid}>
           <Button
-            label="Open registration website"
+            label="Register for Weekend Cup"
             icon="globe-outline"
             onPress={() => void openTournamentRegistration()}
           />

@@ -133,6 +133,7 @@ export const TextStaggerHover = React.forwardRef<
         className
       )}
       {...props}
+      aria-hidden="true"
       ref={ref}
       onMouseEnter={handleMouse}
     >

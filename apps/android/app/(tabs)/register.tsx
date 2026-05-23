@@ -22,7 +22,7 @@ export default function RegisterRedirectTab() {
           rooms, fixtures, uploads, and prize status.
         </Text>
         <View style={styles.buttonStack}>
-          <Button label="Open registration website" icon="globe-outline" onPress={() => void openRegisterPage()} />
+          <Button label="Register for Weekend Cup" icon="globe-outline" onPress={() => void openRegisterPage()} />
           <Button
             label="Open tournament website"
             icon="open-outline"

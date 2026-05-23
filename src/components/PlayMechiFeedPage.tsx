@@ -34,7 +34,7 @@ const PLAYMECHI_FEED_POSTS: FeedPostProps[] = [
     imageAlt: 'PlayMechi Weekend Cup Season 1 poster',
     primaryAction: {
       href: WEEKEND_CUP_REGISTRATION_PATH,
-      label: 'Open registration',
+      label: 'Register for Weekend Cup',
     },
     secondaryAction: {
       href: WEEKEND_CUP_DASHBOARD_PATH,

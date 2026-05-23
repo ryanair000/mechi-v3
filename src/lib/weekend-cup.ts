@@ -107,8 +107,8 @@ export const WEEKEND_CUP_VOTING_ENABLED = true;
 export const WEEKEND_CUP_EVENT_DATES = '29-31 May 2026';
 export const WEEKEND_CUP_REGISTRATION_OPENS_AT = '2026-05-13T00:00:00+03:00';
 export const WEEKEND_CUP_REGISTRATION_OPENS_LABEL = 'Open now';
-export const WEEKEND_CUP_CASH_PRIZE_POOL = 11000;
-export const WEEKEND_CUP_PRIZE_POOL_LABEL = 'Prize Pool Upto KSh 11,000';
+export const WEEKEND_CUP_CASH_PRIZE_POOL = 10500;
+export const WEEKEND_CUP_PRIZE_POOL_LABEL = 'Prize Pool Up to KSh 10,500';
 export const WEEKEND_CUP_STREAM_LABEL = 'Live on Mechi';
 export const WEEKEND_CUP_MAX_VOTE_SELECTIONS = 5;
 export const WEEKEND_CUP_ACTIVE_PAYMENT_TIER: OnlineTournamentPaymentTier = 'early_bird';
@@ -155,6 +155,16 @@ export const WEEKEND_CUP_GAME_ENTRY_FEES = {
     late: 100,
   },
 } as const satisfies Record<OnlineTournamentGameKey, Record<OnlineTournamentPaymentTier, number>>;
+
+export const WEEKEND_CUP_BREAK_EVEN_REFERENCE_TIER: OnlineTournamentPaymentTier = 'regular';
+
+export const WEEKEND_CUP_GAME_BREAK_EVEN_COSTS_KES = {
+  pubgm: 2750,
+  codm: 2750,
+  efootball: 1500,
+  mystery: 0,
+  freefire: 2500,
+} as const satisfies Record<OnlineTournamentGameKey, number>;
 
 export const WEEKEND_CUP_ENTRY_PRICING = {
   earlyBirdKes: 50,
@@ -258,8 +268,8 @@ export const WEEKEND_CUP_GAMES: OnlineTournamentGameConfig[] = [
     format: 'Solo battle royale room',
     matchCount: '3 matches',
     scoring: '1 kill = 1 point. Top fraggers run it up.',
-    firstPrize: 'KSh 1,500',
-    secondPrize: 'KSh 1,000',
+    firstPrize: 'KSh 1,250',
+    secondPrize: 'KSh 750',
     thirdPrize: 'KSh 500',
     whatsappGroupUrl: WEEKEND_CUP_SUPPORT_URL,
   },
@@ -413,6 +423,29 @@ export function getWeekendCupPaymentTierAmount(
   game: OnlineTournamentGameKey = 'codm'
 ) {
   return WEEKEND_CUP_GAME_ENTRY_FEES[game]?.[tier] ?? WEEKEND_CUP_GAME_ENTRY_FEES.codm[tier];
+}
+
+export function getWeekendCupBreakEvenTargetKes(game: OnlineTournamentGameKey) {
+  return WEEKEND_CUP_GAME_BREAK_EVEN_COSTS_KES[game] ?? 0;
+}
+
+export function getWeekendCupBreakEvenNeeded(params: {
+  game: OnlineTournamentGameKey;
+  confirmedRevenueKes: number;
+  referenceTier?: OnlineTournamentPaymentTier;
+}) {
+  const targetKes = getWeekendCupBreakEvenTargetKes(params.game);
+  const shortfallKes = Math.max(0, targetKes - Math.max(0, params.confirmedRevenueKes));
+  const referenceTier = params.referenceTier ?? WEEKEND_CUP_BREAK_EVEN_REFERENCE_TIER;
+  const referenceFeeKes = Math.max(1, getWeekendCupPaymentTierAmount(referenceTier, params.game));
+
+  return {
+    targetKes,
+    shortfallKes,
+    referenceTier,
+    referenceFeeKes,
+    neededPayments: Math.ceil(shortfallKes / referenceFeeKes),
+  };
 }
 
 export function getWeekendCupPaymentTierLabel(tier: OnlineTournamentPaymentTier) {

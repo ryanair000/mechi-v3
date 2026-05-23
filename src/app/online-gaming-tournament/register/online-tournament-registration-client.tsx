@@ -6,6 +6,7 @@ import toast from 'react-hot-toast';
 import { CheckCircle2, ExternalLink, Loader2, MessageCircle, Trophy, Users } from 'lucide-react';
 import { useAuth, useAuthFetch } from '@/components/AuthProvider';
 import { HomeFloatingHeader } from '@/components/HomeFloatingHeader';
+import { TournamentFacts } from '@/components/TournamentFacts';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import {
@@ -31,6 +32,7 @@ import {
   CUSTOMER_WHATSAPP_SUPPORT_NUMBER_LABEL,
   getCustomerWhatsAppSupportUrl,
 } from '@/lib/social-links';
+import { getOnlineTournamentGameFacts } from '@/lib/tournament-facts';
 import type { PlatformKey } from '@/types';
 
 type GameRegistrationCount = {
@@ -414,6 +416,11 @@ export function OnlineTournamentRegistrationClient() {
                     {selectedGameSummary?.registered ?? 0}/{selectedGameConfig.slots}
                   </span>
                 </div>
+
+                <TournamentFacts
+                  title={`${selectedGameConfig.label} tournament facts`}
+                  facts={getOnlineTournamentGameFacts(selectedGameConfig)}
+                />
 
                 {currentRegistration ? (
                   <div className="rounded-[var(--radius-card)] border border-[rgba(50,224,196,0.22)] bg-[rgba(50,224,196,0.08)] p-4">

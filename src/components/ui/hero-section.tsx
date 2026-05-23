@@ -4,15 +4,14 @@ import Image from "next/image";
 import { useRegionalSettings } from "@/components/RegionalSettingsProvider";
 import { TimelineContent } from "@/components/ui/timeline-animation";
 import { cn } from "@/lib/utils";
-import { WEEKEND_CUP_REGISTRATION_PATH } from "@/lib/weekend-cup";
+import {
+  WEEKEND_CUP_EVENT_DATES,
+  WEEKEND_CUP_PRIZE_POOL_LABEL,
+  WEEKEND_CUP_REGISTRATION_PATH,
+  WEEKEND_CUP_TITLE,
+} from "@/lib/weekend-cup";
 
 export const blocksDesign = [
-  {
-    id: "playmechi-launch",
-    name: "PlayMechi Launch",
-    url: "/playmechi",
-    imgSrc: "/images/playmechi/playmechi-tournament-poster.png",
-  },
   {
     id: "weekend-cup",
     name: "Weekend Cup",
@@ -20,10 +19,16 @@ export const blocksDesign = [
     imgSrc: "/images/playmechi/weekend-cup-poster.png",
   },
   {
-    id: "weka-mawe-weekly",
-    name: "Weka Mawe Weekly",
-    url: "/playmechi/weka-mawe",
-    imgSrc: "/images/playmechi/weka-mawe-weekly-poster.png",
+    id: "weekend-cup-register",
+    name: "Register Now",
+    url: WEEKEND_CUP_REGISTRATION_PATH,
+    imgSrc: "/images/weekendcup/season-1-promo.png",
+  },
+  {
+    id: "playmechi-launch",
+    name: "Last Tournament",
+    url: "/playmechi",
+    imgSrc: "/images/playmechi/playmechi-tournament-poster.png",
   },
 ];
 
@@ -45,7 +50,7 @@ export default function HeroSection() {
             </div>
             <p className="inline-block text-xs text-white sm:text-base">
               <span className="px-1 font-semibold">
-                {isSwahili ? "Weekend Cup Inaendelea Sasa!" : "Weekend Cup Live Now!"}
+                {isSwahili ? "Weekend Cup Inaendelea Sasa!" : "Weekend Cup Registration Open"}
               </span>
             </p>
 
@@ -69,13 +74,13 @@ export default function HeroSection() {
             as="h1"
             className="text-4xl leading-[100%] text-[var(--text-primary)] sm:text-5xl xl:text-6xl 2xl:text-7xl"
           >
-            {isSwahili ? "Shindana." : "Compete."}{" "}
+            {isSwahili ? "PlayMechi Weekend Cup." : WEEKEND_CUP_TITLE + "."}{" "}
             <span className="bg-gradient-to-r from-red-500 to-orange-500 bg-clip-text font-semibold text-transparent">
-              {isSwahili ? "Shinda Zawadi." : "Win Prizes."}
+              {isSwahili ? "Shinda Zawadi." : WEEKEND_CUP_PRIZE_POOL_LABEL + "."}
             </span>{" "}
-            {isSwahili ? "Panda Ngazi." : "Level Up."}{" "}
+            {isSwahili ? "Mei 29-31." : WEEKEND_CUP_EVENT_DATES + "."}{" "}
             <span className="bg-gradient-to-r from-blue-400 to-blue-600 bg-clip-text font-semibold text-transparent">
-              {isSwahili ? "Tambulika." : "Get Recognized."}
+              {isSwahili ? "Jisajili Sasa." : "Entry from KSh 50."}
             </span>{" "}
           </TimelineContent>
 
@@ -84,8 +89,8 @@ export default function HeroSection() {
             className="mx-auto max-w-2xl text-sm text-[var(--text-secondary)] sm:text-lg lg:text-xl"
           >
             {isSwahili
-              ? "Njoo PlayMechi, boresha uwezo wako, fuata zawadi halisi, na fanya jina lako lisikike. Ushindani safi, presha ya moja kwa moja, na nafasi ya kweli ya kuonekana."
-              : "Pull up to PlayMechi, sharpen your skill, chase real prizes, and make your name ring out. Clean competition, live pressure, and a real shot to get seen."}
+              ? "PUBG Mobile, CODM, eFootball, na Free Fire ziko live kwa Weekend Cup Season 1. Chagua game, lipia entry, na lock slot yako kabla match day."
+              : "PUBG Mobile, CODM, eFootball, and Free Fire are live for Weekend Cup Season 1. Pick your game, pay entry, and lock your slot before match day."}
           </TimelineContent>
         </article>
 

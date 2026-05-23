@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { requireActiveAccessProfile } from '@/lib/access';
+import { getRequestAccessProfile } from '@/lib/access';
 import type { BountyRow, BountyWinnerPublic, EnrichedBounty } from '@/lib/bounties';
 import { filterVisibleBounties, shouldHideE2EFixtures } from '@/lib/e2e-fixtures';
 import { createServiceClient } from '@/lib/supabase';
@@ -22,9 +22,9 @@ function firstRelation<T>(value: T | T[] | null | undefined): T | null {
 }
 
 export async function GET(request: NextRequest) {
-  const access = await requireActiveAccessProfile(request);
-  if (access.response) {
-    return access.response;
+  const accessProfile = await getRequestAccessProfile(request);
+  if (accessProfile?.is_banned) {
+    return NextResponse.json({ error: 'Your account has been suspended.' }, { status: 403 });
   }
 
   try {
@@ -53,11 +53,11 @@ export async function GET(request: NextRequest) {
 
     const rows = filterVisibleBounties((bountyRows ?? []) as BountyQueryRow[]);
     const bountyIds = rows.map((row) => row.id);
-    const { data: claimRows, error: claimError } = bountyIds.length
+    const { data: claimRows, error: claimError } = accessProfile && bountyIds.length
       ? await supabase
           .from('bounty_claim_attempts')
           .select('bounty_id')
-          .eq('user_id', access.profile.id)
+          .eq('user_id', accessProfile.id)
           .eq('won', true)
           .in('bounty_id', bountyIds)
       : { data: [], error: null };

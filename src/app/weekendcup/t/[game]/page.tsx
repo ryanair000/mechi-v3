@@ -3,7 +3,6 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { notFound, permanentRedirect } from 'next/navigation';
 import FooterSection from '@/components/footer';
-import { TournamentFacts } from '@/components/TournamentFacts';
 import { WeekendCupHeader } from '@/components/WeekendCupHeader';
 import { getGameImage, getGameLogoImage } from '@/lib/config';
 import {
@@ -18,7 +17,6 @@ import {
   isWeekendCupGame,
   isWeekendCupRegisterableGame,
 } from '@/lib/weekend-cup';
-import { getWeekendCupGameFacts } from '@/lib/tournament-facts';
 
 type WeekendCupDetailPageProps = {
   params: Promise<{ game: string }>;
@@ -183,10 +181,6 @@ export default async function WeekendCupGameDetailPage({
                   </div>
                 </div>
 
-                <TournamentFacts
-                  title={`${config.label} tournament facts`}
-                  facts={getWeekendCupGameFacts(config)}
-                />
 
                 {isWeekendCupRegisterableGame(game) ? (
                   <div className="rounded-[var(--radius-panel)] border border-[rgba(50,224,196,0.22)] bg-[rgba(50,224,196,0.08)] p-4">

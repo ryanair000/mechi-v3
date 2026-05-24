@@ -15,7 +15,6 @@ import {
 import { useAuth, useAuthFetch } from '@/components/AuthProvider';
 import FooterSection from '@/components/footer';
 import { PlayMechiHomeHeader } from '@/app/home/playmechi-home-header';
-import { TournamentFacts } from '@/components/TournamentFacts';
 import { getGameImage } from '@/lib/config';
 import { getLoginPath, withQuery } from '@/lib/navigation';
 import { cn } from '@/lib/utils';
@@ -34,7 +33,6 @@ import {
   WEEKEND_CUP_VOTING_ENABLED,
   getWeekendCupGamePricingLine,
 } from '@/lib/weekend-cup';
-import { getWeekendCupGameFacts } from '@/lib/tournament-facts';
 
 type WeekendCupBallotOption = {
   id: string;
@@ -700,15 +698,6 @@ export function WeekendCupClient() {
                 ))}
               </div>
 
-              <div className="mt-5 grid gap-5">
-                {WEEKEND_CUP_REGISTERABLE_GAMES.map((game) => (
-                  <TournamentFacts
-                    key={`${game.game}-facts`}
-                    title={`${game.label} tournament facts`}
-                    facts={getWeekendCupGameFacts(game)}
-                  />
-                ))}
-              </div>
             </div>
           </div>
         </section>

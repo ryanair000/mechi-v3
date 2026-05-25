@@ -34,7 +34,7 @@ To rebuild and install on the connected phone:
 npm run android:usb
 ```
 
-Installed release builds use `https://mechi.club` unless `EXPO_PUBLIC_MECHI_API_URL` is explicitly set at build time.
+Installed release builds use `https://mechi.club`. Non-dev builds ignore accidental localhost API URLs unless `EXPO_PUBLIC_MECHI_ALLOW_LOCAL_API=1` is explicitly set.
 
 ## Android Studio workflow
 

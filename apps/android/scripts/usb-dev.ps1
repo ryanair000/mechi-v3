@@ -51,7 +51,15 @@ Write-Host "Metro reverse: device 127.0.0.1:$MetroPort -> computer 127.0.0.1:$Me
 Write-Host "API reverse: device 127.0.0.1:$ApiPort -> computer 127.0.0.1:$ApiPort"
 
 $env:EXPO_NO_DEPENDENCY_VALIDATION = "1"
-$env:EXPO_PUBLIC_MECHI_API_URL = "http://127.0.0.1:$ApiPort"
+
+if ($Release) {
+  $env:EXPO_PUBLIC_MECHI_API_URL = "https://mechi.club"
+  Write-Host "API target: https://mechi.club"
+}
+else {
+  $env:EXPO_PUBLIC_MECHI_API_URL = "http://127.0.0.1:$ApiPort"
+  Write-Host "API target: http://127.0.0.1:$ApiPort"
+}
 
 if ($Install) {
   Push-Location "$PSScriptRoot\..\android"

@@ -6,6 +6,7 @@ import type { ApiErrorBody } from '../types';
 const USB_REVERSED_API_URL = 'http://127.0.0.1:3000';
 const LOCAL_WEB_API_URL = 'http://localhost:3000';
 const PRODUCTION_API_URL = 'https://mechi.club';
+const LOCAL_API_HOST_PATTERN = /^https?:\/\/(?:localhost|127\.0\.0\.1|\[::1\])(?::\d+)?(?:\/|$)/i;
 
 type RequestOptions = {
   method?: 'GET' | 'POST' | 'PATCH' | 'DELETE';
@@ -36,14 +37,26 @@ function readConfiguredApiUrl(value: unknown): string | null {
   return trimmed ? trimmed.replace(/\/+$/, '') : null;
 }
 
+function canUseConfiguredApiUrl(value: string): boolean {
+  if (__DEV__) {
+    return true;
+  }
+
+  if (!LOCAL_API_HOST_PATTERN.test(value)) {
+    return true;
+  }
+
+  return process.env.EXPO_PUBLIC_MECHI_ALLOW_LOCAL_API === '1';
+}
+
 export function getApiBaseUrl(): string {
   const fromEnv = readConfiguredApiUrl(process.env.EXPO_PUBLIC_MECHI_API_URL);
-  if (fromEnv) {
+  if (fromEnv && canUseConfiguredApiUrl(fromEnv)) {
     return fromEnv;
   }
 
   const fromConfig = readConfiguredApiUrl(Constants.expoConfig?.extra?.apiUrl);
-  if (fromConfig) {
+  if (fromConfig && canUseConfiguredApiUrl(fromConfig)) {
     return fromConfig;
   }
 
@@ -52,6 +65,14 @@ export function getApiBaseUrl(): string {
   }
 
   return PRODUCTION_API_URL;
+}
+
+function getNetworkErrorMessage(): string {
+  if (getApiBaseUrl() === PRODUCTION_API_URL) {
+    return 'Could not reach PlayMechi. Check your internet connection and try again.';
+  }
+
+  return 'Could not reach the PlayMechi API. Check the backend connection and try again.';
 }
 
 function isFormData(body: unknown): body is FormData {
@@ -116,7 +137,11 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
     return parsed as T;
   } catch (error) {
     if (error instanceof Error && error.name === 'AbortError') {
-      throw new ApiError('Request timed out. Check the USB backend connection.', 0, null);
+      throw new ApiError(getNetworkErrorMessage(), 0, null);
+    }
+
+    if (error instanceof TypeError) {
+      throw new ApiError(getNetworkErrorMessage(), 0, null);
     }
 
     throw error;

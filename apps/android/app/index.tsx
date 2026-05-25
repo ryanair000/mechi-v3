@@ -1,6 +1,6 @@
 import { useRouter } from 'expo-router';
 import { useEffect } from 'react';
-import { LoadingState, Screen } from '../src/components/ui';
+import { LaunchScreen } from '../src/components/ui';
 import { isProfileComplete, useAuth } from '../src/auth/AuthProvider';
 
 export default function IndexRoute() {
@@ -23,9 +23,5 @@ export default function IndexRoute() {
     router.replace('/(tabs)');
   }, [initializing, router, token, user]);
 
-  return (
-    <Screen scroll={false}>
-      <LoadingState label="Opening PlayMechi" />
-    </Screen>
-  );
+  return <LaunchScreen />;
 }

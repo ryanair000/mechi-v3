@@ -6,12 +6,12 @@
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "scheme": "mechi",
-    "userInterfaceStyle": "dark",
+    "userInterfaceStyle": "light",
     "newArchEnabled": true,
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#070a08"
+      "backgroundColor": "#E2E8F0"
     },
     "ios": {
       "supportsTablet": true
@@ -35,14 +35,14 @@
       ],
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#070a08"
+        "backgroundColor": "#E2E8F0"
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false
     },
     "androidNavigationBar": {
-      "barStyle": "light-content",
-      "backgroundColor": "#070a08",
+      "barStyle": "dark-content",
+      "backgroundColor": "#E2E8F0",
       "enforceContrast": false
     },
     "web": {
@@ -64,7 +64,7 @@
         {
           "image": "./assets/splash-icon.png",
           "resizeMode": "contain",
-          "backgroundColor": "#070a08"
+          "backgroundColor": "#E2E8F0"
         }
       ],
       "@sentry/react-native"

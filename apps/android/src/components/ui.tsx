@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import {
   ActivityIndicator,
+  Image,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -210,6 +211,24 @@ export function LoadingState({ label = 'Loading' }: { label?: string }) {
   );
 }
 
+export function LaunchScreen({ label = 'Opening PlayMechi' }: { label?: string }) {
+  return (
+    <SafeAreaView style={styles.launchSafeArea}>
+      <View style={styles.launchContent}>
+        <View style={styles.launchLogoPlate}>
+          <Image
+            source={require('../../assets/splash-icon.png')}
+            style={styles.launchLogo}
+            resizeMode="contain"
+          />
+        </View>
+        <Text style={styles.launchTitle}>PlayMechi</Text>
+        <Text style={styles.launchLabel}>{label}</Text>
+      </View>
+    </SafeAreaView>
+  );
+}
+
 export function EmptyState({
   title,
   body,
@@ -321,6 +340,43 @@ const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: colors.bg,
+  },
+  launchSafeArea: {
+    flex: 1,
+    backgroundColor: colors.bg,
+  },
+  launchContent: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: spacing.xl,
+    gap: spacing.md,
+  },
+  launchLogoPlate: {
+    width: 168,
+    height: 168,
+    borderRadius: 28,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.panel2,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  launchLogo: {
+    width: 128,
+    height: 128,
+  },
+  launchTitle: {
+    color: colors.text,
+    fontSize: 28,
+    fontWeight: '800',
+    lineHeight: 33,
+    letterSpacing: 0,
+  },
+  launchLabel: {
+    color: colors.muted,
+    fontSize: 13,
+    fontWeight: '700',
   },
   scrollContent: {
     flexGrow: 1,

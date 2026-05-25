@@ -515,7 +515,7 @@ CREATE TABLE IF NOT EXISTS online_tournament_registrations (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   event_slug text NOT NULL,
   user_id uuid NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
-  game text NOT NULL CHECK (game IN ('pubgm', 'codm', 'efootball')),
+  game text NOT NULL CHECK (game IN ('pubgm', 'codm', 'efootball', 'mystery', 'freefire')),
   in_game_username text NOT NULL,
   game_uid text,
   phone text,
@@ -607,8 +607,14 @@ BEGIN
         registration_cap := 80;
         check_in_cap := 80;
       WHEN 'efootball' THEN
-        registration_cap := 16;
-        check_in_cap := 16;
+        registration_cap := 32;
+        check_in_cap := 32;
+      WHEN 'mystery' THEN
+        registration_cap := 80;
+        check_in_cap := 80;
+      WHEN 'freefire' THEN
+        registration_cap := 80;
+        check_in_cap := 80;
       ELSE
         RETURN NEW;
     END CASE;

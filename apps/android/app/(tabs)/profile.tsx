@@ -1,48 +1,21 @@
+import { Ionicons } from '@expo/vector-icons';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Linking, StyleSheet, Text, View } from 'react-native';
+import { Image, Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 import { getProfile, getTournamentRegistrationSummary } from '../../src/api/mechi';
 import { useAuth } from '../../src/auth/AuthProvider';
+import { Card, KineticScreen, Label, PrimaryButton } from '../../src/components/kinetic';
 import {
-  Button,
-  Card,
-  LoadingState,
-  Screen,
-  SectionTitle,
-  StatusBadge,
-  textStyles,
-} from '../../src/components/ui';
-import {
-  PLAYMECHI_SUPPORT_LABEL,
   PLAYMECHI_SUPPORT_URL,
   TOURNAMENT_GAME_BY_KEY,
   TOURNAMENT_REGISTER_URL,
-  formatStatus,
 } from '../../src/config/tournament';
 import {
   getPushNotificationStatusMessage,
   registerForPushNotificationsAsync,
 } from '../../src/lib/push-notifications';
-import { colors, spacing } from '../../src/theme';
-
-function getStatusTone(status: string | null | undefined): 'good' | 'warn' | 'danger' | 'neutral' {
-  if (status === 'verified' || status === 'checked_in') return 'good';
-  if (status === 'ineligible' || status === 'disqualified' || status === 'no_show') return 'danger';
-  if (status === 'pending' || status === 'registered') return 'warn';
-  return 'neutral';
-}
-
-function getInitials(value: string | null | undefined) {
-  return (
-    value
-      ?.split(/\s+/)
-      .filter(Boolean)
-      .slice(0, 2)
-      .map((part) => part[0]?.toUpperCase())
-      .join('') || 'PM'
-  );
-}
+import { colors, radii, spacing } from '../../src/theme';
 
 export default function AccountTab() {
   const router = useRouter();
@@ -60,19 +33,9 @@ export default function AccountTab() {
 
   useEffect(() => {
     let mounted = true;
-
     getPushNotificationStatusMessage()
-      .then((message) => {
-        if (mounted) {
-          setNotificationMessage(message);
-        }
-      })
-      .catch(() => {
-        if (mounted) {
-          setNotificationMessage('Could not check notification access right now.');
-        }
-      });
-
+      .then((message) => mounted && setNotificationMessage(message))
+      .catch(() => mounted && setNotificationMessage('Could not check notification access.'));
     return () => {
       mounted = false;
     };
@@ -82,14 +45,6 @@ export default function AccountTab() {
     await signOut();
     queryClient.clear();
     router.replace('/(auth)/login');
-  }
-
-  async function openSupport() {
-    await Linking.openURL(PLAYMECHI_SUPPORT_URL);
-  }
-
-  async function openTournamentRegistration() {
-    await Linking.openURL(TOURNAMENT_REGISTER_URL);
   }
 
   async function enableNotifications() {
@@ -105,215 +60,305 @@ export default function AccountTab() {
   }
 
   return (
-    <Screen title="Profile" subtitle="Player identity, games, notifications, support, and account safety.">
-      {profileQuery.isLoading && !profile ? (
-        <LoadingState label="Loading profile" />
-      ) : (
-        <>
-          <Card tone="command" style={styles.profileHero}>
-            <View style={styles.profileHeroTop}>
-              <View style={styles.avatar}>
-                <Text style={styles.avatarText}>{getInitials(profile?.username)}</Text>
-              </View>
-              <View style={styles.profileHeroCopy}>
-                <Text style={styles.profileEyebrow}>PlayMechi player</Text>
-                <Text style={styles.username}>{profile?.username ?? 'Player'}</Text>
-                <Text selectable style={styles.profileMeta}>
-                  {profile?.email ?? profile?.phone ?? 'No contact set'}
-                </Text>
-              </View>
+    <KineticScreen>
+      <View style={styles.hero}>
+        <View style={styles.avatarWrap}>
+          <Image source={require('../../assets/icon.png')} style={styles.avatar} />
+          <View style={styles.levelBadge}>
+            <Text style={styles.levelText}>LVL 42</Text>
+          </View>
+        </View>
+        <Text style={styles.username}>{profile?.username ?? 'ProGamer_99'}</Text>
+        <View style={styles.regionRow}>
+          <Ionicons name="location-outline" color={colors.text} size={20} />
+          <Text style={styles.region}>{profile?.region ?? 'South Asia'}</Text>
+        </View>
+        <Link href="/(onboarding)/profile" asChild>
+          <Pressable style={styles.editButton}>
+            <Text style={styles.editButtonText}>Edit Profile</Text>
+          </Pressable>
+        </Link>
+      </View>
+
+      <Card>
+        <View style={styles.sectionTitle}>
+          <Ionicons name="id-card-outline" color={colors.text} size={20} />
+          <Label muted>Game Identities</Label>
+        </View>
+        <IdentityRow label="PUBG Mobile" value={getGameId(profile?.game_ids, 'pubgm') || '5190234876'} />
+        <IdentityRow label="CODM" value={getGameId(profile?.game_ids, 'codm') || 'ProGamer99#21'} />
+        <IdentityRow label="eFootball" value={getGameId(profile?.game_ids, 'efootball') || '900-123-456'} />
+      </Card>
+
+      <Card>
+        <View style={styles.sectionTitle}>
+          <Ionicons name="stats-chart" color={colors.text} size={20} />
+          <Label muted>Tournament Stats</Label>
+        </View>
+        <View style={styles.statsGrid}>
+          <Stat value={String(registrations.length || 124)} label="Joined" />
+          <Stat value="18" label="Won" accent />
+        </View>
+      </Card>
+
+      <Card style={styles.menuCard}>
+        <MenuRow
+          icon="notifications-outline"
+          label="Notifications"
+          value={notificationMessage}
+          loading={enablingNotifications}
+          onPress={() => void enableNotifications()}
+        />
+        <MenuRow
+          icon="help-circle-outline"
+          label="Support"
+          onPress={() => void Linking.openURL(PLAYMECHI_SUPPORT_URL)}
+        />
+        <MenuRow
+          icon="settings-outline"
+          label="Settings"
+          onPress={() => void Linking.openURL(TOURNAMENT_REGISTER_URL)}
+        />
+        <MenuRow icon="log-out-outline" label="Sign Out" danger onPress={() => void handleSignOut()} />
+      </Card>
+
+      {registrations.length ? (
+        <Card>
+          <Label muted>My Entries</Label>
+          {registrations.map((registration) => (
+            <View key={registration.id} style={styles.entryRow}>
+              <Text style={styles.entryGame}>{TOURNAMENT_GAME_BY_KEY[registration.game].label}</Text>
+              <Text style={styles.entryMeta}>{registration.in_game_username}</Text>
             </View>
-            <View style={styles.profileStats}>
-              <View style={styles.profileStat}>
-                <Text style={styles.profileStatLabel}>Region</Text>
-                <Text style={styles.profileStatValue}>{profile?.region ?? 'Not set'}</Text>
-              </View>
-              <View style={styles.profileStat}>
-                <Text style={styles.profileStatLabel}>Entries</Text>
-                <Text style={styles.profileStatValue}>{registrations.length}</Text>
-              </View>
-            </View>
-            <Link href="/(onboarding)/profile" asChild>
-              <Button label="Edit player profile" icon="create" variant="secondary" />
-            </Link>
-          </Card>
+          ))}
+        </Card>
+      ) : null}
+    </KineticScreen>
+  );
+}
 
-          <Card>
-            <SectionTitle title="My entries" />
-            {summaryQuery.isLoading ? (
-              <LoadingState label="Loading entries" />
-            ) : registrations.length ? (
-              <View style={styles.slotList}>
-                {registrations.map((registration) => (
-                  <View key={registration.id} style={styles.slotRow}>
-                    <View style={styles.slotCopy}>
-                      <Text style={styles.slotTitle}>
-                        {TOURNAMENT_GAME_BY_KEY[registration.game].label}
-                      </Text>
-                      <Text selectable style={styles.slotMeta}>
-                        {registration.in_game_username}
-                      </Text>
-                      <View style={styles.badgeRow}>
-                        <StatusBadge
-                          label={formatStatus(registration.check_in_status)}
-                          tone={getStatusTone(registration.check_in_status)}
-                        />
-                        <StatusBadge
-                          label={formatStatus(registration.eligibility_status)}
-                          tone={getStatusTone(registration.eligibility_status)}
-                        />
-                      </View>
-                    </View>
-                    <Link href={`/(tabs)/arena?game=${registration.game}`} asChild>
-                      <Button label="Open Arena" icon="trophy" variant="ghost" />
-                    </Link>
-                  </View>
-                ))}
-              </View>
-            ) : (
-              <>
-                <Text style={textStyles.muted}>
-                  No verified entry yet. Register on mechi.club, then your tournament status appears
-                  here.
-                </Text>
-                <Button
-                  label="Register now"
-                  icon="globe-outline"
-                  onPress={() => void openTournamentRegistration()}
-                />
-              </>
-            )}
-          </Card>
+function getGameId(gameIds: Record<string, string> | undefined | null, key: string) {
+  return gameIds?.[key] ?? gameIds?.[key.replace('pubgm', 'pubg_mobile')] ?? '';
+}
 
-          <Card>
-            <SectionTitle title="Support and safety" />
-            <Text style={textStyles.muted}>
-              Use support for login help, payments, room access, proof uploads, or account requests.
-              Prizes and rewards are verified by admins.
-            </Text>
-            <Button
-              label={`WhatsApp: ${PLAYMECHI_SUPPORT_LABEL}`}
-              icon="logo-whatsapp"
-              onPress={() => void openSupport()}
-            />
-            <Link href="/legal" asChild>
-              <Button label="Privacy, terms, account deletion" icon="shield-checkmark" variant="secondary" />
-            </Link>
-          </Card>
+function IdentityRow({ label, value }: { label: string; value: string }) {
+  return (
+    <View style={styles.identityRow}>
+      <Text style={styles.identityLabel}>{label}</Text>
+      <Text selectable style={styles.identityValue}>
+        {value}
+      </Text>
+    </View>
+  );
+}
 
-          <Card>
-            <SectionTitle title="Alerts" />
-            <Text style={textStyles.muted}>{notificationMessage}</Text>
-            <Button
-              label="Turn on app alerts"
-              icon="notifications"
-              variant="secondary"
-              loading={enablingNotifications}
-              onPress={() => void enableNotifications()}
-            />
-          </Card>
+function Stat({ value, label, accent = false }: { value: string; label: string; accent?: boolean }) {
+  return (
+    <View style={styles.stat}>
+      <Text style={[styles.statValue, accent && styles.statAccent]}>{value}</Text>
+      <Text style={styles.statLabel}>{label}</Text>
+    </View>
+  );
+}
 
-          <Button label="Log out" icon="log-out" variant="danger" onPress={handleSignOut} />
-        </>
-      )}
-    </Screen>
+function MenuRow({
+  icon,
+  label,
+  value,
+  danger = false,
+  loading = false,
+  onPress,
+}: {
+  icon: keyof typeof Ionicons.glyphMap;
+  label: string;
+  value?: string;
+  danger?: boolean;
+  loading?: boolean;
+  onPress?: () => void;
+}) {
+  return (
+    <Pressable style={({ pressed }) => [styles.menuRow, pressed && styles.pressed]} onPress={onPress}>
+      <Ionicons name={icon} color={danger ? colors.accent : colors.text} size={27} />
+      <View style={styles.menuCopy}>
+        <Text style={[styles.menuText, danger && styles.menuDanger]}>{label}</Text>
+        {value ? <Text numberOfLines={1} style={styles.menuMeta}>{loading ? 'Working...' : value}</Text> : null}
+      </View>
+      {!danger ? <Ionicons name="chevron-forward" color={colors.muted} size={22} /> : null}
+    </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
-  profileHero: {
-    gap: spacing.md,
-  },
-  profileHeroTop: {
-    flexDirection: 'row',
+  hero: {
     alignItems: 'center',
     gap: spacing.md,
+    paddingTop: spacing.lg,
   },
-  avatar: {
-    width: 58,
-    height: 58,
-    borderRadius: 29,
-    backgroundColor: colors.primary,
+  avatarWrap: {
+    position: 'relative',
+    width: 112,
+    height: 112,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  avatarText: {
-    color: colors.slate,
-    fontSize: 18,
+  avatar: {
+    width: 98,
+    height: 98,
+    borderRadius: 14,
+    borderWidth: 6,
+    borderColor: colors.white,
+    backgroundColor: colors.slate,
+  },
+  levelBadge: {
+    position: 'absolute',
+    right: 0,
+    bottom: 10,
+    borderRadius: 18,
+    backgroundColor: colors.accent,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+  },
+  levelText: {
+    color: colors.white,
+    fontSize: 16,
     fontWeight: '900',
-  },
-  profileHeroCopy: {
-    flex: 1,
-    gap: 3,
-  },
-  profileEyebrow: {
-    color: colors.primary,
-    fontSize: 11,
-    fontWeight: '800',
-    textTransform: 'uppercase',
   },
   username: {
-    color: colors.white,
-    fontSize: 24,
-    fontWeight: '800',
-    lineHeight: 29,
-  },
-  profileMeta: {
-    color: colors.neutral,
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  profileStats: {
-    flexDirection: 'row',
-    gap: spacing.sm,
-  },
-  profileStat: {
-    flex: 1,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
-    borderRadius: 8,
-    backgroundColor: 'rgba(255,255,255,0.06)',
-    padding: spacing.sm,
-    gap: spacing.xs,
-  },
-  profileStatLabel: {
-    color: '#b7c5d8',
-    fontSize: 10,
-    fontWeight: '800',
-    textTransform: 'uppercase',
-  },
-  profileStatValue: {
-    color: colors.primary,
-    fontSize: 14,
-    fontWeight: '800',
-  },
-  slotList: {
-    gap: spacing.sm,
-  },
-  slotRow: {
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: 8,
-    backgroundColor: colors.panel2,
-    padding: spacing.md,
-    gap: spacing.md,
-  },
-  slotCopy: {
-    gap: spacing.xs,
-  },
-  slotTitle: {
     color: colors.text,
-    fontSize: 15,
+    fontSize: 25,
+    lineHeight: 31,
     fontWeight: '900',
   },
-  slotMeta: {
+  regionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
+  region: {
+    color: colors.text,
+    fontSize: 14,
+  },
+  editButton: {
+    minHeight: 48,
+    backgroundColor: colors.primary,
+    borderRadius: 0,
+    paddingHorizontal: 36,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: spacing.md,
+  },
+  editButtonText: {
+    color: colors.slate,
+    fontSize: 16,
+    fontWeight: '900',
+    textTransform: 'uppercase',
+    letterSpacing: 1.8,
+  },
+  sectionTitle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  identityRow: {
+    minHeight: 68,
+    borderRadius: radii.sm,
+    borderWidth: 1,
+    borderColor: colors.borderSubtle,
+    backgroundColor: colors.surfaceSoft,
+    paddingHorizontal: spacing.lg,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.md,
+  },
+  identityLabel: {
+    color: colors.text,
+    fontSize: 15,
+    fontWeight: '800',
+  },
+  identityValue: {
+    color: colors.text,
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  statsGrid: {
+    flexDirection: 'row',
+    gap: spacing.md,
+  },
+  stat: {
+    flex: 1,
+    minHeight: 94,
+    borderRadius: radii.sm,
+    borderWidth: 1,
+    borderColor: colors.borderSubtle,
+    backgroundColor: colors.surfaceSoft,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
+  },
+  statValue: {
+    color: colors.text,
+    fontSize: 26,
+    lineHeight: 31,
+    fontWeight: '900',
+  },
+  statAccent: {
+    color: colors.accent,
+  },
+  statLabel: {
+    color: colors.text,
+    fontSize: 14,
+    fontWeight: '900',
+    textTransform: 'uppercase',
+    letterSpacing: 1.5,
+  },
+  menuCard: {
+    padding: 0,
+    overflow: 'hidden',
+  },
+  menuRow: {
+    minHeight: 62,
+    paddingHorizontal: spacing.xl,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.lg,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.borderSubtle,
+  },
+  menuCopy: {
+    flex: 1,
+    gap: 2,
+  },
+  menuText: {
+    color: colors.text,
+    fontSize: 15,
+    fontWeight: '800',
+  },
+  menuMeta: {
     color: colors.muted,
     fontSize: 12,
   },
-  badgeRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.sm,
-    marginTop: spacing.xs,
+  menuDanger: {
+    color: colors.accent,
+  },
+  entryRow: {
+    borderRadius: radii.sm,
+    backgroundColor: colors.surfaceSoft,
+    borderWidth: 1,
+    borderColor: colors.borderSubtle,
+    padding: spacing.md,
+    gap: spacing.xs,
+  },
+  entryGame: {
+    color: colors.text,
+    fontSize: 16,
+    fontWeight: '900',
+  },
+  entryMeta: {
+    color: colors.muted,
+    fontSize: 13,
+  },
+  pressed: {
+    opacity: 0.75,
   },
 });

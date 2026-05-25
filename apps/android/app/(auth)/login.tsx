@@ -3,7 +3,8 @@ import { useState } from 'react';
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { ApiError } from '../../src/api/client';
 import { useAuth } from '../../src/auth/AuthProvider';
-import { Button, Card, ErrorBanner, Field, Screen, textStyles } from '../../src/components/ui';
+import { ErrorBanner, Field } from '../../src/components/ui';
+import { Card, KineticScreen, PrimaryButton } from '../../src/components/kinetic';
 import { colors, spacing } from '../../src/theme';
 
 export default function LoginScreen() {
@@ -29,7 +30,7 @@ export default function LoginScreen() {
   }
 
   return (
-    <Screen>
+    <KineticScreen>
       <View style={styles.brandHeader}>
         <View style={styles.logoPlate}>
           <Image
@@ -45,7 +46,7 @@ export default function LoginScreen() {
       </View>
 
       <Card>
-        <Text style={textStyles.h2}>Back in the lobby</Text>
+        <Text style={styles.cardTitle}>Back in the lobby</Text>
         <Field
           label="Phone, email, or username"
           value={identifier}
@@ -62,11 +63,10 @@ export default function LoginScreen() {
           textContentType="password"
         />
         <ErrorBanner message={error} />
-        <Button
-          label="Enter PlayMechi"
+        <PrimaryButton
+          label={loading ? 'Entering...' : 'Enter PlayMechi'}
           icon="log-in"
           onPress={handleLogin}
-          loading={loading}
           disabled={!identifier.trim() || !password}
         />
       </Card>
@@ -79,7 +79,7 @@ export default function LoginScreen() {
           </Pressable>
         </Link>
       </View>
-    </Screen>
+    </KineticScreen>
   );
 }
 
@@ -90,9 +90,9 @@ const styles = StyleSheet.create({
     paddingTop: spacing.sm,
   },
   logoPlate: {
-    width: 112,
-    height: 112,
-    borderRadius: 28,
+    width: 96,
+    height: 96,
+    borderRadius: 24,
     borderWidth: 1,
     borderColor: colors.border,
     backgroundColor: colors.panel2,
@@ -100,16 +100,22 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   logo: {
-    width: 86,
-    height: 86,
+    width: 68,
+    height: 68,
   },
   brandTitle: {
     color: colors.text,
-    fontSize: 34,
+    fontSize: 28,
     fontWeight: '800',
-    lineHeight: 39,
+    lineHeight: 34,
     letterSpacing: 0,
     textAlign: 'center',
+  },
+  cardTitle: {
+    color: colors.text,
+    fontSize: 24,
+    lineHeight: 30,
+    fontWeight: '900',
   },
   brandSubtitle: {
     color: colors.muted,

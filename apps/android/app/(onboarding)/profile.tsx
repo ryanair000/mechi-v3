@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Redirect, useRouter } from 'expo-router';
 import { useState } from 'react';
-import { Text } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import { ApiError } from '../../src/api/client';
 import { getProfile, patchProfile } from '../../src/api/mechi';
 import { isProfileComplete, useAuth } from '../../src/auth/AuthProvider';
@@ -14,8 +14,6 @@ import {
 } from '../../src/config/games';
 import { TOURNAMENT_GAME_BY_KEY, TOURNAMENT_GAMES, isTournamentGame } from '../../src/config/tournament';
 import {
-  Button,
-  Card,
   ChipGroup,
   ErrorBanner,
   Field,
@@ -24,6 +22,8 @@ import {
   SectionTitle,
   textStyles,
 } from '../../src/components/ui';
+import { Card, KineticScreen, PrimaryButton } from '../../src/components/kinetic';
+import { colors, spacing } from '../../src/theme';
 import type { CountryKey, OnlineTournamentGameKey, Profile } from '../../src/types';
 
 const fallbackRegion = COUNTRIES.kenya.regions[0] ?? 'Nairobi';
@@ -154,10 +154,13 @@ function ProfileSetupForm({ profile }: { profile: Profile | null | undefined }) 
   }
 
   return (
-    <Screen
-      title={isProfileComplete(profile) ? 'Edit profile' : 'Complete profile'}
-      subtitle="Lock your game, IGN, and WhatsApp number so match admins can reach you fast."
-    >
+    <KineticScreen>
+      <View style={styles.intro}>
+        <Text style={styles.title}>{isProfileComplete(profile) ? 'Edit profile' : 'Complete profile'}</Text>
+        <Text style={styles.subtitle}>
+          Lock your game, IGN, and WhatsApp number so match admins can reach you fast.
+        </Text>
+      </View>
       <Card>
         <Text style={textStyles.h2}>Region</Text>
         <ChipGroup options={countryOptions} value={country} onChange={handleCountryChange} />
@@ -204,13 +207,29 @@ function ProfileSetupForm({ profile }: { profile: Profile | null | undefined }) 
       </Card>
 
       <ErrorBanner message={error} />
-      <Button
-        label="Save player profile"
+      <PrimaryButton
+        label={mutation.isPending ? 'Saving...' : 'Save player profile'}
         icon="checkmark-circle"
         onPress={handleSave}
-        loading={mutation.isPending}
         disabled={!region || !gameId.trim() || (whatsappNotifications && !whatsappNumber.trim())}
       />
-    </Screen>
+    </KineticScreen>
   );
 }
+
+const styles = StyleSheet.create({
+  intro: {
+    gap: spacing.sm,
+  },
+  title: {
+    color: colors.text,
+    fontSize: 24,
+    lineHeight: 29,
+    fontWeight: '900',
+  },
+  subtitle: {
+    color: colors.muted,
+    fontSize: 13,
+    lineHeight: 19,
+  },
+});

@@ -1,22 +1,22 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Link } from 'expo-router';
-import { Linking, StyleSheet, Text, View } from 'react-native';
+import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 import { FeedPostCard } from '../../src/components/feed-post-card';
 import { PLAYMECHI_FEED_POSTS } from '../../src/config/feed';
-import { Button, Card, Screen, StatusBadge } from '../../src/components/ui';
-import { colors, spacing } from '../../src/theme';
+import { Card, KineticScreen, Label, PrimaryButton } from '../../src/components/kinetic';
+import { colors, radii, spacing } from '../../src/theme';
 import { TOURNAMENT_REGISTER_URL } from '../../src/config/tournament';
 
 export default function FeedTab() {
   return (
-    <Screen title="Feed" subtitle="Official PlayMechi updates, media, streams, and announcements.">
+    <KineticScreen>
       <Card style={styles.heroCard}>
         <View style={styles.heroTop}>
           <View style={styles.heroIcon}>
             <Ionicons name="flash" size={23} color={colors.primary} />
           </View>
           <View style={styles.heroCopy}>
-            <StatusBadge label="Social gaming feed" tone="good" />
+            <Label>Social Gaming Feed</Label>
             <Text selectable style={styles.heroTitle}>Updates that tell you what to do next.</Text>
             <Text selectable style={styles.heroBody}>
               Tournament news, stream calls, and community moves in one clean feed. No clutter,
@@ -44,7 +44,7 @@ export default function FeedTab() {
           </View>
           <Text style={styles.quickTitle}>Enter the event</Text>
           <Text style={styles.quickBody}>Registration and payments stay on mechi.club for clean verification.</Text>
-          <Button
+          <PrimaryButton
             label="Register on web"
             icon="open-outline"
             onPress={() => void Linking.openURL(TOURNAMENT_REGISTER_URL)}
@@ -58,7 +58,10 @@ export default function FeedTab() {
           <Text style={styles.quickTitle}>Call your shot</Text>
           <Text style={styles.quickBody}>Post a challenge, ask for a lobby, or bring your squad into the chat.</Text>
           <Link href="/(tabs)/community" asChild>
-            <Button label="Enter community" icon="chatbubbles-outline" variant="secondary" />
+            <Pressable style={styles.secondaryButton}>
+              <Ionicons name="chatbubbles-outline" color={colors.text} size={22} />
+              <Text style={styles.secondaryButtonText}>Enter community</Text>
+            </Pressable>
           </Link>
         </Card>
       </View>
@@ -66,7 +69,7 @@ export default function FeedTab() {
       {PLAYMECHI_FEED_POSTS.map((post) => (
         <FeedPostCard key={post.id} post={post} />
       ))}
-    </Screen>
+    </KineticScreen>
   );
 }
 
@@ -150,5 +153,21 @@ const styles = StyleSheet.create({
     color: colors.muted,
     fontSize: 13,
     lineHeight: 19,
+  },
+  secondaryButton: {
+    minHeight: 56,
+    borderRadius: radii.md,
+    borderWidth: 1,
+    borderColor: colors.borderSubtle,
+    backgroundColor: colors.surfaceSoft,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
+  },
+  secondaryButtonText: {
+    color: colors.text,
+    fontSize: 17,
+    fontWeight: '900',
   },
 });

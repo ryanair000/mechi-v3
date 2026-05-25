@@ -9,7 +9,6 @@ import { colors } from '../../src/theme';
 export default function TabsLayout() {
   const { initializing, token, user } = useAuth();
   const insets = useSafeAreaInsets();
-  const bottomInset = Math.max(insets.bottom, Platform.OS === 'android' ? 34 : 0);
 
   if (initializing) {
     return (
@@ -32,24 +31,31 @@ export default function TabsLayout() {
       initialRouteName="index"
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: colors.primaryDark,
-        tabBarInactiveTintColor: colors.muted,
+        tabBarActiveTintColor: colors.primary,
+        tabBarInactiveTintColor: colors.bottomMuted,
         sceneStyle: {
           backgroundColor: colors.bg,
         },
         tabBarStyle: {
-          backgroundColor: colors.bg2,
-          borderTopColor: colors.border,
-          height: 64 + bottomInset,
-          paddingBottom: bottomInset + 6,
-          paddingTop: 8,
+          position: 'absolute',
+          left: 16,
+          right: 16,
+          bottom: Platform.OS === 'android' ? 70 : Math.max(insets.bottom, 10),
+          height: 58,
+          paddingBottom: 5,
+          paddingTop: 6,
+          backgroundColor: '#374151',
+          borderTopColor: 'rgba(255,255,255,0.08)',
+          borderRadius: 16,
         },
         tabBarItemStyle: {
-          minHeight: 50,
+          minHeight: 44,
         },
         tabBarLabelStyle: {
-          fontSize: 11,
+          fontSize: 9,
           fontWeight: '900',
+          letterSpacing: 1.4,
+          textTransform: 'uppercase',
         },
       }}
     >
@@ -57,28 +63,28 @@ export default function TabsLayout() {
         name="index"
         options={{
           title: 'Home',
-          tabBarIcon: ({ color, size }) => <Ionicons name="home" color={color} size={size} />,
+          tabBarIcon: ({ color, size }) => <Ionicons name="home-outline" color={color} size={size} />,
         }}
       />
       <Tabs.Screen
         name="arena"
         options={{
           title: 'Arena',
-          tabBarIcon: ({ color, size }) => <Ionicons name="trophy" color={color} size={size} />,
+          tabBarIcon: ({ color, size }) => <Ionicons name="game-controller-outline" color={color} size={size} />,
         }}
       />
       <Tabs.Screen
         name="feed"
         options={{
           title: 'Feed',
-          tabBarIcon: ({ color, size }) => <Ionicons name="newspaper" color={color} size={size} />,
+          tabBarIcon: ({ color, size }) => <Ionicons name="logo-rss" color={color} size={size} />,
         }}
       />
       <Tabs.Screen
         name="community"
         options={{
           title: 'Community',
-          tabBarIcon: ({ color, size }) => <Ionicons name="chatbubbles" color={color} size={size} />,
+          tabBarIcon: ({ color, size }) => <Ionicons name="people-outline" color={color} size={size} />,
         }}
       />
       <Tabs.Screen
@@ -91,7 +97,7 @@ export default function TabsLayout() {
         name="profile"
         options={{
           title: 'Profile',
-          tabBarIcon: ({ color, size }) => <Ionicons name="person-circle" color={color} size={size} />,
+          tabBarIcon: ({ color, size }) => <Ionicons name="person-outline" color={color} size={size} />,
         }}
       />
     </Tabs>

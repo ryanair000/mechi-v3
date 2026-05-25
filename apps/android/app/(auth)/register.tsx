@@ -11,15 +11,13 @@ import {
 } from '../../src/config/games';
 import { TOURNAMENT_GAME_BY_KEY, TOURNAMENT_GAMES } from '../../src/config/tournament';
 import {
-  Button,
-  Card,
   ChipGroup,
   ErrorBanner,
   Field,
-  Screen,
   SectionTitle,
   textStyles,
 } from '../../src/components/ui';
+import { Card, KineticScreen, PrimaryButton } from '../../src/components/kinetic';
 import { colors, spacing } from '../../src/theme';
 import type { CountryKey, OnlineTournamentGameKey } from '../../src/types';
 
@@ -90,10 +88,13 @@ export default function RegisterScreen() {
     gameId.trim();
 
   return (
-    <Screen
-      title="Join PlayMechi"
-      subtitle="Create your player profile for chat, alerts, and tournament tracking. Paid event registration stays on mechi.club."
-    >
+    <KineticScreen>
+      <View style={styles.intro}>
+        <Text style={styles.title}>Join PlayMechi</Text>
+        <Text style={styles.subtitle}>
+          Create your player profile for chat, alerts, and tournament tracking.
+        </Text>
+      </View>
       <Card>
         <Text style={textStyles.h2}>Player details</Text>
         <Field label="Gamer tag" value={username} onChangeText={setUsername} placeholder="playmechiclutch" />
@@ -160,11 +161,10 @@ export default function RegisterScreen() {
       </Card>
 
       <ErrorBanner message={error} />
-      <Button
-        label="Create player profile"
+      <PrimaryButton
+        label={loading ? 'Creating...' : 'Create player profile'}
         icon="person-add"
         onPress={handleRegister}
-        loading={loading}
         disabled={!canSubmit}
       />
 
@@ -176,11 +176,25 @@ export default function RegisterScreen() {
           </Pressable>
         </Link>
       </View>
-    </Screen>
+    </KineticScreen>
   );
 }
 
 const styles = StyleSheet.create({
+  intro: {
+    gap: spacing.sm,
+  },
+  title: {
+    color: colors.text,
+    fontSize: 28,
+    lineHeight: 34,
+    fontWeight: '900',
+  },
+  subtitle: {
+    color: colors.muted,
+    fontSize: 14,
+    lineHeight: 21,
+  },
   footer: {
     flexDirection: 'row',
     justifyContent: 'center',

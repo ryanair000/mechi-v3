@@ -313,23 +313,23 @@ export function InfoRow({
 export const textStyles = StyleSheet.create({
   h2: {
     color: colors.text,
-    fontSize: 20,
+    fontSize: 17,
     fontWeight: '800',
   },
   h3: {
     color: colors.text,
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '800',
   },
   body: {
     color: colors.text,
-    fontSize: 14,
-    lineHeight: 20,
+    fontSize: 13,
+    lineHeight: 18,
   },
   muted: {
     color: colors.muted,
-    fontSize: 13,
-    lineHeight: 19,
+    fontSize: 12,
+    lineHeight: 17,
   },
 });
 
@@ -387,21 +387,23 @@ const styles = StyleSheet.create({
     gap: spacing.lg,
   },
   padded: {
-    padding: spacing.lg,
+    padding: 14,
   },
   title: {
     color: colors.text,
-    ...typography.display,
+    fontSize: 24,
+    lineHeight: 29,
+    fontWeight: '800',
     letterSpacing: 0,
   },
   subtitle: {
     color: colors.muted,
-    fontSize: 14,
-    lineHeight: 21,
+    fontSize: 13,
+    lineHeight: 19,
     marginTop: -spacing.sm,
   },
   button: {
-    minHeight: 48,
+    minHeight: 44,
     borderRadius: radii.md,
     alignItems: 'center',
     justifyContent: 'center',
@@ -434,30 +436,30 @@ const styles = StyleSheet.create({
   },
   buttonText: {
     color: colors.text,
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: '800',
   },
   buttonTextPrimary: {
     color: colors.slate,
   },
   fieldWrap: {
-    gap: spacing.sm,
+    gap: 6,
   },
   fieldLabel: {
     color: colors.muted,
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '700',
     textTransform: 'uppercase',
   },
   field: {
-    minHeight: 48,
+    minHeight: 44,
     color: colors.text,
     backgroundColor: colors.panel,
     borderColor: colors.border,
     borderWidth: 1,
     borderRadius: radii.md,
     paddingHorizontal: spacing.md,
-    fontSize: 15,
+    fontSize: 14,
   },
   fieldError: {
     borderColor: colors.danger,
@@ -472,11 +474,11 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   chip: {
-    minHeight: 40,
+    minHeight: 36,
     borderRadius: radii.pill,
     borderColor: colors.border,
     borderWidth: 1,
-    paddingHorizontal: spacing.md,
+    paddingHorizontal: 11,
     alignItems: 'center',
     justifyContent: 'center',
     flexDirection: 'row',
@@ -490,7 +492,7 @@ const styles = StyleSheet.create({
   },
   chipText: {
     color: colors.muted,
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '800',
     textAlign: 'center',
   },
@@ -502,8 +504,8 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     borderWidth: 1,
     borderRadius: radii.md,
-    padding: spacing.lg,
-    gap: spacing.md,
+    padding: 14,
+    gap: spacing.sm,
   },
   card_default: {},
   card_soft: {
@@ -557,13 +559,13 @@ const styles = StyleSheet.create({
   },
   cardTitle: {
     color: colors.text,
-    fontSize: 17,
+    fontSize: 15,
     fontWeight: '800',
   },
   cardBody: {
     color: colors.muted,
-    fontSize: 13,
-    lineHeight: 19,
+    fontSize: 12,
+    lineHeight: 17,
   },
   sectionTitleRow: {
     flexDirection: 'row',
@@ -582,11 +584,11 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     paddingVertical: spacing.sm,
     paddingHorizontal: spacing.md,
-    minWidth: 88,
+    minWidth: 78,
   },
   statValue: {
     color: colors.text,
-    fontSize: 17,
+    fontSize: 15,
     fontWeight: '800',
     fontVariant: ['tabular-nums'],
   },
@@ -640,7 +642,7 @@ const styles = StyleSheet.create({
     textTransform: 'capitalize',
   },
   infoRow: {
-    minHeight: 38,
+    minHeight: 34,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -648,12 +650,12 @@ const styles = StyleSheet.create({
   },
   infoLabel: {
     color: colors.muted,
-    fontSize: 13,
+    fontSize: 12,
   },
   infoValue: {
     color: colors.text,
     flexShrink: 1,
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '800',
     textAlign: 'right',
   },

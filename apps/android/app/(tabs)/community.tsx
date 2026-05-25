@@ -4,7 +4,8 @@ import { useState } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { ApiError } from '../../src/api/client';
 import { getCommunityRoom, sendCommunityMessage } from '../../src/api/mechi';
-import { Button, Card, ErrorBanner, LoadingState, Screen, StatusBadge, textStyles } from '../../src/components/ui';
+import { Button, ErrorBanner, LoadingState, textStyles } from '../../src/components/ui';
+import { Card, KineticScreen, Label } from '../../src/components/kinetic';
 import { colors, radii, spacing } from '../../src/theme';
 
 const COMMUNITY_QUERY_KEY = ['community-room'];
@@ -60,14 +61,14 @@ export default function CommunityScreen() {
   }
 
   return (
-    <Screen title="Community" subtitle="Chat, reactions, squad energy, and clean player callouts.">
+    <KineticScreen>
       <Card style={styles.heroCard}>
         <View style={styles.heroRow}>
           <View style={styles.heroIcon}>
             <Ionicons name="flash" color={colors.slate} size={22} />
           </View>
           <View style={styles.heroCopy}>
-            <StatusBadge label={isLocked ? 'Read only' : 'Live now'} tone={isLocked ? 'warn' : 'good'} />
+            <Label>{isLocked ? 'Read Only' : 'Live Now'}</Label>
             <Text style={styles.heroTitle}>Squad up, challenge clean, keep it fair.</Text>
             <Text style={styles.heroBody}>
               Match invites, lobby help, result talk, and PlayMechi community energy in one room.
@@ -153,7 +154,7 @@ export default function CommunityScreen() {
           onPress={handleSend}
         />
       </Card>
-    </Screen>
+    </KineticScreen>
   );
 }
 
@@ -181,9 +182,9 @@ const styles = StyleSheet.create({
   },
   heroTitle: {
     color: colors.white,
-    fontSize: 21,
+    fontSize: 17,
     fontWeight: '900',
-    lineHeight: 26,
+    lineHeight: 22,
   },
   heroBody: {
     color: colors.neutral,

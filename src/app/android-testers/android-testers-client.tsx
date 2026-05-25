@@ -46,7 +46,7 @@ export function AndroidTestersClient() {
       setFeedback({
         tone: 'error',
         title: 'Sign in first.',
-        detail: 'Only logged-in Mechi players can join the v4.0.1 Android early access list.',
+        detail: 'Only logged-in PlayMechi players can join the v4.0.1 Android early access list.',
       });
       return;
     }
@@ -65,7 +65,7 @@ export function AndroidTestersClient() {
     setFeedback({
       tone: 'loading',
       title: 'Locking in your spot...',
-      detail: 'Saving your Google Play account for the Mechi v4.0.1 invite.',
+      detail: 'Saving your Google Play account for the PlayMechi v4.0.1 invite.',
     });
 
     try {
@@ -91,7 +91,7 @@ export function AndroidTestersClient() {
         title: 'You are on the early list.',
         detail:
           data.message ??
-          'Your Google Play account is saved for the Mechi v4.0.1 tester invite. Open your dashboard for the next move.',
+          'Your Google Play account is saved for the PlayMechi v4.0.1 tester invite. Open your dashboard for the next move.',
       });
       window.setTimeout(() => {
         router.push('/dashboard?androidTester=saved');
@@ -116,9 +116,9 @@ export function AndroidTestersClient() {
           </div>
           <div>
             <p className="section-title">Checking account</p>
-            <h2 className="mt-1 text-xl font-black text-[var(--text-primary)]">Loading your Mechi player profile</h2>
+            <h2 className="mt-1 text-xl font-black text-[var(--text-primary)]">Loading your PlayMechi player profile</h2>
             <p className="mt-1 text-sm leading-6 text-[var(--text-secondary)]">
-              Early access is only open to signed-in Mechi players.
+              Early access is only open to signed-in PlayMechi players.
             </p>
           </div>
         </div>
@@ -134,10 +134,10 @@ export function AndroidTestersClient() {
             <ShieldCheck size={18} />
           </div>
           <div>
-            <p className="section-title">Mechi players only</p>
+            <p className="section-title">PlayMechi players only</p>
             <h2 className="mt-1 text-xl font-black text-[var(--text-primary)]">Sign in to get early access</h2>
             <p className="mt-1 text-sm leading-6 text-[var(--text-secondary)]">
-              We will use your Mechi profile details automatically.
+              We will use your PlayMechi profile details automatically.
             </p>
           </div>
         </div>
@@ -147,7 +147,7 @@ export function AndroidTestersClient() {
             Sign in
           </Link>
           <Link href="/register?next=/android-testers" className="btn-ghost w-full">
-            Create Mechi account
+            Create PlayMechi account
           </Link>
         </div>
       </section>
@@ -164,7 +164,7 @@ export function AndroidTestersClient() {
           <p className="section-title">Google Play invite</p>
           <h2 className="mt-1 text-xl font-black text-[var(--text-primary)]">Add your Play Store email</h2>
           <p className="mt-1 text-sm leading-6 text-[var(--text-secondary)]">
-            Signed in as @{user.username}. We will use your Mechi profile for contact details.
+            Signed in as @{user.username}. We will use your PlayMechi profile for contact details.
           </p>
         </div>
       </div>
@@ -187,12 +187,12 @@ export function AndroidTestersClient() {
             required
           />
           <p className="input-hint mt-2">
-            Use the Google account signed in on the Android phone that will install Mechi.
+            Use the Google account signed in on the Android phone that will install PlayMechi.
           </p>
         </div>
 
         <p className="rounded-[var(--radius-panel)] border border-[var(--border-color)] bg-[var(--surface-elevated)] p-3 text-sm leading-6 text-[var(--text-secondary)]">
-          Already known: your Mechi username and account phone. No need to enter them again.
+          Already known: your PlayMechi username and account phone. No need to enter them again.
         </p>
 
         {feedback ? <ActionFeedback {...feedback} /> : null}

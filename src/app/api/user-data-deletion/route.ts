@@ -70,7 +70,7 @@ export async function POST(request: NextRequest) {
 
     if (!username) {
       return NextResponse.json(
-        { error: 'Add the Mechi username connected to the account you want deleted.' },
+        { error: 'Add the PlayMechi username connected to the account you want deleted.' },
         { status: 400 }
       );
     }
@@ -126,7 +126,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       requestId,
       message:
-        'Your request has been sent to Mechi support. We may contact you to verify ownership before deletion is completed.',
+        'Your request has been sent to PlayMechi support. We may contact you to verify ownership before deletion is completed.',
     });
   } catch (error) {
     console.error('[User Data Deletion] Error:', error);

@@ -51,7 +51,7 @@ export function PasswordResetFlow({ loginHref, nextPath, token }: PasswordResetF
       setFeedback({
         tone: 'error',
         title: 'Your username is required.',
-        detail: 'Enter the username on the Mechi account you want to recover.',
+        detail: 'Enter the username on the PlayMechi account you want to recover.',
       });
       toast.error('Enter your username.');
       return;
@@ -61,7 +61,7 @@ export function PasswordResetFlow({ loginHref, nextPath, token }: PasswordResetF
       setFeedback({
         tone: 'error',
         title: 'A valid email or phone number is required.',
-        detail: 'Use the email address or phone number connected to the same Mechi profile.',
+        detail: 'Use the email address or phone number connected to the same PlayMechi profile.',
       });
       toast.error('Enter a valid email address or phone number.');
       return;
@@ -71,7 +71,7 @@ export function PasswordResetFlow({ loginHref, nextPath, token }: PasswordResetF
     setFeedback({
       tone: 'loading',
       title: 'Checking your account...',
-      detail: 'Matching the username and account contact on your Mechi profile.',
+      detail: 'Matching the username and account contact on your PlayMechi profile.',
     });
 
     try {
@@ -104,7 +104,7 @@ export function PasswordResetFlow({ loginHref, nextPath, token }: PasswordResetF
       setFeedback({
         tone: 'success',
         title: 'Account matched.',
-        detail: data.message ?? 'Choose a new password to secure your Mechi account.',
+        detail: data.message ?? 'Choose a new password to secure your PlayMechi account.',
       });
       toast.success('Account matched. Choose a new password.');
     } catch {
@@ -126,7 +126,7 @@ export function PasswordResetFlow({ loginHref, nextPath, token }: PasswordResetF
       setFeedback({
         tone: 'error',
         title: 'Confirm your account first.',
-        detail: 'Enter the username and email or phone on your Mechi profile before choosing a new password.',
+        detail: 'Enter the username and email or phone on your PlayMechi profile before choosing a new password.',
       });
       toast.error('Confirm your username and email or phone first.');
       return;
@@ -198,7 +198,7 @@ export function PasswordResetFlow({ loginHref, nextPath, token }: PasswordResetF
       setFeedback({
         tone: 'success',
         title: 'Password reset complete.',
-        detail: 'You are signed in now. Opening Mechi for you.',
+        detail: 'You are signed in now. Opening PlayMechi for you.',
       });
       toast.success('Password reset complete. You are signed in now.');
       window.location.assign(redirectPath);
@@ -222,9 +222,9 @@ export function PasswordResetFlow({ loginHref, nextPath, token }: PasswordResetF
         </p>
         <p className="mt-1 text-sm text-[var(--text-primary)]">
           {hasToken
-            ? 'Set a new password and Mechi will sign you in right away.'
+            ? 'Set a new password and PlayMechi will sign you in right away.'
             : canSetPassword
-              ? 'Account matched. Choose a new password and Mechi will sign you in right away.'
+              ? 'Account matched. Choose a new password and PlayMechi will sign you in right away.'
               : 'Enter your username and email or phone. If they match, you can set a new password.'}
         </p>
       </div>
@@ -241,7 +241,7 @@ export function PasswordResetFlow({ loginHref, nextPath, token }: PasswordResetF
               value={username}
               onChange={(event) => setUsername(event.target.value)}
               onBlur={() => setUsername((current) => current.trim())}
-              placeholder="Your Mechi username"
+              placeholder="Your PlayMechi username"
               className="input"
               autoComplete="username"
               autoCapitalize="none"

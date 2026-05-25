@@ -23,9 +23,9 @@ import {
 } from '@/lib/weekend-cup';
 
 export const metadata: Metadata = {
-  title: 'Support | Mechi.club',
+  title: 'Support | PlayMechi',
   description:
-    'Get clear next steps for registration, payments, sign-in trouble, and reporting issues on Mechi.',
+    'Get clear next steps for registration, payments, sign-in trouble, and reporting issues on PlayMechi.',
 };
 
 const supportCards = [
@@ -51,7 +51,7 @@ const supportCards = [
     description:
       'Use this if you keep getting sent back to login, your account feels stuck, or a protected action will not let you continue.',
     href: getCustomerWhatsAppSupportUrl(
-      'Hi Mechi, I need help with sign-in or my account flow.'
+      'Hi PlayMechi, I need help with sign-in or my account flow.'
     ),
     label: 'Open account help',
     icon: ShieldCheck,
@@ -83,7 +83,7 @@ export default function SupportPage() {
           <div className="max-w-3xl">
             <p className="section-title">Support + Status</p>
             <h1 className="mt-3 text-[2rem] font-black leading-[0.98] text-[var(--text-primary)] sm:text-[3rem]">
-              Clear next steps when Mechi feels unclear.
+              Clear next steps when PlayMechi feels unclear.
             </h1>
             <p className="mt-4 text-sm leading-7 text-[var(--text-secondary)] sm:text-base">
               This page is the fastest recovery lane for {WEEKEND_CUP_TITLE}, sign-in trouble,
@@ -160,7 +160,7 @@ export default function SupportPage() {
                 Weekend Cup help
               </a>
               <a
-                href={getCustomerWhatsAppSupportUrl('Hi Mechi, I need general help.')}
+                href={getCustomerWhatsAppSupportUrl('Hi PlayMechi, I need general help.')}
                 className="btn-outline justify-center"
               >
                 <MessageCircle size={15} />

@@ -16,9 +16,9 @@ import { createServiceClient } from '@/lib/supabase';
 import type { GameKey, PlatformKey } from '@/types';
 
 export const metadata: Metadata = {
-  title: 'Platform | Mechi.club',
+  title: 'Platform | PlayMechi',
   description:
-    'Explore the Mechi platform for queues, direct challenges, tournaments, score reporting, ranks, and supported games.',
+    'Explore the PlayMechi platform for queues, direct challenges, tournaments, score reporting, ranks, and supported games.',
 };
 
 const BETA_PLAYER_CAP = 100;
@@ -245,7 +245,7 @@ export default async function PlatformPage() {
               </h1>
 
               <p className="mt-4 max-w-xl text-sm leading-7 text-[var(--text-secondary)] sm:text-base">
-                Mechi V3 cuts the WhatsApp chaos for players who want cleaner queues, direct challenges,
+                PlayMechi V3 cuts the WhatsApp chaos for players who want cleaner queues, direct challenges,
                 real tournament flow, confirmed scorelines, and updates that actually tell you what is going on.
               </p>
 

@@ -98,11 +98,11 @@ async function getTournament(slug: string) {
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
   const tournament = await getTournament(slug);
-  if (!tournament) return { title: 'Tournament Not Found | Mechi' };
+  if (!tournament) return { title: 'Tournament Not Found | PlayMechi' };
 
   const game = GAMES[tournament.game as GameKey]?.label ?? tournament.game;
-  const title = `${tournament.title} | Mechi Tournament`;
-  const description = `${game} bracket on Mechi. ${tournament.size} players, ${tournament.status} status.`;
+  const title = `${tournament.title} | PlayMechi Tournament`;
+  const description = `${game} bracket on PlayMechi. ${tournament.size} players, ${tournament.status} status.`;
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://mechi.club';
 
   return {
@@ -113,7 +113,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       description,
       type: 'website',
       url: `${baseUrl}/s/t/${slug}`,
-      siteName: 'Mechi',
+      siteName: 'PlayMechi',
       images: [{ url: `${baseUrl}/api/og/tournament?slug=${slug}`, width: 1200, height: 630, alt: title }],
     },
     twitter: {
@@ -167,7 +167,7 @@ export default async function PublicTournamentPage({ params }: Props) {
             </div>
           </div>
 
-          <p className="brand-kicker justify-center">Mechi Bracket</p>
+          <p className="brand-kicker justify-center">PlayMechi Bracket</p>
           <h1 className="text-4xl font-black tracking-normal text-[var(--text-primary)]">
             {tournament.title}
           </h1>

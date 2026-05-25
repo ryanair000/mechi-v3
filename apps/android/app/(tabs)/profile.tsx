@@ -59,7 +59,7 @@ export default function AccountTab() {
       })
       .catch(() => {
         if (mounted) {
-          setNotificationMessage('Could not check notification access.');
+          setNotificationMessage('Could not check notification access right now.');
         }
       });
 
@@ -88,16 +88,16 @@ export default function AccountTab() {
       const result = await registerForPushNotificationsAsync();
       setNotificationMessage(result.message);
     } catch {
-      setNotificationMessage('Could not enable app notifications.');
+      setNotificationMessage('Notifications did not turn on. Check phone settings and try again.');
     } finally {
       setEnablingNotifications(false);
     }
   }
 
   return (
-    <Screen title="Profile" subtitle="Your Mechi account, tournament access, support, and notification settings.">
+    <Screen title="Profile" subtitle="Player identity, games, notifications, support, and account safety.">
       {profileQuery.isLoading && !profile ? (
-        <LoadingState label="Loading account" />
+        <LoadingState label="Loading profile" />
       ) : (
         <>
           <Card>
@@ -108,14 +108,14 @@ export default function AccountTab() {
             <InfoRow label="Phone" value={profile?.phone ?? 'Not set'} selectable />
             <InfoRow label="Region" value={profile?.region ?? 'Not set'} />
             <Link href="/(onboarding)/profile" asChild>
-              <Button label="Edit tournament profile" icon="create" variant="secondary" />
+              <Button label="Edit player profile" icon="create" variant="secondary" />
             </Link>
           </Card>
 
           <Card>
-            <SectionTitle title="My tournament slots" />
+            <SectionTitle title="My entries" />
             {summaryQuery.isLoading ? (
-              <LoadingState label="Loading registrations" />
+              <LoadingState label="Loading entries" />
             ) : registrations.length ? (
               <View style={styles.slotList}>
                 {registrations.map((registration) => (
@@ -139,7 +139,7 @@ export default function AccountTab() {
                       </View>
                     </View>
                     <Link href={`/(tabs)/arena?game=${registration.game}`} asChild>
-                      <Button label="Tournaments" icon="trophy" variant="ghost" />
+                      <Button label="Open Arena" icon="trophy" variant="ghost" />
                     </Link>
                   </View>
                 ))}
@@ -147,11 +147,11 @@ export default function AccountTab() {
             ) : (
               <>
                 <Text style={textStyles.muted}>
-                  You do not have a saved tournament slot yet. Registration now happens on the
-                  website.
+                  No verified entry yet. Register on mechi.club, then your tournament status appears
+                  here.
                 </Text>
                 <Button
-                  label="Register for Weekend Cup"
+                  label="Register now"
                   icon="globe-outline"
                   onPress={() => void openTournamentRegistration()}
                 />
@@ -160,26 +160,26 @@ export default function AccountTab() {
           </Card>
 
           <Card>
-            <SectionTitle title="Support & policy" />
+            <SectionTitle title="Support and safety" />
             <Text style={textStyles.muted}>
-              Use support for sign-in help, registration issues, room access, result screenshots, or
-              account requests. Payout and reward eligibility must be verified by admins.
+              Use support for login help, payments, room access, proof uploads, or account requests.
+              Prizes and rewards are verified by admins.
             </Text>
             <Button
-              label={`WhatsApp support: ${PLAYMECHI_SUPPORT_LABEL}`}
+              label={`WhatsApp: ${PLAYMECHI_SUPPORT_LABEL}`}
               icon="logo-whatsapp"
               onPress={() => void openSupport()}
             />
             <Link href="/legal" asChild>
-              <Button label="Privacy, terms, deletion" icon="shield-checkmark" variant="secondary" />
+              <Button label="Privacy, terms, account deletion" icon="shield-checkmark" variant="secondary" />
             </Link>
           </Card>
 
           <Card>
-            <SectionTitle title="App notifications" />
+            <SectionTitle title="Alerts" />
             <Text style={textStyles.muted}>{notificationMessage}</Text>
             <Button
-              label="Enable app notifications"
+              label="Turn on app alerts"
               icon="notifications"
               variant="secondary"
               loading={enablingNotifications}

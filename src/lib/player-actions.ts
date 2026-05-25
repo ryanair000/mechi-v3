@@ -361,7 +361,7 @@ export async function joinQueueForUser(params: {
   if (!profile) {
     return {
       status: 'profile_missing',
-      message: 'Your Mechi profile was not found for this number.',
+      message: 'Your PlayMechi profile was not found for this number.',
     };
   }
 
@@ -380,7 +380,7 @@ export async function joinQueueForUser(params: {
   if (!GAMES[game]) {
     return {
       status: 'invalid_game',
-      message: 'That game is not supported on Mechi right now.',
+      message: 'That game is not supported on PlayMechi right now.',
     };
   }
 
@@ -554,7 +554,7 @@ export async function listOpenLobbies(params: {
   if (requestedGame && !GAMES[requestedGame]) {
     return {
       status: 'invalid_game',
-      message: 'That game is not supported on Mechi right now.',
+      message: 'That game is not supported on PlayMechi right now.',
     };
   }
 
@@ -632,7 +632,7 @@ export async function listOpenTournaments(params: {
   if (requestedGame && !GAMES[requestedGame]) {
     return {
       status: 'invalid_game',
-      message: 'That game is not supported on Mechi right now.',
+      message: 'That game is not supported on PlayMechi right now.',
     };
   }
 

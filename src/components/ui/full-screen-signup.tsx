@@ -25,7 +25,7 @@ type FullScreenSignupVariant = 'default' | 'marketing';
 type FullScreenSignupFeedbackTone = 'error' | 'success' | 'loading';
 type SideContentPlacement = 'default' | 'bottom';
 const SIGNUP_SUPPORT_URL = getCustomerWhatsAppSupportUrl(
-  'Hi Mechi, I need help creating my account.'
+  'Hi PlayMechi, I need help creating my account.'
 );
 
 export interface FullScreenSignupValues {
@@ -230,7 +230,7 @@ function StandaloneFullScreenSignup({
     <div className="flex min-h-screen items-center justify-center overflow-hidden bg-[#0b1121] px-4 py-6 text-slate-950">
       <div className="relative flex w-full max-w-5xl flex-col overflow-hidden rounded-lg bg-white shadow-2xl md:min-h-[40rem] md:flex-row">
         <div className="relative min-h-[16rem] overflow-hidden bg-black text-white md:w-1/2">
-          <div className="absolute inset-0 bg-[url('/mechi-whatsapp-profile.jpg')] bg-cover bg-center opacity-70" />
+          <div className="absolute inset-0 bg-[url('/playmechi-whatsapp-profile.jpg')] bg-cover bg-center opacity-70" />
           <div className="absolute inset-0 bg-gradient-to-br from-black via-black/68 to-orange-950/60" />
           <div className="absolute inset-x-0 top-0 h-28 bg-gradient-to-b from-black/80 to-transparent" />
           <div className="relative z-10 flex h-full min-h-[16rem] flex-col justify-between p-8 md:p-12">
@@ -242,7 +242,7 @@ function StandaloneFullScreenSignup({
                 mechi.club
               </p>
               <h1 className="mt-4 max-w-sm text-3xl font-semibold leading-tight tracking-normal md:text-4xl">
-                {isSwahili ? 'Tengeneza akaunti yako ya Mechi.' : 'Create your Mechi account.'}
+                {isSwahili ? 'Tengeneza akaunti yako ya PlayMechi.' : 'Create your PlayMechi account.'}
               </h1>
             </div>
             <p className="mt-8 max-w-sm text-sm leading-6 text-white/78">
@@ -263,8 +263,8 @@ function StandaloneFullScreenSignup({
             </h2>
             <p className="mt-2 text-sm leading-6 opacity-80">
               {isSwahili
-                ? 'Sajili akaunti mpya ya player wa Mechi.'
-                : 'Register a new Mechi player account.'}
+                ? 'Sajili akaunti mpya ya player wa PlayMechi.'
+                : 'Register a new PlayMechi player account.'}
             </p>
           </div>
 

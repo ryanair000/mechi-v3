@@ -15,8 +15,8 @@ interface Hero1Props {
 
 function Hero1({
   badgeLabel = 'Free entry. KSh 6K prize pool.',
-  title = 'Pull up. Lock in. Win on Mechi.',
-  description = 'PUBG Mobile, CODM, and eFootball are going online for three nights. Register on Mechi, show up at 8 PM EAT, and let the scoreboard do the talking.',
+  title = 'Pull up. Lock in. Win on PlayMechi.',
+  description = 'PUBG Mobile, CODM, and eFootball are going online for three nights. Register on PlayMechi, show up at 8 PM EAT, and let the scoreboard do the talking.',
   primaryLabel = 'Secure my slot',
   primaryHref = '#register',
   secondaryLabel = 'See games and prizes',

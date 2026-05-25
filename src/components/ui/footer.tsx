@@ -37,7 +37,7 @@ export default function FooterSection({ className }: FooterSectionProps) {
           href: '/register',
         },
         {
-          title: 'Jinsi Mechi Inavyofanya Kazi',
+          title: 'Jinsi PlayMechi Inavyofanya Kazi',
           href: '/how-mechi-works',
         },
         {
@@ -68,7 +68,7 @@ export default function FooterSection({ className }: FooterSectionProps) {
           href: '/register',
         },
         {
-          title: 'How Mechi Works',
+          title: 'How PlayMechi Works',
           href: '/how-mechi-works',
         },
         {
@@ -195,8 +195,8 @@ export default function FooterSection({ className }: FooterSectionProps) {
         </Link>
         <span className="text-muted-foreground block text-center text-sm">
           {isSwahili
-            ? `Hakimiliki ${new Date().getFullYear()} Mechi, haki zote zimehifadhiwa`
-            : `Copyright ${new Date().getFullYear()} Mechi, All rights reserved`}
+            ? `Hakimiliki ${new Date().getFullYear()} PlayMechi, haki zote zimehifadhiwa`
+            : `Copyright ${new Date().getFullYear()} PlayMechi, All rights reserved`}
         </span>
       </div>
     </footer>

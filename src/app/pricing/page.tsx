@@ -260,8 +260,8 @@ function PricingPageContent() {
               <div>
                 <h1 className="max-w-3xl text-[2rem] font-black leading-[1.05] tracking-normal text-[var(--text-primary)] sm:text-[3.3rem] sm:leading-[1]">
                   {isSwahili
-                    ? 'Anza bure. Panda plan pale tu safari yako ya Mechi inapohitaji zaidi.'
-                    : 'Start free. Upgrade only when your Mechi climb needs more.'}
+                    ? 'Anza bure. Panda plan pale tu safari yako ya PlayMechi inapohitaji zaidi.'
+                    : 'Start free. Upgrade only when your PlayMechi climb needs more.'}
                 </h1>
                 <p className="mt-4 max-w-2xl text-sm leading-7 text-[var(--text-secondary)] sm:text-base">
                   {isSwahili
@@ -400,7 +400,7 @@ function PricingPageContent() {
             {[
               {
                 q: 'How does payment work?',
-                a: 'Mechi starts checkout with Paystack, then activates your plan right after payment is verified.',
+                a: 'PlayMechi starts checkout with Paystack, then activates your plan right after payment is verified.',
               },
               {
                 q: 'Can I cancel any time?',
@@ -424,7 +424,7 @@ function PricingPageContent() {
                 <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">
                   {isSwahili
                     ? item.q === 'How does payment work?'
-                      ? 'Mechi huanza checkout kupitia Paystack, kisha huwasha plan yako mara tu malipo yanapothibitishwa.'
+                      ? 'PlayMechi huanza checkout kupitia Paystack, kisha huwasha plan yako mara tu malipo yanapothibitishwa.'
                       : item.q === 'Can I cancel any time?'
                         ? 'Ndiyo. Ukisitisha, renewal inasimama lakini plan yako inaendelea hadi billing period ya sasa iishe.'
                         : 'Elite inabeba kila kitu kilicho ndani ya Pro, kisha inaongeza hosting ya tournament yenye auto au specified prize pools, tournaments tatu za bure kila mwezi, early access, gold badge, na streaming-feature access.'

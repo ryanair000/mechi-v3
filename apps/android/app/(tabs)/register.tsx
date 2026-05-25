@@ -13,18 +13,18 @@ export default function RegisterRedirectTab() {
   }
 
   return (
-    <Screen title="Register on the website" subtitle="Tournament slot registration now happens on mechi.club only.">
+    <Screen title="Register on web" subtitle="Event entry and payments are verified on mechi.club.">
       <Card>
-        <SectionTitle title="Website-only registration" />
+        <SectionTitle title="Lock your slot" />
         <Text style={textStyles.muted}>
-          Use the website to pick your game, lock your slot, and submit your exact in-game details.
-          Once your registration is saved, come back to the app for community chat, check-in,
-          rooms, fixtures, uploads, and prize status.
+          Pick your game, submit the exact in-game details, and complete payment on the website.
+          After that, return here for check-in, room codes, brackets, proof uploads, and prize
+          status.
         </Text>
         <View style={styles.buttonStack}>
-          <Button label="Register for Weekend Cup" icon="globe-outline" onPress={() => void openRegisterPage()} />
+          <Button label="Register now" icon="globe-outline" onPress={() => void openRegisterPage()} />
           <Button
-            label="Open tournament website"
+            label="Tournament info"
             icon="open-outline"
             variant="secondary"
             onPress={() => void openTournamentHome()}

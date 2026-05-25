@@ -22,14 +22,14 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
   if (!inviter) {
     return {
-      title: 'Invite Not Found | Mechi',
-      description: 'This invite link is not active anymore. Join Mechi and start fresh.',
+      title: 'Invite Not Found | PlayMechi',
+      description: 'This invite link is not active anymore. Join PlayMechi and start fresh.',
     };
   }
 
   return {
-    title: `${inviter.username} invited you to Mechi`,
-    description: `Join Mechi through ${inviter.username}'s invite link and start your climb.`,
+    title: `${inviter.username} invited you to PlayMechi`,
+    description: `Join PlayMechi through ${inviter.username}'s invite link and start your climb.`,
   };
 }
 
@@ -60,13 +60,13 @@ export default async function JoinInvitePage({ params }: Props) {
               This invite is not active
             </h1>
             <p className="mx-auto mt-4 max-w-md text-sm leading-6 text-[var(--text-secondary)]">
-              The link may be old, mistyped, or no longer available. You can still join Mechi and
+              The link may be old, mistyped, or no longer available. You can still join PlayMechi and
               start your own climb right away.
             </p>
 
             <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
               <Link href={getRegisterPath()} className="btn-primary">
-                Join Mechi Free
+                Join PlayMechi Free
               </Link>
               <Link href="/" className="btn-ghost">
                 Back Home
@@ -99,7 +99,7 @@ export default async function JoinInvitePage({ params }: Props) {
               <PageBreadcrumbs className="mb-6" />
               <p className="brand-kicker">Invite Link</p>
               <h1 className="mt-5 text-4xl font-black tracking-normal text-[var(--text-primary)]">
-                {inviter.username} wants you on Mechi
+                {inviter.username} wants you on PlayMechi
               </h1>
               <p className="mt-4 text-sm leading-6 text-[var(--text-secondary)]">
                 Join free, set your game, and start climbing through clean matches, shareable wins,

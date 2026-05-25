@@ -31,7 +31,7 @@ export default function LoginPage({ searchParams }: { searchParams: LoginSearchP
       nextPath={nextPath}
       footerHref={registerHref}
       footerLinkLabel={isSwahili ? 'Tengeneza akaunti yako' : 'Create your account'}
-      footerPrompt={isSwahili ? 'Mgeni Mechi?' : 'New to Mechi?'}
+      footerPrompt={isSwahili ? 'Mgeni PlayMechi?' : 'New to PlayMechi?'}
       sideTitle={isSwahili ? 'Ingia tena.' : 'Sign back in.'}
       sideDescription={
         isSwahili

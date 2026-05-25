@@ -5,23 +5,23 @@ import { APP_URL } from '@/lib/urls';
 const EFFECTIVE_DATE = 'April 19, 2026';
 
 export const metadata: Metadata = {
-  title: 'Privacy Policy | Mechi',
+  title: 'Privacy Policy | PlayMechi',
   description:
-    'Learn how Mechi collects, uses, stores, and shares information when you use our matchmaking, tournament, and subscription features.',
+    'Learn how PlayMechi collects, uses, stores, and shares information when you use our matchmaking, tournament, and subscription features.',
   alternates: {
     canonical: `${APP_URL}/privacy-policy`,
   },
   openGraph: {
-    title: 'Privacy Policy | Mechi',
+    title: 'Privacy Policy | PlayMechi',
     description:
-      'Learn how Mechi collects, uses, stores, and shares information when you use our services.',
+      'Learn how PlayMechi collects, uses, stores, and shares information when you use our services.',
     url: `${APP_URL}/privacy-policy`,
     type: 'article',
   },
   twitter: {
-    title: 'Privacy Policy | Mechi',
+    title: 'Privacy Policy | PlayMechi',
     description:
-      'Learn how Mechi collects, uses, stores, and shares information when you use our services.',
+      'Learn how PlayMechi collects, uses, stores, and shares information when you use our services.',
   },
 };
 
@@ -29,7 +29,7 @@ const sections = [
   {
     title: '1. Information we collect',
     paragraphs: [
-      'We collect information you give us directly when you create an account, set up your player profile, contact support, join paid plans, or participate in matches, lobbies, and tournaments on Mechi.',
+      'We collect information you give us directly when you create an account, set up your player profile, contact support, join paid plans, or participate in matches, lobbies, and tournaments on PlayMechi.',
     ],
     bullets: [
       'Account details such as your name, username, email address, password credentials, and profile settings.',
@@ -41,7 +41,7 @@ const sections = [
   {
     title: '2. How we use information',
     paragraphs: [
-      'We use personal information to operate Mechi, improve the player experience, and protect the community from fraud, abuse, and match integrity issues.',
+      'We use personal information to operate PlayMechi, improve the player experience, and protect the community from fraud, abuse, and match integrity issues.',
     ],
     bullets: [
       'To create and maintain your account, authenticate sessions, and personalize your profile and dashboard.',
@@ -54,7 +54,7 @@ const sections = [
   {
     title: '3. When we share information',
     paragraphs: [
-      'We do not sell your personal information. We share information only when it is necessary to provide the service, comply with the law, or protect Mechi, our users, and the integrity of competition on the platform.',
+      'We do not sell your personal information. We share information only when it is necessary to provide the service, comply with the law, or protect PlayMechi, our users, and the integrity of competition on the platform.',
     ],
     bullets: [
       'With service providers that help us host the app, send emails, analyze usage, store files, or support customer operations.',
@@ -67,7 +67,7 @@ const sections = [
   {
     title: '4. Data retention',
     paragraphs: [
-      'We keep information for as long as we reasonably need it to operate Mechi, maintain competition records, resolve disputes, meet legal or accounting requirements, and protect against fraud or abuse.',
+      'We keep information for as long as we reasonably need it to operate PlayMechi, maintain competition records, resolve disputes, meet legal or accounting requirements, and protect against fraud or abuse.',
       'Retention periods can vary depending on the kind of data involved. For example, account records, payment records, moderation logs, and tournament outcomes may be kept longer than routine analytics data.',
     ],
   },
@@ -82,13 +82,13 @@ const sections = [
     title: '6. Security and international processing',
     paragraphs: [
       'We use reasonable administrative, technical, and organizational safeguards to protect personal information. No method of storage or transmission is completely secure, so we cannot guarantee absolute security.',
-      'Mechi may use providers in more than one country to host infrastructure, process payments, or deliver support tools. By using the service, you understand that information may be processed outside your home country where different data protection rules may apply.',
+      'PlayMechi may use providers in more than one country to host infrastructure, process payments, or deliver support tools. By using the service, you understand that information may be processed outside your home country where different data protection rules may apply.',
     ],
   },
   {
     title: '7. Children and policy updates',
     paragraphs: [
-      'Mechi is not intended for children under 13, and we do not knowingly collect personal information from children under 13. If you believe a child has provided personal information to us, please contact us so we can investigate and take appropriate action.',
+      'PlayMechi is not intended for children under 13, and we do not knowingly collect personal information from children under 13. If you believe a child has provided personal information to us, please contact us so we can investigate and take appropriate action.',
       'We may update this Privacy Policy from time to time. When we make material changes, we may revise the date above and provide additional notice inside the product or through other reasonable channels.',
     ],
   },
@@ -104,7 +104,7 @@ export default function PrivacyPolicyPage() {
   return (
     <LegalPage
       title="Privacy Policy"
-      description="This Privacy Policy explains how Mechi collects, uses, stores, and shares information when you use our website, apps, tournaments, subscriptions, and related services."
+      description="This Privacy Policy explains how PlayMechi collects, uses, stores, and shares information when you use our website, apps, tournaments, subscriptions, and related services."
       effectiveDate={EFFECTIVE_DATE}
       contactEmail="support@mechi.club"
       sections={sections}

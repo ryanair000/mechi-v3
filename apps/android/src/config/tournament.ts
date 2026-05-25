@@ -38,7 +38,7 @@ export const TOURNAMENT_DATES = '29-31 May 2026';
 export const TOURNAMENT_TIME = '8:00 PM EAT';
 export const TOURNAMENT_TOTAL_SLOTS = 256;
 export const TOURNAMENT_TOTAL_CHECK_IN_CAP = 256;
-export const TOURNAMENT_PRIZE_POOL = 'Prize Pool Upto Ksh.7500';
+export const TOURNAMENT_PRIZE_POOL = 'Prize pool up to KSh 7,500';
 export const PLAYMECHI_INSTAGRAM_URL = 'https://www.instagram.com/playmechi/';
 export const PLAYMECHI_YOUTUBE_URL = 'https://www.youtube.com/@playmechi';
 export const PLAYMECHI_SUPPORT_LABEL = '+254 733 638 841';
@@ -58,7 +58,7 @@ export const TOURNAMENT_GAMES: TournamentGameConfig[] = [
     checkInCap: 80,
     format: 'Solo battle royale room',
     matchCount: '3 matches',
-    scoring: '1 kill = 1 point. Top fraggers run it up.',
+    scoring: '1 kill = 1 point. Frag smart, stay alive.',
     firstPrize: 'KSh 1,500',
     secondPrize: 'KSh 1,000',
     thirdPrize: 'KSh 500',
@@ -82,10 +82,10 @@ export const TOURNAMENT_GAMES: TournamentGameConfig[] = [
     thirdPrize: 'KSh 500',
     whatsappGroupUrl: 'https://chat.whatsapp.com/JmizQcphVYR2LiRYcrHEaC',
     deskRules: {
-      heading: 'CODM Battle Royale rules',
+      heading: 'CODM rules',
       sections: [
         {
-          title: 'Restricted loadout',
+          title: 'Loadout limits',
           items: [
             'Banned guns: none.',
             'Banned attachments: all thermite and concussion mags.',
@@ -95,7 +95,7 @@ export const TOURNAMENT_GAMES: TournamentGameConfig[] = [
           ],
         },
         {
-          title: 'Placement and points',
+          title: 'Placement points',
           items: [
             '#1 = 20 points',
             '#2 = 15 points',
@@ -108,8 +108,8 @@ export const TOURNAMENT_GAMES: TournamentGameConfig[] = [
         {
           title: 'Penalties',
           items: [
-            'Rule break: no kill points, regardless of placement or kills scored.',
-            'Repeated rule break: 1 season ban (4 weeks).',
+            'Rule break: kill points are removed, even if placement is valid.',
+            'Repeated rule break: 4-week season ban.',
           ],
         },
       ],
@@ -127,7 +127,7 @@ export const TOURNAMENT_GAMES: TournamentGameConfig[] = [
     checkInCap: 16,
     format: '1v1 knockout bracket',
     matchCount: 'Round of 16 to final',
-    scoring: 'Single-leg bracket. If it is level, settle it clean in extra time or pens.',
+    scoring: 'Single-leg bracket. If level, settle it in extra time or penalties.',
     firstPrize: 'KSh 1,000',
     secondPrize: 'KSh 500',
     thirdPrize: '',
@@ -145,7 +145,7 @@ export const TOURNAMENT_GAMES: TournamentGameConfig[] = [
     checkInCap: 80,
     format: 'Solo battle royale room',
     matchCount: '3 matches',
-    scoring: '1 kill = 1 point. Top fraggers run it up.',
+    scoring: '1 kill = 1 point. Frag smart, stay alive.',
     firstPrize: 'KSh 1,500',
     secondPrize: 'KSh 1,000',
     thirdPrize: 'KSh 500',
@@ -162,13 +162,13 @@ export const TOURNAMENT_GAME_BY_KEY = TOURNAMENT_GAMES.reduce(
 );
 
 export const TOURNAMENT_RULES = [
-  'Registration and payment confirmation happen on mechi.club.',
-  'Use the exact in-game username you register with.',
-  'Join on time. Late players may be disqualified.',
-  'Cheating, teaming, scripts, emulator abuse, and unfair tools are banned.',
-  'Submit screenshots/results immediately after matches.',
-  'Follow PlayMechi on Instagram and subscribe on YouTube to qualify for rewards.',
-  'Admin decisions are final after review and dispute handling.',
+  'Register and confirm payment on mechi.club.',
+  'Use the exact in-game name you registered with.',
+  'Join on time. Late entry can be disqualified.',
+  'No cheating, teaming, scripts, emulator abuse, or unfair tools.',
+  'Submit clear proof right after each match.',
+  'Follow Instagram and subscribe on YouTube to stay reward-eligible.',
+  'Admin decisions are final after review and dispute checks.',
 ];
 
 export function isTournamentGame(value: unknown): value is OnlineTournamentGameKey {

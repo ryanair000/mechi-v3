@@ -56,7 +56,7 @@ const PLAYMECHI_FEED_POSTS: FeedPostProps[] = [
     publishedAt: 'Tonight at 8PM EAT',
     title: 'Stream drops should be one tap away.',
     body:
-      `Instagram, TikTok, and YouTube carry the show. Mechi keeps the bracket, lobby flow, and match desk clear so the stream never outruns the actual tournament state.\n\nOn Android, that means fewer taps before a player finds the right stream or the right desk.`,
+      `Instagram, TikTok, and YouTube carry the show. PlayMechi keeps the bracket, lobby flow, and match desk clear so the stream never outruns the actual tournament state.\n\nOn Android, that means fewer taps before a player finds the right stream or the right desk.`,
     imageSrc: '/dashboard-promos/playmechi-upcoming-stream.jpg',
     imageAlt: 'PlayMechi stream promo artwork',
     primaryAction: {

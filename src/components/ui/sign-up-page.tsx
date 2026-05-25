@@ -36,8 +36,8 @@ export function SignupPage({
   sideDescription,
   sidePoints = [],
   backHref = '/',
-  imageSrc = '/mechi-whatsapp-profile.jpg',
-  imageAlt = 'Mechi community profile art',
+  imageSrc = '/playmechi-whatsapp-profile.jpg',
+  imageAlt = 'PlayMechi community profile art',
   variant = 'default',
   hideMainHeader = false,
   hideSideEyebrow = false,
@@ -126,7 +126,7 @@ export function SignupPage({
                       </>
                     ) : (
                       <p className="mt-4 max-w-xl text-sm leading-7 text-[var(--text-secondary)] sm:text-base">
-                        Clean sign-in and account setup for players moving through Mechi.
+                        Clean sign-in and account setup for players moving through PlayMechi.
                       </p>
                     )}
                   </div>
@@ -139,7 +139,7 @@ export function SignupPage({
                           className="rounded-[var(--radius-card)] border border-[var(--border-color)] bg-[rgba(17,27,46,0.78)] px-4 py-4"
                         >
                           <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--accent-secondary-text)]">
-                            Mechi flow
+                            PlayMechi flow
                           </p>
                           <p className="mt-2 text-sm leading-6 text-[var(--text-primary)]">{point}</p>
                         </div>
@@ -234,7 +234,7 @@ export function SignupPage({
                   </>
                 ) : (
                   <p className="mt-3 max-w-md text-sm leading-6 text-white/85">
-                    Clean sign-in and account setup for players moving through Mechi.
+                    Clean sign-in and account setup for players moving through PlayMechi.
                   </p>
                 )}
               </div>

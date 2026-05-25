@@ -345,7 +345,7 @@ export default function ReportIssueClient() {
               <div className="mt-4 space-y-3 text-sm leading-6 text-[var(--text-secondary)]">
                 <p>The issue text, affected page, screenshot URL, and lightweight metadata such as host, referrer, and browser user agent.</p>
                 <p>Status starts as <span className="font-semibold text-[var(--text-primary)]">new</span> so the review team can triage it later.</p>
-                <p>If you are logged in, the report is linked to your Mechi account automatically. If not, the submission still lands in the review queue.</p>
+                <p>If you are logged in, the report is linked to your PlayMechi account automatically. If not, the submission still lands in the review queue.</p>
               </div>
             </div>
           </div>

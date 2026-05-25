@@ -58,8 +58,8 @@ const STATUS_LABELS: Record<ReportStatus, string> = {
 };
 
 export const metadata: Metadata = {
-  title: 'Test Issue Results | Mechi',
-  description: 'Review submitted Mechi tester issue reports and screenshots.',
+  title: 'Test Issue Results | PlayMechi',
+  description: 'Review submitted PlayMechi tester issue reports and screenshots.',
   alternates: {
     canonical: `${TESTS_URL}/results`,
   },
@@ -203,7 +203,7 @@ async function markReportFixed(formData: FormData) {
   }
 
   const reporterUsername = getMetadataText(report.metadata, 'reporter_username');
-  const resolvedBy = access.profile.username ? `@${access.profile.username}` : 'Mechi admin';
+  const resolvedBy = access.profile.username ? `@${access.profile.username}` : 'PlayMechi admin';
 
   after(async () => {
     try {
@@ -244,7 +244,7 @@ function RestrictedResults() {
                 </h1>
                 <p className="mt-4 max-w-2xl text-sm leading-7 text-[var(--text-secondary)] sm:text-base">
                   Submitted reports can include screenshots and tester context, so this page only opens
-                  for Mechi admin accounts.
+                  for PlayMechi admin accounts.
                 </p>
               </div>
               <a href="/manual-tests" className="btn-ghost w-fit">

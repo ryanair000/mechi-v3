@@ -52,7 +52,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const data = await getMatchData(id);
 
   if (!data) {
-    return { title: 'Match Not Found | Mechi' };
+    return { title: 'Match Not Found | PlayMechi' };
   }
 
   const { match, player1, player2 } = data;
@@ -75,11 +75,11 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const game = GAME_LABELS[match.game] ?? match.game;
 
   const title = isDraw
-    ? `${player1?.username ?? 'Player'} drew ${player2?.username ?? 'Player'} on ${game} | Mechi`
-    : `${winner?.username ?? 'Player'} beat ${loser?.username ?? 'Player'} on ${game} | Mechi`;
+    ? `${player1?.username ?? 'Player'} drew ${player2?.username ?? 'Player'} on ${game} | PlayMechi`
+    : `${winner?.username ?? 'Player'} beat ${loser?.username ?? 'Player'} on ${game} | PlayMechi`;
   const description = isDraw
-    ? `${player1?.username} and ${player2?.username} drew${scoreline ? ` ${scoreline}` : ''} in ${game} on Mechi. Result confirmed.`
-    : `${winner?.username} beat ${loser?.username} in ${game} on Mechi. Result confirmed. Climb continues.`;
+    ? `${player1?.username} and ${player2?.username} drew${scoreline ? ` ${scoreline}` : ''} in ${game} on PlayMechi. Result confirmed.`
+    : `${winner?.username} beat ${loser?.username} in ${game} on PlayMechi. Result confirmed. Climb continues.`;
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://mechi.club';
 
   return {
@@ -90,7 +90,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       description,
       type: 'website',
       url: `${baseUrl}/s/match/${id}`,
-      siteName: 'Mechi',
+      siteName: 'PlayMechi',
       images: [
         {
           url: `${baseUrl}/api/og/match?id=${id}`,
@@ -200,7 +200,7 @@ export default async function ShareMatchPage({ params }: Props) {
 
           <div className="flex flex-col justify-center gap-3 sm:flex-row">
             <Link href="/register" className="btn-primary">
-              Join Mechi Free
+              Join PlayMechi Free
             </Link>
             <Link href="/login" className="btn-ghost">
               Sign In

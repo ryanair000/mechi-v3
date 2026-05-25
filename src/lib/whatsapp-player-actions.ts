@@ -312,7 +312,7 @@ function formatDateTime(value: string | null | undefined) {
 
 function formatHelpMessage() {
   return [
-    'Mechi is live here too.',
+    'PlayMechi is live here too.',
     '',
     'Try any of these:',
     '• dashboard',
@@ -328,7 +328,7 @@ function formatHelpMessage() {
 
 function requireLinkedAccountMessage() {
   return [
-    'I need this WhatsApp number linked to a Mechi account before I can run player actions for you.',
+    'I need this WhatsApp number linked to a PlayMechi account before I can run player actions for you.',
     '',
     `Log in on ${APP_URL}, make sure this number is on your profile, then text me again.`,
   ].join('\n');
@@ -379,7 +379,7 @@ function formatWeekendCupAvailabilityMessage() {
     '',
     `Please try again here: ${APP_URL}${WEEKEND_CUP_REGISTRATION_PATH}`,
     '',
-    "If Paystack still fails, stay here. I've reported the issue to the Mechi team and we'll reply in this chat.",
+    "If Paystack still fails, stay here. I've reported the issue to the PlayMechi team and we'll reply in this chat.",
   ].join('\n');
 }
 
@@ -392,14 +392,14 @@ function formatWeekendCupStatusMessage(
       '',
       `Register here: ${APP_URL}${WEEKEND_CUP_REGISTRATION_PATH}`,
       '',
-      'Use the same WhatsApp number on your Mechi profile so I can confirm it here next time.',
+      'Use the same WhatsApp number on your PlayMechi profile so I can confirm it here next time.',
     ].join('\n');
   }
 
   if (result.status === 'error') {
     return [
       "I couldn't confirm your registration from here right now.",
-      "I've reported it to the Mechi team. Please wait here while we check and reply in this chat.",
+      "I've reported it to the PlayMechi team. Please wait here while we check and reply in this chat.",
     ].join('\n');
   }
 

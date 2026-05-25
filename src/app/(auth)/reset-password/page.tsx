@@ -34,7 +34,7 @@ export default async function ResetPasswordPage({
       subtitle=""
       sideEyebrow="mechi.club"
       sideTitle="Reset your password."
-      sideDescription="Confirm your Mechi username plus email or phone, set a fresh password, and jump back in."
+      sideDescription="Confirm your PlayMechi username plus email or phone, set a fresh password, and jump back in."
       sidePoints={[
         'Username plus email or phone',
         'Inline reset step',

@@ -53,7 +53,7 @@ function getFallbackTitle(pathname: string) {
   const segment = pathname.split('/').filter(Boolean).at(-1);
 
   if (!segment) {
-    return { eyebrow: 'App', title: 'Mechi' };
+    return { eyebrow: 'App', title: 'PlayMechi' };
   }
 
   return {

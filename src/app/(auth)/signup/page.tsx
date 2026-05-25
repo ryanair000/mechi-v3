@@ -37,7 +37,7 @@ export default function SignupPage({ searchParams }: { searchParams: SignupSearc
     setSubmitting(true);
     setFeedback({
       tone: 'loading',
-      title: 'Creating your Mechi account...',
+      title: 'Creating your PlayMechi account...',
       detail: 'Saving the essentials and starting your Pro trial now.',
     });
 
@@ -62,10 +62,10 @@ export default function SignupPage({ searchParams }: { searchParams: SignupSearc
       login(data.token, data.user);
       setFeedback({
         tone: 'success',
-        title: `Welcome to Mechi, ${data.user.username}.`,
-        detail: 'Your account is live. Taking you into Mechi now.',
+        title: `Welcome to PlayMechi, ${data.user.username}.`,
+        detail: 'Your account is live. Taking you into PlayMechi now.',
       });
-      toast.success(`Welcome to Mechi, ${data.user.username}!`);
+      toast.success(`Welcome to PlayMechi, ${data.user.username}!`);
       window.location.assign(nextPath);
     } catch {
       setFeedback({

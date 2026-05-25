@@ -14,9 +14,9 @@ import { colors, spacing } from '../src/theme';
 const deletionMailto = buildSupportMailto(
   'User Data Deletion Request',
   [
-    'Hello PlayMechi team,',
+    'Hi PlayMechi team,',
     '',
-    'I want to request deletion of my PlayMechi/Mechi account and associated personal data.',
+    'Please delete my PlayMechi account and related personal data.',
     '',
     'Account username:',
     'Phone or email on the account:',
@@ -34,21 +34,21 @@ export default function LegalScreen() {
     try {
       await Linking.openURL(url);
     } catch {
-      setError('Could not open that link right now. Please try again in a moment.');
+      setError('That link did not open. Try again in a moment.');
     }
   }
 
   return (
     <Screen
-      title="Account & policy"
-      subtitle="Review account policy links, contact support, or start an account deletion request."
+      title="Account and policy"
+      subtitle="Privacy, terms, support, and account deletion in one place."
     >
       <ErrorBanner message={error} />
 
       <Card>
         <SectionTitle title="Delete account" />
         <Text style={textStyles.body}>
-          Start your deletion request from here, then follow the instructions on the account deletion page.
+          Want out? Start here and follow the deletion instructions on the official page.
         </Text>
         <View style={styles.metaGroup}>
           <Text style={styles.metaLabel}>Deletion page</Text>
@@ -70,7 +70,7 @@ export default function LegalScreen() {
       <Card>
         <SectionTitle title="Privacy & terms" />
         <Text style={textStyles.muted}>
-          These links match the public pages used for the Google Play listing and review process.
+          These are the official PlayMechi policy pages used for the app listing and player support.
         </Text>
         <Button
           label="Privacy policy"
@@ -89,7 +89,7 @@ export default function LegalScreen() {
       <Card>
         <SectionTitle title="Support" />
         <Text style={textStyles.body}>
-          Reach the PlayMechi team if you need help with sign-in, account access, tournaments, or data requests.
+          Need help with login, entries, rooms, prizes, or data requests? Contact the PlayMechi team.
         </Text>
         <View style={styles.metaGroup}>
           <Text style={styles.metaLabel}>Support email</Text>

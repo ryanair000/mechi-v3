@@ -387,7 +387,7 @@ export function buildMatchFoundMessage(params: {
   const matchUrl = `${params.appUrl ?? APP_URL}/match/${params.matchId}`;
 
   return (
-    `Yo ${params.username}, your Mechi match is ready.\n` +
+    `Yo ${params.username}, your PlayMechi match is ready.\n` +
     `Game: ${params.game}\n` +
     `Opponent: ${params.opponentUsername}\n` +
     `Open match: ${matchUrl}`
@@ -426,7 +426,7 @@ export function buildMatchDisputeMessage(params: {
   const matchUrl = `${params.appUrl ?? APP_URL}/match/${params.matchId}`;
 
   return (
-    `${params.username}, your Mechi match has been disputed.\n` +
+    `${params.username}, your PlayMechi match has been disputed.\n` +
     `Game: ${params.game}\n` +
     `Opponent: ${params.opponentUsername}\n` +
     `Upload a screenshot here: ${matchUrl}`
@@ -446,7 +446,7 @@ export function buildChallengeReceivedMessage(params: {
   const challengeNote = params.message ? `Message: ${params.message}\n` : '';
 
   return (
-    `${params.username}, ${params.challengerUsername} challenged you on Mechi.\n` +
+    `${params.username}, ${params.challengerUsername} challenged you on PlayMechi.\n` +
     `Game: ${params.game}\n` +
     `Platform: ${params.platform}\n` +
     challengeNote +

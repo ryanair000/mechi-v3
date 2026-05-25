@@ -364,7 +364,7 @@ export default function ArenaTab() {
       }),
     onSuccess: async (nextState) => {
       setError(null);
-      setNotice(nextState.warning ?? 'Check-in saved and your tournament details are updated.');
+      setNotice(nextState.warning ?? 'Check-in saved. You are on the match desk.');
       queryClient.setQueryData(['tournament-state'], nextState);
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['tournament-registration'] }),
@@ -372,7 +372,7 @@ export default function ArenaTab() {
       ]);
     },
     onError: (err) => {
-      setError(err instanceof ApiError ? err.message : 'Could not check you in.');
+      setError(err instanceof ApiError ? err.message : 'Check-in failed. Confirm your details and try again.');
     },
   });
 
@@ -419,7 +419,7 @@ export default function ArenaTab() {
       setError(
         err instanceof ApiError || err instanceof Error
           ? err.message
-          : 'Could not upload result.'
+          : 'Result upload failed. Try again.'
       );
     },
   });
@@ -469,11 +469,11 @@ export default function ArenaTab() {
 
   return (
     <Screen
-      title="Tournaments"
-      subtitle="Register on the website, then use the app for check-in, rooms, fixtures, uploads, and payout status."
+      title="Arena"
+      subtitle="Match-day desk: check-in, room credentials, fixtures, standings, and result upload."
     >
       <Card>
-        <SectionTitle title="Game desk" />
+        <SectionTitle title="Choose game" />
         <ChipGroup
           options={TOURNAMENT_GAMES.map((game) => ({
             label: game.shortLabel,
@@ -493,19 +493,19 @@ export default function ArenaTab() {
       </Card>
 
       <Card>
-        <SectionTitle title="Website registration" />
+        <SectionTitle title="Register on web" />
         <Text style={textStyles.muted}>
-          Tournament slots are now locked on the website only. Use the website to register, then
-          come back here when you need match-night desk access.
+          Paid slots are verified on mechi.club. Register there first, then return here for match
+          night tools.
         </Text>
         <View style={styles.actionGrid}>
           <Button
-            label="Register for Weekend Cup"
+            label="Register now"
             icon="globe-outline"
             onPress={() => void openTournamentRegistration()}
           />
           <Button
-            label="Open tournament website"
+            label="Tournament info"
             icon="open-outline"
             variant="secondary"
             onPress={() => void openTournamentHome()}
@@ -513,9 +513,9 @@ export default function ArenaTab() {
         </View>
       </Card>
 
-      {stateQuery.isLoading ? <LoadingState label="Loading tournament desk" /> : null}
+      {stateQuery.isLoading ? <LoadingState label="Loading Arena" /> : null}
       {stateQuery.isError ? (
-        <ErrorBanner message="Could not load the tournament desk. This usually means the live tournament storage or API connection needs attention." />
+        <ErrorBanner message="Arena could not load right now. Check your connection and try again." />
       ) : null}
       <ErrorBanner message={error} />
       {notice ? (
@@ -548,11 +548,10 @@ export default function ArenaTab() {
       )}
 
       <Card>
-        <SectionTitle title="Weekend Cup results" />
+        <SectionTitle title="Result proof" />
         <Text style={textStyles.muted}>
-          Weekend Cup screenshots and score checks are handled by the match desk while the new
-          results API is being prepared. Keep your screenshots ready and follow the WhatsApp group
-          or moderator instructions for your game.
+          Keep screenshots clear and ready. Admins verify scores from your uploads, WhatsApp group
+          posts, and moderator instructions for each game.
         </Text>
       </Card>
       <PrizePanel activeGame={activeGame} state={state} />
@@ -596,13 +595,13 @@ function PlayerDeskCard({
   if (!registration) {
     return (
       <Card>
-        <SectionTitle title="No slot yet" />
+        <SectionTitle title="No entry yet" />
         <Text style={textStyles.muted}>
-          Register for {config.label} on the website before room credentials, fixtures, and result
-          uploads unlock here in the app.
+          Register for {config.label} on mechi.club first. Room codes, brackets, and result tools
+          unlock after your entry is found.
         </Text>
         <Button
-          label={`Register for ${config.shortLabel}`}
+          label={`Enter ${config.shortLabel}`}
           icon="globe-outline"
           onPress={onOpenRegistration}
         />
@@ -612,7 +611,7 @@ function PlayerDeskCard({
 
   return (
     <Card>
-      <SectionTitle title={registration.in_game_username || 'Complete your check-in'} />
+      <SectionTitle title={registration.in_game_username || 'Ready up'} />
       <View style={styles.badgeRow}>
         <StatusBadge
           label={formatStatus(registration.check_in_status)}
@@ -628,7 +627,7 @@ function PlayerDeskCard({
       {isDisqualified ? (
         <View style={[styles.noticeBox, styles.noticeDanger]}>
           <Text style={styles.noticeText}>
-            This registration has been disqualified. Tournament access stays locked for this game.
+            This entry is disqualified. Arena access is locked for this game.
           </Text>
         </View>
       ) : null}
@@ -636,8 +635,8 @@ function PlayerDeskCard({
       {needsDetailCompletion ? (
         <View style={[styles.noticeBox, styles.noticeWarn]}>
           <Text style={styles.noticeText}>
-            Check-in already went through, but we still need your{' '}
-            {formatFieldList(missingCheckInFields)} to complete your player details.
+            Check-in is saved. Add your {formatFieldList(missingCheckInFields)} so admins can verify
+            you cleanly.
           </Text>
         </View>
       ) : null}
@@ -645,8 +644,8 @@ function PlayerDeskCard({
       {hasLegacySerialSyncIssue ? (
         <View style={[styles.noticeBox, styles.noticeInfo]}>
           <Text style={styles.noticeText}>
-            Check-in is confirmed and your lobby access is live. Your serial last 6 hit a sync gap,
-            so you do not need to submit again.
+            Check-in is confirmed and your lobby access is live. Serial sync is pending, but you do
+            not need to submit again.
           </Text>
         </View>
       ) : null}
@@ -657,7 +656,7 @@ function PlayerDeskCard({
             label="IGN"
             value={checkInDetails.ign}
             onChangeText={(value) => onCheckInDetailsChange({ ...checkInDetails, ign: value })}
-            placeholder="Exact match-night name"
+            placeholder="Exact in-game name"
           />
           <Field
             label="UID"
@@ -685,7 +684,7 @@ function PlayerDeskCard({
           {requiresDeviceSerial ? (
             <>
               <Field
-                label="Serial number last 6 characters"
+                label="Serial last 6"
                 value={checkInDetails.deviceSerialLast6}
                 onChangeText={(value) =>
                   onCheckInDetailsChange({
@@ -699,14 +698,14 @@ function PlayerDeskCard({
               />
               <View style={[styles.noticeBox, styles.noticeInfo]}>
                 <Text style={styles.noticeText}>
-                  CODM players: open your profile for IGN and UID, then use Settings {'>'} About
-                  phone to copy the last 6 characters of your serial number.
+                  CODM check: use your exact IGN and UID. For serial last 6, open Settings {'>'} About
+                  phone and copy the final 6 characters.
                 </Text>
               </View>
             </>
           ) : null}
           <Button
-            label={isCheckedIn ? 'Save details' : 'Check in'}
+            label={isCheckedIn ? 'Save details' : 'Check in now'}
             icon="checkmark-circle"
             loading={checkingIn}
             disabled={!canSubmitCheckIn}
@@ -730,7 +729,7 @@ function PlayerDeskCard({
               label="Serial last 6"
               value={
                 hasLegacySerialSyncIssue
-                  ? 'Sync pending'
+                  ? 'Syncing'
                   : registration.device_serial_last6 ?? 'Not provided'
               }
             />
@@ -744,7 +743,7 @@ function PlayerDeskCard({
             value={
               registration.checked_in_at
                 ? formatEatDateTime(registration.checked_in_at)
-                : 'Not recorded'
+                : 'Waiting'
             }
           />
           {registration.admin_note ? (
@@ -755,7 +754,7 @@ function PlayerDeskCard({
 
       <View style={styles.actionGrid}>
         <Button
-          label={`Join ${config.shortLabel} WhatsApp group`}
+          label={`Join ${config.shortLabel} group`}
           icon="logo-whatsapp"
           variant="secondary"
           onPress={onOpenGroup}
@@ -799,7 +798,7 @@ function BattleRoyaleRooms({ rooms }: { rooms: OnlineTournamentRoom[] }) {
 
   return (
     <Card>
-      <SectionTitle title="Rooms" />
+      <SectionTitle title="Room codes" />
       <View style={styles.roomGrid}>
         {MATCH_NUMBERS.map((matchNumber) => {
           const room = roomByMatch.get(Number(matchNumber));
@@ -827,7 +826,7 @@ function BattleRoyaleRooms({ rooms }: { rooms: OnlineTournamentRoom[] }) {
               />
               <InfoRow
                 label="Starts"
-                value={room?.starts_at ? formatEatDateTime(room.starts_at) : 'Start time follows match desk.'}
+                value={room?.starts_at ? formatEatDateTime(room.starts_at) : 'Watch admin updates.'}
               />
               {room?.instructions ? <Text style={textStyles.muted}>{room.instructions}</Text> : null}
             </View>
@@ -841,7 +840,7 @@ function BattleRoyaleRooms({ rooms }: { rooms: OnlineTournamentRoom[] }) {
 function BattleRoyaleStandings({ standings }: { standings: OnlineTournamentStanding[] }) {
   return (
     <Card>
-      <SectionTitle title="Verified standings" />
+      <SectionTitle title="Live standings" />
       {standings.length ? (
         <View style={styles.list}>
           {standings.slice(0, 12).map((standing) => (
@@ -858,7 +857,7 @@ function BattleRoyaleStandings({ standings }: { standings: OnlineTournamentStand
           ))}
         </View>
       ) : (
-        <Text style={textStyles.muted}>Standings appear after admins verify result screenshots.</Text>
+        <Text style={textStyles.muted}>Standings update after admins verify result proof.</Text>
       )}
     </Card>
   );
@@ -913,7 +912,7 @@ function EfootballFixtures({
           })}
         </View>
       ) : (
-        <Text style={textStyles.muted}>Bracket seeding will appear here once admins publish fixtures.</Text>
+        <Text style={textStyles.muted}>Fixtures appear here once admins publish the bracket.</Text>
       )}
     </Card>
   );
@@ -981,10 +980,10 @@ function ResultUploadCard({
 }) {
   return (
     <Card>
-      <SectionTitle title="Upload result" />
+      <SectionTitle title="Upload proof" />
       {!registration ? (
         <Text style={textStyles.muted}>
-          Register on the website before uploading screenshots for this game.
+          Register on mechi.club before uploading proof for this game.
         </Text>
       ) : activeGame === 'efootball' ? (
         <>
@@ -1047,12 +1046,12 @@ function ResultUploadCard({
         onPress={onPickScreenshot}
       >
         <Text style={styles.uploadTitle}>
-          {screenshot ? screenshot.fileName ?? 'Screenshot selected' : 'Choose screenshot'}
+          {screenshot ? screenshot.fileName ?? 'Proof selected' : 'Choose proof screenshot'}
         </Text>
-        <Text style={styles.uploadMeta}>PNG, JPG, or WEBP under 10MB</Text>
+        <Text style={styles.uploadMeta}>PNG, JPG, or WEBP under 10MB. Keep scores visible.</Text>
       </Pressable>
       <Button
-        label="Submit for admin review"
+        label="Send for review"
         icon="cloud-upload"
         loading={uploading}
         disabled={!canUpload}
@@ -1065,7 +1064,7 @@ function ResultUploadCard({
 function MySubmissions({ submissions }: { submissions: OnlineTournamentResultSubmission[] }) {
   return (
     <Card>
-      <SectionTitle title="My submissions" />
+      <SectionTitle title="My proof" />
       {submissions.length ? (
         <View style={styles.list}>
           {submissions.slice(0, 6).map((submission) => (
@@ -1084,7 +1083,7 @@ function MySubmissions({ submissions }: { submissions: OnlineTournamentResultSub
           ))}
         </View>
       ) : (
-        <Text style={textStyles.muted}>No uploaded screenshots yet.</Text>
+        <Text style={textStyles.muted}>No proof uploaded yet.</Text>
       )}
     </Card>
   );
@@ -1102,7 +1101,7 @@ function PrizePanel({
 
   return (
     <Card>
-      <SectionTitle title="Prize desk" />
+      <SectionTitle title="Prize status" />
       <View style={styles.list}>
         {prizes.map((prize, index) => {
           const payout = payouts.find((item) => item.placement === index + 1);

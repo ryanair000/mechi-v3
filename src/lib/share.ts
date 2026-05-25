@@ -117,17 +117,17 @@ export function matchResultShareText(
   const climbLine =
     rankLabel && level
       ? `${winner} is now ${rankLabel} / Lv. ${level}`
-      : `${winner} moved up the Mechi climb`;
+      : `${winner} moved up the PlayMechi climb`;
 
-  return `${winner} beat ${loser} on ${game} on Mechi. ${climbLine}. Compete. Connect. Rise.`;
+  return `${winner} beat ${loser} on ${game} on PlayMechi. ${climbLine}. Compete. Connect. Rise.`;
 }
 
 export function profileShareText(username: string, rankLabel: string, level: number) {
-  return `${username} is climbing as ${rankLabel} / Lv. ${level} on Mechi. Think you can beat them?`;
+  return `${username} is climbing as ${rankLabel} / Lv. ${level} on PlayMechi. Think you can beat them?`;
 }
 
 export function inviteShareText(username: string) {
-  return `${username} invited you to Mechi. Join free, compete fairly, and rise through the ladder.`;
+  return `${username} invited you to PlayMechi. Join free, compete fairly, and rise through the ladder.`;
 }
 
 export function tournamentShareText(
@@ -145,7 +145,7 @@ export function tournamentShareText(
       : entryFee > 0
         ? 'Prize pool builds as paid slots lock in.'
         : 'No cash prize.';
-  return `${title} is live on Mechi. ${game}. ${price}. ${prizeCopy} ${slotCopy}. Pull up and prove it.`;
+  return `${title} is live on PlayMechi. ${game}. ${price}. ${prizeCopy} ${slotCopy}. Pull up and prove it.`;
 }
 
 export function getProfileShareStats(profile: Record<string, unknown>) {

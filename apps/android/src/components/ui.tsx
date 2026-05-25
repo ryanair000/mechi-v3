@@ -84,11 +84,11 @@ export function Button({
       ]}
     >
       {loading ? (
-        <ActivityIndicator color={variant === 'primary' ? colors.bg : colors.text} />
+        <ActivityIndicator color={variant === 'primary' ? colors.slate : colors.text} />
       ) : icon ? (
         <Ionicons
           name={icon}
-          color={variant === 'primary' ? colors.bg : colors.text}
+          color={variant === 'primary' ? colors.slate : colors.text}
           size={18}
         />
       ) : null}
@@ -142,7 +142,7 @@ export function Chip<T extends string>({ label, value, selected, onPress, icon }
       ]}
     >
       {icon ? (
-        <Ionicons name={icon} size={15} color={selected ? colors.bg : colors.muted} />
+        <Ionicons name={icon} size={15} color={selected ? colors.slate : colors.muted} />
       ) : null}
       <Text numberOfLines={2} style={[styles.chipText, selected && styles.chipTextSelected]}>
         {label}
@@ -357,8 +357,8 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
   },
   button_danger: {
-    backgroundColor: '#2a1419',
-    borderColor: '#67313b',
+    backgroundColor: 'rgba(255, 107, 107, 0.14)',
+    borderColor: 'rgba(255, 107, 107, 0.36)',
   },
   buttonDisabled: {
     opacity: 0.55,
@@ -372,7 +372,7 @@ const styles = StyleSheet.create({
     fontWeight: '800',
   },
   buttonTextPrimary: {
-    color: colors.bg,
+    color: colors.slate,
   },
   fieldWrap: {
     gap: spacing.sm,
@@ -429,7 +429,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   chipTextSelected: {
-    color: colors.bg,
+    color: colors.slate,
   },
   card: {
     backgroundColor: colors.panel,

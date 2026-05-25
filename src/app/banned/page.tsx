@@ -19,7 +19,7 @@ export default function BannedPage() {
             Account suspended
           </h1>
           <p className="mt-3 text-sm leading-7 text-[var(--text-secondary)]">
-            This account is currently blocked from Mechi. If you think this happened by mistake,
+            This account is currently blocked from PlayMechi. If you think this happened by mistake,
             reach out and we&apos;ll review it.
           </p>
           <div className="mt-6 flex flex-col gap-3">

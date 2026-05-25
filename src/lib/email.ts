@@ -36,7 +36,7 @@ const FROM_ADDRESS =
   process.env.EMAIL_FROM_ADDRESS?.trim() ??
   process.env.AWS_SES_FROM_EMAIL?.trim() ??
   'noreply@mechi.club';
-const FROM = `Mechi <${FROM_ADDRESS}>`;
+const FROM = `PlayMechi <${FROM_ADDRESS}>`;
 const SUPPORT_ADDRESS = 'support@mechi.club';
 let cachedInstanceCredentials: AwsSesCredentials | null = null;
 let cachedSharedCredentials: AwsSesCredentials | null | undefined;
@@ -288,7 +288,7 @@ async function sendBccEmail(params: {
     const unsubscribeUrl = params.unsubscribeUrl ? escapeUrl(params.unsubscribeUrl) : null;
     const unsubscribeContent = unsubscribeUrl
       ? `
-        <p class="note">You received this because this game is selected on your Mechi profile.</p>
+        <p class="note">You received this because this game is selected on your PlayMechi profile.</p>
         <p><a href="${unsubscribeUrl}" class="secondary-link">Unsubscribe from game update emails</a></p>
       `
       : '';
@@ -760,9 +760,9 @@ function baseLayout(title: string, content: string): string {
                 <table role="presentation" class="brand-row" cellpadding="0" cellspacing="0">
                   <tr>
                     <td>
-                      <span class="label-pill">Mechi mail</span>
+                      <span class="label-pill">PlayMechi mail</span>
                       <div class="brand-wrap">
-                        <img src="${logoUrl}" width="52" height="52" alt="Mechi" class="logo" />
+                        <img src="${logoUrl}" width="52" height="52" alt="PlayMechi" class="logo" />
                         <p class="brand">MECHI<span class="brand-mark">.</span></p>
                       </div>
                     </td>
@@ -788,7 +788,7 @@ function baseLayout(title: string, content: string): string {
                   <a href="${supportMailto}">Support</a>
                 </p>
                 <p><strong>mechi.club</strong></p>
-                <p>You are receiving this because your email is linked to a Mechi account or tournament registration.</p>
+                <p>You are receiving this because your email is linked to a PlayMechi account or tournament registration.</p>
                 <p>Need help? Reply here or contact ${SUPPORT_ADDRESS}.</p>
               </div>
             </td>
@@ -812,8 +812,8 @@ export async function sendWelcomeEmail(params: {
   const rewardsUrl = escapeUrl(`${APP_URL}/rewards`);
   const content = `
     <p class="campaign-kicker">Welcome to the arena</p>
-    <h2>Your Mechi profile is live.</h2>
-    <p>Hey ${username}, your starter Pro trial is already unlocked. Mechi is now your clean lane into queues, direct challenges, tournaments, rewards, and faster support when a match gets messy.</p>
+    <h2>Your PlayMechi profile is live.</h2>
+    <p>Hey ${username}, your starter Pro trial is already unlocked. PlayMechi is now your clean lane into queues, direct challenges, tournaments, rewards, and faster support when a match gets messy.</p>
     <table role="presentation" class="mini-grid" cellpadding="0" cellspacing="0">
       <tr>
         <td class="mini-cell" width="33%">
@@ -855,8 +855,8 @@ export async function sendWelcomeEmail(params: {
     await sendEmail({
       from: FROM,
       to: params.to,
-      subject: `Registration confirmed: welcome to Mechi, ${params.username}`,
-      html: baseLayout(`Registration confirmed: welcome to Mechi, ${params.username}`, content),
+      subject: `Registration confirmed: welcome to PlayMechi, ${params.username}`,
+      html: baseLayout(`Registration confirmed: welcome to PlayMechi, ${params.username}`, content),
     });
   } catch (err) {
     console.error('[Email] Welcome send error:', err);
@@ -872,8 +872,8 @@ export async function sendSmokeTestEmail(params: {
   const requestedBy = escapeHtml(params.requestedBy?.trim() || 'the Boss');
   const sentAt = escapeHtml(new Date().toISOString());
   const content = `
-    <h2>Mechi email smoke test</h2>
-    <p>This is a live delivery check from Mechi's production email transport.</p>
+    <h2>PlayMechi email smoke test</h2>
+    <p>This is a live delivery check from PlayMechi's production email transport.</p>
     <div class="info-box">
       <div class="info-row">
         <span class="info-label">Recipient</span>
@@ -889,19 +889,19 @@ export async function sendSmokeTestEmail(params: {
       </div>
       <div class="info-row">
         <span class="info-label">Transport</span>
-        <span class="info-value">SMTP / Mechi live runtime</span>
+        <span class="info-value">SMTP / PlayMechi live runtime</span>
       </div>
     </div>
-    <p>If you received this, the Mechi production email path is working.</p>
-    <a href="${dashboardUrl}" class="btn">Open Mechi</a>
+    <p>If you received this, the PlayMechi production email path is working.</p>
+    <a href="${dashboardUrl}" class="btn">Open PlayMechi</a>
   `;
 
   await sendEmail(
     {
       from: FROM,
       to: params.to,
-      subject: 'Mechi production email smoke test',
-      html: baseLayout('Mechi production email smoke test', content),
+      subject: 'PlayMechi production email smoke test',
+      html: baseLayout('PlayMechi production email smoke test', content),
     },
     { requireConfigured: true }
   );
@@ -917,7 +917,7 @@ export async function sendMagicLinkEmail(params: {
   const requestedEmail = escapeHtml(params.to);
   const magicLink = escapeUrl(params.magicLink);
   const content = `
-    <h2>Sign in to Mechi</h2>
+    <h2>Sign in to PlayMechi</h2>
     <p>Hey ${recipientName}, use this secure link to open your account without typing your password.</p>
     <div class="info-box">
       <div class="info-row">
@@ -930,15 +930,15 @@ export async function sendMagicLinkEmail(params: {
       </div>
     </div>
     <p>If you did not request this, you can ignore the email. Your password stays unchanged.</p>
-    <a href="${magicLink}" class="btn">Sign in to Mechi</a>
+    <a href="${magicLink}" class="btn">Sign in to PlayMechi</a>
   `;
 
   try {
     await sendEmail({
       from: FROM,
       to: params.to,
-      subject: 'Your Mechi sign-in link',
-      html: baseLayout('Sign in to Mechi', content),
+      subject: 'Your PlayMechi sign-in link',
+      html: baseLayout('Sign in to PlayMechi', content),
     }, { requireConfigured: true });
   } catch (err) {
     console.error('[Email] Magic link send error:', err);
@@ -957,7 +957,7 @@ export async function sendPasswordResetEmail(params: {
   const resetLink = escapeUrl(params.resetLink);
   const content = `
     <h2>Reset your password</h2>
-    <p>Hey ${recipientName}, use this secure link to set a new password for your Mechi account.</p>
+    <p>Hey ${recipientName}, use this secure link to set a new password for your PlayMechi account.</p>
     <div class="info-box">
       <div class="info-row">
         <span class="info-label">Link expires in</span>
@@ -976,8 +976,8 @@ export async function sendPasswordResetEmail(params: {
     await sendEmail({
       from: FROM,
       to: params.to,
-      subject: 'Reset your Mechi password',
-      html: baseLayout('Reset your Mechi password', content),
+      subject: 'Reset your PlayMechi password',
+      html: baseLayout('Reset your PlayMechi password', content),
     }, { requireConfigured: true });
   } catch (err) {
     console.error('[Email] Password reset send error:', err);
@@ -1014,7 +1014,7 @@ export async function sendUserDataDeletionSupportEmail(params: {
     : '';
   const content = `
     <h2>User data deletion request</h2>
-    <p>A new Mechi account deletion request was submitted from the public deletion page.</p>
+    <p>A new PlayMechi account deletion request was submitted from the public deletion page.</p>
     <div class="info-box">
       <div class="info-row">
         <span class="info-label">Request ID</span>
@@ -1068,7 +1068,7 @@ export async function sendUserDataDeletionConfirmationEmail(params: {
 }): Promise<void> {
   const content = `
     <h2>Deletion request received</h2>
-    <p>Hey ${params.username}, we received your request to review your Mechi account for deletion.</p>
+    <p>Hey ${params.username}, we received your request to review your PlayMechi account for deletion.</p>
     <div class="info-box">
       <div class="info-row">
         <span class="info-label">Request ID</span>
@@ -1087,8 +1087,8 @@ export async function sendUserDataDeletionConfirmationEmail(params: {
     await sendEmail({
       from: FROM,
       to: params.to,
-      subject: `We received your Mechi deletion request (${params.requestId})`,
-      html: baseLayout(`We received your Mechi deletion request (${params.requestId})`, content),
+      subject: `We received your PlayMechi deletion request (${params.requestId})`,
+      html: baseLayout(`We received your PlayMechi deletion request (${params.requestId})`, content),
     });
   } catch (err) {
     console.error('[Email] User data deletion confirmation send error:', err);
@@ -1125,7 +1125,7 @@ export async function sendMatchFoundEmail(params: {
     : '<p>Use the match page to coordinate, report the result, and keep the ladder moving.</p>';
   const content = `
     <h2>Match found</h2>
-    <p>Your next Mechi match is ready. Open the match room, connect with your opponent, and finish cleanly so both profiles stay accurate.</p>
+    <p>Your next PlayMechi match is ready. Open the match room, connect with your opponent, and finish cleanly so both profiles stay accurate.</p>
     <div class="info-box">
       <div class="info-row">
         <span class="info-label">Game</span>
@@ -1168,7 +1168,7 @@ export async function sendResultConfirmedEmail(params: {
 }): Promise<void> {
   const content = `
     <h2>${params.won ? 'Victory confirmed' : 'Match complete'}</h2>
-    <p>Your match against <strong>${params.opponentUsername}</strong> is locked in. Your Mechi climb has been updated.</p>
+    <p>Your match against <strong>${params.opponentUsername}</strong> is locked in. Your PlayMechi climb has been updated.</p>
     <div class="info-box">
       <div class="info-row">
         <span class="info-label">Game</span>
@@ -1269,7 +1269,7 @@ export async function sendChallengeReceivedEmail(params: {
 
   const content = `
     <h2>Direct challenge received</h2>
-    <p>Hey ${username}, ${challengerUsername} wants to run a direct match with you on Mechi.</p>
+    <p>Hey ${username}, ${challengerUsername} wants to run a direct match with you on PlayMechi.</p>
     <div class="info-box">
       <div class="info-row">
         <span class="info-label">Game</span>
@@ -1289,7 +1289,7 @@ export async function sendChallengeReceivedEmail(params: {
     await sendEmail({
       from: FROM,
       to: params.to,
-      subject: `${params.challengerUsername} challenged you on Mechi`,
+      subject: `${params.challengerUsername} challenged you on PlayMechi`,
       html: baseLayout('Challenge Received', content),
     });
   } catch (err) {
@@ -1376,7 +1376,7 @@ export async function sendLobbyBroadcastEmail(params: {
 
   const content = `
     <h2>New lobby is open</h2>
-    <p>${hostName} opened a new ${game} lobby on Mechi.</p>
+    <p>${hostName} opened a new ${game} lobby on PlayMechi.</p>
     <div class="info-box">
       <div class="info-row">
         <span class="info-label">Lobby</span>
@@ -1462,7 +1462,7 @@ export async function sendTournamentBroadcastEmail(params: {
 
   const content = `
     <h2>New tournament is open</h2>
-    <p>${organizerName} just opened ${tournamentTitle} on Mechi.</p>
+    <p>${organizerName} just opened ${tournamentTitle} on PlayMechi.</p>
     <div class="info-box">
       <div class="info-row">
         <span class="info-label">Game</span>
@@ -1518,7 +1518,7 @@ export async function sendClientMarketingEmail(params: {
     <div class="info-box">
       <div class="info-row">
         <span class="info-label">From</span>
-        <span class="info-value">Mechi platform ops</span>
+        <span class="info-value">PlayMechi platform ops</span>
       </div>
       <div class="info-row">
         <span class="info-label">Platform</span>
@@ -1526,10 +1526,10 @@ export async function sendClientMarketingEmail(params: {
       </div>
       <div class="info-row">
         <span class="info-label">Why you received this</span>
-        <span class="info-value">Your email is linked to Mechi</span>
+        <span class="info-value">Your email is linked to PlayMechi</span>
       </div>
     </div>
-    <p class="note">You received this because your email is linked to Mechi.</p>
+    <p class="note">You received this because your email is linked to PlayMechi.</p>
     <p><a href="${unsubscribeUrl}" class="secondary-link">Unsubscribe from client emails</a></p>
   `;
 
@@ -1681,7 +1681,7 @@ export async function sendOnlineTournamentRegistrationEmail(params: {
         </td>
       </tr>
     </table>
-    <p>We will use your Mechi profile and registered game tag to coordinate the event. Join your game WhatsApp group for room details, fixtures, and match-day updates.</p>
+    <p>We will use your PlayMechi profile and registered game tag to coordinate the event. Join your game WhatsApp group for room details, fixtures, and match-day updates.</p>
     <a href="${escapeUrl(params.whatsappGroupUrl)}" class="btn">Join WhatsApp Group</a>
     <p><a href="${escapeUrl(params.registrationUrl)}" class="secondary-link">View registration</a></p>
   `;
@@ -1925,7 +1925,7 @@ export async function sendOnlineTournamentGameReminderEmail(params: {
       </div>
     </div>
     <p class="note">${escapeHtml(params.scoring)}</p>
-    <p>Open your registration page for final instructions and keep WhatsApp/Mechi notifications nearby in case the ops team needs to reach you.</p>
+    <p>Open your registration page for final instructions and keep WhatsApp/PlayMechi notifications nearby in case the ops team needs to reach you.</p>
     <a href="${escapeUrl(params.registrationUrl)}" class="btn">Open Registration</a>
     ${streamLink}
   `;
@@ -1934,7 +1934,7 @@ export async function sendOnlineTournamentGameReminderEmail(params: {
     await sendEmail({
       from: FROM,
       to: params.to,
-      subject: `${params.gameLabel} starts soon on Mechi`,
+      subject: `${params.gameLabel} starts soon on PlayMechi`,
       html: baseLayout(`${params.gameLabel} starts soon`, content),
     }, { requireConfigured: true });
   } catch (err) {
@@ -1982,7 +1982,7 @@ export async function sendTournamentMatchReadyEmail(params: {
   const game = escapeHtml(params.game);
   const content = `
     <h2>Your bracket match is ready</h2>
-    <p>Hey ${playerName}, your match in <strong>${tournamentTitle}</strong> is live. Treat this as the match reminder: open the room, coordinate with your opponent, and report the result on Mechi.</p>
+    <p>Hey ${playerName}, your match in <strong>${tournamentTitle}</strong> is live. Treat this as the match reminder: open the room, coordinate with your opponent, and report the result on PlayMechi.</p>
     <div class="info-box">
       <div class="info-row">
         <span class="info-label">Game</span>
@@ -2001,7 +2001,7 @@ export async function sendTournamentMatchReadyEmail(params: {
     await sendEmail({
       from: FROM,
       to: params.to,
-      subject: `Your Mechi tournament match is ready`,
+      subject: `Your PlayMechi tournament match is ready`,
       html: baseLayout('Tournament Match Ready', content),
     });
   } catch (err) {
@@ -2018,7 +2018,7 @@ export async function sendTournamentWinnerEmail(params: {
 }): Promise<void> {
   const prizeCopy =
     params.prizeAmount > 0
-      ? `Your prize is KES ${params.prizeAmount.toLocaleString()}. If automatic payout needs review, Mechi will keep it marked on the tournament.`
+      ? `Your prize is KES ${params.prizeAmount.toLocaleString()}. If automatic payout needs review, PlayMechi will keep it marked on the tournament.`
       : 'No cash prize on this one, but the win is yours.';
 
   const content = `
@@ -2055,7 +2055,7 @@ export async function sendSubscriptionConfirmEmail(params: {
 
   const content = `
     <h2>${planName} activated</h2>
-    <p>Hey ${params.username}, your ${planName} plan is live on Mechi.</p>
+    <p>Hey ${params.username}, your ${planName} plan is live on PlayMechi.</p>
     <div class="info-box">
       <div class="info-row">
         <span class="info-label">Plan</span>
@@ -2074,8 +2074,8 @@ export async function sendSubscriptionConfirmEmail(params: {
     await sendEmail({
       from: FROM,
       to: params.to,
-      subject: `${planName} activated on Mechi`,
-      html: baseLayout(`${planName} activated on Mechi`, content),
+      subject: `${planName} activated on PlayMechi`,
+      html: baseLayout(`${planName} activated on PlayMechi`, content),
     });
   } catch (err) {
     console.error('[Email] Subscription confirm send error:', err);

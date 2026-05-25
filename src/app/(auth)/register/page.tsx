@@ -24,7 +24,7 @@ import {
 
 const MIN_PASSWORD_LENGTH = 9;
 const ACCOUNT_REGISTRATION_SUPPORT_URL = getCustomerWhatsAppSupportUrl(
-  'Hi Mechi, I need help creating my account.'
+  'Hi PlayMechi, I need help creating my account.'
 );
 
 type RegisterSearchParams = Promise<{ [key: string]: string | string[] | undefined }>;
@@ -105,7 +105,7 @@ export default function RegisterPage({ searchParams }: { searchParams: RegisterS
     setLoading(true);
     setSubmitFeedback({
       tone: 'loading',
-      title: isSwahili ? 'Inatengeneza akaunti yako ya Mechi...' : 'Creating your Mechi account...',
+      title: isSwahili ? 'Inatengeneza akaunti yako ya PlayMechi...' : 'Creating your PlayMechi account...',
       detail: isSwahili
         ? 'Tunatunza taarifa za msingi na kuwasha trial yako ya Pro sasa.'
         : 'Saving the essentials and starting your Pro trial now.',
@@ -144,16 +144,16 @@ export default function RegisterPage({ searchParams }: { searchParams: RegisterS
       setSubmitFeedback({
         tone: 'success',
         title: isSwahili
-          ? `Karibu Mechi, ${data.user.username}.`
-          : `Welcome to Mechi, ${data.user.username}.`,
+          ? `Karibu PlayMechi, ${data.user.username}.`
+          : `Welcome to PlayMechi, ${data.user.username}.`,
         detail: isSwahili
-          ? 'Akaunti yako imewashwa. Tunakuingiza ndani ya Mechi sasa.'
-          : 'Your account is live. Taking you into Mechi now.',
+          ? 'Akaunti yako imewashwa. Tunakuingiza ndani ya PlayMechi sasa.'
+          : 'Your account is live. Taking you into PlayMechi now.',
       });
       toast.success(
         isSwahili
-          ? `Karibu Mechi, ${data.user.username}!`
-          : `Welcome to Mechi, ${data.user.username}!`
+          ? `Karibu PlayMechi, ${data.user.username}!`
+          : `Welcome to PlayMechi, ${data.user.username}!`
       );
       window.location.assign(nextPath);
     } catch {
@@ -174,11 +174,11 @@ export default function RegisterPage({ searchParams }: { searchParams: RegisterS
     <FullScreenSignup
       title=""
       subtitle=""
-      sideTitle={isSwahili ? 'Jiunge na Mechi Sasa' : 'Join Mechi Now'}
+      sideTitle={isSwahili ? 'Jiunge na PlayMechi Sasa' : 'Join PlayMechi Now'}
       sideDescription={
         isSwahili
-          ? 'Njoo, jifunge, shindana na players wa kweli, na ushinde zawadi kwenye tournaments za Mechi.'
-          : 'Pull up, lock in, compete with real players, and win prizes in Mechi tournaments.'
+          ? 'Njoo, jifunge, shindana na players wa kweli, na ushinde zawadi kwenye tournaments za PlayMechi.'
+          : 'Pull up, lock in, compete with real players, and win prizes in PlayMechi tournaments.'
       }
       hideSideEyebrow
       sideContentPlacement="bottom"

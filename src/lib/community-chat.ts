@@ -14,9 +14,9 @@ import type {
 export const COMMUNITY_MESSAGE_MAX_LENGTH = 500;
 const COMMUNITY_NOTIFICATION_ACTIVE_WINDOW_MS = 60 * 1000;
 const COMMUNITY_ROOM_SLUG = 'global';
-const COMMUNITY_ROOM_NAME = 'Mechi Community';
+const COMMUNITY_ROOM_NAME = 'PlayMechi Community';
 const COMMUNITY_ROOM_DESCRIPTION =
-  'The main Mechi community room for match-night updates, banter, and operator announcements.';
+  'The main PlayMechi community room for match-night updates, banter, and operator announcements.';
 
 type CommunityRoomRow = CommunityRoom;
 

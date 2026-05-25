@@ -3,10 +3,10 @@ import type { MetadataRoute } from 'next';
 export default function manifest(): MetadataRoute.Manifest {
   return {
     id: '/',
-    name: 'Mechi',
-    short_name: 'Mechi',
+    name: 'PlayMechi',
+    short_name: 'PlayMechi',
     description:
-      'Mechi helps East African players find proper 1v1s, clean lobbies, and prize-backed tournaments without the WhatsApp chaos.',
+      'PlayMechi helps East African players find proper 1v1s, clean lobbies, and prize-backed tournaments without the WhatsApp chaos.',
     start_url: '/',
     scope: '/',
     display: 'standalone',

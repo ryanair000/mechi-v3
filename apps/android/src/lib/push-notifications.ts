@@ -80,30 +80,30 @@ function getDeviceLabel(): string | null {
 
 export async function getPushNotificationStatusMessage(): Promise<string> {
   if (Platform.OS === 'web') {
-    return 'App notifications are available on Android builds.';
+    return 'Push alerts are available on the Android app.';
   }
 
   if (!Device.isDevice) {
-    return 'Use a physical Android device to receive push notifications.';
+    return 'Use a real Android phone to receive push alerts.';
   }
 
   const permissions = await Notifications.getPermissionsAsync();
   if (permissions.status === 'granted') {
-    return 'App notifications are enabled on this device.';
+    return 'Push alerts are on for this device.';
   }
 
   if (!permissions.canAskAgain) {
-    return 'Notifications are blocked in Android settings.';
+    return 'Push alerts are blocked in Android settings.';
   }
 
-  return 'App notifications are ready to enable.';
+  return 'Push alerts are ready to turn on.';
 }
 
 export async function registerForPushNotificationsAsync(): Promise<PushRegistrationResult> {
   if (Platform.OS === 'web') {
     return {
       ok: false,
-      message: 'App notifications are available on Android builds.',
+      message: 'Push alerts are available on the Android app.',
     };
   }
 
@@ -112,7 +112,7 @@ export async function registerForPushNotificationsAsync(): Promise<PushRegistrat
   if (!Device.isDevice) {
     return {
       ok: false,
-      message: 'Use a physical Android device to receive push notifications.',
+      message: 'Use a real Android phone to receive push alerts.',
     };
   }
 
@@ -127,7 +127,7 @@ export async function registerForPushNotificationsAsync(): Promise<PushRegistrat
   if (finalStatus !== 'granted') {
     return {
       ok: false,
-      message: 'Notifications were not enabled for this device.',
+      message: 'Push alerts were not enabled on this device.',
     };
   }
 
@@ -135,7 +135,7 @@ export async function registerForPushNotificationsAsync(): Promise<PushRegistrat
   if (!projectId) {
     return {
       ok: false,
-      message: 'Expo project ID is missing from the Android app config.',
+      message: 'Push setup is missing a project ID in the app config.',
     };
   }
 
@@ -156,7 +156,7 @@ export async function registerForPushNotificationsAsync(): Promise<PushRegistrat
 
   return {
     ok: true,
-    message: 'App notifications are enabled on this device.',
+    message: 'Push alerts are on for this device.',
     token: expoPushToken,
   };
 }
@@ -183,7 +183,7 @@ export function resolveNotificationRoute(data: Record<string, unknown> | undefin
   }
 
   if (target.startsWith('/community')) {
-    return '/(tabs)';
+    return '/(tabs)/community';
   }
 
   if (target.startsWith('/feed')) {

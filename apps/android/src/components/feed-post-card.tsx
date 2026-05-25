@@ -17,7 +17,7 @@ function FeedActionButton({ action, primary = false }: { action: FeedAction; pri
           <Ionicons
             name="arrow-forward"
             size={15}
-            color={primary ? colors.bg : colors.text}
+            color={primary ? colors.slate : colors.text}
           />
         </Pressable>
       </Link>
@@ -33,7 +33,7 @@ function FeedActionButton({ action, primary = false }: { action: FeedAction; pri
       <Ionicons
         name="open-outline"
         size={15}
-        color={primary ? colors.bg : colors.text}
+        color={primary ? colors.slate : colors.text}
       />
     </Pressable>
   );
@@ -45,8 +45,6 @@ export function FeedPostCard({ post }: { post: FeedPost }) {
 
   return (
     <View style={styles.frame}>
-      <View pointerEvents="none" style={styles.glowMint} />
-      <View pointerEvents="none" style={styles.glowCoral} />
       <View style={styles.shell}>
         <View style={styles.headerRow}>
           <View style={styles.authorRow}>
@@ -134,37 +132,19 @@ const styles = StyleSheet.create({
   frame: {
     position: 'relative',
     overflow: 'hidden',
-    borderRadius: 24,
+    borderRadius: radii.md,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
-    backgroundColor: 'rgba(255,255,255,0.03)',
+    borderColor: colors.border,
+    backgroundColor: colors.panel,
     padding: 1,
-  },
-  glowMint: {
-    position: 'absolute',
-    top: -54,
-    left: -24,
-    width: 170,
-    height: 170,
-    borderRadius: 999,
-    backgroundColor: 'rgba(50, 224, 196, 0.18)',
-  },
-  glowCoral: {
-    position: 'absolute',
-    right: -36,
-    bottom: -78,
-    width: 190,
-    height: 190,
-    borderRadius: 999,
-    backgroundColor: 'rgba(255, 92, 119, 0.12)',
   },
   shell: {
     position: 'relative',
     overflow: 'hidden',
     gap: spacing.md,
     padding: spacing.md,
-    borderRadius: 23,
-    backgroundColor: 'rgba(9, 13, 10, 0.94)',
+    borderRadius: radii.md,
+    backgroundColor: colors.panel,
   },
   headerRow: {
     flexDirection: 'row',
@@ -181,10 +161,10 @@ const styles = StyleSheet.create({
   logoWrap: {
     width: 46,
     height: 46,
-    borderRadius: 16,
+    borderRadius: radii.md,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
-    backgroundColor: 'rgba(255,255,255,0.04)',
+    borderColor: colors.border,
+    backgroundColor: colors.slate,
     alignItems: 'center',
     justifyContent: 'center',
     overflow: 'hidden',
@@ -216,23 +196,23 @@ const styles = StyleSheet.create({
   verifiedWrap: {
     width: 34,
     height: 34,
-    borderRadius: 12,
+    borderRadius: radii.md,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
-    backgroundColor: 'rgba(255,255,255,0.03)',
+    borderColor: colors.border,
+    backgroundColor: colors.panel2,
     alignItems: 'center',
     justifyContent: 'center',
   },
   media: {
     justifyContent: 'flex-end',
     overflow: 'hidden',
-    borderRadius: 16,
+    borderRadius: radii.md,
     borderWidth: 1,
     borderColor: colors.border,
     backgroundColor: colors.panel2,
   },
   mediaImage: {
-    borderRadius: 16,
+    borderRadius: radii.md,
   },
   mediaOverlay: {
     ...StyleSheet.absoluteFillObject,
@@ -351,7 +331,7 @@ const styles = StyleSheet.create({
   actionButton: {
     minHeight: 46,
     flexGrow: 1,
-    borderRadius: 14,
+    borderRadius: radii.md,
     borderWidth: 1,
     paddingHorizontal: spacing.md,
     flexDirection: 'row',
@@ -372,7 +352,7 @@ const styles = StyleSheet.create({
     fontWeight: '900',
   },
   actionTextPrimary: {
-    color: colors.bg,
+    color: colors.slate,
   },
   actionTextSecondary: {
     color: colors.text,

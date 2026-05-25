@@ -38,7 +38,7 @@ import type {
 const SUPPORT_REPLY_MIN_CONFIDENCE = 0.55;
 const CONVERSATION_WINDOW = 8;
 const SUPPORT_WAIT_ACK =
-  "I've reported this to the Mechi team. Please wait here while we check it and reply in this chat.";
+  "I've reported this to the PlayMechi team. Please wait here while we check it and reply in this chat.";
 
 type SupportProfileRow = {
   id: string;

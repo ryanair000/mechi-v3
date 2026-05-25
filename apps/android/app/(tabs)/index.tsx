@@ -1,889 +1,554 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useEffect, useMemo, useRef, useState } from 'react';
-import {
-  Alert,
-  AppState,
-  type AppStateStatus,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from 'react-native';
-import {
-  getCommunityRoom,
-  moderateCommunityRoom,
-  sendCommunityMessage,
-} from '../../src/api/mechi';
-import { ApiError } from '../../src/api/client';
+import { Ionicons } from '@expo/vector-icons';
+import { useQuery } from '@tanstack/react-query';
+import { Link } from 'expo-router';
+import { Image, Linking, StyleSheet, Text, View } from 'react-native';
+import { getCommunityRoom, getTournamentRegistrationSummary } from '../../src/api/mechi';
 import { useAuth } from '../../src/auth/AuthProvider';
 import {
   Button,
-  ChipGroup,
-  ErrorBanner,
+  Card,
+  InfoRow,
   LoadingState,
   Screen,
+  SectionTitle,
   StatusBadge,
+  textStyles,
 } from '../../src/components/ui';
+import {
+  PLAYMECHI_SUPPORT_URL,
+  TOURNAMENT_GAME_BY_KEY,
+  TOURNAMENT_GAMES,
+  TOURNAMENT_REGISTER_URL,
+  formatStatus,
+} from '../../src/config/tournament';
+import { PLAYMECHI_FEED_POSTS } from '../../src/config/feed';
 import { colors, radii, spacing } from '../../src/theme';
-import type { CommunityMessage, CommunityMessageType } from '../../src/types';
 
-const COMMUNITY_QUERY_KEY = ['community-room'];
-const COMMUNITY_REFETCH_INTERVAL_MS = 15_000;
+type HomeAction =
+  | {
+      type: 'external';
+      title: string;
+      body: string;
+      label: string;
+      icon: keyof typeof Ionicons.glyphMap;
+      external: string;
+    }
+  | {
+      type: 'internal';
+      title: string;
+      body: string;
+      label: string;
+      icon: keyof typeof Ionicons.glyphMap;
+      href: '/(tabs)/arena';
+    };
 
-function formatTime(value: string) {
-  return new Date(value).toLocaleTimeString('en-KE', {
-    hour: 'numeric',
-    minute: '2-digit',
-  });
+function getStatusTone(status: string | null | undefined): 'good' | 'warn' | 'danger' | 'neutral' {
+  if (status === 'verified' || status === 'checked_in' || status === 'paid') return 'good';
+  if (status === 'ineligible' || status === 'disqualified' || status === 'no_show') return 'danger';
+  if (status === 'pending' || status === 'registered') return 'warn';
+  return 'neutral';
 }
 
-function formatDateTime(value: string) {
-  return new Date(value).toLocaleString('en-KE', {
-    day: 'numeric',
-    month: 'short',
-    hour: 'numeric',
-    minute: '2-digit',
-  });
-}
-
-function formatUntil(value?: string | null) {
-  if (!value) {
-    return 'soon';
-  }
-
-  const diffMs = new Date(value).getTime() - Date.now();
-  const diffMinutes = Math.max(0, Math.round(diffMs / 60_000));
-
-  if (diffMinutes < 1) {
-    return 'in under a minute';
-  }
-
-  if (diffMinutes < 60) {
-    return `in ${diffMinutes}m`;
-  }
-
-  const diffHours = Math.round(diffMinutes / 60);
-  if (diffHours < 24) {
-    return `in ${diffHours}h`;
-  }
-
-  const diffDays = Math.round(diffHours / 24);
-  return `in ${diffDays}d`;
-}
-
-function isFuture(value?: string | null) {
-  return Boolean(value && new Date(value).getTime() > Date.now());
-}
-
-function getSenderLabel(message: CommunityMessage, currentUserId?: string | null) {
-  if (message.sender_type === 'system') {
-    return 'Mechi';
-  }
-
-  if (message.sender_user_id === currentUserId) {
-    return 'You';
-  }
-
-  return message.sender?.username ?? 'Community';
-}
-
-function getLockedTone(locked: boolean) {
-  return locked ? 'warn' : 'good';
-}
-
-export default function CommunityTab() {
-  const { user } = useAuth();
-  const queryClient = useQueryClient();
-  const scrollRef = useRef<ScrollView | null>(null);
-  const [input, setInput] = useState('');
-  const [composerMode, setComposerMode] = useState<'text' | 'announcement'>('text');
-  const [error, setError] = useState<string | null>(null);
-  const [isAppActive, setIsAppActive] = useState(AppState.currentState === 'active');
-
-  const roomQuery = useQuery({
-    queryKey: COMMUNITY_QUERY_KEY,
-    queryFn: () => getCommunityRoom(),
-    refetchInterval: isAppActive ? COMMUNITY_REFETCH_INTERVAL_MS : false,
-  });
-
-  const room = roomQuery.data?.room ?? null;
-  const messages = roomQuery.data?.messages ?? [];
-  const pinnedMessage = roomQuery.data?.pinned_message ?? null;
-  const mutedMembers = roomQuery.data?.muted_members ?? [];
-  const canModerate = roomQuery.data?.can_moderate ?? false;
-  const mutedUserIds = useMemo(
-    () => new Set(mutedMembers.map((member) => member.user.id)),
-    [mutedMembers]
+function getNextTournamentGame(now = new Date()) {
+  return (
+    TOURNAMENT_GAMES.find((game) => new Date(game.matchStartsAt).getTime() >= now.getTime()) ??
+    TOURNAMENT_GAMES[TOURNAMENT_GAMES.length - 1] ??
+    null
   );
-  const isMuted = isFuture(roomQuery.data?.state.mute_until);
-  const isLocked = Boolean(room?.is_locked);
+}
 
-  useEffect(() => {
-    function handleAppStateChange(state: AppStateStatus) {
-      setIsAppActive(state === 'active');
-    }
+function getCountdownLabel(value: string, now = new Date()) {
+  const diffMs = new Date(value).getTime() - now.getTime();
 
-    const subscription = AppState.addEventListener('change', handleAppStateChange);
-    return () => subscription.remove();
-  }, []);
+  if (diffMs <= 0) {
+    return 'Live now';
+  }
 
-  useEffect(() => {
-    if (!canModerate && composerMode !== 'text') {
-      setComposerMode('text');
-    }
-  }, [canModerate, composerMode]);
+  const totalMinutes = Math.ceil(diffMs / 60_000);
+  const days = Math.floor(totalMinutes / 1440);
+  const hours = Math.floor((totalMinutes % 1440) / 60);
+  const minutes = totalMinutes % 60;
 
-  useEffect(() => {
-    scrollRef.current?.scrollToEnd({ animated: true });
-  }, [messages.length, pinnedMessage?.id]);
+  if (days > 0) {
+    return `${days}d ${hours}h`;
+  }
 
-  const sendMutation = useMutation({
-    mutationFn: () =>
-      sendCommunityMessage({
-        message: input.trim(),
-        message_type: composerMode,
-      }),
-    onSuccess: async () => {
-      setInput('');
-      setError(null);
-      await queryClient.invalidateQueries({ queryKey: COMMUNITY_QUERY_KEY });
-    },
-    onError: (err) => {
-      setError(err instanceof ApiError ? err.message : 'Could not send community message.');
-    },
+  if (hours > 0) {
+    return `${hours}h ${minutes}m`;
+  }
+
+  return `${minutes}m`;
+}
+
+function getNextAction(registrations: Array<{ check_in_status?: string | null }>): HomeAction {
+  if (!registrations.length) {
+    return {
+      type: 'external',
+      title: 'Lock your Weekend Cup slot',
+      body: 'Secure your entry on mechi.club. Once you are in, this app becomes your live match desk.',
+      label: 'Register now',
+      icon: 'globe-outline',
+      external: TOURNAMENT_REGISTER_URL,
+    };
+  }
+
+  const needsCheckIn = registrations.some((registration) => registration.check_in_status !== 'checked_in');
+  if (needsCheckIn) {
+    return {
+      type: 'internal',
+      title: 'Check in before lobby drop',
+      body: 'Confirm your IGN, UID, device, and WhatsApp so admins can send the right room details.',
+      label: 'Open Arena',
+      icon: 'trophy-outline',
+      href: '/(tabs)/arena',
+    };
+  }
+
+  return {
+    type: 'internal',
+    title: 'You are match-ready',
+    body: 'Track rooms, fixtures, standings, and admin calls from the Arena desk.',
+    label: 'Open match desk',
+    icon: 'radio-outline',
+    href: '/(tabs)/arena',
+  };
+}
+
+export default function HomeTab() {
+  const { user } = useAuth();
+  const summaryQuery = useQuery({
+    queryKey: ['tournament-registration'],
+    queryFn: getTournamentRegistrationSummary,
+  });
+  const communityQuery = useQuery({
+    queryKey: ['community-room-home'],
+    queryFn: () => getCommunityRoom(3),
+    staleTime: 20_000,
   });
 
-  const moderationMutation = useMutation({
-    mutationFn: moderateCommunityRoom,
-    onSuccess: async () => {
-      setError(null);
-      await queryClient.invalidateQueries({ queryKey: COMMUNITY_QUERY_KEY });
-    },
-    onError: (err) => {
-      setError(err instanceof ApiError ? err.message : 'Could not update community room.');
-    },
-  });
+  const registrations = summaryQuery.data?.registrations ?? [];
+  const nextAction = getNextAction(registrations);
+  const communityMessages = communityQuery.data?.messages ?? [];
+  const activeTournament = getNextTournamentGame();
+  const countdownLabel = activeTournament ? getCountdownLabel(activeTournament.matchStartsAt) : 'TBA';
+  const announcement = PLAYMECHI_FEED_POSTS[0] ?? {
+    title: 'PlayMechi updates land here.',
+    body: 'Watch this space for official tournament announcements, stream calls, and match-day instructions.',
+  };
 
-  const canSend =
-    input.trim().length > 0 &&
-    !sendMutation.isPending &&
-    (!isLocked || canModerate) &&
-    !isMuted;
-
-  function handleSend() {
-    if (!canSend) {
-      return;
-    }
-
-    sendMutation.mutate();
-  }
-
-  function confirmDelete(message: CommunityMessage) {
-    Alert.alert(
-      'Delete message?',
-      'This will replace the message body with a deleted placeholder for everyone in the room.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: () =>
-            moderationMutation.mutate({
-              action: 'delete_message',
-              message_id: message.id,
-            }),
-        },
-      ]
-    );
-  }
-
-  function confirmMute(message: CommunityMessage) {
-    if (!message.sender_user_id || !message.sender) {
-      return;
-    }
-
-    const muted = mutedUserIds.has(message.sender_user_id);
-    Alert.alert(
-      muted ? 'Lift mute?' : `Mute ${message.sender.username}?`,
-      muted
-        ? 'This will let them post in the community room again.'
-        : 'This will stop them from posting in the community room for the next 24 hours.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: muted ? 'Unmute' : 'Mute 24h',
-          style: muted ? 'default' : 'destructive',
-          onPress: () =>
-            moderationMutation.mutate(
-              muted
-                ? {
-                    action: 'unmute_user',
-                    user_id: message.sender_user_id!,
-                  }
-                : {
-                    action: 'mute_user',
-                    user_id: message.sender_user_id!,
-                    duration_hours: 24,
-                  }
-            ),
-        },
-      ]
-    );
-  }
-
-  function toggleRoomLock() {
-    moderationMutation.mutate({
-      action: isLocked ? 'unlock' : 'lock',
-    });
-  }
-
-  function togglePin(message: CommunityMessage) {
-    moderationMutation.mutate(
-      pinnedMessage?.id === message.id
-        ? {
-            action: 'unpin',
-          }
-        : {
-            action: 'pin',
-            message_id: message.id,
-          }
-    );
+  async function openExternal(url: string) {
+    await Linking.openURL(url);
   }
 
   return (
-    <Screen scroll={false} padded={false}>
-      <View style={styles.root}>
-        <View style={styles.header}>
-          <View style={styles.headerCopy}>
-            <Text style={styles.eyebrow}>Community</Text>
-            <Text style={styles.headerTitle}>{room?.name ?? 'Mechi Community'}</Text>
-            <Text style={styles.headerSubtitle}>
-              Global chat for the whole signed-in Mechi crew. Keep it clean, useful, and ready for
-              match night.
-            </Text>
+    <Screen>
+      <View style={styles.hero}>
+        <View style={styles.heroTop}>
+          <View style={styles.logoMark}>
+            <Image source={require('../../assets/icon.png')} style={styles.logo} resizeMode="contain" />
           </View>
-          <View style={styles.headerMeta}>
-            <StatusBadge
-              label={isLocked ? 'read only' : 'live'}
-              tone={getLockedTone(isLocked)}
-            />
-            <Text style={styles.headerCount}>
-              {roomQuery.data?.member_count ?? 0} joined
-            </Text>
-            <Text style={styles.headerSync}>
-              {roomQuery.isFetching && !roomQuery.isLoading ? 'Syncing...' : 'Live sync 15s'}
-            </Text>
+          <View style={styles.heroCopy}>
+            <Text style={styles.eyebrow}>PlayMechi HQ</Text>
+            <Text style={styles.heroTitle}>Yo {user?.username ?? 'player'}, ready up.</Text>
           </View>
         </View>
-
-        {isLocked ? (
-          <View style={[styles.banner, styles.bannerWarn]}>
-            <Text style={styles.bannerTitle}>Community is in read-only mode</Text>
-            <Text style={styles.bannerBody}>
-              Mods can still post updates, but everyone else is temporarily locked from sending.
-            </Text>
-          </View>
-        ) : null}
-
-        {isMuted ? (
-          <View style={[styles.banner, styles.bannerDanger]}>
-            <Text style={styles.bannerTitle}>You are muted in community</Text>
-            <Text style={styles.bannerBody}>
-              You can read messages, but posting unlocks after{' '}
-              {formatDateTime(roomQuery.data?.state.mute_until ?? '')}.
-            </Text>
-          </View>
-        ) : null}
-
-        {canModerate ? (
-          <View style={styles.adminPanel}>
-            <View style={styles.adminHeader}>
-              <Text style={styles.adminTitle}>Moderator controls</Text>
-              <Pressable
-                onPress={toggleRoomLock}
-                style={({ pressed }) => [
-                  styles.adminButton,
-                  isLocked && styles.adminButtonWarn,
-                  pressed && styles.pressed,
-                ]}
-              >
-                <Text style={styles.adminButtonText}>
-                  {isLocked ? 'Unlock room' : 'Lock room'}
-                </Text>
-              </Pressable>
-            </View>
-
-            <ChipGroup
-              options={[
-                { label: 'Message', value: 'text' as const, icon: 'chatbubble-ellipses' },
-                { label: 'Announcement', value: 'announcement' as const, icon: 'megaphone' },
-              ]}
-              value={composerMode}
-              onChange={setComposerMode}
-            />
-
-            {mutedMembers.length ? (
-              <View style={styles.mutedWrap}>
-                <Text style={styles.mutedLabel}>Muted users</Text>
-                <View style={styles.mutedList}>
-                  {mutedMembers.map((member) => (
-                    <Pressable
-                      key={member.user.id}
-                      onPress={() =>
-                        moderationMutation.mutate({
-                          action: 'unmute_user',
-                          user_id: member.user.id,
-                        })
-                      }
-                      style={({ pressed }) => [styles.mutedChip, pressed && styles.pressed]}
-                    >
-                      <Text style={styles.mutedChipTitle}>{member.user.username}</Text>
-                      <Text style={styles.mutedChipMeta}>
-                        until {formatUntil(member.muted_until)}
-                      </Text>
-                    </Pressable>
-                  ))}
-                </View>
-              </View>
-            ) : null}
-          </View>
-        ) : null}
-
-        {pinnedMessage ? (
-          <View style={styles.pinnedCard}>
-            <View style={styles.pinnedHeader}>
-              <Text style={styles.pinnedEyebrow}>Pinned message</Text>
-              {canModerate ? (
-                <Pressable
-                  onPress={() => moderationMutation.mutate({ action: 'unpin' })}
-                  style={({ pressed }) => [styles.inlineAction, pressed && styles.pressed]}
-                >
-                  <Text style={styles.inlineActionText}>Unpin</Text>
-                </Pressable>
-              ) : null}
-            </View>
-            <Text style={styles.pinnedSender}>
-              {getSenderLabel(pinnedMessage, user?.id)} · {formatTime(pinnedMessage.created_at)}
-            </Text>
-            <Text style={styles.pinnedBody}>
-              {pinnedMessage.is_deleted ? 'This pinned message was deleted.' : pinnedMessage.body}
-            </Text>
-          </View>
-        ) : null}
-
-        <ErrorBanner message={error} />
-        {roomQuery.isError && !error ? (
-          <ErrorBanner message="Could not load community chat right now." />
-        ) : null}
-
-        <View style={styles.messagesShell}>
-          {roomQuery.isLoading && messages.length === 0 ? (
-            <LoadingState label="Opening community" />
-          ) : messages.length === 0 ? (
-            <View style={styles.emptyState}>
-              <Text style={styles.emptyTitle}>No messages yet</Text>
-              <Text style={styles.emptyBody}>
-                Start the room with a quick hello, match-night question, or a useful update.
-              </Text>
-            </View>
+        <Text style={styles.heroBody}>
+          Active tournament, player status, next move, countdown, and announcements in one clean
+          launch screen.
+        </Text>
+        <View style={styles.heroActions}>
+          {nextAction.type === 'internal' ? (
+            <Link href={nextAction.href} asChild>
+              <Button label={nextAction.label} icon={nextAction.icon} />
+            </Link>
           ) : (
-            <ScrollView
-              ref={scrollRef}
-              contentContainerStyle={styles.messageList}
-              keyboardShouldPersistTaps="handled"
-            >
-              {messages.map((message) => {
-                const mine = message.sender_user_id === user?.id;
-                const system = message.sender_type === 'system';
-                const announcement = message.message_type === 'announcement';
-                const muted = Boolean(
-                  message.sender_user_id && mutedUserIds.has(message.sender_user_id)
-                );
-
-                if (system) {
-                  return (
-                    <View key={message.id} style={styles.systemCard}>
-                      <Text style={styles.systemTitle}>Mechi update</Text>
-                      <Text style={styles.systemBody}>{message.body}</Text>
-                    </View>
-                  );
-                }
-
-                return (
-                  <View
-                    key={message.id}
-                    style={[
-                      styles.messageRow,
-                      mine ? styles.messageRowMine : styles.messageRowOther,
-                    ]}
-                  >
-                    <View
-                      style={[
-                        styles.messageBubble,
-                        mine && styles.messageBubbleMine,
-                        announcement && styles.messageBubbleAnnouncement,
-                        message.is_deleted && styles.messageBubbleDeleted,
-                      ]}
-                    >
-                      <View style={styles.messageMetaRow}>
-                        <Text style={styles.messageSender}>
-                          {getSenderLabel(message, user?.id)}
-                          {message.sender?.role && !mine
-                            ? ` · ${message.sender.role}`
-                            : ''}
-                        </Text>
-                        <Text style={styles.messageTime}>{formatTime(message.created_at)}</Text>
-                      </View>
-                      <Text
-                        style={[
-                          styles.messageBody,
-                          message.is_deleted && styles.messageBodyDeleted,
-                        ]}
-                      >
-                        {message.is_deleted ? 'Message deleted by moderation.' : message.body}
-                      </Text>
-                      {announcement ? (
-                        <Text style={styles.announcementTag}>Announcement</Text>
-                      ) : null}
-                    </View>
-
-                    {canModerate &&
-                    message.sender_user_id &&
-                    message.sender_type !== 'system' &&
-                    !message.is_deleted &&
-                    message.sender_user_id !== user?.id ? (
-                      <View style={styles.messageAdminRow}>
-                        <Pressable
-                          onPress={() => togglePin(message)}
-                          style={({ pressed }) => [styles.inlineAction, pressed && styles.pressed]}
-                        >
-                          <Text style={styles.inlineActionText}>
-                            {pinnedMessage?.id === message.id ? 'Unpin' : 'Pin'}
-                          </Text>
-                        </Pressable>
-                        <Pressable
-                          onPress={() => confirmDelete(message)}
-                          style={({ pressed }) => [styles.inlineAction, pressed && styles.pressed]}
-                        >
-                          <Text style={styles.inlineActionText}>Delete</Text>
-                        </Pressable>
-                        <Pressable
-                          onPress={() => confirmMute(message)}
-                          style={({ pressed }) => [styles.inlineAction, pressed && styles.pressed]}
-                        >
-                          <Text style={styles.inlineActionText}>
-                            {muted ? 'Unmute' : 'Mute'}
-                          </Text>
-                        </Pressable>
-                      </View>
-                    ) : null}
-                  </View>
-                );
-              })}
-            </ScrollView>
-          )}
-        </View>
-
-        <View style={styles.composer}>
-          <View style={styles.composerTop}>
-            <Text style={styles.composerHint}>
-              {composerMode === 'announcement'
-                ? 'Announcement mode is live for moderators.'
-                : isLocked && !canModerate
-                  ? 'Room is locked for read-only mode.'
-                  : isMuted
-                    ? 'You are currently muted in community.'
-                    : 'Keep it helpful, concise, and community-safe.'}
-            </Text>
-            <Text style={styles.composerCount}>{input.trim().length}/500</Text>
-          </View>
-          <View style={styles.composerRow}>
-            <TextInput
-              value={input}
-              onChangeText={setInput}
-              placeholder={
-                composerMode === 'announcement'
-                  ? 'Post a moderator announcement...'
-                  : 'Write to the Mechi community...'
-              }
-              placeholderTextColor={colors.faint}
-              multiline
-              maxLength={500}
-              style={styles.composerInput}
+            <Button
+              label={nextAction.label}
+              icon={nextAction.icon}
+              onPress={() => void openExternal(nextAction.external)}
             />
-            <View style={styles.sendButtonWrap}>
-              <Button
-                label={composerMode === 'announcement' ? 'Announce' : 'Send'}
-                icon={composerMode === 'announcement' ? 'megaphone' : 'send'}
-                loading={sendMutation.isPending}
-                disabled={!canSend}
-                onPress={handleSend}
-              />
-            </View>
-          </View>
+          )}
+          <Link href="/(tabs)/feed" asChild>
+            <Button label="See Feed" icon="images-outline" variant="secondary" />
+          </Link>
         </View>
       </View>
+
+      <Card style={styles.tournamentCard}>
+        <SectionTitle title="Active tournament" />
+        <View style={styles.tournamentHeader}>
+          <View style={styles.tournamentIcon}>
+            <Ionicons name="flash" color={colors.slate} size={20} />
+          </View>
+          <View style={styles.tournamentCopy}>
+            <Text style={styles.tournamentTitle}>{activeTournament?.label ?? 'PlayMechi tournament'}</Text>
+            <Text style={textStyles.muted}>
+              {activeTournament ? `${activeTournament.dateLabel} at ${activeTournament.timeLabel}` : 'Schedule coming soon'}
+            </Text>
+          </View>
+          <View style={styles.countdownPill}>
+            <Text style={styles.countdownLabel}>Countdown</Text>
+            <Text style={styles.countdownValue}>{countdownLabel}</Text>
+          </View>
+        </View>
+        <InfoRow label="Format" value={activeTournament?.format ?? 'TBA'} />
+        <InfoRow label="Status" value={registrations.length ? 'Entry found' : 'Register on web'} />
+      </Card>
+
+      <Card style={styles.nextCard}>
+        <View style={styles.nextIcon}>
+          <Ionicons name={nextAction.icon} color={colors.slate} size={20} />
+        </View>
+        <View style={styles.nextCopy}>
+          <Text style={styles.nextTitle}>{nextAction.title}</Text>
+          <Text style={textStyles.muted}>{nextAction.body}</Text>
+        </View>
+      </Card>
+
+      <Card>
+        <SectionTitle title="Announcement" />
+        <Text style={styles.announcementTitle}>{announcement.title}</Text>
+        <Text style={textStyles.muted}>{announcement.body}</Text>
+        <Link href="/(tabs)/feed" asChild>
+          <Button label="Read official updates" icon="newspaper" variant="secondary" />
+        </Link>
+      </Card>
+
+      <Card>
+        <SectionTitle title="My match desk" />
+        {summaryQuery.isLoading ? (
+          <LoadingState label="Checking your entries" />
+        ) : registrations.length ? (
+          <View style={styles.slotList}>
+            {registrations.slice(0, 3).map((registration) => (
+              <View key={registration.id} style={styles.slotRow}>
+                <View style={styles.slotGameIcon}>
+                  <Text style={styles.slotGameText}>
+                    {TOURNAMENT_GAME_BY_KEY[registration.game].shortLabel.slice(0, 2)}
+                  </Text>
+                </View>
+                <View style={styles.slotCopy}>
+                  <Text style={styles.slotTitle}>
+                    {TOURNAMENT_GAME_BY_KEY[registration.game].label}
+                  </Text>
+                  <Text selectable style={styles.slotMeta}>
+                    {registration.in_game_username}
+                  </Text>
+                  <View style={styles.badgeRow}>
+                    <StatusBadge
+                      label={formatStatus(registration.check_in_status)}
+                      tone={getStatusTone(registration.check_in_status)}
+                    />
+                    <StatusBadge
+                      label={formatStatus(registration.eligibility_status)}
+                      tone={getStatusTone(registration.eligibility_status)}
+                    />
+                  </View>
+                </View>
+              </View>
+            ))}
+            <Link href="/(tabs)/arena" asChild>
+              <Button label="Open Arena desk" icon="trophy" variant="secondary" />
+            </Link>
+          </View>
+        ) : (
+          <>
+            <Text style={textStyles.muted}>
+              No event entry found yet. Register on mechi.club first, then your rooms, status, and
+              results live here.
+            </Text>
+            <Button
+              label="Register on mechi.club"
+              icon="globe-outline"
+              onPress={() => void openExternal(TOURNAMENT_REGISTER_URL)}
+            />
+          </>
+        )}
+      </Card>
+
+      <Card style={styles.socialCard}>
+        <SectionTitle title="Squad zone" />
+        <Text style={styles.socialTitle}>Drops, callouts, and clean energy.</Text>
+        <Text style={textStyles.muted}>
+          Feed is for official drops. Community is where players call matches, talk results, and
+          keep the timeline alive.
+        </Text>
+        <View style={styles.socialGrid}>
+          <View style={styles.socialPill}>
+            <Ionicons name="images-outline" color={colors.primaryDark} size={16} />
+            <Text style={styles.socialPillText}>Short official drops</Text>
+          </View>
+          <View style={styles.socialPill}>
+            <Ionicons name="flash-outline" color={colors.accent} size={16} />
+            <Text style={styles.socialPillText}>Player callouts</Text>
+          </View>
+        </View>
+        <View style={styles.socialActions}>
+          <Link href="/(tabs)/feed" asChild>
+            <Button label="Open Feed" icon="newspaper" />
+          </Link>
+          <Link href="/(tabs)/community" asChild>
+            <Button label="Enter Community" icon="chatbubbles-outline" variant="secondary" />
+          </Link>
+        </View>
+      </Card>
+
+      <Card>
+        <SectionTitle title="Live pulse" />
+        {communityQuery.isLoading ? (
+          <LoadingState label="Loading community" />
+        ) : communityMessages.length ? (
+          <View style={styles.messageList}>
+            {communityMessages.map((message) => (
+              <View key={message.id} style={styles.messageRow}>
+                <Text style={styles.messageSender}>
+                  {message.sender?.username ?? (message.sender_type === 'system' ? 'PlayMechi' : 'Player')}
+                </Text>
+                <Text numberOfLines={2} style={styles.messageBody}>
+                  {message.is_deleted ? 'Removed by moderation.' : message.body}
+                </Text>
+              </View>
+            ))}
+          </View>
+        ) : (
+          <Text style={textStyles.muted}>
+            No community posts yet. Start with clean callouts, match questions, or squad updates.
+          </Text>
+        )}
+        <InfoRow label="Members" value={communityQuery.data?.member_count ?? 0} />
+      </Card>
+
+      <Card>
+        <SectionTitle title="Support" />
+        <Text style={textStyles.muted}>
+          Stuck on login, payment, room access, or result proof? Support will route it fast.
+        </Text>
+        <Button
+          label="Get WhatsApp help"
+          icon="logo-whatsapp"
+          variant="secondary"
+          onPress={() => void openExternal(PLAYMECHI_SUPPORT_URL)}
+        />
+      </Card>
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  root: {
-    flex: 1,
-    backgroundColor: colors.bg,
+  hero: {
+    borderRadius: radii.md,
+    backgroundColor: colors.slate,
+    padding: spacing.lg,
+    gap: spacing.md,
+    overflow: 'hidden',
   },
-  header: {
-    paddingHorizontal: spacing.lg,
-    paddingTop: spacing.lg,
-    paddingBottom: spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-    backgroundColor: colors.bg2,
+  heroTop: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
-    justifyContent: 'space-between',
+    alignItems: 'center',
     gap: spacing.md,
   },
-  headerCopy: {
+  logoMark: {
+    width: 62,
+    height: 62,
+    borderRadius: radii.md,
+    backgroundColor: colors.white,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  logo: {
+    width: 42,
+    height: 42,
+  },
+  heroCopy: {
     flex: 1,
-    gap: spacing.xs,
+    gap: 4,
   },
   eyebrow: {
     color: colors.primary,
     fontSize: 11,
     fontWeight: '900',
     textTransform: 'uppercase',
-    letterSpacing: 0.8,
   },
-  headerTitle: {
-    color: colors.text,
+  heroTitle: {
+    color: colors.white,
     fontSize: 26,
     fontWeight: '900',
+    lineHeight: 31,
   },
-  headerSubtitle: {
-    color: colors.muted,
-    fontSize: 13,
-    lineHeight: 19,
-  },
-  headerMeta: {
-    alignItems: 'flex-end',
-    gap: spacing.xs,
-  },
-  headerCount: {
-    color: colors.text,
-    fontSize: 13,
-    fontWeight: '800',
-  },
-  headerSync: {
-    color: colors.faint,
-    fontSize: 11,
-  },
-  banner: {
-    marginHorizontal: spacing.lg,
-    marginTop: spacing.md,
-    borderWidth: 1,
-    borderRadius: radii.md,
-    padding: spacing.md,
-    gap: spacing.xs,
-  },
-  bannerWarn: {
-    borderColor: 'rgba(255, 184, 107, 0.26)',
-    backgroundColor: 'rgba(255, 184, 107, 0.12)',
-  },
-  bannerDanger: {
-    borderColor: 'rgba(255, 92, 119, 0.28)',
-    backgroundColor: 'rgba(255, 92, 119, 0.12)',
-  },
-  bannerTitle: {
-    color: colors.text,
+  heroBody: {
+    color: '#dbeafe',
     fontSize: 14,
-    fontWeight: '900',
+    lineHeight: 21,
   },
-  bannerBody: {
-    color: colors.muted,
-    fontSize: 12,
-    lineHeight: 17,
+  heroActions: {
+    gap: spacing.sm,
   },
-  adminPanel: {
-    marginHorizontal: spacing.lg,
-    marginTop: spacing.md,
-    borderWidth: 1,
-    borderColor: 'rgba(50, 224, 196, 0.2)',
-    borderRadius: radii.md,
-    backgroundColor: '#0f1b18',
-    padding: spacing.md,
+  tournamentCard: {
     gap: spacing.md,
   },
-  adminHeader: {
+  tournamentHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
     gap: spacing.md,
   },
-  adminTitle: {
+  tournamentIcon: {
+    width: 42,
+    height: 42,
+    borderRadius: radii.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.primary,
+  },
+  tournamentCopy: {
+    flex: 1,
+    gap: spacing.xs,
+  },
+  tournamentTitle: {
     color: colors.text,
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: '900',
   },
-  adminButton: {
-    minHeight: 36,
-    paddingHorizontal: spacing.md,
-    borderRadius: radii.pill,
+  countdownPill: {
+    borderRadius: radii.md,
     borderWidth: 1,
     borderColor: colors.border,
     backgroundColor: colors.panel2,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    alignItems: 'flex-end',
+  },
+  countdownLabel: {
+    color: colors.faint,
+    fontSize: 10,
+    fontWeight: '900',
+    textTransform: 'uppercase',
+  },
+  countdownValue: {
+    color: colors.accent,
+    fontSize: 16,
+    fontWeight: '900',
+  },
+  announcementTitle: {
+    color: colors.text,
+    fontSize: 18,
+    fontWeight: '900',
+    lineHeight: 23,
+  },
+  nextCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  nextIcon: {
+    width: 46,
+    height: 46,
+    borderRadius: radii.md,
+    backgroundColor: colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  adminButtonWarn: {
-    borderColor: 'rgba(255, 184, 107, 0.26)',
-    backgroundColor: 'rgba(255, 184, 107, 0.12)',
+  nextCopy: {
+    flex: 1,
+    gap: spacing.xs,
   },
-  adminButtonText: {
+  nextTitle: {
     color: colors.text,
-    fontSize: 12,
+    fontSize: 16,
     fontWeight: '900',
   },
-  mutedWrap: {
+  slotList: {
     gap: spacing.sm,
   },
-  mutedLabel: {
-    color: colors.muted,
-    fontSize: 12,
-    fontWeight: '800',
+  slotRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    borderRadius: radii.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.panel2,
+    padding: spacing.md,
+  },
+  slotGameIcon: {
+    width: 46,
+    height: 46,
+    borderRadius: radii.md,
+    backgroundColor: colors.slate,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  slotGameText: {
+    color: colors.primary,
+    fontSize: 13,
+    fontWeight: '900',
     textTransform: 'uppercase',
   },
-  mutedList: {
+  slotCopy: {
+    flex: 1,
+    gap: spacing.xs,
+  },
+  slotTitle: {
+    color: colors.text,
+    fontSize: 15,
+    fontWeight: '900',
+  },
+  slotMeta: {
+    color: colors.muted,
+    fontSize: 12,
+  },
+  badgeRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: spacing.sm,
   },
-  mutedChip: {
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radii.md,
-    backgroundColor: colors.panel,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    gap: 2,
+  socialCard: {
+    borderColor: 'rgba(50, 224, 196, 0.45)',
   },
-  mutedChipTitle: {
+  socialTitle: {
     color: colors.text,
-    fontSize: 12,
+    fontSize: 22,
     fontWeight: '900',
   },
-  mutedChipMeta: {
-    color: colors.muted,
-    fontSize: 11,
-  },
-  pinnedCard: {
-    marginHorizontal: spacing.lg,
-    marginTop: spacing.md,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 209, 102, 0.28)',
-    borderRadius: radii.md,
-    backgroundColor: 'rgba(255, 209, 102, 0.1)',
-    padding: spacing.md,
-    gap: spacing.xs,
-  },
-  pinnedHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: spacing.md,
-  },
-  pinnedEyebrow: {
-    color: colors.accent,
-    fontSize: 11,
-    fontWeight: '900',
-    textTransform: 'uppercase',
-  },
-  pinnedSender: {
-    color: colors.text,
-    fontSize: 12,
-    fontWeight: '800',
-  },
-  pinnedBody: {
-    color: colors.text,
-    fontSize: 14,
-    lineHeight: 20,
-  },
-  messagesShell: {
-    flex: 1,
-    marginTop: spacing.md,
-  },
-  messageList: {
-    paddingHorizontal: spacing.lg,
-    paddingBottom: spacing.lg,
-    gap: spacing.md,
-  },
-  emptyState: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: spacing.xl,
+  socialGrid: {
     gap: spacing.sm,
   },
-  emptyTitle: {
+  socialActions: {
+    gap: spacing.sm,
+  },
+  socialPill: {
+    minHeight: 44,
+    borderRadius: radii.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.panel2,
+    paddingHorizontal: spacing.md,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  socialPillText: {
     color: colors.text,
-    fontSize: 18,
+    fontSize: 13,
     fontWeight: '900',
   },
-  emptyBody: {
-    color: colors.muted,
-    fontSize: 13,
-    lineHeight: 19,
-    textAlign: 'center',
+  messageList: {
+    gap: spacing.sm,
   },
-  systemCard: {
-    borderWidth: 1,
-    borderColor: 'rgba(50, 224, 196, 0.18)',
+  messageRow: {
     borderRadius: radii.md,
-    backgroundColor: 'rgba(50, 224, 196, 0.08)',
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.panel2,
     padding: spacing.md,
     gap: spacing.xs,
   },
-  systemTitle: {
-    color: colors.primary,
-    fontSize: 11,
-    fontWeight: '900',
-    textTransform: 'uppercase',
-  },
-  systemBody: {
-    color: colors.text,
-    fontSize: 13,
-    lineHeight: 19,
-  },
-  messageRow: {
-    gap: spacing.xs,
-  },
-  messageRowMine: {
-    alignItems: 'flex-end',
-  },
-  messageRowOther: {
-    alignItems: 'flex-start',
-  },
-  messageBubble: {
-    maxWidth: '88%',
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: 18,
-    backgroundColor: colors.panel2,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    gap: spacing.xs,
-  },
-  messageBubbleMine: {
-    backgroundColor: 'rgba(50, 224, 196, 0.14)',
-    borderColor: 'rgba(50, 224, 196, 0.22)',
-  },
-  messageBubbleAnnouncement: {
-    backgroundColor: 'rgba(255, 209, 102, 0.12)',
-    borderColor: 'rgba(255, 209, 102, 0.24)',
-  },
-  messageBubbleDeleted: {
-    backgroundColor: colors.panel,
-  },
-  messageMetaRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: spacing.md,
-  },
   messageSender: {
-    color: colors.faint,
-    fontSize: 11,
-    fontWeight: '800',
-    textTransform: 'uppercase',
-  },
-  messageTime: {
-    color: colors.faint,
-    fontSize: 11,
+    color: colors.primaryDark,
+    fontSize: 12,
+    fontWeight: '900',
   },
   messageBody: {
     color: colors.text,
     fontSize: 14,
     lineHeight: 20,
-  },
-  messageBodyDeleted: {
-    color: colors.muted,
-    fontStyle: 'italic',
-  },
-  announcementTag: {
-    color: colors.accent,
-    fontSize: 11,
-    fontWeight: '900',
-    textTransform: 'uppercase',
-  },
-  messageAdminRow: {
-    flexDirection: 'row',
-    gap: spacing.sm,
-  },
-  inlineAction: {
-    minHeight: 28,
-    paddingHorizontal: spacing.sm,
-    borderRadius: radii.pill,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.panel,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  inlineActionText: {
-    color: colors.text,
-    fontSize: 11,
-    fontWeight: '800',
-  },
-  composer: {
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
-    backgroundColor: colors.bg2,
-    paddingHorizontal: spacing.lg,
-    paddingTop: spacing.md,
-    paddingBottom: spacing.md,
-    gap: spacing.sm,
-  },
-  composerTop: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: spacing.md,
-  },
-  composerHint: {
-    color: colors.muted,
-    flex: 1,
-    fontSize: 12,
-    lineHeight: 17,
-  },
-  composerCount: {
-    color: colors.faint,
-    fontSize: 11,
-    fontWeight: '800',
-  },
-  composerRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    gap: spacing.sm,
-  },
-  composerInput: {
-    flex: 1,
-    minHeight: 52,
-    maxHeight: 128,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: 18,
-    backgroundColor: colors.panel,
-    color: colors.text,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    fontSize: 15,
-  },
-  sendButtonWrap: {
-    width: 122,
-  },
-  pressed: {
-    opacity: 0.82,
   },
 });

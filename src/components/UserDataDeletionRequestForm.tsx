@@ -44,7 +44,7 @@ export function UserDataDeletionRequestForm() {
     if (!trimmedUsername) {
       setFeedback({
         tone: 'error',
-        title: 'Add your Mechi username first.',
+        title: 'Add your PlayMechi username first.',
         detail: 'We use it to locate the account that should be reviewed for deletion.',
       });
       return;
@@ -63,7 +63,7 @@ export function UserDataDeletionRequestForm() {
       setFeedback({
         tone: 'error',
         title: 'Enter a valid email address.',
-        detail: 'Use the email linked to your Mechi account if you have it.',
+        detail: 'Use the email linked to your PlayMechi account if you have it.',
       });
       return;
     }
@@ -90,7 +90,7 @@ export function UserDataDeletionRequestForm() {
     setFeedback({
       tone: 'loading',
       title: 'Submitting your deletion request...',
-      detail: 'We are sending the request to the Mechi support team now.',
+      detail: 'We are sending the request to the PlayMechi support team now.',
     });
 
     try {
@@ -152,7 +152,7 @@ export function UserDataDeletionRequestForm() {
             Submit an account deletion request from this page.
           </h2>
           <p className="mt-4 text-sm leading-7 text-[var(--text-secondary)] sm:text-base">
-            Use the form to send your Mechi username and account contact details directly to the
+            Use the form to send your PlayMechi username and account contact details directly to the
             support team. This public URL is suitable for Google Play review and for users who need
             a clear account-deletion path outside the app.
           </p>
@@ -168,7 +168,7 @@ export function UserDataDeletionRequestForm() {
               <p className="section-title !mb-0">What to include</p>
             </div>
             <ul className="mt-4 space-y-3 text-sm leading-6 text-[var(--text-secondary)]">
-              <li>Your Mechi username so we can find the account quickly.</li>
+              <li>Your PlayMechi username so we can find the account quickly.</li>
               <li>The email address or phone number linked to that account.</li>
               <li>An optional note if you need to point out the exact profile or support context.</li>
             </ul>
@@ -223,7 +223,7 @@ export function UserDataDeletionRequestForm() {
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
                 <label htmlFor="deletion-username" className="label">
-                  Mechi username
+                  PlayMechi username
                 </label>
                 <input
                   id="deletion-username"
@@ -293,7 +293,7 @@ export function UserDataDeletionRequestForm() {
                   className="mt-1 h-4 w-4 rounded border-[var(--border-color)]"
                 />
                 <span>
-                  I understand Mechi may ask me to verify account ownership before deleting data,
+                  I understand PlayMechi may ask me to verify account ownership before deleting data,
                   and that some billing, fraud, moderation, or dispute records may be retained when
                   legally or operationally required.
                 </span>

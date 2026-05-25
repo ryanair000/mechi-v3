@@ -38,7 +38,7 @@ function isFuture(value?: string | null) {
 
 function getSenderLabel(message: CommunityMessage, currentUserId?: string | null) {
   if (message.sender_type === 'system') {
-    return 'Mechi';
+    return 'PlayMechi';
   }
 
   if (message.sender_user_id === currentUserId) {
@@ -188,10 +188,10 @@ export function CommunityChatPage() {
           <div className="max-w-2xl">
             <p className="section-title">Community</p>
             <h1 className="mt-3 text-[1.75rem] font-black leading-[1.02] text-[var(--text-primary)] sm:text-[2.2rem]">
-              Mechi Community
+              PlayMechi Community
             </h1>
             <p className="mt-3 text-sm leading-6 text-[var(--text-secondary)]">
-              One live room for the signed-in Mechi crowd. Talk like a shared squad chat, line up
+              One live room for the signed-in PlayMechi crowd. Talk like a shared squad chat, line up
               challenges, call for games, and keep match-night comms in one place.
             </p>
           </div>
@@ -316,7 +316,7 @@ export function CommunityChatPage() {
                     className="rounded-[var(--radius-card)] border border-[rgba(50,224,196,0.18)] bg-[rgba(50,224,196,0.08)] px-4 py-3"
                   >
                     <p className="text-[11px] font-black uppercase tracking-[0.14em] text-[var(--accent-secondary-text)]">
-                      Mechi update
+                      PlayMechi update
                     </p>
                     <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">{message.body}</p>
                   </div>
@@ -407,7 +407,7 @@ export function CommunityChatPage() {
             placeholder={
               composerMode === 'announcement'
                 ? 'Post a moderator announcement...'
-                : 'Write to the Mechi community...'
+                : 'Write to the PlayMechi community...'
             }
             className="w-full rounded-[var(--radius-card)] border border-[var(--border-color)] bg-[var(--surface-elevated)] px-4 py-3 text-sm text-[var(--text-primary)] outline-none transition placeholder:text-[var(--text-soft)] focus:border-[var(--border-strong)]"
           />

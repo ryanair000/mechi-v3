@@ -29,7 +29,7 @@ import type {
 } from '@/types';
 
 const EXTERNAL_ENQUIRIES_REPLY =
-  "I can help from this Mechi WhatsApp. Tell me the exact game, item, or payment issue here and I'll check the next step for you.";
+  "I can help from this PlayMechi WhatsApp. Tell me the exact game, item, or payment issue here and I'll check the next step for you.";
 
 export interface SupportUserSummary {
   id: string;
@@ -333,11 +333,11 @@ export function buildSupportSystemPrompt(channel: SupportContextChannel = 'whats
   const channelLabel = channel === 'instagram' ? 'Instagram DM' : 'WhatsApp';
   const channelActionLine =
     channel === 'whatsapp'
-      ? 'Mechi can safely handle dashboard summary, start queue, leave queue, list lobbies, and list tournaments on WhatsApp when the number is linked.'
-      : 'On Instagram, answer product questions from the supplied Mechi context; if the user needs account-specific actions, payment help, payouts, disputes, or moderation decisions, escalate.';
+      ? 'PlayMechi can safely handle dashboard summary, start queue, leave queue, list lobbies, and list tournaments on WhatsApp when the number is linked.'
+      : 'On Instagram, answer product questions from the supplied PlayMechi context; if the user needs account-specific actions, payment help, payouts, disputes, or moderation decisions, escalate.';
 
   return [
-    `You are the Mechi ${channelLabel} support assistant.`,
+    `You are the PlayMechi ${channelLabel} support assistant.`,
     'Reply in a warm, short, confident tone that feels helpful and current, but do not use slang overload.',
     `Format replies for ${channelLabel} so they are easy to scan on mobile.`,
     'Start with the direct answer first.',
@@ -348,15 +348,15 @@ export function buildSupportSystemPrompt(channel: SupportContextChannel = 'whats
     'Do not use markdown tables, hashtags, or long walls of text.',
     channelActionLine,
     'You are not allowed to process money, refunds, payouts, subscription cancellations, bans, disputes, or account-changing actions.',
-    `If someone asks about games, gift cards, Fortnite, V-Bucks, or anything outside Mechi, keep them on this same WhatsApp and reply exactly: "${EXTERNAL_ENQUIRIES_REPLY}" Do not redirect to another number, negotiate prices, or collect payment details.`,
-    'If a customer issue is reported to Telegram or escalated internally, still reply to the customer immediately in this chat with: "I\'ve reported this to the Mechi team. Please wait here while we check it and reply in this chat."',
+    `If someone asks about games, gift cards, Fortnite, V-Bucks, or anything outside PlayMechi, keep them on this same WhatsApp and reply exactly: "${EXTERNAL_ENQUIRIES_REPLY}" Do not redirect to another number, negotiate prices, or collect payment details.`,
+    'If a customer issue is reported to Telegram or escalated internally, still reply to the customer immediately in this chat with: "I\'ve reported this to the PlayMechi team. Please wait here while we check it and reply in this chat."',
     'If the user needs anything operational, risky, or policy-sensitive, return disposition "escalate".',
-    'If the user is asking an informational question and the answer is supported by the supplied Mechi context, return disposition "reply".',
+    'If the user is asking an informational question and the answer is supported by the supplied PlayMechi context, return disposition "reply".',
     'If you need one missing detail to answer safely, return disposition "clarify" with a short question.',
-    'Do not invent product policy, prices, or features that are not in the supplied Mechi context.',
+    'Do not invent product policy, prices, or features that are not in the supplied PlayMechi context.',
     'Output valid JSON only with keys: disposition, reply_text, confidence, tags, escalation_reason.',
     'Confidence must be a number between 0 and 1.',
-    'Keep reply_text under 500 characters and include a Mechi link when it genuinely helps.',
+    'Keep reply_text under 500 characters and include a PlayMechi link when it genuinely helps.',
   ].join('\n');
 }
 
@@ -369,15 +369,15 @@ export function buildMechiSupportContext(
   const userLine = user
     ? `Known player context: ${user.username} is on the ${user.plan} plan, region ${user.region ?? 'unknown'}, selected games ${user.selected_games.length ? user.selected_games.map((game) => GAMES[game]?.label ?? game).join(', ') : 'none yet'}, and platforms ${user.platforms.length ? user.platforms.join(', ') : 'none set'}.`
     : channel === 'instagram'
-      ? 'Known player context: this Instagram sender is not linked to a verified Mechi user in this request.'
-      : 'Known player context: this phone number is not linked to a Mechi user yet.';
+      ? 'Known player context: this Instagram sender is not linked to a verified PlayMechi user in this request.'
+      : 'Known player context: this phone number is not linked to a PlayMechi user yet.';
   const channelCapabilityLine =
     channel === 'whatsapp'
       ? '- WhatsApp can show a linked player dashboard summary, start or leave ranked queue, list open lobbies, and list open tournaments.'
-      : '- Instagram can answer Mechi product questions from this context; account-specific actions should be escalated unless a verified linked profile is supplied.';
+      : '- Instagram can answer PlayMechi product questions from this context; account-specific actions should be escalated unless a verified linked profile is supplied.';
 
   return [
-    `App: Mechi. Main site: ${APP_URL}. Pricing page: ${APP_URL}/pricing. Dashboard: ${APP_URL}/dashboard.`,
+    `App: PlayMechi. Main site: ${APP_URL}. Pricing page: ${APP_URL}/pricing. Dashboard: ${APP_URL}/dashboard.`,
     `Plans:\n${summarizePlanLines()}`,
     'Core rules:',
     '- New players can get a 1-month Pro trial.',
@@ -386,7 +386,7 @@ export function buildMechiSupportContext(
     '- Elite organizers can run auto prize pools from paid entries or set a specified prize pool up front, and the first three Elite tournaments each month do not carry platform cost.',
     '- FC26 and eFootball score reporting use scorelines. Matching score reports can confirm either a win or a draw. Mismatched reports go to dispute review.',
     '- WhatsApp alerts are optional backup notifications when a player has them enabled in profile.',
-    '- Games, gift cards, Fortnite, V-Bucks, and other non-Mechi enquiries stay on this WhatsApp. Ask for the exact item or issue, do not redirect to another number, and do not collect payment details.',
+    '- Games, gift cards, Fortnite, V-Bucks, and other non-PlayMechi enquiries stay on this WhatsApp. Ask for the exact item or issue, do not redirect to another number, and do not collect payment details.',
     `Current PlayMechi Weekend Cup:\n${summarizeWeekendCup()}`,
     `Older PlayMechi Launch tournament:\n${summarizePlayMechiTournament()}`,
     channelCapabilityLine,
@@ -399,15 +399,15 @@ export function buildMechiSupportContext(
 function acknowledgementFor(reason: SupportClassification['reason']) {
   switch (reason) {
     case 'unsupported_media':
-      return "I can only handle text here right now, so I've queued this for a human from Mechi.";
+      return "I can only handle text here right now, so I've queued this for a human from PlayMechi.";
     case 'requested_human':
-      return "I'm looping in the Mechi support team. Drop any extra details here and they'll pick it up.";
+      return "I'm looping in the PlayMechi support team. Drop any extra details here and they'll pick it up.";
     case 'blocked_topic':
-      return "I've reported this to the Mechi team. Please wait here while we check it and reply in this chat.";
+      return "I've reported this to the PlayMechi team. Please wait here while we check it and reply in this chat.";
     case 'banned_account':
-      return "This needs a human Mechi agent to review, so I've handed it to the support inbox.";
+      return "This needs a human PlayMechi agent to review, so I've handed it to the support inbox.";
     case 'blocked_thread':
-      return "This lane is already with the Mechi support team, so they'll continue from here.";
+      return "This lane is already with the PlayMechi support team, so they'll continue from here.";
     case 'empty_message':
       return "Send me a quick text message with what you need and I'll try to point you the right way.";
     case 'external_sales_enquiry':

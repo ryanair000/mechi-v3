@@ -128,7 +128,7 @@ function ProfileSetupForm({ profile }: { profile: Profile | null | undefined }) 
       router.replace('/(tabs)');
     },
     onError: (err) => {
-      setError(err instanceof ApiError ? err.message : 'Could not save your profile.');
+      setError(err instanceof ApiError ? err.message : 'Profile did not save. Check your details and try again.');
     },
   });
 
@@ -156,23 +156,23 @@ function ProfileSetupForm({ profile }: { profile: Profile | null | undefined }) 
   return (
     <Screen
       title={isProfileComplete(profile) ? 'Edit profile' : 'Complete profile'}
-      subtitle="Set the tournament game, gamer tag, and WhatsApp number admins will use for PlayMechi."
+      subtitle="Lock your game, IGN, and WhatsApp number so match admins can reach you fast."
     >
       <Card>
-        <Text style={textStyles.h2}>Location</Text>
+        <Text style={textStyles.h2}>Region</Text>
         <ChipGroup options={countryOptions} value={country} onChange={handleCountryChange} />
         <ChipGroup options={regionOptions} value={region} onChange={setRegion} />
       </Card>
 
       <Card>
-        <SectionTitle title="Tournament setup" />
+        <SectionTitle title="Game setup" />
         <ChipGroup
           options={TOURNAMENT_GAMES.map((item) => ({ value: item.game, label: item.shortLabel }))}
           value={game}
           onChange={handleGameChange}
         />
         <Text style={textStyles.muted}>
-          {TOURNAMENT_GAME_BY_KEY[game].label} uses your mobile in-game username for this event.
+          Use the exact {TOURNAMENT_GAME_BY_KEY[game].label} name you will play with on match day.
         </Text>
         <Field
           label={getGameIdLabel(game, 'mobile')}
@@ -183,11 +183,11 @@ function ProfileSetupForm({ profile }: { profile: Profile | null | undefined }) 
       </Card>
 
       <Card>
-        <SectionTitle title="Alerts" />
+        <SectionTitle title="Match alerts" />
         <ChipGroup
           options={[
-            { value: 'on', label: 'WhatsApp alerts on' },
-            { value: 'off', label: 'Alerts off' },
+            { value: 'on', label: 'WhatsApp alerts' },
+            { value: 'off', label: 'No alerts' },
           ]}
           value={whatsappNotifications ? 'on' : 'off'}
           onChange={(value) => setWhatsappNotifications(value === 'on')}
@@ -205,7 +205,7 @@ function ProfileSetupForm({ profile }: { profile: Profile | null | undefined }) 
 
       <ErrorBanner message={error} />
       <Button
-        label="Save profile"
+        label="Save player profile"
         icon="checkmark-circle"
         onPress={handleSave}
         loading={mutation.isPending}

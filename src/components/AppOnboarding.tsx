@@ -91,12 +91,12 @@ export function AppOnboarding() {
         </button>
 
         <div className="max-w-2xl">
-          <p className="section-title">Welcome to Mechi</p>
+          <p className="section-title">Welcome to PlayMechi</p>
           <h2 className="mt-3 text-2xl font-black text-[var(--text-primary)] sm:text-[2.2rem]">
             Your quickest path from setup to match day.
           </h2>
           <p className="mt-3 text-sm leading-6 text-[var(--text-secondary)]">
-            Keep your grind simple: set your games once, follow the right lane, and let Mechi keep
+            Keep your grind simple: set your games once, follow the right lane, and let PlayMechi keep
             your next action obvious.
           </p>
         </div>

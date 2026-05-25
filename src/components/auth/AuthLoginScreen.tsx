@@ -25,7 +25,7 @@ const LOGIN_METHODS: Array<{
     key: 'phone',
     label: 'Phone number',
     placeholder: '0712 345 678',
-    helper: 'Use the phone number on your Mechi profile.',
+    helper: 'Use the phone number on your PlayMechi profile.',
   },
   {
     key: 'username',
@@ -51,7 +51,7 @@ const SW_LOGIN_METHODS: Array<{
     key: 'phone',
     label: 'Namba ya simu',
     placeholder: '0755 123 456',
-    helper: 'Tumia namba ya simu iliyo kwenye profile yako ya Mechi.',
+    helper: 'Tumia namba ya simu iliyo kwenye profile yako ya PlayMechi.',
   },
   {
     key: 'username',
@@ -144,7 +144,7 @@ export function AuthLoginScreen({
     setFeedback({
       tone: 'loading',
       title: isSwahili ? 'Inaingiza akaunti yako...' : 'Signing you in...',
-      detail: isSwahili ? 'Tunaikagua akaunti yako ya Mechi sasa.' : 'Checking your Mechi account now.',
+      detail: isSwahili ? 'Tunaikagua akaunti yako ya PlayMechi sasa.' : 'Checking your PlayMechi account now.',
     });
 
     try {
@@ -180,7 +180,7 @@ export function AuthLoginScreen({
         title: isSwahili
           ? `Karibu tena, ${data.user.username}.`
           : `Welcome back, ${data.user.username}.`,
-        detail: isSwahili ? 'Tunakukalisha ndani ya Mechi sasa.' : 'Taking you into Mechi now.',
+        detail: isSwahili ? 'Tunakukalisha ndani ya PlayMechi sasa.' : 'Taking you into PlayMechi now.',
       });
       toast.success(
         isSwahili ? `Karibu tena, ${data.user.username}!` : `Welcome back, ${data.user.username}!`
@@ -221,8 +221,8 @@ export function AuthLoginScreen({
         tone: 'error',
         title: isSwahili ? 'Barua pepe sahihi inahitajika.' : 'A valid email is required.',
         detail: isSwahili
-          ? 'Badili kwenda Email kisha weka anuani iliyo kwenye profile yako ya Mechi.'
-          : 'Switch to Email and enter the address on your Mechi profile.',
+          ? 'Badili kwenda Email kisha weka anuani iliyo kwenye profile yako ya PlayMechi.'
+          : 'Switch to Email and enter the address on your PlayMechi profile.',
       });
       return;
     }
@@ -234,8 +234,8 @@ export function AuthLoginScreen({
         ? 'Tunatuma link salama ya kuingia...'
         : 'Sending a secure sign-in link...',
       detail: isSwahili
-        ? 'Ikiwa email hiyo inalingana na akaunti ya Mechi, link iko njiani.'
-        : 'If that email matches a Mechi account, the link is on the way.',
+        ? 'Ikiwa email hiyo inalingana na akaunti ya PlayMechi, link iko njiani.'
+        : 'If that email matches a PlayMechi account, the link is on the way.',
     });
 
     try {
@@ -414,8 +414,8 @@ export function AuthLoginScreen({
               </p>
               <p className="mt-1 text-xs leading-5 text-[var(--text-soft)]">
                 {isSwahili
-                  ? 'Weka email yako hapo juu na Mechi itakutumia link ya kuingia mara moja.'
-                  : 'Enter your email above and Mechi will send a one-time sign-in link.'}
+                  ? 'Weka email yako hapo juu na PlayMechi itakutumia link ya kuingia mara moja.'
+                  : 'Enter your email above and PlayMechi will send a one-time sign-in link.'}
               </p>
               <button
                 type="button"

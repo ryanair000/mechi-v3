@@ -481,7 +481,7 @@ export function WekaMaweClient({ mode }: { mode: Mode }) {
             What happens after I pay?
           </h2>
           <p className="mt-2 max-w-3xl text-sm leading-6 text-[var(--text-secondary)]">
-            Paystack redirects you back to Mechi. Once confirmation lands, your Weka Mawe entry
+            Paystack redirects you back to PlayMechi. Once confirmation lands, your Weka Mawe entry
             changes to paid, your slot is locked, and you can return for check-in before the
             bracket starts.
           </p>
@@ -585,7 +585,7 @@ export function WekaMaweClient({ mode }: { mode: Mode }) {
 
             <div className="grid gap-3">
               {[
-                ['Sign in', 'Your payment and bracket slot must attach to one Mechi account.'],
+                ['Sign in', 'Your payment and bracket slot must attach to one PlayMechi account.'],
                 ['Fill entry', 'Add your eFootball name and WhatsApp contact.'],
                 ['Paystack checkout', 'Payment confirmation locks the slot. A saved form alone does not count.'],
                 ['Check in', 'Return on match day and check in before the deadline.'],
@@ -680,7 +680,7 @@ export function WekaMaweClient({ mode }: { mode: Mode }) {
           <div className="mt-8 flex items-start gap-3 rounded-lg border border-[var(--border-color)] bg-[var(--surface-soft)] p-4 text-sm text-[var(--text-secondary)]">
             <LockKeyhole size={18} className="mt-0.5 shrink-0 text-[var(--accent-secondary-text)]" />
             <p>
-              Already registered? Sign in with the same Mechi account. The page will show your current payment
+              Already registered? Sign in with the same PlayMechi account. The page will show your current payment
               status and checkout link.
             </p>
           </div>

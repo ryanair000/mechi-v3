@@ -75,7 +75,7 @@ export default function RegisterScreen() {
       });
       router.replace('/(tabs)');
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Could not create account. Try again.');
+      setError(err instanceof ApiError ? err.message : 'Account setup failed. Check your details and try again.');
     } finally {
       setLoading(false);
     }
@@ -91,12 +91,12 @@ export default function RegisterScreen() {
 
   return (
     <Screen
-      title="Create account"
-      subtitle="Set up your PlayMechi account for community, tournament tracking, and match-night updates. Tournament slot registration happens on the website."
+      title="Join PlayMechi"
+      subtitle="Create your player profile for chat, alerts, and tournament tracking. Paid event registration stays on mechi.club."
     >
       <Card>
-        <Text style={textStyles.h2}>Account</Text>
-        <Field label="Username" value={username} onChangeText={setUsername} placeholder="playmechiwarrior" />
+        <Text style={textStyles.h2}>Player details</Text>
+        <Field label="Gamer tag" value={username} onChangeText={setUsername} placeholder="playmechiclutch" />
         <Field
           label="Phone"
           value={phone}
@@ -109,7 +109,7 @@ export default function RegisterScreen() {
           label="Email"
           value={email}
           onChangeText={setEmail}
-          placeholder="you@example.com"
+          placeholder="player@example.com"
           keyboardType="email-address"
           textContentType="emailAddress"
         />
@@ -117,20 +117,20 @@ export default function RegisterScreen() {
           label="Password"
           value={password}
           onChangeText={setPassword}
-          placeholder="At least 9 characters"
+          placeholder="9+ characters"
           secureTextEntry
           textContentType="newPassword"
         />
       </Card>
 
       <Card>
-        <SectionTitle title="Location" />
+        <SectionTitle title="Region" />
         <ChipGroup options={countryOptions} value={country} onChange={handleCountryChange} />
         <ChipGroup options={regionOptions} value={region} onChange={setRegion} />
       </Card>
 
       <Card>
-        <SectionTitle title="Primary game" />
+        <SectionTitle title="Main game" />
         <ChipGroup
           options={TOURNAMENT_GAMES.map((item) => ({
             value: item.game,
@@ -140,8 +140,8 @@ export default function RegisterScreen() {
           onChange={handleGameChange}
         />
         <Text style={textStyles.muted}>
-          {TOURNAMENT_GAME_BY_KEY[game].label} plays on mobile for this PlayMechi event. Tournament
-          slots are registered on mechi.club, not inside the app.
+          Pick the game you want linked to your profile. Event slots and payments happen on
+          mechi.club so your entry stays verified.
         </Text>
         <Field
           label={getGameIdLabel(game, 'mobile')}
@@ -151,8 +151,8 @@ export default function RegisterScreen() {
         />
         <ChipGroup
           options={[
-            { value: 'on', label: 'WhatsApp alerts on' },
-            { value: 'off', label: 'Alerts off' },
+            { value: 'on', label: 'WhatsApp alerts' },
+            { value: 'off', label: 'No alerts' },
           ]}
           value={whatsappNotifications ? 'on' : 'off'}
           onChange={(value) => setWhatsappNotifications(value === 'on')}
@@ -161,7 +161,7 @@ export default function RegisterScreen() {
 
       <ErrorBanner message={error} />
       <Button
-        label="Create account"
+        label="Create player profile"
         icon="person-add"
         onPress={handleRegister}
         loading={loading}
@@ -169,7 +169,7 @@ export default function RegisterScreen() {
       />
 
       <View style={styles.footer}>
-        <Text style={styles.footerText}>Already have an account?</Text>
+        <Text style={styles.footerText}>Already in?</Text>
         <Link href="/(auth)/login" asChild>
           <Pressable>
             <Text style={styles.footerLink}>Log in</Text>

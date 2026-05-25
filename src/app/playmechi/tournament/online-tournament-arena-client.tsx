@@ -86,8 +86,8 @@ function arePlayerCheckInDetailsEqual(
   );
 }
 
-const STATE_API_PATH = '/api/events/mechi-online-gaming-tournament/state';
-const RESULTS_API_PATH = '/api/events/mechi-online-gaming-tournament/results';
+const STATE_API_PATH = '/api/events/playmechi-online-gaming-tournament/state';
+const RESULTS_API_PATH = '/api/events/playmechi-online-gaming-tournament/results';
 const PLAYER_STATE_POLL_INTERVAL_MS = 15000;
 const MODERATOR_TOURNAMENT_ARENA_PATH = '/moderators/tournament';
 const MODERATOR_TOURNAMENT_CHECK_IN_PATH = '/moderators/check-in';
@@ -294,7 +294,7 @@ function PlayerGate({ nextPath }: { nextPath: string }) {
           Sign in to enter the tournament desk
         </h1>
         <p className="mt-3 max-w-2xl text-sm leading-7 text-[var(--text-secondary)]">
-          Brackets, room credentials, screenshot uploads, score review, and payouts are handled inside Mechi.club.
+          Brackets, room credentials, screenshot uploads, score review, and payouts are handled inside PlayMechi.
         </p>
         <div className="mt-5 flex flex-wrap gap-3">
           <Link href={getLoginPath(nextPath)} className="btn-primary">

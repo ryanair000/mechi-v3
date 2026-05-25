@@ -22,7 +22,7 @@ export default function LoginScreen() {
       await signIn({ identifier: identifier.trim(), password });
       router.replace('/(tabs)');
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Could not log in. Try again.');
+      setError(err instanceof ApiError ? err.message : 'Login failed. Check your details and try again.');
     } finally {
       setLoading(false);
     }
@@ -31,28 +31,28 @@ export default function LoginScreen() {
   return (
     <Screen
       title="PlayMechi"
-      subtitle="Log in to register, check in, view rooms, upload results, and follow your tournament status."
+      subtitle="Your match-night hub: check in, get rooms, follow brackets, and keep your squad locked in."
     >
       <Card>
-        <Text style={textStyles.h2}>Welcome back</Text>
+        <Text style={textStyles.h2}>Back in the lobby</Text>
         <Field
           label="Phone, email, or username"
           value={identifier}
           onChangeText={setIdentifier}
-          placeholder="0712345678 or playername"
+          placeholder="Phone, email, or gamer tag"
           textContentType="username"
         />
         <Field
           label="Password"
           value={password}
           onChangeText={setPassword}
-          placeholder="Your password"
+          placeholder="Enter your password"
           secureTextEntry
           textContentType="password"
         />
         <ErrorBanner message={error} />
         <Button
-          label="Log in"
+          label="Enter PlayMechi"
           icon="log-in"
           onPress={handleLogin}
           loading={loading}
@@ -61,10 +61,10 @@ export default function LoginScreen() {
       </Card>
 
       <View style={styles.footer}>
-        <Text style={styles.footerText}>New to PlayMechi?</Text>
+        <Text style={styles.footerText}>New here?</Text>
         <Link href="/(auth)/register" asChild>
           <Pressable>
-            <Text style={styles.footerLink}>Create account</Text>
+            <Text style={styles.footerLink}>Create your player profile</Text>
           </Pressable>
         </Link>
       </View>

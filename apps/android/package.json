@@ -8,6 +8,7 @@
     "dev:usb": "powershell -ExecutionPolicy Bypass -File ./scripts/usb-dev.ps1",
     "android": "npm run android:usb",
     "android:usb": "powershell -ExecutionPolicy Bypass -File ./scripts/usb-dev.ps1 -Install",
+    "android:usb:release": "powershell -ExecutionPolicy Bypass -File ./scripts/usb-dev.ps1 -Install -Release",
     "ios": "expo run:ios",
     "web": "expo start --web",
     "typecheck": "tsc --noEmit"

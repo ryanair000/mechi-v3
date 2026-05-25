@@ -26,7 +26,7 @@ export default async function ForgotPasswordPage({
       title="Reset your password."
       subtitle="Enter your username plus your email or phone, then set a fresh password."
       sideTitle="Get back in safely."
-      sideDescription="Match the username and email or phone on your Mechi profile, then choose a fresh password."
+      sideDescription="Match the username and email or phone on your PlayMechi profile, then choose a fresh password."
       sidePoints={[
         'Username plus email or phone',
         'Inline reset step',

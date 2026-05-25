@@ -1,5 +1,6 @@
 param(
   [switch]$Install,
+  [switch]$Release,
   [switch]$NoMetro,
   [int]$MetroPort = 8081,
   [int]$ApiPort = 3000
@@ -56,7 +57,14 @@ if ($Install) {
   Push-Location "$PSScriptRoot\..\android"
   try {
     $env:ANDROID_SERIAL = $serial
-    & .\gradlew.bat installDebug
+    if ($Release) {
+      Write-Host "Installing bundled local release build. Metro is not required after this install."
+      & .\gradlew.bat installReleaseLocal
+    }
+    else {
+      Write-Host "Installing debug build. Keep Metro running with npm start after this install."
+      & .\gradlew.bat installDebug
+    }
     exit $LASTEXITCODE
   }
   finally {

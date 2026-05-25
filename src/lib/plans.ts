@@ -86,7 +86,7 @@ export const PLANS: Record<Plan, PlanConfig> = {
     earlyAccess: true,
     features: [
       'Everything in Pro',
-      'Tournament hosting on Mechi',
+      'Tournament hosting on PlayMechi',
       '3 fee-free tournaments each month',
       'Auto or specified prize pools',
       'Priority matchmaking',

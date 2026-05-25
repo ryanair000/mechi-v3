@@ -3,8 +3,8 @@ import ReportIssueClient from './report-issue-client';
 import { TESTS_URL } from '@/app/manual-tests/manual-test-kit';
 
 export const metadata: Metadata = {
-  title: 'Report A Test Issue | Mechi',
-  description: 'Submit screenshots and issue notes for the Mechi test environment.',
+  title: 'Report A Test Issue | PlayMechi',
+  description: 'Submit screenshots and issue notes for the PlayMechi test environment.',
   alternates: {
     canonical: `${TESTS_URL}/report`,
   },

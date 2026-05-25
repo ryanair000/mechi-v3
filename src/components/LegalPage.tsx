@@ -41,14 +41,14 @@ export function LegalPage({
             className="brand-link inline-flex min-h-11 items-center gap-2 text-sm font-semibold"
           >
             <ArrowLeft size={16} />
-            Back to Mechi
+            Back to PlayMechi
           </Link>
         </div>
 
         <PageBreadcrumbs className="mt-4" />
 
         <section className="card mt-5 overflow-hidden p-5 sm:p-8">
-          <div className="brand-kicker w-fit">Mechi legal</div>
+          <div className="brand-kicker w-fit">PlayMechi legal</div>
           <h1 className="mt-5 max-w-3xl text-[2rem] font-black leading-[1.04] text-[var(--text-primary)] sm:text-[3rem]">
             {title}
           </h1>

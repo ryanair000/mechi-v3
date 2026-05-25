@@ -111,7 +111,7 @@ export function BrandLogo({
         >
           <Image
             src="/mechi-logo.png"
-            alt="Mechi logo"
+            alt="PlayMechi logo"
             fill
             sizes={imageSizes[size]}
             className={imageToneClasses[variant]}
@@ -130,7 +130,7 @@ export function BrandLogo({
               labelClassName
             )}
           >
-            Mechi
+            PlayMechi
           </span>
           {showTagline ? (
             <span

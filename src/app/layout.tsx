@@ -38,12 +38,12 @@ export async function generateMetadata(): Promise<Metadata> {
   return {
     metadataBase: new URL('https://mechi.club'),
     manifest: '/manifest.webmanifest',
-    title: 'Mechi | Compete. Connect. Rise.',
+    title: 'PlayMechi | Compete. Connect. Rise.',
     description: isSwahili
-      ? 'Mechi inawasaidia gamers wa Afrika Mashariki kupata mechi safi za 1v1, lobbies zilizo sawa, na tournaments zenye zawadi bila vurugu za WhatsApp.'
-      : 'Mechi helps East African players find proper 1v1s, clean lobbies, and prize-backed tournaments without the WhatsApp chaos.',
+      ? 'PlayMechi inawasaidia gamers wa Afrika Mashariki kupata mechi safi za 1v1, lobbies zilizo sawa, na tournaments zenye zawadi bila vurugu za WhatsApp.'
+      : 'PlayMechi helps East African players find proper 1v1s, clean lobbies, and prize-backed tournaments without the WhatsApp chaos.',
     keywords: [
-      'mechi',
+      'playmechi',
       'gaming',
       'matchmaking',
       'east africa',
@@ -62,21 +62,21 @@ export async function generateMetadata(): Promise<Metadata> {
       'tekken',
     ],
     openGraph: {
-      title: 'Mechi | Compete. Connect. Rise.',
+      title: 'PlayMechi | Compete. Connect. Rise.',
       description: isSwahili
         ? 'Panga 1v1 safi, simamia lobbies vizuri, na endesha tournaments zenye zawadi kwa players wa Afrika Mashariki sehemu moja.'
         : 'Queue clean 1v1s, spin up proper lobbies, and run prize-backed tournaments for players across East Africa in one place.',
       url: 'https://mechi.club',
-      siteName: 'Mechi',
+      siteName: 'PlayMechi',
       locale: regionalSettings.locale === 'sw-TZ' ? 'sw_TZ' : 'en_US',
       type: 'website',
     },
     twitter: {
       card: 'summary_large_image',
-      title: 'Mechi | Compete. Connect. Rise.',
+      title: 'PlayMechi | Compete. Connect. Rise.',
       description: isSwahili
-        ? 'Players wa Kenya, Tanzania, Uganda, Rwanda, na Ethiopia wanatumia Mechi kwa 1v1 safi, lobbies bora, na tournament zenye mpangilio mzuri.'
-        : 'Players across Kenya, Tanzania, Uganda, Rwanda, and Ethiopia use Mechi for cleaner 1v1s, better lobbies, and smoother tournament runs.',
+        ? 'Players wa Kenya, Tanzania, Uganda, Rwanda, na Ethiopia wanatumia PlayMechi kwa 1v1 safi, lobbies bora, na tournament zenye mpangilio mzuri.'
+        : 'Players across Kenya, Tanzania, Uganda, Rwanda, and Ethiopia use PlayMechi for cleaner 1v1s, better lobbies, and smoother tournament runs.',
     },
   };
 }
@@ -121,7 +121,7 @@ const themeScript = `
 const organizationJsonLd = {
   '@context': 'https://schema.org',
   '@type': 'Organization',
-  name: 'Mechi',
+  name: 'PlayMechi',
   url: APP_URL,
   logo: `${APP_URL}/icon.png`,
   sameAs: [
@@ -136,11 +136,11 @@ const organizationJsonLd = {
 const websiteJsonLd = {
   '@context': 'https://schema.org',
   '@type': 'WebSite',
-  name: 'Mechi.club',
+  name: 'PlayMechi',
   url: APP_URL,
   publisher: {
     '@type': 'Organization',
-    name: 'Mechi',
+    name: 'PlayMechi',
   },
 };
 
@@ -160,7 +160,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       suppressHydrationWarning
     >
       <head>
-        <Script id="mechi-theme-init" strategy="beforeInteractive">
+        <Script id="playmechi-theme-init" strategy="beforeInteractive">
           {themeScript}
         </Script>
         <script

@@ -18,7 +18,6 @@
     },
     "android": {
       "package": "com.mechi.app",
-      "versionCode": 18,
       "permissions": [
         "android.permission.INTERNET",
         "android.permission.POST_NOTIFICATIONS",

@@ -3,8 +3,8 @@ import ManualTestKitClient from './manual-test-kit-client';
 import { TESTS_URL, manualTestSections } from './manual-test-kit';
 
 export const metadata: Metadata = {
-  title: 'Mechi Manual Test Kit | Mechi',
-  description: 'An interactive manual QA kit for testing Mechi end to end.',
+  title: 'PlayMechi Manual Test Kit | PlayMechi',
+  description: 'An interactive manual QA kit for testing PlayMechi end to end.',
   alternates: {
     canonical: TESTS_URL,
   },

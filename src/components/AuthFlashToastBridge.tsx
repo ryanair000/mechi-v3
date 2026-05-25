@@ -11,7 +11,7 @@ const AUTH_NOTICE_COPY: Record<string, { tone: 'success' | 'error'; message: str
   },
   magic_link_sent: {
     tone: 'success',
-    message: 'Check your email for the Mechi sign-in link.',
+    message: 'Check your email for the PlayMechi sign-in link.',
   },
   reset_email_sent: {
     tone: 'success',

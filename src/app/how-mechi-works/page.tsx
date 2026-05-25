@@ -15,9 +15,9 @@ import { HomeFloatingHeader } from '@/components/HomeFloatingHeader';
 import FooterSection from '@/components/footer';
 
 export const metadata: Metadata = {
-  title: 'How Mechi Works | Mechi.club',
+  title: 'How PlayMechi Works | PlayMechi',
   description:
-    'A clear guide to using Mechi.club for profiles, games, tournaments, match rooms, payments, results, rewards, and support.',
+    'A clear guide to using PlayMechi for profiles, games, tournaments, match rooms, payments, results, rewards, and support.',
 };
 
 const NAV_ITEMS = [
@@ -30,7 +30,7 @@ const NAV_ITEMS = [
 const PLAYER_STEPS = [
   {
     icon: UserRoundCheck,
-    title: 'Create your Mechi account',
+    title: 'Create your PlayMechi account',
     copy:
       'Sign up, set your display name, and keep your player details accurate so organizers can match your tournament entry to the right gamer.',
   },
@@ -65,7 +65,7 @@ const TRUST_ITEMS = [
     icon: CircleDollarSign,
     title: 'Payments confirm paid slots',
     copy:
-      'If an event has an entry fee, payment confirmation is what locks your slot. Never assume paid status until Mechi confirms it.',
+      'If an event has an entry fee, payment confirmation is what locks your slot. Never assume paid status until PlayMechi confirms it.',
   },
   {
     icon: MessageCircle,
@@ -121,14 +121,14 @@ export default function HowMechiWorksPage() {
 
           <div className="landing-shell relative flex min-h-[calc(100svh-7rem)] items-center py-16">
             <div className="max-w-3xl">
-              <div className="brand-kicker">Mechi explained</div>
+              <div className="brand-kicker">PlayMechi explained</div>
               <h1 className="mt-5 max-w-3xl text-[2.15rem] font-black leading-[1.05] text-[var(--text-primary)] sm:text-[3.7rem] lg:text-[4.4rem]">
-                How Mechi Works
+                How PlayMechi Works
               </h1>
               <p className="mt-5 max-w-2xl text-base leading-7 text-[var(--text-secondary)] sm:text-lg">
-                Mechi is the gaming hub for player profiles, tournaments, lobbies, rewards,
+                PlayMechi is the gaming hub for player profiles, tournaments, lobbies, rewards,
                 payments, results, and support. The simple version: create your account, add your
-                game details, join the right event, follow the match room, and let Mechi keep the
+                game details, join the right event, follow the match room, and let PlayMechi keep the
                 competition organized.
               </p>
               <div className="mt-7 flex flex-col gap-3 sm:flex-row">
@@ -195,7 +195,7 @@ export default function HowMechiWorksPage() {
                   What happens when you enter an event.
                 </h2>
                 <p className="mt-3 text-sm leading-6 text-[var(--text-secondary)] sm:text-base">
-                  Mechi tournaments can be free or paid. The exact games, prices, timing, prizes,
+                  PlayMechi tournaments can be free or paid. The exact games, prices, timing, prizes,
                   and eligibility rules live on the event page, so always treat that page as the
                   source of truth before you register.
                 </p>

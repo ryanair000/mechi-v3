@@ -1,9 +1,9 @@
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Pricing | Mechi.club',
+  title: 'Pricing | PlayMechi',
   description:
-    'Compare Mechi Free, Pro, and Elite plans for ranked matches, tournament joins, player profiles, hosting, rewards, and streaming access.',
+    'Compare PlayMechi Free, Pro, and Elite plans for ranked matches, tournament joins, player profiles, hosting, rewards, and streaming access.',
   alternates: {
     canonical: '/pricing',
   },

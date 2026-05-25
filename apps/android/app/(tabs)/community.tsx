@@ -1,13 +1,23 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
-import { StyleSheet, Text, TextInput, View } from 'react-native';
+import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { ApiError } from '../../src/api/client';
 import { getCommunityRoom, sendCommunityMessage } from '../../src/api/mechi';
 import { Button, Card, ErrorBanner, LoadingState, Screen, StatusBadge, textStyles } from '../../src/components/ui';
 import { colors, radii, spacing } from '../../src/theme';
 
 const COMMUNITY_QUERY_KEY = ['community-room'];
+const CHALLENGE_PROMPTS = ['1v1?', 'Squad up', 'Need teammate', 'Scrim call'];
+
+function getInitials(value: string) {
+  return value
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase())
+    .join('') || 'PM';
+}
 
 export default function CommunityScreen() {
   const queryClient = useQueryClient();
@@ -50,7 +60,7 @@ export default function CommunityScreen() {
   }
 
   return (
-    <Screen title="Community" subtitle="Chat, reactions, squad energy, and player callouts.">
+    <Screen title="Community" subtitle="Chat, reactions, squad energy, and clean player callouts.">
       <Card style={styles.heroCard}>
         <View style={styles.heroRow}>
           <View style={styles.heroIcon}>
@@ -58,9 +68,9 @@ export default function CommunityScreen() {
           </View>
           <View style={styles.heroCopy}>
             <StatusBadge label={isLocked ? 'Read only' : 'Live now'} tone={isLocked ? 'warn' : 'good'} />
-            <Text style={styles.heroTitle}>Talk clean. Challenge loud. Play fair.</Text>
+            <Text style={styles.heroTitle}>Squad up, challenge clean, keep it fair.</Text>
             <Text style={styles.heroBody}>
-              Use this space for match invites, score talk, lobby help, and PlayMechi community heat.
+              Match invites, lobby help, result talk, and PlayMechi community energy in one room.
             </Text>
           </View>
         </View>
@@ -68,7 +78,64 @@ export default function CommunityScreen() {
 
       <ErrorBanner message={error} />
 
+      <View style={styles.challengeRail}>
+        {CHALLENGE_PROMPTS.map((prompt) => (
+          <Pressable
+            key={prompt}
+            accessibilityRole="button"
+            onPress={() => setInput((current) => (current.trim() ? current : prompt))}
+            style={({ pressed }) => [styles.challengeChip, pressed && styles.pressed]}
+          >
+            <Ionicons name="flash-outline" size={14} color={colors.accent} />
+            <Text style={styles.challengeText}>{prompt}</Text>
+          </Pressable>
+        ))}
+      </View>
+
+      {roomQuery.isLoading ? (
+        <LoadingState label="Loading chat" />
+      ) : messages.length ? (
+        <View style={styles.messageList}>
+          {messages.map((message) => {
+            const senderName =
+              message.sender?.username ?? (message.sender_type === 'system' ? 'PlayMechi' : 'Player');
+
+            return (
+            <View key={message.id} style={styles.messageBubbleRow}>
+              <View style={[styles.avatar, message.sender_type === 'system' && styles.avatarOfficial]}>
+                <Text style={styles.avatarText}>{getInitials(senderName)}</Text>
+              </View>
+              <View style={styles.messageBubble}>
+                <View style={styles.messageTop}>
+                  <Text style={styles.sender}>{senderName}</Text>
+                  <Text style={styles.time}>
+                    {new Date(message.created_at).toLocaleTimeString('en-KE', {
+                      hour: 'numeric',
+                      minute: '2-digit',
+                    })}
+                  </Text>
+                </View>
+                <Text selectable style={[textStyles.body, message.is_deleted && styles.deleted]}>
+                  {message.is_deleted ? 'Removed by moderation.' : message.body}
+                </Text>
+                <View style={styles.reactionRow}>
+                  <Text style={styles.reactionText}>Reply</Text>
+                  <Text style={styles.reactionText}>Challenge</Text>
+                </View>
+              </View>
+            </View>
+          );
+          })}
+        </View>
+      ) : (
+        <Card>
+          <Text style={styles.emptyTitle}>No callouts yet.</Text>
+          <Text style={textStyles.muted}>Start with a clean challenge, lobby request, or match update.</Text>
+        </Card>
+      )}
+
       <Card style={styles.composerCard}>
+        <Text style={styles.composerTitle}>Send a clean callout</Text>
         <TextInput
           multiline
           maxLength={500}
@@ -86,36 +153,6 @@ export default function CommunityScreen() {
           onPress={handleSend}
         />
       </Card>
-
-      {roomQuery.isLoading ? (
-        <LoadingState label="Loading chat" />
-      ) : messages.length ? (
-        <View style={styles.messageList}>
-          {messages.map((message) => (
-            <View key={message.id} style={styles.messageCard}>
-              <View style={styles.messageTop}>
-                <Text style={styles.sender}>
-                  {message.sender?.username ?? (message.sender_type === 'system' ? 'PlayMechi' : 'Player')}
-                </Text>
-                <Text style={styles.time}>
-                  {new Date(message.created_at).toLocaleTimeString('en-KE', {
-                    hour: 'numeric',
-                    minute: '2-digit',
-                  })}
-                </Text>
-              </View>
-              <Text selectable style={[textStyles.body, message.is_deleted && styles.deleted]}>
-                {message.is_deleted ? 'Removed by moderation.' : message.body}
-              </Text>
-            </View>
-          ))}
-        </View>
-      ) : (
-        <Card>
-          <Text style={styles.emptyTitle}>No callouts yet.</Text>
-          <Text style={textStyles.muted}>Start with a clean challenge, lobby request, or match update.</Text>
-        </Card>
-      )}
     </Screen>
   );
 }
@@ -156,6 +193,11 @@ const styles = StyleSheet.create({
   composerCard: {
     gap: spacing.sm,
   },
+  composerTitle: {
+    color: colors.text,
+    fontSize: 15,
+    fontWeight: '800',
+  },
   input: {
     minHeight: 86,
     borderWidth: 1,
@@ -168,9 +210,31 @@ const styles = StyleSheet.create({
     textAlignVertical: 'top',
   },
   messageList: {
+    gap: spacing.md,
+  },
+  messageBubbleRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
     gap: spacing.sm,
   },
-  messageCard: {
+  avatar: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: colors.slate,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  avatarOfficial: {
+    backgroundColor: colors.primary,
+  },
+  avatarText: {
+    color: colors.white,
+    fontSize: 11,
+    fontWeight: '800',
+  },
+  messageBubble: {
+    flex: 1,
     borderWidth: 1,
     borderColor: colors.border,
     borderRadius: radii.md,
@@ -202,5 +266,38 @@ const styles = StyleSheet.create({
     color: colors.text,
     fontSize: 17,
     fontWeight: '900',
+  },
+  challengeRail: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+  },
+  challengeChip: {
+    minHeight: 40,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radii.pill,
+    backgroundColor: colors.panel,
+    paddingHorizontal: spacing.md,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
+  challengeText: {
+    color: colors.text,
+    fontSize: 12,
+    fontWeight: '800',
+  },
+  reactionRow: {
+    flexDirection: 'row',
+    gap: spacing.md,
+  },
+  reactionText: {
+    color: colors.primaryDark,
+    fontSize: 11,
+    fontWeight: '800',
+  },
+  pressed: {
+    opacity: 0.78,
   },
 });

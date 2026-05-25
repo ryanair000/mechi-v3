@@ -59,7 +59,7 @@ export function FeedPostCard({ post }: { post: FeedPost }) {
                 {post.pinned ? <StatusBadge label="Pinned" tone="warn" /> : null}
               </View>
               <Text selectable style={styles.authorMeta}>
-                {post.channel} . {post.publishedAt}
+                {post.channel} / {post.publishedAt}
               </Text>
             </View>
           </View>
@@ -76,7 +76,7 @@ export function FeedPostCard({ post }: { post: FeedPost }) {
           <View style={styles.mediaOverlay} />
           <View style={styles.mediaTopRow}>
             <View style={styles.timePill}>
-              <Ionicons name="sparkles" size={12} color={colors.accent} />
+              <Ionicons name="checkmark-circle" size={12} color={colors.primary} />
               <Text style={styles.timePillText}>Official drop</Text>
             </View>
           </View>
@@ -216,7 +216,7 @@ const styles = StyleSheet.create({
   },
   mediaOverlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(7, 10, 8, 0.28)',
+    backgroundColor: 'rgba(7, 10, 8, 0.34)',
   },
   mediaTopRow: {
     position: 'absolute',
@@ -232,15 +232,15 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
     borderRadius: radii.pill,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.12)',
-    backgroundColor: 'rgba(7, 10, 8, 0.62)',
+    borderColor: 'rgba(255,255,255,0.22)',
+    backgroundColor: 'rgba(7, 10, 8, 0.76)',
     paddingHorizontal: spacing.md,
     paddingVertical: 7,
   },
   timePillText: {
-    color: colors.text,
+    color: colors.white,
     fontSize: 11,
-    fontWeight: '900',
+    fontWeight: '800',
     textTransform: 'uppercase',
   },
   tagRow: {

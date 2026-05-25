@@ -129,33 +129,56 @@ export default function HomeTab() {
   const registrations = summaryQuery.data?.registrations ?? [];
   const nextAction = getNextAction(registrations);
   const communityMessages = communityQuery.data?.messages ?? [];
+  const latestCommunityMessage = communityMessages[0] ?? null;
   const activeTournament = getNextTournamentGame();
   const countdownLabel = activeTournament ? getCountdownLabel(activeTournament.matchStartsAt) : 'TBA';
   const announcement = PLAYMECHI_FEED_POSTS[0] ?? {
     title: 'PlayMechi updates land here.',
     body: 'Watch this space for official tournament announcements, stream calls, and match-day instructions.',
   };
+  const hasEntries = registrations.length > 0;
+  const checkedInCount = registrations.filter(
+    (registration) => registration.check_in_status === 'checked_in'
+  ).length;
+  const commandTitle = hasEntries ? 'Weekend Cup command center' : 'Lock your Weekend Cup slot';
+  const commandBody = hasEntries
+    ? 'Your entries are live. Track check-in, rooms, proof, and announcements from here.'
+    : 'Register on mechi.club first. After verification, this app becomes your live match desk.';
 
   async function openExternal(url: string) {
     await Linking.openURL(url);
   }
 
   return (
-    <Screen>
-      <View style={styles.hero}>
-        <View style={styles.heroTop}>
+    <Screen title="Home" subtitle="Your active tournament, status, next action, countdown, and official updates.">
+      <Card tone="command" style={styles.commandCard}>
+        <View style={styles.commandTop}>
           <View style={styles.logoMark}>
             <Image source={require('../../assets/icon.png')} style={styles.logo} resizeMode="contain" />
           </View>
-          <View style={styles.heroCopy}>
+          <View style={styles.commandCopy}>
             <Text style={styles.eyebrow}>PlayMechi HQ</Text>
-            <Text style={styles.heroTitle}>Yo {user?.username ?? 'player'}, ready up.</Text>
+            <Text style={styles.commandTitle}>{commandTitle}</Text>
+            <Text style={styles.commandMeta}>Signed in as {user?.username ?? 'player'}</Text>
           </View>
         </View>
-        <Text style={styles.heroBody}>
-          Active tournament, player status, next move, countdown, and announcements in one clean
-          launch screen.
+        <Text style={styles.commandBody}>
+          {commandBody}
         </Text>
+        <View style={styles.commandStats}>
+          <View style={styles.commandStat}>
+            <Text style={styles.commandStatLabel}>Next match</Text>
+            <Text style={styles.commandStatValue}>{countdownLabel}</Text>
+          </View>
+          <View style={styles.commandStat}>
+            <Text style={styles.commandStatLabel}>Entries</Text>
+            <Text style={styles.commandStatValue}>{registrations.length}</Text>
+          </View>
+          <View style={styles.commandStat}>
+            <Text style={styles.commandStatLabel}>Checked in</Text>
+            <Text style={styles.commandStatValue}>{checkedInCount}</Text>
+          </View>
+        </View>
         <View style={styles.heroActions}>
           {nextAction.type === 'internal' ? (
             <Link href={nextAction.href} asChild>
@@ -172,30 +195,9 @@ export default function HomeTab() {
             <Button label="See Feed" icon="images-outline" variant="secondary" />
           </Link>
         </View>
-      </View>
-
-      <Card style={styles.tournamentCard}>
-        <SectionTitle title="Active tournament" />
-        <View style={styles.tournamentHeader}>
-          <View style={styles.tournamentIcon}>
-            <Ionicons name="flash" color={colors.slate} size={20} />
-          </View>
-          <View style={styles.tournamentCopy}>
-            <Text style={styles.tournamentTitle}>{activeTournament?.label ?? 'PlayMechi tournament'}</Text>
-            <Text style={textStyles.muted}>
-              {activeTournament ? `${activeTournament.dateLabel} at ${activeTournament.timeLabel}` : 'Schedule coming soon'}
-            </Text>
-          </View>
-          <View style={styles.countdownPill}>
-            <Text style={styles.countdownLabel}>Countdown</Text>
-            <Text style={styles.countdownValue}>{countdownLabel}</Text>
-          </View>
-        </View>
-        <InfoRow label="Format" value={activeTournament?.format ?? 'TBA'} />
-        <InfoRow label="Status" value={registrations.length ? 'Entry found' : 'Register on web'} />
       </Card>
 
-      <Card style={styles.nextCard}>
+      <Card style={styles.nextCard} tone={hasEntries ? 'success' : 'default'}>
         <View style={styles.nextIcon}>
           <Ionicons name={nextAction.icon} color={colors.slate} size={20} />
         </View>
@@ -203,15 +205,6 @@ export default function HomeTab() {
           <Text style={styles.nextTitle}>{nextAction.title}</Text>
           <Text style={textStyles.muted}>{nextAction.body}</Text>
         </View>
-      </Card>
-
-      <Card>
-        <SectionTitle title="Announcement" />
-        <Text style={styles.announcementTitle}>{announcement.title}</Text>
-        <Text style={textStyles.muted}>{announcement.body}</Text>
-        <Link href="/(tabs)/feed" asChild>
-          <Button label="Read official updates" icon="newspaper" variant="secondary" />
-        </Link>
       </Card>
 
       <Card>
@@ -266,75 +259,103 @@ export default function HomeTab() {
         )}
       </Card>
 
-      <Card style={styles.socialCard}>
-        <SectionTitle title="Squad zone" />
-        <Text style={styles.socialTitle}>Drops, callouts, and clean energy.</Text>
-        <Text style={textStyles.muted}>
-          Feed is for official drops. Community is where players call matches, talk results, and
-          keep the timeline alive.
-        </Text>
-        <View style={styles.socialGrid}>
-          <View style={styles.socialPill}>
-            <Ionicons name="images-outline" color={colors.primaryDark} size={16} />
-            <Text style={styles.socialPillText}>Short official drops</Text>
-          </View>
-          <View style={styles.socialPill}>
-            <Ionicons name="flash-outline" color={colors.accent} size={16} />
-            <Text style={styles.socialPillText}>Player callouts</Text>
-          </View>
-        </View>
-        <View style={styles.socialActions}>
-          <Link href="/(tabs)/feed" asChild>
-            <Button label="Open Feed" icon="newspaper" />
+      <Card>
+        <SectionTitle title="Official announcement" />
+        <Text style={styles.announcementTitle}>{announcement.title}</Text>
+        <Text style={textStyles.muted}>{announcement.body}</Text>
+        <Link href="/(tabs)/feed" asChild>
+          <Button label="Read official updates" icon="newspaper" variant="secondary" />
+        </Link>
+      </Card>
+
+      <Card>
+        <SectionTitle title="Quick actions" />
+        <View style={styles.quickActions}>
+          <Link href="/(tabs)/arena" asChild>
+            <Button label="Arena" icon="trophy" />
           </Link>
           <Link href="/(tabs)/community" asChild>
-            <Button label="Enter Community" icon="chatbubbles-outline" variant="secondary" />
+            <Button label="Community" icon="chatbubbles-outline" variant="secondary" />
           </Link>
+          <Button
+            label="WhatsApp help"
+            icon="logo-whatsapp"
+            variant="secondary"
+            onPress={() => void openExternal(PLAYMECHI_SUPPORT_URL)}
+          />
         </View>
-      </Card>
-
-      <Card>
-        <SectionTitle title="Live pulse" />
-        {communityQuery.isLoading ? (
-          <LoadingState label="Loading community" />
-        ) : communityMessages.length ? (
-          <View style={styles.messageList}>
-            {communityMessages.map((message) => (
-              <View key={message.id} style={styles.messageRow}>
-                <Text style={styles.messageSender}>
-                  {message.sender?.username ?? (message.sender_type === 'system' ? 'PlayMechi' : 'Player')}
-                </Text>
-                <Text numberOfLines={2} style={styles.messageBody}>
-                  {message.is_deleted ? 'Removed by moderation.' : message.body}
-                </Text>
-              </View>
-            ))}
+        {latestCommunityMessage ? (
+          <View style={styles.messageRow}>
+            <Text style={styles.messageSender}>
+              {latestCommunityMessage.sender?.username ??
+                (latestCommunityMessage.sender_type === 'system' ? 'PlayMechi' : 'Player')}
+            </Text>
+            <Text numberOfLines={2} style={styles.messageBody}>
+              {latestCommunityMessage.is_deleted ? 'Removed by moderation.' : latestCommunityMessage.body}
+            </Text>
           </View>
-        ) : (
-          <Text style={textStyles.muted}>
-            No community posts yet. Start with clean callouts, match questions, or squad updates.
-          </Text>
-        )}
-        <InfoRow label="Members" value={communityQuery.data?.member_count ?? 0} />
-      </Card>
-
-      <Card>
-        <SectionTitle title="Support" />
-        <Text style={textStyles.muted}>
-          Stuck on login, payment, room access, or result proof? Support will route it fast.
-        </Text>
-        <Button
-          label="Get WhatsApp help"
-          icon="logo-whatsapp"
-          variant="secondary"
-          onPress={() => void openExternal(PLAYMECHI_SUPPORT_URL)}
-        />
+        ) : null}
+        <InfoRow label="Community members" value={communityQuery.data?.member_count ?? 0} />
       </Card>
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
+  commandCard: {
+    gap: spacing.md,
+  },
+  commandTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+  },
+  commandCopy: {
+    flex: 1,
+    gap: 3,
+  },
+  commandTitle: {
+    color: colors.white,
+    fontSize: 25,
+    fontWeight: '800',
+    lineHeight: 30,
+  },
+  commandMeta: {
+    color: colors.neutral,
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  commandBody: {
+    color: colors.neutral,
+    fontSize: 14,
+    lineHeight: 21,
+  },
+  commandStats: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+  },
+  commandStat: {
+    flex: 1,
+    minHeight: 68,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
+    borderRadius: radii.md,
+    backgroundColor: 'rgba(255,255,255,0.06)',
+    padding: spacing.sm,
+    justifyContent: 'space-between',
+  },
+  commandStatLabel: {
+    color: '#b7c5d8',
+    fontSize: 10,
+    fontWeight: '800',
+    textTransform: 'uppercase',
+  },
+  commandStatValue: {
+    color: colors.primary,
+    fontSize: 18,
+    fontWeight: '800',
+    fontVariant: ['tabular-nums'],
+  },
   hero: {
     borderRadius: radii.md,
     backgroundColor: colors.slate,
@@ -550,5 +571,8 @@ const styles = StyleSheet.create({
     color: colors.text,
     fontSize: 14,
     lineHeight: 20,
+  },
+  quickActions: {
+    gap: spacing.sm,
   },
 });

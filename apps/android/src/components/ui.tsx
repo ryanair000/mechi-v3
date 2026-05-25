@@ -13,7 +13,7 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { colors, radii, spacing } from '../theme';
+import { colors, radii, spacing, typography } from '../theme';
 
 type ScreenProps = {
   title?: string;
@@ -176,8 +176,18 @@ export function ChipGroup<T extends string>({
   );
 }
 
-export function Card({ children, style }: { children: React.ReactNode; style?: object }) {
-  return <View style={[styles.card, style]}>{children}</View>;
+type CardTone = 'default' | 'soft' | 'command' | 'success' | 'danger';
+
+export function Card({
+  children,
+  style,
+  tone = 'default',
+}: {
+  children: React.ReactNode;
+  style?: object;
+  tone?: CardTone;
+}) {
+  return <View style={[styles.card, styles[`card_${tone}`], style]}>{children}</View>;
 }
 
 export function ErrorBanner({ message }: { message?: string | null }) {
@@ -314,6 +324,7 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     flexGrow: 1,
+    paddingBottom: spacing.xl,
   },
   screenContent: {
     flex: 1,
@@ -324,8 +335,7 @@ const styles = StyleSheet.create({
   },
   title: {
     color: colors.text,
-    fontSize: 29,
-    fontWeight: '900',
+    ...typography.display,
     letterSpacing: 0,
   },
   subtitle: {
@@ -439,10 +449,27 @@ const styles = StyleSheet.create({
     padding: spacing.lg,
     gap: spacing.md,
   },
+  card_default: {},
+  card_soft: {
+    backgroundColor: colors.surfaceSoft,
+    borderColor: colors.borderSubtle,
+  },
+  card_command: {
+    backgroundColor: colors.slate,
+    borderColor: colors.slate,
+  },
+  card_success: {
+    backgroundColor: colors.successSoft,
+    borderColor: 'rgba(50, 224, 196, 0.32)',
+  },
+  card_danger: {
+    backgroundColor: colors.dangerSoft,
+    borderColor: 'rgba(229, 72, 94, 0.32)',
+  },
   errorBanner: {
     borderWidth: 1,
-    borderColor: '#67313b',
-    backgroundColor: '#261116',
+    borderColor: 'rgba(229, 72, 94, 0.32)',
+    backgroundColor: colors.dangerSoft,
     borderRadius: radii.md,
     padding: spacing.md,
     flexDirection: 'row',
@@ -475,7 +502,7 @@ const styles = StyleSheet.create({
   cardTitle: {
     color: colors.text,
     fontSize: 17,
-    fontWeight: '900',
+    fontWeight: '800',
   },
   cardBody: {
     color: colors.muted,
@@ -490,8 +517,7 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     color: colors.text,
-    fontSize: 18,
-    fontWeight: '900',
+    ...typography.title,
   },
   statPill: {
     backgroundColor: colors.panel2,
@@ -505,7 +531,8 @@ const styles = StyleSheet.create({
   statValue: {
     color: colors.text,
     fontSize: 17,
-    fontWeight: '900',
+    fontWeight: '800',
+    fontVariant: ['tabular-nums'],
   },
   statLabel: {
     color: colors.muted,
@@ -553,7 +580,7 @@ const styles = StyleSheet.create({
   statusBadgeText: {
     color: colors.text,
     fontSize: 11,
-    fontWeight: '900',
+    fontWeight: '800',
     textTransform: 'capitalize',
   },
   infoRow: {
@@ -571,7 +598,7 @@ const styles = StyleSheet.create({
     color: colors.text,
     flexShrink: 1,
     fontSize: 13,
-    fontWeight: '900',
+    fontWeight: '800',
     textAlign: 'right',
   },
 });

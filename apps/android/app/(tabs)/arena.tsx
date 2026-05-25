@@ -1,3 +1,4 @@
+import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useLocalSearchParams } from 'expo-router';
@@ -229,6 +230,57 @@ function formatFieldList(fields: string[]) {
   }
 
   return `${fields.slice(0, -1).join(', ')}, and ${fields.at(-1)}`;
+}
+
+function getArenaNextTask({
+  registration,
+  submissions,
+}: {
+  registration: OnlineTournamentRegistration | null;
+  submissions: OnlineTournamentResultSubmission[];
+}) {
+  if (!registration) {
+    return {
+      label: 'Register first',
+      body: 'Your entry is not found for this game yet. Register on web, then return here.',
+      tone: 'warn' as const,
+      icon: 'globe-outline' as const,
+    };
+  }
+
+  if (registration.eligibility_status === 'disqualified') {
+    return {
+      label: 'Entry locked',
+      body: 'This entry is disqualified. Contact support if you think this is wrong.',
+      tone: 'danger' as const,
+      icon: 'lock-closed' as const,
+    };
+  }
+
+  if (!hasSubmittedCheckIn(registration)) {
+    return {
+      label: 'Check in now',
+      body: 'Confirm your IGN, UID, device, and WhatsApp before lobby details matter.',
+      tone: 'warn' as const,
+      icon: 'checkmark-circle' as const,
+    };
+  }
+
+  if (!submissions.length) {
+    return {
+      label: 'Proof ready',
+      body: 'After your match, upload a clear result screenshot from the Proof section.',
+      tone: 'info' as const,
+      icon: 'cloud-upload' as const,
+    };
+  }
+
+  return {
+    label: 'Proof submitted',
+    body: 'Your latest proof is in review. Watch this desk for admin status updates.',
+    tone: 'good' as const,
+    icon: 'shield-checkmark' as const,
+  };
 }
 
 export default function ArenaTab() {
@@ -466,12 +518,48 @@ export default function ArenaTab() {
     Boolean(selectedFixtureId) &&
     player1Score.trim() !== '' &&
     player2Score.trim() !== '';
+  const canUpload = activeGame === 'efootball' ? canUploadEfootball : canUploadBattleRoyale;
+  const nextTask = getArenaNextTask({
+    registration: myRegistration,
+    submissions: activeSubmissions,
+  });
 
   return (
     <Screen
       title="Arena"
       subtitle="Match-day desk: check-in, room credentials, fixtures, standings, and result upload."
     >
+      <Card tone="command" style={styles.arenaCommand}>
+        <View style={styles.arenaCommandTop}>
+          <View style={styles.arenaCommandIcon}>
+            <Ionicons name={nextTask.icon} color={colors.slate} size={22} />
+          </View>
+          <View style={styles.arenaCommandCopy}>
+            <Text style={styles.arenaEyebrow}>{config.shortLabel} desk</Text>
+            <Text style={styles.arenaCommandTitle}>{nextTask.label}</Text>
+            <Text style={styles.arenaCommandBody}>{nextTask.body}</Text>
+          </View>
+        </View>
+        <View style={styles.arenaStatusRail}>
+          <View style={styles.arenaStatusItem}>
+            <Text style={styles.arenaStatusLabel}>Entry</Text>
+            <Text style={styles.arenaStatusValue}>
+              {myRegistration ? formatStatus(myRegistration.eligibility_status) : 'Missing'}
+            </Text>
+          </View>
+          <View style={styles.arenaStatusItem}>
+            <Text style={styles.arenaStatusLabel}>Check-in</Text>
+            <Text style={styles.arenaStatusValue}>
+              {myRegistration ? formatStatus(myRegistration.check_in_status) : 'Locked'}
+            </Text>
+          </View>
+          <View style={styles.arenaStatusItem}>
+            <Text style={styles.arenaStatusLabel}>Proof</Text>
+            <Text style={styles.arenaStatusValue}>{activeSubmissions.length}</Text>
+          </View>
+        </View>
+      </Card>
+
       <Card>
         <SectionTitle title="Choose game" />
         <ChipGroup
@@ -492,6 +580,7 @@ export default function ArenaTab() {
         <InfoRow label="Registration closes" value={formatEatDateTime(config.registrationClosesAt)} />
       </Card>
 
+      {!stateQuery.isLoading && !myRegistration ? (
       <Card>
         <SectionTitle title="Register on web" />
         <Text style={textStyles.muted}>
@@ -512,6 +601,7 @@ export default function ArenaTab() {
           />
         </View>
       </Card>
+      ) : null}
 
       {stateQuery.isLoading ? <LoadingState label="Loading Arena" /> : null}
       {stateQuery.isError ? (
@@ -547,13 +637,29 @@ export default function ArenaTab() {
         <EfootballFixtures fixtures={activeFixtures} myRegistrationIds={myRegistrationIds} />
       )}
 
-      <Card>
-        <SectionTitle title="Result proof" />
-        <Text style={textStyles.muted}>
-          Keep screenshots clear and ready. Admins verify scores from your uploads, WhatsApp group
-          posts, and moderator instructions for each game.
-        </Text>
-      </Card>
+      <ResultUploadCard
+        activeGame={activeGame}
+        registration={myRegistration}
+        matchNumber={matchNumber}
+        kills={kills}
+        placement={placement}
+        fixtureId={selectedFixtureId}
+        fixtures={selectableFixtures}
+        player1Score={player1Score}
+        player2Score={player2Score}
+        screenshot={screenshot}
+        uploading={uploadMutation.isPending}
+        canUpload={canUpload}
+        onMatchNumberChange={setMatchNumber}
+        onKillsChange={setKills}
+        onPlacementChange={setPlacement}
+        onFixtureChange={setFixtureId}
+        onPlayer1ScoreChange={setPlayer1Score}
+        onPlayer2ScoreChange={setPlayer2Score}
+        onPickScreenshot={() => void pickScreenshot()}
+        onUpload={() => uploadMutation.mutate()}
+      />
+      <MySubmissions submissions={activeSubmissions} />
       <PrizePanel activeGame={activeGame} state={state} />
     </Screen>
   );
@@ -1124,6 +1230,69 @@ function PrizePanel({
 }
 
 const styles = StyleSheet.create({
+  arenaCommand: {
+    gap: spacing.md,
+  },
+  arenaCommandTop: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.md,
+  },
+  arenaCommandIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 8,
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  arenaCommandCopy: {
+    flex: 1,
+    gap: spacing.xs,
+  },
+  arenaEyebrow: {
+    color: colors.primary,
+    fontSize: 11,
+    fontWeight: '800',
+    textTransform: 'uppercase',
+  },
+  arenaCommandTitle: {
+    color: colors.white,
+    fontSize: 24,
+    fontWeight: '800',
+    lineHeight: 29,
+  },
+  arenaCommandBody: {
+    color: colors.neutral,
+    fontSize: 13,
+    lineHeight: 19,
+  },
+  arenaStatusRail: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+  },
+  arenaStatusItem: {
+    flex: 1,
+    minHeight: 62,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
+    borderRadius: 8,
+    backgroundColor: 'rgba(255,255,255,0.06)',
+    padding: spacing.sm,
+    justifyContent: 'space-between',
+  },
+  arenaStatusLabel: {
+    color: '#b7c5d8',
+    fontSize: 10,
+    fontWeight: '800',
+    textTransform: 'uppercase',
+  },
+  arenaStatusValue: {
+    color: colors.primary,
+    fontSize: 13,
+    fontWeight: '800',
+    textTransform: 'capitalize',
+  },
   noticeCard: {
     borderColor: 'rgba(50, 224, 196, 0.22)',
     backgroundColor: 'rgba(50, 224, 196, 0.08)',

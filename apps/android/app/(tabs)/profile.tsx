@@ -7,7 +7,6 @@ import { useAuth } from '../../src/auth/AuthProvider';
 import {
   Button,
   Card,
-  InfoRow,
   LoadingState,
   Screen,
   SectionTitle,
@@ -32,6 +31,17 @@ function getStatusTone(status: string | null | undefined): 'good' | 'warn' | 'da
   if (status === 'ineligible' || status === 'disqualified' || status === 'no_show') return 'danger';
   if (status === 'pending' || status === 'registered') return 'warn';
   return 'neutral';
+}
+
+function getInitials(value: string | null | undefined) {
+  return (
+    value
+      ?.split(/\s+/)
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((part) => part[0]?.toUpperCase())
+      .join('') || 'PM'
+  );
 }
 
 export default function AccountTab() {
@@ -100,13 +110,29 @@ export default function AccountTab() {
         <LoadingState label="Loading profile" />
       ) : (
         <>
-          <Card>
-            <Text style={styles.username}>{profile?.username}</Text>
-            <Text selectable style={textStyles.muted}>
-              {profile?.email ?? profile?.phone}
-            </Text>
-            <InfoRow label="Phone" value={profile?.phone ?? 'Not set'} selectable />
-            <InfoRow label="Region" value={profile?.region ?? 'Not set'} />
+          <Card tone="command" style={styles.profileHero}>
+            <View style={styles.profileHeroTop}>
+              <View style={styles.avatar}>
+                <Text style={styles.avatarText}>{getInitials(profile?.username)}</Text>
+              </View>
+              <View style={styles.profileHeroCopy}>
+                <Text style={styles.profileEyebrow}>PlayMechi player</Text>
+                <Text style={styles.username}>{profile?.username ?? 'Player'}</Text>
+                <Text selectable style={styles.profileMeta}>
+                  {profile?.email ?? profile?.phone ?? 'No contact set'}
+                </Text>
+              </View>
+            </View>
+            <View style={styles.profileStats}>
+              <View style={styles.profileStat}>
+                <Text style={styles.profileStatLabel}>Region</Text>
+                <Text style={styles.profileStatValue}>{profile?.region ?? 'Not set'}</Text>
+              </View>
+              <View style={styles.profileStat}>
+                <Text style={styles.profileStatLabel}>Entries</Text>
+                <Text style={styles.profileStatValue}>{registrations.length}</Text>
+              </View>
+            </View>
             <Link href="/(onboarding)/profile" asChild>
               <Button label="Edit player profile" icon="create" variant="secondary" />
             </Link>
@@ -195,10 +221,71 @@ export default function AccountTab() {
 }
 
 const styles = StyleSheet.create({
-  username: {
-    color: colors.text,
-    fontSize: 24,
+  profileHero: {
+    gap: spacing.md,
+  },
+  profileHeroTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+  },
+  avatar: {
+    width: 58,
+    height: 58,
+    borderRadius: 29,
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  avatarText: {
+    color: colors.slate,
+    fontSize: 18,
     fontWeight: '900',
+  },
+  profileHeroCopy: {
+    flex: 1,
+    gap: 3,
+  },
+  profileEyebrow: {
+    color: colors.primary,
+    fontSize: 11,
+    fontWeight: '800',
+    textTransform: 'uppercase',
+  },
+  username: {
+    color: colors.white,
+    fontSize: 24,
+    fontWeight: '800',
+    lineHeight: 29,
+  },
+  profileMeta: {
+    color: colors.neutral,
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  profileStats: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+  },
+  profileStat: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
+    borderRadius: 8,
+    backgroundColor: 'rgba(255,255,255,0.06)',
+    padding: spacing.sm,
+    gap: spacing.xs,
+  },
+  profileStatLabel: {
+    color: '#b7c5d8',
+    fontSize: 10,
+    fontWeight: '800',
+    textTransform: 'uppercase',
+  },
+  profileStatValue: {
+    color: colors.primary,
+    fontSize: 14,
+    fontWeight: '800',
   },
   slotList: {
     gap: spacing.sm,

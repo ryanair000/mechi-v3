@@ -17,6 +17,17 @@ export const colors = {
   neutral: '#e2e8f0',
   white: '#ffffff',
   black: '#000000',
+  brandPrimary: '#32e0c4',
+  brandAccent: '#ff6b6b',
+  ink: '#0b1121',
+  surface: '#ffffff',
+  surfaceSoft: '#f8fafc',
+  surfaceTint: '#eef7f6',
+  borderSubtle: '#dbe3ec',
+  successSoft: 'rgba(50, 224, 196, 0.14)',
+  warningSoft: 'rgba(245, 158, 11, 0.14)',
+  dangerSoft: 'rgba(229, 72, 94, 0.12)',
+  infoSoft: 'rgba(37, 99, 235, 0.1)',
 };
 
 export const spacing = {
@@ -33,4 +44,32 @@ export const radii = {
   md: 8,
   lg: 12,
   pill: 999,
+};
+
+export const typography = {
+  display: {
+    fontSize: 28,
+    lineHeight: 33,
+    fontWeight: '800' as const,
+  },
+  title: {
+    fontSize: 22,
+    lineHeight: 28,
+    fontWeight: '800' as const,
+  },
+  section: {
+    fontSize: 15,
+    lineHeight: 20,
+    fontWeight: '800' as const,
+  },
+  body: {
+    fontSize: 14,
+    lineHeight: 20,
+    fontWeight: '500' as const,
+  },
+  meta: {
+    fontSize: 12,
+    lineHeight: 16,
+    fontWeight: '600' as const,
+  },
 };

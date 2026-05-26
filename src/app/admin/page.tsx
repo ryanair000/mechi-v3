@@ -16,7 +16,7 @@ import { shouldHideE2EFixtures } from '@/lib/e2e-fixtures';
 import { expireWaitingQueueEntries, getQueueExpiryCutoffIso } from '@/lib/queue';
 import { createServiceClient } from '@/lib/supabase';
 import { verifyToken } from '@/lib/auth';
-import { WEEKEND_CUP_SLUG } from '@/lib/weekend-cup';
+import { WEEKEND_CUP_GAMES, WEEKEND_CUP_SLUG, isWeekendCupGame } from '@/lib/weekend-cup';
 import { getWekaMaweSummary } from '@/lib/weka-mawe';
 import type { AuditLog } from '@/types';
 
@@ -45,6 +45,19 @@ interface AdminOverviewData {
   weekendCupPaid: number;
   weekendCupPendingPayment: number;
   weekendCupCheckedIn: number;
+  weekendCupRevenueKes: number;
+  weekendCupSpotsLeft: number;
+  weekendCupGameRows: Array<{
+    game: string;
+    label: string;
+    registered: number;
+    paid: number;
+    pendingPayment: number;
+    checkedIn: number;
+    revenueKes: number;
+    slots: number;
+    spotsLeft: number;
+  }>;
   wekaMaweRegistered: number;
   wekaMawePaid: number;
   wekaMawePendingPayment: number;
@@ -81,6 +94,19 @@ function buildEmptyOverview(role = 'moderator'): AdminOverviewData {
     weekendCupPaid: 0,
     weekendCupPendingPayment: 0,
     weekendCupCheckedIn: 0,
+    weekendCupRevenueKes: 0,
+    weekendCupSpotsLeft: 0,
+    weekendCupGameRows: WEEKEND_CUP_GAMES.map((game) => ({
+      game: game.game,
+      label: game.label,
+      registered: 0,
+      paid: 0,
+      pendingPayment: 0,
+      checkedIn: 0,
+      revenueKes: 0,
+      slots: game.slots,
+      spotsLeft: game.slots,
+    })),
     wekaMaweRegistered: 0,
     wekaMawePaid: 0,
     wekaMawePendingPayment: 0,
@@ -116,6 +142,58 @@ function formatWaitLabel(minutes: number) {
   }
 
   return `${hours} hr ${remainingMinutes} min longest wait`;
+}
+
+function buildWeekendCupGameRows(
+  registrations: Array<{
+    game?: string | null;
+    payment_status?: string | null;
+    entry_fee_kes?: number | null;
+    eligibility_status?: string | null;
+    check_in_status?: string | null;
+  }>
+) {
+  const rows = WEEKEND_CUP_GAMES.map((game) => ({
+    game: game.game,
+    label: game.label,
+    registered: 0,
+    paid: 0,
+    pendingPayment: 0,
+    checkedIn: 0,
+    revenueKes: 0,
+    slots: game.slots,
+    spotsLeft: game.slots,
+  }));
+  const rowByGame = new Map(rows.map((row) => [row.game, row]));
+
+  for (const registration of registrations) {
+    if (!isWeekendCupGame(registration.game) || registration.eligibility_status === 'disqualified') {
+      continue;
+    }
+
+    const row = rowByGame.get(registration.game);
+    if (!row) {
+      continue;
+    }
+
+    row.registered += 1;
+    if (registration.payment_status === 'paid') {
+      row.paid += 1;
+      row.revenueKes += registration.entry_fee_kes ?? 0;
+    }
+    if (registration.payment_status === 'pending_payment' || registration.payment_status === 'manual_review') {
+      row.pendingPayment += 1;
+    }
+    if (registration.payment_status === 'paid' && registration.check_in_status === 'checked_in') {
+      row.checkedIn += 1;
+    }
+  }
+
+  for (const row of rows) {
+    row.spotsLeft = Math.max(0, row.slots - row.paid);
+  }
+
+  return rows;
 }
 
 async function getOverviewData(): Promise<AdminOverviewData> {
@@ -217,6 +295,7 @@ async function getOverviewData(): Promise<AdminOverviewData> {
     { count: weekendCupPaid },
     { count: weekendCupPendingPayment },
     { count: weekendCupCheckedIn },
+    weekendCupRowsResult,
     wekaMaweSummaryResult,
     prizeResult,
     logsResult,
@@ -266,6 +345,10 @@ async function getOverviewData(): Promise<AdminOverviewData> {
       .select('id', { count: 'exact', head: true })
       .eq('event_slug', WEEKEND_CUP_SLUG)
       .eq('check_in_status', 'checked_in'),
+    supabase
+      .from('online_tournament_registrations')
+      .select('game, payment_status, entry_fee_kes, eligibility_status, check_in_status')
+      .eq('event_slug', WEEKEND_CUP_SLUG),
     getWekaMaweSummary(supabase).catch((error) => {
       console.error('[AdminOverview] Weka Mawe summary error:', error);
       return null;
@@ -284,6 +367,17 @@ async function getOverviewData(): Promise<AdminOverviewData> {
     (total, tournament) => total + ((tournament.prize_pool as number | null) ?? 0),
     0
   );
+  const weekendCupGameRows = buildWeekendCupGameRows(
+    (weekendCupRowsResult.data ?? []) as Array<{
+      game?: string | null;
+      payment_status?: string | null;
+      entry_fee_kes?: number | null;
+      eligibility_status?: string | null;
+      check_in_status?: string | null;
+    }>
+  );
+  const weekendCupRevenueKes = weekendCupGameRows.reduce((total, row) => total + row.revenueKes, 0);
+  const weekendCupSpotsLeft = weekendCupGameRows.reduce((total, row) => total + row.spotsLeft, 0);
 
   const oldestQueueJoinedAt = oldestQueueResult.data?.joined_at ?? null;
   const longestQueueWaitMinutes = oldestQueueJoinedAt
@@ -315,6 +409,9 @@ async function getOverviewData(): Promise<AdminOverviewData> {
     weekendCupPaid: weekendCupPaid ?? 0,
     weekendCupPendingPayment: weekendCupPendingPayment ?? 0,
     weekendCupCheckedIn: weekendCupCheckedIn ?? 0,
+    weekendCupRevenueKes,
+    weekendCupSpotsLeft,
+    weekendCupGameRows,
     wekaMaweRegistered: wekaMaweSummaryResult?.totals.registered ?? 0,
     wekaMawePaid: wekaMaweSummaryResult?.totals.paid ?? 0,
     wekaMawePendingPayment: wekaMaweSummaryResult?.totals.pendingPayment ?? 0,
@@ -410,7 +507,7 @@ export default async function AdminOverviewPage() {
       title: 'Weekend Cup',
       value: overview.weekendCupRegistered.toLocaleString(),
       label: 'registrations',
-      detail: `${overview.weekendCupPaid.toLocaleString()} paid, ${overview.weekendCupPendingPayment.toLocaleString()} pending payment, ${overview.weekendCupCheckedIn.toLocaleString()} checked in.`,
+      detail: `${overview.weekendCupPaid.toLocaleString()} paid, ${overview.weekendCupPendingPayment.toLocaleString()} pending payment, ${overview.weekendCupCheckedIn.toLocaleString()} checked in, ${overview.weekendCupSpotsLeft.toLocaleString()} confirmed slots left.`,
       icon: Trophy,
     },
     {
@@ -629,6 +726,58 @@ export default async function AdminOverviewPage() {
                 {label}
               </p>
               <p className="mt-3 text-sm leading-6 text-[var(--text-secondary)]">{detail}</p>
+            </Link>
+          ))}
+        </div>
+      </section>
+
+      <section className="card p-5">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <p className="section-title">Weekend Cup S1</p>
+            <h2 className="mt-2 text-xl font-black text-[var(--text-primary)]">
+              Registration and payment control
+            </h2>
+          </div>
+          <p className="max-w-xl text-sm leading-6 text-[var(--text-secondary)]">
+            Live Supabase totals by confirmed payment, pending payment, check-in, revenue, and remaining confirmed capacity.
+          </p>
+        </div>
+
+        <div className="mt-4 grid gap-3 lg:grid-cols-4">
+          {overview.weekendCupGameRows.map((game) => (
+            <Link
+              key={game.game}
+              href={`/admin/weekendcup?game=${encodeURIComponent(game.game)}`}
+              className="rounded-lg border border-[var(--border-color)] bg-[var(--surface-elevated)] p-4 transition-colors hover:bg-[var(--surface)]"
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-sm font-black text-[var(--text-primary)]">{game.label}</p>
+                  <p className="mt-1 text-xs text-[var(--text-soft)]">
+                    {game.registered.toLocaleString()} total registrations
+                  </p>
+                </div>
+                <span className="brand-chip px-2 py-0.5">{game.paid}/{game.slots}</span>
+              </div>
+              <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
+                <div>
+                  <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--text-soft)]">Pending</p>
+                  <p className="mt-1 font-black text-[var(--text-primary)]">{game.pendingPayment}</p>
+                </div>
+                <div>
+                  <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--text-soft)]">Checked in</p>
+                  <p className="mt-1 font-black text-[var(--text-primary)]">{game.checkedIn}</p>
+                </div>
+                <div>
+                  <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--text-soft)]">Revenue</p>
+                  <p className="mt-1 font-black text-[var(--text-primary)]">KSh {game.revenueKes.toLocaleString()}</p>
+                </div>
+                <div>
+                  <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--text-soft)]">Slots left</p>
+                  <p className="mt-1 font-black text-[var(--text-primary)]">{game.spotsLeft}</p>
+                </div>
+              </div>
             </Link>
           ))}
         </div>

@@ -14,7 +14,7 @@ const SEASON_2_BALLOT_SLUG = 'weekend-cup-2-pc';
 const WEEKEND_CUP_GAMES = [
   { game: 'pubgm', label: 'PUBG Mobile', slots: 80, checkInCap: 80, breakEvenKes: 2750, phase2FeeKes: 75 },
   { game: 'codm', label: 'CODM', slots: 80, checkInCap: 80, breakEvenKes: 2750, phase2FeeKes: 75 },
-  { game: 'efootball', label: 'eFootball', slots: 16, checkInCap: 16, breakEvenKes: 1500, phase2FeeKes: 125 },
+  { game: 'efootball', label: 'eFootball', slots: 32, checkInCap: 32, breakEvenKes: 1500, phase2FeeKes: 125 },
   { game: 'freefire', label: 'Free Fire', slots: 80, checkInCap: 80, breakEvenKes: 2500, phase2FeeKes: 75 },
 ];
 const TELEGRAM_LIMIT = 3900;

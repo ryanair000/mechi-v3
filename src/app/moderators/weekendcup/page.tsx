@@ -12,7 +12,7 @@ export default function ModeratorWeekendCupPage() {
     <WeekendCupOpsClient
       apiPath="/api/moderators/weekendcup-registrations"
       heading="Moderator Weekend Cup desk"
-      subheading="Handle your assigned Weekend Cup game, confirm payment safely, and keep the confirmed roster clean before check-in opens."
+      subheading="Handle your assigned Weekend Cup game with the latest payment, capacity, revenue, and check-in data. Confirm payment safely and keep the roster clean before match day."
     />
   );
 }

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import toast from 'react-hot-toast';
-import { CheckCircle2, Loader2, Save, Search } from 'lucide-react';
+import { Banknote, CheckCircle2, Clock3, Loader2, Save, Search, ShieldCheck, TicketCheck } from 'lucide-react';
 import { useAuthFetch } from '@/components/AuthProvider';
 import {
   WEEKEND_CUP_ENTRY_PRICING,
@@ -95,6 +95,10 @@ function checkInClasses(status: WeekendCupOpsRegistration['check_in_status']) {
   }
 }
 
+function formatKes(value: number) {
+  return `KSh ${value.toLocaleString('en-KE')}`;
+}
+
 function makeDraft(registration: WeekendCupOpsRegistration): PaymentDraft {
   return {
     payment_status: registration.payment_status,
@@ -179,6 +183,62 @@ export function WeekendCupOpsClient(props: WeekendCupOpsClientProps) {
     });
   }, [gameFilter, search, state?.registrations]);
 
+  const opsMetrics = useMemo(() => {
+    const registrations = state?.registrations ?? [];
+    const games = state?.summary?.games;
+
+    const gameRows = WEEKEND_CUP_GAMES.map((gameConfig) => {
+      const gameRegistrations = registrations.filter(
+        (registration) =>
+          registration.game === gameConfig.game &&
+          registration.eligibility_status !== 'disqualified'
+      );
+      const paidRegistrations = gameRegistrations.filter(
+        (registration) => registration.payment_status === 'paid'
+      );
+      const checkedIn = paidRegistrations.filter(
+        (registration) => registration.check_in_status === 'checked_in'
+      ).length;
+      const revenueKes = paidRegistrations.reduce(
+        (sum, registration) => sum + (registration.entry_fee_kes ?? 0),
+        0
+      );
+      const summary = games?.[gameConfig.game];
+
+      return {
+        ...gameConfig,
+        registered: summary?.registered ?? gameRegistrations.length,
+        confirmed: summary?.confirmed ?? paidRegistrations.length,
+        pendingPayment:
+          summary?.pendingPayment ??
+          gameRegistrations.filter(
+            (registration) =>
+              registration.payment_status === 'pending_payment' ||
+              registration.payment_status === 'manual_review'
+          ).length,
+        checkedIn: summary?.checkedIn ?? checkedIn,
+        spotsLeft: summary?.spotsLeft ?? Math.max(0, gameConfig.slots - paidRegistrations.length),
+        checkInSpotsLeft: summary?.checkInSpotsLeft ?? Math.max(0, gameConfig.checkInCap - checkedIn),
+        revenueKes,
+      };
+    });
+
+    const latestRegistration = [...registrations].sort(
+      (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+    )[0];
+
+    return {
+      totalRegistered: gameRows.reduce((sum, game) => sum + game.registered, 0),
+      totalConfirmed: gameRows.reduce((sum, game) => sum + game.confirmed, 0),
+      totalPending: gameRows.reduce((sum, game) => sum + game.pendingPayment, 0),
+      totalCheckedIn: gameRows.reduce((sum, game) => sum + game.checkedIn, 0),
+      totalRevenueKes: gameRows.reduce((sum, game) => sum + game.revenueKes, 0),
+      totalSpotsLeft: gameRows.reduce((sum, game) => sum + game.spotsLeft, 0),
+      latestRegistration,
+      gameRows,
+    };
+  }, [state?.registrations, state?.summary]);
+
   const handleQuickPaid = async (registration: WeekendCupOpsRegistration) => {
     setActingId(registration.id);
     try {
@@ -258,38 +318,114 @@ export function WeekendCupOpsClient(props: WeekendCupOpsClientProps) {
         <p className="mt-3 max-w-3xl text-sm leading-7 text-[var(--text-secondary)]">
           {props.subheading}
         </p>
+        <div className="mt-4 flex flex-wrap gap-2">
+          <span className="brand-chip px-3 py-1">Live data reloads from Supabase</span>
+          <span className="brand-chip-coral px-3 py-1">Free Fire confirmed</span>
+          <span className="brand-chip px-3 py-1">Early Bird active</span>
+        </div>
       </section>
 
       <section className="grid gap-4 md:grid-cols-4">
         <div className="card p-5">
-          <p className="text-xs font-black uppercase tracking-[0.14em] text-[var(--text-soft)]">Paid</p>
+          <p className="flex items-center gap-2 text-xs font-black uppercase tracking-[0.14em] text-[var(--text-soft)]">
+            <TicketCheck size={14} />
+            Paid
+          </p>
           <p className="mt-2 text-2xl font-black text-[var(--text-primary)]">
-            {state?.summary
-              ? Object.values(state.summary.games).reduce((sum, row) => sum + row.confirmed, 0)
-              : 0}
+            {opsMetrics.totalConfirmed}
+          </p>
+          <p className="mt-1 text-xs text-[var(--text-secondary)]">
+            {opsMetrics.totalSpotsLeft.toLocaleString()} confirmed slots left
           </p>
         </div>
         <div className="card p-5">
-          <p className="text-xs font-black uppercase tracking-[0.14em] text-[var(--text-soft)]">Pending</p>
+          <p className="flex items-center gap-2 text-xs font-black uppercase tracking-[0.14em] text-[var(--text-soft)]">
+            <Clock3 size={14} />
+            Pending
+          </p>
           <p className="mt-2 text-2xl font-black text-[var(--text-primary)]">
-            {state?.summary
-              ? Object.values(state.summary.games).reduce((sum, row) => sum + row.pendingPayment, 0)
-              : 0}
+            {opsMetrics.totalPending}
+          </p>
+          <p className="mt-1 text-xs text-[var(--text-secondary)]">
+            {opsMetrics.totalRegistered.toLocaleString()} total registrations
           </p>
         </div>
         <div className="card p-5">
-          <p className="text-xs font-black uppercase tracking-[0.14em] text-[var(--text-soft)]">Checked in</p>
+          <p className="flex items-center gap-2 text-xs font-black uppercase tracking-[0.14em] text-[var(--text-soft)]">
+            <ShieldCheck size={14} />
+            Checked in
+          </p>
           <p className="mt-2 text-2xl font-black text-[var(--text-primary)]">
-            {state?.summary
-              ? Object.values(state.summary.games).reduce((sum, row) => sum + row.checkedIn, 0)
-              : 0}
+            {opsMetrics.totalCheckedIn}
+          </p>
+          <p className="mt-1 text-xs text-[var(--text-secondary)]">
+            {opsMetrics.latestRegistration
+              ? `Latest: ${opsMetrics.latestRegistration.user?.username ?? opsMetrics.latestRegistration.in_game_username}`
+              : 'No registration yet'}
           </p>
         </div>
         <div className="card p-5">
-          <p className="text-xs font-black uppercase tracking-[0.14em] text-[var(--text-soft)]">Early Bird used</p>
-          <p className="mt-2 text-2xl font-black text-[var(--text-primary)]">
-            {state?.summary?.payment.earlyBirdPaidCount ?? 0}/{WEEKEND_CUP_ENTRY_PRICING.earlyBirdPaidLimit}
+          <p className="flex items-center gap-2 text-xs font-black uppercase tracking-[0.14em] text-[var(--text-soft)]">
+            <Banknote size={14} />
+            Revenue
           </p>
+          <p className="mt-2 text-2xl font-black text-[var(--text-primary)]">
+            {formatKes(opsMetrics.totalRevenueKes)}
+          </p>
+          <p className="mt-1 text-xs text-[var(--text-secondary)]">
+            Early Bird: {state?.summary?.payment.earlyBirdPaidCount ?? 0}/{WEEKEND_CUP_ENTRY_PRICING.earlyBirdPaidLimit}
+          </p>
+        </div>
+      </section>
+
+      <section className="card p-5">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <p className="section-title">Game desk pulse</p>
+            <h2 className="mt-2 text-xl font-black text-[var(--text-primary)]">
+              Payment, capacity, and check-in by game
+            </h2>
+          </div>
+          <p className="max-w-xl text-sm leading-6 text-[var(--text-secondary)]">
+            Confirmed players count toward capacity. Pending payments stay visible so moderators can chase proof without overbooking.
+          </p>
+        </div>
+
+        <div className="mt-4 grid gap-3 xl:grid-cols-4">
+          {opsMetrics.gameRows.map((game) => (
+            <div
+              key={game.game}
+              className="rounded-lg border border-[var(--border-color)] bg-[var(--surface-elevated)] p-4"
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-sm font-black text-[var(--text-primary)]">{game.label}</p>
+                  <p className="mt-1 text-xs text-[var(--text-soft)]">
+                    {game.dateLabel} at {game.timeLabel}
+                  </p>
+                </div>
+                <span className="brand-chip px-2 py-0.5">{game.confirmed}/{game.slots}</span>
+              </div>
+              <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
+                <div>
+                  <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--text-soft)]">Pending</p>
+                  <p className="mt-1 font-black text-[var(--text-primary)]">{game.pendingPayment}</p>
+                </div>
+                <div>
+                  <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--text-soft)]">Checked in</p>
+                  <p className="mt-1 font-black text-[var(--text-primary)]">{game.checkedIn}/{game.checkInCap}</p>
+                </div>
+                <div>
+                  <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--text-soft)]">Revenue</p>
+                  <p className="mt-1 font-black text-[var(--text-primary)]">{formatKes(game.revenueKes)}</p>
+                </div>
+                <div>
+                  <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--text-soft)]">Slots left</p>
+                  <p className="mt-1 font-black text-[var(--text-primary)]">{game.spotsLeft}</p>
+                </div>
+              </div>
+            </div>
+          ))}
         </div>
       </section>
 
@@ -354,10 +490,10 @@ export function WeekendCupOpsClient(props: WeekendCupOpsClientProps) {
                         </span>
                       </div>
                       <p className="text-sm text-[var(--text-secondary)]">
-                        {gameLabel} • IGN: {registration.in_game_username}
+                        {gameLabel} | IGN: {registration.in_game_username}
                       </p>
                       <p className="text-sm text-[var(--text-secondary)]">
-                        WhatsApp: {registration.whatsapp_number ?? 'Not added'} • Ref:{' '}
+                        WhatsApp: {registration.whatsapp_number ?? 'Not added'} | Ref:{' '}
                         {registration.payment_reference ?? 'Not added'}
                       </p>
                     </div>

@@ -134,6 +134,103 @@ function htmlToText(html) {
     .trim();
 }
 
+function hashForKey(value) {
+  return crypto.createHash('sha256').update(normalizeEmail(value)).digest('hex').slice(0, 24);
+}
+
+function eventKeyFor(audience, recipient) {
+  const segment = recipient.registrationId || recipient.game || 'profile';
+  return [
+    'email-campaign',
+    CAMPAIGN_KEY,
+    audience,
+    hashForKey(recipient.email),
+    String(segment).replace(/[^a-z0-9_-]+/gi, '-'),
+  ].join(':');
+}
+
+async function claimDelivery(supabase, { audience, subject, recipient }) {
+  const eventKey = eventKeyFor(audience, recipient);
+  const metadata = {
+    campaign: CAMPAIGN_KEY,
+    audience,
+    subject,
+    registration_id: recipient.registrationId || null,
+    game: recipient.game || null,
+  };
+  const { error } = await supabase.from('email_delivery_events').insert({
+    event_key: eventKey,
+    event_type: 'weekend_cup_phase_closing_campaign',
+    recipient: recipient.email,
+    user_id: recipient.userId || null,
+    metadata,
+    status: 'claimed',
+    updated_at: new Date().toISOString(),
+  });
+
+  if (!error) {
+    return { claimed: true, eventKey, metadata };
+  }
+
+  if (error.code !== '23505') {
+    throw error;
+  }
+
+  const { data, error: lookupError } = await supabase
+    .from('email_delivery_events')
+    .select('status')
+    .eq('event_key', eventKey)
+    .maybeSingle();
+
+  if (lookupError) {
+    throw lookupError;
+  }
+
+  if (data?.status === 'failed') {
+    const { error: reclaimError } = await supabase
+      .from('email_delivery_events')
+      .update({
+        status: 'claimed',
+        error: null,
+        recipient: recipient.email,
+        user_id: recipient.userId || null,
+        metadata: { ...metadata, reclaimed_at: new Date().toISOString() },
+        updated_at: new Date().toISOString(),
+      })
+      .eq('event_key', eventKey)
+      .eq('status', 'failed');
+
+    if (reclaimError) {
+      throw reclaimError;
+    }
+
+    return { claimed: true, eventKey, metadata: { ...metadata, reclaimed: true } };
+  }
+
+  return {
+    claimed: false,
+    eventKey,
+    metadata: { ...metadata, existing_status: data?.status || null },
+  };
+}
+
+async function markDelivery(supabase, eventKey, status, metadata, error = null) {
+  const update = {
+    status,
+    metadata,
+    error,
+    updated_at: new Date().toISOString(),
+  };
+  const { error: updateError } = await supabase
+    .from('email_delivery_events')
+    .update(update)
+    .eq('event_key', eventKey);
+
+  if (updateError) {
+    console.error(`[delivery] Could not mark ${eventKey}: ${updateError.message}`);
+  }
+}
+
 function baseLayout({ title, preheader, body, unsubscribeUrl }) {
   return `<!doctype html>
 <html lang="en">
@@ -338,6 +435,9 @@ function getTransport() {
     host,
     port,
     secure,
+    connectionTimeout: 15_000,
+    greetingTimeout: 15_000,
+    socketTimeout: 25_000,
     auth: { user, pass },
   });
 }
@@ -467,10 +567,41 @@ function wait(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-async function sendAudience({ transporter, name, subject, recipients, buildHtml, delayMs, summary }) {
+function writeCheckpoint(outputPath, summary) {
+  fs.mkdirSync(path.dirname(outputPath), { recursive: true });
+  fs.writeFileSync(outputPath, JSON.stringify(summary, null, 2), 'utf8');
+}
+
+async function sendAudience({ supabase, transporter, name, subject, recipients, buildHtml, delayMs, summary, outputPath }) {
   for (let index = 0; index < recipients.length; index += 1) {
     const recipient = recipients[index];
     const unsubscribeUrl = buildUnsubscribeUrl(recipient.email);
+    let claimed;
+    try {
+      claimed = await claimDelivery(supabase, { audience: name, subject, recipient });
+    } catch (error) {
+      summary.failed.push({
+        audience: name,
+        email: recipient.email,
+        username: recipient.username,
+        error: error instanceof Error ? error.message : String(error),
+      });
+      writeCheckpoint(outputPath, summary);
+      continue;
+    }
+
+    if (!claimed.claimed) {
+      summary.skipped.push({
+        audience: name,
+        email: recipient.email,
+        username: recipient.username,
+        eventKey: claimed.eventKey,
+        reason: 'delivery event already exists',
+      });
+      writeCheckpoint(outputPath, summary);
+      continue;
+    }
+
     try {
       const html = buildHtml(recipient);
       const info = await transporter.sendMail({
@@ -491,15 +622,33 @@ async function sendAudience({ transporter, name, subject, recipients, buildHtml,
         email: recipient.email,
         username: recipient.username,
         messageId: info.messageId || null,
+        eventKey: claimed.eventKey,
       });
+      await markDelivery(
+        supabase,
+        claimed.eventKey,
+        'sent',
+        { ...claimed.metadata, sent_at: new Date().toISOString(), message_id: info.messageId || null }
+      );
     } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
       summary.failed.push({
         audience: name,
         email: recipient.email,
         username: recipient.username,
-        error: error instanceof Error ? error.message : String(error),
+        eventKey: claimed.eventKey,
+        error: message,
       });
+      await markDelivery(
+        supabase,
+        claimed.eventKey,
+        'failed',
+        { ...claimed.metadata, failed_at: new Date().toISOString() },
+        message
+      );
     }
+
+    writeCheckpoint(outputPath, summary);
 
     if ((index + 1) % 25 === 0 || index === recipients.length - 1) {
       console.log(`[${name}] ${index + 1}/${recipients.length}`);
@@ -524,6 +673,7 @@ async function main() {
     audiences: [],
     sent: [],
     failed: [],
+    skipped: [],
   };
 
   let allProfiles = [];
@@ -550,11 +700,13 @@ async function main() {
 
   fs.mkdirSync(RESULTS_DIR, { recursive: true });
   const outputPath = path.join(RESULTS_DIR, `${CAMPAIGN_KEY}-${timestampLabel()}.json`);
+  writeCheckpoint(outputPath, summary);
   const transporter = getTransport();
   await transporter.verify();
 
   if (allProfiles.length > 0) {
     await sendAudience({
+      supabase,
       transporter,
       name: 'all',
       subject: BLAST_SUBJECT,
@@ -562,12 +714,14 @@ async function main() {
       buildHtml: buildBlastHtml,
       delayMs: options.delayMs,
       summary,
+      outputPath,
     });
-    fs.writeFileSync(outputPath, JSON.stringify(summary, null, 2), 'utf8');
+    writeCheckpoint(outputPath, summary);
   }
 
   if (unpaidRegistrations.length > 0) {
     await sendAudience({
+      supabase,
       transporter,
       name: 'unpaid',
       subject: REMINDER_SUBJECT,
@@ -575,20 +729,22 @@ async function main() {
       buildHtml: buildReminderHtml,
       delayMs: options.delayMs,
       summary,
+      outputPath,
     });
-    fs.writeFileSync(outputPath, JSON.stringify(summary, null, 2), 'utf8');
+    writeCheckpoint(outputPath, summary);
   }
 
   if (typeof transporter.close === 'function') {
     transporter.close();
   }
 
-  fs.writeFileSync(outputPath, JSON.stringify(summary, null, 2), 'utf8');
+  writeCheckpoint(outputPath, summary);
   console.log(JSON.stringify({
     ok: true,
     outputPath,
     sentCount: summary.sent.length,
     failedCount: summary.failed.length,
+    skippedCount: summary.skipped.length,
     audiences: summary.audiences.map(({ name, recipientCount }) => ({ name, recipientCount })),
   }, null, 2));
 }

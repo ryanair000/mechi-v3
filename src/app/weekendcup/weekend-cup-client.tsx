@@ -22,6 +22,7 @@ import {
   WEEKEND_CUP_BALLOTS,
   WEEKEND_CUP_ENTRY_PRICING,
   WEEKEND_CUP_EVENT_DATES,
+  WEEKEND_CUP_DASHBOARD_PATH,
   WEEKEND_CUP_MAX_VOTE_SELECTIONS,
   WEEKEND_CUP_PRIZE_POOL_LABEL,
   WEEKEND_CUP_PROMO_IMAGE,
@@ -616,8 +617,9 @@ export function WeekendCupClient() {
 
           <div className="mx-auto flex max-w-[760px] flex-col items-center space-y-3 text-center">
             <p className="section-title">Weekend Cup preview</p>
-            <h1 className="mx-auto font-[var(--font-display)] text-[clamp(1.9rem,5.4vw,3.55rem)] font-black leading-[0.94] tracking-[-0.03em] text-[var(--text-primary)]">
-              <span className="block whitespace-nowrap">PlayMechi Weekend Cup</span>
+            <h1 className="mx-auto max-w-[22rem] font-[var(--font-display)] text-[clamp(2.35rem,10.2vw,3.55rem)] font-black leading-[0.94] text-[var(--text-primary)] sm:max-w-none sm:text-[clamp(2.45rem,5.4vw,3.55rem)]">
+              <span className="block">PlayMechi</span>
+              <span className="block">Weekend Cup</span>
               <span className="sr-only"> </span>
               <span className="block">Season 1</span>
             </h1>
@@ -643,16 +645,16 @@ export function WeekendCupClient() {
               ))}
             </div>
 
-            <div className="flex flex-wrap justify-center gap-3">
+            <div className="grid w-full max-w-[22rem] gap-3 sm:flex sm:max-w-none sm:flex-wrap sm:justify-center">
               <Link
                 href={WEEKEND_CUP_REGISTRATION_PATH}
-                className={`btn-primary min-h-11 px-4 py-2 text-[0.9rem] ${DASHBOARD_CONTROL_RADIUS_CLASS}`}
+                className={`btn-primary min-h-11 w-full px-4 py-2 text-[0.9rem] sm:w-auto ${DASHBOARD_CONTROL_RADIUS_CLASS}`}
               >
                 Register for Weekend Cup
               </Link>
               <Link
-                href={WEEKEND_CUP_REGISTRATION_PATH}
-                className={`btn-outline min-h-11 px-4 py-2 text-[0.9rem] ${DASHBOARD_CONTROL_RADIUS_CLASS}`}
+                href={WEEKEND_CUP_DASHBOARD_PATH}
+                className={`btn-outline min-h-11 w-full px-4 py-2 text-[0.9rem] sm:w-auto ${DASHBOARD_CONTROL_RADIUS_CLASS}`}
               >
                 View tournament desk
               </Link>

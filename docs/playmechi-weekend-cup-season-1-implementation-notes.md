@@ -67,6 +67,17 @@
    - match-day data
 6. Once paid, the player can complete check-in from the dashboard.
 
+## Season 1 announced modes and maps
+
+- CODM: 3 solo battle royale matches, all on Isolated.
+- Free Fire: 3 solo battle royale matches; Match 1 Bermuda, Match 2 Bermuda, Match 3 Solara.
+- PUBG Mobile: 3 solo battle royale matches; Match 1 Rondo, Match 2 Erangel, Match 3 Miramar.
+- eFootball: 1v1 one-leg knockout from Round of 32 to final.
+
+Detailed operator/player brief:
+
+- [docs/playmechi-weekend-cup-season-1-detailed.md](D:\MECHIV4\mechi-v3-master\MECHIV4\docs\playmechi-weekend-cup-season-1-detailed.md)
+
 ## Admin and moderator flow
 
 - Admin and moderator ops can:

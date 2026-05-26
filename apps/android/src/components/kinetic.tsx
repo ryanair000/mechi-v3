@@ -19,11 +19,13 @@ export function KineticScreen({
 
   return (
     <View style={[styles.root, dark && styles.darkRoot]}>
-      <View style={[styles.topBar, { paddingTop: insets.top + 10 }]}>
+      <View style={[styles.topBar, dark && styles.darkTopBar, { paddingTop: insets.top + 10 }]}>
         <Pressable accessibilityRole="button" style={styles.iconButton}>
           <Ionicons name="menu" size={27} color={dark ? colors.mutedDark : colors.primary} />
         </Pressable>
-        <Text style={[styles.brand, dark && styles.darkBrand]}>{title}</Text>
+        <View style={[styles.brandPlate, dark && styles.darkBrandPlate]}>
+          <Text style={[styles.brand, dark && styles.darkBrand]}>{title}</Text>
+        </View>
         <Pressable accessibilityRole="button" style={styles.iconButton}>
           <Ionicons
             name="notifications-outline"
@@ -130,11 +132,25 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
   },
+  darkTopBar: {
+    borderBottomColor: 'rgba(186,202,197,0.16)',
+  },
   iconButton: {
     width: 42,
     height: 42,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  brandPlate: {
+    minHeight: 34,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  darkBrandPlate: {
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.82)',
+    backgroundColor: colors.white,
+    paddingHorizontal: 12,
   },
   brand: {
     color: colors.primary,
@@ -147,9 +163,6 @@ const styles = StyleSheet.create({
     fontSize: 13,
     lineHeight: 18,
     color: colors.accent,
-    backgroundColor: colors.white,
-    paddingHorizontal: 12,
-    paddingVertical: 7,
     textTransform: 'uppercase',
   },
   content: {

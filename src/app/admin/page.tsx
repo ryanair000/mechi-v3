@@ -704,21 +704,21 @@ export default async function AdminOverviewPage() {
           </p>
         </div>
 
-        <div className="mt-4 grid gap-3 lg:grid-cols-3">
+        <div className="mt-4 grid gap-3 [grid-template-columns:repeat(auto-fit,minmax(240px,1fr))]">
           {mechiOpsCards.map(({ href, title, value, label, detail, icon: Icon }) => (
             <Link
               key={href}
               href={href}
-              className="rounded-[0.7rem] border border-[var(--border-color)] bg-[var(--surface-elevated)] p-4 transition-colors hover:bg-[var(--surface)]"
+              className="min-w-0 rounded-lg border border-[var(--border-color)] bg-[var(--surface-elevated)] p-4 transition-colors hover:bg-[var(--surface)]"
             >
               <div className="flex items-start justify-between gap-3">
-                <div>
+                <div className="min-w-0">
                   <p className="text-sm font-black text-[var(--text-primary)]">{title}</p>
-                  <p className="mt-2 text-3xl font-black leading-none text-[var(--accent-secondary-text)]">
+                  <p className="mt-2 break-words text-2xl font-black leading-none text-[var(--accent-secondary-text)] sm:text-3xl">
                     {value}
                   </p>
                 </div>
-                <div className="flex h-10 w-10 items-center justify-center rounded-md border border-[rgba(50,224,196,0.18)] bg-[rgba(50,224,196,0.08)] text-[var(--accent-secondary-text)]">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md border border-[rgba(50,224,196,0.18)] bg-[rgba(50,224,196,0.08)] text-[var(--accent-secondary-text)]">
                   <Icon size={17} />
                 </div>
               </div>
@@ -744,36 +744,36 @@ export default async function AdminOverviewPage() {
           </p>
         </div>
 
-        <div className="mt-4 grid gap-3 lg:grid-cols-4">
+        <div className="mt-4 grid gap-3 [grid-template-columns:repeat(auto-fit,minmax(230px,1fr))]">
           {overview.weekendCupGameRows.map((game) => (
             <Link
               key={game.game}
               href={`/admin/weekendcup?game=${encodeURIComponent(game.game)}`}
-              className="rounded-lg border border-[var(--border-color)] bg-[var(--surface-elevated)] p-4 transition-colors hover:bg-[var(--surface)]"
+              className="min-w-0 rounded-lg border border-[var(--border-color)] bg-[var(--surface-elevated)] p-4 transition-colors hover:bg-[var(--surface)]"
             >
               <div className="flex items-start justify-between gap-3">
-                <div>
+                <div className="min-w-0">
                   <p className="text-sm font-black text-[var(--text-primary)]">{game.label}</p>
                   <p className="mt-1 text-xs text-[var(--text-soft)]">
                     {game.registered.toLocaleString()} total registrations
                   </p>
                 </div>
-                <span className="brand-chip px-2 py-0.5">{game.paid}/{game.slots}</span>
+                <span className="brand-chip shrink-0 px-2 py-0.5">{game.paid}/{game.slots}</span>
               </div>
               <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
-                <div>
+                <div className="min-w-0">
                   <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--text-soft)]">Pending</p>
                   <p className="mt-1 font-black text-[var(--text-primary)]">{game.pendingPayment}</p>
                 </div>
-                <div>
+                <div className="min-w-0">
                   <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--text-soft)]">Checked in</p>
                   <p className="mt-1 font-black text-[var(--text-primary)]">{game.checkedIn}</p>
                 </div>
-                <div>
+                <div className="min-w-0">
                   <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--text-soft)]">Revenue</p>
-                  <p className="mt-1 font-black text-[var(--text-primary)]">KSh {game.revenueKes.toLocaleString()}</p>
+                  <p className="mt-1 break-words font-black text-[var(--text-primary)]">KSh {game.revenueKes.toLocaleString()}</p>
                 </div>
-                <div>
+                <div className="min-w-0">
                   <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--text-soft)]">Slots left</p>
                   <p className="mt-1 font-black text-[var(--text-primary)]">{game.spotsLeft}</p>
                 </div>

@@ -4,7 +4,6 @@ import { getStoredToken } from '../lib/token-store';
 import type { ApiErrorBody } from '../types';
 
 const USB_REVERSED_API_URL = 'http://127.0.0.1:3000';
-const LOCAL_WEB_API_URL = 'http://localhost:3000';
 const PRODUCTION_API_URL = 'https://mechi.club';
 const LOCAL_API_HOST_PATTERN = /^https?:\/\/(?:localhost|127\.0\.0\.1|\[::1\])(?::\d+)?(?:\/|$)/i;
 
@@ -60,8 +59,8 @@ export function getApiBaseUrl(): string {
     return fromConfig;
   }
 
-  if (__DEV__) {
-    return Platform.OS === 'web' ? LOCAL_WEB_API_URL : USB_REVERSED_API_URL;
+  if (__DEV__ && Platform.OS !== 'web') {
+    return USB_REVERSED_API_URL;
   }
 
   return PRODUCTION_API_URL;

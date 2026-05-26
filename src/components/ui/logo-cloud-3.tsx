@@ -97,9 +97,8 @@ export function LogoCloud({ className, logos, ...props }: LogoCloudProps) {
 }
 
 export function LogoCloud3Section({ className, ...props }: ComponentProps<'section'>) {
-  const { country, locale } = useRegionalSettings();
+  const { locale } = useRegionalSettings();
   const isSwahili = locale === 'sw-TZ';
-  const isUnitedStates = country === 'united_states';
 
   return (
     <section
@@ -121,7 +120,7 @@ export function LogoCloud3Section({ className, ...props }: ComponentProps<'secti
         </span>
         <br />
         <span className="font-semibold">
-          {isSwahili ? 'Shindana Sasa.' : isUnitedStates ? 'Build Your Run.' : 'Compete Now.'}
+          {isSwahili ? 'Shindana Sasa.' : 'Compete Now.'}
         </span>
       </h2>
 

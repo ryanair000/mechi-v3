@@ -11,7 +11,6 @@ const COUNTRY_LANDING_PATHS: Partial<Record<CountryKey, string>> = {
   kenya: '/ke',
   tanzania: '/tz',
   uganda: '/ug',
-  united_states: '/usa',
 };
 
 function getSourceLabel(countrySource: string, locale: string) {

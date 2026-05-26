@@ -54,6 +54,11 @@ export default function HomeTab() {
           <Text style={styles.timerLabel}>Registration closes in:</Text>
           <Text style={styles.timer}>02:14:59</Text>
         </View>
+        <View style={styles.commandStats}>
+          <CommandStat label="Slots" value="48/64" />
+          <CommandStat label="Entry" value="Free" />
+          <CommandStat label="Mode" value="Squad" />
+        </View>
         <PrimaryButton label="Register Now" onPress={() => void openRegister()} />
       </View>
 
@@ -78,6 +83,11 @@ export default function HomeTab() {
       <Link href="/(tabs)/feed" asChild>
         <Pressable style={({ pressed }) => [styles.announcement, pressed && styles.pressed]}>
           <View style={styles.announcementShade} />
+          <View style={styles.announcementGrid}>
+            <View style={styles.announcementPanel} />
+            <View style={styles.announcementPanelSmall} />
+            <View style={styles.announcementPanelTall} />
+          </View>
           <Text style={styles.pill}>Announcement</Text>
           <Text style={styles.announcementTitle}>
             {announcement?.title ?? 'New Season Prizes Revealed!'}
@@ -100,7 +110,42 @@ export default function HomeTab() {
           <Text style={styles.quickText}>Support</Text>
         </Pressable>
       </View>
+
+      <Card style={styles.operationsCard}>
+        <View style={styles.operationTitleRow}>
+          <Ionicons name="library-outline" color={colors.muted} size={20} />
+          <Label muted>Command Center</Label>
+        </View>
+        <OperationRow
+          icon="shield-checkmark-outline"
+          title="Tournament Pass"
+          description="Confirm entry, lobby, and proof status"
+          tag="Ready"
+        />
+        <OperationRow
+          icon="flag-outline"
+          title="Weekend Cup"
+          description="Free Fire squad registration is open"
+          tag="Live"
+          accent
+        />
+        <OperationRow
+          icon="people-outline"
+          title="Community"
+          description="Join squads and get match support"
+          tag="Open"
+        />
+      </Card>
     </KineticScreen>
+  );
+}
+
+function CommandStat({ label, value }: { label: string; value: string }) {
+  return (
+    <View style={styles.commandStat}>
+      <Text style={styles.commandStatValue}>{value}</Text>
+      <Text style={styles.commandStatLabel}>{label}</Text>
+    </View>
   );
 }
 
@@ -122,6 +167,35 @@ function QuickTile({
         <Text style={styles.quickText}>{label}</Text>
       </Pressable>
     </Link>
+  );
+}
+
+function OperationRow({
+  icon,
+  title,
+  description,
+  tag,
+  accent = false,
+}: {
+  icon: keyof typeof Ionicons.glyphMap;
+  title: string;
+  description: string;
+  tag: string;
+  accent?: boolean;
+}) {
+  return (
+    <View style={styles.operationRow}>
+      <View style={styles.operationIcon}>
+        <Ionicons name={icon} color={colors.muted} size={20} />
+      </View>
+      <View style={styles.operationCopy}>
+        <Text style={styles.operationTitle}>{title}</Text>
+        <Text style={styles.operationDescription}>{description}</Text>
+      </View>
+      <View style={[styles.operationTag, accent && styles.operationTagAccent]}>
+        <Text style={[styles.operationTagText, accent && styles.operationTagTextAccent]}>{tag}</Text>
+      </View>
+    </View>
   );
 }
 
@@ -156,6 +230,7 @@ const styles = StyleSheet.create({
     borderRadius: radii.md,
     borderWidth: 1,
     borderColor: 'rgba(50,224,196,0.25)',
+    boxShadow: '0 8px 18px rgba(50,224,196,0.12)',
     padding: spacing.lg,
     gap: spacing.md,
   },
@@ -225,6 +300,33 @@ const styles = StyleSheet.create({
     fontWeight: '900',
     fontVariant: ['tabular-nums'],
   },
+  commandStats: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+  },
+  commandStat: {
+    flex: 1,
+    minHeight: 54,
+    borderRadius: radii.sm,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
+    backgroundColor: 'rgba(255,255,255,0.045)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 2,
+  },
+  commandStatValue: {
+    color: colors.white,
+    fontSize: 15,
+    fontWeight: '900',
+  },
+  commandStatLabel: {
+    color: colors.neutral,
+    fontSize: 10,
+    fontWeight: '900',
+    letterSpacing: 1.3,
+    textTransform: 'uppercase',
+  },
   section: {
     gap: spacing.lg,
   },
@@ -279,7 +381,33 @@ const styles = StyleSheet.create({
   },
   announcementShade: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: '#102c35',
+    backgroundColor: '#0d2630',
+  },
+  announcementGrid: {
+    ...StyleSheet.absoluteFillObject,
+    opacity: 0.42,
+    flexDirection: 'row',
+    gap: spacing.sm,
+    padding: spacing.lg,
+    justifyContent: 'flex-end',
+  },
+  announcementPanel: {
+    width: 58,
+    height: 96,
+    borderRadius: radii.sm,
+    backgroundColor: 'rgba(50,224,196,0.2)',
+  },
+  announcementPanelSmall: {
+    width: 44,
+    height: 72,
+    borderRadius: radii.sm,
+    backgroundColor: 'rgba(255,255,255,0.14)',
+  },
+  announcementPanelTall: {
+    width: 36,
+    height: 118,
+    borderRadius: radii.sm,
+    backgroundColor: 'rgba(255,107,107,0.16)',
   },
   pill: {
     alignSelf: 'flex-start',
@@ -340,5 +468,66 @@ const styles = StyleSheet.create({
   },
   pressed: {
     opacity: 0.82,
+  },
+  operationsCard: {
+    gap: spacing.md,
+  },
+  operationTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  operationRow: {
+    minHeight: 62,
+    borderRadius: radii.sm,
+    backgroundColor: colors.surfaceSoft,
+    borderWidth: 1,
+    borderColor: colors.borderSubtle,
+    padding: spacing.md,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+  },
+  operationIcon: {
+    width: 38,
+    height: 38,
+    borderRadius: radii.sm,
+    backgroundColor: colors.white,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  operationCopy: {
+    flex: 1,
+    gap: 2,
+  },
+  operationTitle: {
+    color: colors.text,
+    fontSize: 14,
+    fontWeight: '900',
+  },
+  operationDescription: {
+    color: colors.muted,
+    fontSize: 12,
+    lineHeight: 16,
+    fontWeight: '600',
+  },
+  operationTag: {
+    borderRadius: radii.sm,
+    backgroundColor: colors.neutral,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+  },
+  operationTagAccent: {
+    backgroundColor: 'rgba(255,107,107,0.12)',
+  },
+  operationTagText: {
+    color: colors.muted,
+    fontSize: 10,
+    fontWeight: '900',
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+  },
+  operationTagTextAccent: {
+    color: colors.accent,
   },
 });

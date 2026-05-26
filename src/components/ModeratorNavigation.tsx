@@ -144,7 +144,7 @@ export function ModeratorNavigation({
 
   if (variant === 'mobile') {
     return (
-      <div className="flex gap-2 overflow-x-auto no-scrollbar">
+      <div className="flex flex-wrap gap-2">
         {items.map(({ href, label, icon: Icon }) => {
           const active = isActive(pathname, href);
           return (
@@ -152,14 +152,14 @@ export function ModeratorNavigation({
               key={href}
               href={href}
               aria-current={active ? 'page' : undefined}
-              className={`inline-flex min-h-10 items-center gap-2 rounded-md border px-3 text-xs font-bold whitespace-nowrap ${
+              className={`inline-flex min-h-10 min-w-0 items-center gap-2 rounded-md border px-3 text-xs font-bold ${
                 active
                   ? 'border-[rgba(50,224,196,0.2)] bg-[rgba(50,224,196,0.12)] text-[var(--text-primary)]'
                   : 'border-[var(--border-color)] bg-[var(--surface)] text-[var(--text-secondary)]'
               }`}
             >
-              <Icon size={14} />
-              {label}
+              <Icon size={14} className="shrink-0" />
+              <span className="min-w-0 break-words">{label}</span>
             </Link>
           );
         })}

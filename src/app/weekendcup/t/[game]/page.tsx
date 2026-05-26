@@ -171,6 +171,16 @@ export default async function WeekendCupGameDetailPage({
                       {config.format}
                     </p>
                   </div>
+                  {config.mapsLabel ? (
+                    <div className="rounded-[var(--radius-panel)] border border-white/10 bg-[rgba(255,255,255,0.03)] p-4">
+                      <p className="text-[10px] font-black uppercase tracking-[0.14em] text-[var(--text-soft)]">
+                        Maps
+                      </p>
+                      <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">
+                        {config.mapsLabel}
+                      </p>
+                    </div>
+                  ) : null}
                   <div className="rounded-[var(--radius-panel)] border border-white/10 bg-[rgba(255,255,255,0.03)] p-4">
                     <p className="text-[10px] font-black uppercase tracking-[0.14em] text-[var(--text-soft)]">
                       Match flow

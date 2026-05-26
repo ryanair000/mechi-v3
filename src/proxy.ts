@@ -71,17 +71,12 @@ const REGIONAL_ROUTE_CONFIGS: Array<{
     countryCode: 'UG',
     acceptLanguage: 'en-UG,en;q=0.9,sw;q=0.8',
   },
-  {
-    pathPrefix: '/usa',
-    country: 'united_states',
-    countryCode: 'US',
-    acceptLanguage: 'en-US,en;q=0.9',
-  },
 ];
 
 const ADMIN_PREFIXES = ['/admin', '/api/admin'];
 const TESTS_HOSTS = new Set(['tests.mechi.club']);
 const LOCAL_APP_HOSTS = new Set(['localhost', '127.0.0.1']);
+const LOCAL_DEV_ORIGIN_HOSTS = new Set(['localhost', '127.0.0.1']);
 const UNSAFE_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
 const CANONICAL_ADMIN_HOST = 'mechi.lokimax.top';
 const ADMIN_HOSTS = new Set([CONFIGURED_ADMIN_HOST, CANONICAL_ADMIN_HOST]);
@@ -286,6 +281,37 @@ function isAllowedUnsafeOrigin(request: NextRequest) {
   } catch {
     return false;
   }
+}
+
+function getLocalDevCorsOrigin(request: NextRequest) {
+  const origin = request.headers.get('origin');
+  if (!origin) {
+    return null;
+  }
+
+  try {
+    const originHost = normalizeHost(new URL(origin).host);
+    return LOCAL_DEV_ORIGIN_HOSTS.has(originHost) ? origin : null;
+  } catch {
+    return null;
+  }
+}
+
+function applyLocalDevCors(request: NextRequest, response: NextResponse) {
+  const origin = getLocalDevCorsOrigin(request);
+  if (!origin || !request.nextUrl.pathname.startsWith('/api/')) {
+    return response;
+  }
+
+  response.headers.set('Access-Control-Allow-Origin', origin);
+  response.headers.set('Access-Control-Allow-Credentials', 'true');
+  response.headers.set(
+    'Access-Control-Allow-Headers',
+    'Authorization, Content-Type, Accept'
+  );
+  response.headers.set('Access-Control-Allow-Methods', 'GET, POST, PATCH, DELETE, OPTIONS');
+  response.headers.append('Vary', 'Origin');
+  return response;
 }
 
 function getApiRateLimitPolicy(pathname: string) {
@@ -649,10 +675,15 @@ export async function proxy(request: NextRequest) {
   const localRequest = isLocalRequest(request);
   const adminHost = ADMIN_HOSTS.has(host) || isLocalHost(host) || localRequest;
   const sharedLocalHost = adminHost && (host === APP_HOST || isLocalHost(host) || localRequest);
+
+  if (pathname.startsWith('/api/') && request.method === 'OPTIONS' && getLocalDevCorsOrigin(request)) {
+    return applyLocalDevCors(request, new NextResponse(null, { status: 204 }));
+  }
+
   const guardedResponse = applyApiIngressGuards(request);
 
   if (guardedResponse) {
-    return guardedResponse;
+    return applyLocalDevCors(request, guardedResponse);
   }
 
   const dashboardPathAlias = getDashboardPathAlias(pathname);
@@ -666,6 +697,12 @@ export async function proxy(request: NextRequest) {
     const tanzaniaRegistrationUrl = request.nextUrl.clone();
     tanzaniaRegistrationUrl.pathname = '/tz/esportsday/register';
     return NextResponse.redirect(tanzaniaRegistrationUrl, 308);
+  }
+
+  if (!adminHost && (pathname === '/usa' || pathname.startsWith('/usa/'))) {
+    const eastAfricaUrl = request.nextUrl.clone();
+    eastAfricaUrl.pathname = '/ke';
+    return NextResponse.redirect(eastAfricaUrl, 308);
   }
 
   if (pathname.startsWith('/s/') && !pathname.startsWith('/s/match/') && !pathname.startsWith('/s/t/')) {
@@ -776,11 +813,11 @@ export async function proxy(request: NextRequest) {
     payload &&
     !access
   ) {
-    return clearAuthCookie(NextResponse.next());
+    return applyLocalDevCors(request, clearAuthCookie(NextResponse.next()));
   }
 
   if (isPublic(effectivePathname) && !isAdminRoute(effectivePathname)) {
-    return NextResponse.next();
+    return applyLocalDevCors(request, NextResponse.next());
   }
 
   if (isAdminRoute(effectivePathname)) {
@@ -800,7 +837,7 @@ export async function proxy(request: NextRequest) {
       rewriteUrl.pathname = adminHostAlias;
       return NextResponse.rewrite(rewriteUrl);
     }
-    return NextResponse.next();
+    return applyLocalDevCors(request, NextResponse.next());
   }
 
   if (isProtectedRoute(effectivePathname)) {
@@ -819,7 +856,7 @@ export async function proxy(request: NextRequest) {
     return NextResponse.rewrite(rewriteUrl);
   }
 
-  return NextResponse.next();
+  return applyLocalDevCors(request, NextResponse.next());
 }
 
 export const config = {

@@ -187,9 +187,9 @@ CREATE TABLE weekend_cup_results (
 - Select lobby and match number (1, 2, 3)
 - Enter kills per player
 - Auto-calculate points based on game scoring rules:
-  - PUBG: 1 kill = 1 point
-  - CODM: 1 kill = 3 points + placement
-  - Free Fire: 1 kill = 1 point
+  - PUBG: 3 matches on Rondo, Erangel, and Miramar; 1 kill = 1 point + placement
+  - CODM: 3 matches on Isolated; 1 kill = 3 points + placement
+  - Free Fire: 3 matches on Bermuda, Bermuda, and Solara; 1 kill = 1 point + placement
 - Upload screenshot for verification
 - Submit scores
 
@@ -245,9 +245,10 @@ CREATE TABLE weekend_cup_brackets (
 1. Get all checked-in eFootball players (max 32)
 2. Shuffle for random seeding (or manual seed)
 3. Generate Round of 32 matches (16 matches)
-4. As results come in, auto-populate next round
-5. Semi-final losers go to Bronze match
-6. Final determines 1st/2nd, Bronze determines 3rd/4th
+4. Run one-leg fixtures
+5. As results come in, auto-populate next round
+6. Semi-final losers go to Bronze match
+7. Final determines 1st/2nd, Bronze determines 3rd/4th
 
 ---
 

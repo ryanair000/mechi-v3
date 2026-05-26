@@ -34,7 +34,6 @@ const ISO_COUNTRY_MAP: Record<string, CountryKey> = {
   RW: 'rwanda',
   TZ: 'tanzania',
   UG: 'uganda',
-  US: 'united_states',
 };
 
 const COUNTRY_HEADER_KEYS = [

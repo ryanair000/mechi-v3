@@ -46,7 +46,7 @@ export default function TabsLayout() {
           paddingTop: 6,
           backgroundColor: '#374151',
           borderTopColor: 'rgba(255,255,255,0.08)',
-          borderRadius: 16,
+          borderRadius: 8,
         },
         tabBarItemStyle: {
           minHeight: 44,

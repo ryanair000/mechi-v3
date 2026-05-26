@@ -105,7 +105,7 @@ export function AdminNavigation({
             <div className="px-1 text-[10px] font-bold uppercase tracking-[0.18em] text-[var(--text-soft)]">
               {section.label}
             </div>
-            <div className="flex gap-2 overflow-x-auto no-scrollbar">
+            <div className="flex flex-wrap gap-2">
               {section.items.map(({ href, label, icon: Icon }) => {
                 const isActive = isPathActive(pathname, href);
 
@@ -114,7 +114,7 @@ export function AdminNavigation({
                     key={href}
                     href={href}
                     aria-current={isActive ? 'page' : undefined}
-                    className={`inline-flex items-center gap-2 rounded-md border px-3 py-2 text-xs font-semibold whitespace-nowrap transition-colors ${
+                    className={`inline-flex min-w-0 items-center gap-2 rounded-md border px-3 py-2 text-xs font-semibold transition-colors ${
                       isActive
                         ? 'border-[rgba(50,224,196,0.2)] bg-[rgba(50,224,196,0.12)] text-[var(--text-primary)]'
                         : section.secondary
@@ -124,9 +124,9 @@ export function AdminNavigation({
                   >
                     <Icon
                       size={14}
-                      className={isActive ? 'text-[var(--accent-secondary-text)]' : undefined}
+                      className={isActive ? 'shrink-0 text-[var(--accent-secondary-text)]' : 'shrink-0'}
                     />
-                    <span>{label}</span>
+                    <span className="min-w-0 break-words">{label}</span>
                   </Link>
                 );
               })}

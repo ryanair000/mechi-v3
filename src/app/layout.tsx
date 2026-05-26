@@ -52,8 +52,6 @@ export async function generateMetadata(): Promise<Metadata> {
       'uganda',
       'rwanda',
       'ethiopia',
-      'united states',
-      'usa',
       'esports',
       '1v1',
       'competitive gaming',
@@ -68,7 +66,7 @@ export async function generateMetadata(): Promise<Metadata> {
         : 'Queue clean 1v1s, spin up proper lobbies, and run prize-backed tournaments for players across East Africa in one place.',
       url: 'https://mechi.club',
       siteName: 'PlayMechi',
-      locale: regionalSettings.locale === 'sw-TZ' ? 'sw_TZ' : 'en_US',
+      locale: regionalSettings.locale === 'sw-TZ' ? 'sw_TZ' : 'en_KE',
       type: 'website',
     },
     twitter: {

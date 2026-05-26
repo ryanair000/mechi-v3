@@ -78,6 +78,11 @@ export default function AccountTab() {
             <Text style={styles.editButtonText}>Edit Profile</Text>
           </Pressable>
         </Link>
+        <View style={styles.profileRail}>
+          <ProfileRailItem label="Tier" value="Gold" />
+          <ProfileRailItem label="Region" value={profile?.region ?? 'South Asia'} />
+          <ProfileRailItem label="Status" value="Ready" accent />
+        </View>
       </View>
 
       <Card>
@@ -99,6 +104,16 @@ export default function AccountTab() {
           <Stat value={String(registrations.length || 124)} label="Joined" />
           <Stat value="18" label="Won" accent />
         </View>
+      </Card>
+
+      <Card>
+        <View style={styles.sectionTitle}>
+          <Ionicons name="checkmark-circle-outline" color={colors.text} size={20} />
+          <Label muted>Player Readiness</Label>
+        </View>
+        <ReadinessRow icon="person-outline" label="Profile Completion" value="90%" />
+        <ReadinessRow icon="pulse-outline" label="Activity Level" value="75%" />
+        <ReadinessRow icon="star-outline" label="Reputation" value="85%" />
       </Card>
 
       <Card style={styles.menuCard}>
@@ -157,6 +172,46 @@ function Stat({ value, label, accent = false }: { value: string; label: string; 
     <View style={styles.stat}>
       <Text style={[styles.statValue, accent && styles.statAccent]}>{value}</Text>
       <Text style={styles.statLabel}>{label}</Text>
+    </View>
+  );
+}
+
+function ProfileRailItem({
+  label,
+  value,
+  accent = false,
+}: {
+  label: string;
+  value: string;
+  accent?: boolean;
+}) {
+  return (
+    <View style={styles.profileRailItem}>
+      <Text style={[styles.profileRailValue, accent && styles.profileRailAccent]}>{value}</Text>
+      <Text style={styles.profileRailLabel}>{label}</Text>
+    </View>
+  );
+}
+
+function ReadinessRow({
+  icon,
+  label,
+  value,
+}: {
+  icon: keyof typeof Ionicons.glyphMap;
+  label: string;
+  value: '90%' | '75%' | '85%';
+}) {
+  return (
+    <View style={styles.readinessRow}>
+      <View style={styles.readinessMeta}>
+        <Ionicons name={icon} color={colors.muted} size={16} />
+        <Text style={styles.readinessLabel}>{label}</Text>
+        <Text style={styles.readinessValue}>{value}</Text>
+      </View>
+      <View style={styles.readinessTrack}>
+        <View style={[styles.readinessFill, { width: value }]} />
+      </View>
     </View>
   );
 }
@@ -253,6 +308,69 @@ const styles = StyleSheet.create({
     fontWeight: '900',
     textTransform: 'uppercase',
     letterSpacing: 1.8,
+  },
+  profileRail: {
+    width: '100%',
+    flexDirection: 'row',
+    gap: spacing.sm,
+    paddingTop: spacing.sm,
+  },
+  profileRailItem: {
+    flex: 1,
+    minHeight: 58,
+    borderRadius: radii.sm,
+    borderWidth: 1,
+    borderColor: colors.borderSubtle,
+    backgroundColor: colors.white,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 2,
+  },
+  profileRailValue: {
+    color: colors.text,
+    fontSize: 14,
+    fontWeight: '900',
+  },
+  profileRailAccent: {
+    color: colors.primaryDark,
+  },
+  profileRailLabel: {
+    color: colors.muted,
+    fontSize: 10,
+    fontWeight: '900',
+    textTransform: 'uppercase',
+    letterSpacing: 1.2,
+  },
+  readinessRow: {
+    gap: spacing.sm,
+  },
+  readinessMeta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  readinessLabel: {
+    flex: 1,
+    color: colors.muted,
+    fontSize: 12,
+    fontWeight: '900',
+  },
+  readinessValue: {
+    color: colors.text,
+    fontSize: 12,
+    fontWeight: '900',
+    fontVariant: ['tabular-nums'],
+  },
+  readinessTrack: {
+    height: 7,
+    borderRadius: radii.sm,
+    backgroundColor: colors.neutral,
+    overflow: 'hidden',
+  },
+  readinessFill: {
+    height: '100%',
+    borderRadius: radii.sm,
+    backgroundColor: colors.primary,
   },
   sectionTitle: {
     flexDirection: 'row',

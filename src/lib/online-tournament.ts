@@ -43,6 +43,7 @@ export type OnlineTournamentGameConfig = {
   regularSlots?: number;
   lateSlots?: number;
   format: string;
+  mapsLabel?: string;
   matchCount: string;
   scoring: string;
   firstPrize: string;

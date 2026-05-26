@@ -16,15 +16,30 @@
 - PUBG Mobile
   - Date: `Friday 29 May 2026`
   - Slots: `80`
+  - Format: `Solo battle royale room`
+  - Matches: `3`
+  - Maps: `Rondo`, `Erangel`, `Miramar`
   - Prizes: `KSh 1,500`, `KSh 1,000`, `KSh 500`
 - CODM
   - Date: `Saturday 30 May 2026`
   - Slots: `80`
+  - Format: `Solo battle royale room`
+  - Matches: `3`
+  - Map: `Isolated` for all three matches
   - Prizes: `KSh 1,500`, `KSh 1,000`, `KSh 500`
 - eFootball
   - Date: `Sunday 31 May 2026`
-  - Slots: `16`
+  - Slots: `32`
+  - Format: `1v1 one-leg knockout`
+  - Bracket: `Round of 32` to final
   - Prizes: `KSh 1,000`, `KSh 500`
+- Free Fire
+  - Date: `Sunday 31 May 2026`
+  - Slots: `80`
+  - Format: `Solo battle royale room`
+  - Matches: `3`
+  - Maps: `Bermuda`, `Bermuda`, `Solara`
+  - Prizes: `KSh 1,250`, `KSh 750`, `KSh 500`
 
 ## Ops Notes
 

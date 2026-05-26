@@ -204,11 +204,19 @@ export default function ArenaTab() {
             <Text style={styles.startsValue}>04:59</Text>
           </View>
         </View>
+        <View style={styles.timerTrack}>
+          <View style={styles.timerFill} />
+        </View>
         <Credential label="Room ID" value={room?.credentials_released ? room.room_id || '8472910' : 'Locked'} />
         <Credential
           label="Password"
           value={room?.credentials_released ? room.room_password || 'mechi123' : 'Locked'}
         />
+        <View style={styles.matchChecklist}>
+          <ChecklistItem label="Registered" done={Boolean(registration)} />
+          <ChecklistItem label="Checked in" done={Boolean(room)} />
+          <ChecklistItem label="Proof pending" done={submissions.length > 0} />
+        </View>
         <View style={styles.actionRow}>
           <PrimaryButton label="Report Issue" danger onPress={() => void Linking.openURL(config.whatsappGroupUrl)} />
           <View style={styles.launchButtonWrap}>
@@ -275,6 +283,15 @@ export default function ArenaTab() {
         ))}
       </View>
     </KineticScreen>
+  );
+}
+
+function ChecklistItem({ label, done }: { label: string; done: boolean }) {
+  return (
+    <View style={styles.checklistItem}>
+      <View style={[styles.checklistDot, done && styles.checklistDotDone]} />
+      <Text style={[styles.checklistText, done && styles.checklistTextDone]}>{label}</Text>
+    </View>
   );
 }
 
@@ -480,6 +497,7 @@ const styles = StyleSheet.create({
     position: 'relative',
     overflow: 'hidden',
     gap: spacing.lg,
+    boxShadow: '0 0 18px rgba(50,224,196,0.1)',
   },
   accentLine: {
     position: 'absolute',
@@ -531,6 +549,17 @@ const styles = StyleSheet.create({
     fontWeight: '900',
     fontVariant: ['tabular-nums'],
   },
+  timerTrack: {
+    height: 4,
+    borderRadius: radii.sm,
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    overflow: 'hidden',
+  },
+  timerFill: {
+    width: '62%',
+    height: '100%',
+    backgroundColor: colors.accent,
+  },
   credential: {
     minHeight: 74,
     borderRadius: radii.sm,
@@ -564,6 +593,39 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(50,224,196,0.12)',
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  matchChecklist: {
+    borderRadius: radii.sm,
+    borderWidth: 1,
+    borderColor: 'rgba(186,202,197,0.12)',
+    backgroundColor: 'rgba(255,255,255,0.035)',
+    padding: spacing.md,
+    gap: spacing.sm,
+  },
+  checklistItem: {
+    minHeight: 26,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  checklistDot: {
+    width: 9,
+    height: 9,
+    borderRadius: 999,
+    backgroundColor: colors.mutedDark,
+  },
+  checklistDotDone: {
+    backgroundColor: colors.primary,
+  },
+  checklistText: {
+    color: colors.mutedDark,
+    fontSize: 12,
+    fontWeight: '900',
+    textTransform: 'uppercase',
+    letterSpacing: 1.2,
+  },
+  checklistTextDone: {
+    color: colors.neutral,
   },
   actionRow: {
     flexDirection: 'row',

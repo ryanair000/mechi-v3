@@ -1,6 +1,7 @@
 param(
   [switch]$Install,
   [switch]$Release,
+  [switch]$LocalApi,
   [switch]$NoMetro,
   [int]$MetroPort = 8081,
   [int]$ApiPort = 3000
@@ -52,13 +53,13 @@ Write-Host "API reverse: device 127.0.0.1:$ApiPort -> computer 127.0.0.1:$ApiPor
 
 $env:EXPO_NO_DEPENDENCY_VALIDATION = "1"
 
-if ($Release) {
-  $env:EXPO_PUBLIC_MECHI_API_URL = "https://mechi.club"
-  Write-Host "API target: https://mechi.club"
-}
-else {
+if ($LocalApi) {
   $env:EXPO_PUBLIC_MECHI_API_URL = "http://127.0.0.1:$ApiPort"
   Write-Host "API target: http://127.0.0.1:$ApiPort"
+}
+else {
+  $env:EXPO_PUBLIC_MECHI_API_URL = "https://mechi.club"
+  Write-Host "API target: https://mechi.club"
 }
 
 if ($Install) {

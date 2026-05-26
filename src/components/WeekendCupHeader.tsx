@@ -31,14 +31,14 @@ export function WeekendCupHeader({
     ? [
         { href: voteHref, label: 'Kura' },
         { href: '/leaderboard', label: 'Ubao wa Washindi' },
-        { href: '/playmechi', label: 'Tournament Iliyopita' },
+        { href: '/playmechi', label: 'Archive' },
         { href: '/android-testers', label: 'Android' },
         { href: '/platform', label: 'Mfumo' },
       ]
     : [
         { href: voteHref, label: 'Vote' },
         { href: '/leaderboard', label: 'Leaderboard' },
-        { href: '/playmechi', label: 'Last Tournament' },
+        { href: '/playmechi', label: 'Archive' },
         { href: '/android-testers', label: 'Android' },
         { href: '/platform', label: 'Platform' },
       ];
@@ -90,12 +90,12 @@ export function WeekendCupHeader({
           </div>
 
           <div className="mt-1.5 border-t border-[rgba(112,139,174,0.2)] pt-1.5 lg:hidden">
-            <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar">
+            <div className="flex gap-1.5 overflow-x-auto pb-1 no-scrollbar">
               {navItems.map((item) => (
                 <Link
                   key={item.href}
                   href={item.href}
-                  className="shrink-0 rounded-[var(--radius-control)] px-3 py-1.5 font-[var(--font-display)] text-[0.72rem] font-black uppercase tracking-[0.14em] text-[var(--text-secondary)] transition-colors hover:bg-[rgba(255,255,255,0.05)] hover:text-[var(--text-primary)]"
+                  className="shrink-0 rounded-[var(--radius-control)] px-2.5 py-1.5 font-[var(--font-display)] text-[0.68rem] font-black uppercase tracking-[0.1em] text-[var(--text-secondary)] transition-colors hover:bg-[rgba(255,255,255,0.05)] hover:text-[var(--text-primary)]"
                 >
                   {item.label}
                 </Link>

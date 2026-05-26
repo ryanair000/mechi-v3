@@ -9,33 +9,9 @@ import { LogoCloud3Section } from '@/components/ui/logo-cloud-3';
 import { PlayMechiHomeHeader } from '@/app/home/playmechi-home-header';
 
 export function MechiHomePageShell() {
-  const { country, locale } = useRegionalSettings();
+  const { locale } = useRegionalSettings();
   const isSwahili = locale === 'sw-TZ';
-  const isUnitedStates = country === 'united_states';
-  const homeFaqs: FaqItem[] = isUnitedStates
-    ? [
-        {
-          question: 'What is Mechi USA?',
-          answer:
-            'Mechi USA is the American landing lane for PlayMechi: competitive gaming profiles, community lobbies, skill-first brackets, and prize-backed events as the US player base opens up.',
-        },
-        {
-          question: 'Which games fit the USA version?',
-          answer:
-            'The first USA page keeps the current Mechi core: PUBG Mobile, CODM, eFootball, FC, fighting games, and community-voted mystery slots. It is built so US-focused games can be promoted without changing the app foundation.',
-        },
-        {
-          question: 'Can US players join Weekend Cup?',
-          answer:
-            'US players can create a Mechi account and follow the Weekend Cup flow, but event timing, payment availability, and prize eligibility should be checked on the event page before entering.',
-        },
-        {
-          question: 'How should players get updates?',
-          answer:
-            'Follow PlayMechi on Instagram, YouTube, X, Discord, and Twitch for the cleanest public updates while the USA community lane is being built out.',
-        },
-      ]
-    : isSwahili
+  const homeFaqs: FaqItem[] = isSwahili
     ? [
         {
           question: 'Mechi.club ni nini?',
@@ -99,20 +75,16 @@ export function MechiHomePageShell() {
         <LogoCloud3Section />
         <AnimatedSlideshowSection />
         <Faq5
-          badge={isSwahili ? 'Maswali ya Mechi.club' : isUnitedStates ? 'USA FAQ' : 'Mechi.club FAQ'}
+          badge={isSwahili ? 'Maswali ya Mechi.club' : 'Mechi.club FAQ'}
           heading={
-            isUnitedStates
-              ? 'What changes for players in the United States.'
-              : isSwahili
+            isSwahili
               ? 'Majibu ya haraka kuhusu Mechi.club.'
               : 'Quick answers for getting started on Mechi.club.'
           }
           description={
-            isUnitedStates
-              ? 'A dedicated USA entry point for Mechi, keeping the current tournament engine while making the promise clear for American players.'
-              : isSwahili
+            isSwahili
               ? 'Profiles, tournaments, payments, rewards, na sehemu ya kufuatilia kila kinachoendelea kwenye Mechi.club.'
-              : 'Profiles, tournaments, payments, rewards, and where to follow the action across Mechi.club.'
+              : 'Profiles, tournaments, payments, rewards, and official PlayMechi updates for players across East Africa.'
           }
           faqs={homeFaqs}
         />

@@ -27,7 +27,6 @@ export default function sitemap(): MetadataRoute.Sitemap {
     entry('/ke', 'weekly', 0.9),
     entry('/tz', 'weekly', 0.8),
     entry('/ug', 'weekly', 0.8),
-    entry('/usa', 'monthly', 0.6),
     entry('/weekendcup', 'daily', 1),
     entry('/weekendcup/register', 'daily', 0.95),
     ...WEEKEND_CUP_GAMES.map((game) =>

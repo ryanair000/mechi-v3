@@ -314,7 +314,7 @@ export function WeekendCupOpsClient(props: WeekendCupOpsClientProps) {
     <div className="page-container space-y-5 py-8">
       <section className="card circuit-panel p-5 sm:p-6">
         <p className="section-title">{props.heading}</p>
-        <h1 className="text-3xl font-black text-[var(--text-primary)]">Weekend Cup payment ops</h1>
+        <h1 className="text-2xl font-black text-[var(--text-primary)] sm:text-3xl">Weekend Cup payment ops</h1>
         <p className="mt-3 max-w-3xl text-sm leading-7 text-[var(--text-secondary)]">
           {props.subheading}
         </p>
@@ -325,37 +325,37 @@ export function WeekendCupOpsClient(props: WeekendCupOpsClientProps) {
         </div>
       </section>
 
-      <section className="grid gap-4 md:grid-cols-4">
-        <div className="card p-5">
+      <section className="grid gap-4 [grid-template-columns:repeat(auto-fit,minmax(180px,1fr))]">
+        <div className="card min-w-0 p-4 sm:p-5">
           <p className="flex items-center gap-2 text-xs font-black uppercase tracking-[0.14em] text-[var(--text-soft)]">
             <TicketCheck size={14} />
             Paid
           </p>
-          <p className="mt-2 text-2xl font-black text-[var(--text-primary)]">
+          <p className="mt-2 break-words text-xl font-black text-[var(--text-primary)] sm:text-2xl">
             {opsMetrics.totalConfirmed}
           </p>
           <p className="mt-1 text-xs text-[var(--text-secondary)]">
             {opsMetrics.totalSpotsLeft.toLocaleString()} confirmed slots left
           </p>
         </div>
-        <div className="card p-5">
+        <div className="card min-w-0 p-4 sm:p-5">
           <p className="flex items-center gap-2 text-xs font-black uppercase tracking-[0.14em] text-[var(--text-soft)]">
             <Clock3 size={14} />
             Pending
           </p>
-          <p className="mt-2 text-2xl font-black text-[var(--text-primary)]">
+          <p className="mt-2 break-words text-xl font-black text-[var(--text-primary)] sm:text-2xl">
             {opsMetrics.totalPending}
           </p>
           <p className="mt-1 text-xs text-[var(--text-secondary)]">
             {opsMetrics.totalRegistered.toLocaleString()} total registrations
           </p>
         </div>
-        <div className="card p-5">
+        <div className="card min-w-0 p-4 sm:p-5">
           <p className="flex items-center gap-2 text-xs font-black uppercase tracking-[0.14em] text-[var(--text-soft)]">
             <ShieldCheck size={14} />
             Checked in
           </p>
-          <p className="mt-2 text-2xl font-black text-[var(--text-primary)]">
+          <p className="mt-2 break-words text-xl font-black text-[var(--text-primary)] sm:text-2xl">
             {opsMetrics.totalCheckedIn}
           </p>
           <p className="mt-1 text-xs text-[var(--text-secondary)]">
@@ -364,12 +364,12 @@ export function WeekendCupOpsClient(props: WeekendCupOpsClientProps) {
               : 'No registration yet'}
           </p>
         </div>
-        <div className="card p-5">
+        <div className="card min-w-0 p-4 sm:p-5">
           <p className="flex items-center gap-2 text-xs font-black uppercase tracking-[0.14em] text-[var(--text-soft)]">
             <Banknote size={14} />
             Revenue
           </p>
-          <p className="mt-2 text-2xl font-black text-[var(--text-primary)]">
+          <p className="mt-2 break-words text-xl font-black text-[var(--text-primary)] sm:text-2xl">
             {formatKes(opsMetrics.totalRevenueKes)}
           </p>
           <p className="mt-1 text-xs text-[var(--text-secondary)]">
@@ -391,35 +391,35 @@ export function WeekendCupOpsClient(props: WeekendCupOpsClientProps) {
           </p>
         </div>
 
-        <div className="mt-4 grid gap-3 xl:grid-cols-4">
+        <div className="mt-4 grid gap-3 [grid-template-columns:repeat(auto-fit,minmax(230px,1fr))]">
           {opsMetrics.gameRows.map((game) => (
             <div
               key={game.game}
-              className="rounded-lg border border-[var(--border-color)] bg-[var(--surface-elevated)] p-4"
+              className="min-w-0 rounded-lg border border-[var(--border-color)] bg-[var(--surface-elevated)] p-4"
             >
               <div className="flex items-start justify-between gap-3">
-                <div>
+                <div className="min-w-0">
                   <p className="text-sm font-black text-[var(--text-primary)]">{game.label}</p>
                   <p className="mt-1 text-xs text-[var(--text-soft)]">
                     {game.dateLabel} at {game.timeLabel}
                   </p>
                 </div>
-                <span className="brand-chip px-2 py-0.5">{game.confirmed}/{game.slots}</span>
+                <span className="brand-chip shrink-0 px-2 py-0.5">{game.confirmed}/{game.slots}</span>
               </div>
               <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
-                <div>
+                <div className="min-w-0">
                   <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--text-soft)]">Pending</p>
                   <p className="mt-1 font-black text-[var(--text-primary)]">{game.pendingPayment}</p>
                 </div>
-                <div>
+                <div className="min-w-0">
                   <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--text-soft)]">Checked in</p>
                   <p className="mt-1 font-black text-[var(--text-primary)]">{game.checkedIn}/{game.checkInCap}</p>
                 </div>
-                <div>
+                <div className="min-w-0">
                   <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--text-soft)]">Revenue</p>
-                  <p className="mt-1 font-black text-[var(--text-primary)]">{formatKes(game.revenueKes)}</p>
+                  <p className="mt-1 break-words font-black text-[var(--text-primary)]">{formatKes(game.revenueKes)}</p>
                 </div>
-                <div>
+                <div className="min-w-0">
                   <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--text-soft)]">Slots left</p>
                   <p className="mt-1 font-black text-[var(--text-primary)]">{game.spotsLeft}</p>
                 </div>
@@ -475,11 +475,11 @@ export function WeekendCupOpsClient(props: WeekendCupOpsClientProps) {
               const gameLabel = WEEKEND_CUP_GAMES.find((game) => game.game === registration.game)?.label ?? registration.game;
 
               return (
-                <div key={registration.id} className="rounded-[1.2rem] border border-[var(--border-color)] bg-[var(--surface-subtle)] p-4">
+                <div key={registration.id} className="min-w-0 rounded-lg border border-[var(--border-color)] bg-[var(--surface-subtle)] p-4">
                   <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
-                    <div className="space-y-2">
+                    <div className="min-w-0 space-y-2">
                       <div className="flex flex-wrap items-center gap-2">
-                        <p className="text-base font-black text-[var(--text-primary)]">
+                        <p className="min-w-0 break-words text-base font-black text-[var(--text-primary)]">
                           {registration.user?.username ?? registration.in_game_username}
                         </p>
                         <span className={`rounded-full px-3 py-1 text-xs font-bold uppercase tracking-[0.14em] ${paymentStatusClasses(registration.payment_status)}`}>
@@ -489,16 +489,16 @@ export function WeekendCupOpsClient(props: WeekendCupOpsClientProps) {
                           {registration.check_in_status.replaceAll('_', ' ')}
                         </span>
                       </div>
-                      <p className="text-sm text-[var(--text-secondary)]">
+                      <p className="break-words text-sm text-[var(--text-secondary)]">
                         {gameLabel} | IGN: {registration.in_game_username}
                       </p>
-                      <p className="text-sm text-[var(--text-secondary)]">
+                      <p className="break-words text-sm text-[var(--text-secondary)]">
                         WhatsApp: {registration.whatsapp_number ?? 'Not added'} | Ref:{' '}
                         {registration.payment_reference ?? 'Not added'}
                       </p>
                     </div>
 
-                    <div className="flex flex-wrap gap-3">
+                    <div className="flex shrink-0 flex-wrap gap-2">
                       <button
                         type="button"
                         onClick={() => void handleQuickPaid(registration)}
@@ -528,7 +528,7 @@ export function WeekendCupOpsClient(props: WeekendCupOpsClientProps) {
                   </div>
 
                   {editingId === registration.id ? (
-                    <div className="mt-4 grid gap-4 rounded-[1rem] border border-[var(--border-color)] bg-[var(--surface-elevated)] p-4 md:grid-cols-2">
+                    <div className="mt-4 grid gap-4 rounded-lg border border-[var(--border-color)] bg-[var(--surface-elevated)] p-4 [grid-template-columns:repeat(auto-fit,minmax(220px,1fr))]">
                       <div>
                         <label className="label">Payment status</label>
                         <select
@@ -626,7 +626,7 @@ export function WeekendCupOpsClient(props: WeekendCupOpsClientProps) {
                           <option value="no_show">no_show</option>
                         </select>
                       </div>
-                      <div className="md:col-span-2">
+                      <div className="[grid-column:1/-1]">
                         <label className="label">Payment note</label>
                         <textarea
                           value={draft.payment_note}
@@ -642,7 +642,7 @@ export function WeekendCupOpsClient(props: WeekendCupOpsClientProps) {
                           className="input min-h-[110px] resize-none"
                         />
                       </div>
-                      <div className="md:col-span-2">
+                      <div className="[grid-column:1/-1]">
                         <button
                           type="button"
                           onClick={() => void handleSaveDraft(registration.id)}

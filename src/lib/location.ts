@@ -57,7 +57,7 @@ export const COUNTRY_KEYS = Object.keys(COUNTRY_LOCATION_MAP) as CountryKey[];
 export const COUNTRY_OPTIONS = COUNTRY_KEYS.map((key) => ({
   key,
   label: COUNTRY_LOCATION_MAP[key].label,
-}));
+})).filter((option) => option.key !== 'united_states');
 
 export const LOCATION_LABELS = COUNTRY_KEYS.flatMap((country) =>
   COUNTRY_LOCATION_MAP[country].regions.map((region) => formatLocationLabel(country, region))

@@ -8,6 +8,11 @@ import {
 } from '@/lib/navigation';
 import { checkRateLimit, getClientIp } from '@/lib/rateLimit';
 import {
+  AFRICAN_COUNTRY_KEYS,
+  getCountryIso2,
+  getCountrySlug,
+} from '@/lib/location';
+import {
   getCountryFromIpHeaders,
   getRegionalPreferenceCookieOptions,
   REGIONAL_PREFERENCE_COOKIE_NAME,
@@ -52,26 +57,18 @@ const REGIONAL_ROUTE_CONFIGS: Array<{
   country: CountryKey;
   countryCode: string;
   acceptLanguage: string;
-}> = [
-  {
-    pathPrefix: '/ke',
-    country: 'kenya',
-    countryCode: 'KE',
-    acceptLanguage: 'en-KE,en;q=0.9,sw;q=0.8',
-  },
-  {
-    pathPrefix: '/tz',
-    country: 'tanzania',
-    countryCode: 'TZ',
-    acceptLanguage: 'sw-TZ,sw;q=0.9,en;q=0.8',
-  },
-  {
-    pathPrefix: '/ug',
-    country: 'uganda',
-    countryCode: 'UG',
-    acceptLanguage: 'en-UG,en;q=0.9,sw;q=0.8',
-  },
-];
+}> = AFRICAN_COUNTRY_KEYS.map((country) => {
+  const countryCode = getCountryIso2(country);
+  return {
+    pathPrefix: `/${getCountrySlug(country)}`,
+    country,
+    countryCode,
+    acceptLanguage:
+      country === 'tanzania'
+        ? 'sw-TZ,sw;q=0.9,en;q=0.8'
+        : `en-${countryCode},en;q=0.9,sw;q=0.7`,
+  };
+});
 
 const ADMIN_PREFIXES = ['/admin', '/api/admin'];
 const TESTS_HOSTS = new Set(['tests.mechi.club']);
@@ -142,6 +139,7 @@ const PUBLIC_PREFIXES = [
   '/manual-tests',
   '/report',
   '/reports',
+  '/africa',
   '/results',
   '/login',
   '/register',
@@ -412,10 +410,6 @@ function getRegionalRouteForCountry(country: CountryKey | null) {
   }
 
   return REGIONAL_ROUTE_CONFIGS.find((route) => route.country === country) ?? null;
-}
-
-function getDefaultRegionalRoute() {
-  return REGIONAL_ROUTE_CONFIGS.find((route) => route.country === 'kenya') ?? REGIONAL_ROUTE_CONFIGS[0];
 }
 
 function getPathWithoutRegionalPrefix(pathname: string, pathPrefix: string) {
@@ -700,9 +694,9 @@ export async function proxy(request: NextRequest) {
   }
 
   if (!adminHost && (pathname === '/usa' || pathname.startsWith('/usa/'))) {
-    const eastAfricaUrl = request.nextUrl.clone();
-    eastAfricaUrl.pathname = '/ke';
-    return NextResponse.redirect(eastAfricaUrl, 308);
+    const africaUrl = request.nextUrl.clone();
+    africaUrl.pathname = '/africa';
+    return NextResponse.redirect(africaUrl, 308);
   }
 
   if (pathname.startsWith('/s/') && !pathname.startsWith('/s/match/') && !pathname.startsWith('/s/t/')) {
@@ -737,7 +731,12 @@ export async function proxy(request: NextRequest) {
 
   if (!adminHost && pathname === '/') {
     const ipRegionalRoute = getRegionalRouteForCountry(getCountryFromIpHeaders(request.headers));
-    return redirectRegionalVisitor(request, ipRegionalRoute ?? getDefaultRegionalRoute());
+    return redirectRegionalVisitor(request, ipRegionalRoute ?? {
+      pathPrefix: '/africa',
+      country: 'kenya',
+      countryCode: 'KE',
+      acceptLanguage: 'en-KE,en;q=0.9,sw;q=0.8',
+    });
   }
 
   if (pathname === '/moderators/register' || pathname === '/admin/moderators/register') {

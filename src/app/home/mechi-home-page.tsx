@@ -84,7 +84,7 @@ export function MechiHomePageShell() {
           description={
             isSwahili
               ? 'Profiles, tournaments, payments, rewards, na sehemu ya kufuatilia kila kinachoendelea kwenye Mechi.club.'
-              : 'Profiles, tournaments, payments, rewards, and official PlayMechi updates for players across East Africa.'
+              : 'Profiles, tournaments, payments, rewards, and official PlayMechi updates for players across Africa.'
           }
           faqs={homeFaqs}
         />

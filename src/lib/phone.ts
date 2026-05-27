@@ -1,31 +1,20 @@
 import type { CountryKey } from '@/types';
+import {
+  COUNTRY_KEYS,
+  getCountryDialCode as getLocationCountryDialCode,
+  getCountrySubscriberLength,
+} from '@/lib/location';
 
-const COUNTRY_DIAL_CODES: Record<CountryKey, string> = {
-  kenya: '254',
-  tanzania: '255',
-  uganda: '256',
-  rwanda: '250',
-  ethiopia: '251',
-  united_states: '1',
-};
-
-const COUNTRY_SUBSCRIBER_LENGTHS: Record<CountryKey, number> = {
-  kenya: 9,
-  tanzania: 9,
-  uganda: 9,
-  rwanda: 9,
-  ethiopia: 9,
-  united_states: 10,
-};
-
-const SUPPORTED_DIAL_CODES = Object.values(COUNTRY_DIAL_CODES);
+const SUPPORTED_DIAL_CODES = COUNTRY_KEYS.map((country) => getLocationCountryDialCode(country)).filter(
+  Boolean
+) as string[];
 
 function getSubscriberLengthForDialCode(dialCode: string): number | null {
-  const country = (Object.keys(COUNTRY_DIAL_CODES) as CountryKey[]).find(
-    (candidate) => COUNTRY_DIAL_CODES[candidate] === dialCode
+  const country = COUNTRY_KEYS.find(
+    (candidate) => getLocationCountryDialCode(candidate) === dialCode
   );
 
-  return country ? COUNTRY_SUBSCRIBER_LENGTHS[country] : null;
+  return country ? getCountrySubscriberLength(country) : null;
 }
 
 function findDialCode(value: string): string | null {
@@ -62,11 +51,7 @@ function getSubscriberNumber(value: string): string | null {
 }
 
 export function getCountryDialCode(country: CountryKey | null | undefined): string | null {
-  if (!country) {
-    return null;
-  }
-
-  return COUNTRY_DIAL_CODES[country] ?? null;
+  return getLocationCountryDialCode(country);
 }
 
 export function normalizePhoneNumber(
@@ -85,7 +70,7 @@ export function normalizePhoneNumber(
   }
 
   const dialCode = getCountryDialCode(country ?? null);
-  const subscriberLength = country ? COUNTRY_SUBSCRIBER_LENGTHS[country] : 9;
+  const subscriberLength = getCountrySubscriberLength(country ?? null);
   if (dialCode) {
     if (country === 'united_states' && digits.length === subscriberLength) {
       return `${dialCode}${digits}`;

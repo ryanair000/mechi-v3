@@ -5,6 +5,7 @@ import {
   Loader2,
   LockKeyhole,
   Mail,
+  MapPinned,
   MessageCircle,
   Phone,
   SunIcon as Sunburst,
@@ -15,6 +16,12 @@ import type { FormEvent, ReactNode } from 'react';
 import { useState } from 'react';
 import { useRegionalSettings } from '@/components/RegionalSettingsProvider';
 import { SignupPage } from '@/components/ui/sign-up-page';
+import {
+  COUNTRY_OPTIONS,
+  getCountryLabel,
+  getRegionsForCountry,
+  normalizeCountryKey,
+} from '@/lib/location';
 import {
   CUSTOMER_WHATSAPP_SUPPORT_NUMBER_LABEL,
   PLAYMECHI_WHATSAPP_GROUP_URL,
@@ -33,6 +40,8 @@ export interface FullScreenSignupValues {
   phone: string;
   username: string;
   password: string;
+  country: string;
+  region: string;
 }
 
 export interface FullScreenSignupFeedback {
@@ -118,13 +127,15 @@ function StandaloneFullScreenSignup({
   submitLabel,
 }: Required<Pick<FullScreenSignupProps, 'loginHref' | 'submitting' | 'submitLabel'>> &
   Pick<FullScreenSignupProps, 'feedback' | 'onSubmit'>) {
-  const { locale, phonePlaceholder } = useRegionalSettings();
+  const { country, locale, phonePlaceholder } = useRegionalSettings();
   const isSwahili = locale === 'sw-TZ';
   const [values, setValues] = useState<FullScreenSignupValues>({
     email: '',
     phone: '',
     username: '',
     password: '',
+    country,
+    region: '',
   });
   const [errors, setErrors] = useState<Partial<Record<keyof FullScreenSignupValues, string>>>({});
 
@@ -159,6 +170,14 @@ function StandaloneFullScreenSignup({
         : 'Password must be more than 8 characters.';
     }
 
+    if (!normalizeCountryKey(values.country)) {
+      nextErrors.country = isSwahili ? 'Chagua nchi.' : 'Choose your country.';
+    }
+
+    if (values.region.trim().length < 2) {
+      nextErrors.region = isSwahili ? 'Weka region au mji.' : 'Enter your region or city.';
+    }
+
     setErrors(nextErrors);
     return Object.keys(nextErrors).length === 0;
   };
@@ -174,6 +193,8 @@ function StandaloneFullScreenSignup({
       phone: values.phone.trim(),
       username: values.username.trim(),
       password: values.password,
+      country: normalizeCountryKey(values.country) ?? values.country,
+      region: values.region.trim(),
     });
   };
 
@@ -207,6 +228,22 @@ function StandaloneFullScreenSignup({
       placeholder: phonePlaceholder,
       icon: <Phone className="h-4 w-4" />,
       autoComplete: 'tel',
+    },
+    {
+      id: 'country',
+      label: isSwahili ? 'Nchi' : 'Country',
+      type: 'text',
+      placeholder: getCountryLabel(country),
+      icon: <MapPinned className="h-4 w-4" />,
+      autoComplete: 'country-name',
+    },
+    {
+      id: 'region',
+      label: isSwahili ? 'Region / mji' : 'Region / city',
+      type: 'text',
+      placeholder: isSwahili ? 'Anza kuandika region' : 'Start typing your region',
+      icon: <MapPinned className="h-4 w-4" />,
+      autoComplete: 'address-level1',
     },
     {
       id: 'email',
@@ -314,17 +351,47 @@ function StandaloneFullScreenSignup({
                     </span>
                     <input
                       id={field.id}
+                      list={
+                        field.id === 'country'
+                          ? 'standalone-country-options'
+                          : field.id === 'region'
+                            ? 'standalone-region-options'
+                            : undefined
+                      }
                       type={field.type}
                       placeholder={field.placeholder}
                       className={`w-full rounded-lg border bg-white py-2.5 pl-10 pr-3 text-sm text-black outline-none transition focus:ring-1 focus:ring-orange-500 ${
                         error ? 'border-red-500' : 'border-gray-300'
                       }`}
                       value={values[field.id]}
-                      onChange={(event) => setField(field.id, event.target.value)}
+                      onChange={(event) => {
+                        if (field.id === 'country') {
+                          const nextCountry = normalizeCountryKey(event.target.value);
+                          setField('country', nextCountry ?? event.target.value);
+                          setField('region', '');
+                          return;
+                        }
+
+                        setField(field.id, event.target.value);
+                      }}
                       aria-invalid={Boolean(error)}
                       aria-describedby={error ? `${field.id}-error` : undefined}
                       autoComplete={field.autoComplete}
                     />
+                    {field.id === 'country' ? (
+                      <datalist id="standalone-country-options">
+                        {COUNTRY_OPTIONS.map((option) => (
+                          <option key={option.key} value={option.label} />
+                        ))}
+                      </datalist>
+                    ) : null}
+                    {field.id === 'region' ? (
+                      <datalist id="standalone-region-options">
+                        {getRegionsForCountry(normalizeCountryKey(values.country)).map((region) => (
+                          <option key={region} value={region} />
+                        ))}
+                      </datalist>
+                    ) : null}
                   </div>
                   {error ? (
                     <p id={`${field.id}-error`} className="mt-1 text-xs text-red-600">

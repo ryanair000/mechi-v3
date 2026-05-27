@@ -2,16 +2,14 @@
 
 import { Globe2, Loader2, MapPinned, Sparkles } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { COUNTRY_OPTIONS } from '@/lib/location';
+import { COUNTRY_OPTIONS, getCountrySlug } from '@/lib/location';
 import { cn } from '@/lib/utils';
 import { useRegionalSettings } from '@/components/RegionalSettingsProvider';
 import type { CountryKey } from '@/types';
 
-const COUNTRY_LANDING_PATHS: Partial<Record<CountryKey, string>> = {
-  kenya: '/ke',
-  tanzania: '/tz',
-  uganda: '/ug',
-};
+function getCountryLandingPath(country: CountryKey) {
+  return `/${getCountrySlug(country) || 'africa'}`;
+}
 
 function getSourceLabel(countrySource: string, locale: string) {
   const isSwahili = locale === 'sw-TZ';
@@ -69,7 +67,7 @@ export function CountryLanguageBar({
             const nextCountry = event.target.value as CountryKey;
             void setCountryPreference(nextCountry)
               .then(() => {
-                router.push(COUNTRY_LANDING_PATHS[nextCountry] ?? '/');
+                router.push(getCountryLandingPath(nextCountry));
               })
               .catch(() => undefined);
           }}

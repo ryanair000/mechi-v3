@@ -20,6 +20,7 @@ import { makePaymentReference } from '@/lib/slug';
 import { createServiceClient } from '@/lib/supabase';
 import { sendOnlineTournamentRegistrationTelegramNotification } from '@/lib/telegram';
 import { getObservabilitySettings } from '@/lib/observability-settings';
+import { getCountryCurrency, resolveProfileLocation } from '@/lib/location';
 import type { GameKey, PlatformKey } from '@/types';
 import type { OnlineTournamentPaymentTier } from '@/lib/online-tournament';
 import {
@@ -197,7 +198,7 @@ export async function POST(request: NextRequest) {
 
     const { data: profileRaw, error: profileError } = await supabase
       .from('profiles')
-      .select('id, username, phone, email, whatsapp_number, selected_games, game_ids, platforms')
+      .select('id, username, phone, email, whatsapp_number, country, region, selected_games, game_ids, platforms')
       .eq('id', access.profile.id)
       .single();
 
@@ -208,6 +209,8 @@ export async function POST(request: NextRequest) {
           phone?: string | null;
           email?: string | null;
           whatsapp_number?: string | null;
+          country?: string | null;
+          region?: string | null;
           selected_games?: GameKey[] | null;
           game_ids?: Record<string, string> | null;
           platforms?: PlatformKey[] | null;
@@ -424,6 +427,11 @@ export async function POST(request: NextRequest) {
     if (registration.payment_status !== 'paid') {
       const email = profile.email || `${profile.username}@mechi.club`;
       const callbackUrl = `${APP_URL}/weekendcup/payment/complete`;
+      const profileLocation = resolveProfileLocation({
+        country: profile.country,
+        region: profile.region,
+      });
+      const preferredCurrency = getCountryCurrency(profileLocation.country);
       const kenyanMobilePhone = getNormalisedKenyanMobilePhone(
         profile.whatsapp_number ?? profile.phone ?? ''
       );
@@ -441,6 +449,9 @@ export async function POST(request: NextRequest) {
           game,
           user_id: access.profile.id,
           payment_tier: paymentTier,
+          preferred_country: profileLocation.country,
+          preferred_region: profileLocation.region,
+          preferred_currency: preferredCurrency.code,
           phone: kenyanMobilePhone,
           mpesa_requires_kenyan_phone: !kenyanMobilePhone,
         },

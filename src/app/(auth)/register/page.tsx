@@ -9,6 +9,12 @@ import { useAuth } from '@/components/AuthProvider';
 import { useRegionalSettings } from '@/components/RegionalSettingsProvider';
 import { FullScreenSignup } from '@/components/ui/full-screen-signup';
 import { normalizeInviteCode } from '@/lib/invite';
+import {
+  COUNTRY_OPTIONS,
+  getCountryLabel,
+  getRegionsForCountry,
+  normalizeCountryKey,
+} from '@/lib/location';
 import { getLoginPath, getSafeNextPath } from '@/lib/navigation';
 import {
   CUSTOMER_WHATSAPP_SUPPORT_NUMBER_LABEL,
@@ -21,6 +27,7 @@ import {
   USERNAME_MIN_LENGTH,
   validateUsername,
 } from '@/lib/username';
+import type { CountryKey } from '@/types';
 
 const MIN_PASSWORD_LENGTH = 9;
 const ACCOUNT_REGISTRATION_SUPPORT_URL = getCustomerWhatsAppSupportUrl(
@@ -34,6 +41,8 @@ interface RegisterFormData {
   phone: string;
   email: string;
   password: string;
+  country: CountryKey;
+  region: string;
 }
 
 export default function RegisterPage({ searchParams }: { searchParams: RegisterSearchParams }) {
@@ -63,6 +72,8 @@ export default function RegisterPage({ searchParams }: { searchParams: RegisterS
     phone: '',
     email: '',
     password: '',
+    country,
+    region: '',
   });
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -79,7 +90,16 @@ export default function RegisterPage({ searchParams }: { searchParams: RegisterS
   const usernameValidation = validateUsername(formData.username);
   const phoneIsValid = formData.phone.replace(/\D/g, '').length >= 9;
   const passwordIsValid = formData.password.length >= MIN_PASSWORD_LENGTH;
-  const formIsValid = !usernameValidation.error && phoneIsValid && emailIsValid && passwordIsValid;
+  const countryIsValid = Boolean(formData.country);
+  const regionIsValid = formData.region.trim().length >= 2;
+  const selectedCountryRegions = getRegionsForCountry(formData.country);
+  const formIsValid =
+    !usernameValidation.error &&
+    phoneIsValid &&
+    emailIsValid &&
+    passwordIsValid &&
+    countryIsValid &&
+    regionIsValid;
 
   const setField = (field: keyof RegisterFormData, value: string) => {
     setFormData((current) => ({ ...current, [field]: value }));
@@ -96,8 +116,8 @@ export default function RegisterPage({ searchParams }: { searchParams: RegisterS
         detail:
           usernameValidation.error ??
           (isSwahili
-            ? 'Username, simu, barua pepe, na password zinahitajika.'
-            : 'Username, phone, mail address, and password are required.'),
+            ? 'Username, simu, barua pepe, nchi, region, na password zinahitajika.'
+            : 'Username, phone, mail address, country, region, and password are required.'),
       });
       return;
     }
@@ -121,7 +141,8 @@ export default function RegisterPage({ searchParams }: { searchParams: RegisterS
           email: formData.email.trim(),
           password: formData.password,
           invite_code: normalizedInviteCode,
-          country,
+          country: formData.country,
+          region: formData.region.trim(),
         }),
       });
       const data = await res.json();
@@ -271,6 +292,54 @@ export default function RegisterPage({ searchParams }: { searchParams: RegisterS
               inputMode="tel"
               autoComplete="tel"
             />
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div>
+              <label className="label" htmlFor="country">
+                {isSwahili ? 'Nchi' : 'Country'}
+              </label>
+              <input
+                id="country"
+                list="mechi-country-options"
+                value={getCountryLabel(formData.country)}
+                onChange={(event) => {
+                  const nextCountry = normalizeCountryKey(event.target.value);
+                  if (nextCountry) {
+                    setField('country', nextCountry);
+                    setField('region', '');
+                  }
+                }}
+                placeholder={isSwahili ? 'Chagua nchi' : 'Select country'}
+                className="input"
+                autoComplete="country-name"
+              />
+              <datalist id="mechi-country-options">
+                {COUNTRY_OPTIONS.map((option) => (
+                  <option key={option.key} value={option.label} />
+                ))}
+              </datalist>
+            </div>
+
+            <div>
+              <label className="label" htmlFor="region">
+                {isSwahili ? 'Region / mji' : 'Region / city'}
+              </label>
+              <input
+                id="region"
+                list="mechi-region-options"
+                value={formData.region}
+                onChange={(event) => setField('region', event.target.value)}
+                placeholder={isSwahili ? 'Anza kuandika region' : 'Start typing your region'}
+                className="input"
+                autoComplete="address-level1"
+              />
+              <datalist id="mechi-region-options">
+                {selectedCountryRegions.map((region) => (
+                  <option key={region} value={region} />
+                ))}
+              </datalist>
+            </div>
           </div>
 
           <div>

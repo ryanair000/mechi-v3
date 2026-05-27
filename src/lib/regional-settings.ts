@@ -1,4 +1,9 @@
-import { getCountryLabel, normalizeCountryKey } from '@/lib/location';
+import {
+  ISO_COUNTRY_MAP,
+  getCountryDialCode,
+  getCountryLabel,
+  normalizeCountryKey,
+} from '@/lib/location';
 import type { CountryKey } from '@/types';
 
 export type MechiLocale = 'en' | 'sw-TZ';
@@ -17,23 +22,6 @@ export interface RegionalSettings {
 
 type HeaderReader = {
   get(name: string): string | null;
-};
-
-const COUNTRY_PHONE_PLACEHOLDERS: Record<CountryKey, string> = {
-  kenya: '0712 345 678',
-  tanzania: '0755 123 456',
-  uganda: '0701 234 567',
-  rwanda: '0788 123 456',
-  ethiopia: '0911 234 567',
-  united_states: '(555) 123-4567',
-};
-
-const ISO_COUNTRY_MAP: Record<string, CountryKey> = {
-  ET: 'ethiopia',
-  KE: 'kenya',
-  RW: 'rwanda',
-  TZ: 'tanzania',
-  UG: 'uganda',
 };
 
 const COUNTRY_HEADER_KEYS = [
@@ -73,7 +61,8 @@ export function getLanguageLabelForLocale(locale: MechiLocale): string {
 }
 
 export function getPhonePlaceholderForCountry(country: CountryKey): string {
-  return COUNTRY_PHONE_PLACEHOLDERS[country];
+  const dialCode = getCountryDialCode(country);
+  return dialCode ? `+${dialCode} 712 345 678` : '+254 712 345 678';
 }
 
 export function buildRegionalSettings(
@@ -134,24 +123,9 @@ export function getCountryFromAcceptLanguage(value: string | null | undefined): 
       return 'tanzania';
     }
 
-    if (tag === 'am' || tag.endsWith('-et')) {
-      return 'ethiopia';
-    }
-
-    if (tag === 'rw' || tag.endsWith('-rw')) {
-      return 'rwanda';
-    }
-
-    if (tag.endsWith('-tz')) {
-      return 'tanzania';
-    }
-
-    if (tag.endsWith('-ke')) {
-      return 'kenya';
-    }
-
-    if (tag.endsWith('-ug')) {
-      return 'uganda';
+    const iso2 = ISO_COUNTRY_MAP[tag.split('-').at(-1)?.toUpperCase() ?? ''];
+    if (iso2) {
+      return iso2;
     }
   }
 

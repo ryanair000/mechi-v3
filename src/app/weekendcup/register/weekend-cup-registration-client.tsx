@@ -6,10 +6,12 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import toast from 'react-hot-toast';
 import { CheckCircle2, Loader2, MessageCircle } from 'lucide-react';
 import { useAuth, useAuthFetch } from '@/components/AuthProvider';
+import { useRegionalSettings } from '@/components/RegionalSettingsProvider';
 import FooterSection from '@/components/footer';
 import { TournamentFacts } from '@/components/TournamentFacts';
 import { WeekendCupHeader } from '@/components/WeekendCupHeader';
 import { getLoginPath, getRegisterPath, getSafeNextPath, withQuery } from '@/lib/navigation';
+import { getApproximateLocalAmount, getPaymentCurrencyCopy } from '@/lib/currency';
 import {
   WEEKEND_CUP_DASHBOARD_PATH,
   WEEKEND_CUP_ENTRY_PRICING,
@@ -17,6 +19,7 @@ import {
   WEEKEND_CUP_GAMES,
   WEEKEND_CUP_PUBLIC_PATH,
   WEEKEND_CUP_REGISTERABLE_GAMES,
+  WEEKEND_CUP_ACTIVE_PAYMENT_TIER,
   WEEKEND_CUP_REGISTRATION_DISABLED_MESSAGE,
   WEEKEND_CUP_REGISTRATION_ENABLED,
   WEEKEND_CUP_REGISTRATION_PATH,
@@ -25,6 +28,7 @@ import {
   formatWeekendCupPaymentStatus,
   getWeekendCupFallbackSummary,
   getWeekendCupGamePricingLine,
+  getWeekendCupPaymentTierAmount,
   isWeekendCupRegisterableGame,
   isWeekendCupRegistrationOpen,
   type WeekendCupPlayerRegistration,
@@ -70,6 +74,7 @@ export function WeekendCupRegistrationClient() {
   const searchParams = useSearchParams();
   const authFetch = useAuthFetch();
   const { clearLocalAuth, user, loading: authLoading } = useAuth();
+  const regionalSettings = useRegionalSettings();
   const [registrationOpen, setRegistrationOpen] = useState(() =>
     WEEKEND_CUP_REGISTRATION_ENABLED && isWeekendCupRegistrationOpen()
   );
@@ -89,6 +94,12 @@ export function WeekendCupRegistrationClient() {
   const [availableAtMatchTime, setAvailableAtMatchTime] = useState(true);
 
   const selectedConfig = WEEKEND_CUP_GAMES.find((game) => game.game === selectedGame) ?? WEEKEND_CUP_GAMES[0];
+  const selectedEntryFeeKes = getWeekendCupPaymentTierAmount(WEEKEND_CUP_ACTIVE_PAYMENT_TIER, selectedConfig.game);
+  const localEntryAmount = getApproximateLocalAmount({
+    amountKes: selectedEntryFeeKes,
+    country: regionalSettings.country,
+  });
+  const paymentCurrencyCopy = getPaymentCurrencyCopy(regionalSettings.country);
   const currentRegistration = summary.registrations.find((registration) => registration.game === selectedGame);
   const requestedNextPath = getSafeNextPath(searchParams.get('next'), '');
   const returnPath = withQuery(WEEKEND_CUP_REGISTRATION_PATH, {
@@ -340,7 +351,12 @@ export function WeekendCupRegistrationClient() {
             </h1>
             <p className="mt-3 max-w-xl text-sm leading-6 text-[var(--text-secondary)]">
               One entry per game. Payment is the only thing that locks the slot.
-              {' '}M-PESA needs a Kenyan Safaricom number; outside Kenya, use Paybill, Till, Airtel, card, or support.
+              {' '}{paymentCurrencyCopy.methodCopy}
+              {localEntryAmount ? (
+                <>
+                  {' '}Current local guide: {localEntryAmount.label} ({paymentCurrencyCopy.currencyCode}) for KSh {selectedEntryFeeKes.toLocaleString('en-KE')}.
+                </>
+              ) : null}
             </p>
           </div>
 

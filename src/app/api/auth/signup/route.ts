@@ -4,7 +4,7 @@ import { isMissingColumnError, isMissingTableError } from '@/lib/db-compat';
 import { sendWelcomeEmail } from '@/lib/email';
 import { DEFAULT_RATING } from '@/lib/config';
 import { generateUniqueInviteCode } from '@/lib/invite';
-import { getCountryLabel } from '@/lib/location';
+import { getCountryLabel, validateLocationSelection } from '@/lib/location';
 import { getPhoneLookupVariants, isValidPhoneNumber, normalizePhoneNumber } from '@/lib/phone';
 import { checkPersistentRateLimit, getClientIp, rateLimitResponse } from '@/lib/rateLimit';
 import { normalizeRegionalPreference } from '@/lib/regional-settings';
@@ -16,7 +16,6 @@ import { isUsernameTaken } from '@/lib/username-availability';
 import { validateUsername } from '@/lib/username';
 
 const STARTER_TRIAL_PLAN = 'pro';
-const DEFAULT_REGION = 'Other';
 const MIN_PASSWORD_LENGTH = 9;
 
 function getStarterTrialWindow() {
@@ -76,6 +75,14 @@ export async function POST(request: NextRequest) {
       ? { country: requestedCountry }
       : await resolveRegionalSettingsForRequest(request);
     const signupCountry = regionalSettings.country;
+    const location = validateLocationSelection({
+      country: signupCountry,
+      region: body.region,
+    });
+
+    if (!location) {
+      return NextResponse.json({ error: 'Choose your country and region' }, { status: 400 });
+    }
 
     if (!isValidPhoneNumber(rawPhone, signupCountry)) {
       return NextResponse.json({ error: 'Enter a valid phone number' }, { status: 400 });
@@ -127,8 +134,8 @@ export async function POST(request: NextRequest) {
       email,
       password_hash,
       invite_code: ownInviteCode,
-      country: signupCountry,
-      region: DEFAULT_REGION,
+      country: location.country,
+      region: location.region,
       plan: STARTER_TRIAL_PLAN,
       plan_since: trialWindow.startedAtIso,
       plan_expires_at: trialWindow.expiresAtIso,
@@ -161,7 +168,7 @@ export async function POST(request: NextRequest) {
       phone: normalizedPhone,
       email,
       password_hash,
-      region: DEFAULT_REGION,
+      region: location.label,
       platforms: [],
       game_ids: {},
       selected_games: [],
@@ -205,7 +212,7 @@ export async function POST(request: NextRequest) {
           username: profile.username as string,
           email,
           phone: normalizedPhone,
-          location: `${getCountryLabel(signupCountry)} / ${DEFAULT_REGION}`,
+          location: `${getCountryLabel(location.country)} / ${location.region}`,
           selectedGames: [],
           plan: STARTER_TRIAL_PLAN,
         });

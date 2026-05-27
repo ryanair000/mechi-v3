@@ -1,3 +1,1 @@
-import { EditProfileNewScreen } from '../../src/components/new-screens';
-
-export default EditProfileNewScreen;
+export { EditProfileScreen as default } from '../../src/screens/more';

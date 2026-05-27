@@ -1,5 +1,10 @@
 import type { Metadata } from 'next';
 import { LegalPage } from '@/components/LegalPage';
+import {
+  PLAYMECHI_CONTACT_EMAIL,
+  PLAYMECHI_DEVELOPER_ADDRESS,
+  PLAYMECHI_DEVELOPER_NAME,
+} from '@/lib/legal-contact';
 import { APP_URL } from '@/lib/urls';
 
 const EFFECTIVE_DATE = 'April 19, 2026';
@@ -64,7 +69,7 @@ const sections = [
     ],
     bullets: [
       'Use the in-app support or reporting pathways to raise safety concerns, suspicious conduct, or content that may put a child at risk.',
-      'For child safety concerns or CSAE-related reports, contact support@mechi.club so the PlayMechi team can review and escalate the issue.',
+      `For child safety concerns or CSAE-related reports, contact ${PLAYMECHI_CONTACT_EMAIL} so the PlayMechi team can review and escalate the issue.`,
     ],
   },
   {
@@ -116,7 +121,8 @@ const sections = [
   {
     title: '11. Contact us',
     paragraphs: [
-      'Questions about these Terms of Service, moderation issues, or child safety concerns can be sent to support@mechi.club.',
+      `Questions about these Terms of Service, moderation issues, or child safety concerns can be sent to ${PLAYMECHI_DEVELOPER_NAME} at ${PLAYMECHI_CONTACT_EMAIL}.`,
+      `Mailing address: ${PLAYMECHI_DEVELOPER_ADDRESS}.`,
     ],
   },
 ] satisfies Parameters<typeof LegalPage>[0]['sections'];
@@ -127,7 +133,9 @@ export default function TermsOfServicePage() {
       title="Terms of Service"
       description="These Terms of Service explain the rules for using PlayMechi, including account use, paid plans, tournament participation, player conduct, moderation, and platform rights."
       effectiveDate={EFFECTIVE_DATE}
-      contactEmail="support@mechi.club"
+      contactEmail={PLAYMECHI_CONTACT_EMAIL}
+      developerName={PLAYMECHI_DEVELOPER_NAME}
+      developerAddress={PLAYMECHI_DEVELOPER_ADDRESS}
       sections={sections}
       secondaryLink={{
         href: '/privacy-policy',

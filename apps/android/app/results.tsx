@@ -1,3 +1,1 @@
-import { ResultsNewScreen } from '../src/components/new-screens';
-
-export default ResultsNewScreen;
+export { ResultsScreen as default } from '../src/screens/more';

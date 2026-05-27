@@ -124,8 +124,8 @@ function ProgressBar({ paid, total }: { paid: number; total: number }) {
   return (
     <div className="mt-4">
       <div className="flex items-center justify-between text-xs font-bold text-[var(--text-secondary)]">
-        <span>{paid} confirmed</span>
-        <span>{total} max</span>
+        <span>Entries confirmed</span>
+        <span>{percent >= 100 ? 'Full' : 'Open'}</span>
       </div>
       <div className="mt-2 h-2 rounded-full bg-white/10">
         <div className="h-full rounded-full bg-[var(--accent-secondary-text)]" style={{ width: `${percent}%` }} />
@@ -258,10 +258,12 @@ export function WekaMaweClient({ mode }: { mode: Mode }) {
     ? 'Loading deadline...'
     : formatEatDateTime(edition?.registration_closes_at) || 'Registration close TBA';
   const slotsFactValue = loading
-    ? 'Loading slots...'
+    ? 'Loading status...'
     : edition
-      ? `${summary.totals.slotsLeft}/${maxPlayers} slots left`
-      : 'Slots TBA';
+      ? summary.totals.slotsLeft > 0
+        ? 'Registration open'
+        : 'Registration full'
+      : 'Status TBA';
   const checkInFactValue = loading
     ? 'Loading check-in...'
     : formatEatDateTime(edition?.check_in_opens_at) || 'Check-in TBA';
@@ -292,8 +294,8 @@ export function WekaMaweClient({ mode }: { mode: Mode }) {
   const checkInLabel = loading
     ? 'Loading check-in...'
     : formatEatDateTime(edition?.check_in_opens_at) || 'Check-in TBA';
-  const slotsLeftValue = loading ? '...' : edition ? summary.totals.slotsLeft : 'TBA';
-  const paidPlayersValue = loading ? '...' : `${summary.totals.paid}/${maxPlayers}`;
+  const slotStatusValue = loading ? '...' : edition ? displayStatus.label : 'TBA';
+  const paidPlayersValue = loading ? '...' : summary.totals.paid > 0 ? 'Confirmed' : 'Awaiting players';
   const pendingPaymentValue = loading ? '...' : summary.totals.pendingPayment;
   const checkedInValue = loading ? '...' : summary.totals.checkedIn;
 
@@ -492,7 +494,7 @@ export function WekaMaweClient({ mode }: { mode: Mode }) {
 
         <section className="mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <StatCard icon={Users} label="Paid players" value={paidPlayersValue} />
-          <StatCard icon={ShieldCheck} label="Slots left" value={slotsLeftValue} />
+          <StatCard icon={ShieldCheck} label="Entry status" value={slotStatusValue} />
           <StatCard icon={WalletCards} label="Pending payment" value={pendingPaymentValue} />
           <StatCard icon={CheckCircle2} label="Checked in" value={checkedInValue} />
         </section>

@@ -1,3 +1,1 @@
-import { PaymentMethodsNewScreen } from '../src/components/new-screens';
-
-export default PaymentMethodsNewScreen;
+export { PaymentMethodsScreen as default } from '../src/screens/more';

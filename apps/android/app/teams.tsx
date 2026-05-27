@@ -1,1 +1,1 @@
-export { TeamsNewScreen as default } from '../src/components/new-screens';
+export { TeamsScreen as default } from '../src/screens/tournament';

@@ -203,8 +203,6 @@ async function getLaunchOverview() {
     console.error('[PlatformPage] Failed to load registration stats:', error);
   }
 
-  const spotsLeft = Math.max(0, BETA_PLAYER_CAP - registeredPlayers);
-
   return {
     closesLabel: formatRegistrationDeadlineLabel(REGISTRATION_CLOSES_AT),
     countdownSnapshot,
@@ -213,11 +211,11 @@ async function getLaunchOverview() {
       ? [
           `First ${BETA_PLAYER_CAP} players only`,
           'Registration window is closed',
-          `${registeredPlayers} players joined this beta lane`,
+          'Beta lane closed',
         ]
       : [
-          `Open to first ${BETA_PLAYER_CAP} players`,
-          `${spotsLeft} ${spotsLeft === 1 ? 'spot' : 'spots'} left before registration closes`,
+          'Limited beta access',
+          'Registration open while capacity lasts',
           formatRegistrationChip(countdownSnapshot),
         ],
   };

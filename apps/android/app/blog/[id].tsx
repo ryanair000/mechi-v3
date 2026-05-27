@@ -1,3 +1,1 @@
-import { BlogDetailNewScreen } from '../../src/components/new-screens';
-
-export default BlogDetailNewScreen;
+export { BlogDetailScreen as default } from '../../src/screens/more';

@@ -1,1 +1,1 @@
-export { FeedNewScreen as default } from '../../src/components/new-screens';
+export { FeedScreen as default } from '../../src/screens/tabs';

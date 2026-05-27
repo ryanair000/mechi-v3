@@ -1,1 +1,1 @@
-export { SubmitProofNewScreen as default } from '../src/components/new-screens';
+export { SubmitProofScreen as default } from '../src/screens/tournament';

@@ -1,1 +1,1 @@
-export { CompleteProfileNewScreen as default } from '../../src/components/new-screens';
+export { CompleteProfileScreen as default } from '../../src/screens/auth';

@@ -1,1 +1,1 @@
-export { HomeNewScreen as default } from '../../src/components/new-screens';
+export { HomeScreen as default } from '../../src/screens/tabs';

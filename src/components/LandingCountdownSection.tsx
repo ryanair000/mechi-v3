@@ -49,28 +49,22 @@ export function LandingCountdownSection({
     return () => window.clearInterval(timer);
   }, [closesAt]);
 
-  const spotsLeft = Math.max(0, playerCap - registeredPlayers);
   const statusLabel = snapshot.expired
     ? 'Closed'
-    : spotsLeft === 0
-      ? 'At capacity'
-      : snapshot.days === 0
+    : snapshot.days === 0
         ? 'Closing soon'
         : 'Open now';
   const sectionCopy = snapshot.expired
-    ? `Beta V3 closed at the end of ${closesLabel}. ${registeredPlayers} players made it into this ${playerCap}-player wave before the timer ran out.`
-    : spotsLeft === 0
-      ? `All ${playerCap} beta spots are currently claimed. The countdown still marks the official close at the end of ${closesLabel}.`
-      : `The first ${playerCap} players get into this beta wave. ${registeredPlayers} are already in, so ${spotsLeft} ${spotsLeft === 1 ? 'spot is' : 'spots are'} still open before the timer hits zero.`;
+    ? `Beta V3 closed at the end of ${closesLabel}. Thanks to everyone who joined this wave before the timer ran out.`
+    : `Beta V3 registration is open while capacity lasts. Join before the timer hits zero.`;
   const metaItems = snapshot.expired
     ? [
-        `${registeredPlayers}/${playerCap} players joined`,
+        'Beta wave closed',
         `Registration closed ${closesLabel}`,
       ]
     : [
         statusLabel,
-        `${spotsLeft} ${spotsLeft === 1 ? 'spot' : 'spots'} left`,
-        `${registeredPlayers}/${playerCap} joined`,
+        'Limited beta access',
         `Closes ${closesLabel}`,
       ];
 

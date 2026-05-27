@@ -1,3 +1,1 @@
-import { GameDetailNewScreen } from '../../src/components/new-screens';
-
-export default GameDetailNewScreen;
+export { GameDetailScreen as default } from '../../src/screens/more';

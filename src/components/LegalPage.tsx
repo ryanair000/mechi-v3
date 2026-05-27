@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, Mail } from 'lucide-react';
+import { ArrowLeft, Mail, MapPin, UserRound } from 'lucide-react';
 import FooterSection from '@/components/footer';
 import { PageBreadcrumbs } from '@/components/PageBreadcrumbs';
 
@@ -15,6 +15,8 @@ type LegalPageProps = {
   description: string;
   effectiveDate: string;
   contactEmail: string;
+  developerName?: string;
+  developerAddress?: string;
   sections: LegalSection[];
   secondaryLink: {
     href: string;
@@ -28,6 +30,8 @@ export function LegalPage({
   description,
   effectiveDate,
   contactEmail,
+  developerName,
+  developerAddress,
   sections,
   secondaryLink,
   children,
@@ -58,6 +62,12 @@ export function LegalPage({
 
           <div className="mt-5 flex flex-wrap gap-3">
             <span className="brand-chip">Effective {effectiveDate}</span>
+            {developerName ? (
+              <span className="brand-chip gap-2">
+                <UserRound size={14} />
+                {developerName}
+              </span>
+            ) : null}
             <a
               href={`mailto:${contactEmail}`}
               className="btn-ghost min-h-11 gap-2 px-4 py-2 text-sm"
@@ -65,6 +75,12 @@ export function LegalPage({
               <Mail size={14} />
               {contactEmail}
             </a>
+            {developerAddress ? (
+              <span className="brand-chip gap-2">
+                <MapPin size={14} />
+                {developerAddress}
+              </span>
+            ) : null}
           </div>
         </section>
 

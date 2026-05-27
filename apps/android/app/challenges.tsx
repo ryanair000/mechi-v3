@@ -1,3 +1,1 @@
-import { ChallengesNewScreen } from '../src/components/new-screens';
-
-export default ChallengesNewScreen;
+export { ChallengesScreen as default } from '../src/screens/more';

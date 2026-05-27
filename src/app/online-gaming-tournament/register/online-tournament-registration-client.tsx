@@ -364,10 +364,8 @@ export function OnlineTournamentRegistrationClient() {
                 Pull up and claim your slot.
               </h1>
               <p className="mt-4 text-sm leading-7 text-[var(--text-secondary)] sm:text-base">
-                Up to {selectedGameConfig.slots} registrations per game, real players, and prizes
-                on the line. Match-day check-in still caps at {selectedGameConfig.checkInCap} for{' '}
-                {selectedGameConfig.shortLabel}. Pick your game, drop your gamer tag, and show
-                PlayMechi some love to stay reward-ready.
+                Real players, clean match-day flow, and prizes on the line. Pick your game, drop
+                your gamer tag, and show PlayMechi some love to stay reward-ready.
               </p>
               {summaryError ? (
                 <div className="mt-4 rounded-[var(--radius-card)] border border-amber-400/20 bg-amber-400/10 p-4 text-sm leading-6 text-amber-100">
@@ -407,13 +405,12 @@ export function OnlineTournamentRegistrationClient() {
                       {selectedGameConfig.label}
                     </h2>
                     <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">
-                      Closes {formatEatDateTime(selectedGameConfig.registrationClosesAt)}.
-                      {' '}Registration cap {selectedGameConfig.slots}. Check-in cap{' '}
-                      {selectedGameConfig.checkInCap}.
+                      Closes {formatEatDateTime(selectedGameConfig.registrationClosesAt)}. Live
+                      registration status updates here.
                     </p>
                   </div>
                   <span className="brand-chip px-3 py-1">
-                    {selectedGameSummary?.registered ?? 0}/{selectedGameConfig.slots}
+                    {selectedGameSummary?.full ? 'Full' : 'Open'}
                   </span>
                 </div>
 
@@ -614,7 +611,7 @@ export function OnlineTournamentRegistrationClient() {
                       ? `${selectedGameConfig.label} registration is closed.`
                       : selectedGameIsFull
                       ? `${selectedGameConfig.label} is full.`
-                      : `${selectedGameSummary?.spotsLeft ?? selectedGameConfig.slots} slots left for ${selectedGameConfig.shortLabel}.`}
+                      : `${selectedGameConfig.shortLabel} registration is open.`}
                   </div>
                   <Button type="button" size="lg" disabled={!canUsePrimaryAction} onClick={handlePrimaryAction}>
                     {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trophy className="h-4 w-4" />}

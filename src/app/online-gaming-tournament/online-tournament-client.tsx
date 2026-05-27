@@ -140,10 +140,16 @@ export function OnlineTournamentClient() {
                   tags={[
                     game.shortLabel,
                     summaryLoading || summaryError
-                      ? `${game.slots} slots`
-                      : isSwahili
-                        ? `${summary.games[game.game]?.spotsLeft ?? game.slots} nafasi zimebaki`
-                        : `${summary.games[game.game]?.spotsLeft ?? game.slots} slots left`,
+                      ? isSwahili
+                        ? 'Usajili wa moja kwa moja'
+                        : 'Live registration'
+                      : summary.games[game.game]?.full
+                        ? isSwahili
+                          ? 'Usajili umejaa'
+                          : 'Registration full'
+                        : isSwahili
+                          ? 'Usajili wazi'
+                          : 'Registration open',
                   ]}
                   stats={[
                     { label: isSwahili ? 'Nafasi ya 1' : '1st place', value: game.firstPrize },

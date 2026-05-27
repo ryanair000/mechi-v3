@@ -1,1 +1,1 @@
-export { NotificationsNewScreen as default } from '../../src/components/new-screens';
+export { NotificationsScreen as default } from '../../src/screens/more';

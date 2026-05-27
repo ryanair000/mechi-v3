@@ -1,3 +1,1 @@
-import { MatchHistoryNewScreen } from '../src/components/new-screens';
-
-export default MatchHistoryNewScreen;
+export { MatchHistoryScreen as default } from '../src/screens/more';

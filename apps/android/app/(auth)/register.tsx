@@ -1,1 +1,1 @@
-export { CreateProfileNewScreen as default } from '../../src/components/new-screens';
+export { CreateProfileScreen as default } from '../../src/screens/auth';

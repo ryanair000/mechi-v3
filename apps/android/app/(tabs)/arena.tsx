@@ -1,1 +1,1 @@
-export { ArenaNewScreen as default } from '../../src/components/new-screens';
+export { ArenaScreen as default } from '../../src/screens/tabs';

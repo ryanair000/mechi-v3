@@ -1,1 +1,1 @@
-export { ProfileNewScreen as default } from '../../src/components/new-screens';
+export { ProfileScreen as default } from '../../src/screens/tabs';

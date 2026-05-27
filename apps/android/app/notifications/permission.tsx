@@ -1,1 +1,1 @@
-export { NotificationPermissionNewScreen as default } from '../../src/components/new-screens';
+export { NotificationPermissionScreen as default } from '../../src/screens/more';

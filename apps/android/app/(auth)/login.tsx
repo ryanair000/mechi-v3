@@ -1,1 +1,1 @@
-export { LoginNewScreen as default } from '../../src/components/new-screens';
+export { LoginScreen as default } from '../../src/screens/auth';

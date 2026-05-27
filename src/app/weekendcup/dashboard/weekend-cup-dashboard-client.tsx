@@ -354,9 +354,7 @@ export function WeekendCupDashboardClient() {
     ? `Match-day check-in unlocks on ${selectedConfig.dateLabel} at ${selectedConfig.timeLabel}.`
     : 'Retry payment here if you still need to lock this slot.';
   const referenceLabel = currentRegistration?.payment_reference?.trim() || 'No payment reference yet';
-  const availabilityLabel = currentCounts?.confirmed
-    ? `${Math.max(0, currentCounts.spotsLeft)} confirmed spots left`
-    : `${selectedConfig.slots} spots in the pool`;
+  const availabilityLabel = 'Limited slots available';
   const windowState = getWeekendCupWindowState(selectedConfig);
   const matchWindowLabel = !windowState.isRegistrationOpen
     ? 'Registration closed'

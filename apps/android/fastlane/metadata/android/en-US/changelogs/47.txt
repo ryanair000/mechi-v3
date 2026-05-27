@@ -1,0 +1,1 @@
+Hides exact remaining slot counts from player-facing Android and web tournament surfaces while keeping registration status clear.

@@ -2,11 +2,11 @@
   "expo": {
     "name": "PlayMechi",
     "slug": "mechi-android",
-    "version": "1.0.6",
+    "version": "1.0.7",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "scheme": "mechi",
-    "userInterfaceStyle": "light",
+    "userInterfaceStyle": "dark",
     "newArchEnabled": true,
     "splash": {
       "image": "./assets/splash-wordmark.png",
@@ -41,8 +41,8 @@
       "predictiveBackGestureEnabled": false
     },
     "androidNavigationBar": {
-      "barStyle": "dark-content",
-      "backgroundColor": "#F6F9FF",
+      "barStyle": "light-content",
+      "backgroundColor": "#050A12",
       "enforceContrast": false
     },
     "web": {

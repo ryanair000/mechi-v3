@@ -1,1 +1,1 @@
-export { CommunityNewScreen as default } from '../src/components/new-screens';
+export { CommunityScreen as default } from '../src/screens/tabs';

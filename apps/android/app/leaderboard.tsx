@@ -1,3 +1,1 @@
-import { LeaderboardNewScreen } from '../src/components/new-screens';
-
-export default LeaderboardNewScreen;
+export { LeaderboardScreen as default } from '../src/screens/more';

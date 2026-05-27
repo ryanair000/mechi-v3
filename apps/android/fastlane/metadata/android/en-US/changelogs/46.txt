@@ -1,0 +1,1 @@
+Login now supports email, phone number, or Mechi username. Google and Facebook sign-in buttons were removed.

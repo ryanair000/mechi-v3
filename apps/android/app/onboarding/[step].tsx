@@ -1,3 +1,1 @@
-import { OnboardingNewScreen } from '../../src/components/new-screens';
-
-export default OnboardingNewScreen;
+export { OnboardingScreen as default } from '../../src/screens/auth';

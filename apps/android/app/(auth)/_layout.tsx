@@ -1,13 +1,13 @@
 import { Redirect, Stack } from 'expo-router';
 import { useAuth } from '../../src/auth/AuthProvider';
-import { SplashNewScreen } from '../../src/components/new-screens';
-import { colors } from '../../src/theme';
+import { SplashScreen } from '../../src/screens/auth';
+import { p } from '../../src/ui/production-ui';
 
 export default function AuthLayout() {
   const { initializing, token } = useAuth();
 
   if (initializing) {
-    return <SplashNewScreen />;
+    return <SplashScreen />;
   }
 
   if (token) {
@@ -18,7 +18,7 @@ export default function AuthLayout() {
     <Stack
       screenOptions={{
         headerShown: false,
-        contentStyle: { backgroundColor: colors.bg },
+        contentStyle: { backgroundColor: p.bg },
       }}
     />
   );

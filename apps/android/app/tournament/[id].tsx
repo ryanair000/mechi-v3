@@ -1,1 +1,1 @@
-export { TournamentDetailsNewScreen as default } from '../../src/components/new-screens';
+export { TournamentDetailsScreen as default } from '../../src/screens/tournament';

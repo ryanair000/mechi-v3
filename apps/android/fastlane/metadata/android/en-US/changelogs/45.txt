@@ -1,0 +1,1 @@
+Updated the PlayMechi app icon with the official logo and refreshed the Android release build.

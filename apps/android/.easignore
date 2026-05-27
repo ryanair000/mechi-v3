@@ -17,6 +17,7 @@ android/app/.cxx
 android/app/.cxx/**
 android/local.properties
 expo-qr.png
+output-route-sweep-*.png
 google-play-service-account.json
 eas-*.txt
 *.log

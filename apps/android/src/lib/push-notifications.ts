@@ -203,7 +203,11 @@ export function resolveNotificationRoute(data: Record<string, unknown> | undefin
     return '/(tabs)/arena';
   }
 
-  if (target.startsWith('/profile') || target.startsWith('/notifications')) {
+  if (target.startsWith('/notifications')) {
+    return '/notifications';
+  }
+
+  if (target.startsWith('/profile')) {
     return '/(tabs)/profile';
   }
 

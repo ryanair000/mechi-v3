@@ -1,5 +1,13 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
-import { getMe, login, register, type LoginPayload, type RegisterPayload } from '../api/mechi';
+import * as Linking from 'expo-linking';
+import {
+  completeSocialLogin,
+  getMe,
+  login,
+  register,
+  type LoginPayload,
+  type RegisterPayload,
+} from '../api/mechi';
 import { getConfiguredGameId } from '../config/games';
 import { isTournamentGame } from '../config/tournament';
 import { unregisterStoredPushToken } from '../lib/push-notifications';
@@ -27,6 +35,13 @@ function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
       .then(resolve, reject)
       .finally(() => clearTimeout(timeout));
   });
+}
+
+function readSocialAccessToken(url: string): string | null {
+  const [, fragment = ''] = url.split('#');
+  const query = url.includes('?') ? url.split('?')[1]?.split('#')[0] ?? '' : '';
+  const params = new URLSearchParams([query, fragment].filter(Boolean).join('&'));
+  return params.get('access_token');
 }
 
 export function isProfileComplete(user: AuthUser | null | undefined): boolean {
@@ -112,6 +127,39 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setToken(null);
     setUser(null);
   }, []);
+
+  const completeSocialSignIn = useCallback(async (url: string) => {
+    const providerAccessToken = readSocialAccessToken(url);
+    if (!providerAccessToken) {
+      return;
+    }
+
+    const response = await completeSocialLogin({ access_token: providerAccessToken });
+    await setStoredToken(response.token);
+    setToken(response.token);
+    setUser(response.user);
+  }, []);
+
+  useEffect(() => {
+    let active = true;
+
+    Linking.getInitialURL()
+      .then((url) => {
+        if (active && url) {
+          void completeSocialSignIn(url).catch(() => {});
+        }
+      })
+      .catch(() => {});
+
+    const subscription = Linking.addEventListener('url', ({ url }) => {
+      void completeSocialSignIn(url).catch(() => {});
+    });
+
+    return () => {
+      active = false;
+      subscription.remove();
+    };
+  }, [completeSocialSignIn]);
 
   const value = useMemo(
     () => ({

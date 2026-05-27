@@ -1,14 +1,17 @@
 {
   "name": "mechi-android",
-  "version": "1.0.5",
+  "version": "1.0.6",
   "main": "expo-router/entry",
   "scripts": {
     "start": "npm run dev:usb",
     "start:clear": "expo start --clear",
     "dev:usb": "powershell -ExecutionPolicy Bypass -File ./scripts/usb-dev.ps1",
+    "dev:usb:prod": "powershell -ExecutionPolicy Bypass -File ./scripts/usb-dev.ps1 -ProductionApi",
     "android": "npm run android:usb",
     "android:usb": "powershell -ExecutionPolicy Bypass -File ./scripts/usb-dev.ps1 -Install",
+    "android:usb:prod": "powershell -ExecutionPolicy Bypass -File ./scripts/usb-dev.ps1 -Install -ProductionApi",
     "android:usb:release": "powershell -ExecutionPolicy Bypass -File ./scripts/usb-dev.ps1 -Install -Release",
+    "android:usb:release:local": "powershell -ExecutionPolicy Bypass -File ./scripts/usb-dev.ps1 -Install -Release -LocalApi",
     "ios": "expo run:ios",
     "web": "expo start --web",
     "typecheck": "tsc --noEmit"

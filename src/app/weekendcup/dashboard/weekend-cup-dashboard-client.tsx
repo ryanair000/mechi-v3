@@ -90,6 +90,13 @@ export function WeekendCupDashboardClient() {
   );
   const [loading, setLoading] = useState(true);
   const [retryingPayment, setRetryingPayment] = useState(false);
+  const [proofFile, setProofFile] = useState<File | null>(null);
+  const [proofSubmitting, setProofSubmitting] = useState(false);
+  const [proofMatchNumber, setProofMatchNumber] = useState('1');
+  const [proofKills, setProofKills] = useState('');
+  const [proofPlacement, setProofPlacement] = useState('');
+  const [proofPlayerScore, setProofPlayerScore] = useState('');
+  const [proofOpponentScore, setProofOpponentScore] = useState('');
   const requestedGame = searchParams.get('game') ?? '';
   const [selectedGame, setSelectedGame] = useState<WeekendCupPlayerRegistration['game']>(() =>
     isWeekendCupRegisterableGame(requestedGame) ? requestedGame : 'pubgm'
@@ -240,6 +247,83 @@ export function WeekendCupDashboardClient() {
       setRetryingPayment(false);
     }
   }, [authFetch, currentRegistration, handleAuthExpired]);
+
+  const handleSubmitProof = useCallback(async () => {
+    if (!currentRegistration) {
+      toast.error('Save a Weekend Cup entry first.');
+      return;
+    }
+
+    if (currentRegistration.payment_status !== 'paid') {
+      toast.error('Payment must be confirmed before result proof.');
+      return;
+    }
+
+    if (!proofFile) {
+      toast.error('Choose a result screenshot first.');
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append('game', currentRegistration.game);
+    formData.append('screenshot', proofFile);
+
+    if (currentRegistration.game === 'efootball') {
+      formData.append('player1_score', proofPlayerScore);
+      formData.append('player2_score', proofOpponentScore);
+    } else {
+      formData.append('match_number', proofMatchNumber);
+      formData.append('kills', proofKills);
+      formData.append('placement', proofPlacement);
+    }
+
+    setProofSubmitting(true);
+    try {
+      const res = await authFetch('/api/events/playmechi-weekend-cup/results', {
+        method: 'POST',
+        body: formData,
+      });
+      const data = (await res.json()) as { error?: string };
+
+      if (res.status === 401 || res.status === 403) {
+        if (data.error) {
+          toast.error(data.error);
+          return;
+        }
+
+        handleAuthExpired();
+        return;
+      }
+
+      if (!res.ok) {
+        toast.error(data.error ?? 'Could not submit proof');
+        return;
+      }
+
+      toast.success('Result proof submitted. Moderators will review it.');
+      setProofFile(null);
+      setProofKills('');
+      setProofPlacement('');
+      setProofPlayerScore('');
+      setProofOpponentScore('');
+      await loadSummary();
+    } catch {
+      toast.error('Network error while uploading proof');
+    } finally {
+      setProofSubmitting(false);
+    }
+  }, [
+    authFetch,
+    currentRegistration,
+    handleAuthExpired,
+    loadSummary,
+    proofFile,
+    proofKills,
+    proofMatchNumber,
+    proofOpponentScore,
+    proofPlacement,
+    proofPlayerScore,
+  ]);
 
   if (!registrationOpen) {
     return (
@@ -423,6 +507,95 @@ export function WeekendCupDashboardClient() {
           </div>
         )}
       </section>
+
+      {currentRegistration ? (
+        <section className="card p-5 sm:p-6">
+          <p className="section-title">Result proof</p>
+          <h2 className="mt-2 text-2xl font-black text-[var(--text-primary)]">
+            Submit Weekend Cup screenshots
+          </h2>
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--text-secondary)]">
+            Upload clear screenshots after each match. Moderators review proof before standings
+            and prizes are finalized.
+          </p>
+
+          <div className="mt-4 grid gap-3 md:grid-cols-2">
+            {currentRegistration.game === 'efootball' ? (
+              <>
+                <input
+                  value={proofPlayerScore}
+                  onChange={(event) => setProofPlayerScore(event.target.value)}
+                  placeholder="Your score"
+                  inputMode="numeric"
+                  className="input"
+                />
+                <input
+                  value={proofOpponentScore}
+                  onChange={(event) => setProofOpponentScore(event.target.value)}
+                  placeholder="Opponent score"
+                  inputMode="numeric"
+                  className="input"
+                />
+              </>
+            ) : (
+              <>
+                <select
+                  value={proofMatchNumber}
+                  onChange={(event) => setProofMatchNumber(event.target.value)}
+                  className="input"
+                >
+                  <option value="1">Match 1</option>
+                  <option value="2">Match 2</option>
+                  <option value="3">Match 3</option>
+                </select>
+                <input
+                  value={proofKills}
+                  onChange={(event) => setProofKills(event.target.value)}
+                  placeholder="Kills"
+                  inputMode="numeric"
+                  className="input"
+                />
+                <input
+                  value={proofPlacement}
+                  onChange={(event) => setProofPlacement(event.target.value)}
+                  placeholder="Final placement"
+                  inputMode="numeric"
+                  className="input md:col-span-2"
+                />
+              </>
+            )}
+            <input
+              type="file"
+              accept="image/png,image/jpeg,image/webp"
+              onChange={(event) => setProofFile(event.target.files?.[0] ?? null)}
+              className="input md:col-span-2"
+            />
+          </div>
+
+          <div className="mt-4 flex flex-wrap items-center gap-3">
+            <button
+              type="button"
+              onClick={() => void handleSubmitProof()}
+              disabled={proofSubmitting || !proofFile}
+              className="btn-primary"
+            >
+              {proofSubmitting ? (
+                <>
+                  <Loader2 size={14} className="animate-spin" />
+                  Uploading proof
+                </>
+              ) : (
+                'Submit proof'
+              )}
+            </button>
+            <span className="text-sm text-[var(--text-secondary)]">
+              {currentRegistration.check_in_status === 'checked_in'
+                ? 'Check-in complete.'
+                : 'Check-in is required before upload is accepted.'}
+            </span>
+          </div>
+        </section>
+      ) : null}
     </main>
   );
 }

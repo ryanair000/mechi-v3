@@ -7,6 +7,8 @@ import type {
   OnlineTournamentGameKey,
   OnlineTournamentPlayerState,
   OnlineTournamentRegistrationSummary,
+  WeekendCupRegistrationResponse,
+  NotificationsResponse,
   PlatformKey,
   Profile,
 } from '../types';
@@ -79,7 +81,7 @@ export type TournamentResultPayload =
       uri: string;
       name?: string | null;
       mimeType?: string | null;
-      fixture_id: string;
+      fixture_id?: string | null;
       player1_score: number;
       player2_score: number;
     };
@@ -90,6 +92,17 @@ export type PushTokenPayload = {
   device_name?: string | null;
   app_version?: string | null;
   experience_id?: string | null;
+};
+
+export type SocialAuthProvider = 'google' | 'facebook';
+
+export type SocialLoginStartPayload = {
+  provider: SocialAuthProvider;
+  redirect_to: string;
+};
+
+export type SocialLoginCompletePayload = {
+  access_token: string;
 };
 
 export type TournamentStateResponse = OnlineTournamentPlayerState & {
@@ -144,6 +157,22 @@ export function register(payload: RegisterPayload) {
   });
 }
 
+export function startSocialLogin(payload: SocialLoginStartPayload) {
+  return apiRequest<{ authorization_url: string }>('/api/auth/social/start', {
+    method: 'POST',
+    auth: false,
+    body: payload,
+  });
+}
+
+export function completeSocialLogin(payload: SocialLoginCompletePayload) {
+  return apiRequest<AuthResponse>('/api/auth/social/session', {
+    method: 'POST',
+    auth: false,
+    body: payload,
+  });
+}
+
 export function getMe() {
   return apiRequest<{ user: AuthUser }>('/api/auth/me');
 }
@@ -152,6 +181,18 @@ export function registerPushToken(payload: PushTokenPayload) {
   return apiRequest<{ success: true }>('/api/notifications/push-token', {
     method: 'POST',
     body: payload,
+  });
+}
+
+export function getNotifications(limit = 60) {
+  return apiRequest<NotificationsResponse>(
+    `/api/notifications?limit=${encodeURIComponent(String(limit))}`
+  );
+}
+
+export function markAllNotificationsRead() {
+  return apiRequest<{ success: true }>('/api/notifications', {
+    method: 'PATCH',
   });
 }
 
@@ -180,11 +221,24 @@ export function getTournamentRegistrationSummary() {
 }
 
 export function registerForTournament(payload: TournamentRegistrationPayload) {
-  return apiRequest<OnlineTournamentRegistrationSummary>(
+  return apiRequest<WeekendCupRegistrationResponse>(
     '/api/events/playmechi-weekend-cup/register',
     {
       method: 'POST',
       body: payload,
+    }
+  );
+}
+
+export function verifyWeekendCupPayment(reference: string) {
+  return apiRequest<WeekendCupRegistrationResponse>(
+    '/api/events/playmechi-weekend-cup/register',
+    {
+      method: 'POST',
+      body: {
+        action: 'verify_payment',
+        reference,
+      },
     }
   );
 }
@@ -218,7 +272,9 @@ export function submitTournamentResult(payload: TournamentResultPayload) {
   } as unknown as Blob);
 
   if (payload.game === 'efootball') {
-    form.append('fixture_id', payload.fixture_id);
+    if (payload.fixture_id) {
+      form.append('fixture_id', payload.fixture_id);
+    }
     form.append('player1_score', String(payload.player1_score));
     form.append('player2_score', String(payload.player2_score));
   } else {
@@ -228,7 +284,7 @@ export function submitTournamentResult(payload: TournamentResultPayload) {
   }
 
   return apiRequest<TournamentStateResponse>(
-    '/api/events/mechi-online-gaming-tournament/results',
+    '/api/events/playmechi-weekend-cup/results',
     {
       method: 'POST',
       body: form,

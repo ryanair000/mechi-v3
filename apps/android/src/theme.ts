@@ -3,13 +3,13 @@ export const colors = {
   bg2: '#ffffff',
   panel: '#ffffff',
   panel2: '#f8fafc',
-  border: '#dbe3ec',
-  text: '#0b1121',
-  muted: '#475569',
+  border: '#dde3eb',
+  text: '#161c22',
+  muted: '#3b4a46',
   mutedDark: '#3b4a46',
-  faint: '#64748b',
+  faint: '#6b7a76',
   primary: '#32e0c4',
-  primaryDark: '#0f766e',
+  primaryDark: '#006b5c',
   accent: '#ff6b6b',
   danger: '#e5485e',
   warning: '#f59e0b',
@@ -23,13 +23,21 @@ export const colors = {
   ink: '#0b1121',
   surface: '#ffffff',
   surfaceSoft: '#f8fafc',
+  surfaceNeutral: '#eef4fc',
+  surfaceDim: '#d4dbe2',
+  surfaceVariant: '#dde3eb',
   surfaceTint: '#eef7f6',
-  borderSubtle: '#dbe3ec',
+  borderSubtle: '#dde3eb',
+  outline: '#6b7a76',
+  outlineVariant: '#bacac5',
   bottomMuted: 'rgba(59, 74, 70, 0.34)',
   successSoft: 'rgba(50, 224, 196, 0.14)',
   warningSoft: 'rgba(245, 158, 11, 0.14)',
   dangerSoft: 'rgba(229, 72, 94, 0.12)',
   infoSoft: 'rgba(37, 99, 235, 0.1)',
+  nightPanel: '#151b2c',
+  nightPanel2: '#1a2233',
+  nightBorder: 'rgba(186, 202, 197, 0.16)',
 };
 
 export const spacing = {
@@ -42,7 +50,7 @@ export const spacing = {
 };
 
 export const radii = {
-  sm: 6,
+  sm: 4,
   md: 8,
   lg: 12,
   pill: 999,
@@ -50,19 +58,19 @@ export const radii = {
 
 export const typography = {
   display: {
-    fontSize: 28,
-    lineHeight: 33,
-    fontWeight: '800' as const,
+    fontSize: 30,
+    lineHeight: 36,
+    fontWeight: '900' as const,
   },
   title: {
-    fontSize: 22,
+    fontSize: 20,
     lineHeight: 28,
-    fontWeight: '800' as const,
+    fontWeight: '900' as const,
   },
   section: {
-    fontSize: 15,
+    fontSize: 12,
     lineHeight: 20,
-    fontWeight: '800' as const,
+    fontWeight: '900' as const,
   },
   body: {
     fontSize: 14,

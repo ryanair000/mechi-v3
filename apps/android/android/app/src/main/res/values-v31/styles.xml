@@ -1,0 +1,13 @@
+<resources xmlns:tools="http://schemas.android.com/tools">
+  <style name="Theme.App.SplashScreen" parent="AppTheme">
+    <item name="android:windowSplashScreenBackground">@color/splashscreen_background</item>
+    <item name="android:windowSplashScreenAnimatedIcon">@drawable/splashscreen_logo</item>
+    <item name="android:windowSplashScreenIconBackgroundColor">@android:color/transparent</item>
+    <item name="android:windowBackground">@drawable/ic_launcher_background</item>
+    <item name="android:statusBarColor">@color/splashscreen_background</item>
+    <item name="android:navigationBarColor">@color/splashscreen_background</item>
+    <item name="android:windowLightStatusBar">false</item>
+    <item name="android:windowLightNavigationBar">false</item>
+    <item name="android:enforceNavigationBarContrast" tools:targetApi="31">false</item>
+  </style>
+</resources>

@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Link } from 'expo-router';
-import { Linking, Image, ImageBackground, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { Linking, ImageBackground, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { BrandMark } from './brand';
 import { StatusBadge } from './ui';
 import { colors, radii, spacing } from '../theme';
 import type { FeedAction, FeedPost } from '../config/feed';
@@ -49,7 +50,7 @@ export function FeedPostCard({ post }: { post: FeedPost }) {
         <View style={styles.headerRow}>
           <View style={styles.authorRow}>
             <View style={styles.logoWrap}>
-              <Image source={require('../../assets/icon.png')} style={styles.logo} resizeMode="contain" />
+              <BrandMark size={34} dark />
             </View>
             <View style={styles.authorCopy}>
               <View style={styles.authorLine}>
@@ -69,7 +70,7 @@ export function FeedPostCard({ post }: { post: FeedPost }) {
         </View>
 
         <ImageBackground
-          source={{ uri: post.imageUrl }}
+          source={post.imageUrl}
           imageStyle={styles.mediaImage}
           style={[styles.media, { minHeight: mediaHeight }]}
         >
@@ -168,10 +169,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     overflow: 'hidden',
-  },
-  logo: {
-    width: 28,
-    height: 28,
   },
   authorCopy: {
     flex: 1,

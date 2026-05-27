@@ -272,6 +272,8 @@ export function getTournamentTotals(summary: OnlineTournamentRegistrationSummary
       const gameSummary = summary.games[game.game];
       const slots = gameSummary?.slots ?? game.slots;
       const registered = gameSummary?.registered ?? 0;
+      const confirmed = gameSummary?.confirmed ?? 0;
+      const pendingPayment = gameSummary?.pendingPayment ?? 0;
       const checkedIn = gameSummary?.checkedIn ?? 0;
       const spotsLeft =
         gameSummary?.spotsLeft ?? (game.registrationClosed ? 0 : Math.max(0, slots - registered));
@@ -281,6 +283,8 @@ export function getTournamentTotals(summary: OnlineTournamentRegistrationSummary
 
       return {
         registered: totals.registered + registered,
+        confirmed: totals.confirmed + confirmed,
+        pendingPayment: totals.pendingPayment + pendingPayment,
         slots: totals.slots + slots,
         spotsLeft: totals.spotsLeft + Math.max(0, spotsLeft),
         checkedIn: totals.checkedIn + checkedIn,
@@ -292,6 +296,8 @@ export function getTournamentTotals(summary: OnlineTournamentRegistrationSummary
     },
     {
       registered: 0,
+      confirmed: 0,
+      pendingPayment: 0,
       slots: 0,
       spotsLeft: 0,
       checkedIn: 0,

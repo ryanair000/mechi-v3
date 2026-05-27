@@ -1,0 +1,1 @@
+New PlayMechi screen set, cleaner logo assets, push alert controls, and updated match-day screens for registration, check-in, rooms, proof, and profile.

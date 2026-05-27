@@ -128,8 +128,26 @@ export async function GET(request: NextRequest) {
     const summary = await getWeekendCupRegistrationSummary({
       userId: access.profile.id,
     });
+    const supabase = createServiceClient();
+    const { data: submissions } = await supabase
+      .from('online_tournament_result_submissions')
+      .select(
+        'id, event_slug, game, registration_id, user_id, room_id, fixture_id, match_number, kills, placement, player1_score, player2_score, screenshot_url, status, admin_note, created_at, updated_at'
+      )
+      .eq('event_slug', WEEKEND_CUP_SLUG)
+      .eq('user_id', access.profile.id)
+      .order('created_at', { ascending: false });
 
-    return NextResponse.json(summary);
+    return NextResponse.json({
+      ...summary,
+      roster: [],
+      myRegistrations: summary.registrations,
+      rooms: [],
+      fixtures: [],
+      standings: {},
+      mySubmissions: submissions ?? [],
+      payouts: [],
+    });
   } catch (error) {
     console.error('[WeekendCupState GET] Error:', error);
     return NextResponse.json({ error: 'Could not load Weekend Cup player state' }, { status: 500 });
@@ -341,9 +359,24 @@ export async function POST(request: NextRequest) {
       supabase,
       userId: access.profile.id,
     });
+    const { data: submissions } = await supabase
+      .from('online_tournament_result_submissions')
+      .select(
+        'id, event_slug, game, registration_id, user_id, room_id, fixture_id, match_number, kills, placement, player1_score, player2_score, screenshot_url, status, admin_note, created_at, updated_at'
+      )
+      .eq('event_slug', WEEKEND_CUP_SLUG)
+      .eq('user_id', access.profile.id)
+      .order('created_at', { ascending: false });
 
     return NextResponse.json({
       ...summary,
+      roster: [],
+      myRegistrations: summary.registrations,
+      rooms: [],
+      fixtures: [],
+      standings: {},
+      mySubmissions: submissions ?? [],
+      payouts: [],
       checkInClosed: !windowState.isRegistrationOpen,
     });
   } catch (error) {

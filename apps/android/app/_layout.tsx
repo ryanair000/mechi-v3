@@ -8,7 +8,9 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import '../src/lib/sentry';
 import { AuthProvider } from '../src/auth/AuthProvider';
+import { ToastProvider } from '../src/components/figma-ui';
 import { PushNotificationsBridge } from '../src/components/PushNotificationsBridge';
+import { NotificationsProvider } from '../src/data/notifications-context';
 import { colors } from '../src/theme';
 
 function RootLayout() {
@@ -29,14 +31,18 @@ function RootLayout() {
       <SafeAreaProvider>
         <QueryClientProvider client={queryClient}>
           <AuthProvider>
-            <PushNotificationsBridge />
-            <StatusBar style="dark" />
-            <Stack
-              screenOptions={{
-                headerShown: false,
-                contentStyle: { backgroundColor: colors.bg },
-              }}
-            />
+            <NotificationsProvider>
+              <ToastProvider>
+                <PushNotificationsBridge />
+                <StatusBar style="dark" />
+                <Stack
+                  screenOptions={{
+                    headerShown: false,
+                    contentStyle: { backgroundColor: colors.bg },
+                  }}
+                />
+              </ToastProvider>
+            </NotificationsProvider>
           </AuthProvider>
         </QueryClientProvider>
       </SafeAreaProvider>

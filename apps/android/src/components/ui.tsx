@@ -1,7 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import {
   ActivityIndicator,
-  Image,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -14,6 +13,7 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { BrandWordmark } from './brand';
 import { colors, radii, spacing, typography } from '../theme';
 
 type ScreenProps = {
@@ -215,14 +215,7 @@ export function LaunchScreen({ label = 'Opening PlayMechi' }: { label?: string }
   return (
     <SafeAreaView style={styles.launchSafeArea}>
       <View style={styles.launchContent}>
-        <View style={styles.launchLogoPlate}>
-          <Image
-            source={require('../../assets/splash-icon.png')}
-            style={styles.launchLogo}
-            resizeMode="contain"
-          />
-        </View>
-        <Text style={styles.launchTitle}>PlayMechi</Text>
+        <BrandWordmark size="hero" stacked tagline="Tournament match desk" />
         <Text style={styles.launchLabel}>{label}</Text>
       </View>
     </SafeAreaView>
@@ -352,27 +345,6 @@ const styles = StyleSheet.create({
     padding: spacing.xl,
     gap: spacing.md,
   },
-  launchLogoPlate: {
-    width: 168,
-    height: 168,
-    borderRadius: 28,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.panel2,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  launchLogo: {
-    width: 128,
-    height: 128,
-  },
-  launchTitle: {
-    color: colors.text,
-    fontSize: 28,
-    fontWeight: '800',
-    lineHeight: 33,
-    letterSpacing: 0,
-  },
   launchLabel: {
     color: colors.muted,
     fontSize: 13,
@@ -447,19 +419,21 @@ const styles = StyleSheet.create({
   },
   fieldLabel: {
     color: colors.muted,
-    fontSize: 11,
-    fontWeight: '700',
+    fontSize: 12,
+    fontWeight: '900',
     textTransform: 'uppercase',
+    letterSpacing: 1.6,
   },
   field: {
-    minHeight: 44,
+    minHeight: 56,
     color: colors.text,
-    backgroundColor: colors.panel,
+    backgroundColor: colors.surfaceSoft,
     borderColor: colors.border,
     borderWidth: 1,
-    borderRadius: radii.md,
-    paddingHorizontal: spacing.md,
-    fontSize: 14,
+    borderRadius: radii.sm,
+    paddingHorizontal: spacing.lg,
+    fontSize: 15,
+    fontWeight: '700',
   },
   fieldError: {
     borderColor: colors.danger,
@@ -474,11 +448,11 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   chip: {
-    minHeight: 36,
-    borderRadius: radii.pill,
+    minHeight: 44,
+    borderRadius: radii.sm,
     borderColor: colors.border,
     borderWidth: 1,
-    paddingHorizontal: 11,
+    paddingHorizontal: spacing.md,
     alignItems: 'center',
     justifyContent: 'center',
     flexDirection: 'row',
@@ -504,8 +478,8 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     borderWidth: 1,
     borderRadius: radii.md,
-    padding: 14,
-    gap: spacing.sm,
+    padding: spacing.lg,
+    gap: spacing.md,
   },
   card_default: {},
   card_soft: {
@@ -575,7 +549,9 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     color: colors.text,
-    ...typography.title,
+    ...typography.section,
+    textTransform: 'uppercase',
+    letterSpacing: 1.7,
   },
   statPill: {
     backgroundColor: colors.panel2,

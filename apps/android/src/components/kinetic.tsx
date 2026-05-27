@@ -167,7 +167,7 @@ const styles = StyleSheet.create({
   },
   content: {
     flexGrow: 1,
-    paddingBottom: 150,
+    paddingBottom: 210,
     gap: spacing.lg,
   },
   padded: {

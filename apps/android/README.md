@@ -28,13 +28,19 @@ Local Android development is wired for USB debugging only. The app uses `adb rev
 npm run dev:usb
 ```
 
+`npm run dev:usb` targets the local backend by default and prints a warning if `http://127.0.0.1:3000` is not answering. To point a development client at production instead:
+
+```bash
+npm run dev:usb:prod
+```
+
 To rebuild and install on the connected phone:
 
 ```bash
 npm run android:usb
 ```
 
-Installed release builds use `https://mechi.club`. Non-dev builds ignore accidental localhost API URLs unless `EXPO_PUBLIC_MECHI_ALLOW_LOCAL_API=1` is explicitly set.
+Installed release builds use `https://mechi.club` by default. For a local release smoke test over USB, use `npm run android:usb:release:local`. Non-dev builds ignore accidental localhost API URLs unless `EXPO_PUBLIC_MECHI_ALLOW_LOCAL_API=1` is explicitly set.
 
 ## Android Studio workflow
 

@@ -24,6 +24,7 @@ export type GameKey =
 export type OnlineTournamentGameKey = Extract<GameKey, 'pubgm' | 'codm' | 'efootball' | 'freefire'>;
 
 export type UserRole = 'user' | 'moderator' | 'admin';
+export type Plan = 'free' | 'pro' | 'elite' | string;
 export type CommunityMessageType = 'text' | 'announcement' | 'system';
 export type CommunityMessageSenderType = 'user' | 'moderator' | 'admin' | 'system';
 
@@ -59,6 +60,9 @@ export type AuthUser = {
   reward_points_available?: number;
   reward_points_pending?: number;
   reward_points_lifetime?: number;
+  plan?: Plan | null;
+  plan_since?: string | null;
+  plan_expires_at?: string | null;
 };
 
 export type Profile = AuthUser;
@@ -120,6 +124,59 @@ export type OnlineTournamentRegistration = {
 export type OnlineTournamentRegistrationSummary = {
   games: Record<OnlineTournamentGameKey, OnlineTournamentGameRegistrationCount>;
   registrations: OnlineTournamentRegistration[];
+};
+
+export type WeekendCupRegistrationResponse = OnlineTournamentRegistrationSummary & {
+  registration?: OnlineTournamentRegistration;
+  status?: 'payment_pending' | 'paid' | string;
+  authorization_url?: string | null;
+  reference?: string | null;
+  entryFeeKes?: number | null;
+  paymentTier?: string | null;
+  paymentLabel?: string | null;
+  paymentCopy?: {
+    pricingLine?: string | null;
+    earlyBirdPolicy?: string | null;
+    mpesaKenyanPhoneOnly?: string | null;
+    registerUrl?: string | null;
+  };
+};
+
+export type NotificationType =
+  | 'challenge_received'
+  | 'challenge_sent'
+  | 'challenge_accepted'
+  | 'challenge_declined'
+  | 'challenge_cancelled'
+  | 'bounty_won'
+  | 'tournament_joined'
+  | 'tournament_player_joined'
+  | 'tournament_started'
+  | 'tournament_registration_verified'
+  | 'match_found'
+  | 'match_chat_message'
+  | 'community_chat_message'
+  | 'community_announcement'
+  | 'match_reported'
+  | 'match_completed'
+  | 'match_disputed'
+  | string;
+
+export type LiveNotification = {
+  id: string;
+  user_id: string;
+  type: NotificationType;
+  title: string;
+  body?: string | null;
+  href?: string | null;
+  metadata?: Record<string, unknown> | null;
+  read_at?: string | null;
+  created_at: string;
+};
+
+export type NotificationsResponse = {
+  notifications: LiveNotification[];
+  unreadCount: number;
 };
 
 export type OnlineTournamentSafeRegistration = OnlineTournamentRegistration & {

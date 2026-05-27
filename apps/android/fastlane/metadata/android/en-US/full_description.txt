@@ -1,0 +1,18 @@
+PlayMechi helps players get through tournament night without chasing links or room codes.
+
+Use the app to register for events, finish payment, check in, see room details when they are released, and submit your result proof after a match.
+
+What you can do:
+- Create your player profile and save your game IDs
+- Register for live PlayMechi tournaments
+- Pay entry fees through Paystack when required
+- See your entry, payment, and check-in status
+- Check in before your match
+- Open room details, fixtures, standings, and match updates
+- Upload a screenshot for result review
+- Read official updates and use support when you need help
+- Turn on alerts for room releases, check-in reminders, and proof reviews
+
+PlayMechi is for mobile players who want the basics to be clear: what is open, what is due next, and where to go when the match starts.
+
+Payments may open in Paystack. Tournament rooms, rewards, fees, fixtures, standings, and alerts depend on the active event and admin review.

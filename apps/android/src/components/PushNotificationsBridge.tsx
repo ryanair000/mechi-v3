@@ -1,8 +1,11 @@
 import * as Notifications from 'expo-notifications';
 import { router } from 'expo-router';
 import { useEffect, useRef } from 'react';
+import { Platform } from 'react-native';
 import { useAuth } from '../auth/AuthProvider';
 import { registerForPushNotificationsAsync, resolveNotificationRoute } from '../lib/push-notifications';
+
+const AUTO_REGISTER_PUSH = process.env.EXPO_PUBLIC_MECHI_AUTO_REGISTER_PUSH === '1';
 
 function handleNotificationResponse(response: Notifications.NotificationResponse) {
   const data = response.notification.request.content.data as Record<string, unknown> | undefined;
@@ -24,6 +27,10 @@ export function PushNotificationsBridge() {
       return;
     }
 
+    if (!AUTO_REGISTER_PUSH) {
+      return;
+    }
+
     const registrationKey = `${user.id}:${token}`;
     if (lastRegistrationKey.current === registrationKey) {
       return;
@@ -36,6 +43,10 @@ export function PushNotificationsBridge() {
   }, [token, user?.id]);
 
   useEffect(() => {
+    if (Platform.OS === 'web') {
+      return;
+    }
+
     let mounted = true;
 
     const openResponse = (response: Notifications.NotificationResponse | null) => {

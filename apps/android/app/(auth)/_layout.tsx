@@ -1,13 +1,13 @@
 import { Redirect, Stack } from 'expo-router';
-import { LaunchScreen } from '../../src/components/ui';
 import { useAuth } from '../../src/auth/AuthProvider';
+import { SplashNewScreen } from '../../src/components/new-screens';
 import { colors } from '../../src/theme';
 
 export default function AuthLayout() {
   const { initializing, token } = useAuth();
 
   if (initializing) {
-    return <LaunchScreen label="Checking session" />;
+    return <SplashNewScreen />;
   }
 
   if (token) {

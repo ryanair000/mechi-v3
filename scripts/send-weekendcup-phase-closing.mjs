@@ -25,7 +25,7 @@ const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const RESERVED_DOMAINS = new Set(['example.com', 'mechi.test', 'localhost', 'invalid']);
 const APP_URL = normalizeUrl(process.env.NEXT_PUBLIC_APP_URL || 'https://mechi.club');
 const WEEKEND_CUP_SLUG = 'playmechi-weekend-cup-season-1-2026-05-29';
-const CAMPAIGN_KEY = 'weekend-cup-early-bird-closing-2026-05-26';
+const CAMPAIGN_KEY = 'weekend-cup-registration-closing-regular-prices-2026-05-28';
 const FROM_ADDRESS = 'chezahub@gmail.com';
 const FROM = `PlayMechi <${FROM_ADDRESS}>`;
 const REPLY_TO = 'chezahub@gmail.com';
@@ -62,8 +62,16 @@ const PHASE_2_FEES = {
   mystery: 75,
 };
 
-const BLAST_SUBJECT = 'Early Bird closes soon. Weekend Cup Phase 2 is next.';
-const REMINDER_SUBJECT = 'Finish payment to lock your Weekend Cup slot';
+const FINAL_RUSH_FEES = {
+  pubgm: 100,
+  codm: 100,
+  efootball: 150,
+  freefire: 100,
+  mystery: 100,
+};
+
+const BLAST_SUBJECT = 'Weekend Cup registration closes soon. Regular prices are live.';
+const REMINDER_SUBJECT = 'Finish payment before Weekend Cup registration closes';
 
 function normalizeUrl(value) {
   return String(value || 'https://mechi.club').trim().replace(/\/+$/, '');
@@ -297,16 +305,16 @@ function buildBlastHtml(recipient) {
   const unsubscribeUrl = buildUnsubscribeUrl(recipient.email);
   const registerUrl = escapeUrl('/weekendcup');
   const body = `
-    <p class="kicker">Early Bird closing soon</p>
-    <h1>Boss move: lock the Early Bird price before Phase 2 opens.</h1>
-    <p>Hey ${escapeHtml(recipient.username || 'Player')}, PlayMechi Weekend Cup Season 1 starts this Friday, 29 May 2026. Early Bird is still active, but it is closing soon.</p>
-    <p>The next phase is <strong>Phase 2</strong>: PUBG Mobile, CODM, and Free Fire move to <strong>KSh 75</strong>. eFootball moves to <strong>KSh 125</strong>. That is the next price, not Final Rush.</p>
+    <p class="kicker">Registration closing soon</p>
+    <h1>Weekend Cup starts tomorrow. Lock your slot at the regular price.</h1>
+    <p>Hey ${escapeHtml(recipient.username || 'Player')}, PlayMechi Weekend Cup Season 1 starts Friday, 29 May 2026. Registration is still open, but it is closing soon for match-day setup.</p>
+    <p><strong>Regular pricing is live now</strong>: PUBG Mobile, CODM, and Free Fire are <strong>KSh 75</strong>. eFootball is <strong>KSh 125</strong>. Final Rush comes after this if slots remain.</p>
     <div class="grid">
-      ${infoRow('Early Bird now', 'PUBG/CODM/Free Fire KSh 50, eFootball KSh 100')}
-      ${infoRow('Next phase price', 'PUBG/CODM/Free Fire KSh 75, eFootball KSh 125')}
-      ${infoRow('Final Rush later', 'Not this phase')}
+      ${infoRow('Regular now', 'PUBG/CODM/Free Fire KSh 75, eFootball KSh 125')}
+      ${infoRow('Final Rush later', 'PUBG/CODM/Free Fire KSh 100, eFootball KSh 150')}
       ${infoRow('Prize pool', 'Up to KSh 10,500')}
       ${infoRow('Games', 'PUBG Mobile, CODM, eFootball, Free Fire')}
+      ${infoRow('Starts', 'Friday 29 May 2026')}
     </div>
     <p>Pick your game, use the exact in-game name, and pay through Paystack so your slot can be confirmed before match day.</p>
     <a class="btn" href="${registerUrl}">Register for Weekend Cup</a>
@@ -315,7 +323,7 @@ function buildBlastHtml(recipient) {
 
   return baseLayout({
     title: BLAST_SUBJECT,
-    preheader: 'Early Bird is closing soon. See Phase 2 prices before Final Rush.',
+    preheader: 'Weekend Cup starts tomorrow. Regular prices are live before Final Rush.',
     body,
     unsubscribeUrl,
   });
@@ -329,6 +337,7 @@ function buildReminderHtml(recipient) {
   const paymentUrl = escapeUrl(`/weekendcup/register?game=${encodeURIComponent(game)}`);
   const earlyBirdFee = EARLY_BIRD_FEES[game] || 50;
   const phase2Fee = PHASE_2_FEES[game] || 75;
+  const finalRushFee = FINAL_RUSH_FEES[game] || 100;
   const savedFee = Number.isFinite(Number(recipient.entryFeeKes)) && Number(recipient.entryFeeKes) > 0
     ? Number(recipient.entryFeeKes)
     : earlyBirdFee;
@@ -336,24 +345,25 @@ function buildReminderHtml(recipient) {
   const body = `
     <p class="kicker">Payment reminder</p>
     <h1>Your ${escapeHtml(gameLabel)} slot is saved, but not locked yet.</h1>
-    <p>Hey ${escapeHtml(recipient.username || 'Player')}, your Weekend Cup registration is still waiting for payment confirmation. Finish payment before Early Bird closes so your slot can move from pending to confirmed.</p>
+    <p>Hey ${escapeHtml(recipient.username || 'Player')}, your Weekend Cup registration is still waiting for payment confirmation. Finish payment before registration closes so your slot can move from pending to confirmed.</p>
     <div class="grid">
       ${infoRow('Game', gameLabel)}
       ${infoRow('Game tag', recipient.inGameUsername || 'Submitted on registration')}
       ${infoRow('Match time', GAME_DATES[game] || '29-31 May 2026')}
       ${infoRow('Your pending amount', `KSh ${savedFee}`)}
-      ${infoRow('Next phase price', `KSh ${phase2Fee}`)}
+      ${infoRow('Regular price now', `KSh ${phase2Fee}`)}
+      ${infoRow('Final Rush later', `KSh ${finalRushFee}`)}
       ${infoRow('Payment reference', recipient.paymentReference || 'Open registration to continue')}
     </div>
     <p>If checkout timed out, open your Weekend Cup registration again and continue from there. Your slot is only confirmed after Paystack clears the payment.</p>
     <a class="btn" href="${paymentUrl}">Complete payment</a>
     <p><a href="${registerUrl}" style="color:#138f80;font-weight:900;text-decoration:none;">Open registration details</a></p>
-    <p class="note">Do not wait for Final Rush pricing. Complete the pending Early Bird payment now while the current phase is still active.</p>
+    <p class="note">Do not wait for Final Rush pricing. Complete payment now while registration is still open.</p>
   `;
 
   return baseLayout({
     title: REMINDER_SUBJECT,
-    preheader: `Complete your ${gameLabel} payment before Early Bird closes.`,
+    preheader: `Complete your ${gameLabel} payment before Weekend Cup registration closes.`,
     body,
     unsubscribeUrl,
   });

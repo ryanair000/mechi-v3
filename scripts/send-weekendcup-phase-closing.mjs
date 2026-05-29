@@ -25,8 +25,11 @@ const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const RESERVED_DOMAINS = new Set(['example.com', 'mechi.test', 'localhost', 'invalid']);
 const APP_URL = normalizeUrl(process.env.NEXT_PUBLIC_APP_URL || 'https://mechi.club');
 const WEEKEND_CUP_SLUG = 'playmechi-weekend-cup-season-1-2026-05-29';
-const CAMPAIGN_KEY = 'weekend-cup-registration-closing-regular-prices-2026-05-28';
-const FROM_ADDRESS = 'chezahub@gmail.com';
+const CAMPAIGN_KEY = 'weekend-cup-registration-closes-today-regular-prices-2026-05-29';
+const FROM_ADDRESS =
+  process.env.EMAIL_FROM_ADDRESS?.trim() ||
+  process.env.AWS_SES_FROM_EMAIL?.trim() ||
+  'chezahub@gmail.com';
 const FROM = `PlayMechi <${FROM_ADDRESS}>`;
 const REPLY_TO = 'chezahub@gmail.com';
 
@@ -39,19 +42,11 @@ const GAME_LABELS = {
 };
 
 const GAME_DATES = {
-  pubgm: 'Friday 29 May 2026, 8:00 PM EAT',
+  pubgm: 'Sunday 31 May 2026, 8:00 PM EAT',
   codm: 'Saturday 30 May 2026, 8:00 PM EAT',
   efootball: 'Sunday 31 May 2026, 7:30 PM EAT',
   freefire: 'Sunday 31 May 2026, 8:00 PM EAT',
   mystery: 'Sunday 31 May 2026, 8:00 PM EAT',
-};
-
-const EARLY_BIRD_FEES = {
-  pubgm: 50,
-  codm: 50,
-  efootball: 100,
-  freefire: 50,
-  mystery: 50,
 };
 
 const PHASE_2_FEES = {
@@ -70,8 +65,8 @@ const FINAL_RUSH_FEES = {
   mystery: 100,
 };
 
-const BLAST_SUBJECT = 'Weekend Cup registration closes soon. Regular prices are live.';
-const REMINDER_SUBJECT = 'Finish payment before Weekend Cup registration closes';
+const BLAST_SUBJECT = 'Weekend Cup registration closes today. Regular prices are live.';
+const REMINDER_SUBJECT = 'Finish payment today before Weekend Cup registration closes';
 
 function normalizeUrl(value) {
   return String(value || 'https://mechi.club').trim().replace(/\/+$/, '');
@@ -305,16 +300,18 @@ function buildBlastHtml(recipient) {
   const unsubscribeUrl = buildUnsubscribeUrl(recipient.email);
   const registerUrl = escapeUrl('/weekendcup');
   const body = `
-    <p class="kicker">Registration closing soon</p>
-    <h1>Weekend Cup starts tomorrow. Lock your slot at the regular price.</h1>
-    <p>Hey ${escapeHtml(recipient.username || 'Player')}, PlayMechi Weekend Cup Season 1 starts Friday, 29 May 2026. Registration is still open, but it is closing soon for match-day setup.</p>
+    <p class="kicker">Registration closes today</p>
+    <h1>Weekend Cup registration closes today. Lock your slot at the regular price.</h1>
+    <p>Hey ${escapeHtml(recipient.username || 'Player')}, PlayMechi Weekend Cup Season 1 registration closes today, Friday 29 May 2026, so moderators can finish match-day setup.</p>
     <p><strong>Regular pricing is live now</strong>: PUBG Mobile, CODM, and Free Fire are <strong>KSh 75</strong>. eFootball is <strong>KSh 125</strong>. Final Rush comes after this if slots remain.</p>
     <div class="grid">
       ${infoRow('Regular now', 'PUBG/CODM/Free Fire KSh 75, eFootball KSh 125')}
       ${infoRow('Final Rush later', 'PUBG/CODM/Free Fire KSh 100, eFootball KSh 150')}
       ${infoRow('Prize pool', 'Up to KSh 10,500')}
       ${infoRow('Games', 'PUBG Mobile, CODM, eFootball, Free Fire')}
-      ${infoRow('Starts', 'Friday 29 May 2026')}
+      ${infoRow('Registration closes', 'Today - Friday 29 May 2026')}
+      ${infoRow('CODM', 'Saturday 30 May 2026, 8:00 PM EAT')}
+      ${infoRow('PUBG Mobile', 'Sunday 31 May 2026, 8:00 PM EAT')}
     </div>
     <p>Pick your game, use the exact in-game name, and pay through Paystack so your slot can be confirmed before match day.</p>
     <a class="btn" href="${registerUrl}">Register for Weekend Cup</a>
@@ -323,7 +320,7 @@ function buildBlastHtml(recipient) {
 
   return baseLayout({
     title: BLAST_SUBJECT,
-    preheader: 'Weekend Cup starts tomorrow. Regular prices are live before Final Rush.',
+    preheader: 'Registration closes today. CODM plays Saturday and PUBG Mobile plays Sunday.',
     body,
     unsubscribeUrl,
   });
@@ -335,30 +332,30 @@ function buildReminderHtml(recipient) {
   const gameLabel = GAME_LABELS[game] || 'your game';
   const registerUrl = escapeUrl(`/weekendcup/register?game=${encodeURIComponent(game)}`);
   const paymentUrl = escapeUrl(`/weekendcup/register?game=${encodeURIComponent(game)}`);
-  const earlyBirdFee = EARLY_BIRD_FEES[game] || 50;
   const phase2Fee = PHASE_2_FEES[game] || 75;
   const finalRushFee = FINAL_RUSH_FEES[game] || 100;
-  const savedFee = Number.isFinite(Number(recipient.entryFeeKes)) && Number(recipient.entryFeeKes) > 0
+  const amountDue = Number.isFinite(Number(recipient.entryFeeKes)) && Number(recipient.entryFeeKes) >= phase2Fee
     ? Number(recipient.entryFeeKes)
-    : earlyBirdFee;
+    : phase2Fee;
 
   const body = `
     <p class="kicker">Payment reminder</p>
     <h1>Your ${escapeHtml(gameLabel)} slot is saved, but not locked yet.</h1>
-    <p>Hey ${escapeHtml(recipient.username || 'Player')}, your Weekend Cup registration is still waiting for payment confirmation. Finish payment before registration closes so your slot can move from pending to confirmed.</p>
+    <p>Hey ${escapeHtml(recipient.username || 'Player')}, your Weekend Cup registration is still waiting for payment confirmation. Finish payment today, Friday 29 May 2026, so your slot can move from pending to confirmed before registration closes.</p>
     <div class="grid">
       ${infoRow('Game', gameLabel)}
       ${infoRow('Game tag', recipient.inGameUsername || 'Submitted on registration')}
       ${infoRow('Match time', GAME_DATES[game] || '29-31 May 2026')}
-      ${infoRow('Your pending amount', `KSh ${savedFee}`)}
+      ${infoRow('Amount due', `KSh ${amountDue}`)}
       ${infoRow('Regular price now', `KSh ${phase2Fee}`)}
       ${infoRow('Final Rush later', `KSh ${finalRushFee}`)}
+      ${infoRow('Registration closes', 'Today - Friday 29 May 2026')}
       ${infoRow('Payment reference', recipient.paymentReference || 'Open registration to continue')}
     </div>
     <p>If checkout timed out, open your Weekend Cup registration again and continue from there. Your slot is only confirmed after Paystack clears the payment.</p>
     <a class="btn" href="${paymentUrl}">Complete payment</a>
     <p><a href="${registerUrl}" style="color:#138f80;font-weight:900;text-decoration:none;">Open registration details</a></p>
-    <p class="note">Do not wait for Final Rush pricing. Complete payment now while registration is still open.</p>
+    <p class="note">Do not wait. Complete payment today while registration is still open.</p>
   `;
 
   return baseLayout({
@@ -427,7 +424,157 @@ function getSupabase() {
   return createClient(url, key, { auth: { persistSession: false, autoRefreshToken: false } });
 }
 
+function toAddressArray(value) {
+  return (Array.isArray(value) ? value : value ? [value] : [])
+    .map((address) => String(address || '').trim())
+    .filter(Boolean);
+}
+
+function sha256Hex(value) {
+  return crypto.createHash('sha256').update(value, 'utf8').digest('hex');
+}
+
+function hmac(key, value) {
+  return crypto.createHmac('sha256', key).update(value, 'utf8').digest();
+}
+
+function hmacHex(key, value) {
+  return crypto.createHmac('sha256', key).update(value, 'utf8').digest('hex');
+}
+
+function getAwsSignatureKey(secretAccessKey, dateStamp, region) {
+  const dateKey = hmac(`AWS4${secretAccessKey}`, dateStamp);
+  const regionKey = hmac(dateKey, region);
+  const serviceKey = hmac(regionKey, 'ses');
+  return hmac(serviceKey, 'aws4_request');
+}
+
+function getAmzDate(date) {
+  return date.toISOString().replace(/[:-]|\.\d{3}/g, '');
+}
+
+function getDateStamp(amzDate) {
+  return amzDate.slice(0, 8);
+}
+
+function getAwsSesRegion() {
+  return (
+    process.env.AWS_SES_REGION?.trim() ||
+    process.env.AWS_REGION?.trim() ||
+    process.env.AWS_DEFAULT_REGION?.trim() ||
+    'us-east-2'
+  );
+}
+
+function getAwsSesCredentials() {
+  const accessKeyId = process.env.AWS_SES_ACCESS_KEY_ID?.trim() || process.env.AWS_ACCESS_KEY_ID?.trim();
+  const secretAccessKey = process.env.AWS_SES_SECRET_ACCESS_KEY?.trim() || process.env.AWS_SECRET_ACCESS_KEY?.trim();
+  const sessionToken = process.env.AWS_SESSION_TOKEN?.trim() || '';
+
+  if (!accessKeyId || !secretAccessKey) {
+    throw new Error('AWS SES credentials are required when EMAIL_TRANSPORT=ses.');
+  }
+
+  return { accessKeyId, secretAccessKey, sessionToken };
+}
+
+function getAwsSesHeaders(headers) {
+  return Object.entries(headers ?? {})
+    .map(([name, value]) => ({ Name: name, Value: String(value) }))
+    .filter((header) => header.Name && header.Value)
+    .slice(0, 15);
+}
+
+async function sendWithAwsSes(message) {
+  const region = getAwsSesRegion();
+  const credentials = getAwsSesCredentials();
+  const endpoint = new URL(
+    process.env.AWS_SES_ENDPOINT_URL?.trim() ||
+      `https://email.${region}.amazonaws.com/v2/email/outbound-emails`
+  );
+  const amzDate = getAmzDate(new Date());
+  const dateStamp = getDateStamp(amzDate);
+  const headers = getAwsSesHeaders(message.headers);
+  const body = JSON.stringify({
+    ...(process.env.AWS_SES_CONFIGURATION_SET?.trim()
+      ? { ConfigurationSetName: process.env.AWS_SES_CONFIGURATION_SET.trim() }
+      : {}),
+    FromEmailAddress: message.from,
+    Destination: {
+      ToAddresses: toAddressArray(message.to),
+      ...(message.bcc ? { BccAddresses: toAddressArray(message.bcc) } : {}),
+    },
+    ...(message.replyTo ? { ReplyToAddresses: toAddressArray(message.replyTo) } : {}),
+    Content: {
+      Simple: {
+        Subject: { Charset: 'UTF-8', Data: message.subject },
+        Body: {
+          Html: { Charset: 'UTF-8', Data: message.html },
+          Text: { Charset: 'UTF-8', Data: message.text ?? htmlToText(message.html) },
+        },
+        ...(headers.length > 0 ? { Headers: headers } : {}),
+      },
+    },
+  });
+  const signedHeaders = credentials.sessionToken
+    ? 'content-type;host;x-amz-date;x-amz-security-token'
+    : 'content-type;host;x-amz-date';
+  const canonicalHeaders = [
+    'content-type:application/json',
+    `host:${endpoint.host}`,
+    `x-amz-date:${amzDate}`,
+    ...(credentials.sessionToken ? [`x-amz-security-token:${credentials.sessionToken}`] : []),
+    '',
+  ].join('\n');
+  const canonicalRequest = [
+    'POST',
+    endpoint.pathname,
+    '',
+    canonicalHeaders,
+    signedHeaders,
+    sha256Hex(body),
+  ].join('\n');
+  const credentialScope = `${dateStamp}/${region}/ses/aws4_request`;
+  const signature = hmacHex(
+    getAwsSignatureKey(credentials.secretAccessKey, dateStamp, region),
+    ['AWS4-HMAC-SHA256', amzDate, credentialScope, sha256Hex(canonicalRequest)].join('\n')
+  );
+  const response = await fetch(endpoint, {
+    method: 'POST',
+    headers: {
+      Authorization:
+        `AWS4-HMAC-SHA256 Credential=${credentials.accessKeyId}/${credentialScope}, ` +
+        `SignedHeaders=${signedHeaders}, Signature=${signature}`,
+      'Content-Type': 'application/json',
+      'X-Amz-Date': amzDate,
+      ...(credentials.sessionToken ? { 'X-Amz-Security-Token': credentials.sessionToken } : {}),
+    },
+    body,
+  });
+  const responseText = await response.text();
+
+  if (!response.ok) {
+    throw new Error(`AWS SES email send failed: ${response.status} ${responseText}`);
+  }
+
+  const data = responseText ? JSON.parse(responseText) : {};
+  return { messageId: data.MessageId ?? null };
+}
+
 function getTransport() {
+  const preference = process.env.EMAIL_TRANSPORT?.trim().toLowerCase();
+  if (preference === 'ses' || preference === 'aws-ses') {
+    return {
+      async verify() {
+        getAwsSesCredentials();
+      },
+      async sendMail(message) {
+        return sendWithAwsSes(message);
+      },
+      close() {},
+    };
+  }
+
   const host = process.env.SMTP_HOST?.trim();
   const user = process.env.SMTP_USER?.trim();
   const pass = process.env.SMTP_PASS?.trim();

@@ -33,6 +33,7 @@ import {
   WEEKEND_CUP_STREAM_LABEL,
   WEEKEND_CUP_VOTING_DISABLED_MESSAGE,
   WEEKEND_CUP_VOTING_ENABLED,
+  getWeekendCupGamePrizePoolLabel,
   getWeekendCupGamePricingLine,
 } from '@/lib/weekend-cup';
 
@@ -690,6 +691,9 @@ export function WeekendCupClient() {
                       </span>
                       <span className="mt-1 block text-xs font-bold text-[var(--accent-secondary-text)]">
                         {getWeekendCupGamePricingLine(game.game)}
+                      </span>
+                      <span className="mt-1 block text-xs leading-5 text-[var(--text-soft)]">
+                        {getWeekendCupGamePrizePoolLabel(game)}
                       </span>
                     </span>
                     <ArrowRight

@@ -9,12 +9,13 @@ import {
   WEEKEND_CUP_GAME_BY_KEY,
   WEEKEND_CUP_GAMES,
   WEEKEND_CUP_PENDING_PAYMENT_HELP_COPY,
-  WEEKEND_CUP_PRIZE_POOL_LABEL,
   WEEKEND_CUP_PROMO_IMAGE,
   WEEKEND_CUP_PUBLIC_PATH,
   WEEKEND_CUP_REGISTRATION_PATH,
   WEEKEND_CUP_ENTRY_PRICING,
+  WEEKEND_CUP_TOTAL_PRIZE_POOL_LABEL,
   WEEKEND_CUP_TITLE,
+  getWeekendCupGamePrizePoolLabel,
   isWeekendCupGame,
   isWeekendCupRegisterableGame,
 } from '@/lib/weekend-cup';
@@ -161,7 +162,10 @@ export default async function WeekendCupGameDetailPage({
                     {paymentLine}
                   </span>
                   <span className="brand-chip !rounded-[var(--radius-control)] px-3 py-1">
-                    {WEEKEND_CUP_PRIZE_POOL_LABEL}
+                    {WEEKEND_CUP_TOTAL_PRIZE_POOL_LABEL}
+                  </span>
+                  <span className="brand-chip !rounded-[var(--radius-control)] px-3 py-1">
+                    {getWeekendCupGamePrizePoolLabel(config)}
                   </span>
                 </div>
 

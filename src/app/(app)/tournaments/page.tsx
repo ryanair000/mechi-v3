@@ -33,6 +33,7 @@ import {
   WEEKEND_CUP_PUBLIC_PATH,
   WEEKEND_CUP_REGISTRATION_PATH,
   WEEKEND_CUP_TITLE,
+  getWeekendCupGamePrizePoolLabel,
 } from '@/lib/weekend-cup';
 import type { GameKey } from '@/types';
 
@@ -130,7 +131,7 @@ export default function TournamentsPage() {
           gameLogoUrl: getGameLogoImage(game.game as GameKey),
           id: `weekendcup-${game.game}`,
           metaLabel: isMysteryGame ? 'Mystery vote' : 'Paid entry',
-          prizeLabel: getWeekendCupGamePrizeLabel(game),
+          prizeLabel: getWeekendCupGamePrizePoolLabel(game),
           progress: isMysteryGame ? 0 : 8,
           secondaryActionHref: detailHref,
           secondaryActionLabel: 'Details',
@@ -307,23 +308,6 @@ function getOnlineTournamentGamePrizeLabel(game: OnlineTournamentGameConfig) {
   }, 0);
 
   return cashTotal > 0 ? `KSh ${cashTotal.toLocaleString('en-KE')}` : getOnlineTournamentPrizeLabel();
-}
-
-function getWeekendCupGamePrizeLabel(
-  game: OnlineTournamentGameConfig | { prizes: string[] }
-) {
-  const prizes =
-    'prizes' in game
-      ? game.prizes
-      : [game.firstPrize, game.secondPrize, game.thirdPrize].filter(
-          (prize): prize is string => Boolean(prize)
-        );
-  const cashTotal = prizes.reduce((total, prize) => {
-    const match = prize.match(/^KSh\s+([\d,]+)/i);
-    return match ? total + Number(match[1].replace(/,/g, '')) : total;
-  }, 0);
-
-  return cashTotal > 0 ? `KSh ${cashTotal.toLocaleString('en-KE')}` : 'TBA';
 }
 
 function getOnlineTournamentRegistration(

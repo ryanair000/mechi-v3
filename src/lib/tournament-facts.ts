@@ -7,7 +7,8 @@ import {
 } from '@/lib/online-tournament';
 import {
   WEEKEND_CUP_ACTIVE_PAYMENT_TIER,
-  WEEKEND_CUP_PRIZE_POOL_LABEL,
+  WEEKEND_CUP_TOTAL_PRIZE_POOL_LABEL,
+  getWeekendCupGamePrizePoolLabel,
   getWeekendCupPaymentTierAmount,
   getWeekendCupPaymentTierLabel,
 } from '@/lib/weekend-cup';
@@ -57,7 +58,8 @@ export function getWeekendCupGameFacts(game: OnlineTournamentGameConfig) {
       label: 'Entry fee',
       value: `${getWeekendCupPaymentTierLabel(WEEKEND_CUP_ACTIVE_PAYMENT_TIER)} KSh ${getWeekendCupPaymentTierAmount(WEEKEND_CUP_ACTIVE_PAYMENT_TIER, game.game)}`,
     },
-    { label: 'Prize pool', value: `${WEEKEND_CUP_PRIZE_POOL_LABEL}; ${getPrizePoolFromGamePrizes(game)}` },
+    { label: 'Total Weekend Cup prize pool', value: WEEKEND_CUP_TOTAL_PRIZE_POOL_LABEL },
+    { label: "This game's prize pool", value: getWeekendCupGamePrizePoolLabel(game) },
     { label: 'Deadline', value: formatEatDateTime(game.registrationClosesAt) },
     { label: 'Slots', value: 'Limited slots available' },
     { label: 'Check-in time', value: 'Dashboard check-in opens before match time' },

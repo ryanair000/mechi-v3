@@ -111,8 +111,8 @@ export const WEEKEND_CUP_REGISTRATION_CLOSES_LABEL =
 export const WEEKEND_CUP_REGISTRATION_OPENS_AT = '2026-05-13T00:00:00+03:00';
 export const WEEKEND_CUP_REGISTRATION_OPENS_LABEL = 'Open now';
 export const WEEKEND_CUP_CASH_PRIZE_POOL = 10500;
-export const WEEKEND_CUP_PRIZE_POOL_LABEL =
-  "Total Weekend Cup prize pool: up to KSh 10,500. See each game's prize breakdown below.";
+export const WEEKEND_CUP_TOTAL_PRIZE_POOL_LABEL = 'Total Weekend Cup prize pool: up to KSh 10,500';
+export const WEEKEND_CUP_PRIZE_POOL_LABEL = WEEKEND_CUP_TOTAL_PRIZE_POOL_LABEL;
 export const WEEKEND_CUP_STREAM_LABEL = 'Live on Mechi';
 export const WEEKEND_CUP_MAX_VOTE_SELECTIONS = 5;
 export const WEEKEND_CUP_ACTIVE_PAYMENT_TIER: OnlineTournamentPaymentTier = 'regular';
@@ -311,6 +311,61 @@ export const WEEKEND_CUP_TOTAL_SLOTS = WEEKEND_CUP_GAMES.reduce(
   (total, game) => total + game.slots,
   0
 );
+
+export function getWeekendCupGamePrizeBreakdown(game: OnlineTournamentGameConfig) {
+  return [
+    game.firstPrize,
+    game.secondPrize,
+    game.thirdPrize,
+    game.fourthPrize,
+    game.fifthPrize,
+  ]
+    .filter(Boolean)
+    .join(' / ');
+}
+
+export function getWeekendCupGamePrizePoolLabel(game: OnlineTournamentGameConfig) {
+  const prizes = [
+    game.firstPrize,
+    game.secondPrize,
+    game.thirdPrize,
+    game.fourthPrize,
+    game.fifthPrize,
+  ].filter((prize): prize is string => Boolean(prize));
+  const cashTotal = prizes.reduce((total, prize) => {
+    const match = prize.match(/^KSh\s+([\d,]+)/i);
+    return match ? total + Number(match[1].replace(/,/g, '')) : total;
+  }, 0);
+  const currencyTotals = new Map<string, number>();
+
+  prizes.forEach((prize) => {
+    if (/^KSh\s+/i.test(prize)) {
+      return;
+    }
+
+    const match = prize.match(/^([\d,]+)\s+(.+)$/);
+    if (!match) {
+      return;
+    }
+
+    const amount = Number(match[1].replace(/,/g, ''));
+    const currency = match[2].trim();
+    if (!Number.isFinite(amount) || !currency) {
+      return;
+    }
+
+    currencyTotals.set(currency, (currencyTotals.get(currency) ?? 0) + amount);
+  });
+
+  const parts = [
+    cashTotal > 0 ? `KSh ${cashTotal.toLocaleString('en-KE')}` : null,
+    ...Array.from(currencyTotals.entries()).map(
+      ([currency, amount]) => `${amount.toLocaleString('en-KE')} ${currency}`
+    ),
+  ].filter((part): part is string => Boolean(part));
+
+  return parts.length > 0 ? `This game's prize pool: ${parts.join(' + ')}` : 'This game prize pool: TBA';
+}
 
 export const WEEKEND_CUP_BALLOTS: WeekendCupBallotSeed[] = [
   {

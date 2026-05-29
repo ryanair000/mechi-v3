@@ -2,10 +2,19 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import toast from 'react-hot-toast';
-import { Banknote, CheckCircle2, Clock3, Loader2, Save, Search, ShieldCheck, TicketCheck } from 'lucide-react';
+import {
+  Banknote,
+  CheckCircle2,
+  Clock3,
+  Loader2,
+  RefreshCw,
+  Save,
+  Search,
+  ShieldCheck,
+  TicketCheck,
+} from 'lucide-react';
 import { useAuthFetch } from '@/components/AuthProvider';
 import {
-  WEEKEND_CUP_ENTRY_PRICING,
   WEEKEND_CUP_GAMES,
   formatWeekendCupPaymentStatus,
   type WeekendCupRegistrationSummary,
@@ -56,6 +65,14 @@ type WeekendCupOpsRegistration = {
 type WeekendCupOpsResponse = {
   registrations: WeekendCupOpsRegistration[];
   summary: WeekendCupRegistrationSummary;
+  scope?: {
+    game: OnlineTournamentGameKey;
+    label: string;
+    shortLabel: string;
+    isAdmin: boolean;
+    allGames?: boolean;
+    canViewRevenue?: boolean;
+  };
   error?: string;
 };
 
@@ -128,8 +145,9 @@ export function WeekendCupOpsClient(props: WeekendCupOpsClientProps) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [actingId, setActingId] = useState<string | null>(null);
   const [drafts, setDrafts] = useState<Record<string, PaymentDraft>>({});
+  const [lastLoadedAt, setLastLoadedAt] = useState<Date | null>(null);
 
-  const loadState = useCallback(async () => {
+  const loadState = useCallback(async (showToast = false) => {
     setLoading(true);
     try {
       const res = await authFetch(props.apiPath, { method: 'GET' });
@@ -140,12 +158,16 @@ export function WeekendCupOpsClient(props: WeekendCupOpsClientProps) {
       }
 
       setState(data);
+      setLastLoadedAt(new Date());
       setDrafts(
         (data.registrations ?? []).reduce<Record<string, PaymentDraft>>((next, registration) => {
           next[registration.id] = makeDraft(registration);
           return next;
         }, {})
       );
+      if (showToast) {
+        toast.success('Weekend Cup desk refreshed.');
+      }
     } catch {
       toast.error('Could not load Weekend Cup ops');
     } finally {
@@ -156,6 +178,25 @@ export function WeekendCupOpsClient(props: WeekendCupOpsClientProps) {
   useEffect(() => {
     void loadState();
   }, [loadState]);
+
+  useEffect(() => {
+    if (state?.scope?.game) {
+      setGameFilter(state.scope.game);
+    }
+  }, [state?.scope?.game]);
+
+  const visibleGames = useMemo(() => {
+    if (state?.scope?.allGames) {
+      return WEEKEND_CUP_GAMES;
+    }
+
+    if (state?.scope && !state.scope.isAdmin) {
+      return WEEKEND_CUP_GAMES.filter((game) => game.game === state.scope?.game);
+    }
+
+    return WEEKEND_CUP_GAMES;
+  }, [state?.scope]);
+  const canViewRevenue = !state?.scope || state.scope.canViewRevenue === true || state.scope.isAdmin;
 
   const filteredRegistrations = useMemo(() => {
     const registrations = state?.registrations ?? [];
@@ -187,7 +228,7 @@ export function WeekendCupOpsClient(props: WeekendCupOpsClientProps) {
     const registrations = state?.registrations ?? [];
     const games = state?.summary?.games;
 
-    const gameRows = WEEKEND_CUP_GAMES.map((gameConfig) => {
+    const gameRows = visibleGames.map((gameConfig) => {
       const gameRegistrations = registrations.filter(
         (registration) =>
           registration.game === gameConfig.game &&
@@ -199,10 +240,9 @@ export function WeekendCupOpsClient(props: WeekendCupOpsClientProps) {
       const checkedIn = paidRegistrations.filter(
         (registration) => registration.check_in_status === 'checked_in'
       ).length;
-      const revenueKes = paidRegistrations.reduce(
-        (sum, registration) => sum + (registration.entry_fee_kes ?? 0),
-        0
-      );
+      const revenueKes = canViewRevenue
+        ? paidRegistrations.reduce((sum, registration) => sum + (registration.entry_fee_kes ?? 0), 0)
+        : 0;
       const summary = games?.[gameConfig.game];
 
       return {
@@ -237,7 +277,17 @@ export function WeekendCupOpsClient(props: WeekendCupOpsClientProps) {
       latestRegistration,
       gameRows,
     };
-  }, [state?.registrations, state?.summary]);
+  }, [canViewRevenue, state?.registrations, state?.summary, visibleGames]);
+
+  const scopeLabel = state?.scope?.allGames
+    ? 'All Weekend Cup games'
+    : state?.scope && !state.scope.isAdmin ? state.scope.label : 'All Weekend Cup games';
+  const lastLoadedLabel = lastLoadedAt
+    ? lastLoadedAt.toLocaleTimeString('en-KE', {
+        hour: '2-digit',
+        minute: '2-digit',
+      })
+    : null;
 
   const handleQuickPaid = async (registration: WeekendCupOpsRegistration) => {
     setActingId(registration.id);
@@ -282,7 +332,7 @@ export function WeekendCupOpsClient(props: WeekendCupOpsClientProps) {
           registration_id: registrationId,
           payment_status: draft.payment_status,
           payment_tier: draft.payment_tier || null,
-          entry_fee_kes: draft.entry_fee_kes || null,
+          ...(canViewRevenue ? { entry_fee_kes: draft.entry_fee_kes || null } : {}),
           payment_reference: draft.payment_reference || null,
           payment_note: draft.payment_note || null,
           check_in_status: draft.check_in_status,
@@ -313,15 +363,32 @@ export function WeekendCupOpsClient(props: WeekendCupOpsClientProps) {
   return (
     <div className="page-container space-y-5 py-8">
       <section className="card circuit-panel p-5 sm:p-6">
-        <p className="section-title">{props.heading}</p>
-        <h1 className="text-2xl font-black text-[var(--text-primary)] sm:text-3xl">Weekend Cup payment ops</h1>
-        <p className="mt-3 max-w-3xl text-sm leading-7 text-[var(--text-secondary)]">
-          {props.subheading}
-        </p>
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+          <div className="min-w-0">
+            <p className="section-title">{props.heading}</p>
+            <h1 className="text-2xl font-black text-[var(--text-primary)] sm:text-3xl">
+              Weekend Cup payment ops
+            </h1>
+            <p className="mt-3 max-w-3xl text-sm leading-7 text-[var(--text-secondary)]">
+              {props.subheading}
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => void loadState(true)}
+            disabled={loading}
+            className="btn-ghost shrink-0"
+          >
+            <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
+            Refresh
+          </button>
+        </div>
         <div className="mt-4 flex flex-wrap gap-2">
-          <span className="brand-chip px-3 py-1">Live data reloads from Supabase</span>
-          <span className="brand-chip-coral px-3 py-1">Free Fire confirmed</span>
-          <span className="brand-chip px-3 py-1">Early Bird active</span>
+          <span className="brand-chip px-3 py-1">{scopeLabel}</span>
+          <span className="brand-chip px-3 py-1">
+            {lastLoadedLabel ? `Updated ${lastLoadedLabel}` : 'Live Supabase data'}
+          </span>
+          <span className="brand-chip-coral px-3 py-1">Regular pricing active</span>
         </div>
       </section>
 
@@ -364,18 +431,20 @@ export function WeekendCupOpsClient(props: WeekendCupOpsClientProps) {
               : 'No registration yet'}
           </p>
         </div>
-        <div className="card min-w-0 p-4 sm:p-5">
-          <p className="flex items-center gap-2 text-xs font-black uppercase tracking-[0.14em] text-[var(--text-soft)]">
-            <Banknote size={14} />
-            Revenue
-          </p>
-          <p className="mt-2 break-words text-xl font-black text-[var(--text-primary)] sm:text-2xl">
-            {formatKes(opsMetrics.totalRevenueKes)}
-          </p>
-          <p className="mt-1 text-xs text-[var(--text-secondary)]">
-            Early Bird: {state?.summary?.payment.earlyBirdPaidCount ?? 0}/{WEEKEND_CUP_ENTRY_PRICING.earlyBirdPaidLimit}
-          </p>
-        </div>
+        {canViewRevenue ? (
+          <div className="card min-w-0 p-4 sm:p-5">
+            <p className="flex items-center gap-2 text-xs font-black uppercase tracking-[0.14em] text-[var(--text-soft)]">
+              <Banknote size={14} />
+              Revenue
+            </p>
+            <p className="mt-2 break-words text-xl font-black text-[var(--text-primary)] sm:text-2xl">
+              {formatKes(opsMetrics.totalRevenueKes)}
+            </p>
+            <p className="mt-1 text-xs text-[var(--text-secondary)]">
+              Regular pricing is live for new payments
+            </p>
+          </div>
+        ) : null}
       </section>
 
       <section className="card p-5">
@@ -415,10 +484,12 @@ export function WeekendCupOpsClient(props: WeekendCupOpsClientProps) {
                   <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--text-soft)]">Checked in</p>
                   <p className="mt-1 font-black text-[var(--text-primary)]">{game.checkedIn}/{game.checkInCap}</p>
                 </div>
-                <div className="min-w-0">
-                  <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--text-soft)]">Revenue</p>
-                  <p className="mt-1 break-words font-black text-[var(--text-primary)]">{formatKes(game.revenueKes)}</p>
-                </div>
+                {canViewRevenue ? (
+                  <div className="min-w-0">
+                    <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--text-soft)]">Revenue</p>
+                    <p className="mt-1 break-words font-black text-[var(--text-primary)]">{formatKes(game.revenueKes)}</p>
+                  </div>
+                ) : null}
                 <div className="min-w-0">
                   <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--text-soft)]">Slots left</p>
                   <p className="mt-1 font-black text-[var(--text-primary)]">{game.spotsLeft}</p>
@@ -442,7 +513,10 @@ export function WeekendCupOpsClient(props: WeekendCupOpsClientProps) {
             />
           </div>
           <div className="flex flex-wrap gap-2">
-            {(['all', ...WEEKEND_CUP_GAMES.map((game) => game.game)] as const).map((value) => (
+            {[
+              ...(state?.scope && !state.scope.isAdmin && !state.scope.allGames ? [] : ['all'] as const),
+              ...visibleGames.map((game) => game.game),
+            ].map((value) => (
               <button
                 key={value}
                 type="button"
@@ -459,6 +533,12 @@ export function WeekendCupOpsClient(props: WeekendCupOpsClientProps) {
               </button>
             ))}
           </div>
+        </div>
+
+        <div className="mt-4 flex flex-wrap items-center gap-2 text-xs font-bold uppercase tracking-[0.12em] text-[var(--text-soft)]">
+          <span>{filteredRegistrations.length.toLocaleString()} players showing</span>
+          <span aria-hidden="true">|</span>
+          <span>{scopeLabel}</span>
         </div>
 
         <div className="mt-5 space-y-4">
@@ -567,28 +647,29 @@ export function WeekendCupOpsClient(props: WeekendCupOpsClientProps) {
                           className="input"
                         >
                           <option value="">Auto assign</option>
-                          <option value="early_bird">Early Bird</option>
                           <option value="regular">Regular</option>
                           <option value="late">Late</option>
                         </select>
                       </div>
-                      <div>
-                        <label className="label">Amount paid (KES)</label>
-                        <input
-                          type="text"
-                          value={draft.entry_fee_kes}
-                          onChange={(event) =>
-                            setDrafts((current) => ({
-                              ...current,
-                              [registration.id]: {
-                                ...draft,
-                                entry_fee_kes: event.target.value,
-                              },
-                            }))
-                          }
-                          className="input"
-                        />
-                      </div>
+                      {canViewRevenue ? (
+                        <div>
+                          <label className="label">Amount paid (KES)</label>
+                          <input
+                            type="text"
+                            value={draft.entry_fee_kes}
+                            onChange={(event) =>
+                              setDrafts((current) => ({
+                                ...current,
+                                [registration.id]: {
+                                  ...draft,
+                                  entry_fee_kes: event.target.value,
+                                },
+                              }))
+                            }
+                            className="input"
+                          />
+                        </div>
+                      ) : null}
                       <div>
                         <label className="label">Payment ref</label>
                         <input

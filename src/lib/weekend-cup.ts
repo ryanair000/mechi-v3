@@ -111,7 +111,7 @@ export const WEEKEND_CUP_CASH_PRIZE_POOL = 10500;
 export const WEEKEND_CUP_PRIZE_POOL_LABEL = 'Prize Pool Up to KSh 10,500';
 export const WEEKEND_CUP_STREAM_LABEL = 'Live on Mechi';
 export const WEEKEND_CUP_MAX_VOTE_SELECTIONS = 5;
-export const WEEKEND_CUP_ACTIVE_PAYMENT_TIER: OnlineTournamentPaymentTier = 'early_bird';
+export const WEEKEND_CUP_ACTIVE_PAYMENT_TIER: OnlineTournamentPaymentTier = 'regular';
 export const WEEKEND_CUP_HERO_LINE =
   'Free Fire is confirmed for the Mobile Games Cup. Register now and lock your slot.';
 export const WEEKEND_CUP_SERIES_TITLE = 'PlayMechi Weekend Cup 2026';
@@ -171,12 +171,12 @@ export const WEEKEND_CUP_ENTRY_PRICING = {
   regularKes: 75,
   lateKes: 100,
   earlyBirdPaidLimit: 68,
-  entryFromLabel: 'Entry from KSh 50',
+  entryFromLabel: 'Entry from KSh 75',
   earlyBirdLabel: 'Early Bird',
-  regularLabel: 'Phase 2',
+  regularLabel: 'Regular',
   lateLabel: 'Final Rush',
-  pricingLineLabel: 'Early Bird is active now',
-  earlyBirdLimitLabel: 'Early Bird is live now',
+  pricingLineLabel: 'Regular pricing is active now',
+  earlyBirdLimitLabel: 'Regular pricing is live now',
   earlyBirdPolicyLabel: 'Payment confirms the slot automatically.',
   confirmedAfterPaymentLabel: 'Slots move from pending to confirmed after payment clears.',
   pendingPaymentLabel: 'Pending payment',
@@ -476,7 +476,7 @@ export function getWeekendCupPaymentTierDisplay(
 
 export function getWeekendCupGamePricingLine(game: OnlineTournamentGameKey) {
   const fees = WEEKEND_CUP_GAME_ENTRY_FEES[game] ?? WEEKEND_CUP_GAME_ENTRY_FEES.codm;
-  return `Early Bird KSh ${fees.early_bird}`;
+  return `Regular KSh ${fees.regular}`;
 }
 
 export function getWeekendCupDefaultPaymentForConfirmation(

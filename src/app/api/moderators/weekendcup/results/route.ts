@@ -22,15 +22,32 @@ function isPrizeStatus(value: unknown): value is WeekendCupPrizeStatus {
   return typeof value === 'string' && PRIZE_STATUSES.includes(value as WeekendCupPrizeStatus);
 }
 
+function requireWeekendCupAssignment(
+  scope: Awaited<ReturnType<typeof requireModeratorTournamentScope>>
+) {
+  if (scope.response || scope.isAdmin) return null;
+  if (scope.assignment?.key.startsWith('weekendcup_')) return null;
+  return NextResponse.json(
+    { error: 'Weekend Cup moderator assignment required' },
+    { status: 403 }
+  );
+}
+
+function isAllGamesModerator(scope: Awaited<ReturnType<typeof requireModeratorTournamentScope>>) {
+  return scope.profile?.username.toLowerCase() === 'ranxxs';
+}
+
 export async function GET(request: NextRequest) {
   const scope = await requireModeratorTournamentScope(request);
   if (scope.response) return scope.response;
+  const assignmentResponse = requireWeekendCupAssignment(scope);
+  if (assignmentResponse) return assignmentResponse;
 
   const { searchParams } = new URL(request.url);
   const gameParam = cleanText(searchParams.get('game'), 20);
   const game = isWeekendCupGame(gameParam) ? gameParam : null;
 
-  if (!scope.isAdmin && game && scope.assignment?.game !== game) {
+  if (!scope.isAdmin && !isAllGamesModerator(scope) && game && scope.assignment?.game !== game) {
     return NextResponse.json({ error: 'Access limited to your assigned game' }, { status: 403 });
   }
 
@@ -57,6 +74,8 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   const scope = await requireModeratorTournamentScope(request);
   if (scope.response) return scope.response;
+  const assignmentResponse = requireWeekendCupAssignment(scope);
+  if (assignmentResponse) return assignmentResponse;
 
   let body: Record<string, unknown>;
   try {
@@ -70,7 +89,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Invalid game' }, { status: 400 });
   }
 
-  if (!scope.isAdmin && scope.assignment?.game !== game) {
+  if (!scope.isAdmin && !isAllGamesModerator(scope) && scope.assignment?.game !== game) {
     return NextResponse.json({ error: 'You can only finalize results for your assigned game' }, { status: 403 });
   }
 
@@ -175,6 +194,8 @@ export async function POST(request: NextRequest) {
 export async function PATCH(request: NextRequest) {
   const scope = await requireModeratorTournamentScope(request);
   if (scope.response) return scope.response;
+  const assignmentResponse = requireWeekendCupAssignment(scope);
+  if (assignmentResponse) return assignmentResponse;
 
   if (!scope.isAdmin) {
     return NextResponse.json({ error: 'Admin access required for prize updates' }, { status: 403 });

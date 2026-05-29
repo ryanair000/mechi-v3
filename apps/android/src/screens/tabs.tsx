@@ -5,7 +5,7 @@ import { useState } from 'react';
 import { Image, Pressable, Switch, Text, View } from 'react-native';
 import { getTournamentRegistrationSummary, getTournamentState } from '../api/mechi';
 import { useAuth } from '../auth/AuthProvider';
-import { TOURNAMENT_GAMES, TOURNAMENT_PRIZE_POOL, getFallbackTournamentSummary, getTournamentDisplayStatus, getTournamentTotals } from '../config/tournament';
+import { TOURNAMENT_ENTRY_FROM_LABEL, TOURNAMENT_GAMES, TOURNAMENT_PRIZE_POOL, getFallbackTournamentSummary, getTournamentDisplayStatus, getTournamentTotals } from '../config/tournament';
 import { registerForPushNotificationsAsync } from '../lib/push-notifications';
 import {
   Card,
@@ -54,7 +54,7 @@ export function HomeScreen() {
         label={status === 'open' ? 'Live on Mechi' : status === 'active' ? 'Match Day' : 'Results Desk'}
         title="Weekend Cup"
         subtitle="Season 1"
-        meta={`${TOURNAMENT_PRIZE_POOL} | Limited slots | ${rooms} rooms live`}
+        meta={`${TOURNAMENT_PRIZE_POOL} | ${TOURNAMENT_ENTRY_FROM_LABEL} | ${rooms} rooms live`}
         action="View Tournament"
         onPress={() => router.push({ pathname: '/tournament/[id]', params: { id: 'pubgm' } })}
       />
@@ -79,7 +79,7 @@ export function HomeScreen() {
       </View>
 
       <SectionTitle title="Player Desk" />
-      <RowCard icon="ticket-outline" title="Register for Weekend Cup" body="Pick your game, confirm handles, and pay securely." onPress={() => router.push('/(tabs)/register')} />
+      <RowCard icon="ticket-outline" title="Register for Weekend Cup" body={`${TOURNAMENT_ENTRY_FROM_LABEL}. Pick your game, confirm handles, and pay securely.`} onPress={() => router.push('/(tabs)/register')} />
       <RowCard icon="cloud-upload-outline" title="Submit Proof" body="Upload screenshots for match review." onPress={() => router.push('/submit-proof')} />
     </Screen>
   );
@@ -141,6 +141,7 @@ export function ArenaScreen() {
                   <StatusPill label={count?.full ? 'Waitlist' : 'Registration Open'} tone={count?.full ? 'coral' : 'teal'} />
                   <Text selectable style={{ color: p.text, fontSize: 22, lineHeight: 24, fontWeight: '900', textTransform: 'uppercase' }}>{game.label}</Text>
                   <Text selectable style={{ color: p.muted, fontSize: 12, lineHeight: 17, fontWeight: '700' }}>{game.format} | {game.dateLabel}</Text>
+                  <Text selectable style={{ color: p.teal, fontSize: 12, lineHeight: 16, fontWeight: '900' }}>{game.entryFeeLabel}</Text>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                     <Ionicons name="trophy-outline" color={p.amber} size={18} />
                     <Text selectable style={{ color: p.teal, fontSize: 15, fontWeight: '900' }}>{game.firstPrize}</Text>

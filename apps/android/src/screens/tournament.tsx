@@ -5,7 +5,7 @@ import { Linking, Pressable, Text, View } from 'react-native';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { checkInTournament, getTournamentRegistrationSummary, getTournamentState, registerForTournament, submitTournamentResult, verifyWeekendCupPayment } from '../api/mechi';
 import { useAuth } from '../auth/AuthProvider';
-import { TOURNAMENT_GAME_BY_KEY, TOURNAMENT_GAMES, TOURNAMENT_PRIZE_POOL, TOURNAMENT_PUBLIC_URL, TOURNAMENT_RULES, getFallbackTournamentSummary, getGameFromParam, getTournamentTotals } from '../config/tournament';
+import { TOURNAMENT_ENTRY_FROM_LABEL, TOURNAMENT_GAME_BY_KEY, TOURNAMENT_GAMES, TOURNAMENT_PRIZE_POOL, TOURNAMENT_PUBLIC_URL, TOURNAMENT_REGULAR_PRICING_LABEL, TOURNAMENT_RULES, getFallbackTournamentSummary, getGameFromParam, getTournamentTotals } from '../config/tournament';
 import { Card, Field, HeroCard, PrimaryButton, RowCard, Screen, SectionTitle, Stat, StatusPill, images, p, useToast } from '../ui/production-ui';
 import type { OnlineTournamentGameKey } from '../types';
 
@@ -37,7 +37,7 @@ export function TournamentDetailsScreen() {
       backTo="/(tabs)/arena"
       backLabel="Arena"
     >
-      <HeroCard image={img[game]} label="Live on Mechi" title="Weekend Cup" subtitle={config.shortLabel} meta={`${TOURNAMENT_PRIZE_POOL} | Limited slots`} action="Register" onPress={() => router.push({ pathname: '/(tabs)/register', params: { game } })} />
+      <HeroCard image={img[game]} label="Live on Mechi" title="Weekend Cup" subtitle={config.shortLabel} meta={`${TOURNAMENT_PRIZE_POOL} | ${config.entryFeeLabel} | Limited slots`} action="Register" onPress={() => router.push({ pathname: '/(tabs)/register', params: { game } })} />
       <View style={{ flexDirection: 'row', gap: 10 }}>
         <Stat label="Registered" value={gameSummary?.registered ?? 0} icon="people-outline" />
         <Stat label="Checked In" value={gameSummary?.checkedIn ?? 0} icon="flash-outline" />
@@ -46,6 +46,12 @@ export function TournamentDetailsScreen() {
       <Card>
         <Text selectable style={{ color: p.text, fontSize: 17, fontWeight: '900' }}>Prize Desk</Text>
         <Text selectable style={{ color: p.muted, fontSize: 13, lineHeight: 19, fontWeight: '700' }}>1st: {config.firstPrize} | 2nd: {config.secondPrize} | 3rd: {config.thirdPrize}</Text>
+      </Card>
+      <Card>
+        <Text selectable style={{ color: p.text, fontSize: 17, fontWeight: '900' }}>Entry Payment</Text>
+        <Text selectable style={{ color: p.muted, fontSize: 13, lineHeight: 19, fontWeight: '700' }}>
+          {config.entryFeeLabel}. Paystack confirms your slot after payment clears.
+        </Text>
       </Card>
       <SectionTitle title="Rules" />
       {TOURNAMENT_RULES.slice(0, 5).map((rule) => (
@@ -158,13 +164,20 @@ export function RegisterTournamentScreen() {
       <Card>
         <Text selectable style={{ color: p.text, fontSize: 16, fontWeight: '900' }}>{TOURNAMENT_GAME_BY_KEY[game].label}</Text>
         <Text selectable style={{ color: p.muted, fontSize: 13, lineHeight: 19, fontWeight: '700' }}>{TOURNAMENT_GAME_BY_KEY[game].format}</Text>
+        <Text selectable style={{ color: p.teal, fontSize: 13, lineHeight: 19, fontWeight: '900' }}>{TOURNAMENT_GAME_BY_KEY[game].entryFeeLabel}</Text>
         {registration ? (
           <StatusPill
-            label={isPaid ? 'Payment verified' : registration.payment_status === 'pending' ? 'Payment pending' : 'Registered'}
-            tone={isPaid ? 'teal' : registration.payment_status === 'pending' ? 'amber' : 'blue'}
+            label={isPaid ? 'Payment verified' : registration.payment_status === 'pending_payment' ? 'Payment pending' : 'Registered'}
+            tone={isPaid ? 'teal' : registration.payment_status === 'pending_payment' ? 'amber' : 'blue'}
           />
         ) : null}
       </Card>
+      <RowCard
+        icon="card-outline"
+        title={TOURNAMENT_REGULAR_PRICING_LABEL}
+        body={`${TOURNAMENT_ENTRY_FROM_LABEL}. eFootball is KSh 125.`}
+        right={<View />}
+      />
       <Field label="Exact in-game name / ID" value={ign} onChangeText={setIgn} placeholder={user?.username ?? 'Your IGN'} />
       <Field label="Instagram username" value={instagram} onChangeText={setInstagram} placeholder="@playmechi" autoCapitalize="none" />
       <Field label="YouTube name or email" value={youtube} onChangeText={setYoutube} placeholder="Your YouTube name" />

@@ -27,7 +27,8 @@ type ModeratorNavItem = {
 
 function getModeratorNavItems(
   assignedGame: OnlineTournamentGameKey,
-  tournamentKey?: ModeratorTournamentKey
+  tournamentKey?: ModeratorTournamentKey,
+  username?: string
 ): ModeratorNavItem[] {
   if (tournamentKey === 'weka_mawe_efootball') {
     return [
@@ -51,8 +52,8 @@ function getModeratorNavItems(
     ];
   }
 
-  const isWeekendCup =
-    tournamentKey?.startsWith('weekendcup_') || tournamentKey?.startsWith('playmechi_');
+  const isWeekendCup = tournamentKey?.startsWith('weekendcup_');
+  const canSeeAllWeekendCupGames = username?.toLowerCase() === 'ranxxs';
   const game = ONLINE_TOURNAMENT_GAME_BY_KEY[assignedGame];
   const gameParam = encodeURIComponent(assignedGame);
 
@@ -65,7 +66,30 @@ function getModeratorNavItems(
       },
     ];
 
-    if (assignedGame === 'efootball') {
+    if (canSeeAllWeekendCupGames) {
+      for (const gameKey of ['pubgm', 'codm', 'freefire'] as const) {
+        const gameConfig = ONLINE_TOURNAMENT_GAME_BY_KEY[gameKey];
+        const encodedGame = encodeURIComponent(gameKey);
+        items.push(
+          {
+            href: `/moderators/weekendcup/lobbies?game=${encodedGame}`,
+            label: `${gameConfig.shortLabel} Lobbies`,
+            icon: MonitorPlay,
+          },
+          {
+            href: `/moderators/weekendcup/scores?game=${encodedGame}`,
+            label: `${gameConfig.shortLabel} Scores`,
+            icon: ClipboardCheck,
+          }
+        );
+      }
+
+      items.push({
+        href: '/moderators/weekendcup/bracket',
+        label: 'eFootball Bracket',
+        icon: Trophy,
+      });
+    } else if (assignedGame === 'efootball') {
       items.push({
         href: '/moderators/weekendcup/bracket',
         label: 'eFootball Bracket',
@@ -130,16 +154,18 @@ export function ModeratorNavigation({
   collapsed = false,
   role,
   tournamentKey,
+  username,
   variant = 'desktop',
 }: {
   assignedGame?: OnlineTournamentGameKey;
   collapsed?: boolean;
   role: ModeratorNavRole;
   tournamentKey?: ModeratorTournamentKey;
+  username?: string;
   variant?: 'desktop' | 'mobile';
 }) {
   const pathname = usePathname();
-  const navItems = getModeratorNavItems(assignedGame, tournamentKey);
+  const navItems = getModeratorNavItems(assignedGame, tournamentKey, username);
   const items = navItems.filter((item) => !item.adminOnly || role === 'admin');
 
   if (variant === 'mobile') {

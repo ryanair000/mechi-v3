@@ -6,8 +6,10 @@ import {
   type OnlineTournamentGameConfig,
 } from '@/lib/online-tournament';
 import {
+  WEEKEND_CUP_ACTIVE_PAYMENT_TIER,
   WEEKEND_CUP_PRIZE_POOL_LABEL,
   getWeekendCupPaymentTierAmount,
+  getWeekendCupPaymentTierLabel,
 } from '@/lib/weekend-cup';
 import {
   CUSTOMER_WHATSAPP_SUPPORT_NUMBER_LABEL,
@@ -53,7 +55,7 @@ export function getWeekendCupGameFacts(game: OnlineTournamentGameConfig) {
     { label: 'Game', value: game.label },
     {
       label: 'Entry fee',
-      value: `Early Bird KSh ${getWeekendCupPaymentTierAmount('early_bird', game.game)}`,
+      value: `${getWeekendCupPaymentTierLabel(WEEKEND_CUP_ACTIVE_PAYMENT_TIER)} KSh ${getWeekendCupPaymentTierAmount(WEEKEND_CUP_ACTIVE_PAYMENT_TIER, game.game)}`,
     },
     { label: 'Prize pool', value: `${WEEKEND_CUP_PRIZE_POOL_LABEL}; ${getPrizePoolFromGamePrizes(game)}` },
     { label: 'Deadline', value: formatEatDateTime(game.registrationClosesAt) },

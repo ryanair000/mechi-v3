@@ -28,6 +28,7 @@ import {
 } from '@/lib/upcoming-playmechi-tournaments';
 import {
   WEEKEND_CUP_GAMES,
+  WEEKEND_CUP_ENTRY_PRICING,
   WEEKEND_CUP_PRIZE_POOL_LABEL,
   WEEKEND_CUP_PUBLIC_PATH,
   WEEKEND_CUP_REGISTRATION_PATH,
@@ -133,7 +134,7 @@ export default function TournamentsPage() {
           progress: isMysteryGame ? 0 : 8,
           secondaryActionHref: detailHref,
           secondaryActionLabel: 'Details',
-          slotsLabel: isMysteryGame ? 'Vote decides the slot' : 'Entry from KSh 50',
+          slotsLabel: isMysteryGame ? 'Vote decides the slot' : WEEKEND_CUP_ENTRY_PRICING.entryFromLabel,
           startsLabel: `${game.dateLabel.replace(' 2026', '')}, ${game.timeLabel}`,
           statusClassName: getStatusClasses('open'),
           statusLabel: 'Open',
@@ -221,7 +222,7 @@ export default function TournamentsPage() {
                 {PRIMARY_UPCOMING_PLAYMECHI_TOURNAMENT.title}
               </h2>
               <p className="mt-3 max-w-2xl text-sm leading-6 text-[var(--text-secondary)]">
-                3 games. 3 days. Starts 29 May. Entry from KSh 50.
+                4 games. 3 days. Starts 29 May. {WEEKEND_CUP_ENTRY_PRICING.entryFromLabel}.
               </p>
 
               <div className="mt-4 flex flex-wrap gap-2">
@@ -229,7 +230,7 @@ export default function TournamentsPage() {
                   {WEEKEND_CUP_PRIZE_POOL_LABEL}
                 </span>
                 <span className="brand-chip !rounded-[var(--radius-control)] px-3 py-1">
-                  Entry from KSh 50
+                  {WEEKEND_CUP_ENTRY_PRICING.entryFromLabel}
                 </span>
               </div>
 

@@ -6,6 +6,7 @@ import { TimelineContent } from "@/components/ui/timeline-animation";
 import { cn } from "@/lib/utils";
 import {
   WEEKEND_CUP_EVENT_DATES,
+  WEEKEND_CUP_ENTRY_PRICING,
   WEEKEND_CUP_PRIZE_POOL_LABEL,
   WEEKEND_CUP_REGISTRATION_PATH,
   WEEKEND_CUP_TITLE,
@@ -80,7 +81,7 @@ export default function HeroSection() {
             </span>{" "}
             {isSwahili ? "Mei 29-31." : WEEKEND_CUP_EVENT_DATES + "."}{" "}
             <span className="bg-gradient-to-r from-blue-400 to-blue-600 bg-clip-text font-semibold text-transparent">
-              {isSwahili ? "Jisajili Sasa." : "Entry from KSh 50."}
+              {isSwahili ? "Jisajili Sasa." : `${WEEKEND_CUP_ENTRY_PRICING.entryFromLabel}.`}
             </span>{" "}
           </TimelineContent>
 

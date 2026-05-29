@@ -23,6 +23,7 @@ import {
   WEEKEND_CUP_REGISTRATION_ENABLED,
   WEEKEND_CUP_REGISTRATION_PATH,
   WEEKEND_CUP_SUPPORT_URL,
+  WEEKEND_CUP_ACTIVE_PAYMENT_TIER,
   formatWeekendCupPaymentStatus,
   getWeekendCupFallbackSummary,
   getWeekendCupPaymentTierAmount,
@@ -113,7 +114,6 @@ export function WeekendCupDashboardClient() {
   );
   const currentRegistration =
     summary.registrations.find((registration) => registration.game === selectedConfig.game) ?? null;
-  const currentCounts = summary.games[selectedConfig.game];
   const signInHref = getLoginPath(
     `${WEEKEND_CUP_DASHBOARD_PATH}?game=${encodeURIComponent(selectedConfig.game)}`,
     'signin_required'
@@ -130,12 +130,12 @@ export function WeekendCupDashboardClient() {
 
   const slotBooked = currentRegistration?.payment_status === 'paid';
   const fallbackEntryAmount =
-    formatKes(getWeekendCupPaymentTierAmount('early_bird', selectedConfig.game)) ?? 'KSh 50';
+    formatKes(getWeekendCupPaymentTierAmount(WEEKEND_CUP_ACTIVE_PAYMENT_TIER, selectedConfig.game)) ?? 'KSh 75';
   const paymentLabel = currentRegistration?.payment_tier
     ? `${getWeekendCupPaymentTierLabel(currentRegistration.payment_tier)} ${formatKes(
         getWeekendCupPaymentTierAmount(currentRegistration.payment_tier, currentRegistration.game)
       ) ?? fallbackEntryAmount}`
-    : `Early Bird ${fallbackEntryAmount}`;
+    : `${getWeekendCupPaymentTierLabel(WEEKEND_CUP_ACTIVE_PAYMENT_TIER)} ${fallbackEntryAmount}`;
   const paymentAmountLabel = formatKes(currentRegistration?.entry_fee_kes) ?? fallbackEntryAmount;
 
   useEffect(() => {

@@ -13,6 +13,7 @@ import {
   WEEKEND_CUP_PROMO_IMAGE,
   WEEKEND_CUP_PUBLIC_PATH,
   WEEKEND_CUP_REGISTRATION_PATH,
+  WEEKEND_CUP_ENTRY_PRICING,
   WEEKEND_CUP_TITLE,
   isWeekendCupGame,
   isWeekendCupRegisterableGame,
@@ -99,7 +100,9 @@ export default async function WeekendCupGameDetailPage({
   const detailCopy = getWeekendCupDetailCopy(game);
   const detailImage = getWeekendCupDetailImage(game);
   const gameLogo = getGameLogoImage(game);
-  const paymentLine = isWeekendCupRegisterableGame(game) ? 'Entry from KSh 50' : 'Community vote';
+  const paymentLine = isWeekendCupRegisterableGame(game)
+    ? WEEKEND_CUP_ENTRY_PRICING.entryFromLabel
+    : 'Community vote';
 
   return (
     <div className="weekend-cup-shell app-prototype-shell page-base min-h-screen bg-[radial-gradient(circle_at_top,rgba(50,224,196,0.08),transparent_32%),linear-gradient(180deg,#07111e_0%,#050b13_100%)]">

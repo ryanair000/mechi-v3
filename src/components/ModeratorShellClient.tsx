@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, type ReactNode } from 'react';
+import Link from 'next/link';
 import { PanelLeftClose, PanelLeftOpen, ShieldCheck } from 'lucide-react';
 import { BrandLogo } from '@/components/BrandLogo';
 import { ModeratorNavigation } from '@/components/ModeratorNavigation';
@@ -48,13 +49,13 @@ export function ModeratorShellClient({ children, profile, tournament }: Moderato
       >
         <div className={cn('border-b border-[var(--border-color)] py-4', sidebarCollapsed ? 'px-3' : 'px-4')}>
           <div className={cn('flex gap-2', sidebarCollapsed ? 'flex-col items-center' : 'items-center justify-between')}>
-            <a
+            <Link
               href="/dashboard"
               aria-label="Mechi dashboard"
               className={cn('flex items-center', sidebarCollapsed ? 'justify-center' : undefined)}
             >
               <BrandLogo size="sm" variant={sidebarCollapsed ? 'symbol' : 'reversed'} />
-            </a>
+            </Link>
             <button
               type="button"
               aria-label={toggleLabel}
@@ -106,6 +107,7 @@ export function ModeratorShellClient({ children, profile, tournament }: Moderato
               collapsed={sidebarCollapsed}
               role={profile.role}
               tournamentKey={tournament.key}
+              username={profile.username}
             />
           </nav>
         </div>
@@ -127,6 +129,7 @@ export function ModeratorShellClient({ children, profile, tournament }: Moderato
               assignedGame={tournament.game}
               role={profile.role}
               tournamentKey={tournament.key}
+              username={profile.username}
               variant="mobile"
             />
           </div>

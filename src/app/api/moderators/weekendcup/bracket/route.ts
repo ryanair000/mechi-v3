@@ -28,9 +28,23 @@ function isBracketStatus(value: unknown): value is WeekendCupBracketStatus {
   return typeof value === 'string' && BRACKET_STATUSES.includes(value as WeekendCupBracketStatus);
 }
 
+function requireWeekendCupAssignment(
+  scope: Awaited<ReturnType<typeof requireModeratorTournamentScope>>
+) {
+  if (scope.response || scope.isAdmin) return null;
+  if (scope.profile?.username.toLowerCase() === 'ranxxs') return null;
+  if (scope.assignment?.key === 'weekendcup_efootball') return null;
+  return NextResponse.json(
+    { error: 'Weekend Cup eFootball moderator assignment required' },
+    { status: 403 }
+  );
+}
+
 export async function GET(request: NextRequest) {
   const scope = await requireModeratorTournamentScope(request);
   if (scope.response) return scope.response;
+  const assignmentResponse = requireWeekendCupAssignment(scope);
+  if (assignmentResponse) return assignmentResponse;
 
   const supabase = createServiceClient();
   const { data, error } = await supabase
@@ -52,6 +66,8 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   const scope = await requireModeratorTournamentScope(request);
   if (scope.response) return scope.response;
+  const assignmentResponse = requireWeekendCupAssignment(scope);
+  if (assignmentResponse) return assignmentResponse;
 
   if (!scope.isAdmin && scope.assignment?.game !== 'efootball') {
     return NextResponse.json({ error: 'Only eFootball moderators can generate brackets' }, { status: 403 });
@@ -159,6 +175,8 @@ export async function POST(request: NextRequest) {
 export async function PATCH(request: NextRequest) {
   const scope = await requireModeratorTournamentScope(request);
   if (scope.response) return scope.response;
+  const assignmentResponse = requireWeekendCupAssignment(scope);
+  if (assignmentResponse) return assignmentResponse;
 
   if (!scope.isAdmin && scope.assignment?.game !== 'efootball') {
     return NextResponse.json({ error: 'Only eFootball moderators can update brackets' }, { status: 403 });

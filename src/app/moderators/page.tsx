@@ -32,7 +32,7 @@ async function getAssignedModeratorHome() {
   if (!tournamentKey) return null;
   if (tournamentKey === 'days_esports_tz_efootball') return '/moderators/tz';
   if (tournamentKey === 'weka_mawe_efootball') return '/moderators/weka-mawe';
-  if (tournamentKey.startsWith('weekendcup_') || tournamentKey.startsWith('playmechi_')) {
+  if (tournamentKey.startsWith('weekendcup_')) {
     return '/moderators/weekendcup';
   }
 

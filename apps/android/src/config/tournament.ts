@@ -19,6 +19,8 @@ export type TournamentGameConfig = {
   registrationClosed?: boolean;
   slots: number;
   checkInCap: number;
+  entryFeeKes: number;
+  entryFeeLabel: string;
   format: string;
   matchCount: string;
   scoring: string;
@@ -36,9 +38,14 @@ export const TOURNAMENT_PUBLIC_URL = 'https://mechi.club/weekendcup';
 export const TOURNAMENT_REGISTER_URL = 'https://mechi.club/weekendcup/register';
 export const TOURNAMENT_DATES = '29-31 May 2026';
 export const TOURNAMENT_TIME = '8:00 PM EAT';
-export const TOURNAMENT_TOTAL_SLOTS = 256;
-export const TOURNAMENT_TOTAL_CHECK_IN_CAP = 256;
-export const TOURNAMENT_PRIZE_POOL = 'Prize pool up to KSh 7,500';
+export const TOURNAMENT_TOTAL_SLOTS = 272;
+export const TOURNAMENT_TOTAL_CHECK_IN_CAP = 272;
+export const TOURNAMENT_PRIZE_POOL = 'Prize pool up to KSh 10,500';
+export const TOURNAMENT_ACTIVE_PAYMENT_TIER = 'regular';
+export const TOURNAMENT_ENTRY_FROM_LABEL = 'Entry from KSh 75';
+export const TOURNAMENT_REGULAR_PRICING_LABEL = 'Regular pricing is live';
+export const TOURNAMENT_MOBILE_ENTRY_FEE_KES = 75;
+export const TOURNAMENT_EFOOTBALL_ENTRY_FEE_KES = 125;
 export const PLAYMECHI_INSTAGRAM_URL = 'https://www.instagram.com/playmechi/';
 export const PLAYMECHI_YOUTUBE_URL = 'https://www.youtube.com/@playmechi';
 export const PLAYMECHI_SUPPORT_LABEL = '+254 733 638 841';
@@ -56,6 +63,8 @@ export const TOURNAMENT_GAMES: TournamentGameConfig[] = [
     registrationClosesAt: '2026-05-29T19:00:00+03:00',
     slots: 80,
     checkInCap: 80,
+    entryFeeKes: TOURNAMENT_MOBILE_ENTRY_FEE_KES,
+    entryFeeLabel: 'Regular KSh 75',
     format: 'Solo battle royale room',
     matchCount: '3 matches',
     scoring: '1 kill = 1 point. Frag smart, stay alive.',
@@ -74,6 +83,8 @@ export const TOURNAMENT_GAMES: TournamentGameConfig[] = [
     registrationClosesAt: '2026-05-30T19:00:00+03:00',
     slots: 80,
     checkInCap: 80,
+    entryFeeKes: TOURNAMENT_MOBILE_ENTRY_FEE_KES,
+    entryFeeLabel: 'Regular KSh 75',
     format: 'Solo battle royale room',
     matchCount: '3 matches',
     scoring: '1 kill = 3 points. Placement matters too.',
@@ -123,11 +134,13 @@ export const TOURNAMENT_GAMES: TournamentGameConfig[] = [
     timeLabel: '7:30 PM EAT',
     matchStartsAt: '2026-05-31T19:30:00+03:00',
     registrationClosesAt: '2026-05-31T19:00:00+03:00',
-    slots: 16,
-    checkInCap: 16,
-    format: '1v1 knockout bracket',
-    matchCount: 'Round of 16 to final',
-    scoring: 'Single-leg bracket. If level, settle it in extra time or penalties.',
+    slots: 32,
+    checkInCap: 32,
+    entryFeeKes: TOURNAMENT_EFOOTBALL_ENTRY_FEE_KES,
+    entryFeeLabel: 'Regular KSh 125',
+    format: '1v1 knockout bracket with bronze match',
+    matchCount: 'Round of 32 to final',
+    scoring: 'Single-leg bracket from Round of 32. If level, settle it in extra time or penalties.',
     firstPrize: 'KSh 1,000',
     secondPrize: 'KSh 500',
     thirdPrize: '',
@@ -143,6 +156,8 @@ export const TOURNAMENT_GAMES: TournamentGameConfig[] = [
     registrationClosesAt: '2026-05-31T19:00:00+03:00',
     slots: 80,
     checkInCap: 80,
+    entryFeeKes: TOURNAMENT_MOBILE_ENTRY_FEE_KES,
+    entryFeeLabel: 'Regular KSh 75',
     format: 'Solo battle royale room',
     matchCount: '3 matches',
     scoring: '1 kill = 1 point. Frag smart, stay alive.',
@@ -162,7 +177,7 @@ export const TOURNAMENT_GAME_BY_KEY = TOURNAMENT_GAMES.reduce(
 );
 
 export const TOURNAMENT_RULES = [
-  'Register and confirm payment on mechi.club.',
+  'Register and confirm regular-price payment on mechi.club.',
   'Use the exact in-game name you registered with.',
   'Join on time. Late entry can be disqualified.',
   'No cheating, teaming, scripts, emulator abuse, or unfair tools.',

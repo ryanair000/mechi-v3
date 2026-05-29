@@ -107,7 +107,7 @@ export const WEEKEND_CUP_VOTING_ENABLED = true;
 export const WEEKEND_CUP_EVENT_DATES = '29-31 May 2026';
 export const WEEKEND_CUP_MATCH_DATES = '30-31 May 2026';
 export const WEEKEND_CUP_REGISTRATION_CLOSES_LABEL =
-  'Registration closes Friday 29 May 2026 at 11:59 PM EAT';
+  'Registration stays open through Sunday 31 May 2026 at 11:59 PM EAT';
 export const WEEKEND_CUP_REGISTRATION_OPENS_AT = '2026-05-13T00:00:00+03:00';
 export const WEEKEND_CUP_REGISTRATION_OPENS_LABEL = 'Open now';
 export const WEEKEND_CUP_CASH_PRIZE_POOL = 10500;
@@ -195,7 +195,7 @@ export const WEEKEND_CUP_GAMES: OnlineTournamentGameConfig[] = [
     dateLabel: 'Sunday 31 May 2026',
     timeLabel: '8:00 PM EAT',
     matchStartsAt: '2026-05-31T20:00:00+03:00',
-    registrationClosesAt: '2026-05-29T23:59:00+03:00',
+    registrationClosesAt: '2026-05-31T23:59:00+03:00',
     slots: 80,
     checkInCap: 80,
     earlyBirdSlots: 20,
@@ -219,7 +219,7 @@ export const WEEKEND_CUP_GAMES: OnlineTournamentGameConfig[] = [
     dateLabel: 'Saturday 30 May 2026',
     timeLabel: '8:00 PM EAT',
     matchStartsAt: '2026-05-30T20:00:00+03:00',
-    registrationClosesAt: '2026-05-29T23:59:00+03:00',
+    registrationClosesAt: '2026-05-31T23:59:00+03:00',
     slots: 80,
     checkInCap: 80,
     earlyBirdSlots: 20,
@@ -243,7 +243,7 @@ export const WEEKEND_CUP_GAMES: OnlineTournamentGameConfig[] = [
     dateLabel: 'Sunday 31 May 2026',
     timeLabel: '7:30 PM EAT',
     matchStartsAt: '2026-05-31T19:30:00+03:00',
-    registrationClosesAt: '2026-05-29T23:59:00+03:00',
+    registrationClosesAt: '2026-05-31T23:59:00+03:00',
     slots: 32,
     checkInCap: 32,
     earlyBirdSlots: 8,
@@ -266,7 +266,7 @@ export const WEEKEND_CUP_GAMES: OnlineTournamentGameConfig[] = [
     dateLabel: 'Sunday 31 May 2026',
     timeLabel: '8:00 PM EAT',
     matchStartsAt: '2026-05-31T20:00:00+03:00',
-    registrationClosesAt: '2026-05-29T23:59:00+03:00',
+    registrationClosesAt: '2026-05-31T23:59:00+03:00',
     slots: 80,
     checkInCap: 80,
     earlyBirdSlots: 20,

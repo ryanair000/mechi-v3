@@ -25,7 +25,7 @@ const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const RESERVED_DOMAINS = new Set(['example.com', 'mechi.test', 'localhost', 'invalid']);
 const APP_URL = normalizeUrl(process.env.NEXT_PUBLIC_APP_URL || 'https://mechi.club');
 const WEEKEND_CUP_SLUG = 'playmechi-weekend-cup-season-1-2026-05-29';
-const CAMPAIGN_KEY = 'weekend-cup-registration-closes-today-regular-prices-2026-05-29';
+const CAMPAIGN_KEY = 'weekend-cup-last-chance-all-games-open-2026-05-30';
 const FROM_ADDRESS =
   process.env.EMAIL_FROM_ADDRESS?.trim() ||
   process.env.AWS_SES_FROM_EMAIL?.trim() ||
@@ -65,8 +65,8 @@ const FINAL_RUSH_FEES = {
   mystery: 100,
 };
 
-const BLAST_SUBJECT = 'Weekend Cup registration closes today. Regular prices are live.';
-const REMINDER_SUBJECT = 'Finish payment today before Weekend Cup registration closes';
+const BLAST_SUBJECT = 'Last chance: Weekend Cup registration is open for all games';
+const REMINDER_SUBJECT = 'Last chance to finish Weekend Cup payment';
 
 function normalizeUrl(value) {
   return String(value || 'https://mechi.club').trim().replace(/\/+$/, '');
@@ -300,18 +300,20 @@ function buildBlastHtml(recipient) {
   const unsubscribeUrl = buildUnsubscribeUrl(recipient.email);
   const registerUrl = escapeUrl('/weekendcup');
   const body = `
-    <p class="kicker">Registration closes today</p>
-    <h1>Weekend Cup registration closes today. Lock your slot at the regular price.</h1>
-    <p>Hey ${escapeHtml(recipient.username || 'Player')}, PlayMechi Weekend Cup Season 1 registration closes today, Friday 29 May 2026, so moderators can finish match-day setup.</p>
-    <p><strong>Regular pricing is live now</strong>: PUBG Mobile, CODM, and Free Fire are <strong>KSh 75</strong>. eFootball is <strong>KSh 125</strong>. Final Rush comes after this if slots remain.</p>
+    <p class="kicker">Last chance to register</p>
+    <h1>Weekend Cup registration is open again for every game.</h1>
+    <p>Hey ${escapeHtml(recipient.username || 'Player')}, PlayMechi Weekend Cup Season 1 registration is open for PUBG Mobile, CODM, eFootball, and Free Fire through the weekend.</p>
+    <p><strong>Regular pricing is live now</strong>: PUBG Mobile, CODM, and Free Fire are <strong>KSh 75</strong>. eFootball is <strong>KSh 125</strong>. This is the last chance window before the weekend cup closes.</p>
     <div class="grid">
       ${infoRow('Regular now', 'PUBG/CODM/Free Fire KSh 75, eFootball KSh 125')}
       ${infoRow('Final Rush later', 'PUBG/CODM/Free Fire KSh 100, eFootball KSh 150')}
       ${infoRow('Prize pool', 'Up to KSh 10,500')}
       ${infoRow('Games', 'PUBG Mobile, CODM, eFootball, Free Fire')}
-      ${infoRow('Registration closes', 'Today - Friday 29 May 2026')}
+      ${infoRow('Registration window', 'Open through Sunday 31 May 2026')}
       ${infoRow('CODM', 'Saturday 30 May 2026, 8:00 PM EAT')}
       ${infoRow('PUBG Mobile', 'Sunday 31 May 2026, 8:00 PM EAT')}
+      ${infoRow('Free Fire', 'Sunday 31 May 2026, 8:00 PM EAT')}
+      ${infoRow('eFootball', 'Sunday 31 May 2026, 7:30 PM EAT')}
     </div>
     <p>Pick your game, use the exact in-game name, and pay through Paystack so your slot can be confirmed before match day.</p>
     <a class="btn" href="${registerUrl}">Register for Weekend Cup</a>
@@ -320,7 +322,7 @@ function buildBlastHtml(recipient) {
 
   return baseLayout({
     title: BLAST_SUBJECT,
-    preheader: 'Registration closes today. CODM plays Saturday and PUBG Mobile plays Sunday.',
+    preheader: 'All Weekend Cup games are open again. Register and pay to lock your slot.',
     body,
     unsubscribeUrl,
   });
@@ -341,7 +343,7 @@ function buildReminderHtml(recipient) {
   const body = `
     <p class="kicker">Payment reminder</p>
     <h1>Your ${escapeHtml(gameLabel)} slot is saved, but not locked yet.</h1>
-    <p>Hey ${escapeHtml(recipient.username || 'Player')}, your Weekend Cup registration is still waiting for payment confirmation. Finish payment today, Friday 29 May 2026, so your slot can move from pending to confirmed before registration closes.</p>
+    <p>Hey ${escapeHtml(recipient.username || 'Player')}, your Weekend Cup registration is still waiting for payment confirmation. Finish payment now so your slot can move from pending to confirmed while registration is open again.</p>
     <div class="grid">
       ${infoRow('Game', gameLabel)}
       ${infoRow('Game tag', recipient.inGameUsername || 'Submitted on registration')}
@@ -349,13 +351,13 @@ function buildReminderHtml(recipient) {
       ${infoRow('Amount due', `KSh ${amountDue}`)}
       ${infoRow('Regular price now', `KSh ${phase2Fee}`)}
       ${infoRow('Final Rush later', `KSh ${finalRushFee}`)}
-      ${infoRow('Registration closes', 'Today - Friday 29 May 2026')}
+      ${infoRow('Registration window', 'Open through Sunday 31 May 2026')}
       ${infoRow('Payment reference', recipient.paymentReference || 'Open registration to continue')}
     </div>
     <p>If checkout timed out, open your Weekend Cup registration again and continue from there. Your slot is only confirmed after Paystack clears the payment.</p>
     <a class="btn" href="${paymentUrl}">Complete payment</a>
     <p><a href="${registerUrl}" style="color:#138f80;font-weight:900;text-decoration:none;">Open registration details</a></p>
-    <p class="note">Do not wait. Complete payment today while registration is still open.</p>
+    <p class="note">Do not wait. Complete payment while registration is open again.</p>
   `;
 
   return baseLayout({

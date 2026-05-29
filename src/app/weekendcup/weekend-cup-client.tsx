@@ -23,6 +23,7 @@ import {
   WEEKEND_CUP_ENTRY_PRICING,
   WEEKEND_CUP_EVENT_DATES,
   WEEKEND_CUP_DASHBOARD_PATH,
+  WEEKEND_CUP_MATCH_SCHEDULE_SUMMARY,
   WEEKEND_CUP_MAX_VOTE_SELECTIONS,
   WEEKEND_CUP_PRIZE_POOL_LABEL,
   WEEKEND_CUP_PROMO_IMAGE,
@@ -624,9 +625,9 @@ export function WeekendCupClient() {
               <span className="block">Season 1</span>
             </h1>
             <p className="mx-auto max-w-3xl text-[0.92rem] leading-7 text-[var(--text-secondary)] sm:text-[1rem]">
-              Season 1 runs on <strong>{WEEKEND_CUP_EVENT_DATES}</strong>. PUBG Mobile locks Friday,
-              CODM runs Saturday, and Sunday closes with eFootball plus Free Fire. Mobile Games Cup
-              voting is closed and Free Fire is confirmed.
+              Season 1 window: <strong>{WEEKEND_CUP_EVENT_DATES}</strong>.{' '}
+              {WEEKEND_CUP_MATCH_SCHEDULE_SUMMARY} Mobile Games Cup voting is closed and Free Fire
+              is confirmed.
             </p>
 
             <div className="flex flex-wrap justify-center gap-2">
@@ -669,7 +670,7 @@ export function WeekendCupClient() {
                   </h2>
                 </div>
                 <span className={`brand-chip ${DASHBOARD_CONTROL_RADIUS_CLASS} !px-3 !py-1 !text-[0.74rem]`}>
-                  Pay. Slot secured.
+                  Your slot is only confirmed after successful payment.
                 </span>
               </div>
 

@@ -105,10 +105,14 @@ export const WEEKEND_CUP_PROMO_IMAGE = '/images/weekendcup/season-1-promo.png';
 export const WEEKEND_CUP_REGISTRATION_ENABLED = true;
 export const WEEKEND_CUP_VOTING_ENABLED = true;
 export const WEEKEND_CUP_EVENT_DATES = '29-31 May 2026';
+export const WEEKEND_CUP_MATCH_DATES = '30-31 May 2026';
+export const WEEKEND_CUP_REGISTRATION_CLOSES_LABEL =
+  'Registration closes Friday 29 May 2026 at 11:59 PM EAT';
 export const WEEKEND_CUP_REGISTRATION_OPENS_AT = '2026-05-13T00:00:00+03:00';
 export const WEEKEND_CUP_REGISTRATION_OPENS_LABEL = 'Open now';
 export const WEEKEND_CUP_CASH_PRIZE_POOL = 10500;
-export const WEEKEND_CUP_PRIZE_POOL_LABEL = 'Prize Pool Up to KSh 10,500';
+export const WEEKEND_CUP_PRIZE_POOL_LABEL =
+  "Total Weekend Cup prize pool: up to KSh 10,500. See each game's prize breakdown below.";
 export const WEEKEND_CUP_STREAM_LABEL = 'Live on Mechi';
 export const WEEKEND_CUP_MAX_VOTE_SELECTIONS = 5;
 export const WEEKEND_CUP_ACTIVE_PAYMENT_TIER: OnlineTournamentPaymentTier = 'regular';
@@ -280,6 +284,20 @@ export const WEEKEND_CUP_GAMES: OnlineTournamentGameConfig[] = [
 ];
 
 export const WEEKEND_CUP_REGISTERABLE_GAMES = WEEKEND_CUP_GAMES;
+
+const sortedWeekendCupGames = [...WEEKEND_CUP_GAMES].sort(
+  (left, right) => new Date(left.matchStartsAt).getTime() - new Date(right.matchStartsAt).getTime()
+);
+
+export const WEEKEND_CUP_MATCH_SCHEDULE_SUMMARY =
+  `${WEEKEND_CUP_REGISTRATION_CLOSES_LABEL}. Matches run ${WEEKEND_CUP_MATCH_DATES}: ` +
+  sortedWeekendCupGames
+    .map((game) => `${game.label} is ${game.dateLabel.replace(' 2026', '')} at ${game.timeLabel}`)
+    .join('; ') +
+  '.';
+
+export const WEEKEND_CUP_EVENT_STARTS_AT = sortedWeekendCupGames[0]?.matchStartsAt ?? '2026-05-30T20:00:00+03:00';
+export const WEEKEND_CUP_EVENT_ENDS_AT = sortedWeekendCupGames.at(-1)?.matchStartsAt ?? '2026-05-31T20:00:00+03:00';
 
 export const WEEKEND_CUP_GAME_BY_KEY = WEEKEND_CUP_GAMES.reduce(
   (games, game) => {

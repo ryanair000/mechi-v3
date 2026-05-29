@@ -18,6 +18,7 @@ import {
 import {
   WEEKEND_CUP_GAME_BY_KEY,
   WEEKEND_CUP_GAMES,
+  WEEKEND_CUP_MATCH_SCHEDULE_SUMMARY,
   WEEKEND_CUP_PUBLIC_PATH,
   WEEKEND_CUP_REGISTRATION_PATH,
   WEEKEND_CUP_TITLE,
@@ -361,7 +362,7 @@ function formatPlayMechiRegistrationMessage(game: GameKey | null) {
     `${APP_URL}${WEEKEND_CUP_REGISTRATION_PATH}`,
     '',
     `Pick ${gameLabel}, confirm your game tag, then pay with Paystack to lock your slot.`,
-    'Season 1 runs 29-31 May 2026. Free Fire is confirmed and registration is open.',
+    `${WEEKEND_CUP_MATCH_SCHEDULE_SUMMARY} Free Fire is confirmed and registration is open.`,
   ].join('\n');
 }
 

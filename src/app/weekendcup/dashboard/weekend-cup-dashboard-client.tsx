@@ -37,6 +37,7 @@ import {
 } from '@/lib/weekend-cup';
 
 const API_PATH = '/api/events/playmechi-weekend-cup/register';
+const STATE_API_PATH = '/api/events/playmechi-weekend-cup/state';
 
 function paymentStatusClasses(status: WeekendCupPlayerRegistration['payment_status']) {
   switch (status) {
@@ -90,6 +91,12 @@ export function WeekendCupDashboardClient() {
     getWeekendCupFallbackSummary
   );
   const [loading, setLoading] = useState(true);
+  const [checkInSubmitting, setCheckInSubmitting] = useState(false);
+  const [checkInIgn, setCheckInIgn] = useState('');
+  const [checkInUid, setCheckInUid] = useState('');
+  const [checkInDevice, setCheckInDevice] = useState('');
+  const [checkInWhatsapp, setCheckInWhatsapp] = useState('');
+  const [checkInSerial, setCheckInSerial] = useState('');
   const [retryingPayment, setRetryingPayment] = useState(false);
   const [proofFile, setProofFile] = useState<File | null>(null);
   const [proofSubmitting, setProofSubmitting] = useState(false);
@@ -137,6 +144,7 @@ export function WeekendCupDashboardClient() {
       ) ?? fallbackEntryAmount}`
     : `${getWeekendCupPaymentTierLabel(WEEKEND_CUP_ACTIVE_PAYMENT_TIER)} ${fallbackEntryAmount}`;
   const paymentAmountLabel = formatKes(currentRegistration?.entry_fee_kes) ?? fallbackEntryAmount;
+  const checkInComplete = currentRegistration?.check_in_status === 'checked_in';
 
   useEffect(() => {
     if (isWeekendCupGame(requestedGame) && dashboardGames.some((game) => game.game === requestedGame)) {
@@ -158,7 +166,7 @@ export function WeekendCupDashboardClient() {
   const loadSummary = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await authFetch(API_PATH, { method: 'GET' });
+      const res = await authFetch(STATE_API_PATH, { method: 'GET' });
       const data = (await res.json()) as WeekendCupRegistrationSummary & { error?: string };
 
       if (res.status === 401 || res.status === 403) {
@@ -186,6 +194,21 @@ export function WeekendCupDashboardClient() {
 
     void loadSummary();
   }, [authLoading, loadSummary, registrationOpen, user]);
+
+  useEffect(() => {
+    setCheckInIgn(currentRegistration?.in_game_username ?? '');
+    setCheckInUid(currentRegistration?.game_uid ?? '');
+    setCheckInDevice(currentRegistration?.device_model ?? '');
+    setCheckInWhatsapp(currentRegistration?.whatsapp_number ?? '');
+    setCheckInSerial(currentRegistration?.device_serial_last6 ?? '');
+  }, [
+    currentRegistration?.device_model,
+    currentRegistration?.device_serial_last6,
+    currentRegistration?.game_uid,
+    currentRegistration?.id,
+    currentRegistration?.in_game_username,
+    currentRegistration?.whatsapp_number,
+  ]);
 
   const handleRetryPayment = useCallback(async () => {
     if (!currentRegistration) {
@@ -323,6 +346,61 @@ export function WeekendCupDashboardClient() {
     proofOpponentScore,
     proofPlacement,
     proofPlayerScore,
+  ]);
+
+  const handleCheckIn = useCallback(async () => {
+    if (!currentRegistration) {
+      toast.error('Save a Weekend Cup entry first.');
+      return;
+    }
+
+    if (currentRegistration.payment_status !== 'paid') {
+      toast.error('Payment must be confirmed before check-in.');
+      return;
+    }
+
+    setCheckInSubmitting(true);
+    try {
+      const res = await authFetch(STATE_API_PATH, {
+        method: 'POST',
+        body: JSON.stringify({
+          action: 'check_in',
+          game: currentRegistration.game,
+          in_game_username: checkInIgn,
+          game_uid: checkInUid,
+          device_model: checkInDevice,
+          whatsapp_number: checkInWhatsapp,
+          device_serial_last6: checkInSerial,
+        }),
+      });
+      const data = (await res.json()) as WeekendCupRegistrationSummary & { error?: string };
+
+      if (res.status === 401 || res.status === 403) {
+        handleAuthExpired();
+        return;
+      }
+
+      if (!res.ok) {
+        toast.error(data.error ?? 'Could not complete Weekend Cup check-in');
+        return;
+      }
+
+      setSummary(data);
+      toast.success('Weekend Cup check-in complete.');
+    } catch {
+      toast.error('Network error while checking in');
+    } finally {
+      setCheckInSubmitting(false);
+    }
+  }, [
+    authFetch,
+    checkInDevice,
+    checkInIgn,
+    checkInSerial,
+    checkInUid,
+    checkInWhatsapp,
+    currentRegistration,
+    handleAuthExpired,
   ]);
 
   if (!registrationOpen) {
@@ -505,6 +583,80 @@ export function WeekendCupDashboardClient() {
           </div>
         )}
       </section>
+
+      {currentRegistration ? (
+        <section className="card p-5 sm:p-6">
+          <p className="section-title">Match-day check-in</p>
+          <h2 className="mt-2 text-2xl font-black text-[var(--text-primary)]">
+            Confirm your player details
+          </h2>
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--text-secondary)]">
+            Paid players must check in here before result proof is accepted. Use the same account
+            and WhatsApp number moderators should recognize on match day.
+          </p>
+
+          <div className="mt-4 grid gap-3 md:grid-cols-2">
+            <input
+              value={checkInIgn}
+              onChange={(event) => setCheckInIgn(event.target.value)}
+              placeholder="In-game name"
+              className="input"
+            />
+            <input
+              value={checkInUid}
+              onChange={(event) => setCheckInUid(event.target.value)}
+              placeholder="Game UID / player ID"
+              className="input"
+            />
+            <input
+              value={checkInDevice}
+              onChange={(event) => setCheckInDevice(event.target.value)}
+              placeholder="Device model"
+              className="input"
+            />
+            <input
+              value={checkInWhatsapp}
+              onChange={(event) => setCheckInWhatsapp(event.target.value)}
+              placeholder="WhatsApp number"
+              inputMode="tel"
+              className="input"
+            />
+            <input
+              value={checkInSerial}
+              onChange={(event) => setCheckInSerial(event.target.value)}
+              placeholder="Device serial last 6 (if requested)"
+              className="input md:col-span-2"
+            />
+          </div>
+
+          <div className="mt-4 flex flex-wrap items-center gap-3">
+            <button
+              type="button"
+              onClick={() => void handleCheckIn()}
+              disabled={checkInSubmitting || currentRegistration.payment_status !== 'paid'}
+              className="btn-primary"
+            >
+              {checkInSubmitting ? (
+                <>
+                  <Loader2 size={14} className="animate-spin" />
+                  Checking in
+                </>
+              ) : checkInComplete ? (
+                'Update check-in'
+              ) : (
+                'Check in'
+              )}
+            </button>
+            <span className="text-sm text-[var(--text-secondary)]">
+              {checkInComplete
+                ? 'Check-in complete. You can update details if needed.'
+                : slotBooked
+                  ? 'Ready once your details are filled.'
+                  : 'Payment must clear before check-in.'}
+            </span>
+          </div>
+        </section>
+      ) : null}
 
       {currentRegistration ? (
         <section className="card p-5 sm:p-6">

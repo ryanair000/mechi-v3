@@ -102,11 +102,16 @@ export function ModeratorRegistrationClient({ mode = 'admin' }: { mode?: Registr
           data.staff.moderator_tournament_key ?? selectedTournament
         );
         toast.success(mode === 'public' ? 'Moderator account created' : 'Moderator access activated');
-        window.location.assign(
+        const moderatorHome =
           tournament.key === 'days_esports_tz_efootball'
             ? '/moderators/tz'
-            : `/moderators/check-in?game=${encodeURIComponent(tournament.game)}`
-        );
+            : tournament.key === 'weka_mawe_efootball'
+              ? '/moderators/weka-mawe'
+              : tournament.key.startsWith('weekendcup_')
+                ? '/moderators/weekendcup'
+                : `/moderators/check-in?game=${encodeURIComponent(tournament.game)}`;
+
+        window.location.assign(moderatorHome);
         return;
       }
 

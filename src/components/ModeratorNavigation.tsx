@@ -15,6 +15,7 @@ import {
 import { getModeratorLoginPath } from '@/lib/navigation';
 import type { ModeratorTournamentKey } from '@/lib/moderator-tournaments';
 import { ONLINE_TOURNAMENT_GAME_BY_KEY, type OnlineTournamentGameKey } from '@/lib/online-tournament';
+import { WEEKEND_CUP_GAME_BY_KEY } from '@/lib/weekend-cup';
 
 type ModeratorNavRole = 'admin' | 'moderator' | string;
 
@@ -54,7 +55,8 @@ function getModeratorNavItems(
 
   const isWeekendCup = tournamentKey?.startsWith('weekendcup_');
   const canSeeAllWeekendCupGames = username?.toLowerCase() === 'ranxxs';
-  const game = ONLINE_TOURNAMENT_GAME_BY_KEY[assignedGame];
+  const game = ONLINE_TOURNAMENT_GAME_BY_KEY[assignedGame] ?? WEEKEND_CUP_GAME_BY_KEY[assignedGame];
+  const weekendCupGame = WEEKEND_CUP_GAME_BY_KEY[assignedGame];
   const gameParam = encodeURIComponent(assignedGame);
 
   if (isWeekendCup) {
@@ -68,7 +70,7 @@ function getModeratorNavItems(
 
     if (canSeeAllWeekendCupGames) {
       for (const gameKey of ['pubgm', 'codm', 'freefire'] as const) {
-        const gameConfig = ONLINE_TOURNAMENT_GAME_BY_KEY[gameKey];
+        const gameConfig = WEEKEND_CUP_GAME_BY_KEY[gameKey];
         const encodedGame = encodeURIComponent(gameKey);
         items.push(
           {
@@ -99,12 +101,12 @@ function getModeratorNavItems(
       items.push(
         {
           href: `/moderators/weekendcup/lobbies?game=${gameParam}`,
-          label: `${game.shortLabel} Lobbies`,
+          label: `${weekendCupGame.shortLabel} Lobbies`,
           icon: MonitorPlay,
         },
         {
           href: `/moderators/weekendcup/scores?game=${gameParam}`,
-          label: `${game.shortLabel} Scores`,
+          label: `${weekendCupGame.shortLabel} Scores`,
           icon: ClipboardCheck,
         }
       );

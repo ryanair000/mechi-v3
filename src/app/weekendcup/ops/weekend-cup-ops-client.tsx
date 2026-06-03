@@ -4,7 +4,6 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import toast from 'react-hot-toast';
 import {
   Banknote,
-  CheckCircle2,
   Clock3,
   Loader2,
   RefreshCw,
@@ -16,7 +15,6 @@ import {
 import { useAuthFetch } from '@/components/AuthProvider';
 import {
   WEEKEND_CUP_GAMES,
-  formatWeekendCupPaymentStatus,
   type WeekendCupRegistrationSummary,
 } from '@/lib/weekend-cup';
 import type { OnlineTournamentGameKey } from '@/lib/online-tournament';
@@ -76,13 +74,9 @@ type WeekendCupOpsResponse = {
   error?: string;
 };
 
-type PaymentDraft = {
-  payment_status: WeekendCupOpsRegistration['payment_status'];
-  payment_tier: '' | 'early_bird' | 'regular' | 'late';
-  entry_fee_kes: string;
-  payment_reference: string;
-  payment_note: string;
+type RegistrationDraft = {
   check_in_status: WeekendCupOpsRegistration['check_in_status'];
+  admin_note: string;
 };
 
 function paymentStatusClasses(status: WeekendCupOpsRegistration['payment_status']) {
@@ -116,17 +110,14 @@ function formatKes(value: number) {
   return `KSh ${value.toLocaleString('en-KE')}`;
 }
 
-function makeDraft(registration: WeekendCupOpsRegistration): PaymentDraft {
+function formatOpsPaymentStatus(status: WeekendCupOpsRegistration['payment_status']) {
+  return status === 'paid' ? 'Paid' : 'Unpaid';
+}
+
+function makeDraft(registration: WeekendCupOpsRegistration): RegistrationDraft {
   return {
-    payment_status: registration.payment_status,
-    payment_tier: registration.payment_tier ?? '',
-    entry_fee_kes:
-      registration.entry_fee_kes !== null && registration.entry_fee_kes !== undefined
-        ? String(registration.entry_fee_kes)
-        : '',
-    payment_reference: registration.payment_reference ?? '',
-    payment_note: registration.payment_note ?? '',
     check_in_status: registration.check_in_status,
+    admin_note: registration.admin_note ?? '',
   };
 }
 
@@ -144,7 +135,7 @@ export function WeekendCupOpsClient(props: WeekendCupOpsClientProps) {
   const [gameFilter, setGameFilter] = useState<'all' | OnlineTournamentGameKey>('all');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [actingId, setActingId] = useState<string | null>(null);
-  const [drafts, setDrafts] = useState<Record<string, PaymentDraft>>({});
+  const [drafts, setDrafts] = useState<Record<string, RegistrationDraft>>({});
   const [lastLoadedAt, setLastLoadedAt] = useState<Date | null>(null);
 
   const loadState = useCallback(async (showToast = false) => {
@@ -160,7 +151,7 @@ export function WeekendCupOpsClient(props: WeekendCupOpsClientProps) {
       setState(data);
       setLastLoadedAt(new Date());
       setDrafts(
-        (data.registrations ?? []).reduce<Record<string, PaymentDraft>>((next, registration) => {
+        (data.registrations ?? []).reduce<Record<string, RegistrationDraft>>((next, registration) => {
           next[registration.id] = makeDraft(registration);
           return next;
         }, {})
@@ -289,37 +280,6 @@ export function WeekendCupOpsClient(props: WeekendCupOpsClientProps) {
       })
     : null;
 
-  const handleQuickPaid = async (registration: WeekendCupOpsRegistration) => {
-    setActingId(registration.id);
-    try {
-      const res = await authFetch(props.apiPath, {
-        method: 'PATCH',
-        body: JSON.stringify({
-          registration_id: registration.id,
-          payment_status: 'paid',
-        }),
-      });
-      const data = (await res.json()) as WeekendCupOpsResponse;
-      if (!res.ok) {
-        toast.error(data.error ?? 'Could not confirm payment');
-        return;
-      }
-
-      toast.success('Payment confirmed.');
-      setState(data);
-      setDrafts(
-        (data.registrations ?? []).reduce<Record<string, PaymentDraft>>((next, item) => {
-          next[item.id] = makeDraft(item);
-          return next;
-        }, {})
-      );
-    } catch {
-      toast.error('Network error while confirming payment');
-    } finally {
-      setActingId(null);
-    }
-  };
-
   const handleSaveDraft = async (registrationId: string) => {
     const draft = drafts[registrationId];
     if (!draft) return;
@@ -330,12 +290,8 @@ export function WeekendCupOpsClient(props: WeekendCupOpsClientProps) {
         method: 'PATCH',
         body: JSON.stringify({
           registration_id: registrationId,
-          payment_status: draft.payment_status,
-          payment_tier: draft.payment_tier || null,
-          ...(canViewRevenue ? { entry_fee_kes: draft.entry_fee_kes || null } : {}),
-          payment_reference: draft.payment_reference || null,
-          payment_note: draft.payment_note || null,
           check_in_status: draft.check_in_status,
+          admin_note: draft.admin_note || null,
         }),
       });
       const data = (await res.json()) as WeekendCupOpsResponse;
@@ -347,7 +303,7 @@ export function WeekendCupOpsClient(props: WeekendCupOpsClientProps) {
       toast.success('Weekend Cup registration updated.');
       setState(data);
       setDrafts(
-        (data.registrations ?? []).reduce<Record<string, PaymentDraft>>((next, item) => {
+        (data.registrations ?? []).reduce<Record<string, RegistrationDraft>>((next, item) => {
           next[item.id] = makeDraft(item);
           return next;
         }, {})
@@ -563,7 +519,7 @@ export function WeekendCupOpsClient(props: WeekendCupOpsClientProps) {
                           {registration.user?.username ?? registration.in_game_username}
                         </p>
                         <span className={`rounded-full px-3 py-1 text-xs font-bold uppercase tracking-[0.14em] ${paymentStatusClasses(registration.payment_status)}`}>
-                          {formatWeekendCupPaymentStatus(registration.payment_status)}
+                          {formatOpsPaymentStatus(registration.payment_status)}
                         </span>
                         <span className={`rounded-full px-3 py-1 text-xs font-bold uppercase tracking-[0.14em] ${checkInClasses(registration.check_in_status)}`}>
                           {registration.check_in_status.replaceAll('_', ' ')}
@@ -581,24 +537,6 @@ export function WeekendCupOpsClient(props: WeekendCupOpsClientProps) {
                     <div className="flex shrink-0 flex-wrap gap-2">
                       <button
                         type="button"
-                        onClick={() => void handleQuickPaid(registration)}
-                        disabled={actingId === registration.id || registration.payment_status === 'paid'}
-                        className="btn-primary"
-                      >
-                        {actingId === registration.id ? (
-                          <>
-                            <Loader2 size={14} className="animate-spin" />
-                            Saving
-                          </>
-                        ) : (
-                          <>
-                            <CheckCircle2 size={14} />
-                            Mark paid
-                          </>
-                        )}
-                      </button>
-                      <button
-                        type="button"
                         onClick={() => setEditingId((current) => (current === registration.id ? null : registration.id))}
                         className="btn-outline"
                       >
@@ -610,84 +548,6 @@ export function WeekendCupOpsClient(props: WeekendCupOpsClientProps) {
                   {editingId === registration.id ? (
                     <div className="mt-4 grid gap-4 rounded-lg border border-[var(--border-color)] bg-[var(--surface-elevated)] p-4 [grid-template-columns:repeat(auto-fit,minmax(220px,1fr))]">
                       <div>
-                        <label className="label">Payment status</label>
-                        <select
-                          value={draft.payment_status}
-                          onChange={(event) =>
-                            setDrafts((current) => ({
-                              ...current,
-                              [registration.id]: {
-                                ...draft,
-                                payment_status: event.target.value as PaymentDraft['payment_status'],
-                              },
-                            }))
-                          }
-                          className="input"
-                        >
-                          {['pending_payment', 'paid', 'manual_review', 'failed', 'refunded'].map((status) => (
-                            <option key={status} value={status}>
-                              {status.replaceAll('_', ' ')}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                      <div>
-                        <label className="label">Payment tier</label>
-                        <select
-                          value={draft.payment_tier}
-                          onChange={(event) =>
-                            setDrafts((current) => ({
-                              ...current,
-                              [registration.id]: {
-                                ...draft,
-                                payment_tier: event.target.value as PaymentDraft['payment_tier'],
-                              },
-                            }))
-                          }
-                          className="input"
-                        >
-                          <option value="">Auto assign</option>
-                          <option value="regular">Regular</option>
-                          <option value="late">Late</option>
-                        </select>
-                      </div>
-                      {canViewRevenue ? (
-                        <div>
-                          <label className="label">Amount paid (KES)</label>
-                          <input
-                            type="text"
-                            value={draft.entry_fee_kes}
-                            onChange={(event) =>
-                              setDrafts((current) => ({
-                                ...current,
-                                [registration.id]: {
-                                  ...draft,
-                                  entry_fee_kes: event.target.value,
-                                },
-                              }))
-                            }
-                            className="input"
-                          />
-                        </div>
-                      ) : null}
-                      <div>
-                        <label className="label">Payment ref</label>
-                        <input
-                          type="text"
-                          value={draft.payment_reference}
-                          onChange={(event) =>
-                            setDrafts((current) => ({
-                              ...current,
-                              [registration.id]: {
-                                ...draft,
-                                payment_reference: event.target.value,
-                              },
-                            }))
-                          }
-                          className="input"
-                        />
-                      </div>
-                      <div>
                         <label className="label">Check-in status</label>
                         <select
                           value={draft.check_in_status}
@@ -696,7 +556,7 @@ export function WeekendCupOpsClient(props: WeekendCupOpsClientProps) {
                               ...current,
                               [registration.id]: {
                                 ...draft,
-                                check_in_status: event.target.value as PaymentDraft['check_in_status'],
+                                check_in_status: event.target.value as RegistrationDraft['check_in_status'],
                               },
                             }))
                           }
@@ -708,15 +568,15 @@ export function WeekendCupOpsClient(props: WeekendCupOpsClientProps) {
                         </select>
                       </div>
                       <div className="[grid-column:1/-1]">
-                        <label className="label">Payment note</label>
+                        <label className="label">Admin note</label>
                         <textarea
-                          value={draft.payment_note}
+                          value={draft.admin_note}
                           onChange={(event) =>
                             setDrafts((current) => ({
                               ...current,
                               [registration.id]: {
                                 ...draft,
-                                payment_note: event.target.value,
+                                admin_note: event.target.value,
                               },
                             }))
                           }

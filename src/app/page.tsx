@@ -5,7 +5,7 @@ import { WEEKEND_CUP_TITLE } from '@/lib/weekend-cup';
 export const metadata: Metadata = {
   title: 'Home | PlayMechi',
   description:
-    `PlayMechi home for ${WEEKEND_CUP_TITLE}, platform discovery, and community-driven competition.`,
+    `Register for ${WEEKEND_CUP_TITLE}, follow tournament updates, and get the PlayMechi Android app.`,
 };
 
 export default function HomePage() {

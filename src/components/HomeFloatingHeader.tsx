@@ -24,18 +24,18 @@ type NavDropdownItem = {
 export type HomeFloatingHeaderNavItem = NavLinkItem | NavDropdownItem;
 
 const DEFAULT_NAV_ITEMS: HomeFloatingHeaderNavItem[] = [
-  { href: '#how-it-works', label: 'HOW IT WORKS' },
-  { href: '#supported', label: 'GAMES' },
-  { href: '/android-testers', label: 'ANDROID' },
-  { href: '#pricing', label: 'PRICING' },
-  { href: '#ranks', label: 'RANKS' },
+  { href: '/tournaments', label: 'TOURNAMENTS' },
+  { href: '/how-mechi-works', label: 'HOW IT WORKS' },
+  { href: '/pricing', label: 'PRICING' },
+  { href: '/android-testers', label: 'ANDROID APP' },
+  { href: '/support', label: 'SUPPORT' },
 ];
 const SWAHILI_DEFAULT_NAV_ITEMS: HomeFloatingHeaderNavItem[] = [
-  { href: '#how-it-works', label: 'JINSI INAVYOFANYA KAZI' },
-  { href: '#supported', label: 'MICHEZO' },
-  { href: '/android-testers', label: 'ANDROID' },
-  { href: '#pricing', label: 'BEI' },
-  { href: '#ranks', label: 'RANKI' },
+  { href: '/tournaments', label: 'MASHINDANO' },
+  { href: '/how-mechi-works', label: 'JINSI INAVYOFANYA KAZI' },
+  { href: '/pricing', label: 'BEI' },
+  { href: '/android-testers', label: 'ANDROID APP' },
+  { href: '/support', label: 'MSAADA' },
 ];
 const DISPLAY_FONT_STYLE = { fontFamily: 'var(--font-display)' } as const;
 
@@ -64,6 +64,7 @@ interface HomeFloatingHeaderProps {
   joinHref?: string;
   joinLabel?: string;
   showLogo?: boolean;
+  showJoinButton?: boolean;
   showRegionalControls?: boolean;
   compact?: boolean;
 }
@@ -74,6 +75,7 @@ export function HomeFloatingHeader({
   joinHref = '/register',
   joinLabel,
   showLogo = true,
+  showJoinButton = false,
   compact = false,
 }: HomeFloatingHeaderProps) {
   const [isOpen, setIsOpen] = useState(false);
@@ -207,7 +209,7 @@ export function HomeFloatingHeader({
                 >
                   {user ? dashboardLabel : signInLabel}
                 </Link>
-                {!user ? (
+                {!user && showJoinButton ? (
                   <Link href={joinHref} className={joinButtonClass} style={DISPLAY_FONT_STYLE}>
                     {resolvedJoinLabel}
                   </Link>
@@ -299,7 +301,7 @@ export function HomeFloatingHeader({
                 >
                   {user ? dashboardLabel : signInLabel}
                 </Link>
-                {!user ? (
+                {!user && showJoinButton ? (
                   <Link
                     href={joinHref}
                     onClick={closeMobileMenu}

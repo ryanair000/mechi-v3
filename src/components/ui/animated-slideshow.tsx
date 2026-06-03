@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 interface TextStaggerHoverProps {
   text: string;
   index: number;
+  label?: string;
 }
 
 interface HoverSliderImageProps {
@@ -23,6 +24,7 @@ interface HoverSliderContextValue {
 type Slide = {
   id: string;
   title: string;
+  label: string;
   imageUrl: string;
 };
 
@@ -30,26 +32,31 @@ const LEADERBOARD_SLIDES: Slide[] = [
   {
     id: "slide-1",
     title: "pubg mobile",
+    label: "PUBG Mobile",
     imageUrl: "/images/playmechi/leaderboard/pubgm-winners.png",
   },
   {
     id: "slide-2",
     title: "codm",
+    label: "CODM",
     imageUrl: "/images/playmechi/leaderboard/codm-winners.png",
   },
   {
     id: "slide-3",
     title: "efootball",
+    label: "eFootball",
     imageUrl: "/images/playmechi/leaderboard/efootball-winners.png",
   },
   {
     id: "slide-4",
     title: "weekend cup",
+    label: "Weekend Cup",
     imageUrl: "/images/playmechi/leaderboard/weekend-cup-winners.png",
   },
   {
     id: "slide-5",
     title: "weka mawe",
+    label: "Weka Mawe",
     imageUrl: "/images/playmechi/weka-mawe-weekly-poster.png",
   },
 ];
@@ -118,29 +125,34 @@ export const WordStaggerHover = React.forwardRef<
 WordStaggerHover.displayName = "WordStaggerHover";
 
 export const TextStaggerHover = React.forwardRef<
-  HTMLSpanElement,
-  React.HTMLAttributes<HTMLSpanElement> & TextStaggerHoverProps
->(({ text, index, className, ...props }, ref) => {
+  HTMLButtonElement,
+  React.ButtonHTMLAttributes<HTMLButtonElement> & TextStaggerHoverProps
+>(({ text, index, label, className, ...props }, ref) => {
   const { activeSlide, changeSlide } = useHoverSliderContext();
   const { characters } = splitText(text);
   const isActive = activeSlide === index;
   const handleMouse = () => changeSlide(index);
+  const accessibleLabel = label ?? text;
 
   return (
-    <span
+    <button
+      type="button"
       className={cn(
-        "relative inline-block origin-bottom overflow-hidden",
+        "relative inline-block origin-bottom overflow-hidden border-0 bg-transparent p-0 text-left text-inherit appearance-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgb(201,100,66)] focus-visible:ring-offset-4 focus-visible:ring-offset-[var(--background)]",
         className
       )}
       {...props}
-      aria-hidden="true"
+      aria-label={accessibleLabel}
       ref={ref}
       onMouseEnter={handleMouse}
+      onFocus={handleMouse}
     >
+      <span className="sr-only">{accessibleLabel}</span>
       {characters.map((char, charIndex) => (
         <span
           key={`${char}-${charIndex}`}
           className="relative inline-block overflow-hidden"
+          aria-hidden="true"
         >
           <MotionConfig
             transition={{
@@ -150,27 +162,22 @@ export const TextStaggerHover = React.forwardRef<
             }}
           >
             <motion.span
-              className="inline-block opacity-20"
+              className="inline-block opacity-20 before:content-[attr(data-char)]"
+              data-char={char === " " ? "\u00a0" : char}
               initial={{ y: "0%" }}
               animate={isActive ? { y: "-110%" } : { y: "0%" }}
-            >
-              {char}
-              {char === " " && charIndex < characters.length - 1 ? (
-                <>&nbsp;</>
-              ) : null}
-            </motion.span>
+            />
 
             <motion.span
-              className="absolute left-0 top-0 inline-block opacity-100"
+              className="absolute left-0 top-0 inline-block opacity-100 before:content-[attr(data-char)]"
+              data-char={char === " " ? "\u00a0" : char}
               initial={{ y: "110%" }}
               animate={isActive ? { y: "0%" } : { y: "110%" }}
-            >
-              {char}
-            </motion.span>
+            />
           </MotionConfig>
         </span>
       ))}
-    </span>
+    </button>
   );
 });
 TextStaggerHover.displayName = "TextStaggerHover";
@@ -229,7 +236,7 @@ export function AnimatedSlideshowSection() {
   return (
     <HoverSlider className="landing-shell px-4 py-8 text-[var(--text-primary)] md:px-12 md:py-12">
       <h3 className="mb-6 text-xs font-medium capitalize tracking-wide text-[rgb(201,100,66)]">
-        {isSwahili ? "/ Ubao wa Washindi" : "/ Leaderboard"}
+        {isSwahili ? "/ Highlights za Tournament" : "/ Tournament Highlights"}
       </h3>
       <div className="flex flex-col items-center justify-center gap-5 lg:flex-row lg:items-center lg:gap-8">
         <div className="flex shrink-0 flex-col space-y-2 md:space-y-4">
@@ -239,6 +246,7 @@ export function AnimatedSlideshowSection() {
               index={index}
               className="cursor-pointer text-4xl font-bold uppercase tracking-tighter sm:text-5xl"
               text={slide.title}
+              label={slide.label}
             />
           ))}
         </div>
@@ -248,7 +256,7 @@ export function AnimatedSlideshowSection() {
               <HoverSliderImage
                 index={index}
                 imageUrl={slide.imageUrl}
-                alt={slide.title}
+                alt={slide.label}
                 className="size-full max-h-96 rounded-[var(--radius-panel)] object-cover"
                 loading="eager"
                 decoding="async"

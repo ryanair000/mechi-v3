@@ -120,7 +120,7 @@ export function LogoCloud3Section({ className, ...props }: ComponentProps<'secti
         </span>
         <br />
         <span className="font-semibold">
-          {isSwahili ? 'Shindana Sasa.' : 'Compete Now.'}
+          {isSwahili ? 'Tournaments Ziko Live.' : 'Tournaments Are Live.'}
         </span>
       </h2>
 

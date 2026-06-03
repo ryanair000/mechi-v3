@@ -20,13 +20,6 @@ export const metadata: Metadata = {
     'A clear guide to using PlayMechi for profiles, games, tournaments, match rooms, payments, results, rewards, and support.',
 };
 
-const NAV_ITEMS = [
-  { href: '/', label: 'HOME' },
-  { href: '/weekendcup', label: 'WEEKEND CUP' },
-  { href: '/pricing', label: 'PRICING' },
-  { href: '/support', label: 'SUPPORT' },
-];
-
 const PLAYER_STEPS = [
   {
     icon: UserRoundCheck,
@@ -105,7 +98,7 @@ const QUICK_LINKS = [
 export default function HowMechiWorksPage() {
   return (
     <div className="page-base marketing-prototype-shell flex min-h-screen flex-col">
-      <HomeFloatingHeader navItems={NAV_ITEMS} compact />
+      <HomeFloatingHeader compact />
 
       <main className="flex-1">
         <section className="relative min-h-[calc(100svh-7rem)] overflow-hidden">

@@ -45,6 +45,33 @@ type TournamentLeaderboardResponse = {
   };
 };
 
+const WEEKEND_CUP_EMPTY_MESSAGE =
+  'Weekend Cup results appear here after check-in and admin verification. Registration is open now.';
+
+const LAUNCH_WINNERS = [
+  {
+    game: 'PUBG Mobile',
+    winner: 'HM TOP',
+    result: '13 kills across 3 verified rooms',
+    prize: 'KSh 1,500',
+    image: '/images/playmechi/leaderboard/pubgm-winners.png',
+  },
+  {
+    game: 'CODM',
+    winner: 'WhyNot',
+    result: '112 final points',
+    prize: 'KSh 1,200',
+    image: '/images/playmechi/leaderboard/codm-winners.png',
+  },
+  {
+    game: 'eFootball',
+    winner: 'Samuuo11',
+    result: '8-2 final win',
+    prize: 'KSh 1,000',
+    image: '/images/playmechi/leaderboard/efootball-winners.png',
+  },
+];
+
 function formatCheckInTime(value: string | null | undefined) {
   if (!value) return 'Verified';
 
@@ -149,6 +176,8 @@ export default function LeaderboardPage() {
   const totalGames = payload?.summary?.games ?? ONLINE_TOURNAMENT_GAMES.length;
   const totalVerifiedResults = payload?.summary?.verifiedResults ?? 0;
   const topScore = activeBoard?.leaderboard[0]?.score ?? 0;
+  const isWeekendCupWaitingForResults =
+    !loading && totalCheckIns === 0 && totalVerifiedResults === 0;
 
   return (
     <div className="page-container space-y-5">
@@ -211,6 +240,20 @@ export default function LeaderboardPage() {
             );
           })}
         </div>
+
+        {isWeekendCupWaitingForResults ? (
+          <div className="mt-5 rounded-[var(--radius-panel)] border border-[rgba(50,224,196,0.22)] bg-[rgba(50,224,196,0.08)] px-4 py-3">
+            <p className="text-sm font-semibold leading-6 text-[var(--text-primary)]">
+              {WEEKEND_CUP_EMPTY_MESSAGE}
+            </p>
+            <Link
+              href="/weekendcup/register"
+              className="mt-2 inline-flex text-xs font-bold uppercase tracking-[0.12em] text-[var(--accent-secondary-text)]"
+            >
+              Register for Weekend Cup
+            </Link>
+          </div>
+        ) : null}
       </section>
 
       {loading ? (
@@ -224,7 +267,7 @@ export default function LeaderboardPage() {
           <Trophy size={36} className="mx-auto mb-3 opacity-30" />
           <p className="font-medium text-[var(--text-primary)]">No verified tournament data yet</p>
           <p className="mt-1 text-xs">
-            Players will appear here after check-in verification starts on the tournament desk.
+            {WEEKEND_CUP_EMPTY_MESSAGE}
           </p>
         </div>
       ) : (
@@ -346,7 +389,7 @@ export default function LeaderboardPage() {
                   {activeBoard.leaderboard.length === 0 ? (
                     <tr>
                       <td colSpan={5} className="py-12 text-center text-sm text-[var(--text-secondary)]">
-                        No verified {activeBoard.label} check-ins yet.
+                        {WEEKEND_CUP_EMPTY_MESSAGE}
                       </td>
                     </tr>
                   ) : null}
@@ -356,6 +399,60 @@ export default function LeaderboardPage() {
           </section>
         </>
       )}
+
+      <section className="card p-4 sm:p-5">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <p className="section-title">Previous winners</p>
+            <h2 className="mt-2 text-xl font-black text-[var(--text-primary)]">
+              PlayMechi Launch champions
+            </h2>
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--text-secondary)]">
+              Weekend Cup boards fill after admin verification. Until then, here are verified
+              winners from the PlayMechi Launch event.
+            </p>
+          </div>
+          <Link
+            href="/playmechi"
+            className="brand-link inline-flex min-h-10 items-center text-sm font-semibold"
+          >
+            View launch event
+          </Link>
+        </div>
+
+        <div className="mt-4 grid gap-3 md:grid-cols-3">
+          {LAUNCH_WINNERS.map((winner) => (
+            <article
+              key={winner.game}
+              className="overflow-hidden rounded-[var(--radius-card)] border border-[var(--border-color)] bg-[var(--surface-elevated)]"
+            >
+              <div className="aspect-[16/9] overflow-hidden bg-[var(--surface)]">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={winner.image}
+                  alt={`${winner.game} launch winners`}
+                  className="h-full w-full object-cover"
+                  loading="lazy"
+                />
+              </div>
+              <div className="p-4">
+                <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-[var(--text-soft)]">
+                  {winner.game}
+                </p>
+                <h3 className="mt-1 text-lg font-black text-[var(--text-primary)]">
+                  {winner.winner}
+                </h3>
+                <p className="mt-2 text-sm font-semibold text-[var(--text-secondary)]">
+                  {winner.result}
+                </p>
+                <p className="mt-3 inline-flex rounded-full border border-[var(--border-color)] bg-[var(--surface)] px-3 py-1 text-xs font-bold text-[var(--accent-secondary-text)]">
+                  1st prize: {winner.prize}
+                </p>
+              </div>
+            </article>
+          ))}
+        </div>
+      </section>
     </div>
   );
 }

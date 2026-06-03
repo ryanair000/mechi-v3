@@ -1,0 +1,2873 @@
+# PlayMechi Matchmaking Dashboard Plan
+
+## 1. Product Direction
+
+PlayMechi should be built as a dashboard-first matchmaking platform.
+
+The public website should explain the product, market the brand, and bring users into the dashboard. The dashboard should be where all player activity happens.
+
+## Core Principle
+
+Public pages explain PlayMechi.
+The dashboard runs PlayMechi.
+
+## Public Pages
+
+Public pages should support the product but should not contain the main player activity.
+
+Recommended public pages:
+
+```txt
+mechi.club/
+mechi.club/home
+mechi.club/how-it-works
+mechi.club/pricing
+mechi.club/tournaments
+mechi.club/support
+mechi.club/download
+mechi.club/terms-of-service
+mechi.club/privacy-policy
+```
+
+## Dashboard Pages
+
+All logged-in activity should happen inside:
+
+```txt
+mechi.club/dashboard
+```
+
+Dashboard routes should include:
+
+```txt
+/dashboard
+/dashboard/play
+/dashboard/challenges
+/dashboard/matches
+/dashboard/matches/[matchId]
+/dashboard/tournaments
+/dashboard/leaderboard
+/dashboard/games
+/dashboard/game-ids
+/dashboard/results
+/dashboard/disputes
+/dashboard/rewards
+/dashboard/socials
+/dashboard/subscription
+/dashboard/payments
+/dashboard/profile
+/dashboard/notifications
+/dashboard/support
+```
+
+## Admin Dashboard
+
+Admin tools should be separate:
+
+```txt
+/admin
+/admin/users
+/admin/matches
+/admin/challenges
+/admin/results
+/admin/disputes
+/admin/tournaments
+/admin/games
+/admin/subscriptions
+/admin/payments
+/admin/reports
+/admin/moderators
+/admin/content
+/admin/analytics
+/admin/settings
+```
+
+---
+
+# 2. Main Product Positioning
+
+## Short Positioning
+
+PlayMechi is the competitive gaming dashboard for African gamers.
+
+## Main Headline
+
+Challenge players. Find matches. Climb the ranks.
+
+## Supporting Message
+
+PlayMechi helps gamers create challenges, find opponents, join tournaments, submit results, track stats, climb leaderboards, and build a verified competitive gaming profile.
+
+## What PlayMechi Is Not
+
+PlayMechi should not feel like only a tournament flyer website.
+
+It should not feel like a gambling app.
+
+It should not depend on cash-stake matches at launch.
+
+It should not start with custom Ludo yet.
+
+## What PlayMechi Should Be First
+
+PlayMechi should first become:
+
+```txt
+A player dashboard
++ challenge board
++ match room system
++ result confirmation system
++ ranking system
++ tournament support system
++ subscription platform
+```
+
+---
+
+# 3. Dashboard-First Architecture
+
+The dashboard should be the product.
+
+A player should log in and immediately understand:
+
+```txt
+What can I play now?
+Who challenged me?
+Which match is active?
+Which result do I need to submit?
+What tournament am I in?
+What is my rank?
+What plan am I on?
+What should I do next?
+```
+
+## Dashboard Home Purpose
+
+The dashboard home should not be a landing page.
+
+It should be a command center.
+
+## Dashboard Home Priority
+
+The order of importance should be:
+
+1. Play now
+2. Active match
+3. Pending actions
+4. Open challenges
+5. Rank progress
+6. Joined tournaments
+7. Rewards
+8. Subscription status
+9. Announcements
+10. Streams/social content
+
+The current Weekend Cup-style hero card can remain, but it should not dominate the dashboard. It should become a smaller featured event card.
+
+---
+
+# 4. Recommended Player Dashboard Layout
+
+## Top Bar
+
+The top bar should include:
+
+```txt
+Search
+Notifications
+Quick Create Challenge button
+Join Queue button
+User avatar
+Current plan badge
+```
+
+Example:
+
+```txt
+Welcome back, Ryanair001
+Bronze III · Free Plan · 3 ranked matches left today
+
+[Join Queue] [Create Challenge] [View Tournaments]
+```
+
+## Main Dashboard Grid
+
+### Section 1: Play Now
+
+This is the most important card.
+
+Content:
+
+```txt
+Play Now
+Choose a game and find an opponent.
+
+Game: eFootball
+Mode: 1v1
+Type: Ranked
+Platform: PlayStation
+
+[Find Match]
+```
+
+This card should always be visible near the top.
+
+### Section 2: Active Match
+
+Only show when the player has an active match.
+
+Example:
+
+```txt
+Active Match
+eFootball 1v1 vs Brian254
+Status: Awaiting result
+Deadline: 8:45 PM
+
+[Open Match Room] [Submit Result] [Report Issue]
+```
+
+### Section 3: Pending Actions
+
+Show things the player must complete.
+
+Examples:
+
+```txt
+Confirm result vs Brian254
+Upload screenshot for Match #1021
+Add your PUBG Mobile ID
+Check in for Weekend Cup
+Complete your profile
+Upgrade to Pro to continue ranked matches
+```
+
+### Section 4: Open Challenges
+
+Show challenges the player can accept.
+
+Example table:
+
+| Player   | Game      | Rank      | Mode  | Time    | Action |
+| -------- | --------- | --------- | ----- | ------- | ------ |
+| Brian254 | eFootball | Silver II | 1v1   | Now     | Accept |
+| JayCODM  | CODM      | Bronze I  | 2v2   | 8 PM    | Accept |
+| KibetFF  | Free Fire | Gold III  | Squad | Tonight | View   |
+
+### Section 5: Rank Progress
+
+Example:
+
+```txt
+Rank Progress
+Bronze III → Bronze II
+2 wins needed to rank up
+Recent form: W-L-W-W
+```
+
+### Section 6: My Tournaments
+
+Show:
+
+```txt
+Joined tournaments
+Check-in status
+Next match
+Tournament deadline
+Tournament result
+```
+
+### Section 7: Rewards
+
+Show:
+
+```txt
+Daily mission
+Weekly mission
+Current streak
+Badges unlocked
+Drops available
+```
+
+### Section 8: Subscription Status
+
+Example for Free user:
+
+```txt
+Free Plan
+3 ranked matches left today
+Upgrade to Pro for unlimited ranked matches, more game slots, and advanced stats.
+
+[Upgrade to Pro]
+```
+
+### Section 9: Announcements
+
+This is where Weekend Cup, upcoming stream, and community drops should appear.
+
+They should support player activity, not replace it.
+
+---
+
+# 5. Dashboard Sidebar
+
+## Player Sidebar
+
+Recommended sidebar:
+
+```txt
+PLAYMECHI
+
+Main
+- Dashboard
+- Play
+- Challenges
+- My Matches
+- Tournaments
+- Leaderboard
+
+Player
+- Games
+- Game IDs
+- Results
+- Disputes
+- Rewards
+- Socials
+
+Account
+- Profile
+- Subscription
+- Payments
+- Notifications
+- Support
+```
+
+## Conditional Sidebar Items
+
+Only show these if the user has access.
+
+```txt
+Host Tools
+- My Events
+- Create Tournament
+- Participants
+- Brackets
+
+Moderator
+- Review Results
+- Disputes
+- Reports
+
+Admin
+- Admin Dashboard
+```
+
+Normal players should not see “Moderators” unless they are moderators.
+
+---
+
+# 6. UI Design Direction
+
+## Design Goal
+
+The UI should feel like a real gaming operations dashboard, not an AI-generated landing page.
+
+It should be:
+
+```txt
+Dark
+Fast
+Sharp
+Clean
+Functional
+Status-driven
+Action-first
+```
+
+It should not be:
+
+```txt
+Over-glossy
+Over-gradient
+Over-animated
+Full of fake cards
+Full of stock images
+Full of random glowing sections
+Generic SaaS-looking
+```
+
+## Visual Style
+
+Use the existing PlayMechi identity:
+
+```txt
+Dark navy background
+Teal accent
+Red/coral accent
+White text
+Soft borders
+Subtle shadows
+Gaming-style icons
+Rounded cards
+Compact tables
+Status badges
+```
+
+## Suggested Color System
+
+```txt
+Background:
+#07111F or similar dark navy
+
+Surface:
+#0E1A2D
+#111D31
+
+Border:
+#22334D
+
+Primary Accent:
+Teal / cyan
+
+Danger Accent:
+Coral / red
+
+Text:
+White for primary
+Light gray for secondary
+Muted gray for helper text
+
+Status:
+Green = confirmed / active
+Yellow = pending
+Red = disputed / failed
+Blue = info
+Purple = Pro / Elite highlight
+```
+
+## UI Rule
+
+Use color to communicate status, not decoration.
+
+Every color should have a job.
+
+## Typography
+
+Use one strong display font for headings and one clean UI font for everything else.
+
+Recommended approach:
+
+```txt
+Headings: bold, compact, gaming feel
+Body: clean, readable, simple
+Buttons: short and direct
+Labels: uppercase only when useful
+```
+
+Avoid too many font weights.
+
+## Spacing
+
+Use consistent spacing.
+
+Recommended spacing scale:
+
+```txt
+4px
+8px
+12px
+16px
+24px
+32px
+48px
+```
+
+Do not randomly space cards.
+
+## Cards
+
+Every card should have one clear purpose.
+
+Good card:
+
+```txt
+Active Match
+eFootball 1v1 vs Brian254
+Awaiting result · Deadline 8:45 PM
+[Open Match Room]
+```
+
+Bad card:
+
+```txt
+Compete with the best players and unlock endless opportunities in the next generation of gaming excellence.
+```
+
+Cards should be scannable and actionable.
+
+---
+
+# 7. Anti-AI-Slop UI Rules
+
+## What To Avoid
+
+Avoid these common AI-generated UI problems:
+
+```txt
+Huge generic hero sections inside dashboard
+Random glassmorphism
+Too many gradients
+Fake analytics numbers
+Fake users
+Fake testimonials
+Stock images everywhere
+Cards with vague titles
+Buttons that do not lead anywhere
+Too much marketing copy inside logged-in areas
+Overuse of emojis
+Overuse of glowing borders
+Random 3D icons
+Inconsistent icon styles
+Too many shadows
+Too much vertical space
+Repeated card patterns with no real data
+```
+
+## Dashboard Copy Rules
+
+Use short functional copy.
+
+Good:
+
+```txt
+Submit result
+Accept challenge
+Find match
+Check in
+Upload proof
+Confirm score
+Open match room
+```
+
+Bad:
+
+```txt
+Embark on your competitive journey and unlock your gaming destiny.
+```
+
+## Data Rules
+
+Never show fake stats as if they are real.
+
+If there is no data, show a useful empty state.
+
+Bad:
+
+```txt
+1,293 active players
+```
+
+when the platform has no real activity.
+
+Good:
+
+```txt
+No open challenges yet.
+Create the first challenge for eFootball.
+[Create Challenge]
+```
+
+## Empty State Rules
+
+Every empty state should include:
+
+```txt
+What happened
+Why it matters
+What the user can do next
+```
+
+Example:
+
+```txt
+No active match
+You are not currently playing anyone.
+Join the queue or create a challenge to start competing.
+
+[Join Queue] [Create Challenge]
+```
+
+## Button Rules
+
+Use one main button per card.
+
+Examples:
+
+```txt
+Find Match
+Create Challenge
+Open Match Room
+Submit Result
+Confirm Result
+Upgrade to Pro
+```
+
+Avoid five equal buttons in one card.
+
+## Icon Rules
+
+Use one icon family.
+
+Do not mix:
+
+```txt
+Lucide icons
+Font Awesome icons
+Random emoji icons
+3D icons
+AI-generated icons
+```
+
+Pick one and stay consistent.
+
+Recommended:
+
+```txt
+Lucide icons
+```
+
+## Image Rules
+
+Use images only where they help.
+
+Inside the dashboard, images should be secondary.
+
+Use images for:
+
+```txt
+Featured tournament
+Community post
+Stream announcement
+Game cover
+```
+
+Do not use images for:
+
+```txt
+Every card
+Every stat
+Every action
+Every empty state
+```
+
+## Animation Rules
+
+Use subtle animation only.
+
+Allowed:
+
+```txt
+Hover lift
+Button loading spinner
+Toast slide-in
+Modal fade
+Queue searching pulse
+```
+
+Avoid:
+
+```txt
+Constant glowing
+Floating cards
+Overanimated gradients
+Random particle backgrounds
+Spinning icons
+```
+
+---
+
+# 8. UI Component System
+
+Build a component system first.
+
+## Core Components
+
+```txt
+Button
+Card
+Badge
+Tabs
+Table
+Modal
+Drawer
+Dropdown
+Input
+Select
+Textarea
+Toast
+Avatar
+Progress bar
+Stat card
+Empty state
+Timeline
+Notification item
+Match card
+Challenge card
+Tournament card
+Subscription card
+```
+
+## Status Badges
+
+Use consistent badges:
+
+```txt
+Open
+Accepted
+Ready
+In Progress
+Awaiting Result
+Awaiting Confirmation
+Disputed
+Finalized
+Expired
+Cancelled
+Paid
+Failed
+Active
+Suspended
+Free
+Pro
+Elite
+```
+
+## Match Card Component
+
+```txt
+MatchCard
+- game
+- mode
+- playerOne
+- playerTwo
+- status
+- deadline
+- primaryAction
+```
+
+## Challenge Card Component
+
+```txt
+ChallengeCard
+- creator
+- game
+- platform
+- rankRange
+- scheduledTime
+- status
+- acceptButton
+```
+
+## Subscription Card Component
+
+```txt
+SubscriptionCard
+- plan
+- price
+- billingPeriod
+- features
+- currentPlan
+- CTA
+```
+
+## Admin Table Component
+
+```txt
+AdminTable
+- search
+- filters
+- columns
+- rows
+- status badges
+- action menu
+- detail drawer
+```
+
+---
+
+# 9. Responsive Design
+
+## Desktop
+
+Use:
+
+```txt
+Sidebar left
+Top bar
+Main content grid
+Right detail panel where useful
+```
+
+## Tablet
+
+Use:
+
+```txt
+Collapsible sidebar
+Two-column card layout
+Tables become compact
+```
+
+## Mobile
+
+Use:
+
+```txt
+Bottom navigation
+Single-column cards
+Sticky primary action
+Simplified tables
+Swipeable tabs
+```
+
+## Mobile Bottom Navigation
+
+Recommended mobile nav:
+
+```txt
+Dashboard
+Play
+Challenges
+Matches
+Profile
+```
+
+The mobile experience matters because many Kenyan gamers will access PlayMechi from phones.
+
+---
+
+# 10. Accessibility Rules
+
+The dashboard should be accessible from the start.
+
+Requirements:
+
+```txt
+Keyboard focus visible
+Buttons have clear labels
+Inputs have labels
+Good contrast
+Errors explain what happened
+Forms do not rely only on color
+Tables have proper headers
+Modals can be closed with keyboard
+Loading states are clear
+Touch targets are large enough
+```
+
+Do not make the UI beautiful but hard to use.
+
+---
+
+# 11. Matchmaking System
+
+## Matchmaking Types
+
+PlayMechi should support two types of matchmaking.
+
+### Queue Matchmaking
+
+The player says:
+
+```txt
+Find me an opponent now.
+```
+
+Flow:
+
+```txt
+Player goes to /dashboard/play
+Selects game
+Selects platform
+Selects casual or ranked
+Clicks Find Match
+System searches for opponent
+Both players accept
+Match room is created
+Players play outside PlayMechi
+Result is submitted
+Opponent confirms
+Rating updates
+```
+
+### Challenge Board
+
+The player says:
+
+```txt
+I want to create a challenge and wait for someone to accept.
+```
+
+Flow:
+
+```txt
+Player goes to /dashboard/challenges
+Clicks Create Challenge
+Selects game, mode, platform, rank range, time
+Challenge appears on open board
+Another player accepts
+Match room is created
+Players play
+Result is submitted and confirmed
+Ranking updates
+```
+
+## Matchmaking Filters
+
+Use:
+
+```txt
+Game
+Platform
+Region
+Rank
+Availability
+Trust score
+Match history
+No-show rate
+Subscription level where applicable
+```
+
+## Early MVP Matching Rules
+
+```txt
+Match similar ranks first
+Widen rank range after waiting
+Avoid players with recent disputes against each other
+Avoid high no-show users
+Allow rematch after completion
+```
+
+---
+
+# 12. Challenge System
+
+## Challenge Types
+
+| Challenge Type       | Description                         |
+| -------------------- | ----------------------------------- |
+| Open Challenge       | Anyone eligible can accept          |
+| Direct Challenge     | Invite a specific player            |
+| Scheduled Challenge  | Match set for later                 |
+| Rematch              | Challenge previous opponent         |
+| Tournament Challenge | Match connected to a tournament     |
+| Clan Challenge       | Team or group-based challenge later |
+
+## Challenge Fields
+
+When creating a challenge, ask for:
+
+```txt
+Game
+Mode
+Platform
+Casual or Ranked
+Preferred time
+Rank range
+Notes
+Proof requirements
+Expiry time
+```
+
+## Challenge Statuses
+
+```txt
+Draft
+Open
+Accepted
+Expired
+Cancelled
+Converted to Match
+```
+
+---
+
+# 13. Match Room
+
+The match room is one of the most important product pages.
+
+Route:
+
+```txt
+/dashboard/matches/[matchId]
+```
+
+## Match Room Should Show
+
+```txt
+Match ID
+Player 1
+Player 2
+Game
+Platform
+Mode
+Match status
+Rules
+Deadline
+Game IDs
+Lobby code if available
+Result submission
+Screenshot upload
+Chat/comments
+Dispute button
+Moderator decision if disputed
+```
+
+## Match Room Statuses
+
+```txt
+Waiting for players
+Ready
+In progress
+Awaiting result
+Result submitted
+Awaiting confirmation
+Disputed
+Finalized
+Voided
+```
+
+## Match Room Actions
+
+Player can:
+
+```txt
+View opponent details
+Copy game ID
+Submit result
+Upload screenshot
+Confirm result
+Dispute result
+Report no-show
+Request rematch
+Contact support
+```
+
+---
+
+# 14. Result Submission
+
+Because matches happen outside PlayMechi, result verification is critical.
+
+## Result Modes
+
+### Mutual Confirmation
+
+Best for normal 1v1 matches.
+
+Flow:
+
+```txt
+Winner submits score
+Opponent confirms
+Match finalizes
+Rating updates
+```
+
+### Screenshot Proof
+
+Best for ranked matches and tournaments.
+
+Require:
+
+```txt
+Score screenshot
+Opponent name if visible
+Match time
+Game ID or lobby ID where possible
+```
+
+### Moderator Review
+
+Used when players disagree.
+
+Moderator reviews:
+
+```txt
+Scores
+Screenshots
+Match history
+Comments
+User trust score
+No-show history
+```
+
+## Result Statuses
+
+```txt
+Not submitted
+Submitted
+Confirmed
+Auto-confirmed
+Disputed
+Rejected
+Finalized
+```
+
+## Auto-Confirmation Rule
+
+If a player submits a result and the opponent does not respond within a set time, the result can auto-confirm unless disputed.
+
+Suggested window:
+
+```txt
+Casual match: 30 minutes
+Ranked match: 60 minutes
+Tournament match: admin-defined
+```
+
+---
+
+# 15. Dispute System
+
+## Dispute Reasons
+
+Players can dispute when:
+
+```txt
+Opponent submitted wrong score
+Opponent did not show up
+Screenshot is fake
+Wrong game ID was used
+Match was played outside the time window
+Opponent disconnected
+Opponent used abusive language
+Rules were broken
+```
+
+## Dispute Page
+
+Route:
+
+```txt
+/dashboard/disputes
+```
+
+Player sees:
+
+```txt
+Open disputes
+Dispute status
+Required evidence
+Moderator decision
+Penalties if any
+```
+
+## Admin Dispute Decisions
+
+Admin/moderator can decide:
+
+```txt
+Player A wins
+Player B wins
+Void match
+Rematch required
+No-show loss
+Both players penalized
+Warning issued
+Account suspended
+```
+
+## Penalties
+
+Possible penalties:
+
+```txt
+Warning
+Rank points penalty
+Temporary ranked ban
+Tournament ban
+Account suspension
+Permanent ban for fake evidence or repeated fraud
+```
+
+---
+
+# 16. Ranking System
+
+Use a simple visible rank system supported by hidden rating points.
+
+## Public Ranks
+
+```txt
+Bronze III
+Bronze II
+Bronze I
+
+Silver III
+Silver II
+Silver I
+
+Gold III
+Gold II
+Gold I
+
+Platinum III
+Platinum II
+Platinum I
+
+Diamond III
+Diamond II
+Diamond I
+
+Legend
+```
+
+## Hidden Rating
+
+Behind the scenes:
+
+```txt
+New user starts at 1000 rating
+Win gives points
+Loss removes points
+Beating stronger players gives more points
+Losing to weaker players removes more points
+No-show removes points
+Disputes and false results affect trust score
+```
+
+## Game-Specific Rankings
+
+Each game should have its own rating.
+
+Example:
+
+```txt
+Ryanair001
+eFootball: Silver II
+CODM: Bronze I
+Free Fire: Unranked
+```
+
+## Leaderboard Types
+
+Inside `/dashboard/leaderboard`, include:
+
+```txt
+Overall leaderboard
+Game leaderboard
+Weekly leaderboard
+Monthly leaderboard
+Friends leaderboard
+Pro leaderboard
+Elite hosts leaderboard
+Most active players
+Best win streaks
+Rising players
+```
+
+---
+
+# 17. Subscription Strategy
+
+PlayMechi should offer daily, weekly, and monthly options.
+
+Daily and weekly options are important because many players may not want to commit to monthly billing immediately.
+
+## Subscription Naming
+
+Use simple names:
+
+```txt
+Free
+Pro Daily
+Pro Weekly
+Pro Monthly
+Elite Daily
+Elite Weekly
+Elite Monthly
+```
+
+Alternatively, call daily/weekly products “passes”:
+
+```txt
+Pro Day Pass
+Pro Weekly Pass
+Pro Monthly
+Elite Day Pass
+Elite Weekly Pass
+Elite Monthly
+```
+
+This may be clearer because daily and weekly access can be bought as one-time access first before full recurring billing.
+
+## Recommended Pricing
+
+### Free
+
+```txt
+KES 0
+```
+
+### Pro
+
+```txt
+Pro Daily: KES 20/day
+Pro Weekly: KES 70/week
+Pro Monthly: KES 199/month
+```
+
+### Elite
+
+```txt
+Elite Daily: KES 50/day
+Elite Weekly: KES 199/week
+Elite Monthly: KES 699/month
+```
+
+## Why These Prices Work
+
+The daily pass lowers the barrier.
+
+The weekly pass is good for players who only compete during weekends.
+
+The monthly plan gives the best value and should be the main plan.
+
+## Pricing Psychology
+
+Make monthly look like the best deal.
+
+Example:
+
+```txt
+Pro Daily: KES 20
+Pro Weekly: KES 70
+Pro Monthly: KES 199
+```
+
+A player who buys Pro Daily many times will realize monthly is better.
+
+Example:
+
+```txt
+Elite Daily: KES 50
+Elite Weekly: KES 199
+Elite Monthly: KES 699
+```
+
+Elite monthly should be positioned for hosts and serious players.
+
+---
+
+# 18. Subscription Features
+
+## Free Plan
+
+Free must be useful because it grows the community.
+
+### Free Features
+
+```txt
+5 ranked matches per day
+Unlimited casual challenges
+1 selected main game
+Join public tournaments
+Basic leaderboard access
+10-match history
+Basic player profile
+Basic stats
+Result submission
+Dispute access
+Basic notifications
+```
+
+### Free Dashboard Message
+
+```txt
+Free Plan
+You have 3 ranked matches left today.
+Upgrade to Pro for unlimited ranked matches, more game slots, and advanced stats.
+```
+
+---
+
+## Pro Plan
+
+Pro is for active players.
+
+### Pro Pricing
+
+```txt
+KES 20/day
+KES 70/week
+KES 199/month
+```
+
+### Pro Features
+
+```txt
+Unlimited ranked matches
+Up to 3 selected games
+Unlimited casual challenges
+Advanced match history
+100-match history
+Pro badge
+Advanced stats
+Priority challenge visibility
+Scheduled challenges
+Rematch shortcuts
+Custom profile banner
+Early access to selected tournaments
+Reduced tournament service fee where applicable
+Priority notifications
+Verified-only queue later
+```
+
+### Pro Stats
+
+Pro users should see:
+
+```txt
+Win rate by game
+Current streak
+Best streak
+Rank movement
+Most played opponent
+Monthly form
+Recent performance graph
+Game-specific performance
+```
+
+### Pro Dashboard Message
+
+```txt
+Pro Active
+Unlimited ranked matches unlocked.
+3 selected games enabled.
+Advanced stats available.
+```
+
+---
+
+## Elite Plan
+
+Elite is for serious players, hosts, clans, and creators.
+
+### Elite Pricing
+
+```txt
+KES 50/day
+KES 199/week
+KES 699/month
+```
+
+### Elite Features
+
+```txt
+Everything in Pro
+Host tournaments
+3 fee-free hosted tournaments per month
+Custom tournament pages
+Clan/team page
+5+ selected games or unlimited selected games
+Unlimited match history
+CSV export
+Elite badge
+Priority support
+Featured profile placement
+Featured tournament placement
+Stream card access
+Community drops tools
+Host dashboard
+Early access to new features
+Private community events
+Sponsor placement tools later
+```
+
+### Elite Dashboard Message
+
+```txt
+Elite Active
+Host tools unlocked.
+You can create tournaments, manage participants, export results, and feature your events.
+```
+
+## Elite Should Not Be Pay-To-Win
+
+Elite should not give:
+
+```txt
+Easier opponents
+Fake rank boosts
+Free wins
+Unfair leaderboard advantage
+```
+
+Elite should give:
+
+```txt
+Hosting power
+Better tools
+More visibility
+Better analytics
+Better support
+Community features
+```
+
+---
+
+# 19. Subscription Comparison Table
+
+| Feature                       |      Free | Pro Daily | Pro Weekly | Pro Monthly | Elite Daily | Elite Weekly | Elite Monthly |
+| ----------------------------- | --------: | --------: | ---------: | ----------: | ----------: | -----------: | ------------: |
+| Price                         |     KES 0 |    KES 20 |     KES 70 |     KES 199 |      KES 50 |      KES 199 |       KES 699 |
+| Duration                      |   Forever |    24 hrs |     7 days |     30 days |      24 hrs |       7 days |       30 days |
+| Ranked Matches                |     5/day | Unlimited |  Unlimited |   Unlimited |   Unlimited |    Unlimited |     Unlimited |
+| Casual Challenges             | Unlimited | Unlimited |  Unlimited |   Unlimited |   Unlimited |    Unlimited |     Unlimited |
+| Selected Games                |         1 |         3 |          3 |           3 |          5+ |           5+ |            5+ |
+| Match History                 |        10 |       100 |        100 |         100 |   Unlimited |    Unlimited |     Unlimited |
+| Advanced Stats                |        No |       Yes |        Yes |         Yes |         Yes |          Yes |           Yes |
+| Badge                         |        No |       Pro |        Pro |         Pro |       Elite |        Elite |         Elite |
+| Schedule Challenges           |   Limited |       Yes |        Yes |         Yes |         Yes |          Yes |           Yes |
+| Priority Challenge Visibility |        No |       Yes |        Yes |         Yes |         Yes |          Yes |           Yes |
+| Host Tournaments              |        No |        No |         No |          No |         Yes |          Yes |           Yes |
+| Fee-Free Hosted Tournaments   |        No |        No |         No |          No |          No |       1/week |       3/month |
+| CSV Export                    |        No |        No |         No |          No |         Yes |          Yes |           Yes |
+| Clan/Team Page                |        No |        No |         No |          No |         Yes |          Yes |           Yes |
+| Priority Support              |        No |   Limited |    Limited |     Limited |         Yes |          Yes |           Yes |
+| Featured Profile              |        No |        No |         No |          No |     Limited |          Yes |           Yes |
+| Stream Tools                  |        No |        No |         No |          No |         Yes |          Yes |           Yes |
+
+---
+
+# 20. Subscription Implementation
+
+## Recommended Billing Logic
+
+Use two types of access:
+
+### One-Time Passes
+
+Good for:
+
+```txt
+Daily Pro
+Weekly Pro
+Daily Elite
+Weekly Elite
+```
+
+These can be sold like access passes.
+
+A user pays once and gets access until expiry.
+
+### Recurring Subscription
+
+Good for:
+
+```txt
+Pro Monthly
+Elite Monthly
+```
+
+Monthly subscriptions can be recurring where payment provider support allows it.
+
+## Subscription Statuses
+
+```txt
+Free
+Trial
+Active
+Expiring Soon
+Expired
+Cancelled
+Payment Failed
+Grace Period
+```
+
+## Access Rules
+
+When a player buys a pass or subscription:
+
+```txt
+Set plan_level
+Set plan_started_at
+Set plan_expires_at
+Unlock plan features
+Show plan badge
+Track renewal or expiry
+```
+
+## Expiry Rules
+
+When plan expires:
+
+```txt
+Return user to Free
+Keep match history but lock advanced history view
+Keep badge in history but remove active badge
+Disable Pro/Elite-only actions
+Show renew CTA
+```
+
+## Plan Upgrade Rules
+
+If user upgrades before expiry:
+
+```txt
+Apply higher plan immediately
+Extend expiry fairly if possible
+Show confirmation
+```
+
+## Plan Downgrade Rules
+
+If user downgrades:
+
+```txt
+Let current paid access continue until expiry
+Apply lower plan after expiry
+Do not delete user data
+Only lock access to premium views
+```
+
+---
+
+# 21. Payment and Compliance Position
+
+For the first version, payments should focus on:
+
+```txt
+Subscriptions
+Daily passes
+Weekly passes
+Monthly plans
+Tournament registration where approved
+```
+
+Avoid at launch:
+
+```txt
+Player-vs-player cash staking
+Winner-takes-pot challenges
+Wallet deposits
+Wallet withdrawals
+Random cash rewards
+Paid lucky draws
+Cash Ludo
+Double-your-money language
+```
+
+## Safe Product Language
+
+Use:
+
+```txt
+Compete, rank up, join tournaments, and unlock rewards.
+```
+
+Avoid:
+
+```txt
+Stake money and win cash instantly.
+```
+
+## Important Rule
+
+Do not scale entry-fee plus prize mechanics until legal and payment provider approval is confirmed.
+
+---
+
+# 22. Admin Dashboard Design
+
+## Admin Dashboard Goal
+
+The admin dashboard should help PlayMechi staff control the platform.
+
+Admins should be able to:
+
+```txt
+Monitor active matches
+Resolve disputes
+Verify results
+Manage users
+Manage subscriptions
+Manage tournaments
+Review payments
+Detect fraud
+Control dashboard content
+Manage games
+Manage moderators
+```
+
+## Admin Visual Style
+
+Use the same PlayMechi style, but more operational.
+
+Admin UI should be:
+
+```txt
+Compact
+Data-heavy
+Table-focused
+Filterable
+Fast
+Status-driven
+Less decorative than player dashboard
+```
+
+## Admin Sidebar
+
+```txt
+PLAYMECHI ADMIN
+
+Overview
+- Admin Home
+- Live Activity
+- Alerts
+
+Players
+- Users
+- Profiles
+- Game IDs
+- Trust Scores
+
+Competition
+- Matches
+- Challenges
+- Results
+- Disputes
+- Leaderboards
+
+Events
+- Tournaments
+- Participants
+- Brackets
+- Hosts
+
+Business
+- Subscriptions
+- Payments
+- Refunds
+- Revenue
+
+Platform
+- Games
+- Rules
+- Notifications
+- Content Banners
+- Support Tickets
+
+Security
+- Reports
+- Suspensions
+- Audit Logs
+- Moderators
+
+Settings
+- Platform Settings
+- Roles & Permissions
+```
+
+## Admin Home Cards
+
+Top cards:
+
+```txt
+Active Players Today
+Live Matches
+Open Challenges
+Pending Results
+Open Disputes
+Paid Users
+Revenue This Month
+New Signups
+```
+
+## Admin Home Layout
+
+```txt
+Top Bar:
+Search users, matches, payments...
+Notifications
+Admin profile
+
+Metric Cards:
+Active Players
+Live Matches
+Open Challenges
+Pending Results
+Open Disputes
+Monthly Revenue
+
+Main Left:
+Live Match Feed
+Pending Result Reviews
+
+Main Right:
+Dispute Queue
+Risk Alerts
+System Announcements
+```
+
+## Admin Tables
+
+Every admin table should have:
+
+```txt
+Search
+Filters
+Status badges
+Bulk actions
+Export button where needed
+View details drawer
+Admin notes
+```
+
+---
+
+# 23. Admin User Management
+
+Admin user page should show:
+
+```txt
+Username
+Email/phone
+Plan
+Rank
+Games
+Matches played
+Win/loss
+Disputes
+No-shows
+Trust score
+Account status
+```
+
+## User Statuses
+
+```txt
+Active
+Limited
+Suspended
+Banned
+Under Review
+Deleted
+```
+
+## Admin User Actions
+
+Admin can:
+
+```txt
+View profile
+Edit username if needed
+Reset selected games
+Change plan manually
+Suspend account
+Ban account
+Reset rank
+Add note
+View payment history
+View dispute history
+```
+
+---
+
+# 24. Admin Match Management
+
+Admin can open any match and see:
+
+```txt
+Full match details
+Player profiles
+Game IDs
+Submitted results
+Screenshots
+Chat/comments
+Timeline
+Previous disputes
+Trust scores
+Moderator notes
+```
+
+## Admin Match Actions
+
+Admin can:
+
+```txt
+Finalize result
+Void match
+Force rematch
+Penalize player
+Extend deadline
+Lock match
+Reopen match
+Message players
+Assign moderator
+```
+
+---
+
+# 25. Admin Roles
+
+## Roles
+
+| Role            | Access                                 |
+| --------------- | -------------------------------------- |
+| Super Admin     | Full platform access                   |
+| Admin           | Most management tools                  |
+| Moderator       | Results, disputes, reports             |
+| Tournament Host | Own tournament only                    |
+| Support Agent   | Tickets, user support, payment support |
+| Content Manager | Banners, announcements, social cards   |
+
+## Moderator Can
+
+```txt
+Review results
+Resolve disputes
+View match evidence
+Issue warnings
+Escalate users
+```
+
+## Moderator Cannot
+
+```txt
+Access full revenue data
+Change subscriptions
+Delete users
+Change system settings
+```
+
+## Tournament Host Can
+
+```txt
+Manage own tournament
+Approve participants
+Update bracket
+Post announcements
+Review own tournament results
+```
+
+## Tournament Host Cannot
+
+```txt
+Access all platform users
+See all payments
+Suspend users globally
+Edit other tournaments
+```
+
+---
+
+# 26. Codex Implementation Approach
+
+Codex should not be asked to “make the dashboard beautiful” in one vague prompt.
+
+That leads to AI slop.
+
+Codex should be given small, structured engineering tasks with clear UI rules, file targets, acceptance criteria, and screenshots or existing design references.
+
+## Codex Working Method
+
+Use this process:
+
+```txt
+1. Create a product spec
+2. Create a design system spec
+3. Create database schema
+4. Create route map
+5. Create component list
+6. Build components first
+7. Build pages from components
+8. Add real empty states
+9. Add loading/error states
+10. Test flows
+11. Review UI manually
+12. Refactor
+```
+
+## Codex Should Work in Phases
+
+Do not ask Codex to generate everything at once.
+
+Use phases:
+
+```txt
+Phase 1: Design system
+Phase 2: Dashboard shell
+Phase 3: Player profile and game IDs
+Phase 4: Challenge board
+Phase 5: Match room
+Phase 6: Result submission
+Phase 7: Rankings and leaderboard
+Phase 8: Subscriptions
+Phase 9: Admin dashboard
+Phase 10: QA and cleanup
+```
+
+## Codex Prompting Rule
+
+Every Codex task should include:
+
+```txt
+Goal
+Files to edit
+Files not to edit
+UI style rules
+Data requirements
+States required
+Acceptance criteria
+Testing instructions
+```
+
+## Bad Codex Prompt
+
+```txt
+Build me a modern gaming dashboard with matchmaking and subscriptions.
+```
+
+This is too vague and will likely create generic AI UI.
+
+## Good Codex Prompt
+
+```txt
+Build the /dashboard/play page using the existing PlayMechi dashboard shell.
+
+Requirements:
+- Keep the current dark navy PlayMechi style.
+- Do not create a giant marketing hero.
+- Use compact action-first cards.
+- Add a Play Now card with game, platform, mode, match type, and Find Match button.
+- Add an empty state for no active queue.
+- Add loading, error, and success states.
+- Use existing Button, Card, Badge, Select, and Tabs components.
+- Do not introduce new colors outside the design tokens.
+- Do not add stock images.
+- Do not use fake player counts.
+- Make the page responsive.
+- Add basic tests if the project has test setup.
+
+Acceptance criteria:
+- User can select a game.
+- User can select ranked or casual.
+- User can click Find Match.
+- Empty state appears when no queue is active.
+- UI matches existing dashboard spacing and typography.
+```
+
+---
+
+# 27. Codex Task List
+
+## Task 1: Create Design Tokens
+
+Codex task:
+
+```txt
+Create a PlayMechi design token file for colors, spacing, radius, shadows, typography, and status colors.
+
+Do not change the current brand identity.
+Use dark navy surfaces, teal primary accent, coral danger accent, and clean readable text colors.
+Replace hardcoded random colors where safe.
+```
+
+Output:
+
+```txt
+tokens.ts
+theme.ts
+globals.css updates
+```
+
+## Task 2: Build Core Components
+
+Codex task:
+
+```txt
+Create reusable dashboard components:
+Button, Card, Badge, Tabs, Table, EmptyState, StatCard, MatchCard, ChallengeCard, SubscriptionCard, PageHeader.
+
+Use existing design style.
+No stock images.
+No fake decorative gradients.
+Each component must support loading and empty states where relevant.
+```
+
+## Task 3: Build Dashboard Shell
+
+Codex task:
+
+```txt
+Build the dashboard shell with sidebar, topbar, content area, and responsive mobile layout.
+
+Sidebar groups:
+Main, Player, Account.
+Hide Admin, Moderator, and Host sections unless user role allows them.
+```
+
+## Task 4: Build Dashboard Home
+
+Codex task:
+
+```txt
+Rework /dashboard into an action-first player command center.
+
+Top order:
+1. Welcome + quick actions
+2. Play Now
+3. Active Match
+4. Pending Actions
+5. Open Challenges
+6. Rank Progress
+7. My Tournaments
+8. Rewards
+9. Announcements
+
+Do not place a large marketing hero at the top.
+```
+
+## Task 5: Build Play Page
+
+Route:
+
+```txt
+/dashboard/play
+```
+
+Codex task:
+
+```txt
+Create the Play page where users select game, platform, mode, and match type before entering queue.
+```
+
+## Task 6: Build Challenge Board
+
+Route:
+
+```txt
+/dashboard/challenges
+```
+
+Codex task:
+
+```txt
+Create challenge board with tabs:
+Open, My Challenges, Sent, Received, Completed, Disputed.
+
+Add create challenge modal.
+Add filters for game, platform, rank, and time.
+```
+
+## Task 7: Build Match Room
+
+Route:
+
+```txt
+/dashboard/matches/[matchId]
+```
+
+Codex task:
+
+```txt
+Create match room page with players, game IDs, rules, deadline, result submission, screenshot upload, confirm result, dispute result, and timeline.
+```
+
+## Task 8: Build Results Flow
+
+Routes:
+
+```txt
+/dashboard/results
+/dashboard/matches/[matchId]
+```
+
+Codex task:
+
+```txt
+Implement result submission, opponent confirmation, auto-confirmation state, and dispute trigger.
+```
+
+## Task 9: Build Subscription Page
+
+Route:
+
+```txt
+/dashboard/subscription
+```
+
+Codex task:
+
+```txt
+Create subscription page with Free, Pro Daily, Pro Weekly, Pro Monthly, Elite Daily, Elite Weekly, Elite Monthly.
+
+Show current plan, expiry date, features, upgrade CTA, and payment status.
+```
+
+## Task 10: Build Admin Dashboard
+
+Route:
+
+```txt
+/admin
+```
+
+Codex task:
+
+```txt
+Build admin dashboard shell and overview with metric cards, live matches table, pending results, dispute queue, risk alerts, and quick filters.
+```
+
+---
+
+# 28. Codex UI Quality Checklist
+
+Before accepting any Codex-generated UI, check:
+
+```txt
+Does it look like PlayMechi, not generic SaaS?
+Is there one clear primary action per card?
+Are there real empty states?
+Are loading states included?
+Are error states included?
+Are fake numbers removed?
+Are colors from tokens?
+Are icons consistent?
+Is spacing consistent?
+Is mobile usable?
+Are admin-only items hidden from players?
+Are dashboard pages action-first?
+Are public pages marketing-first?
+Are buttons connected to real routes/actions?
+Does it avoid random gradients and glow effects?
+Does it avoid stock image dependency?
+```
+
+## Manual Review Rule
+
+Never accept Codex UI without manually reviewing the screen.
+
+Codex can build fast, but product taste must come from you.
+
+---
+
+# 29. Suggested Tech Structure
+
+This assumes a modern Next.js-style app.
+
+## Suggested Route Structure
+
+```txt
+app/
+  page.tsx
+  home/
+  how-it-works/
+  pricing/
+  support/
+  dashboard/
+    layout.tsx
+    page.tsx
+    play/
+    challenges/
+    matches/
+      page.tsx
+      [matchId]/
+    tournaments/
+    leaderboard/
+    games/
+    game-ids/
+    results/
+    disputes/
+    rewards/
+    socials/
+    subscription/
+    payments/
+    profile/
+    notifications/
+    support/
+  admin/
+    layout.tsx
+    page.tsx
+    users/
+    matches/
+    challenges/
+    results/
+    disputes/
+    tournaments/
+    games/
+    subscriptions/
+    payments/
+    reports/
+    moderators/
+    content/
+    analytics/
+    settings/
+components/
+  ui/
+  dashboard/
+  admin/
+  matches/
+  challenges/
+  subscriptions/
+lib/
+  auth/
+  db/
+  payments/
+  matchmaking/
+  ratings/
+  permissions/
+  notifications/
+```
+
+## Suggested Component Structure
+
+```txt
+components/ui/Button.tsx
+components/ui/Card.tsx
+components/ui/Badge.tsx
+components/ui/Tabs.tsx
+components/ui/Table.tsx
+components/ui/EmptyState.tsx
+
+components/dashboard/DashboardShell.tsx
+components/dashboard/Sidebar.tsx
+components/dashboard/Topbar.tsx
+components/dashboard/PlayNowCard.tsx
+components/dashboard/ActiveMatchCard.tsx
+components/dashboard/PendingActionsCard.tsx
+components/dashboard/RankProgressCard.tsx
+
+components/challenges/ChallengeCard.tsx
+components/challenges/CreateChallengeModal.tsx
+components/challenges/ChallengeFilters.tsx
+
+components/matches/MatchRoomHeader.tsx
+components/matches/ResultSubmissionForm.tsx
+components/matches/MatchTimeline.tsx
+components/matches/DisputePanel.tsx
+
+components/subscriptions/PlanCard.tsx
+components/subscriptions/PlanComparison.tsx
+components/subscriptions/CurrentPlanCard.tsx
+
+components/admin/AdminShell.tsx
+components/admin/AdminMetricCard.tsx
+components/admin/AdminTable.tsx
+components/admin/DisputeQueue.tsx
+```
+
+---
+
+# 30. Database Models
+
+## Users
+
+```txt
+id
+username
+email
+phone
+password_hash
+country
+role
+plan
+status
+created_at
+updated_at
+```
+
+## Profiles
+
+```txt
+id
+user_id
+display_name
+avatar
+bio
+main_game
+rank_summary
+social_links
+trust_score
+created_at
+updated_at
+```
+
+## Games
+
+```txt
+id
+name
+platforms
+modes
+proof_requirements
+rules
+status
+created_at
+updated_at
+```
+
+## Player Game IDs
+
+```txt
+id
+user_id
+game_id
+platform
+game_username
+game_uid
+verified_status
+created_at
+updated_at
+```
+
+## Challenges
+
+```txt
+id
+creator_id
+accepted_by
+game_id
+mode
+platform
+rank_range
+scheduled_time
+status
+expires_at
+created_at
+updated_at
+```
+
+## Matches
+
+```txt
+id
+challenge_id
+player_one_id
+player_two_id
+game_id
+mode
+platform
+status
+deadline
+winner_id
+rating_processed
+created_at
+updated_at
+```
+
+## Results
+
+```txt
+id
+match_id
+submitted_by
+player_one_score
+player_two_score
+screenshot_url
+confirmation_status
+created_at
+updated_at
+```
+
+## Disputes
+
+```txt
+id
+match_id
+opened_by
+reason
+evidence_url
+status
+moderator_id
+decision
+created_at
+updated_at
+```
+
+## Ratings
+
+```txt
+id
+user_id
+game_id
+rating_points
+tier
+wins
+losses
+draws
+streak
+created_at
+updated_at
+```
+
+## Subscriptions
+
+```txt
+id
+user_id
+plan
+billing_period
+status
+start_date
+end_date
+payment_reference
+created_at
+updated_at
+```
+
+## Payments
+
+```txt
+id
+user_id
+amount
+currency
+purpose
+provider
+reference
+status
+created_at
+updated_at
+```
+
+## Notifications
+
+```txt
+id
+user_id
+type
+title
+message
+read_status
+action_url
+created_at
+```
+
+## Admin Logs
+
+```txt
+id
+admin_id
+action
+target_type
+target_id
+notes
+created_at
+```
+
+---
+
+# 31. MVP Build Order
+
+## Week 1: Design System and Dashboard Shell
+
+Build:
+
+```txt
+Design tokens
+Core UI components
+Dashboard layout
+Sidebar
+Topbar
+Responsive layout
+Empty state components
+```
+
+Goal:
+
+The dashboard has a consistent foundation.
+
+## Week 2: Player Setup
+
+Build:
+
+```txt
+Profile
+Game selection
+Game IDs
+Subscription status card
+Notifications base
+```
+
+Goal:
+
+Players can create a real gaming profile.
+
+## Week 3: Challenge Board
+
+Build:
+
+```txt
+Create challenge
+Open challenges
+Accept challenge
+Cancel challenge
+Challenge filters
+Challenge expiry
+```
+
+Goal:
+
+Players can find opponents manually.
+
+## Week 4: Match Rooms
+
+Build:
+
+```txt
+Match room page
+Match status
+Game IDs display
+Rules display
+Result submission
+Screenshot upload
+Confirmation flow
+```
+
+Goal:
+
+Every match has a clear home.
+
+## Week 5: Results and Ranking
+
+Build:
+
+```txt
+Confirm result
+Auto-confirm result
+Basic dispute
+Rating update
+Match history
+Leaderboard
+```
+
+Goal:
+
+Players can compete and progress.
+
+## Week 6: Subscriptions
+
+Build:
+
+```txt
+Free limits
+Pro Daily
+Pro Weekly
+Pro Monthly
+Elite Daily
+Elite Weekly
+Elite Monthly
+Payment records
+Feature locking
+Upgrade prompts
+Expiry logic
+```
+
+Goal:
+
+Start monetizing active users.
+
+## Week 7: Admin Dashboard
+
+Build:
+
+```txt
+Admin overview
+User management
+Match management
+Result review
+Dispute queue
+Tournament management
+Payments overview
+Content banners
+```
+
+Goal:
+
+PlayMechi can operate safely.
+
+## Week 8: Private Beta
+
+Invite:
+
+```txt
+50–100 players
+```
+
+Start with:
+
+```txt
+eFootball
+EA FC
+CODM
+```
+
+Track:
+
+```txt
+Matches created
+Matches completed
+Disputes
+No-shows
+Subscription interest
+UI confusion
+Mobile usability
+```
+
+---
+
+# 32. Launch Offer
+
+## Public Message
+
+```txt
+PlayMechi Matchmaking Beta is live.
+
+Create your player profile, challenge opponents, enter ranked matches, submit results, and climb the leaderboard.
+
+Free players get 5 ranked matches per day.
+Pro unlocks unlimited ranked matches and advanced stats.
+Elite unlocks host tools and tournament features.
+```
+
+## Launch Offer
+
+```txt
+First 500 players get 7 days Pro free.
+```
+
+## Pricing
+
+```txt
+Free: KES 0
+
+Pro Daily: KES 20
+Pro Weekly: KES 70
+Pro Monthly: KES 199
+
+Elite Daily: KES 50
+Elite Weekly: KES 199
+Elite Monthly: KES 699
+```
+
+---
+
+# 33. Success Metrics
+
+Track weekly.
+
+## Player Activity
+
+```txt
+Daily active users
+Weekly active users
+Matches created
+Matches completed
+Challenges created
+Challenges accepted
+Average time to match
+Repeat players
+```
+
+## Quality
+
+```txt
+Dispute rate
+No-show rate
+Fake result reports
+Average dispute resolution time
+Match completion rate
+```
+
+## Monetization
+
+```txt
+Free users
+Pro Daily buyers
+Pro Weekly buyers
+Pro Monthly users
+Elite Daily buyers
+Elite Weekly buyers
+Elite Monthly users
+Pro conversion rate
+Elite conversion rate
+Monthly recurring revenue
+Subscription churn
+```
+
+## Tournament Health
+
+```txt
+Tournament registrations
+Check-in rate
+Match completion rate
+Bracket completion rate
+Host retention
+```
+
+## Community
+
+```txt
+Invites sent
+Socials connected
+Rewards completed
+Returning players
+Featured players
+```
+
+---
+
+# 34. Final Recommendation
+
+Build PlayMechi as a dashboard-first matchmaking platform.
+
+The dashboard should contain all player activity.
+
+Public pages should only support the dashboard.
+
+Start with:
+
+```txt
+Player profiles
+Game IDs
+Challenge board
+Match rooms
+Result confirmation
+Ranking
+Subscriptions
+Admin moderation
+```
+
+Do not start with custom Ludo yet.
+
+Do not start with risky cash-stake matches yet.
+
+Start with structure, trust, match history, ranking, and community activity.
+
+The strongest PlayMechi path is:
+
+```txt
+Dashboard-first matchmaking
+→ Challenge board
+→ Match rooms
+→ Rankings
+→ Daily/weekly/monthly Pro access
+→ Elite host tools
+→ Tournaments
+→ Custom games later
+```
+
+The dashboard should make every player ask:
+
+```txt
+Who can I play now?
+What match do I have?
+What rank am I?
+What result do I need to submit?
+What tournament am I joining?
+What can I unlock next?
+```
+
+That is the product.

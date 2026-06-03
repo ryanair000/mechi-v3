@@ -335,15 +335,7 @@ export function OnlineTournamentDisputeClient() {
 
   return (
     <div className="page-base marketing-prototype-shell min-h-screen">
-      <HomeFloatingHeader
-        navItems={[
-          { href: ONLINE_TOURNAMENT_PUBLIC_PATH, label: 'HOME' },
-          { href: ONLINE_TOURNAMENT_REGISTRATION_PATH, label: 'REGISTER' },
-          { href: ONLINE_TOURNAMENT_DISPUTE_PATH, label: 'REPORT' },
-        ]}
-        signInHref={signInHref}
-        joinHref={createAccountHref}
-      />
+      <HomeFloatingHeader signInHref={signInHref} joinHref={createAccountHref} />
 
       <main className="landing-shell pb-12 pt-8 sm:pb-16 sm:pt-10">
         <section className="grid gap-6 lg:grid-cols-[minmax(0,0.84fr)_minmax(0,1.16fr)] lg:items-start">

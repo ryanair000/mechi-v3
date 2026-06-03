@@ -21,17 +21,10 @@ export const metadata: Metadata = {
   },
 };
 
-const NAV_ITEMS = [
-  { href: '/', label: 'HOME' },
-  { href: WEEKEND_CUP_PUBLIC_PATH, label: 'WEEKEND CUP' },
-  { href: '/tournaments', label: 'TOURNAMENTS' },
-  { href: '/support', label: 'SUPPORT' },
-];
-
 export default function PlayMechiRegisterClosedPage() {
   return (
     <div className="page-base marketing-prototype-shell flex min-h-screen flex-col">
-      <HomeFloatingHeader navItems={NAV_ITEMS} compact />
+      <HomeFloatingHeader compact />
 
       <main className="landing-shell flex flex-1 items-center py-16">
         <section className="grid w-full gap-6 lg:grid-cols-[minmax(0,1fr)_360px] lg:items-center">

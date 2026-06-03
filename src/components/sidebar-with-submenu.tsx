@@ -174,7 +174,7 @@ export default function SidebarWithSubmenu({ collapsed, onToggle }: SidebarWithS
   const pathname = usePathname();
   const { user, logout } = useAuth();
   const currentPlan = getPlan(user?.plan ?? 'free');
-  const profileActive = pathname === '/profile';
+  const profileActive = pathname === '/profile' || pathname.startsWith('/dashboard/profile');
   const canUseModeratorDesk = user?.role === 'moderator' || user?.role === 'admin';
   const [sectionOverrides, setSectionOverrides] = useState<Partial<Record<SidebarSectionKey, boolean>>>({});
 
@@ -262,7 +262,7 @@ export default function SidebarWithSubmenu({ collapsed, onToggle }: SidebarWithS
           <NotificationNavButton className="rounded-md border border-[var(--border-color)] bg-transparent hover:border-[var(--border-strong)] hover:bg-[var(--surface-elevated)]" />
           <div className="group relative">
             <Link
-              href="/profile"
+              href="/dashboard/profile"
               className={`inline-flex h-8 w-8 items-center justify-center rounded-md border text-[var(--text-secondary)] transition-colors hover:border-[var(--border-strong)] hover:bg-[var(--surface-elevated)] hover:text-[var(--text-primary)] ${
                 profileActive
                   ? 'border-[rgba(50,224,196,0.22)] bg-[rgba(50,224,196,0.1)] text-[var(--accent-secondary-text)]'

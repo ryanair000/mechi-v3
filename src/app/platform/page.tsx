@@ -1,18 +1,15 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { connection } from 'next/server';
 import { ArrowRight } from 'lucide-react';
 import { BrandLogo } from '@/components/BrandLogo';
 import FooterSection from '@/components/footer';
 import FeatureShaderCards from '@/components/ui/feature-shader-cards';
 import { HomeFloatingHeader } from '@/components/HomeFloatingHeader';
-import { LandingCountdownSection } from '@/components/LandingCountdownSection';
 import { PlatformLogo } from '@/components/PlatformLogo';
 import { TierMedal } from '@/components/TierMedal';
 import { Gallery4, type Gallery4Item } from '@/components/ui/gallery4';
 import { GAMES, PLATFORMS, getGameImage } from '@/lib/config';
 import { PLANS } from '@/lib/plans';
-import { createServiceClient } from '@/lib/supabase';
 import type { GameKey, PlatformKey } from '@/types';
 
 export const metadata: Metadata = {
@@ -21,10 +18,6 @@ export const metadata: Metadata = {
     'Explore the PlayMechi platform for queues, direct challenges, tournaments, score reporting, ranks, and supported games.',
 };
 
-const BETA_PLAYER_CAP = 100;
-const FALLBACK_REGISTERED_PLAYERS = 50;
-const REGISTRATION_CLOSES_AT = '2026-05-08T00:00:00+03:00';
-
 const HERO_STATS = [
   { value: '16+', label: 'Supported titles' },
   { value: '1v1', label: 'Ranked direct challenges' },
@@ -32,10 +25,10 @@ const HERO_STATS = [
   { value: 'KES 49', label: 'Starts per week', note: '1 month Pro trial' },
 ];
 
-const PLATFORM_NAV_ITEMS = [
-  { href: '/', label: 'TOURNAMENTS' },
-  { href: '/android-testers', label: 'ANDROID' },
-  { href: '/pricing', label: 'SUBSCRIPTIONS' },
+const ACTIVE_PLATFORM_CHIPS = [
+  'Open player accounts',
+  'Weekend Cup active',
+  'Queues, challenges, and tournaments live',
 ];
 
 const PLATFORM_CHIPS: Array<{ platform: PlatformKey; label: string }> = [
@@ -117,6 +110,17 @@ const RANK_TIERS = [
   { name: 'Legend', note: 'Top ladder', rating: 1900 },
 ];
 
+const PLATFORM_CHANGELOG = [
+  {
+    title: 'Closed beta archive',
+    copy: 'The limited Beta V3 registration window has ended. Those notes now live here as launch history, separate from the current platform flow.',
+  },
+  {
+    title: 'Current lane',
+    copy: 'Players can still create accounts, join active competitions, set up games, use queues, send challenges, and compare Free, Pro, and Elite plans.',
+  },
+];
+
 function formatGamePlatforms(platforms: PlatformKey[]) {
   return platforms.map((platform) => PLATFORMS[platform].label).join(', ');
 }
@@ -136,98 +140,10 @@ const SUPPORTED_GALLERY_ITEMS: Gallery4Item[] = FEATURED_GALLERY_GAMES.map((game
   };
 });
 
-type CountdownSnapshot = {
-  days: number;
-  hours: number;
-  minutes: number;
-  seconds: number;
-  expired: boolean;
-};
-
-function getCountdownSnapshot(targetIso: string, nowMs = Date.now()): CountdownSnapshot {
-  const remainingMs = Math.max(0, new Date(targetIso).getTime() - nowMs);
-  const totalSeconds = Math.floor(remainingMs / 1000);
-
-  return {
-    days: Math.floor(totalSeconds / 86400),
-    hours: Math.floor((totalSeconds % 86400) / 3600),
-    minutes: Math.floor((totalSeconds % 3600) / 60),
-    seconds: totalSeconds % 60,
-    expired: remainingMs <= 0,
-  };
-}
-
-function formatRegistrationChip(snapshot: CountdownSnapshot) {
-  if (snapshot.expired) {
-    return 'Registration is closed';
-  }
-
-  if (snapshot.days > 0) {
-    return `Registration closes in ${snapshot.days} ${snapshot.days === 1 ? 'day' : 'days'}`;
-  }
-
-  if (snapshot.hours > 0) {
-    return `Registration closes in ${snapshot.hours} ${snapshot.hours === 1 ? 'hour' : 'hours'}`;
-  }
-
-  const minuteCount = Math.max(1, snapshot.minutes);
-  return `Registration closes in ${minuteCount} ${minuteCount === 1 ? 'minute' : 'minutes'}`;
-}
-
-function formatRegistrationDeadlineLabel(targetIso: string) {
-  const closesAt = new Date(targetIso);
-  const dateLabel = new Intl.DateTimeFormat('en-US', {
-    dateStyle: 'long',
-    timeZone: 'Africa/Nairobi',
-  }).format(closesAt);
-
-  return `${dateLabel} (EAT)`;
-}
-
-async function getLaunchOverview() {
-  const countdownSnapshot = getCountdownSnapshot(REGISTRATION_CLOSES_AT);
-  let registeredPlayers = FALLBACK_REGISTERED_PLAYERS;
-
-  try {
-    const supabase = createServiceClient();
-    const [{ count: totalProfiles }, { count: bannedProfiles }] = await Promise.all([
-      supabase.from('profiles').select('id', { count: 'exact', head: true }),
-      supabase.from('profiles').select('id', { count: 'exact', head: true }).eq('is_banned', true),
-    ]);
-
-    registeredPlayers = Math.max(
-      0,
-      (totalProfiles ?? FALLBACK_REGISTERED_PLAYERS) - (bannedProfiles ?? 0)
-    );
-  } catch (error) {
-    console.error('[PlatformPage] Failed to load registration stats:', error);
-  }
-
-  return {
-    closesLabel: formatRegistrationDeadlineLabel(REGISTRATION_CLOSES_AT),
-    countdownSnapshot,
-    registeredPlayers,
-    launchChips: countdownSnapshot.expired
-      ? [
-          `First ${BETA_PLAYER_CAP} players only`,
-          'Registration window is closed',
-          'Beta lane closed',
-        ]
-      : [
-          'Limited beta access',
-          'Registration open while capacity lasts',
-          formatRegistrationChip(countdownSnapshot),
-        ],
-  };
-}
-
-export default async function PlatformPage() {
-  await connection();
-  const { closesLabel, countdownSnapshot, launchChips, registeredPlayers } = await getLaunchOverview();
-
+export default function PlatformPage() {
   return (
     <div className="page-base marketing-prototype-shell">
-      <HomeFloatingHeader navItems={PLATFORM_NAV_ITEMS} />
+      <HomeFloatingHeader />
 
       <section className="relative overflow-hidden">
         <div className="pointer-events-none absolute left-[10%] top-10 hidden h-56 w-56 rounded-full bg-[rgba(50,224,196,0.1)] blur-[110px] sm:block" />
@@ -258,7 +174,7 @@ export default async function PlatformPage() {
               </div>
 
               <div className="mt-5 flex flex-wrap gap-2">
-                {launchChips.map((chip) => (
+                {ACTIVE_PLATFORM_CHIPS.map((chip) => (
                   <span key={chip} className="rounded-full border border-[var(--border-color)] bg-[var(--surface-strong)] px-3 py-1.5 text-xs font-semibold text-[var(--text-secondary)]">
                     {chip}
                   </span>
@@ -286,7 +202,7 @@ export default async function PlatformPage() {
                 <div>
                   <p className="section-title">Quick read</p>
                   <p className="mt-2 max-w-sm text-sm leading-6 text-[var(--text-secondary)]">
-                    Beta V3 is built for players who want to queue, challenge, host, report, and keep moving without guessing what happens next.
+                    PlayMechi V3 is built for players who want to queue, challenge, host, report, and keep moving without guessing what happens next.
                   </p>
                 </div>
 
@@ -521,13 +437,35 @@ export default async function PlatformPage() {
         </div>
       </section>
 
-      <LandingCountdownSection
-        closesAt={REGISTRATION_CLOSES_AT}
-        closesLabel={closesLabel}
-        playerCap={BETA_PLAYER_CAP}
-        registeredPlayers={registeredPlayers}
-        initialSnapshot={countdownSnapshot}
-      />
+      <section id="changelog" className="landing-section pt-0">
+        <div className="landing-shell">
+          <div className="rounded-[var(--radius-card)] border border-[var(--border-color)] bg-[var(--surface-soft)] p-5 sm:p-6">
+            <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+              <div>
+                <p className="section-title">Platform changelog</p>
+                <h2 className="mt-3 text-2xl font-black text-[var(--text-primary)] sm:text-3xl">
+                  Beta notes live in the archive. The platform page stays current.
+                </h2>
+              </div>
+              <Link href="/blog#platform-notes" className="brand-link inline-flex min-h-11 items-center text-sm font-semibold">
+                Read platform notes
+              </Link>
+            </div>
+
+            <div className="mt-5 grid gap-3 md:grid-cols-2">
+              {PLATFORM_CHANGELOG.map((item) => (
+                <div
+                  key={item.title}
+                  className="rounded-[var(--radius-card)] border border-[var(--border-color)] bg-[var(--surface)] p-4"
+                >
+                  <h3 className="text-sm font-black text-[var(--text-primary)]">{item.title}</h3>
+                  <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">{item.copy}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
 
       <FooterSection />
     </div>

@@ -5,7 +5,7 @@ export default function AdminWeekendCupPage() {
     <WeekendCupOpsClient
       apiPath="/api/admin/weekendcup-registrations"
       heading="Admin Weekend Cup desk"
-      subheading="Confirm payments, set tiers, capture refs, and keep paid vs pending clean for Season 1 without touching the live PlayMechi Launch event."
+      subheading="Track Paystack-confirmed payments, capacity, revenue, and check-in data for Weekend Cup without manual payment marking."
     />
   );
 }

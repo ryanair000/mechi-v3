@@ -16,12 +16,12 @@ export function MechiHomePageShell() {
         {
           question: 'Mechi.club ni nini?',
           answer:
-            'Mechi.club ni hub ya gaming inayounganisha profiles, tournaments, rewards, na community updates sehemu moja. Unatengeneza account, unaingia kwenye events, na unaendelea kufuatilia kinachoendelea bila kupotea.',
+            'Mechi.club ni home ya PlayMechi tournaments na updates. Kwa sasa, hatua kuu ni kuchagua event iliyo live, kusajili slot yako, na kufuatilia match details.',
         },
         {
           question: 'Naanzaje kucheza au kushiriki?',
           answer:
-            'Sign in kwenye Mechi.club, kamilisha profile yako, kisha chagua tournament, challenge, au activity iliyo live. Fuata details za event na tumia taarifa zilezile utakazotumia siku ya match.',
+            'Fungua Weekend Cup au tournament nyingine iliyo live, chagua game, weka details sahihi, kisha kamilisha payment kama event inahitaji entry fee.',
         },
         {
           question: 'Mechi.club ina games gani?',
@@ -36,19 +36,19 @@ export function MechiHomePageShell() {
         {
           question: 'Ninapata wapi updates?',
           answer:
-            'Updates za tournaments, match rooms, results, content, na community drops hutokea kwenye Mechi.club hub na channels rasmi za PlayMechi. Event pages ndizo source bora kwa timing, rules, na next steps.',
+            'Event page na Android app ndizo sehemu kuu za timing, rules, check-in, na match updates. Channels rasmi za PlayMechi zinabeba matangazo na reminders.',
         },
       ]
     : [
         {
           question: 'What is Mechi.club?',
           answer:
-            'Mechi.club is the gaming hub for player profiles, tournaments, rewards, and community updates. Create your account, jump into active events, and keep your gaming life in one clean place.',
+            'Mechi.club is the public home for PlayMechi tournaments and event updates. Right now, the main move is simple: pick the live event, register your slot, and follow match details.',
         },
         {
           question: 'How do I start playing or entering events?',
           answer:
-            'Sign in on Mechi.club, complete your profile, then choose any live tournament, challenge, or community activity. Use the exact player details you will use on match day so your slot stays valid.',
+            'Open Weekend Cup or another live tournament, choose your game, enter accurate player details, then complete payment if the event has an entry fee.',
         },
         {
           question: 'Which games does Mechi.club support?',
@@ -63,7 +63,7 @@ export function MechiHomePageShell() {
         {
           question: 'Where do I follow updates?',
           answer:
-            'Tournament updates, room details, results, content drops, and community announcements live on the Mechi.club hub and official PlayMechi channels. Event pages stay the main source for timing, rules, and next steps.',
+            'Use the event page and Android app for timing, rules, check-in, and match updates. Official PlayMechi channels carry announcements and reminders.',
         },
       ];
 
@@ -78,13 +78,13 @@ export function MechiHomePageShell() {
           badge={isSwahili ? 'Maswali ya Mechi.club' : 'Mechi.club FAQ'}
           heading={
             isSwahili
-              ? 'Majibu ya haraka kuhusu Mechi.club.'
-              : 'Quick answers for getting started on Mechi.club.'
+              ? 'Majibu ya haraka kabla ya kuingia tournament.'
+              : 'Quick answers before you enter a tournament.'
           }
           description={
             isSwahili
-              ? 'Profiles, tournaments, payments, rewards, na sehemu ya kufuatilia kila kinachoendelea kwenye Mechi.club.'
-              : 'Profiles, tournaments, payments, rewards, and official PlayMechi updates for players across Africa.'
+              ? 'Tournaments, payments, rewards, Android app, na updates rasmi za PlayMechi.'
+              : 'Tournaments, payments, rewards, the Android app, and official PlayMechi updates.'
           }
           faqs={homeFaqs}
         />

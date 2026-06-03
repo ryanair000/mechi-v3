@@ -29,18 +29,18 @@ export function WeekendCupHeader({
   );
   const navItems = isSwahili
     ? [
-        { href: voteHref, label: 'Kura' },
-        { href: '/leaderboard', label: 'Ubao wa Washindi' },
-        { href: '/playmechi', label: 'Archive' },
-        { href: '/android-testers', label: 'Android' },
-        { href: '/platform', label: 'Mfumo' },
+        { href: '/tournaments', label: 'Mashindano' },
+        { href: '/how-mechi-works', label: 'Jinsi inavyofanya kazi' },
+        { href: '/pricing', label: 'Bei' },
+        { href: '/android-testers', label: 'Android App' },
+        { href: '/support', label: 'Msaada' },
       ]
     : [
-        { href: voteHref, label: 'Vote' },
-        { href: '/leaderboard', label: 'Leaderboard' },
-        { href: '/playmechi', label: 'Archive' },
-        { href: '/android-testers', label: 'Android' },
-        { href: '/platform', label: 'Platform' },
+        { href: '/tournaments', label: 'Tournaments' },
+        { href: '/how-mechi-works', label: 'How It Works' },
+        { href: '/pricing', label: 'Pricing' },
+        { href: '/android-testers', label: 'Android App' },
+        { href: '/support', label: 'Support' },
       ];
 
   return (

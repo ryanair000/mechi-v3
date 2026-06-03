@@ -19,10 +19,16 @@ function getSubscriberLengthForDialCode(dialCode: string): number | null {
 
 function findDialCode(value: string): string | null {
   return (
-    SUPPORTED_DIAL_CODES.find((dialCode) => {
-      const subscriberLength = getSubscriberLengthForDialCode(dialCode);
-      return Boolean(subscriberLength && value.length === dialCode.length + subscriberLength);
-    }) ?? null
+    [...SUPPORTED_DIAL_CODES]
+      .sort((a, b) => b.length - a.length)
+      .find((dialCode) => {
+        const subscriberLength = getSubscriberLengthForDialCode(dialCode);
+        return Boolean(
+          subscriberLength &&
+            value.startsWith(dialCode) &&
+            value.length === dialCode.length + subscriberLength
+        );
+      }) ?? null
   );
 }
 

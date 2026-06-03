@@ -2,55 +2,147 @@
 
 import Link from 'next/link';
 import { Suspense, useEffect, useState, useRef, useCallback } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import toast from 'react-hot-toast';
-import { Users, X } from 'lucide-react';
+import { AlertTriangle, Gamepad2, Play, Users, X } from 'lucide-react';
 import { ActionFeedback, type ActionFeedbackState } from '@/components/ActionFeedback';
 import { useAuth, useAuthFetch } from '@/components/AuthProvider';
 import { BrandLogo } from '@/components/BrandLogo';
 import { PlatformLogo } from '@/components/PlatformLogo';
-import { GAMES, PLATFORMS, getCanonicalGameKey } from '@/lib/config';
-import type { GameKey, PlatformKey } from '@/types';
+import {
+  GAMES,
+  PLATFORMS,
+  getCanonicalGameKey,
+  getConfiguredPlatformForGame,
+  getGameIdValue,
+} from '@/lib/config';
+import type { GameKey, PlatformKey, QueueEntry } from '@/types';
+
+type QueueJoinResponse = {
+  entry?: QueueEntry & Record<string, unknown>;
+  error?: string;
+  limit_reached?: boolean;
+  matchId?: string;
+  queueEntry?: QueueEntry & Record<string, unknown>;
+  upgrade_url?: string;
+};
+
+type QueueStatusResponse = {
+  activeMatch?: { id: string } | null;
+  inQueue?: boolean;
+  queueEntry?: QueueEntry | null;
+};
+
+function getQueuePlatformsForUser(
+  game: GameKey,
+  gameIds: Record<string, string>,
+  platforms: PlatformKey[]
+) {
+  const gameConfig = GAMES[game];
+  if (!gameConfig) return [];
+
+  const configuredPlatform = getConfiguredPlatformForGame(game, gameIds, platforms);
+  const eligiblePlatforms = gameConfig.platforms.filter((item) => {
+    return platforms.includes(item) && getGameIdValue(gameIds, game, item).trim().length > 0;
+  });
+
+  if (configuredPlatform && !eligiblePlatforms.includes(configuredPlatform)) {
+    eligiblePlatforms.unshift(configuredPlatform);
+  }
+
+  return eligiblePlatforms;
+}
 
 function QueueGamePicker() {
   const { user } = useAuth();
   const router = useRouter();
+  const pathname = usePathname();
   const userGames = (user?.selected_games ?? []) as GameKey[];
+  const gameIds = (user?.game_ids ?? {}) as Record<string, string>;
+  const platforms = (user?.platforms ?? []) as PlatformKey[];
+  const playBasePath = pathname.startsWith('/dashboard/play') ? '/dashboard/play' : '/queue';
   const ranked1v1Games = userGames.filter((g) => GAMES[g]?.mode === '1v1');
   const gamesToShow =
     ranked1v1Games.length > 0
       ? ranked1v1Games
       : (Object.keys(GAMES).filter((g) => GAMES[g as GameKey]?.mode === '1v1') as GameKey[]);
+  const hasConfiguredRankedGame = ranked1v1Games.some(
+    (game) => getQueuePlatformsForUser(game, gameIds, platforms).length > 0
+  );
 
   return (
-    <div className="page-container flex min-h-[80vh] items-center justify-center">
-      <div className="card w-full max-w-md p-6 text-center sm:p-7">
-        <h1 className="text-2xl font-black text-[var(--text-primary)]">Join the Queue</h1>
-        <p className="mt-2 text-sm text-[var(--text-secondary)]">Pick a game to start matchmaking.</p>
-        <div className="mt-6 grid gap-3">
-          {gamesToShow.map((g) => (
-            <button
-              key={g}
-              type="button"
-              className="btn-primary w-full"
-              onClick={() => router.push(`/queue?game=${g}`)}
-            >
-              {GAMES[g].label}
-            </button>
-          ))}
-          <Link href="/queue/active" className="btn-outline w-full">
+    <div className="dashboard-page-container flex min-h-[80vh] items-center justify-center py-4">
+      <div className="w-full max-w-4xl">
+        <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <p className="text-xs font-black uppercase tracking-[0.18em] text-[var(--accent-secondary-text)]">
+              Ranked matchmaking
+            </p>
+            <h1 className="mt-2 text-3xl font-black tracking-normal text-[var(--text-primary)]">
+              Choose your lane.
+            </h1>
+            <p className="mt-2 max-w-xl text-sm leading-6 text-[var(--text-secondary)]">
+              Select a configured game and platform. Mechi will join the queue, check for a match, then open the match room when one lands.
+            </p>
+          </div>
+          <Link href={`${playBasePath}/active`} className="btn-outline h-10 px-3 text-sm">
             <Users size={14} />
-            View Active Players
+            Active players
           </Link>
         </div>
-        {ranked1v1Games.length === 0 && (
-          <p className="mt-4 text-xs text-[var(--text-soft)]">
-            No ranked games set up yet.
-            <Link href="/profile" className="brand-link ml-1">
-              Add games in settings.
-            </Link>
-          </p>
-        )}
+
+        {!hasConfiguredRankedGame ? (
+          <ActionFeedback
+            tone="info"
+            title="Finish game setup first."
+            detail="Add at least one ranked game, platform, and in-game ID so opponents know where to find you."
+            className="mb-4"
+          />
+        ) : null}
+
+        <div className="grid gap-3 md:grid-cols-2">
+          {gamesToShow.map((g) => {
+            const platformOptions = getQueuePlatformsForUser(g, gameIds, platforms);
+            const canQueue = platformOptions.length > 0;
+
+            return (
+              <div key={g} className="card p-4">
+                <div className="flex items-start gap-3">
+                  <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-md border border-[var(--border-color)] bg-[var(--surface-elevated)] text-[var(--accent-secondary-text)]">
+                    <Gamepad2 size={17} />
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-base font-black text-[var(--text-primary)]">{GAMES[g].label}</p>
+                    <p className="mt-1 text-xs leading-5 text-[var(--text-secondary)]">
+                      {canQueue ? 'Pick a platform to enter matchmaking.' : 'Missing platform or game ID setup.'}
+                    </p>
+                  </div>
+                </div>
+
+                {canQueue ? (
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    {platformOptions.map((platform) => (
+                      <button
+                        key={`${g}-${platform}`}
+                        type="button"
+                        className="btn-primary px-3 py-2 text-xs"
+                        onClick={() => router.push(`${playBasePath}?game=${g}&platform=${platform}`)}
+                      >
+                        <PlatformLogo platform={platform} size={14} />
+                        {PLATFORMS[platform]?.label ?? platform}
+                      </button>
+                    ))}
+                  </div>
+                ) : (
+                  <Link href="/dashboard/game-ids" className="btn-outline mt-4 w-full px-3 py-2 text-xs">
+                    <AlertTriangle size={13} />
+                    Fix setup
+                  </Link>
+                )}
+              </div>
+            );
+          })}
+        </div>
       </div>
     </div>
   );
@@ -58,6 +150,7 @@ function QueueGamePicker() {
 
 function QueueContent() {
   const router = useRouter();
+  const pathname = usePathname();
   const searchParams = useSearchParams();
   const { user } = useAuth();
   const authFetch = useAuthFetch();
@@ -68,10 +161,15 @@ function QueueContent() {
   const [elapsed, setElapsed] = useState(0);
   const [queueCount, setQueueCount] = useState(0);
   const [leaving, setLeaving] = useState(false);
+  const [joining, setJoining] = useState(false);
+  const [joinedQueue, setJoinedQueue] = useState(false);
+  const [joinAttempt, setJoinAttempt] = useState(0);
+  const [joinError, setJoinError] = useState<QueueJoinResponse | null>(null);
   const [queueFeedback, setQueueFeedback] = useState<ActionFeedbackState | null>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const pollRef = useRef<NodeJS.Timeout | null>(null);
   const resolvedRef = useRef(false);
+  const joinKeyRef = useRef<string | null>(null);
 
   const moveToMatch = useCallback(
     (nextMatchId: string) => {
@@ -84,9 +182,13 @@ function QueueContent() {
         detail: 'Opening your live match now so you can connect with your opponent.',
       });
       toast.success('Match found. Opening it now.');
-      router.push(`/match/${nextMatchId}`);
+      router.push(
+        pathname.startsWith('/dashboard/play')
+          ? `/dashboard/matches/${nextMatchId}`
+          : `/match/${nextMatchId}`
+      );
     },
-    [router]
+    [pathname, router]
   );
 
   const exitQueueToDashboard = useCallback(
@@ -116,7 +218,7 @@ function QueueContent() {
       const res = await authFetch('/api/queue/status');
       if (!res.ok) return;
 
-      const data = await res.json();
+      const data = (await res.json()) as QueueStatusResponse;
       if (data.activeMatch) {
         moveToMatch(data.activeMatch.id);
       } else if (!data.inQueue) {
@@ -136,16 +238,106 @@ function QueueContent() {
 
   useEffect(() => {
     if (!game || !GAMES[game]) {
+      joinKeyRef.current = null;
       return;
     }
 
+    const joinKey = `${game}:${platform ?? 'auto'}:${joinAttempt}`;
+    if (joinKeyRef.current === joinKey) {
+      return;
+    }
+
+    joinKeyRef.current = joinKey;
     resolvedRef.current = false;
+    setElapsed(0);
+    setJoinError(null);
+    setJoinedQueue(false);
     setQueueFeedback({
       tone: 'loading',
-      title: `Searching ${GAMES[game].label} matchmaking...`,
-      detail:
-        'Keep this page open if you want live updates, or leave the app and wait for the match alert.',
+      title: `Joining ${GAMES[game].label} queue...`,
+      detail: 'Checking your profile, platform, access, and live match state.',
     });
+    setJoining(true);
+
+    const joinQueue = async () => {
+      try {
+        const res = await authFetch('/api/queue/join', {
+          method: 'POST',
+          body: JSON.stringify({
+            game,
+            ...(platform ? { platform } : {}),
+          }),
+        });
+        const payload = (await res.json().catch(() => null)) as QueueJoinResponse | null;
+
+        if (res.ok) {
+          setJoinedQueue(true);
+          setQueueFeedback({
+            tone: 'loading',
+            title: `Searching ${GAMES[game].label} matchmaking...`,
+            detail:
+              'Keep this page open for live updates, or leave the app and wait for the match alert.',
+          });
+          void checkStatus();
+          return;
+        }
+
+        if (payload?.matchId) {
+          moveToMatch(payload.matchId);
+          return;
+        }
+
+        if (res.status === 409 && payload?.queueEntry) {
+          const existingGame = payload.queueEntry.game;
+          const existingPlatform = payload.queueEntry.platform;
+          if (existingGame && existingGame !== game) {
+            const nextPath = `${pathname.startsWith('/dashboard/play') ? '/dashboard/play' : '/queue'}?game=${existingGame}${
+              existingPlatform ? `&platform=${existingPlatform}` : ''
+            }`;
+            router.replace(nextPath);
+            return;
+          }
+
+          setJoinedQueue(true);
+          setQueueFeedback({
+            tone: 'loading',
+            title: `Searching ${GAMES[existingGame ?? game]?.label ?? GAMES[game].label} matchmaking...`,
+            detail: 'You were already in this queue. Continuing the live search.',
+          });
+          void checkStatus();
+          return;
+        }
+
+        setJoinError(payload ?? { error: 'Could not join queue' });
+        joinKeyRef.current = null;
+        setQueueFeedback({
+          tone: 'error',
+          title: payload?.error ?? 'Could not join queue.',
+          detail: payload?.limit_reached
+            ? 'Your current plan has reached the daily match limit.'
+            : 'Review your game setup, platform, or active match state and try again.',
+        });
+      } catch {
+        setJoinError({ error: 'Network error' });
+        joinKeyRef.current = null;
+        setQueueFeedback({
+          tone: 'error',
+          title: 'Network error.',
+          detail: 'Could not reach matchmaking. Try again in a moment.',
+        });
+      } finally {
+        setJoining(false);
+      }
+    };
+
+    void joinQueue();
+  }, [authFetch, checkStatus, game, joinAttempt, moveToMatch, pathname, platform, router]);
+
+  useEffect(() => {
+    if (!game || !GAMES[game] || !joinedQueue) {
+      return;
+    }
+
     timerRef.current = setInterval(() => setElapsed((value) => value + 1), 1000);
 
     const fetchCount = async () => {
@@ -173,7 +365,7 @@ function QueueContent() {
       if (pollRef.current) clearInterval(pollRef.current);
       clearInterval(statusPoll);
     };
-  }, [game, platform, user, router, checkStatus]);
+  }, [game, joinedQueue, platform, user, router, checkStatus]);
 
   const handleLeave = async () => {
     setLeaving(true);
@@ -245,7 +437,7 @@ function QueueContent() {
         </div>
 
         <h1 className="text-[2rem] font-black tracking-normal text-[var(--text-primary)] sm:text-[2.15rem]">
-          We&apos;re cooking up your next matchup.
+          {joinError ? 'Queue needs attention.' : "We're cooking up your next matchup."}
         </h1>
         <p className="mt-2 text-[13px] text-[var(--text-secondary)]">{gameConfig.label}</p>
         {queueFeedback ? (
@@ -256,9 +448,11 @@ function QueueContent() {
             className="mx-auto mt-4 max-w-md text-left"
           />
         ) : null}
-        <p className="mt-3 text-[2rem] font-black tabular-nums text-[var(--brand-coral)] sm:text-[2.25rem]">
-          {formatTime(elapsed)}
-        </p>
+        {joinedQueue ? (
+          <p className="mt-3 text-[2rem] font-black tabular-nums text-[var(--brand-coral)] sm:text-[2.25rem]">
+            {formatTime(elapsed)}
+          </p>
+        ) : null}
 
         <div className="mt-5 grid gap-2.5 sm:grid-cols-2">
           <div className="card flex items-center justify-center gap-2 px-3 py-2.5">
@@ -278,14 +472,41 @@ function QueueContent() {
         </div>
 
         <p className="mx-auto mb-6 mt-5 max-w-sm text-center text-[13px] leading-6 text-[var(--text-secondary)]">
-          Mechi is checking your {platformLabel} pool first, then opening the net wider if things stay quiet. You can
-          leave the app and keep your queue live. When a match lands, Mechi sends the update by email and WhatsApp.
+          {joinError
+            ? 'Fix the issue above, then retry matchmaking from this lane or update your game IDs.'
+            : `Mechi is checking your ${platformLabel} pool first, then opening the net wider if things stay quiet. You can leave the app and keep your queue live. When a match lands, Mechi sends the update by email and WhatsApp.`}
         </p>
 
-        <button onClick={handleLeave} disabled={leaving} className="btn-danger mx-auto px-4 py-2 text-sm">
-          <X size={13} />
-          {leaving ? 'Leaving...' : 'Cancel Search'}
-        </button>
+        {joinError ? (
+          <div className="flex flex-wrap justify-center gap-2">
+            {joinError.upgrade_url ? (
+              <Link href={joinError.upgrade_url} className="btn-primary px-4 py-2 text-sm">
+                <Play size={13} />
+                Upgrade access
+              </Link>
+            ) : null}
+            <button
+              type="button"
+              className="btn-primary px-4 py-2 text-sm"
+              onClick={() => setJoinAttempt((value) => value + 1)}
+            >
+              <Play size={13} />
+              Retry
+            </button>
+            <Link href="/dashboard/game-ids" className="btn-outline px-4 py-2 text-sm">
+              <AlertTriangle size={13} />
+              Game IDs
+            </Link>
+            <Link href={pathname.startsWith('/dashboard/play') ? '/dashboard/play' : '/queue'} className="btn-outline px-4 py-2 text-sm">
+              Choose another lane
+            </Link>
+          </div>
+        ) : (
+          <button onClick={handleLeave} disabled={leaving || joining} className="btn-danger mx-auto px-4 py-2 text-sm">
+            <X size={13} />
+            {leaving ? 'Leaving...' : joining ? 'Joining...' : 'Cancel Search'}
+          </button>
+        )}
       </div>
     </div>
   );

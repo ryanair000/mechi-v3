@@ -2,16 +2,16 @@
 
 import { usePathname } from 'next/navigation';
 import { useRouter } from 'next/navigation';
-import { Home, MessageCircle, Newspaper, Trophy, User } from 'lucide-react';
+import { Gamepad2, History, Home, MessageCircle, User } from 'lucide-react';
 
 import Dock from '@/components/ui/dock';
 
 const NAV_ITEMS = [
   { href: '/dashboard', label: 'Home', icon: Home },
-  { href: '/playmechi/tournament', label: 'Arena', icon: Trophy, activeHrefs: ['/tournaments'] },
-  { href: '/feed', label: 'Feed', icon: Newspaper },
-  { href: '/community', label: 'Community', icon: MessageCircle },
-  { href: '/profile', label: 'Profile', icon: User },
+  { href: '/dashboard/play', label: 'Play', icon: Gamepad2, activeHrefs: ['/queue'] },
+  { href: '/dashboard/challenges', label: 'Challenges', icon: MessageCircle, activeHrefs: ['/challenges'] },
+  { href: '/dashboard/matches', label: 'Matches', icon: History, activeHrefs: ['/matches', '/match'] },
+  { href: '/dashboard/profile', label: 'Profile', icon: User, activeHrefs: ['/profile'] },
 ];
 
 export function BottomNav() {

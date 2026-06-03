@@ -88,9 +88,7 @@ export function WeekendCupRegistrationClient() {
   );
   const [inGameUsername, setInGameUsername] = useState('');
   const [followedInstagram, setFollowedInstagram] = useState(true);
-  const [instagramUsername, setInstagramUsername] = useState('');
   const [subscribedYoutube, setSubscribedYoutube] = useState(true);
-  const [youtubeName, setYoutubeName] = useState('');
   const [availableAtMatchTime, setAvailableAtMatchTime] = useState(true);
 
   const selectedConfig = WEEKEND_CUP_GAMES.find((game) => game.game === selectedGame) ?? WEEKEND_CUP_GAMES[0];
@@ -159,9 +157,7 @@ export function WeekendCupRegistrationClient() {
     if (currentRegistration) {
       setInGameUsername(currentRegistration.in_game_username);
       setFollowedInstagram(currentRegistration.followed_instagram);
-      setInstagramUsername(currentRegistration.instagram_username ?? '');
       setSubscribedYoutube(currentRegistration.subscribed_youtube);
-      setYoutubeName(currentRegistration.youtube_name ?? '');
       return;
     }
 
@@ -169,9 +165,7 @@ export function WeekendCupRegistrationClient() {
       cleanWeekendCupText(prefill?.in_game_username ?? user?.game_ids?.[`${selectedGame}_mobile`] ?? '', 80)
     );
     setFollowedInstagram(prefill?.followed_instagram ?? true);
-    setInstagramUsername(cleanWeekendCupText(prefill?.instagram_username ?? '', 80));
     setSubscribedYoutube(prefill?.subscribed_youtube ?? true);
-    setYoutubeName(cleanWeekendCupText(prefill?.youtube_name ?? '', 100));
     setAvailableAtMatchTime(prefill?.available_at_8pm ?? true);
   }, [currentRegistration, selectedGame, summary.prefill, user]);
 
@@ -195,9 +189,7 @@ export function WeekendCupRegistrationClient() {
           game: selectedGame,
           in_game_username: inGameUsername,
           followed_instagram: followedInstagram,
-          instagram_username: instagramUsername,
           subscribed_youtube: subscribedYoutube,
-          youtube_name: youtubeName,
           available_at_match_time: availableAtMatchTime,
         }),
       });
@@ -456,41 +448,15 @@ export function WeekendCupRegistrationClient() {
                   facts={getWeekendCupGameFacts(selectedConfig)}
                 />
 
-                <div className="grid gap-3 md:grid-cols-2">
-                  <div>
-                    <label className="label">IGN / gamer tag</label>
-                    <input
-                      type="text"
-                      value={inGameUsername}
-                      onChange={(event) => setInGameUsername(event.target.value)}
-                      placeholder="Exact match-day name"
-                      className="input"
-                      maxLength={80}
-                    />
-                  </div>
-
-                  <div>
-                    <label className="label">Instagram username</label>
-                    <input
-                      type="text"
-                      value={instagramUsername}
-                      onChange={(event) => setInstagramUsername(event.target.value)}
-                      placeholder="@yourhandle"
-                      className="input"
-                      maxLength={80}
-                    />
-                  </div>
-                </div>
-
                 <div>
-                  <label className="label">YouTube name or email</label>
+                  <label className="label">IGN / gamer tag</label>
                   <input
                     type="text"
-                    value={youtubeName}
-                    onChange={(event) => setYoutubeName(event.target.value)}
-                    placeholder="Channel name or subscription email"
+                    value={inGameUsername}
+                    onChange={(event) => setInGameUsername(event.target.value)}
+                    placeholder="Exact match-day name"
                     className="input"
-                    maxLength={100}
+                    maxLength={80}
                   />
                 </div>
 

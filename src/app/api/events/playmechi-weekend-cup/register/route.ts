@@ -32,7 +32,6 @@ import {
   WEEKEND_CUP_REGISTRATION_ENABLED,
   WEEKEND_CUP_SLUG,
   WEEKEND_CUP_TITLE,
-  cleanWeekendCupHandle,
   cleanWeekendCupText,
   getWeekendCupPaymentTierAmount,
   getWeekendCupPaymentTierDisplay,
@@ -274,12 +273,8 @@ export async function POST(request: NextRequest) {
       cleanWeekendCupText(body.in_game_username, 80) ||
       cleanWeekendCupText(sourcePrefill?.in_game_username, 80) ||
       profileGameId;
-    const instagramUsername =
-      cleanWeekendCupHandle(body.instagram_username, 80) ||
-      cleanWeekendCupHandle(sourcePrefill?.instagram_username, 80);
-    const youtubeName =
-      cleanWeekendCupText(body.youtube_name, 100) ||
-      cleanWeekendCupText(sourcePrefill?.youtube_name, 100);
+    const instagramUsername = null;
+    const youtubeName = null;
     const followedInstagram = Boolean(body.followed_instagram ?? sourcePrefill?.followed_instagram ?? true);
     const subscribedYoutube = Boolean(body.subscribed_youtube ?? sourcePrefill?.subscribed_youtube ?? true);
     const availableAtMatchTime = Boolean(
@@ -294,20 +289,6 @@ export async function POST(request: NextRequest) {
     if (!availableAtMatchTime) {
       return NextResponse.json(
         { error: `Confirm that you are free for ${gameConfig.dateLabel} at ${gameConfig.timeLabel}` },
-        { status: 400 }
-      );
-    }
-
-    if (followedInstagram && instagramUsername.length < 2) {
-      return NextResponse.json(
-        { error: 'Add the Instagram username you used to follow PlayMechi' },
-        { status: 400 }
-      );
-    }
-
-    if (subscribedYoutube && youtubeName.length < 2) {
-      return NextResponse.json(
-        { error: 'Add the YouTube name or email you used to subscribe' },
         { status: 400 }
       );
     }
@@ -374,8 +355,8 @@ export async function POST(request: NextRequest) {
           phone: profile.phone ?? null,
           whatsapp_number: sourcePrefill?.whatsapp_number ?? profile.whatsapp_number ?? profile.phone ?? null,
           email: profile.email ?? null,
-          instagram_username: instagramUsername || null,
-          youtube_name: youtubeName || null,
+          instagram_username: instagramUsername,
+          youtube_name: youtubeName,
           followed_instagram: followedInstagram,
           subscribed_youtube: subscribedYoutube,
           available_at_8pm: availableAtMatchTime,

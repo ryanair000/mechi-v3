@@ -41,7 +41,7 @@ export function getPaymentCurrencyCopy(country: CountryKey | null | undefined) {
     currencyCode: currency.code,
     methodCopy:
       country === 'kenya'
-        ? 'Pay with M-PESA, Airtel Money where available, Paybill, Till, or card in Paystack.'
-        : `Pay with card in Paystack. Local mobile money support depends on ${currency.code} provider availability.`,
+        ? 'Pay securely by card through Paystack. M-Pesa support is being added.'
+        : 'Pay securely by card through Paystack.',
   };
 }

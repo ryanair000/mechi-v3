@@ -1,13 +1,13 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 import { useRegionalSettings } from "@/components/RegionalSettingsProvider";
 import { TimelineContent } from "@/components/ui/timeline-animation";
 import { cn } from "@/lib/utils";
 import {
   WEEKEND_CUP_EVENT_DATES,
   WEEKEND_CUP_ENTRY_PRICING,
-  WEEKEND_CUP_PRIZE_POOL_LABEL,
   WEEKEND_CUP_REGISTRATION_PATH,
   WEEKEND_CUP_TITLE,
 } from "@/lib/weekend-cup";
@@ -77,7 +77,7 @@ export default function HeroSection() {
           >
             {isSwahili ? "PlayMechi Weekend Cup." : WEEKEND_CUP_TITLE + "."}{" "}
             <span className="bg-gradient-to-r from-red-500 to-orange-500 bg-clip-text font-semibold text-transparent">
-              {isSwahili ? "Shinda Zawadi." : WEEKEND_CUP_PRIZE_POOL_LABEL + "."}
+              {isSwahili ? "Shinda Zawadi." : "Prize pool up to KSh 10,500."}
             </span>{" "}
             {isSwahili ? "Mei 29-31." : WEEKEND_CUP_EVENT_DATES + "."}{" "}
             <span className="bg-gradient-to-r from-blue-400 to-blue-600 bg-clip-text font-semibold text-transparent">
@@ -91,7 +91,16 @@ export default function HeroSection() {
           >
             {isSwahili
               ? "PUBG Mobile, CODM, eFootball, na Free Fire ziko live kwa Weekend Cup Season 1. Chagua game, lipia entry, na lock slot yako kabla match day."
-              : "PUBG Mobile, CODM, eFootball, and Free Fire are live for Weekend Cup Season 1. Pick your game, pay entry, and lock your slot before match day."}
+              : "PUBG Mobile, CODM, eFootball, and Free Fire are live for Weekend Cup Season 1. Register first, then use the Android app or event desk for match updates."}
+          </TimelineContent>
+
+          <TimelineContent as="div" className="flex flex-col items-center justify-center gap-3 sm:flex-row">
+            <Link href={WEEKEND_CUP_REGISTRATION_PATH} className="btn-primary min-h-11 px-5 text-sm">
+              {isSwahili ? "Jisajili Weekend Cup" : "Register for Weekend Cup"}
+            </Link>
+            <Link href="/android-testers" className="btn-outline min-h-11 px-5 text-sm">
+              {isSwahili ? "Pata Android app" : "Get Android app"}
+            </Link>
           </TimelineContent>
         </article>
 

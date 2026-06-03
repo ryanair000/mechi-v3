@@ -22,14 +22,6 @@ export const metadata: Metadata = {
     'Tournament notes, player guides, platform updates, and PlayMechi broadcast stories from the Mechi team.',
 };
 
-const BLOG_NAV_ITEMS = [
-  { href: '/', label: 'TOURNAMENTS' },
-  { href: '/blog', label: 'BLOG' },
-  { href: '/android-testers', label: 'ANDROID' },
-  { href: '/platform', label: 'PLATFORM' },
-  { href: '/pricing', label: 'PRICING' },
-];
-
 const FEATURED_POST = {
   slug: 'playmechi-launch-week',
   title: 'PlayMechi launch week: what players should expect',
@@ -159,10 +151,7 @@ function PostMeta({
 export default function BlogPage() {
   return (
     <div className="page-base marketing-prototype-shell min-h-screen">
-      <HomeFloatingHeader
-        navItems={BLOG_NAV_ITEMS}
-        joinHref={ONLINE_TOURNAMENT_REGISTRATION_PATH}
-      />
+      <HomeFloatingHeader joinHref={ONLINE_TOURNAMENT_REGISTRATION_PATH} />
 
       <main className="landing-shell pb-8 pt-5 sm:pb-10 sm:pt-8">
         <section className="grid gap-6 pb-12 lg:grid-cols-[minmax(0,0.9fr)_minmax(320px,0.72fr)] lg:items-end lg:gap-10">

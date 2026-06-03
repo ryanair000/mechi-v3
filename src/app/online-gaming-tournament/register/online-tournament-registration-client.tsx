@@ -20,9 +20,7 @@ import {
   ONLINE_TOURNAMENT_ARENA_PATH,
   ONLINE_TOURNAMENT_CHECK_IN_PATH,
   ONLINE_TOURNAMENT_GAME_BY_KEY,
-  ONLINE_TOURNAMENT_PUBLIC_PATH,
   ONLINE_TOURNAMENT_REGISTRATION_PATH,
-  ONLINE_TOURNAMENT_YOUTUBE_URL,
   formatEatDateTime,
   getOnlineTournamentWindowState,
   isOnlineTournamentRegistrationClosed,
@@ -121,10 +119,6 @@ function normalizeRegistrationText(value: string | null | undefined) {
   return value?.trim() ?? '';
 }
 
-function normalizeRegistrationHandle(value: string | null | undefined) {
-  return normalizeRegistrationText(value).replace(/^@+/, '');
-}
-
 export function OnlineTournamentRegistrationClient() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -139,9 +133,7 @@ export function OnlineTournamentRegistrationClient() {
   );
   const [inGameUsername, setInGameUsername] = useState('');
   const [followedInstagram, setFollowedInstagram] = useState(true);
-  const [instagramUsername, setInstagramUsername] = useState('');
   const [subscribedYoutube, setSubscribedYoutube] = useState(true);
-  const [youtubeName, setYoutubeName] = useState('');
   const [availableAt8pm, setAvailableAt8pm] = useState(true);
   const [acceptedRules, setAcceptedRules] = useState(false);
 
@@ -176,11 +168,7 @@ export function OnlineTournamentRegistrationClient() {
         normalizeRegistrationText(inGameUsername) !==
           normalizeRegistrationText(currentRegistration.in_game_username) ||
         followedInstagram !== currentRegistration.followed_instagram ||
-        normalizeRegistrationHandle(instagramUsername) !==
-          normalizeRegistrationHandle(currentRegistration.instagram_username) ||
-        subscribedYoutube !== currentRegistration.subscribed_youtube ||
-        normalizeRegistrationText(youtubeName) !==
-          normalizeRegistrationText(currentRegistration.youtube_name)
+        subscribedYoutube !== currentRegistration.subscribed_youtube
       )
   );
   const registrationPrimaryHref =
@@ -244,9 +232,7 @@ export function OnlineTournamentRegistrationClient() {
     if (currentRegistration) {
       setInGameUsername(currentRegistration.in_game_username);
       setFollowedInstagram(currentRegistration.followed_instagram);
-      setInstagramUsername(currentRegistration.instagram_username ?? '');
       setSubscribedYoutube(currentRegistration.subscribed_youtube);
-      setYoutubeName(currentRegistration.youtube_name ?? '');
       setAcceptedRules(true);
       return;
     }
@@ -261,9 +247,7 @@ export function OnlineTournamentRegistrationClient() {
         : ''
     );
     setFollowedInstagram(true);
-    setInstagramUsername('');
     setSubscribedYoutube(true);
-    setYoutubeName('');
     setAvailableAt8pm(true);
     setAcceptedRules(false);
   }, [currentRegistration, selectedGame, user]);
@@ -288,9 +272,7 @@ export function OnlineTournamentRegistrationClient() {
           game: selectedGame,
           in_game_username: inGameUsername,
           followed_instagram: followedInstagram,
-          instagram_username: instagramUsername,
           subscribed_youtube: subscribedYoutube,
-          youtube_name: youtubeName,
           available_at_8pm: availableAt8pm,
           accepted_rules: acceptedRules,
         }),
@@ -343,17 +325,7 @@ export function OnlineTournamentRegistrationClient() {
 
   return (
     <div className="page-base marketing-prototype-shell min-h-screen">
-      <HomeFloatingHeader
-        navItems={[
-          { href: ONLINE_TOURNAMENT_PUBLIC_PATH, label: 'HOME' },
-          { href: '/#prizes', label: 'PRIZES' },
-          { href: '/#rules', label: 'RULES' },
-          { href: '/#stream', label: 'STREAM' },
-          { href: ONLINE_TOURNAMENT_DISPUTE_PATH, label: 'REPORT' },
-        ]}
-        signInHref={signInHref}
-        joinHref={createAccountHref}
-      />
+      <HomeFloatingHeader signInHref={signInHref} joinHref={createAccountHref} />
 
       <main className="landing-shell pb-12 pt-8 sm:pb-16 sm:pt-10">
         <section className="grid gap-6 lg:grid-cols-[minmax(0,0.82fr)_minmax(0,1.18fr)] lg:items-start">
@@ -433,7 +405,7 @@ export function OnlineTournamentRegistrationClient() {
                             ? 'done'
                             : 'still needed'}.{' '}
                           {selectedGameRegistrationOpen
-                            ? 'You can update your tag or social proof before registration closes.'
+                            ? 'You can update your tag before registration closes.'
                             : 'Registration is now closed for this game. Your saved slot stays on the list.'}
                         </p>
                         <div className="mt-3 flex flex-wrap gap-2">
@@ -524,56 +496,6 @@ export function OnlineTournamentRegistrationClient() {
                           Required for rewards.
                         </span>
                       </span>
-                    </label>
-                  </div>
-
-                  <a
-                    href={ONLINE_TOURNAMENT_YOUTUBE_URL}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex flex-col gap-3 rounded-[var(--radius-card)] border border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.045)] p-4 text-sm transition hover:border-[rgba(50,224,196,0.28)] hover:bg-[rgba(50,224,196,0.08)] sm:flex-row sm:items-center sm:justify-between"
-                  >
-                    <span>
-                      <span className="block font-black text-[var(--text-primary)]">
-                        PlayMechi YouTube channel
-                      </span>
-                      <span className="mt-1 block break-all text-[var(--accent-secondary-text)]">
-                        youtube.com/@playmechi
-                      </span>
-                    </span>
-                    <span className="inline-flex items-center gap-2 font-bold text-[var(--text-primary)]">
-                      Open channel
-                      <ExternalLink className="h-4 w-4" />
-                    </span>
-                  </a>
-
-                  <div className="grid gap-4 sm:grid-cols-2">
-                    <label className="block">
-                      <span className="label">Instagram username</span>
-                      <div className="relative">
-                        <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm font-bold text-[var(--text-soft)]">
-                          @
-                        </span>
-                        <input
-                          value={instagramUsername}
-                          onChange={(event) =>
-                            setInstagramUsername(event.target.value.replace(/^@+/, ''))
-                          }
-                          disabled={detailFieldsDisabled}
-                          className="input pl-8"
-                          placeholder="yourhandle"
-                        />
-                      </div>
-                    </label>
-                    <label className="block">
-                      <span className="label">Youtube Mail/Channel Name</span>
-                      <input
-                        value={youtubeName}
-                        onChange={(event) => setYoutubeName(event.target.value)}
-                        disabled={detailFieldsDisabled}
-                        className="input"
-                        placeholder="Email or channel name"
-                      />
                     </label>
                   </div>
 

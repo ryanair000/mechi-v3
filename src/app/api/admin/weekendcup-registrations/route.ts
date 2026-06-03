@@ -13,25 +13,19 @@ import {
   WEEKEND_CUP_REGISTRATION_ENABLED,
   WEEKEND_CUP_SLUG,
   cleanWeekendCupText,
-  getWeekendCupDefaultPaymentForConfirmation,
-  getWeekendCupPaymentTierAmount,
   isWeekendCupRegistrationOpen,
   isWeekendCupGame,
   isWeekendCupPaidStatus,
-  isWeekendCupPaymentStatus,
-  isWeekendCupPaymentTier,
   type WeekendCupPlayerRegistration,
 } from '@/lib/weekend-cup';
 import {
   getWeekendCupCapacityErrorMessage,
-  getWeekendCupEarlyBirdPaidCount,
   getWeekendCupRegistrationSummary,
 } from '@/lib/weekend-cup-server';
 import type {
   OnlineTournamentCheckInStatus,
   OnlineTournamentEligibilityStatus,
   OnlineTournamentPaymentStatus,
-  OnlineTournamentPaymentTier,
 } from '@/lib/online-tournament';
 
 type WeekendCupAdminRegistration = WeekendCupPlayerRegistration & {
@@ -75,23 +69,6 @@ function isCheckInStatus(value: unknown): value is OnlineTournamentCheckInStatus
 function cleanOptionalText(value: unknown, maxLength = 300) {
   const text = cleanWeekendCupText(value, maxLength);
   return text || null;
-}
-
-function readOptionalInteger(value: unknown) {
-  if (value === null || value === undefined || value === '') {
-    return null;
-  }
-
-  if (typeof value === 'number' && Number.isInteger(value) && value >= 0) {
-    return value;
-  }
-
-  const text = String(value).trim();
-  if (!/^\d+$/.test(text)) {
-    return Number.NaN;
-  }
-
-  return Number(text);
 }
 
 async function loadRegistrations() {
@@ -177,7 +154,7 @@ export async function PATCH(request: NextRequest) {
     const { data: currentRaw, error: currentError } = await supabase
       .from('online_tournament_registrations')
       .select(
-        'id, user_id, game, in_game_username, eligibility_status, check_in_status, payment_status, payment_tier, entry_fee_kes'
+        'id, user_id, game, in_game_username, eligibility_status, check_in_status, payment_status'
       )
       .eq('id', registrationId)
       .eq('event_slug', WEEKEND_CUP_SLUG)
@@ -192,8 +169,6 @@ export async function PATCH(request: NextRequest) {
           eligibility_status: OnlineTournamentEligibilityStatus;
           check_in_status: OnlineTournamentCheckInStatus;
           payment_status: OnlineTournamentPaymentStatus;
-          payment_tier: OnlineTournamentPaymentTier | null;
-          entry_fee_kes: number | null;
         }
       | null;
 
@@ -204,9 +179,20 @@ export async function PATCH(request: NextRequest) {
     const updates: Record<string, unknown> = {
       updated_at: new Date().toISOString(),
     };
-    let nextPaymentStatus = currentRegistration.payment_status;
-    let nextPaymentTier = currentRegistration.payment_tier;
-    let nextEntryFeeKes = currentRegistration.entry_fee_kes;
+    const nextPaymentStatus = currentRegistration.payment_status;
+
+    if (
+      Object.prototype.hasOwnProperty.call(body, 'payment_status') ||
+      Object.prototype.hasOwnProperty.call(body, 'payment_tier') ||
+      Object.prototype.hasOwnProperty.call(body, 'entry_fee_kes') ||
+      Object.prototype.hasOwnProperty.call(body, 'payment_reference') ||
+      Object.prototype.hasOwnProperty.call(body, 'payment_note')
+    ) {
+      return NextResponse.json(
+        { error: 'Payment status is controlled by Paystack confirmation' },
+        { status: 400 }
+      );
+    }
 
     if (Object.prototype.hasOwnProperty.call(body, 'eligibility_status')) {
       if (!isEligibilityStatus(body.eligibility_status)) {
@@ -222,90 +208,6 @@ export async function PATCH(request: NextRequest) {
         updates.tournament_lobby_slot = null;
         updates.tournament_lobby_assigned_at = null;
       }
-    }
-
-    if (Object.prototype.hasOwnProperty.call(body, 'payment_status')) {
-      if (!isWeekendCupPaymentStatus(body.payment_status)) {
-        return NextResponse.json({ error: 'Invalid payment status' }, { status: 400 });
-      }
-
-      nextPaymentStatus = body.payment_status;
-      updates.payment_status = nextPaymentStatus;
-
-      if (isWeekendCupPaidStatus(nextPaymentStatus)) {
-        updates.payment_confirmed_at = updates.updated_at;
-        updates.payment_confirmed_by = access.profile.id;
-      } else {
-        updates.payment_confirmed_at = null;
-        updates.payment_confirmed_by = null;
-        updates.check_in_status = 'registered';
-        updates.checked_in_at = null;
-        updates.tournament_lobby_number = null;
-        updates.tournament_lobby_slot = null;
-        updates.tournament_lobby_assigned_at = null;
-      }
-    }
-
-    if (Object.prototype.hasOwnProperty.call(body, 'payment_tier')) {
-      if (body.payment_tier === null || body.payment_tier === '') {
-        nextPaymentTier = null;
-        updates.payment_tier = null;
-      } else if (!isWeekendCupPaymentTier(body.payment_tier)) {
-        return NextResponse.json({ error: 'Invalid payment tier' }, { status: 400 });
-      } else {
-        nextPaymentTier = body.payment_tier;
-        updates.payment_tier = body.payment_tier;
-      }
-    }
-
-    if (Object.prototype.hasOwnProperty.call(body, 'entry_fee_kes')) {
-      const entryFeeKes = readOptionalInteger(body.entry_fee_kes);
-      if (Number.isNaN(entryFeeKes)) {
-        return NextResponse.json({ error: 'Entry fee must be a non-negative whole number' }, { status: 400 });
-      }
-
-      nextEntryFeeKes = entryFeeKes;
-      updates.entry_fee_kes = entryFeeKes;
-    }
-
-    if (Object.prototype.hasOwnProperty.call(body, 'payment_reference')) {
-      updates.payment_reference = cleanOptionalText(body.payment_reference, 120);
-    }
-
-    if (Object.prototype.hasOwnProperty.call(body, 'payment_note')) {
-      updates.payment_note = cleanOptionalText(body.payment_note, 500);
-    }
-
-    if (isWeekendCupPaidStatus(nextPaymentStatus) && !nextPaymentTier) {
-      const earlyBirdPaidCount = await getWeekendCupEarlyBirdPaidCount({
-        supabase,
-        excludeRegistrationId: registrationId,
-      });
-      const paymentGame = isWeekendCupGame(currentRegistration.game)
-        ? currentRegistration.game
-        : 'codm';
-      const defaultPayment = getWeekendCupDefaultPaymentForConfirmation(
-        earlyBirdPaidCount,
-        paymentGame
-      );
-      nextPaymentTier = defaultPayment.tier;
-      updates.payment_tier = defaultPayment.tier;
-
-      if (nextEntryFeeKes === null) {
-        nextEntryFeeKes = defaultPayment.amountKes;
-        updates.entry_fee_kes = defaultPayment.amountKes;
-      }
-    }
-
-    if (isWeekendCupPaidStatus(nextPaymentStatus) && nextPaymentTier && nextEntryFeeKes === null) {
-      const paymentGame = isWeekendCupGame(currentRegistration.game)
-        ? currentRegistration.game
-        : 'codm';
-      nextEntryFeeKes = getWeekendCupPaymentTierAmount(
-        nextPaymentTier,
-        paymentGame
-      );
-      updates.entry_fee_kes = nextEntryFeeKes;
     }
 
     if (Object.prototype.hasOwnProperty.call(body, 'check_in_status')) {

@@ -120,18 +120,10 @@ const ADMIN_HOST_PATH_ALIASES: Record<string, string> = {
 };
 
 const DASHBOARD_PATH_ALIASES: Record<string, string> = {
-  '/dashboard/notifications': '/notifications',
   '/dashboard/inbox': '/inbox',
-  '/dashboard/matches': '/matches',
-  '/dashboard/challenges': '/challenges',
   '/dashboard/lobbies': '/lobbies',
-  '/dashboard/queue': '/queue',
-  '/dashboard/profile': '/profile',
-  '/dashboard/profile/settings': '/profile/settings',
-  '/dashboard/rewards': '/rewards',
-  '/dashboard/socials': '/socials',
+  '/dashboard/queue': '/dashboard/play',
   '/dashboard/streams': '/streams',
-  '/dashboard/tournaments': '/tournaments',
 };
 
 const PUBLIC_PREFIXES = [

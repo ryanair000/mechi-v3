@@ -12,7 +12,6 @@ import {
   ShieldCheck,
   Swords,
   Trophy,
-  Users,
   Zap,
 } from 'lucide-react';
 
@@ -44,14 +43,16 @@ const DASHBOARD_NAV_ITEM: AppNavItem = {
 };
 
 const LEADERBOARD_NAV_ITEM: AppNavItem = {
-  href: '/leaderboard',
+  activeHrefs: ['/leaderboard'],
+  href: '/dashboard/leaderboard',
   label: 'Leaderboard',
   icon: Trophy,
   matchMode: 'prefix',
 };
 
 const TOURNAMENTS_NAV_ITEM: AppNavItem = {
-  href: '/tournaments',
+  activeHrefs: ['/tournaments', '/playmechi/tournament'],
+  href: '/dashboard/tournaments',
   label: 'Tournaments',
   icon: Swords,
   matchMode: 'prefix',
@@ -65,37 +66,41 @@ const CODM_MODERATOR_NAV_ITEM: AppNavItem = {
 };
 
 const SOCIALS_NAV_ITEM: AppNavItem = {
-  href: '/socials',
+  activeHrefs: ['/socials'],
+  href: '/dashboard/socials',
   label: 'Socials',
   icon: AtSign,
   matchMode: 'prefix',
 };
 
-const LOBBIES_NAV_ITEM: AppNavItem = {
-  href: '/lobbies',
-  label: 'Lobbies',
-  icon: Users,
+const PLAY_NAV_ITEM: AppNavItem = {
+  activeHrefs: ['/queue'],
+  href: '/dashboard/play',
+  label: 'Play',
+  icon: Zap,
   matchMode: 'prefix',
 };
 
 const CHALLENGES_NAV_ITEM: AppNavItem = {
-  href: '/challenges',
+  activeHrefs: ['/challenges'],
+  href: '/dashboard/challenges',
   label: 'Challenges',
   icon: MessageCircle,
   matchMode: 'prefix',
 };
 
 const MATCHES_NAV_ITEM: AppNavItem = {
-  href: '/matches',
-  label: 'Match History',
+  activeHrefs: ['/matches', '/match'],
+  href: '/dashboard/matches',
+  label: 'Matches',
   icon: History,
   matchMode: 'prefix',
 };
 
 const GAMES_NAV_ITEM: AppNavItem = {
-  activeHrefs: ['/suggest'],
-  href: '/games',
-  label: 'Games',
+  activeHrefs: ['/games', '/suggest'],
+  href: '/dashboard/game-ids',
+  label: 'Game IDs',
   icon: Gamepad2,
   matchMode: 'prefix',
 };
@@ -109,14 +114,16 @@ const SHARE_NAV_ITEM: AppNavItem = {
 };
 
 const REWARDS_NAV_ITEM: AppNavItem = {
-  href: '/rewards',
+  activeHrefs: ['/rewards'],
+  href: '/dashboard/rewards',
   label: 'Rewards',
   icon: Coins,
   matchMode: 'exact',
 };
 
 const REDEEM_NAV_ITEM: AppNavItem = {
-  href: '/rewards/catalog',
+  activeHrefs: ['/rewards/catalog'],
+  href: '/dashboard/rewards/catalog',
   label: 'Redeem',
   icon: Gift,
   matchMode: 'prefix',
@@ -132,9 +139,9 @@ const BOUNTIES_NAV_ITEM: AppNavItem = {
 
 export const SIDEBAR_PRIMARY_ITEMS: AppNavItem[] = [
   DASHBOARD_NAV_ITEM,
-  LEADERBOARD_NAV_ITEM,
-  TOURNAMENTS_NAV_ITEM,
-  SOCIALS_NAV_ITEM,
+  PLAY_NAV_ITEM,
+  CHALLENGES_NAV_ITEM,
+  MATCHES_NAV_ITEM,
 ];
 
 export const SIDEBAR_MODERATOR_ITEMS: AppNavItem[] = [CODM_MODERATOR_NAV_ITEM];
@@ -145,14 +152,13 @@ export const SIDEBAR_SECTIONS: SidebarSectionConfig[] = [
     title: 'Compete',
     icon: Crosshair,
     items: [
-      LOBBIES_NAV_ITEM,
-      CHALLENGES_NAV_ITEM,
-      MATCHES_NAV_ITEM,
+      LEADERBOARD_NAV_ITEM,
+      TOURNAMENTS_NAV_ITEM,
     ],
   },
   {
     id: 'games',
-    title: 'Games',
+    title: 'Setup',
     icon: Gamepad2,
     items: [GAMES_NAV_ITEM],
   },
@@ -160,6 +166,6 @@ export const SIDEBAR_SECTIONS: SidebarSectionConfig[] = [
     id: 'growth',
     title: 'Growth',
     icon: Gift,
-    items: [SHARE_NAV_ITEM, REWARDS_NAV_ITEM, REDEEM_NAV_ITEM, BOUNTIES_NAV_ITEM],
+    items: [SOCIALS_NAV_ITEM, SHARE_NAV_ITEM, REWARDS_NAV_ITEM, REDEEM_NAV_ITEM, BOUNTIES_NAV_ITEM],
   },
 ];

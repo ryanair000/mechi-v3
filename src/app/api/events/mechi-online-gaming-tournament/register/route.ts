@@ -19,7 +19,6 @@ import {
   getOnlineTournamentWindowState,
   isOnlineTournamentRegistrationClosed,
   isOnlineTournamentGame,
-  normalizeSocialHandle,
   type OnlineTournamentGameKey,
 } from '@/lib/online-tournament';
 import { sendOnlineTournamentRegistrationEmail } from '@/lib/email';
@@ -298,8 +297,8 @@ export async function POST(request: NextRequest) {
       platforms: profilePlatforms,
     });
     const inGameUsername = cleanText(body.in_game_username, 80) || profileGameId;
-    const instagramUsername = normalizeSocialHandle(body.instagram_username);
-    const youtubeName = cleanText(body.youtube_name, 100);
+    const instagramUsername = null;
+    const youtubeName = null;
     const followedInstagram = Boolean(body.followed_instagram);
     const subscribedYoutube = Boolean(body.subscribed_youtube);
     const availableAt8pm = Boolean(body.available_at_8pm);
@@ -318,20 +317,6 @@ export async function POST(request: NextRequest) {
 
     if (!acceptedRules) {
       return NextResponse.json({ error: 'Accept the tournament rules before registering' }, { status: 400 });
-    }
-
-    if (followedInstagram && instagramUsername.length < 2) {
-      return NextResponse.json(
-        { error: 'Add the Instagram username used to follow PlayMechi' },
-        { status: 400 }
-      );
-    }
-
-    if (subscribedYoutube && youtubeName.length < 2) {
-      return NextResponse.json(
-        { error: 'Add the Youtube mail or channel name used to subscribe' },
-        { status: 400 }
-      );
     }
 
     const tournamentPlatform: PlatformKey = 'mobile';
@@ -386,8 +371,8 @@ export async function POST(request: NextRequest) {
           phone: profile.phone ?? null,
           whatsapp_number: profile.whatsapp_number ?? profile.phone ?? null,
           email: profile.email ?? null,
-          instagram_username: instagramUsername || null,
-          youtube_name: youtubeName || null,
+          instagram_username: instagramUsername,
+          youtube_name: youtubeName,
           followed_instagram: followedInstagram,
           subscribed_youtube: subscribedYoutube,
           available_at_8pm: availableAt8pm,

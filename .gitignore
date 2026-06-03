@@ -57,6 +57,12 @@ supabase/.temp/
 # local test/audit output
 /output/
 /tmp/
+/.campaign-results/
+/.codex-logs/
+/apps/android/output-route-sweep-home.png
+/apps/android/review/
+/Esports Tournament App Screens/
+/stitch_android_app_interface/
 
 # OpenClaw EC2 operational backups/workspace copies
 *.bak-*

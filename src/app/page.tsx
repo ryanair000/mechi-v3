@@ -1,13 +1,16 @@
 import type { Metadata } from 'next';
-import { MechiHomePageShell } from '@/app/home/mechi-home-page';
-import { WEEKEND_CUP_TITLE } from '@/lib/weekend-cup';
+import { PlayMechiHome } from '@/components/home/PlayMechiHome';
+import { getHomepageTournaments } from '@/lib/homepage-tournaments';
+
+export const dynamic = 'force-dynamic';
 
 export const metadata: Metadata = {
-  title: 'Home | PlayMechi',
+  title: 'PlayMechi | The Home of African Competition',
   description:
-    `Register for ${WEEKEND_CUP_TITLE}, follow tournament updates, and get the PlayMechi Android app.`,
+    'Find tournaments, host credible competition, build your rank, and grow gaming communities across Africa.',
 };
 
-export default function HomePage() {
-  return <MechiHomePageShell />;
+export default async function HomePage() {
+  const tournaments = await getHomepageTournaments();
+  return <PlayMechiHome publicTournaments={tournaments} />;
 }

@@ -1,13 +1,16 @@
 import type { Metadata } from 'next';
-import { OnlineTournamentClient } from '@/app/online-gaming-tournament/online-tournament-client';
-import { ONLINE_TOURNAMENT_TITLE } from '@/lib/online-tournament';
+import { PlayMechiHome } from '@/components/home/PlayMechiHome';
+import { getHomepageTournaments } from '@/lib/homepage-tournaments';
+
+export const dynamic = 'force-dynamic';
 
 export const metadata: Metadata = {
-  title: `${ONLINE_TOURNAMENT_TITLE} Archive | PlayMechi`,
+  title: 'PlayMechi | Competitive Gaming for Africa',
   description:
-    'View the previous PlayMechi Launch tournament featuring PUBG Mobile, Call of Duty Mobile, and eFootball.',
+    'Find approved tournaments, grow a trusted player record, and host competition across Africa.',
 };
 
-export default function PlayMechiPage() {
-  return <OnlineTournamentClient />;
+export default async function PlayMechiPage() {
+  const tournaments = await getHomepageTournaments();
+  return <PlayMechiHome publicTournaments={tournaments} />;
 }

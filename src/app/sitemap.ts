@@ -33,6 +33,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
       entry(`/weekendcup/t/${game.game}`, 'daily', 0.9)
     ),
     entry('/tournaments', 'daily', 0.9),
+    entry('/playmechi/tournaments', 'daily', 0.95),
     entry('/pricing', 'weekly', 0.7),
     entry('/how-mechi-works', 'monthly', 0.75),
     entry('/support', 'monthly', 0.7),

@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
-import { MechiHomePageShell } from '@/app/home/mechi-home-page';
+import { PlayMechiHome } from '@/components/home/PlayMechiHome';
 import { RegionalSettingsProvider } from '@/components/RegionalSettingsProvider';
 import {
   AFRICAN_COUNTRY_KEYS,
@@ -9,7 +9,9 @@ import {
   getCountrySlug,
 } from '@/lib/location';
 import { buildRegionalSettings } from '@/lib/regional-settings';
-import { WEEKEND_CUP_TITLE } from '@/lib/weekend-cup';
+import { getHomepageTournaments } from '@/lib/homepage-tournaments';
+
+export const dynamic = 'force-dynamic';
 
 type CountrySlugPageProps = {
   params: Promise<{ countrySlug: string }>;
@@ -34,7 +36,7 @@ export async function generateMetadata({
   const countryLabel = getCountryLabel(country);
   return {
     title: `${countryLabel} | Mechi.club`,
-    description: `Mechi.club ${countryLabel} home for ${WEEKEND_CUP_TITLE}, tournaments, lobbies, rewards, and African gaming community runs.`,
+    description: `Find approved tournaments, organizers, rankings, and competitive gaming communities in ${countryLabel}.`,
     alternates: {
       canonical: `/${countrySlug}`,
     },
@@ -49,9 +51,11 @@ export default async function CountrySlugPage({ params }: CountrySlugPageProps) 
     notFound();
   }
 
+  const tournaments = await getHomepageTournaments(country);
+
   return (
     <RegionalSettingsProvider initialSettings={buildRegionalSettings(country, 'manual')}>
-      <MechiHomePageShell />
+      <PlayMechiHome publicTournaments={tournaments} />
     </RegionalSettingsProvider>
   );
 }

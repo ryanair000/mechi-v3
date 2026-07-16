@@ -10,36 +10,21 @@ import { makeSlug } from '@/lib/slug';
 import { maybeExpireProfilePlan } from '@/lib/subscription';
 import { createServiceClient } from '@/lib/supabase';
 import {
-  canProfileHostTournaments,
   getTournamentHostingAccess,
   getTournamentHostingMonthWindow,
 } from '@/lib/tournament-hosting';
 import {
-  firstRelation,
+  getFreeTournamentConfigurationError,
+  getTournamentCreationApprovalStatus,
+  isTournamentPubliclyAccessible,
+} from '@/lib/tournament-policy';
+import {
   getPlatformForTournament,
   getTournamentPaymentMetrics,
   getTournamentPrizeSnapshot,
   resolveTournamentPrizePoolMode,
 } from '@/lib/tournaments';
 import type { GameKey, PlatformKey } from '@/types';
-
-type TournamentOrganizerRelation =
-  | {
-      id: string;
-      username?: string | null;
-      plan?: string | null;
-      plan_expires_at?: string | null;
-      role?: 'user' | 'moderator' | 'admin' | null;
-    }
-  | Array<{
-      id: string;
-      username?: string | null;
-      plan?: string | null;
-      plan_expires_at?: string | null;
-      role?: 'user' | 'moderator' | 'admin' | null;
-    }>
-  | null
-  | undefined;
 
 export async function GET(request: NextRequest) {
   try {
@@ -55,6 +40,7 @@ export async function GET(request: NextRequest) {
       .select(
         '*, organizer:organizer_id(id, username, plan, plan_expires_at, role), winner:winner_id(id, username)'
       )
+      .or('approval_status.eq.approved,entry_fee.eq.0')
       .order('is_featured', { ascending: false })
       .order('created_at', { ascending: false })
       .range(offset, offset + limit - 1);
@@ -78,17 +64,14 @@ export async function GET(request: NextRequest) {
 
     const tournaments = filterVisibleTournaments(
       (data ?? []) as Array<Record<string, unknown> & { id: string }>
-    ).filter((tournament) => {
-      const organizer = firstRelation(
-        tournament.organizer as TournamentOrganizerRelation
-      );
-
-      return canProfileHostTournaments({
-        plan: organizer?.plan,
-        planExpiresAt: organizer?.plan_expires_at,
-        role: organizer?.role,
-      });
-    });
+    ).filter((tournament) =>
+      isTournamentPubliclyAccessible({
+        entryFee: Number(tournament.entry_fee ?? 0),
+        prizePool: Number(tournament.prize_pool ?? 0),
+        prizePoolMode: tournament.prize_pool_mode as string | null | undefined,
+        approvalStatus: tournament.approval_status as string | null | undefined,
+      })
+    );
     if (!tournaments.length) {
       return NextResponse.json({ tournaments: [] });
     }
@@ -288,17 +271,6 @@ export async function POST(request: NextRequest) {
       role: organizerRole,
     });
 
-    if (!hostingAccess.canHost) {
-      return NextResponse.json(
-        {
-          error: 'Tournament hosting requires Elite or admin access.',
-          upgrade_url: '/pricing',
-          required_plan: 'elite',
-        },
-        { status: 403 }
-      );
-    }
-
     const createRateLimit = await checkPersistentRateLimit(
       `tournament-create:${authUser.id}:${game}:${getClientIp(request)}`,
       2,
@@ -322,6 +294,18 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const freeTournamentPolicyError = getFreeTournamentConfigurationError({
+      entryFee,
+      prizePool: requestedPrizePool,
+      prizePoolMode,
+    });
+    if (freeTournamentPolicyError) {
+      return NextResponse.json({ error: freeTournamentPolicyError }, { status: 400 });
+    }
+
+    const approvalStatus = getTournamentCreationApprovalStatus(entryFee);
+    const approvedAt = approvalStatus === 'approved' ? new Date().toISOString() : null;
+
     const { data: tournament, error } = await supabase
       .from('tournaments')
       .insert({
@@ -332,13 +316,15 @@ export async function POST(request: NextRequest) {
         region: location.label,
         size,
         entry_fee: entryFee,
-        prize_pool_mode: prizePoolMode,
-        prize_pool: prizePoolMode === 'specified' ? requestedPrizePool : 0,
+        prize_pool_mode: entryFee > 0 ? prizePoolMode : 'auto',
+        prize_pool: entryFee > 0 && prizePoolMode === 'specified' ? requestedPrizePool : 0,
         platform_fee: 0,
         platform_fee_rate: hostingAccess.platformFeePercent,
         rules: rules || null,
         scheduled_for: scheduledAt.toISOString(),
-        approval_status: 'pending',
+        approval_status: approvalStatus,
+        approved_at: approvedAt,
+        approved_by: null,
         is_featured: false,
         organizer_id: authUser.id,
       })
@@ -355,26 +341,31 @@ export async function POST(request: NextRequest) {
       payment_status: 'free',
     });
 
-    try {
-      await notifyGameAudienceAboutTournament({
-        supabase,
-        actorUserId: authUser.id,
-        game,
-        organizerName: organizerProfile.username?.trim() || 'A player',
-        slug,
-        title,
-        platform,
-        entryFee,
-        size,
-        region: location.label,
-        scheduledFor: scheduledAt.toISOString(),
-        excludeUserIds: [authUser.id],
-      });
-    } catch (broadcastError) {
-      console.error('[Tournaments POST] Broadcast error:', broadcastError);
+    if (approvalStatus === 'approved') {
+      try {
+        await notifyGameAudienceAboutTournament({
+          supabase,
+          actorUserId: authUser.id,
+          game,
+          organizerName: organizerProfile.username?.trim() || 'A player',
+          slug,
+          title,
+          platform,
+          entryFee,
+          size,
+          region: location.label,
+          scheduledFor: scheduledAt.toISOString(),
+          excludeUserIds: [authUser.id],
+        });
+      } catch (broadcastError) {
+        console.error('[Tournaments POST] Broadcast error:', broadcastError);
+      }
     }
 
-    return NextResponse.json({ tournament }, { status: 201 });
+    return NextResponse.json(
+      { tournament, review_required: approvalStatus === 'pending' },
+      { status: 201 }
+    );
   } catch (err) {
     console.error('[Tournaments POST] Error:', err);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });

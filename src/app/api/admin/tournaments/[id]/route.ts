@@ -7,6 +7,11 @@ import { isE2ETournamentFixture, shouldHideE2EFixtures } from '@/lib/e2e-fixture
 import { getClientIp } from '@/lib/rateLimit';
 import { createServiceClient } from '@/lib/supabase';
 import {
+  getFreeTournamentConfigurationError,
+  getTournamentCreationApprovalStatus,
+  isPaidTournament,
+} from '@/lib/tournament-policy';
+import {
   ACTIVE_TOURNAMENT_PLAYER_STATUSES,
   getTournamentPaymentMetrics,
   getTournamentPrizeSnapshot,
@@ -189,6 +194,22 @@ export async function PATCH(
         return NextResponse.json({ error: 'approval_status is required' }, { status: 400 });
       }
 
+      const freeTournamentPolicyError = getFreeTournamentConfigurationError({
+        entryFee: tournament.entry_fee,
+        prizePool: tournament.prize_pool,
+        prizePoolMode: tournament.prize_pool_mode,
+      });
+      if (freeTournamentPolicyError) {
+        return NextResponse.json({ error: freeTournamentPolicyError }, { status: 400 });
+      }
+
+      if (!isPaidTournament(tournament.entry_fee) && approvalStatus !== 'approved') {
+        return NextResponse.json(
+          { error: 'Free tournaments are approved automatically and do not enter review.' },
+          { status: 400 }
+        );
+      }
+
       const approvedAt = approvalStatus === 'approved' ? new Date().toISOString() : null;
       const approvedBy = approvalStatus === 'approved' ? admin.id : null;
       const shouldKeepFeatured = approvalStatus === 'approved' ? tournament.is_featured : false;
@@ -357,9 +378,18 @@ export async function PATCH(
         updatePayload.platform = platform;
         updatePayload.size = size;
         updatePayload.entry_fee = entryFee;
-        if (entryFee <= 0 && tournament.prize_pool_mode !== 'specified') {
+        if (entryFee <= 0) {
+          updatePayload.prize_pool_mode = 'auto';
           updatePayload.prize_pool = 0;
           updatePayload.platform_fee = 0;
+          updatePayload.approval_status = getTournamentCreationApprovalStatus(entryFee);
+          updatePayload.approved_at = new Date().toISOString();
+          updatePayload.approved_by = null;
+        } else if (structureChanged) {
+          updatePayload.approval_status = 'pending';
+          updatePayload.approved_at = null;
+          updatePayload.approved_by = null;
+          updatePayload.is_featured = false;
         }
       }
 

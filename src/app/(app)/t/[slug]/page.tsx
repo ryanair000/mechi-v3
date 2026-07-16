@@ -497,6 +497,14 @@ function TournamentDetailContent() {
             You are in this bracket{viewer.paymentStatus ? ` / ${viewer.paymentStatus}` : ''}.
           </div>
         )}
+        {viewer.isOrganizer && (
+          <Link
+            href={`/t/${tournament.slug}/manage`}
+            className="btn-ghost flex-1 justify-center"
+          >
+            Manage Tournament
+          </Link>
+        )}
         {viewer.isOrganizer && tournament.status === 'full' && (
           <button
             onClick={handleStart}

@@ -81,7 +81,11 @@ export default function CreateTournamentPage() {
     [effectiveEntryFee, effectivePlatformFeePercent, form.size]
   );
   const displayedPrizePool =
-    form.prize_pool_mode === 'specified' ? form.prize_pool : autoPrizeAtCapacity.prizePool;
+    form.entry_type === 'free'
+      ? 0
+      : form.prize_pool_mode === 'specified'
+        ? form.prize_pool
+        : autoPrizeAtCapacity.prizePool;
 
   useEffect(() => {
     if (!userLocation.country && !userLocation.region) {
@@ -205,7 +209,21 @@ export default function CreateTournamentPage() {
       return;
     }
 
-    if (form.prize_pool_mode === 'specified' && form.prize_pool <= 0) {
+    if (form.entry_type === 'paid' && effectiveEntryFee <= 0) {
+      setCreateFeedback({
+        tone: 'error',
+        title: 'Add the paid entry amount.',
+        detail: 'A paid tournament needs an entry fee above KES 0 before it can be submitted.',
+      });
+      toast.error('Enter a paid entry fee');
+      return;
+    }
+
+    if (
+      form.entry_type === 'paid' &&
+      form.prize_pool_mode === 'specified' &&
+      form.prize_pool <= 0
+    ) {
       setCreateFeedback({
         tone: 'error',
         title: 'Add the specified prize pool amount.',
@@ -229,7 +247,11 @@ export default function CreateTournamentPage() {
           ...form,
           scheduled_for: scheduledAt.toISOString(),
           entry_fee: effectiveEntryFee,
-          prize_pool: form.prize_pool_mode === 'specified' ? form.prize_pool : 0,
+          prize_pool_mode: form.entry_type === 'free' ? 'auto' : form.prize_pool_mode,
+          prize_pool:
+            form.entry_type === 'paid' && form.prize_pool_mode === 'specified'
+              ? form.prize_pool
+              : 0,
         }),
       });
       const data = await res.json();
@@ -244,10 +266,12 @@ export default function CreateTournamentPage() {
       }
       setCreateFeedback({
         tone: 'success',
-        title: 'Tournament created.',
-        detail: 'Opening the bracket page now so you can invite players and start it later.',
+        title: data.review_required ? 'Tournament submitted for review.' : 'Tournament created.',
+        detail: data.review_required
+          ? 'Mechi must approve this paid tournament before players can discover or join it.'
+          : 'Opening the bracket page now so you can invite players and start it later.',
       });
-      toast.success('Tournament created');
+      toast.success(data.review_required ? 'Paid tournament submitted for review' : 'Tournament created');
       router.push(`/t/${data.tournament.slug}`);
     } catch {
       setCreateFeedback({
@@ -533,7 +557,7 @@ export default function CreateTournamentPage() {
                 {
                   key: 'free' as const,
                   title: 'Free entry',
-                  copy: 'Open the bracket without charging players and use specified prize mode if you still want a cash payout.',
+                  copy: 'Open the bracket to everyone with no entry fee, cash prize, or reward.',
                 },
               ].map((entryType) => {
                 const isSelected = form.entry_type === entryType.key;
@@ -547,6 +571,9 @@ export default function CreateTournamentPage() {
                         entry_type: entryType.key,
                         entry_fee:
                           entryType.key === 'free' ? 0 : Math.max(0, current.entry_fee || 0),
+                        prize_pool_mode:
+                          entryType.key === 'free' ? 'auto' : current.prize_pool_mode,
+                        prize_pool: entryType.key === 'free' ? 0 : current.prize_pool,
                       }))
                     }
                     className={`rounded-2xl border p-4 text-left transition-all ${
@@ -572,7 +599,7 @@ export default function CreateTournamentPage() {
             {form.entry_type === 'paid' ? (
               <input
                 type="number"
-                min={0}
+                min={1}
                 value={form.entry_fee}
                 onChange={(event) =>
                   setForm((current) => ({
@@ -598,13 +625,15 @@ export default function CreateTournamentPage() {
                   copy:
                     form.entry_type === 'paid'
                       ? 'Calculate the pool from paid entries as players check out.'
-                      : 'Free entry keeps auto mode at KES 0, so switch to specified if you want a guaranteed payout.',
+                      : 'Free tournaments stay at KES 0 with no prize or reward.',
                 },
                 {
                   key: 'specified' as const,
                   title: 'Specified prize pool',
                   copy:
-                    'Set the cash amount yourself up front and keep it fixed on the bracket page.',
+                    form.entry_type === 'free'
+                      ? 'Cash prizes are unavailable for free tournaments.'
+                      : 'Set the cash amount yourself up front and keep it fixed on the bracket page.',
                 },
               ].map((mode) => {
                 const isSelected = form.prize_pool_mode === mode.key;
@@ -612,13 +641,14 @@ export default function CreateTournamentPage() {
                   <button
                     key={mode.key}
                     type="button"
+                    disabled={form.entry_type === 'free' && mode.key === 'specified'}
                     onClick={() =>
                       setForm((current) => ({
                         ...current,
                         prize_pool_mode: mode.key,
                       }))
                     }
-                    className={`rounded-2xl border p-4 text-left transition-all ${
+                    className={`rounded-2xl border p-4 text-left transition-all disabled:cursor-not-allowed disabled:opacity-45 ${
                       isSelected
                         ? 'border-[rgba(50,224,196,0.26)] bg-[rgba(50,224,196,0.1)]'
                         : 'border-[var(--border-color)] bg-[var(--surface-elevated)] hover:border-[rgba(255,107,107,0.22)] hover:bg-[var(--surface)]'
@@ -637,11 +667,11 @@ export default function CreateTournamentPage() {
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
               <label className="label">
-                {form.prize_pool_mode === 'specified'
+                {form.entry_type === 'paid' && form.prize_pool_mode === 'specified'
                   ? 'Specified prize pool'
                   : 'Auto prize preview at full slots'}
               </label>
-              {form.prize_pool_mode === 'specified' ? (
+              {form.entry_type === 'paid' && form.prize_pool_mode === 'specified' ? (
                 <input
                   type="number"
                   min={0}
@@ -672,9 +702,11 @@ export default function CreateTournamentPage() {
                 KES {displayedPrizePool.toLocaleString()}
               </p>
               <p className="mt-2 text-xs leading-5 text-[var(--text-secondary)]">
-                {form.prize_pool_mode === 'specified'
+                {form.entry_type === 'paid' && form.prize_pool_mode === 'specified'
                   ? 'This amount stays fixed on the tournament.'
-                  : 'This is the top-end pool if every slot pays in.'}
+                  : form.entry_type === 'free'
+                    ? 'Free tournaments do not include cash prizes or rewards.'
+                    : 'This is the top-end pool if every slot pays in.'}
               </p>
             </div>
           </div>
@@ -697,11 +729,11 @@ export default function CreateTournamentPage() {
               <Trophy size={15} className="text-[var(--brand-coral)]" />
               Prize setup
             </div>
-            {form.prize_pool_mode === 'specified'
+            {form.entry_type === 'free'
+              ? 'Free tournaments publish immediately with no entry fee, cash prize, or reward.'
+              : form.prize_pool_mode === 'specified'
               ? `Specified mode keeps the prize pool fixed at KES ${form.prize_pool.toLocaleString()} from the moment you publish the bracket.`
-              : form.entry_type === 'free'
-                ? 'Auto mode with free entry stays at KES 0. Switch to specified mode if you want to guarantee a cash payout.'
-                : `Auto mode grows only from paid slots. At full capacity this bracket would reach up to KES ${autoPrizeAtCapacity.prizePool.toLocaleString()}.`}
+              : `Auto mode grows only from paid slots. At full capacity this bracket would reach up to KES ${autoPrizeAtCapacity.prizePool.toLocaleString()}.`}
           </div>
 
           {createFeedback ? (

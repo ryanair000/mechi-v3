@@ -19,6 +19,10 @@ import {
   normaliseKenyanPhone,
 } from '@/lib/paystack';
 import { makePaymentReference } from '@/lib/slug';
+import {
+  getTournamentParticipationPolicyError,
+  isPaidTournament,
+} from '@/lib/tournament-policy';
 import type { NotificationType, Tournament } from '@/types';
 
 export async function POST(
@@ -44,6 +48,19 @@ export async function POST(
     let tournament = tournamentBySlug as Tournament | null;
     if (tournamentError || !tournament) {
       return NextResponse.json({ error: 'Tournament not found' }, { status: 404 });
+    }
+
+    const policyError = getTournamentParticipationPolicyError({
+      entryFee: tournament.entry_fee,
+      prizePool: tournament.prize_pool,
+      prizePoolMode: tournament.prize_pool_mode,
+      approvalStatus: tournament.approval_status,
+    });
+    if (policyError) {
+      return NextResponse.json(
+        { error: policyError },
+        { status: isPaidTournament(tournament.entry_fee) ? 403 : 400 }
+      );
     }
 
     await releaseExpiredTournamentReservations(supabase, tournament.id);

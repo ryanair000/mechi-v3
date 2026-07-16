@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { requireActiveAccessProfile } from '@/lib/access';
+import { hasModeratorAccess, requireActiveAccessProfile } from '@/lib/access';
 import { hasPrimaryAdminAccess } from '@/lib/admin-access';
 import { isE2ETournamentFixture, shouldHideE2EFixtures } from '@/lib/e2e-fixtures';
 import { resolvePlan } from '@/lib/subscription';
 import { createServiceClient } from '@/lib/supabase';
+import { isTournamentPubliclyAccessible } from '@/lib/tournament-policy';
 import {
   firstRelation,
   getTournamentPaymentMetrics,
@@ -84,6 +85,20 @@ export async function GET(
     const { data: tournamentBySlug, error } = await tournamentBySlugQuery.single();
 
     if (error || !tournamentBySlug || isE2ETournamentFixture(tournamentBySlug)) {
+      return NextResponse.json({ error: 'Tournament not found' }, { status: 404 });
+    }
+
+    const canPreviewUnapprovedTournament =
+      tournamentBySlug.organizer_id === authUser.id || hasModeratorAccess(authUser);
+    if (
+      !canPreviewUnapprovedTournament &&
+      !isTournamentPubliclyAccessible({
+        entryFee: tournamentBySlug.entry_fee,
+        prizePool: tournamentBySlug.prize_pool,
+        prizePoolMode: tournamentBySlug.prize_pool_mode,
+        approvalStatus: tournamentBySlug.approval_status,
+      })
+    ) {
       return NextResponse.json({ error: 'Tournament not found' }, { status: 404 });
     }
 

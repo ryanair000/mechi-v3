@@ -1,4 +1,3 @@
-import { resolvePlan } from '@/lib/plans';
 import type { Plan, UserRole } from '@/types';
 
 export const TOURNAMENT_HOSTING_TIMEZONE = 'Africa/Nairobi';
@@ -48,11 +47,8 @@ export function getTournamentHostingMonthWindow(date = new Date()) {
 }
 
 export function canProfileHostTournaments(profile: TournamentHostingProfile): boolean {
-  if (profile.role === 'admin') {
-    return true;
-  }
-
-  return resolvePlan(profile.plan, profile.planExpiresAt) === 'elite';
+  void profile;
+  return true;
 }
 
 export function getTournamentHostingAccess(
@@ -78,7 +74,7 @@ export function getTournamentHostingAccess(
   if (plan !== 'elite') {
     return {
       plan,
-      canHost: false,
+      canHost: true,
       platformFeePercent: STANDARD_TOURNAMENT_PLATFORM_FEE_PERCENT,
       eliteFeeFreeLimit: ELITE_FEE_FREE_TOURNAMENT_LIMIT,
       eliteFeeFreeUsed: feeFreeUsed,

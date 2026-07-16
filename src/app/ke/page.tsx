@@ -1,15 +1,28 @@
 import type { Metadata } from 'next';
-import { KenyaHomePage } from '@/app/ke/kenya-home-page';
-import { WEEKEND_CUP_TITLE } from '@/lib/weekend-cup';
+import { PlayMechiHome } from '@/components/home/PlayMechiHome';
+import { RegionalSettingsProvider } from '@/components/RegionalSettingsProvider';
+import { getHomepageTournaments } from '@/lib/homepage-tournaments';
+import { buildRegionalSettings } from '@/lib/regional-settings';
+
+export const dynamic = 'force-dynamic';
 
 export const metadata: Metadata = {
   title: 'Kenya | Mechi.club',
-  description: `Mechi.club Kenya home for ${WEEKEND_CUP_TITLE}, tournaments, lobbies, and East African gaming community runs.`,
+  description:
+    'Find approved tournaments, organizers, rankings, and competitive gaming communities in Kenya.',
   alternates: {
     canonical: '/ke',
   },
 };
 
-export default function KenyaPage() {
-  return <KenyaHomePage />;
+const kenyaSettings = buildRegionalSettings('kenya', 'manual');
+
+export default async function KenyaPage() {
+  const tournaments = await getHomepageTournaments('kenya');
+
+  return (
+    <RegionalSettingsProvider initialSettings={kenyaSettings}>
+      <PlayMechiHome publicTournaments={tournaments} />
+    </RegionalSettingsProvider>
+  );
 }

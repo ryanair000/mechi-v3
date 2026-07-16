@@ -1,15 +1,28 @@
 import type { Metadata } from 'next';
-import { UgandaHomePage } from '@/app/ug/uganda-home-page';
-import { WEEKEND_CUP_TITLE } from '@/lib/weekend-cup';
+import { PlayMechiHome } from '@/components/home/PlayMechiHome';
+import { RegionalSettingsProvider } from '@/components/RegionalSettingsProvider';
+import { getHomepageTournaments } from '@/lib/homepage-tournaments';
+import { buildRegionalSettings } from '@/lib/regional-settings';
+
+export const dynamic = 'force-dynamic';
 
 export const metadata: Metadata = {
   title: 'Uganda | Mechi.club',
-  description: `Mechi.club Uganda home for ${WEEKEND_CUP_TITLE}, tournaments, lobbies, and East African gaming community runs.`,
+  description:
+    'Find approved tournaments, organizers, rankings, and competitive gaming communities in Uganda.',
   alternates: {
     canonical: '/ug',
   },
 };
 
-export default function UgandaPage() {
-  return <UgandaHomePage />;
+const ugandaSettings = buildRegionalSettings('uganda', 'manual');
+
+export default async function UgandaPage() {
+  const tournaments = await getHomepageTournaments('uganda');
+
+  return (
+    <RegionalSettingsProvider initialSettings={ugandaSettings}>
+      <PlayMechiHome publicTournaments={tournaments} />
+    </RegionalSettingsProvider>
+  );
 }

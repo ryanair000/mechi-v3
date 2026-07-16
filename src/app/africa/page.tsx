@@ -1,15 +1,19 @@
 import type { Metadata } from 'next';
-import { MechiHomePageShell } from '@/app/home/mechi-home-page';
-import { WEEKEND_CUP_TITLE } from '@/lib/weekend-cup';
+import { PlayMechiHome } from '@/components/home/PlayMechiHome';
+import { getHomepageTournaments } from '@/lib/homepage-tournaments';
+
+export const dynamic = 'force-dynamic';
 
 export const metadata: Metadata = {
   title: 'Africa | Mechi.club',
-  description: `Mechi.club Africa home for ${WEEKEND_CUP_TITLE}, open tournaments, country routing, and player communities across the continent.`,
+  description:
+    'Find approved tournaments, organizers, rankings, and competitive gaming communities across Africa.',
   alternates: {
     canonical: '/africa',
   },
 };
 
-export default function AfricaPage() {
-  return <MechiHomePageShell />;
+export default async function AfricaPage() {
+  const tournaments = await getHomepageTournaments();
+  return <PlayMechiHome publicTournaments={tournaments} />;
 }

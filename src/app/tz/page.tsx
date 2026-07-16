@@ -1,12 +1,15 @@
 import type { Metadata } from 'next';
-import { MechiHomePageShell } from '@/app/home/mechi-home-page';
+import { PlayMechiHome } from '@/components/home/PlayMechiHome';
 import { RegionalSettingsProvider } from '@/components/RegionalSettingsProvider';
+import { getHomepageTournaments } from '@/lib/homepage-tournaments';
 import { buildRegionalSettings } from '@/lib/regional-settings';
 
+export const dynamic = 'force-dynamic';
+
 export const metadata: Metadata = {
-  title: 'Mechi Tanzania | Mechi.club',
+  title: 'Tanzania | Mechi.club',
   description:
-    'Mechi.club kwa Kiswahili: wasifu wa wachezaji, lobbies, mashindano, rewards, na njia safi ya kuingia kwenye PlayMechi Tanzania.',
+    'Find approved tournaments, organizers, rankings, and competitive gaming communities in Tanzania.',
   alternates: {
     canonical: '/tz',
   },
@@ -14,10 +17,12 @@ export const metadata: Metadata = {
 
 const tanzaniaSettings = buildRegionalSettings('tanzania', 'manual');
 
-export default function TanzaniaPage() {
+export default async function TanzaniaPage() {
+  const tournaments = await getHomepageTournaments('tanzania');
+
   return (
     <RegionalSettingsProvider initialSettings={tanzaniaSettings}>
-      <MechiHomePageShell />
+      <PlayMechiHome publicTournaments={tournaments} />
     </RegionalSettingsProvider>
   );
 }

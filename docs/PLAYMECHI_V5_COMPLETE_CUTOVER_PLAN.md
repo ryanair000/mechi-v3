@@ -689,8 +689,9 @@ Critical browser stories:
 Latest verified implementation evidence (18 July 2026):
 
 - clean release worktree on `codex/mechi-v5-complete-cutover`;
-- production build completed across 280 routes after compiling, type checking, collecting data and generating pages;
+- an earlier production build completed across 280 routes after compiling, type checking, collecting data and generating pages; the current revision still requires a fresh build on the deployment runner because the latest local full-build process ended without a build marker after exhausting this Windows worktree's capacity;
 - canonical compact light/dark workspace shell implemented for player, team, organizer, creator, coach, sponsor, shop and admin;
+- V5 identity shell now covers login, registration and password recovery; `/signup` canonically resolves to `/register`, and default post-auth routing enters `/app/player` or `/app/admin` instead of a legacy dashboard;
 - Player Dashboard reads live tournament, match, reward, history and notification APIs;
 - tournament discovery is a bespoke responsive directory rather than the generic Figma-gallery renderer;
 - player registration now performs eligibility, free entry, Paystack handoff, callback recovery and payment verification inside Player Dashboard;
@@ -699,20 +700,30 @@ Latest verified implementation evidence (18 July 2026):
 - role-specific Team, Creator, Coach, Sponsor and Gaming Shop sections replace generic blank pages and explicitly exclude coach/shop booking;
 - Mechi Operations reads protected statistics, tournament, support and reward-review sources in the V5 shell;
 - workspace/team schema and APIs are additive and remain unapplied to production until preview verification;
-- `npm run check:v5-cutover` passes and rejects transitional presentation routes or legacy shells in canonical V5 source.
+- `npm run check:v5-cutover` passes and rejects transitional presentation routes or legacy shells in canonical V5 source;
+- targeted V5 lint, `tsc -p tsconfig.build.json --noEmit`, and `git diff --check` pass;
+- Playwright verified the V5 public homepage at desktop and mobile, the tournament directory, the protected-player deep link, and the new identity shell at desktop light and 390px dark mode; the verified identity run reported zero browser errors and preserved `next=/app/player`.
 
 | Phase | Status | Evidence |
 | --- | --- | --- |
 | 0. Contract and baseline | Complete | Blueprint, route audit, isolated cutover branch, clean lint baseline |
-| 1. Foundation and shell | In progress | V5 shell, workspace routes, semantic modes, workspace migration/API; responsive browser gate pending |
-| 2. Player and account | In progress | Live overview, tournament registration/Paystack recovery, matches, wallet, inbox and profile implemented; full story tests pending |
+| 1. Foundation and shell | In progress | V5 public, identity, workspace and operations shells, workspace routes, semantic modes, workspace migration/API; desktop/mobile light/dark browser evidence passes, while tablet/200%-text gates remain |
+| 2. Player and account | In progress | Live overview, V5 identity routing, tournament registration/Paystack recovery, matches, wallet, inbox and profile implemented; authenticated end-to-end fixture tests remain |
 | 3. Creator Studio | In progress | Role-specific Studio sections and activation implemented; durable content/assignment contracts pending |
 | 4. Organizer workspace | In progress | Live portfolio, tournament control and creation wizard implemented; staff/communications/finance mutations pending |
 | 5. Tournament lifecycle | In progress | Public discovery/detail, solo entry/payment recovery, creation policy, match result/chat/evidence implemented; team entry/check-in/admin decision completion pending |
 | 6. Team/sponsor/coach/shop | In progress | Role-specific dashboard journeys and workspace activation implemented; durable role-domain mutations pending |
-| 7. Shared support/recovery | Pending | Recovery and safety suite |
+| 7. Shared support/recovery | In progress | Password and Paystack recovery, inbox, support and canonical identity return paths are wired; MFA/session and complete cross-workspace recovery suite remain |
 | 8. Administration | In progress | V5 protected operations overview and live source queues implemented; V5 decision details pending |
 | 9. Legacy elimination | In progress | Canonical redirects, route disposition and passing forbidden-route/import guard |
 | 10. Release | Pending | Production deployment and smoke report |
 
 This table is updated only when the phase exit gate has objective evidence. Visual resemblance alone is not completion.
+
+### Current external release gates
+
+1. **Mechi database identity:** the connected Supabase projects are named `Lokimax 3.0` and `Jenga`; neither can safely be assumed to be the Mechi production database. The additive V5 migration must not be applied until the Mechi project is explicitly connected or identified.
+2. **Current production build:** the current revision needs a successful clean production build on preview/CI. Local lint, TypeScript and cutover checks pass, but a deployment cannot be promoted from an incomplete local build artifact.
+3. **Authenticated fixtures:** player, captain, organizer, creator and operations browser stories need controlled preview accounts and tournament fixtures before money, evidence and decision mutations can be accepted as release-complete.
+
+These gates do not reopen V4 as a product option. Until they are cleared, the V5 branch is implementation-complete only for the verified surfaces above and remains intentionally unpromoted.

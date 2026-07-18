@@ -1,7 +1,7 @@
 import { normalizeInviteCode } from '@/lib/invite';
 import type { UserRole } from '@/types';
 
-export const MODERATOR_DESK_PATH = '/moderators';
+export const MODERATOR_DESK_PATH = '/app/admin';
 
 const BLOCKED_POST_AUTH_PATHS = new Set([
   '/login',
@@ -17,7 +17,7 @@ type PostLoginIdentity = {
   role?: UserRole | null;
 };
 
-export function getSafeNextPath(value: string | null | undefined, fallback = '/dashboard') {
+export function getSafeNextPath(value: string | null | undefined, fallback = '/app/player') {
   if (!value || !value.startsWith('/') || value.startsWith('//')) {
     return fallback;
   }
@@ -30,6 +30,10 @@ export function getSafeNextPath(value: string | null | undefined, fallback = '/d
   } catch {
     return fallback;
   }
+
+  if (matchesAppPath(value, '/dashboard')) return value.replace('/dashboard', '/app/player');
+  if (matchesAppPath(value, '/moderators')) return value.replace('/moderators', '/app/admin');
+  if (matchesAppPath(value, '/admin')) return value.replace('/admin', '/app/admin');
 
   return value;
 }
@@ -44,7 +48,7 @@ function matchesAppPath(pathname: string, basePath: string) {
 }
 
 function isAdminPath(pathname: string) {
-  return matchesAppPath(pathname, '/admin');
+  return matchesAppPath(pathname, '/app/admin') || matchesAppPath(pathname, '/admin');
 }
 
 function isWeekendCupHomeAnchorPath(pathname: string) {
@@ -60,14 +64,14 @@ export function hasModeratorDeskRole(identity: PostLoginIdentity | null | undefi
 }
 
 function getNonStaffFallbackPath(fallback: string | null | undefined) {
-  const safeFallback = getSafeNextPath(fallback, '/dashboard');
-  return isModeratorDeskPath(safeFallback) || isAdminPath(safeFallback) ? '/dashboard' : safeFallback;
+  const safeFallback = getSafeNextPath(fallback, '/app/player');
+  return isModeratorDeskPath(safeFallback) || isAdminPath(safeFallback) ? '/app/player' : safeFallback;
 }
 
 export function getPostLoginRedirectPath(
   identity: PostLoginIdentity | null | undefined,
   requestedPath: string | null | undefined,
-  fallback = '/dashboard'
+  fallback = '/app/player'
 ) {
   const safePath = getSafeNextPath(requestedPath, fallback);
 

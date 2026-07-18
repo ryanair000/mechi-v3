@@ -22,6 +22,7 @@
 /.next-build-admin/
 /.next-build-tournament/
 /.next-codex-*/
+/.next-v5-*/
 /out/
 
 # production

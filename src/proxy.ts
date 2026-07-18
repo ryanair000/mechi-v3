@@ -21,6 +21,7 @@ import { createServiceClient } from '@/lib/supabase';
 import { ADMIN_HOST as CONFIGURED_ADMIN_HOST, ADMIN_URL, APP_HOST, APP_URL } from '@/lib/urls';
 
 const PROTECTED_PREFIXES = [
+  '/app/',
   '/dashboard',
   '/profile',
   '/games',
@@ -193,6 +194,10 @@ function isAdminRoute(pathname: string) {
 
 function isProtectedRoute(pathname: string) {
   return PROTECTED_PREFIXES.some((prefix) => pathname.startsWith(prefix));
+}
+
+function isV5AdminRoute(pathname: string) {
+  return pathname === '/app/admin' || pathname.startsWith('/app/admin/');
 }
 
 function isHiddenRoute(pathname: string) {
@@ -838,6 +843,10 @@ export async function proxy(request: NextRequest) {
   if (isProtectedRoute(effectivePathname)) {
     if (!payload || !access) {
       return unauthorizedResponse(effectivePathname, request);
+    }
+
+    if (isV5AdminRoute(effectivePathname) && !hasPrimaryAdminAccess(access)) {
+      return forbiddenResponse(effectivePathname, request);
     }
 
     if (access.is_banned) {

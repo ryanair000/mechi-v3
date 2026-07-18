@@ -14,7 +14,7 @@ export default async function AppWorkspacePage({
     redirect('/app/player');
   }
 
-  if (!isV5WorkspaceKind(workspaceValue) || workspaceValue === 'admin') {
+  if (!isV5WorkspaceKind(workspaceValue)) {
     redirect('/app/player');
   }
 

@@ -17,6 +17,7 @@ import {
   Video,
 } from 'lucide-react';
 import { ThemeToggle } from '@/components/ThemeToggle';
+import { V5TournamentDirectory } from '@/components/v5/V5TournamentDirectory';
 import { listPublicTournaments, type PublicTournament } from '@/lib/public-tournament-data';
 import {
   getV5Screen,
@@ -192,7 +193,7 @@ export async function V5HomePage({ country }: { country?: string } = {}) {
               <span>{tournaments[0] ? `${tournaments[0].player_count} / ${tournaments[0].size} players` : 'Open to verified players'}</span>
             </div>
             <div className={styles.progress}><span /></div>
-            <Link className={`${styles.buttonOutline} ${styles.wide}`} href={tournaments[0] ? `/s/t/${encodeURIComponent(tournaments[0].slug)}` : '/v5/tournaments'}>View tournament</Link>
+            <Link className={`${styles.buttonOutline} ${styles.wide}`} href={tournaments[0] ? `/tournaments/${encodeURIComponent(tournaments[0].slug)}` : '/tournaments'}>View tournament</Link>
           </div>
         </article>
       </section>
@@ -214,7 +215,7 @@ export async function V5HomePage({ country }: { country?: string } = {}) {
         <div className={styles.container}>
           <div className={styles.sectionIntro}>
             <h2 className={styles.sectionTitle}>Competitions happening now</h2>
-            <Link className={styles.textLink} href="/v5/tournaments">View all tournaments →</Link>
+            <Link className={styles.textLink} href="/tournaments">View all tournaments →</Link>
           </div>
           <div className={styles.tournamentGrid}>
             {[0, 1, 2].map((index) => <TournamentCard key={tournaments[index]?.slug ?? index} tournament={tournaments[index]} index={index} />)}
@@ -248,7 +249,7 @@ export async function V5HomePage({ country }: { country?: string } = {}) {
               <div className={styles.policyItem}><span className={styles.policyDot}><Check size={15} /></span>Free + no prize: publish instantly</div>
               <div className={styles.policyItem}><span className={`${styles.policyDot} ${styles.policyDotCoral}`}><ShieldCheck size={15} /></span>Paid or rewarded: approval required</div>
             </div>
-            <Link className={styles.button} href="/tournaments/create">Host a free tournament</Link>
+            <Link className={styles.button} href="/app/organizer/tournaments/new">Host a free tournament</Link>
           </div>
           <div className={styles.formPreview} aria-label="Tournament creation preview">
             <div className={styles.formSteps}><span>1 Details</span><span>2 Rules</span><span>3 Confirm</span></div>
@@ -264,7 +265,7 @@ export async function V5HomePage({ country }: { country?: string } = {}) {
       <section className={`${styles.container} ${styles.section}`}>
         <h2 className={styles.sectionTitle}>Build around competition</h2>
         <div className={styles.roleGrid}>
-          {[['Creators', 'Grow your audience and bring more eyes to the game.', styles.roleImageOne, '/v5/streamer/live'], ['Coaches', 'Develop talent and build the next generation.', styles.roleImageTwo, '/v5/coach/workbench'], ['Companies', 'Connect with communities through competition.', styles.roleImageThree, '/v5/sponsor'], ['Gaming shops', 'Engage players and power your local scene.', styles.roleImageFour, '/v5/shop']].map(([title, copy, art, href]) => (
+          {[['Creators', 'Grow your audience and bring more eyes to the game.', styles.roleImageOne, '/app/creator'], ['Coaches', 'Develop talent and build the next generation.', styles.roleImageTwo, '/app/coach'], ['Companies', 'Connect with communities through competition.', styles.roleImageThree, '/app/sponsor'], ['Gaming shops', 'Engage players and power your local scene.', styles.roleImageFour, '/app/shop']].map(([title, copy, art, href]) => (
             <article className={styles.roleCard} key={title}><div className={`${styles.roleImage} ${art}`} /><div className={styles.roleBody}><h3>{title}</h3><p>{copy}</p><Link className={styles.textLink} href={href}>Learn more →</Link></div></article>
           ))}
         </div>
@@ -343,9 +344,7 @@ export function V5HowItWorksPage() { return <V5ScreenPage definition={{ ...page(
 
 export async function V5TournamentsPage() {
   const tournaments = await safeTournaments(12);
-  const rows: V5Row[] = tournaments.map((item) => ({ title: item.title, meta: tournamentMeta(item), status: item.status.toUpperCase(), tone: item.status === 'active' ? 'danger' : item.entry_fee > 0 ? 'warning' : 'teal', href: `/tournaments/${encodeURIComponent(item.slug)}` }));
-  const definition: V5ScreenDefinition = { ...page('games'), eyebrow: 'Competition', title: 'Find a tournament worth playing.', description: 'Browse approved public tournaments. Free, no-prize events can publish instantly; paid or rewarded events are reviewed by Mechi.', primaryLabel: 'Host a tournament', primaryHref: '/app/organizer/tournaments/new', mainTitle: 'Open and upcoming tournaments', rows: [], metrics: [{ label: 'Visible now', value: String(tournaments.length), help: 'Approved public tournaments' }, { label: 'Free events', value: String(tournaments.filter((item) => item.entry_fee === 0 && item.prize_pool === 0).length), help: 'No entry fee or value reward' }, { label: 'Payment rail', value: 'Paystack', help: 'For approved paid events' }] };
-  return <V5ScreenPage definition={definition} rows={rows} />;
+  return <V5Shell><V5TournamentDirectory tournaments={tournaments} /></V5Shell>;
 }
 
 export function V5LeaderboardPage() { return <V5ScreenPage definition={{ ...page('explore'), eyebrow: 'Rankings', title: 'Performance earns reputation.', mainTitle: 'Top competitors' }} />; }

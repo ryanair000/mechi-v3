@@ -131,6 +131,7 @@ const nextConfig: NextConfig = {
       { source: "/t/:slug/manage", destination: "/app/organizer/tournaments/:slug", permanent: true },
       { source: "/v5", destination: "/", permanent: true },
       { source: "/v5/tournaments", destination: "/tournaments", permanent: true },
+      { source: "/v5/:path*", destination: "/", permanent: true },
       {
         source:
           "/:path((?!$|admin(?:/|$)|dashboard(?:/|$)|login(?:/|$)|register(?:/|$)|forgot-password(?:/|$)|reset-password(?:/|$)|banned(?:/|$)|api(?:/|$)|_next(?:/|$)|favicon|icon|robots|sitemap).*)",

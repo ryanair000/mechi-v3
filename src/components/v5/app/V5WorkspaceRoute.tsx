@@ -20,8 +20,10 @@ import {
   WalletCards,
 } from 'lucide-react';
 import { useAuth, useAuthFetch } from '@/components/AuthProvider';
+import { V5AdminWorkspace } from '@/components/v5/app/V5AdminWorkspace';
 import { V5AppShell } from '@/components/v5/app/V5AppShell';
 import { V5MatchRoom } from '@/components/v5/app/V5MatchRoom';
+import { V5RoleSection } from '@/components/v5/app/V5RoleSection';
 import { V5TournamentWizard } from '@/components/v5/app/V5TournamentWizard';
 import { V5_WORKSPACES, type V5WorkspaceKind } from '@/components/v5/app/v5-workspaces';
 import styles from './V5WorkspaceRoute.module.css';
@@ -180,7 +182,9 @@ export function V5WorkspaceRoute({ workspace, section }: { workspace: V5Workspac
 
   return (
     <V5AppShell workspace={workspace} section={section.split('/')[0] ?? ''}>
-      {section ? (
+      {workspace === 'admin' ? (
+        <V5AdminWorkspace section={section} />
+      ) : section ? (
         <WorkspaceSection workspace={workspace} section={section} data={data} />
       ) : (
         <WorkspaceOverview workspace={workspace} data={data} />
@@ -416,7 +420,7 @@ function RoleOverview({ workspace }: { workspace: V5WorkspaceKind }) {
 }
 
 function WorkspaceSection({ workspace, section, data }: { workspace: V5WorkspaceKind; section: string; data: LiveWorkspaceData }) {
-  if (workspace === 'organizer' && section === 'tournaments/new') {
+  if (['organizer', 'shop'].includes(workspace) && section === 'tournaments/new') {
     return <V5TournamentWizard />;
   }
   if (workspace === 'organizer' && section.startsWith('tournaments/')) {
@@ -426,6 +430,9 @@ function WorkspaceSection({ workspace, section, data }: { workspace: V5Workspace
   const baseSection = section.split('/')[0];
   if (workspace === 'player' && ['matches', 'wallet', 'inbox', 'profile', 'rankings'].includes(baseSection)) {
     return <PlayerSection section={section} data={data} />;
+  }
+  if (['team', 'creator', 'coach', 'sponsor', 'shop'].includes(workspace)) {
+    return <V5RoleSection workspace={workspace as 'team' | 'creator' | 'coach' | 'sponsor' | 'shop'} section={baseSection} tournaments={data.tournaments} loading={data.loading} />;
   }
   const copy = SECTION_COPY[baseSection] ?? {
     title: baseSection.replace(/-/g, ' ').replace(/^./, (value) => value.toUpperCase()),

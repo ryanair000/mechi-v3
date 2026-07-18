@@ -1,6 +1,5 @@
 import type { Metadata } from 'next';
-import { PlayMechiHome } from '@/components/home/PlayMechiHome';
-import { getHomepageTournaments } from '@/lib/homepage-tournaments';
+import { V5HomePage } from '@/components/v5/V5Public';
 
 export const dynamic = 'force-dynamic';
 
@@ -10,7 +9,6 @@ export const metadata: Metadata = {
     'Find tournaments, host credible competition, build your rank, and grow gaming communities across Africa.',
 };
 
-export default async function HomePage() {
-  const tournaments = await getHomepageTournaments();
-  return <PlayMechiHome publicTournaments={tournaments} />;
+export default function HomePage() {
+  return <V5HomePage />;
 }

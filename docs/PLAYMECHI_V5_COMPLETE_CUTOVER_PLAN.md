@@ -700,7 +700,8 @@ Latest verified implementation evidence (18 July 2026):
 - role-specific Team, Creator, Coach, Sponsor and Gaming Shop sections replace generic blank pages and explicitly exclude coach/shop booking;
 - Mechi Operations reads protected statistics, tournament, support and reward-review sources in the V5 shell;
 - operations queue rows and case decisions now stay inside `/app/admin`; tournament approval/rejection, support resolution/reopen and reward-review actions require an explicit reason and confirmation, while payout release remains visibly held without a complete eligibility contract;
-- workspace/team schema and APIs are additive and remain unapplied to production until preview verification;
+- workspace/team schema and APIs are additive; migration `20260718144302` was transactionally dry-run, applied to the healthy `Mechi V4` Supabase project, and verified without creating fixture records;
+- production verification confirms all nine V5 tables, twelve tournament/match columns, validated team-size constraints, RLS on every new table, zero anon/authenticated grants, no missing V5 foreign-key indexes, and no new V5 advisor warnings;
 - `npm run check:v5-cutover` passes and rejects transitional presentation routes or legacy shells in canonical V5 source;
 - targeted V5 lint, `tsc -p tsconfig.build.json --noEmit`, and `git diff --check` pass;
 - Playwright verified the V5 public homepage at desktop and mobile, the tournament directory, the protected-player deep link, and the new identity shell at desktop light and 390px dark mode; the verified identity run reported zero browser errors and preserved `next=/app/player`.
@@ -716,15 +717,16 @@ Latest verified implementation evidence (18 July 2026):
 | 6. Team/sponsor/coach/shop | In progress | Role-specific dashboard journeys and workspace activation implemented; durable role-domain mutations pending |
 | 7. Shared support/recovery | In progress | Password and Paystack recovery, inbox, support and canonical identity return paths are wired; MFA/session and complete cross-workspace recovery suite remain |
 | 8. Administration | In progress | V5 protected overview, live queues and in-dashboard tournament/support/reward decision details implemented with confirmation and audit reasons; sponsorship/verification and payout-release contracts remain |
-| 9. Legacy elimination | In progress | Canonical redirects, route disposition and passing forbidden-route/import guard |
+| 9. Legacy elimination | In progress | Canonical redirects, route disposition, production V5 schema migration and passing forbidden-route/import guard; compatibility campaign retirement remains |
 | 10. Release | Pending | Production deployment and smoke report |
 
 This table is updated only when the phase exit gate has objective evidence. Visual resemblance alone is not completion.
 
 ### Current external release gates
 
-1. **Mechi database identity:** the connected Supabase projects are named `Lokimax 3.0` and `Jenga`; neither can safely be assumed to be the Mechi production database. The additive V5 migration must not be applied until the Mechi project is explicitly connected or identified.
-2. **Current production build:** the current revision needs a successful clean production build on preview/CI. Local lint, TypeScript and cutover checks pass, but a deployment cannot be promoted from an incomplete local build artifact.
-3. **Authenticated fixtures:** player, captain, organizer, creator and operations browser stories need controlled preview accounts and tournament fixtures before money, evidence and decision mutations can be accepted as release-complete.
+1. **Current production build:** the current revision needs a successful clean production build on preview/CI. Local lint, TypeScript and cutover checks pass, but a deployment cannot be promoted from an incomplete build artifact.
+2. **Authenticated fixtures:** player, captain, organizer, creator and operations browser stories need controlled preview accounts and tournament fixtures before money, evidence and decision mutations can be accepted as release-complete.
+
+Resolved 19 July 2026: Supabase CLI access identified project `Mechi V4` (`zcpgarqumzxuwicjihxp`). The migration and transactional team-entry verification passed; no production fixture rows were retained.
 
 These gates do not reopen V4 as a product option. Until they are cleared, the V5 branch is implementation-complete only for the verified surfaces above and remains intentionally unpromoted.

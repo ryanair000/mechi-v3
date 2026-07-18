@@ -1,7 +1,6 @@
 import type { Metadata } from 'next';
-import { PlayMechiHome } from '@/components/home/PlayMechiHome';
 import { RegionalSettingsProvider } from '@/components/RegionalSettingsProvider';
-import { getHomepageTournaments } from '@/lib/homepage-tournaments';
+import { V5HomePage } from '@/components/v5/V5Public';
 import { buildRegionalSettings } from '@/lib/regional-settings';
 
 export const dynamic = 'force-dynamic';
@@ -17,12 +16,10 @@ export const metadata: Metadata = {
 
 const kenyaSettings = buildRegionalSettings('kenya', 'manual');
 
-export default async function KenyaPage() {
-  const tournaments = await getHomepageTournaments('kenya');
-
+export default function KenyaPage() {
   return (
     <RegionalSettingsProvider initialSettings={kenyaSettings}>
-      <PlayMechiHome publicTournaments={tournaments} />
+      <V5HomePage country="kenya" />
     </RegionalSettingsProvider>
   );
 }

@@ -23,6 +23,7 @@ import { useAuth, useAuthFetch } from '@/components/AuthProvider';
 import { V5AdminWorkspace } from '@/components/v5/app/V5AdminWorkspace';
 import { V5AppShell } from '@/components/v5/app/V5AppShell';
 import { V5MatchRoom } from '@/components/v5/app/V5MatchRoom';
+import { V5PlayerTournamentFlow } from '@/components/v5/app/V5PlayerTournamentFlow';
 import { V5RoleSection } from '@/components/v5/app/V5RoleSection';
 import { V5TournamentWizard } from '@/components/v5/app/V5TournamentWizard';
 import { V5_WORKSPACES, type V5WorkspaceKind } from '@/components/v5/app/v5-workspaces';
@@ -41,6 +42,10 @@ interface TournamentRecord {
   prize_pool?: number | null;
   approval_status?: string | null;
   organizer_id?: string | null;
+  participant_type?: 'solo' | 'team' | null;
+  team_size?: number | null;
+  valuable_reward_exists?: boolean | null;
+  reward_description?: string | null;
 }
 
 interface MatchRecord {
@@ -428,7 +433,7 @@ function WorkspaceSection({ workspace, section, data }: { workspace: V5Workspace
     return <TournamentControl tournament={data.tournaments.find((item) => item.slug === slug)} loading={data.loading} />;
   }
   const baseSection = section.split('/')[0];
-  if (workspace === 'player' && ['matches', 'wallet', 'inbox', 'profile', 'rankings'].includes(baseSection)) {
+  if (workspace === 'player' && ['tournaments', 'matches', 'wallet', 'inbox', 'profile', 'rankings'].includes(baseSection)) {
     return <PlayerSection section={section} data={data} />;
   }
   if (['team', 'creator', 'coach', 'sponsor', 'shop'].includes(workspace)) {
@@ -463,6 +468,7 @@ function WorkspaceSection({ workspace, section, data }: { workspace: V5Workspace
 function PlayerSection({ section, data }: { section: string; data: LiveWorkspaceData }) {
   const { user } = useAuth();
   const [baseSection, detailId] = section.split('/');
+  if (baseSection === 'tournaments') return <V5PlayerTournamentFlow tournaments={data.tournaments} loading={data.loading} />;
   if (baseSection === 'matches' && detailId) return <V5MatchRoom matchId={detailId} />;
   const copy = SECTION_COPY[baseSection];
   if (section === 'matches') {

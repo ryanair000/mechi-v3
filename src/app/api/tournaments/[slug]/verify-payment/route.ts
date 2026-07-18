@@ -98,7 +98,7 @@ export async function POST(
         type: 'tournament_joined',
         title: `Payment confirmed for ${tournament.title}`,
         body: `You're locked into the ${GAMES[tournament.game]?.label ?? tournament.game} bracket.`,
-        href: `/t/${tournament.slug}`,
+        href: `/app/player/tournaments?join=${encodeURIComponent(tournament.slug)}`,
         metadata: {
           tournament_id: tournament.id,
           slug: tournament.slug,
@@ -113,7 +113,7 @@ export async function POST(
         type: 'tournament_player_joined',
         title: `${String(profile?.username ?? 'A player')} joined ${tournament.title}`,
         body: `Their payment cleared and the ${GAMES[tournament.game]?.label ?? tournament.game} slot is locked.`,
-        href: `/t/${tournament.slug}`,
+        href: `/app/organizer/tournaments/${encodeURIComponent(tournament.slug)}`,
         metadata: {
           tournament_id: tournament.id,
           slug: tournament.slug,
@@ -134,7 +134,7 @@ export async function POST(
           platform: tournament.platform,
           scheduledFor: tournament.scheduled_for,
           entryFee: tournament.entry_fee,
-          tournamentUrl: `${getAppUrl()}/t/${tournament.slug}`,
+          tournamentUrl: `${getAppUrl()}/tournaments/${encodeURIComponent(tournament.slug)}`,
         });
       });
     }

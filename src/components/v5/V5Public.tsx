@@ -16,6 +16,7 @@ import {
   Users,
   Video,
 } from 'lucide-react';
+import { ThemeToggle } from '@/components/ThemeToggle';
 import { listPublicTournaments, type PublicTournament } from '@/lib/public-tournament-data';
 import {
   getV5Screen,
@@ -70,6 +71,7 @@ export function V5Shell({ children }: { children: ReactNode }) {
             {navigation.map((item) => <Link key={item.label} href={item.href}>{item.label}</Link>)}
           </nav>
           <div className={styles.headerActions}>
+            <ThemeToggle className={styles.themeControl} />
             <Link className={styles.buttonGhost} href="/login">Sign in</Link>
             <Link className={styles.button} href="/register">Join PlayMechi</Link>
           </div>
@@ -79,6 +81,10 @@ export function V5Shell({ children }: { children: ReactNode }) {
               {navigation.map((item) => <Link key={item.label} href={item.href}>{item.label}</Link>)}
               <Link href="/login">Sign in</Link>
               <Link href="/register">Join PlayMechi</Link>
+              <div className={styles.mobileThemeRow}>
+                <span>Appearance</span>
+                <ThemeToggle variant="pill" className={styles.mobileThemeControl} />
+              </div>
             </nav>
           </details>
         </div>

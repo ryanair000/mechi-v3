@@ -119,10 +119,10 @@ function V5Footer() {
   );
 }
 
-async function safeTournaments(limit = 6) {
+async function safeTournaments(limit = 6, country?: string) {
   try {
     return await Promise.race([
-      listPublicTournaments({ status: 'all', limit }),
+      listPublicTournaments({ status: 'all', limit, country }),
       new Promise<PublicTournament[]>((resolve) => {
         setTimeout(() => resolve(fallbackTournaments), 2500);
       }),
@@ -158,8 +158,8 @@ function TournamentCard({ tournament, index }: { tournament?: PublicTournament; 
   );
 }
 
-export async function V5HomePage() {
-  const tournaments = await safeTournaments(3);
+export async function V5HomePage({ country }: { country?: string } = {}) {
+  const tournaments = await safeTournaments(3, country);
   return (
     <V5Shell>
       <section className={`${styles.container} ${styles.hero}`}>

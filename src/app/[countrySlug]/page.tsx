@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
-import { PlayMechiHome } from '@/components/home/PlayMechiHome';
 import { RegionalSettingsProvider } from '@/components/RegionalSettingsProvider';
+import { V5HomePage } from '@/components/v5/V5Public';
 import {
   AFRICAN_COUNTRY_KEYS,
   getCountryBySlug,
@@ -9,7 +9,6 @@ import {
   getCountrySlug,
 } from '@/lib/location';
 import { buildRegionalSettings } from '@/lib/regional-settings';
-import { getHomepageTournaments } from '@/lib/homepage-tournaments';
 
 export const dynamic = 'force-dynamic';
 
@@ -51,11 +50,9 @@ export default async function CountrySlugPage({ params }: CountrySlugPageProps) 
     notFound();
   }
 
-  const tournaments = await getHomepageTournaments(country);
-
   return (
     <RegionalSettingsProvider initialSettings={buildRegionalSettings(country, 'manual')}>
-      <PlayMechiHome publicTournaments={tournaments} />
+      <V5HomePage country={country} />
     </RegionalSettingsProvider>
   );
 }

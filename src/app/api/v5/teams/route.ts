@@ -30,7 +30,7 @@ export async function POST(request: NextRequest) {
 
   const name = String(body.name ?? `${user.username} squad`).trim();
   const tag = String(body.tag ?? '').trim().toUpperCase();
-  const game = String(body.game ?? user.selected_games?.[0] ?? '') as GameKey;
+  const game = String(body.game ?? '') as GameKey;
   const platform = String(body.platform ?? GAMES[game]?.platforms?.[0] ?? '').trim();
   if (name.length < 2 || name.length > 120) return NextResponse.json({ error: 'Team name must be between 2 and 120 characters.' }, { status: 400 });
   if (tag && (tag.length < 2 || tag.length > 8)) return NextResponse.json({ error: 'Team tag must be 2 to 8 characters.' }, { status: 400 });
@@ -40,7 +40,7 @@ export async function POST(request: NextRequest) {
   const slug = `${makeSlug(name)}-${crypto.randomUUID().slice(0, 6)}`;
   const { data: workspace, error: workspaceError } = await supabase.from('workspaces').insert({
     type: 'team', owner_id: user.id, name, slug, status: 'active', verification_status: 'unverified',
-    is_public: false, country: user.country ?? null, region: user.region ?? null,
+    is_public: false,
   }).select('id,name,slug,status,verification_status').single();
   if (workspaceError || !workspace) return NextResponse.json({ error: workspaceError?.code === '42P01' ? 'V5 team storage is not ready yet.' : 'Team could not be created.' }, { status: workspaceError?.code === '42P01' ? 503 : 409 });
 

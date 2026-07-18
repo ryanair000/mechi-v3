@@ -23,12 +23,14 @@ function fallbackWorkspaces(user: { id: string; username: string }) {
     {
       id: `player:${user.id}`,
       type: 'player' as const,
+      owner_id: user.id,
       name: user.username,
       slug: user.username,
       status: 'active',
       verification_status: 'unverified',
       role: 'owner',
       persisted: false,
+      is_public: false,
     },
   ];
 }
@@ -74,7 +76,7 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  const workspaces = Array.from(byId.values());
+  const workspaces: Array<WorkspaceRow & { role: string; persisted: boolean }> = Array.from(byId.values());
   if (!workspaces.some((workspace) => workspace.type === 'player')) {
     workspaces.unshift(fallbackWorkspaces(user)[0]);
   }
@@ -134,8 +136,6 @@ export async function POST(request: NextRequest) {
       status: 'active',
       verification_status: verificationStatus,
       is_public: false,
-      country: user.country ?? null,
-      region: user.region ?? null,
     })
     .select('id,type,name,slug,status,verification_status,is_public')
     .single();

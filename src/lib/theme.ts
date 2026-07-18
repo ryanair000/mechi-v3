@@ -1,7 +1,7 @@
 export type Theme = 'light' | 'dark';
 
 export const STORAGE_KEY = 'mechi-theme';
-export const DEFAULT_THEME: Theme = 'dark';
+export const DEFAULT_THEME: Theme = 'light';
 export const LIGHT_THEME_COLOR = '#F8FBFD';
 export const DARK_THEME_COLOR = '#0B1121';
 

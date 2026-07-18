@@ -15,6 +15,7 @@ import {
 } from '@/lib/tournament-hosting';
 import {
   getFreeTournamentConfigurationError,
+  getTournamentApprovalClassification,
   getTournamentCreationApprovalStatus,
   isTournamentPubliclyAccessible,
 } from '@/lib/tournament-policy';
@@ -168,6 +169,12 @@ export async function POST(request: NextRequest) {
       typeof body.prize_pool_mode === 'string' ? body.prize_pool_mode.trim() : 'auto';
     const prizePoolMode = resolveTournamentPrizePoolMode(prizePoolModeInput);
     const requestedPrizePool = Math.max(0, Math.round(Number(body.prize_pool ?? 0)));
+    const participantType = body.participant_type === 'team' ? 'team' : 'solo';
+    const teamSize = participantType === 'team' ? Number(body.team_size ?? 0) : null;
+    const valuableRewardExists = body.valuable_reward_exists === true;
+    const sponsorFundedRewardExists = body.sponsor_funded_reward_exists === true;
+    const manualRiskFlagExists = body.manual_risk_flag_exists === true;
+    const rewardDescription = String(body.reward_description ?? '').trim();
 
     if (title.length < 3) {
       return NextResponse.json({ error: 'Tournament title is too short' }, { status: 400 });
@@ -181,6 +188,14 @@ export async function POST(request: NextRequest) {
 
     if (!isTournamentSize(size)) {
       return NextResponse.json({ error: 'Tournament size must be 4, 8, or 16' }, { status: 400 });
+    }
+
+    if (participantType === 'team' && (!Number.isInteger(teamSize) || Number(teamSize) < 2 || Number(teamSize) > 32)) {
+      return NextResponse.json({ error: 'Team size must be between 2 and 32 players.' }, { status: 400 });
+    }
+
+    if ((valuableRewardExists || sponsorFundedRewardExists) && rewardDescription.length < 3) {
+      return NextResponse.json({ error: 'Describe the valuable reward for Mechi review.' }, { status: 400 });
     }
 
     if (!normalizedSchedule) {
@@ -303,7 +318,22 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: freeTournamentPolicyError }, { status: 400 });
     }
 
-    const approvalStatus = getTournamentCreationApprovalStatus(entryFee);
+    const approvalClassification = getTournamentApprovalClassification({
+      entryFee,
+      prizePool: requestedPrizePool,
+      prizePoolMode,
+      valuableRewardExists,
+      sponsorFundedRewardExists,
+      manualRiskFlagExists,
+    });
+    const approvalStatus = getTournamentCreationApprovalStatus({
+      entryFee,
+      prizePool: requestedPrizePool,
+      prizePoolMode,
+      valuableRewardExists,
+      sponsorFundedRewardExists,
+      manualRiskFlagExists,
+    });
     const approvedAt = approvalStatus === 'approved' ? new Date().toISOString() : null;
 
     const { data: tournament, error } = await supabase
@@ -316,8 +346,8 @@ export async function POST(request: NextRequest) {
         region: location.label,
         size,
         entry_fee: entryFee,
-        prize_pool_mode: entryFee > 0 ? prizePoolMode : 'auto',
-        prize_pool: entryFee > 0 && prizePoolMode === 'specified' ? requestedPrizePool : 0,
+        prize_pool_mode: prizePoolMode,
+        prize_pool: prizePoolMode === 'specified' ? requestedPrizePool : 0,
         platform_fee: 0,
         platform_fee_rate: hostingAccess.platformFeePercent,
         rules: rules || null,
@@ -327,6 +357,14 @@ export async function POST(request: NextRequest) {
         approved_by: null,
         is_featured: false,
         organizer_id: authUser.id,
+        participant_type: participantType,
+        team_size: teamSize,
+        valuable_reward_exists: valuableRewardExists,
+        reward_description: rewardDescription || null,
+        sponsor_funded_reward_exists: sponsorFundedRewardExists,
+        manual_risk_flag_exists: manualRiskFlagExists,
+        approval_required: approvalClassification.required,
+        approval_reason_codes: approvalClassification.reasons,
       })
       .select('*')
       .single();
@@ -363,7 +401,11 @@ export async function POST(request: NextRequest) {
     }
 
     return NextResponse.json(
-      { tournament, review_required: approvalStatus === 'pending' },
+      {
+        tournament,
+        review_required: approvalStatus === 'pending',
+        approval_reason_codes: approvalClassification.reasons,
+      },
       { status: 201 }
     );
   } catch (err) {

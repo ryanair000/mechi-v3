@@ -64,7 +64,7 @@ export default function RegisterPage({ searchParams }: { searchParams: RegisterS
       : Array.isArray(rawNextValue)
         ? rawNextValue[0] ?? null
         : null;
-  const nextPath = getSafeNextPath(rawNext, '/dashboard');
+  const nextPath = getSafeNextPath(rawNext, '/app/player');
   const loginHref = getLoginPath(rawNext ? nextPath : null);
   const isSwahili = locale === 'sw-TZ';
   const [formData, setFormData] = useState<RegisterFormData>({

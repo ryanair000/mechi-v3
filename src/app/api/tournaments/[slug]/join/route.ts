@@ -199,7 +199,7 @@ export async function POST(
           type: 'tournament_joined',
           title: `You're in ${tournament.title}`,
           body: `${GAMES[tournament.game]?.label ?? tournament.game} bracket joined successfully.`,
-          href: `/t/${tournament.slug}`,
+          href: `/app/player/tournaments?join=${encodeURIComponent(tournament.slug)}`,
           metadata: {
             tournament_id: tournament.id,
             slug: tournament.slug,
@@ -214,7 +214,7 @@ export async function POST(
           type: 'tournament_player_joined',
           title: `${profile.username} joined ${tournament.title}`,
           body: `One more player locked their ${GAMES[tournament.game]?.label ?? tournament.game} slot.`,
-          href: `/t/${tournament.slug}`,
+          href: `/app/organizer/tournaments/${encodeURIComponent(tournament.slug)}`,
           metadata: {
             tournament_id: tournament.id,
             slug: tournament.slug,
@@ -236,7 +236,7 @@ export async function POST(
             platform: tournament.platform,
             scheduledFor: tournament.scheduled_for,
             entryFee: tournament.entry_fee,
-            tournamentUrl: `${getAppUrl()}/t/${tournament.slug}`,
+            tournamentUrl: `${getAppUrl()}/tournaments/${encodeURIComponent(tournament.slug)}`,
           });
         });
       }
@@ -268,7 +268,7 @@ export async function POST(
 
     const reference = makePaymentReference('mechi_tournament');
     const email = profile.email || `${profile.username}@mechi.club`;
-    const callbackUrl = `${getAppUrl()}/t/${tournament.slug}?reference=${encodeURIComponent(reference)}`;
+    const callbackUrl = `${getAppUrl()}/app/player/tournaments?join=${encodeURIComponent(tournament.slug)}&reference=${encodeURIComponent(reference)}`;
 
     const pendingOperation = canRetryExistingPlayer
       ? supabase

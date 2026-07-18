@@ -21,7 +21,7 @@ export default function LoginPage({ searchParams }: { searchParams: LoginSearchP
   const hostFallbackPath =
     typeof window !== 'undefined' && isPrimaryAdminHost(window.location.host)
       ? '/admin'
-      : '/dashboard';
+      : '/app/player';
   const nextPath = getSafeNextPath(rawNext, hostFallbackPath);
   const registerHref = getRegisterPath({ next: rawNext ? nextPath : null });
   const isSwahili = locale === 'sw-TZ';

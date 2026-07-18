@@ -61,6 +61,14 @@ export async function PATCH(
       return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
     }
 
+    const reason = typeof body.reason === 'string' ? body.reason.trim() : '';
+    if (['resolve', 'reopen', 'block'].includes(action) && reason.length < 8) {
+      return NextResponse.json(
+        { error: 'A decision reason of at least 8 characters is required' },
+        { status: 400 }
+      );
+    }
+
     const detail = await handleSupportThreadAction({
       threadId: id,
       actorId: user.id,
@@ -73,6 +81,7 @@ export async function PATCH(
         typeof body.lookup === 'string' && body.lookup.trim().length > 0
           ? body.lookup.trim()
           : null,
+      reason: reason || null,
       ipAddress: getRequestIp(request),
     });
 

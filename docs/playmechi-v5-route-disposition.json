@@ -1,0 +1,26 @@
+{
+  "version": "5.0-cutover",
+  "canonical": {
+    "public": ["/", "/tournaments", "/tournaments/:slug"],
+    "identity": ["/login", "/register", "/forgot-password", "/reset-password"],
+    "workspace": [
+      "/app/player", "/app/team", "/app/organizer", "/app/creator",
+      "/app/coach", "/app/sponsor", "/app/shop", "/app/admin"
+    ]
+  },
+  "permanentRedirects": {
+    "/dashboard/:path*": "/app/player/:path*",
+    "/streams/dashboard": "/app/creator",
+    "/tournaments/create": "/app/organizer/tournaments/new",
+    "/s/match/:id": "/app/player/matches/:id",
+    "/match/:id": "/app/player/matches/:id",
+    "/s/t/:slug": "/tournaments/:slug",
+    "/t/:slug/manage": "/app/organizer/tournaments/:slug",
+    "/v5/:path*": "/"
+  },
+  "compatibilityOnly": [
+    "/t/:slug", "/embed/tournaments/:slug", "/online-gaming-tournament/:path*",
+    "/playmechi/:path*", "/weekendcup/:path*", "/moderators/:path*"
+  ],
+  "releaseRule": "No canonical route may import a V4 shell or link to a compatibility-only presentation route."
+}

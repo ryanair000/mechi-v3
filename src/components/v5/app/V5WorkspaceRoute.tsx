@@ -21,6 +21,8 @@ import {
 } from 'lucide-react';
 import { useAuth, useAuthFetch } from '@/components/AuthProvider';
 import { V5AppShell } from '@/components/v5/app/V5AppShell';
+import { V5MatchRoom } from '@/components/v5/app/V5MatchRoom';
+import { V5TournamentWizard } from '@/components/v5/app/V5TournamentWizard';
 import { V5_WORKSPACES, type V5WorkspaceKind } from '@/components/v5/app/v5-workspaces';
 import styles from './V5WorkspaceRoute.module.css';
 
@@ -224,7 +226,7 @@ function WorkspaceOverview({ workspace, data }: { workspace: V5WorkspaceKind; da
                 <p className={styles.kicker}>{data.currentMatch.game || 'Competitive match'}</p>
                 <h2>Match vs {opponent || 'your opponent'}</h2>
                 <p>Your match room is ready. Open it to review the deadline and submit results.</p>
-                <Link className={styles.primaryButton} href={`/s/match/${data.currentMatch.id}`}>Open match room <ArrowRight size={17} /></Link>
+                <Link className={styles.primaryButton} href={`/app/player/matches/${data.currentMatch.id}`}>Open match room <ArrowRight size={17} /></Link>
               </>
             ) : nextTournament ? (
               <>
@@ -415,7 +417,7 @@ function RoleOverview({ workspace }: { workspace: V5WorkspaceKind }) {
 
 function WorkspaceSection({ workspace, section, data }: { workspace: V5WorkspaceKind; section: string; data: LiveWorkspaceData }) {
   if (workspace === 'organizer' && section === 'tournaments/new') {
-    return <TournamentStart />;
+    return <V5TournamentWizard />;
   }
   if (workspace === 'organizer' && section.startsWith('tournaments/')) {
     const slug = section.split('/')[1];
@@ -423,7 +425,7 @@ function WorkspaceSection({ workspace, section, data }: { workspace: V5Workspace
   }
   const baseSection = section.split('/')[0];
   if (workspace === 'player' && ['matches', 'wallet', 'inbox', 'profile', 'rankings'].includes(baseSection)) {
-    return <PlayerSection section={baseSection} data={data} />;
+    return <PlayerSection section={section} data={data} />;
   }
   const copy = SECTION_COPY[baseSection] ?? {
     title: baseSection.replace(/-/g, ' ').replace(/^./, (value) => value.toUpperCase()),
@@ -453,10 +455,12 @@ function WorkspaceSection({ workspace, section, data }: { workspace: V5Workspace
 
 function PlayerSection({ section, data }: { section: string; data: LiveWorkspaceData }) {
   const { user } = useAuth();
-  const copy = SECTION_COPY[section];
+  const [baseSection, detailId] = section.split('/');
+  if (baseSection === 'matches' && detailId) return <V5MatchRoom matchId={detailId} />;
+  const copy = SECTION_COPY[baseSection];
   if (section === 'matches') {
     return <div className={styles.page}><PageHeading eyebrow="Player workspace" title={copy.title} description={copy.description} />
-      {data.currentMatch ? <div className={styles.controlBlocker}><Swords size={20}/><div><strong>You have an active match.</strong><span>Open the match room to review the deadline, communicate and submit a result.</span></div><Link className={styles.textLink} href={`/s/match/${data.currentMatch.id}`}>Open match <ArrowRight size={14}/></Link></div> : null}
+      {data.currentMatch ? <div className={styles.controlBlocker}><Swords size={20}/><div><strong>You have an active match.</strong><span>Open the match room to review the deadline, communicate and submit a result.</span></div><Link className={styles.textLink} href={`/app/player/matches/${data.currentMatch.id}`}>Open match <ArrowRight size={14}/></Link></div> : null}
       <section className={styles.panel}><PanelHeading title="Recent verified results" />
         {data.loading ? <div className={styles.rowSkeleton}><span/><span/><span/></div> : data.matchHistory.length ? <div className={styles.resultRows}>{data.matchHistory.map((match)=><Link href={`/app/player/matches/${match.id}`} key={match.id}><span className={match.result==='win'?styles.resultWin:match.result==='loss'?styles.resultLoss:styles.resultNeutral}>{match.result}</span><span><strong>vs {match.opponent_username}</strong><small>{formatGame(match.game)} · {new Intl.DateTimeFormat('en-KE',{day:'numeric',month:'short',year:'numeric'}).format(new Date(match.completed_at))}</small></span><em>{match.rating_change > 0 ? '+' : ''}{match.rating_change} rating</em><ArrowRight size={16}/></Link>)}</div> : <EmptyInline title="No completed matches yet" body="Enter a tournament or find a match to begin building a verified record." href="/tournaments" action="Find competition" />}
       </section></div>;
@@ -554,34 +558,6 @@ function SectionState({ workspace, section }: { workspace: V5WorkspaceKind; sect
     </div>
   );
 }
-
-function TournamentStart() {
-  return (
-    <div className={styles.page}>
-      <PageHeading eyebrow="Organizer workspace" title="Create a tournament" description="Start with the competition format. Mechi reveals only the rules relevant to your choices." />
-      <div className={styles.wizardLayout}>
-        <section className={styles.panel}>
-          <div className={styles.stepLabel}>Step 1 of 6 · Format</div>
-          <h2>Who will compete?</h2>
-          <p className={styles.lead}>This determines registration, readiness, check-in and bracket behavior.</p>
-          <div className={styles.choiceGrid}>
-            <button type="button" className={styles.choiceCard}><UserRoundIcon /><strong>Solo players</strong><span>Each player enters and competes independently.</span><em>Choose solo</em></button>
-            <button type="button" className={styles.choiceCard}><UsersRound size={26} /><strong>Teams</strong><span>Captains register a verified roster and check in together.</span><em>Choose teams</em></button>
-          </div>
-        </section>
-        <aside className={styles.policyAside}>
-          <ShieldCheck size={24} />
-          <h2>Publishing policy</h2>
-          <p>A tournament publishes immediately only when entry is free and there is no cash or valuable reward.</p>
-          <ul><li>Free entry</li><li>KES 0 cash prize</li><li>No voucher, merchandise or valuable reward</li></ul>
-          <p>Anything else is saved safely and submitted for Mechi approval.</p>
-        </aside>
-      </div>
-    </div>
-  );
-}
-
-function UserRoundIcon() { return <Gamepad2 size={26} />; }
 
 function PageHeading({ eyebrow, title, description, actionHref, actionLabel }: { eyebrow: string; title: string; description: string; actionHref?: string; actionLabel?: string }) {
   return (

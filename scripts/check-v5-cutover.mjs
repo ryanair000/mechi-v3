@@ -17,6 +17,8 @@ const forbidden = [
   { label: 'legacy match route', pattern: /["'`]\/(?:s\/)?match\// },
   { label: 'legacy tournament share route', pattern: /["'`]\/s\/t\// },
   { label: 'legacy tournament create route', pattern: /["'`]\/tournaments\/create/ },
+  { label: 'legacy admin presentation route', pattern: /["'`]\/admin(?:\/|["'`?])/ },
+  { label: 'legacy moderator presentation route', pattern: /["'`]\/moderators(?:\/|["'`?])/ },
   { label: 'Figma/gallery route used as product route', pattern: /["'`]\/v5(?:\/|["'`?])/ },
   { label: 'legacy app shell import', pattern: /from\s+["']@\/components\/(?:AppShell|DashboardShell|AdminShell)/ },
 ];

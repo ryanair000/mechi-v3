@@ -1432,6 +1432,7 @@ export async function handleSupportThreadAction(params: {
   action: 'assign' | 'unassign' | 'resolve' | 'reopen' | 'block' | 'relink';
   assignedTo?: string | null;
   lookup?: string | null;
+  reason?: string | null;
   ipAddress?: string | null;
 }) {
   const threadDetail = await getSupportThreadDetail(params.threadId);
@@ -1447,7 +1448,10 @@ export async function handleSupportThreadAction(params: {
     | 'reopen_support_thread'
     | 'block_support_thread'
     | 'relink_support_thread';
-  const details: Record<string, unknown> = { thread_id: params.threadId };
+  const details: Record<string, unknown> = {
+    thread_id: params.threadId,
+    reason: params.reason?.trim() || null,
+  };
 
   switch (params.action) {
     case 'assign':

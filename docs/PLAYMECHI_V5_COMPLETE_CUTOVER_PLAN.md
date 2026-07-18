@@ -190,20 +190,20 @@ Shared `/app` utilities include workspace-aware notifications, messages, account
 ### 5.4 Administration surface
 
 ```text
-/admin
-/admin/tournaments
-/admin/tournaments/[id]
-/admin/sponsorships
-/admin/sponsorships/[id]
-/admin/verification
-/admin/verification/[id]
-/admin/moderation
-/admin/moderation/[id]
-/admin/payouts
-/admin/payouts/[id]
-/admin/risk
-/admin/audit
-/admin/platform
+/app/admin
+/app/admin/tournaments
+/app/admin/tournaments/[id]
+/app/admin/sponsorships
+/app/admin/sponsorships/[id]
+/app/admin/verification
+/app/admin/verification/[id]
+/app/admin/moderation
+/app/admin/moderation/[id]
+/app/admin/payouts
+/app/admin/payouts/[id]
+/app/admin/risk
+/app/admin/audit
+/app/admin/platform
 ```
 
 Administration uses the V5 visual language but has a distinct high-risk shell, stronger permission boundaries, step-up authentication, and immutable decision references.
@@ -699,6 +699,7 @@ Latest verified implementation evidence (18 July 2026):
 - match deep links now resolve to a V5 match workspace with result/score reporting, communication and dispute evidence;
 - role-specific Team, Creator, Coach, Sponsor and Gaming Shop sections replace generic blank pages and explicitly exclude coach/shop booking;
 - Mechi Operations reads protected statistics, tournament, support and reward-review sources in the V5 shell;
+- operations queue rows and case decisions now stay inside `/app/admin`; tournament approval/rejection, support resolution/reopen and reward-review actions require an explicit reason and confirmation, while payout release remains visibly held without a complete eligibility contract;
 - workspace/team schema and APIs are additive and remain unapplied to production until preview verification;
 - `npm run check:v5-cutover` passes and rejects transitional presentation routes or legacy shells in canonical V5 source;
 - targeted V5 lint, `tsc -p tsconfig.build.json --noEmit`, and `git diff --check` pass;
@@ -714,7 +715,7 @@ Latest verified implementation evidence (18 July 2026):
 | 5. Tournament lifecycle | In progress | Public discovery/detail, solo entry/payment recovery, creation policy, match result/chat/evidence implemented; team entry/check-in/admin decision completion pending |
 | 6. Team/sponsor/coach/shop | In progress | Role-specific dashboard journeys and workspace activation implemented; durable role-domain mutations pending |
 | 7. Shared support/recovery | In progress | Password and Paystack recovery, inbox, support and canonical identity return paths are wired; MFA/session and complete cross-workspace recovery suite remain |
-| 8. Administration | In progress | V5 protected operations overview and live source queues implemented; V5 decision details pending |
+| 8. Administration | In progress | V5 protected overview, live queues and in-dashboard tournament/support/reward decision details implemented with confirmation and audit reasons; sponsorship/verification and payout-release contracts remain |
 | 9. Legacy elimination | In progress | Canonical redirects, route disposition and passing forbidden-route/import guard |
 | 10. Release | Pending | Production deployment and smoke report |
 

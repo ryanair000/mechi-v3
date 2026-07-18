@@ -17,6 +17,7 @@ type AdminTournament = { id: string; slug: string; title: string; game?: string;
 type SupportThread = { id: string; subject?: string; status?: string; updated_at?: string; user?: { username?: string } | null };
 type RewardItem = { id: string; reason?: string; status?: string; created_at?: string; user?: { username?: string } | null };
 type AdminData = { stats: Stats | null; tournaments: AdminTournament[]; support: SupportThread[]; rewards: RewardItem[]; loading: boolean; forbidden: boolean; error: boolean };
+type QueueItem = { id:string; title:string; detail:string; status:string; href:string; kind:'tournament'|'support'|'reward'|'payout' };
 
 const EMPTY: AdminData = { stats: null, tournaments: [], support: [], rewards: [], loading: true, forbidden: false, error: false };
 const SECTION_TITLES: Record<string, [string,string]> = {
@@ -53,9 +54,9 @@ export function V5AdminWorkspace({ section }: { section: string }) {
 
   if (data.loading) return <div className={styles.loading}><span/><span/><span/></div>;
   if (data.forbidden || !['admin','moderator'].includes(user?.role || '')) return <div className={styles.forbidden}><ShieldAlert/><h1>Operations access required</h1><p>This workspace contains protected decisions. Your current account does not have an active Mechi operations role.</p><Link href="/app/player">Return to player workspace</Link></div>;
-  const baseSection = section.split('/')[0];
+  const [baseSection, selectedId] = section.split('/');
   if (!baseSection) return <AdminOverview data={data}/>;
-  return <AdminSection section={baseSection} data={data}/>;
+  return <AdminSection section={baseSection} selectedId={selectedId} data={data} userRole={user?.role || ''} onRefresh={load}/>;
 }
 
 function AdminOverview({ data }: { data: AdminData }) {
@@ -87,17 +88,57 @@ function AdminOverview({ data }: { data: AdminData }) {
   </div>;
 }
 
-function AdminSection({ section, data }: { section: string; data: AdminData }) {
+function AdminSection({ section, selectedId, data, userRole, onRefresh }: { section: string; selectedId?: string; data: AdminData; userRole: string; onRefresh: () => Promise<void> }) {
   const [title,description] = SECTION_TITLES[section] || ['Operations','Protected Mechi administration.'];
-  let items: Array<{id:string;title:string;detail:string;status:string;href:string}> = [];
-  if (section === 'tournaments') items = data.tournaments.map((item) => ({ id:item.id,title:item.title,detail:`${format(item.game)} · ${item.player_count || 0}/${item.size || '—'} entries · ${item.organizer?.username || 'Organizer'}`,status:item.approval_status || item.status || 'unknown',href:`/admin/tournaments/${item.id}`}));
-  if (section === 'payouts') items = data.tournaments.filter((item) => item.payout_status === 'pending').map((item) => ({ id:item.id,title:item.title,detail:`KES ${number(item.prize_pool)} prize · ${item.player_count || 0} confirmed entries`,status:'payout pending',href:`/admin/tournaments/${item.id}`}));
-  if (section === 'risk') items = data.rewards.map((item) => ({ id:item.id,title:item.user?.username || 'Reward review',detail:format(item.reason),status:item.status || 'open',href:'/admin/rewards'}));
-  if (section === 'moderation') items = data.support.filter((item) => item.status !== 'resolved').map((item) => ({ id:item.id,title:item.subject || 'Support and safety case',detail:item.user?.username || 'Player case',status:item.status || 'open',href:`/admin/support/${item.id}`}));
+  let items: QueueItem[] = [];
+  if (section === 'tournaments') items = data.tournaments.map((item) => ({ id:item.id,title:item.title,detail:`${format(item.game)} · ${item.player_count || 0}/${item.size || '—'} entries · ${item.organizer?.username || 'Organizer'}`,status:item.approval_status || item.status || 'unknown',href:`/app/admin/tournaments/${item.id}`,kind:'tournament' }));
+  if (section === 'payouts') items = data.tournaments.filter((item) => item.payout_status === 'pending').map((item) => ({ id:item.id,title:item.title,detail:`KES ${number(item.prize_pool)} prize · ${item.player_count || 0} confirmed entries`,status:'payout pending',href:`/app/admin/payouts/${item.id}`,kind:'payout' }));
+  if (section === 'risk') items = data.rewards.map((item) => ({ id:item.id,title:item.user?.username || 'Reward review',detail:format(item.reason),status:item.status || 'open',href:`/app/admin/risk/${item.id}`,kind:'reward' }));
+  if (section === 'moderation') items = data.support.filter((item) => item.status !== 'resolved').map((item) => ({ id:item.id,title:item.subject || 'Support and safety case',detail:item.user?.username || 'Player case',status:item.status || 'open',href:`/app/admin/moderation/${item.id}`,kind:'support' }));
   const liveSource = ['tournaments','payouts','risk','moderation'].includes(section);
+  const selected = selectedId ? items.find((item) => item.id === selectedId) : null;
+  if (selectedId) return <CaseDetail section={section} item={selected} userRole={userRole} onRefresh={onRefresh}/>;
   return <div className={styles.page}><PageHeading eyebrow="Mechi operations" title={title} description={description}/>
     <div className={styles.operatorNotice}><ShieldCheck/><div><strong>Protected decision surface</strong><span>Confirm subject, evidence, scope, downstream effects and reason before any irreversible action.</span></div></div>
     <section className={styles.panel}><PanelHeading title={liveSource ? 'Live queue' : 'Queue contract'}/>{items.length ? <div className={styles.rows}>{items.map((item) => <Link href={item.href} key={item.id}><span><strong>{item.title}</strong><small>{item.detail}</small></span><em>{format(item.status)}</em><ArrowRight size={16}/></Link>)}</div> : <div className={styles.empty}><Clock3/><h2>{liveSource ? 'No cases in the current result set' : 'This protected queue activates with the V5 trust-domain migration'}</h2><p>{liveSource ? 'Refresh before concluding that operational work is complete.' : 'Its decision contract is defined, but it will not fabricate cases from unrelated legacy tables.'}</p></div>}</section>
+  </div>;
+}
+
+function CaseDetail({ section, item, userRole, onRefresh }: { section:string; item:QueueItem|null|undefined; userRole:string; onRefresh:() => Promise<void> }) {
+  const authFetch = useAuthFetch();
+  const [reason,setReason] = useState('');
+  const [working,setWorking] = useState(false);
+  const [feedback,setFeedback] = useState<string|null>(null);
+  if (!item) return <div className={styles.page}><PageHeading eyebrow="Mechi operations" title="Case unavailable" description="This case is not present in the current permission-scoped queue."/><Link className={styles.backLink} href={`/app/admin/${section}`}>Return to queue</Link></div>;
+
+  const run = async (label:string, endpoint:string, body:Record<string,unknown>) => {
+    const trimmed = reason.trim();
+    if (trimmed.length < 8) { setFeedback('Add a reason of at least 8 characters so the decision is auditable.'); return; }
+    if (!window.confirm(`${label} “${item.title}”? This records an operational decision and may notify the affected user.`)) return;
+    setWorking(true); setFeedback(null);
+    try {
+      const response = await authFetch(endpoint,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) { setFeedback(result.error || `${label} failed. Refresh the case before retrying.`); return; }
+      setFeedback(`${label} recorded successfully. The queue is refreshing.`); setReason(''); await onRefresh();
+    } catch { setFeedback(`${label} could not reach the server. No success is assumed.`); }
+    finally { setWorking(false); }
+  };
+
+  return <div className={styles.page}>
+    <Link className={styles.backLink} href={`/app/admin/${section}`}>← Back to {format(section)} queue</Link>
+    <PageHeading eyebrow="Protected case" title={item.title} description={item.detail}/>
+    <div className={styles.operatorNotice}><ShieldCheck/><div><strong>Current status: {format(item.status)}</strong><span>Review source evidence and downstream effects before recording a decision.</span></div></div>
+    <div className={styles.caseGrid}>
+      <section className={styles.panel}><PanelHeading title="Decision context"/><dl className={styles.caseFacts}><div><dt>Case reference</dt><dd>{item.id}</dd></div><div><dt>Queue</dt><dd>{format(section)}</dd></div><div><dt>Subject</dt><dd>{item.title}</dd></div><div><dt>Current state</dt><dd>{format(item.status)}</dd></div></dl></section>
+      <section className={styles.panel}><PanelHeading title="Record a decision"/><label className={styles.reasonLabel} htmlFor="case-reason">Decision reason</label><textarea id="case-reason" value={reason} onChange={(event)=>setReason(event.target.value)} placeholder="State the evidence, policy and expected downstream effect." minLength={8}/>{feedback ? <p className={styles.feedback} role="status">{feedback}</p> : null}<div className={styles.decisionActions}>
+        {item.kind === 'tournament' && userRole === 'admin' ? <><button disabled={working} onClick={()=>void run('Approve tournament',`/api/admin/tournaments/${item.id}`,{action:'set_approval',approval_status:'approved',reason:reason.trim()})}>Approve</button><button data-tone="danger" disabled={working} onClick={()=>void run('Reject tournament',`/api/admin/tournaments/${item.id}`,{action:'set_approval',approval_status:'rejected',reason:reason.trim()})}>Reject</button></> : null}
+        {item.kind === 'reward' ? <><button disabled={working} onClick={()=>void run('Start reward review',`/api/admin/rewards/${item.id}`,{action:'start_review',note:reason.trim()})}>Start review</button><button disabled={working} onClick={()=>void run('Resolve reward review',`/api/admin/rewards/${item.id}`,{action:'resolve',note:reason.trim()})}>Resolve</button><button data-tone="danger" disabled={working} onClick={()=>void run('Dismiss reward review',`/api/admin/rewards/${item.id}`,{action:'dismiss',note:reason.trim()})}>Dismiss</button></> : null}
+        {item.kind === 'support' ? <><button disabled={working} onClick={()=>void run('Resolve support case',`/api/admin/support/${item.id}`,{action:'resolve',reason:reason.trim()})}>Resolve</button><button disabled={working} onClick={()=>void run('Reopen support case',`/api/admin/support/${item.id}`,{action:'reopen',reason:reason.trim()})}>Reopen</button></> : null}
+        {item.kind === 'payout' ? <p className={styles.readOnly}>Payout release remains held until eligibility, recipient and Paystack references are available together. This V5 surface will not infer a release action from tournament status alone.</p> : null}
+        {item.kind === 'tournament' && userRole !== 'admin' ? <p className={styles.readOnly}>Moderators may inspect this case. An administrator role is required to approve or reject a tournament.</p> : null}
+      </div></section>
+    </div>
   </div>;
 }
 

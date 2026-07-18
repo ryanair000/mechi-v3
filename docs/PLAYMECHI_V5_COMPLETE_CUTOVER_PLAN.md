@@ -689,7 +689,7 @@ Critical browser stories:
 Latest verified implementation evidence (18 July 2026):
 
 - clean release worktree on `codex/mechi-v5-complete-cutover`;
-- an earlier production build completed across 280 routes after compiling, type checking, collecting data and generating pages; the current revision still requires a fresh build on the deployment runner because the latest local full-build process ended without a build marker after exhausting this Windows worktree's capacity;
+- the current revision completed a clean production build across 280 routes after compilation, TypeScript, page-data collection, static generation, optimization and build-trace collection;
 - canonical compact light/dark workspace shell implemented for player, team, organizer, creator, coach, sponsor, shop and admin;
 - V5 identity shell now covers login, registration and password recovery; `/signup` canonically resolves to `/register`, and default post-auth routing enters `/app/player` or `/app/admin` instead of a legacy dashboard;
 - Player Dashboard reads live tournament, match, reward, history and notification APIs;
@@ -718,15 +718,16 @@ Latest verified implementation evidence (18 July 2026):
 | 7. Shared support/recovery | In progress | Password and Paystack recovery, inbox, support and canonical identity return paths are wired; MFA/session and complete cross-workspace recovery suite remain |
 | 8. Administration | In progress | V5 protected overview, live queues and in-dashboard tournament/support/reward decision details implemented with confirmation and audit reasons; sponsorship/verification and payout-release contracts remain |
 | 9. Legacy elimination | In progress | Canonical redirects, route disposition, production V5 schema migration and passing forbidden-route/import guard; compatibility campaign retirement remains |
-| 10. Release | Pending | Production deployment and smoke report |
+| 10. Release | In progress | Current 280-route production build passes; branch publication, deployment and production smoke report remain |
 
 This table is updated only when the phase exit gate has objective evidence. Visual resemblance alone is not completion.
 
 ### Current external release gates
 
-1. **Current production build:** the current revision needs a successful clean production build on preview/CI. Local lint, TypeScript and cutover checks pass, but a deployment cannot be promoted from an incomplete build artifact.
-2. **Authenticated fixtures:** player, captain, organizer, creator and operations browser stories need controlled preview accounts and tournament fixtures before money, evidence and decision mutations can be accepted as release-complete.
+1. **Authenticated fixtures:** player, captain, organizer, creator and operations browser stories need controlled preview accounts and tournament fixtures before money, evidence and decision mutations can be accepted as release-complete.
 
 Resolved 19 July 2026: Supabase CLI access identified project `Mechi V4` (`zcpgarqumzxuwicjihxp`). The migration and transactional team-entry verification passed; no production fixture rows were retained.
+
+Resolved 19 July 2026: the current V5 revision passed the complete Next.js production build, including all 280 generated pages.
 
 These gates do not reopen V4 as a product option. Until they are cleared, the V5 branch is implementation-complete only for the verified surfaces above and remains intentionally unpromoted.

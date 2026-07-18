@@ -29,27 +29,27 @@ import styles from './V5Public.module.css';
 type Icon = ComponentType<{ size?: number; strokeWidth?: number }>;
 
 const navigation = [
-  { label: 'Play', href: '/v5/tournaments' },
-  { label: 'Tournaments', href: '/v5/tournaments' },
-  { label: 'Watch', href: '/v5/watch' },
-  { label: 'Community', href: '/v5/explore' },
-  { label: 'Rankings', href: '/v5/leaderboard' },
+  { label: 'Play', href: '/tournaments' },
+  { label: 'Tournaments', href: '/tournaments' },
+  { label: 'Watch', href: '/watch' },
+  { label: 'Community', href: '/players' },
+  { label: 'Rankings', href: '/rankings' },
 ];
 
 const audiences: Array<{ title: string; copy: string; href: string; icon: Icon }> = [
-  { title: 'Play', copy: 'Find tournaments and compete.', href: '/v5/tournaments', icon: Gamepad2 },
-  { title: 'Host', copy: 'Create and manage tournaments.', href: '/v5/organizer', icon: Trophy },
-  { title: 'Stream', copy: 'Broadcast matches and grow.', href: '/v5/streamer/live', icon: Video },
-  { title: 'Coach', copy: 'Share knowledge and build players.', href: '/v5/coach/workbench', icon: GraduationCap },
-  { title: 'Sponsor', copy: 'Support events and communities.', href: '/v5/sponsor', icon: Users },
-  { title: 'Run local events', copy: 'Organize trusted shop tournaments.', href: '/v5/shop', icon: MapPin },
+  { title: 'Play', copy: 'Find tournaments and compete.', href: '/app/player', icon: Gamepad2 },
+  { title: 'Host', copy: 'Create and manage tournaments.', href: '/app/organizer', icon: Trophy },
+  { title: 'Stream', copy: 'Broadcast matches and grow.', href: '/app/creator', icon: Video },
+  { title: 'Coach', copy: 'Share knowledge and build players.', href: '/app/coach', icon: GraduationCap },
+  { title: 'Sponsor', copy: 'Support events and communities.', href: '/app/sponsor', icon: Users },
+  { title: 'Run local events', copy: 'Organize trusted shop tournaments.', href: '/app/shop', icon: MapPin },
 ];
 
 const fallbackTournaments: PublicTournament[] = [];
 
 function Logo() {
   return (
-    <Link className={styles.brand} href="/v5" aria-label="PlayMechi V5 home">
+    <Link className={styles.brand} href="/" aria-label="PlayMechi home">
       <span className={styles.brandMark}>
         <Image src="/mechi-logo.png" alt="" width={940} height={1117} priority />
       </span>
@@ -62,7 +62,7 @@ export function V5Shell({ children }: { children: ReactNode }) {
   return (
     <div className={styles.page}>
       <div className={styles.announcement}>
-        <Trophy size={14} /> Host a free, no-prize tournament today.
+        <Trophy size={14} /> Host a free, no-reward tournament today.
       </div>
       <header className={styles.header}>
         <div className={styles.headerInner}>
@@ -97,10 +97,10 @@ export function V5Shell({ children }: { children: ReactNode }) {
 
 function V5Footer() {
   const columns = [
-    { title: 'Play', links: [['Find tournaments', '/v5/tournaments'], ['How it works', '/v5/how-it-works'], ['Rankings', '/v5/leaderboard'], ['Player guide', '/v5/support']] },
-    { title: 'Tournaments', links: [['All tournaments', '/v5/tournaments'], ['Host a tournament', '/tournaments/create'], ['Tournament rules', '/v5/support'], ['Organizer guide', '/v5/organizer']] },
-    { title: 'Community', links: [['Teams', '/v5/explore'], ['Creators', '/v5/streamer/live'], ['Coaches', '/v5/coach/workbench'], ['Gaming shops', '/v5/shop']] },
-    { title: 'Support', links: [['Help center', '/v5/support'], ['Safety', '/v5/legal/preferences'], ['Terms of service', '/terms'], ['Privacy policy', '/privacy-policy']] },
+    { title: 'Play', links: [['Find tournaments', '/tournaments'], ['How it works', '/how-mechi-works'], ['Rankings', '/rankings'], ['Player guide', '/support']] },
+    { title: 'Tournaments', links: [['All tournaments', '/tournaments'], ['Host a tournament', '/app/organizer/tournaments/new'], ['Tournament rules', '/support'], ['Organizer workspace', '/app/organizer']] },
+    { title: 'Community', links: [['Teams', '/app/team'], ['Creators', '/app/creator'], ['Coaches', '/app/coach'], ['Gaming shops', '/app/shop']] },
+    { title: 'Support', links: [['Help center', '/support'], ['Safety', '/legal/community-rules'], ['Terms of service', '/terms-of-service'], ['Privacy policy', '/privacy-policy']] },
   ];
   return (
     <footer className={styles.footer}>
@@ -147,7 +147,7 @@ function TournamentCard({ tournament, index }: { tournament?: PublicTournament; 
   const artClasses = [styles.tournamentArtOne, styles.tournamentArtTwo, styles.tournamentArtThree];
   const title = tournament?.title ?? ['Mechi Valor Showdown', 'Mechi FC League', 'Mechi Legends Clash'][index];
   const meta = tournament ? tournamentMeta(tournament) : ['COD Mobile · Free entry · 64/128 players', 'EA SPORTS FC · 96/192 players', 'PUBG Mobile · 77/150 players'][index];
-  const href = tournament ? `/s/t/${encodeURIComponent(tournament.slug)}` : '/v5/tournaments';
+  const href = tournament ? `/tournaments/${encodeURIComponent(tournament.slug)}` : '/tournaments';
   const badge = tournament?.status === 'active' ? 'LIVE' : tournament?.status === 'open' ? 'OPEN' : index === 2 ? 'UPCOMING' : 'LIVE';
   return (
     <article className={styles.tournamentCard}>
@@ -174,8 +174,8 @@ export async function V5HomePage({ country }: { country?: string } = {}) {
           <h1>The home of African competition.</h1>
           <p className={styles.heroCopy}>Play, host, stream, coach, or support the communities shaping African gaming.</p>
           <div className={styles.heroActions}>
-            <Link className={styles.button} href="/v5/tournaments">Start competing <ArrowRight size={16} /></Link>
-            <Link className={styles.buttonOutline} href="/tournaments/create">Host a tournament</Link>
+            <Link className={styles.button} href="/app/player">Start competing <ArrowRight size={16} /></Link>
+            <Link className={styles.buttonOutline} href="/app/organizer/tournaments/new">Host a tournament</Link>
           </div>
         </div>
         <article className={styles.heroCard}>
@@ -343,8 +343,8 @@ export function V5HowItWorksPage() { return <V5ScreenPage definition={{ ...page(
 
 export async function V5TournamentsPage() {
   const tournaments = await safeTournaments(12);
-  const rows: V5Row[] = tournaments.map((item) => ({ title: item.title, meta: tournamentMeta(item), status: item.status.toUpperCase(), tone: item.status === 'active' ? 'danger' : item.entry_fee > 0 ? 'warning' : 'teal', href: `/s/t/${encodeURIComponent(item.slug)}` }));
-  const definition: V5ScreenDefinition = { ...page('games'), eyebrow: 'Competition', title: 'Find a tournament worth playing.', description: 'Browse approved public tournaments. Free, no-prize events can publish instantly; paid or rewarded events are reviewed by Mechi.', primaryLabel: 'Host a tournament', primaryHref: '/tournaments/create', mainTitle: 'Open and upcoming tournaments', rows: [], metrics: [{ label: 'Visible now', value: String(tournaments.length), help: 'Approved public tournaments' }, { label: 'Free events', value: String(tournaments.filter((item) => item.entry_fee === 0 && item.prize_pool === 0).length), help: 'No entry fee or value reward' }, { label: 'Payment rail', value: 'Paystack', help: 'For approved paid events' }] };
+  const rows: V5Row[] = tournaments.map((item) => ({ title: item.title, meta: tournamentMeta(item), status: item.status.toUpperCase(), tone: item.status === 'active' ? 'danger' : item.entry_fee > 0 ? 'warning' : 'teal', href: `/tournaments/${encodeURIComponent(item.slug)}` }));
+  const definition: V5ScreenDefinition = { ...page('games'), eyebrow: 'Competition', title: 'Find a tournament worth playing.', description: 'Browse approved public tournaments. Free, no-prize events can publish instantly; paid or rewarded events are reviewed by Mechi.', primaryLabel: 'Host a tournament', primaryHref: '/app/organizer/tournaments/new', mainTitle: 'Open and upcoming tournaments', rows: [], metrics: [{ label: 'Visible now', value: String(tournaments.length), help: 'Approved public tournaments' }, { label: 'Free events', value: String(tournaments.filter((item) => item.entry_fee === 0 && item.prize_pool === 0).length), help: 'No entry fee or value reward' }, { label: 'Payment rail', value: 'Paystack', help: 'For approved paid events' }] };
   return <V5ScreenPage definition={definition} rows={rows} />;
 }
 

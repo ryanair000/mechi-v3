@@ -110,6 +110,24 @@ const nextConfig: NextConfig = {
   },
   async redirects() {
     return [
+      { source: "/dashboard", destination: "/app/player", permanent: true },
+      { source: "/dashboard/tournaments", destination: "/app/player/tournaments", permanent: true },
+      { source: "/dashboard/matches", destination: "/app/player/matches", permanent: true },
+      { source: "/dashboard/matches/:path*", destination: "/app/player/matches/:path*", permanent: true },
+      { source: "/dashboard/leaderboard", destination: "/app/player/rankings", permanent: true },
+      { source: "/dashboard/rewards", destination: "/app/player/wallet", permanent: true },
+      { source: "/dashboard/rewards/:path*", destination: "/app/player/wallet", permanent: true },
+      { source: "/dashboard/notifications", destination: "/app/player/inbox", permanent: true },
+      { source: "/dashboard/profile", destination: "/app/player/profile", permanent: true },
+      { source: "/dashboard/game-ids", destination: "/app/player/profile", permanent: true },
+      { source: "/dashboard/games", destination: "/app/player/profile", permanent: true },
+      { source: "/dashboard/socials", destination: "/app/player/profile", permanent: true },
+      { source: "/streams/dashboard", destination: "/app/creator", permanent: true },
+      { source: "/tournaments/create", destination: "/app/organizer/tournaments/new", permanent: true },
+      { source: "/s/t/:slug", destination: "/tournaments/:slug", permanent: true },
+      { source: "/t/:slug/manage", destination: "/app/organizer/tournaments/:slug", permanent: true },
+      { source: "/v5", destination: "/", permanent: true },
+      { source: "/v5/tournaments", destination: "/tournaments", permanent: true },
       {
         source:
           "/:path((?!$|admin(?:/|$)|dashboard(?:/|$)|login(?:/|$)|register(?:/|$)|forgot-password(?:/|$)|reset-password(?:/|$)|banned(?:/|$)|api(?:/|$)|_next(?:/|$)|favicon|icon|robots|sitemap).*)",

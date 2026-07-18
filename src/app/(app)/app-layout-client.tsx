@@ -13,7 +13,7 @@ import { getLoginPath } from '@/lib/navigation';
 const PUBLIC_APP_PATHS = new Set(['/bounties', '/leaderboard', '/tournaments']);
 
 function isPublicAppPath(pathname: string) {
-  return PUBLIC_APP_PATHS.has(pathname);
+  return PUBLIC_APP_PATHS.has(pathname) || pathname.startsWith('/tournaments/');
 }
 
 export function AppLayoutClient({ children }: { children: React.ReactNode }) {
@@ -45,6 +45,10 @@ export function AppLayoutClient({ children }: { children: React.ReactNode }) {
 
   if (!user && !publicAppPath) {
     return null;
+  }
+
+  if (pathname === '/tournaments' || pathname.startsWith('/tournaments/')) {
+    return children;
   }
 
   return (

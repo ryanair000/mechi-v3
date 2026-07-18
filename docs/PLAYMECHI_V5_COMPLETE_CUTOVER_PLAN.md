@@ -686,18 +686,33 @@ Critical browser stories:
 
 ## 16. Execution tracking
 
+Latest verified implementation evidence (18 July 2026):
+
+- clean release worktree on `codex/mechi-v5-complete-cutover`;
+- production build completed across 280 routes after compiling, type checking, collecting data and generating pages;
+- canonical compact light/dark workspace shell implemented for player, team, organizer, creator, coach, sponsor, shop and admin;
+- Player Dashboard reads live tournament, match, reward, history and notification APIs;
+- tournament discovery is a bespoke responsive directory rather than the generic Figma-gallery renderer;
+- player registration now performs eligibility, free entry, Paystack handoff, callback recovery and payment verification inside Player Dashboard;
+- organizer creation is a real five-stage solo/team wizard using the deterministic approval classifier and tournament API;
+- match deep links now resolve to a V5 match workspace with result/score reporting, communication and dispute evidence;
+- role-specific Team, Creator, Coach, Sponsor and Gaming Shop sections replace generic blank pages and explicitly exclude coach/shop booking;
+- Mechi Operations reads protected statistics, tournament, support and reward-review sources in the V5 shell;
+- workspace/team schema and APIs are additive and remain unapplied to production until preview verification;
+- `npm run check:v5-cutover` passes and rejects transitional presentation routes or legacy shells in canonical V5 source.
+
 | Phase | Status | Evidence |
 | --- | --- | --- |
 | 0. Contract and baseline | Complete | Blueprint, route audit, isolated cutover branch, clean lint baseline |
-| 1. Foundation and shell | In progress | V5 shell, workspace routes, semantic modes, workspace migration and API |
-| 2. Player and account | Pending | Player journey tests |
-| 3. Creator Studio | Pending | Creator assignment story |
-| 4. Organizer workspace | Pending | Organizer portfolio story |
-| 5. Tournament lifecycle | Pending | Solo/team/payment/dispute stories |
-| 6. Team/sponsor/coach/shop | Pending | Role story suite |
+| 1. Foundation and shell | In progress | V5 shell, workspace routes, semantic modes, workspace migration/API; responsive browser gate pending |
+| 2. Player and account | In progress | Live overview, tournament registration/Paystack recovery, matches, wallet, inbox and profile implemented; full story tests pending |
+| 3. Creator Studio | In progress | Role-specific Studio sections and activation implemented; durable content/assignment contracts pending |
+| 4. Organizer workspace | In progress | Live portfolio, tournament control and creation wizard implemented; staff/communications/finance mutations pending |
+| 5. Tournament lifecycle | In progress | Public discovery/detail, solo entry/payment recovery, creation policy, match result/chat/evidence implemented; team entry/check-in/admin decision completion pending |
+| 6. Team/sponsor/coach/shop | In progress | Role-specific dashboard journeys and workspace activation implemented; durable role-domain mutations pending |
 | 7. Shared support/recovery | Pending | Recovery and safety suite |
-| 8. Administration | Pending | Approval/moderation/payout suite |
-| 9. Legacy elimination | Pending | Route crawl and forbidden-import report |
+| 8. Administration | In progress | V5 protected operations overview and live source queues implemented; V5 decision details pending |
+| 9. Legacy elimination | In progress | Canonical redirects, route disposition and passing forbidden-route/import guard |
 | 10. Release | Pending | Production deployment and smoke report |
 
 This table is updated only when the phase exit gate has objective evidence. Visual resemblance alone is not completion.

@@ -8,6 +8,7 @@
     "android:usb": "npm --prefix apps/android run android:usb",
     "android:typecheck": "npm --prefix apps/android run typecheck",
     "build": "next build --webpack",
+    "check:v5-cutover": "node ./scripts/check-v5-cutover.mjs",
     "start": "next start",
     "import:registrations": "node ./scripts/import-registration-feed.mjs",
     "ops:instagram:check": "node ./scripts/openclaw-instagram-check.mjs",

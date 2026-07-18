@@ -122,6 +122,9 @@ alter table public.tournaments
     or (participant_type = 'team' and team_size between 2 and 32)
   ) not valid;
 
+alter table public.tournaments
+  validate constraint tournaments_v5_team_size_check;
+
 create table if not exists public.tournament_entries (
   id uuid primary key default gen_random_uuid(),
   tournament_id uuid not null references public.tournaments(id) on delete cascade,
@@ -187,17 +190,27 @@ create unique index if not exists workspaces_one_personal_coach_idx
 create index if not exists workspaces_type_status_idx on public.workspaces(type, status);
 create index if not exists workspace_members_user_status_idx on public.workspace_members(user_id, status);
 create index if not exists workspace_members_workspace_role_idx on public.workspace_members(workspace_id, role);
+create index if not exists workspace_members_invited_by_idx on public.workspace_members(invited_by) where invited_by is not null;
 create index if not exists workspace_invitations_user_status_idx on public.workspace_invitations(invited_user_id, status);
 create index if not exists workspace_invitations_workspace_status_idx on public.workspace_invitations(workspace_id, status);
+create index if not exists workspace_invitations_invited_by_idx on public.workspace_invitations(invited_by);
+create index if not exists workspace_preferences_user_idx on public.workspace_preferences(user_id);
 create index if not exists teams_captain_idx on public.teams(captain_user_id);
 create index if not exists team_members_user_status_idx on public.team_members(user_id, status);
 create index if not exists team_roster_snapshots_team_idx on public.team_roster_snapshots(team_id, locked_at desc);
+create index if not exists team_roster_snapshots_tournament_idx on public.team_roster_snapshots(tournament_id) where tournament_id is not null;
+create index if not exists team_roster_snapshots_created_by_idx on public.team_roster_snapshots(created_by);
+create index if not exists team_roster_snapshots_unlocked_by_idx on public.team_roster_snapshots(unlocked_by) where unlocked_by is not null;
 create index if not exists tournament_entries_tournament_status_idx on public.tournament_entries(tournament_id, status);
 create index if not exists tournament_entries_user_status_idx on public.tournament_entries(user_id, status) where user_id is not null;
 create index if not exists tournament_entries_team_status_idx on public.tournament_entries(team_id, status) where team_id is not null;
+create index if not exists tournament_entries_roster_snapshot_idx on public.tournament_entries(roster_snapshot_id) where roster_snapshot_id is not null;
+create index if not exists tournament_entries_checked_in_by_idx on public.tournament_entries(checked_in_by) where checked_in_by is not null;
+create index if not exists tournament_entries_created_by_idx on public.tournament_entries(created_by);
 create index if not exists tournaments_organizer_workspace_idx on public.tournaments(organizer_workspace_id);
 create index if not exists tournament_matches_entry1_idx on public.tournament_matches(entry1_id);
 create index if not exists tournament_matches_entry2_idx on public.tournament_matches(entry2_id);
+create index if not exists tournament_matches_winner_entry_idx on public.tournament_matches(winner_entry_id) where winner_entry_id is not null;
 create index if not exists workspace_audit_workspace_created_idx on public.workspace_audit_events(workspace_id, created_at desc);
 create index if not exists workspace_audit_actor_created_idx on public.workspace_audit_events(actor_user_id, created_at desc);
 create index if not exists workspace_audit_correlation_idx on public.workspace_audit_events(correlation_id);
@@ -212,83 +225,15 @@ alter table public.team_roster_snapshots enable row level security;
 alter table public.tournament_entries enable row level security;
 alter table public.workspace_audit_events enable row level security;
 
--- Direct Data API access is read-only and deliberately narrow. Application mutations use
--- authenticated server endpoints that validate the custom Mechi session and workspace permission.
-grant select on public.workspaces, public.workspace_members, public.workspace_invitations,
+-- Mechi uses a custom server-side session rather than Supabase Auth. Direct Data API access is
+-- therefore closed. Server endpoints validate the Mechi session and workspace permission before
+-- using the service role. RLS stays enabled as defense in depth if grants change accidentally.
+revoke all on public.workspaces, public.workspace_members, public.workspace_invitations,
   public.workspace_preferences, public.teams, public.team_members, public.team_roster_snapshots,
-  public.tournament_entries to authenticated;
+  public.tournament_entries, public.workspace_audit_events from anon, authenticated;
 grant all on public.workspaces, public.workspace_members, public.workspace_invitations,
   public.workspace_preferences, public.teams, public.team_members, public.team_roster_snapshots,
   public.tournament_entries, public.workspace_audit_events to service_role;
-
-drop policy if exists "v5 public workspaces are visible" on public.workspaces;
-create policy "v5 public workspaces are visible"
-  on public.workspaces for select to anon, authenticated
-  using (is_public = true and status = 'active');
-
-drop policy if exists "v5 members can view their workspaces" on public.workspaces;
-create policy "v5 members can view their workspaces"
-  on public.workspaces for select to authenticated
-  using (
-    owner_id = (select auth.uid())
-    or id in (
-      select workspace_id from public.workspace_members
-      where user_id = (select auth.uid()) and status = 'active'
-    )
-  );
-
-drop policy if exists "v5 users can view own memberships" on public.workspace_members;
-create policy "v5 users can view own memberships"
-  on public.workspace_members for select to authenticated
-  using (user_id = (select auth.uid()));
-
-drop policy if exists "v5 users can view own invitations" on public.workspace_invitations;
-create policy "v5 users can view own invitations"
-  on public.workspace_invitations for select to authenticated
-  using (invited_user_id = (select auth.uid()) or invited_by = (select auth.uid()));
-
-drop policy if exists "v5 users can view own workspace preferences" on public.workspace_preferences;
-create policy "v5 users can view own workspace preferences"
-  on public.workspace_preferences for select to authenticated
-  using (user_id = (select auth.uid()));
-
-drop policy if exists "v5 team members can view teams" on public.teams;
-create policy "v5 team members can view teams"
-  on public.teams for select to authenticated
-  using (
-    captain_user_id = (select auth.uid())
-    or id in (
-      select team_id from public.team_members
-      where user_id = (select auth.uid()) and status in ('active', 'benched')
-    )
-  );
-
-drop policy if exists "v5 users can view own team memberships" on public.team_members;
-create policy "v5 users can view own team memberships"
-  on public.team_members for select to authenticated
-  using (user_id = (select auth.uid()));
-
-drop policy if exists "v5 team members can view roster snapshots" on public.team_roster_snapshots;
-create policy "v5 team members can view roster snapshots"
-  on public.team_roster_snapshots for select to authenticated
-  using (
-    team_id in (
-      select team_id from public.team_members
-      where user_id = (select auth.uid()) and status in ('active', 'benched')
-    )
-  );
-
-drop policy if exists "v5 users can view own tournament entries" on public.tournament_entries;
-create policy "v5 users can view own tournament entries"
-  on public.tournament_entries for select to authenticated
-  using (
-    user_id = (select auth.uid())
-    or created_by = (select auth.uid())
-    or team_id in (
-      select team_id from public.team_members
-      where user_id = (select auth.uid()) and status in ('active', 'benched')
-    )
-  );
 
 comment on table public.workspaces is 'V5 role-aware operating contexts. One profile may belong to multiple workspaces.';
 comment on table public.tournament_entries is 'Generic solo or team tournament participation. Legacy tournament_players remains during backfill.';

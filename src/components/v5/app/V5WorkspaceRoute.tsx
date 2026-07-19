@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import { useAuth, useAuthFetch } from '@/components/AuthProvider';
 import { V5AdminWorkspace } from '@/components/v5/app/V5AdminWorkspace';
+import { V51v1Challenges } from '@/components/v5/app/V51v1Challenges';
 import { V5AppShell } from '@/components/v5/app/V5AppShell';
 import { V5MatchRoom } from '@/components/v5/app/V5MatchRoom';
 import { V5PlayerTournamentFlow } from '@/components/v5/app/V5PlayerTournamentFlow';
@@ -107,6 +108,7 @@ const EMPTY_DATA: LiveWorkspaceData = {
 
 const SECTION_COPY: Record<string, { title: string; description: string; action?: string }> = {
   tournaments: { title: 'Tournaments', description: 'Discover, enter and track tournaments that fit your games.', action: 'Browse tournaments' },
+  challenges: { title: '1v1 Challenges', description: 'Find compatible opponents, manage callouts and start verified head-to-head matches.' },
   matches: { title: 'Matches', description: 'See current match rooms, deadlines, results and disputes.' },
   teams: { title: 'Teams', description: 'Create or join a team and become tournament-ready.', action: 'Create a team' },
   rankings: { title: 'Rankings', description: 'Follow verified performance by game, region and season.' },
@@ -288,6 +290,11 @@ function WorkspaceOverview({ workspace, data }: { workspace: V5WorkspaceKind; da
               <div><strong>Also create tournament content?</strong><span>Activate Creator Studio from the workspace switcher.</span></div>
               <Link href="/app/creator">Explore</Link>
             </div>
+            <div className={styles.creatorPrompt}>
+              <Swords size={19} />
+              <div><strong>Want a direct matchup?</strong><span>Find a compatible player and send a verified 1v1 challenge.</span></div>
+              <Link href="/app/player/challenges">Challenge</Link>
+            </div>
           </section>
         </div>
       </div>
@@ -433,7 +440,7 @@ function WorkspaceSection({ workspace, section, data }: { workspace: V5Workspace
     return <TournamentControl tournament={data.tournaments.find((item) => item.slug === slug)} loading={data.loading} />;
   }
   const baseSection = section.split('/')[0];
-  if (workspace === 'player' && ['tournaments', 'matches', 'wallet', 'inbox', 'profile', 'rankings'].includes(baseSection)) {
+  if (workspace === 'player' && ['tournaments', 'challenges', 'matches', 'wallet', 'inbox', 'profile', 'rankings'].includes(baseSection)) {
     return <PlayerSection section={section} data={data} />;
   }
   if (['team', 'creator', 'coach', 'sponsor', 'shop'].includes(workspace)) {
@@ -469,6 +476,7 @@ function PlayerSection({ section, data }: { section: string; data: LiveWorkspace
   const { user } = useAuth();
   const [baseSection, detailId] = section.split('/');
   if (baseSection === 'tournaments') return <V5PlayerTournamentFlow tournaments={data.tournaments} loading={data.loading} />;
+  if (baseSection === 'challenges') return <V51v1Challenges currentMatch={data.currentMatch} recentMatches={data.matchHistory} />;
   if (baseSection === 'matches' && detailId) return <V5MatchRoom matchId={detailId} />;
   const copy = SECTION_COPY[baseSection];
   if (section === 'matches') {

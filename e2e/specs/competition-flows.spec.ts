@@ -32,7 +32,7 @@ test.describe('Competition Flows', () => {
     expect(acceptedPayload.match_id).toBeTruthy();
 
     const { context, page } = await openPersonaPage('playerPro');
-    await page.goto(`/match/${acceptedPayload.match_id}`);
+    await page.goto(`/app/player/matches/${acceptedPayload.match_id}`);
     await expect(page.locator('body')).toContainText(SEEDED_PERSONAS.playerOpponentA.username);
     await expect(page.locator('body')).toContainText(/Match room setup/i);
     await expect(page.locator('body')).toContainText(/Invite code owner/i);
@@ -120,7 +120,7 @@ test.describe('Competition Flows', () => {
     expect(currentMatchPayload.match?.id).toBeTruthy();
 
     const { context, page } = await openPersonaPage('playerFree');
-    await page.goto(`/match/${currentMatchPayload.match?.id}`);
+    await page.goto(`/app/player/matches/${currentMatchPayload.match?.id}`);
     await expect(page.locator('body')).toContainText(SEEDED_PERSONAS.playerOpponentB.username);
 
     await context.close();

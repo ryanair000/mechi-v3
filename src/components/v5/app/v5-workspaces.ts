@@ -57,6 +57,7 @@ export const V5_WORKSPACES: Record<V5WorkspaceKind, V5WorkspaceDefinition> = {
     nav: [
       { label: 'Overview', section: '', icon: 'home' },
       { label: 'Tournaments', section: 'tournaments', icon: 'trophy' },
+      { label: '1v1 challenges', section: 'challenges', icon: 'swords' },
       { label: 'Matches', section: 'matches', icon: 'swords' },
       { label: 'Teams', section: 'teams', icon: 'users' },
       { label: 'Rankings', section: 'rankings', icon: 'chart' },

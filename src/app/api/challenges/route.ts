@@ -92,6 +92,10 @@ export async function GET(request: NextRequest) {
         .order('created_at', { ascending: false }),
     ]);
 
+    if (inboundResult.error || outboundResult.error) {
+      throw inboundResult.error ?? outboundResult.error;
+    }
+
     return NextResponse.json({
       inbound: ((inboundResult.data ?? []) as Record<string, unknown>[]).map(mapChallengeRelations),
       outbound: ((outboundResult.data ?? []) as Record<string, unknown>[]).map(mapChallengeRelations),
@@ -239,7 +243,7 @@ export async function POST(request: NextRequest) {
     }
 
     const challenge = mapChallengeRelations(challengeRow as Record<string, unknown>);
-    const challengeHref = '/challenges';
+    const challengeHref = '/app/player/challenges';
     const challengeUrl = `${APP_URL}${challengeHref}`;
     await createNotifications(
       [

@@ -214,7 +214,7 @@ export async function POST(
           type: 'challenge_accepted',
           title: `${opponent.username} accepted your challenge`,
           body: `${GAMES[game].label} is live. Tap in and run it.`,
-          href: `/match/${match.id}`,
+          href: `/app/player/matches/${match.id}`,
           metadata: {
             challenge_id: challenge.id,
             match_id: match.id,
@@ -227,7 +227,7 @@ export async function POST(
           type: 'challenge_accepted',
           title: `Challenge accepted`,
           body: `${challenger.username} is ready. Your ${GAMES[game].label} match is live now.`,
-          href: `/match/${match.id}`,
+          href: `/app/player/matches/${match.id}`,
           metadata: {
             challenge_id: challenge.id,
             match_id: match.id,

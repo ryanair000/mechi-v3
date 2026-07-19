@@ -70,7 +70,7 @@ export async function POST(
           type: 'challenge_cancelled',
           title: `${challenger?.username ?? 'The challenger'} pulled back the invite`,
           body: 'That direct 1-on-1 is no longer live.',
-          href: '/notifications',
+          href: '/app/player/challenges',
           metadata: {
             challenge_id: challenge.id,
             game: challenge.game,
@@ -82,7 +82,7 @@ export async function POST(
           type: 'challenge_cancelled',
           title: `Challenge cancelled`,
           body: `Your invite to ${opponent?.username ?? 'that player'} is closed.`,
-          href: '/notifications',
+          href: '/app/player/challenges',
           metadata: {
             challenge_id: challenge.id,
             game: challenge.game,

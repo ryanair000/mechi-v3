@@ -112,6 +112,7 @@ const nextConfig: NextConfig = {
     return [
       { source: "/dashboard", destination: "/app/player", permanent: true },
       { source: "/dashboard/tournaments", destination: "/app/player/tournaments", permanent: true },
+      { source: "/dashboard/challenges", destination: "/app/player/challenges", permanent: true },
       { source: "/dashboard/matches", destination: "/app/player/matches", permanent: true },
       { source: "/dashboard/matches/:path*", destination: "/app/player/matches/:path*", permanent: true },
       { source: "/dashboard/leaderboard", destination: "/app/player/rankings", permanent: true },
@@ -125,6 +126,7 @@ const nextConfig: NextConfig = {
       { source: "/s/match/:id", destination: "/app/player/matches/:id", permanent: true },
       { source: "/match/:id", destination: "/app/player/matches/:id", permanent: true },
       { source: "/matches", destination: "/app/player/matches", permanent: true },
+      { source: "/challenges", destination: "/app/player/challenges", permanent: true },
       { source: "/streams/dashboard", destination: "/app/creator", permanent: true },
       { source: "/tournaments/create", destination: "/app/organizer/tournaments/new", permanent: true },
       { source: "/s/t/:slug", destination: "/tournaments/:slug", permanent: true },

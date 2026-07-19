@@ -215,7 +215,7 @@ export const EMAIL_CAMPAIGN_TEMPLATES: EmailCampaignTemplate[] = [
     bodyText:
       'If there is a player you want to face, do not let it live only in chat.\n\nUse PlayMechi challenges to create the matchup, track the status, and keep the result in one place. Cleaner setup means fewer arguments and more time actually playing.\n\nSend the challenge and let the match answer.',
     ctaLabel: 'Create Challenge',
-    ctaUrl: '/challenges',
+    ctaUrl: '/app/player/challenges',
   },
   {
     id: 'lobby-invite',

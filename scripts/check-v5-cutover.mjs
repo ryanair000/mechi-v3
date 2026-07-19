@@ -15,6 +15,7 @@ const ignoredCatalog = new Set([
 const forbidden = [
   { label: 'legacy dashboard route', pattern: /["'`]\/dashboard(?:\/|["'`?])/ },
   { label: 'legacy match route', pattern: /["'`]\/(?:s\/)?match\// },
+  { label: 'legacy challenge route', pattern: /["'`]\/challenges(?:\/|["'`?])/ },
   { label: 'legacy tournament share route', pattern: /["'`]\/s\/t\// },
   { label: 'legacy tournament create route', pattern: /["'`]\/tournaments\/create/ },
   { label: 'legacy admin presentation route', pattern: /["'`]\/admin(?:\/|["'`?])/ },

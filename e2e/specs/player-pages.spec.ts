@@ -64,30 +64,26 @@ test.describe('Player Pages', () => {
   test('challenge finder shows eligible games, filters by username, and refreshes sent challenges @core', async ({
     page,
   }) => {
-    await page.goto('/challenges');
+    await page.goto('/app/player/challenges');
+    await expect(page.getByRole('heading', { name: /1v1 challenges/i })).toBeVisible();
+    await expect(page.getByRole('button', { name: /efootball 2026/i })).toBeVisible();
+    await expect(page.getByRole('button', { name: /ea fc 26/i })).toBeVisible();
+    await expect(page.getByRole('button', { name: /call of duty: mobile/i })).toHaveCount(0);
 
-    await page.getByRole('button', { name: /find opponent/i }).click();
-    const dialog = page.getByRole('dialog', { name: /find opponent/i });
-
-    await expect(dialog).toBeVisible();
-    await expect(dialog.getByRole('button', { name: /efootball 2026/i })).toBeVisible();
-    await expect(dialog.getByRole('button', { name: /ea fc 26/i })).toBeVisible();
-    await expect(dialog.getByRole('button', { name: /call of duty: mobile/i })).toHaveCount(0);
-
-    const usernameSearch = dialog.getByLabel(/search by username/i);
+    const usernameSearch = page.getByLabel(/search opponents by username/i);
     await usernameSearch.fill('@opponent-a');
-    await expect(dialog).toContainText(/e2e-opponent-a/i);
+    await expect(page.locator('main')).toContainText(/e2e-opponent-a/i);
 
-    const opponentRow = dialog.locator('div.rounded-2xl').filter({ hasText: 'e2e-opponent-a' }).first();
-    await opponentRow.getByRole('button', { name: /^challenge$/i }).click();
+    const opponentRow = page.getByRole('article').filter({ hasText: 'e2e-opponent-a' }).first();
+    await opponentRow.getByRole('button', { name: /challenge e2e-opponent-a/i }).click();
+    await page.getByRole('button', { name: /send challenge/i }).click();
 
-    await expect(dialog).toBeHidden();
     await expect(page.locator('body')).toContainText(/e2e-opponent-a/i);
-    await expect(page.locator('body')).toContainText(/waiting on/i);
+    await expect(page.locator('body')).toContainText(/waiting for opponents/i);
 
-    const sentRow = page.locator('div').filter({ hasText: 'e2e-opponent-a' }).last();
-    await sentRow.getByRole('button', { name: /cancel/i }).click();
-    await expect(page.locator('body')).not.toContainText(/waiting on e2e-opponent-a/i);
+    const sentRow = page.getByRole('article').filter({ hasText: 'e2e-opponent-a' }).first();
+    await sentRow.getByRole('button', { name: /cancel challenge/i }).click();
+    await expect(sentRow).toBeHidden();
   });
 
   test('friends and public profile surfaces show last seen copy @core', async ({ page }) => {

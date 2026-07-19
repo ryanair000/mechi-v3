@@ -70,7 +70,7 @@ export async function POST(
           type: 'challenge_declined',
           title: `${opponent?.username ?? 'Your opponent'} declined the challenge`,
           body: 'That direct 1-on-1 is closed. Send another when both sides are ready.',
-          href: '/notifications',
+          href: '/app/player/challenges',
           metadata: {
             challenge_id: challenge.id,
             game: challenge.game,
@@ -82,7 +82,7 @@ export async function POST(
           type: 'challenge_declined',
           title: `Challenge declined`,
           body: `You passed on ${challenger?.username ?? 'that player'}'s challenge.`,
-          href: '/notifications',
+          href: '/app/player/challenges',
           metadata: {
             challenge_id: challenge.id,
             game: challenge.game,

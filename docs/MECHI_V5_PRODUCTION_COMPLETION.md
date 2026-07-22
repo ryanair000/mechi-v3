@@ -132,8 +132,8 @@ Baseline facts to re-verify continuously during implementation:
 | V5 storage | Workspace/team/entry foundation migration exists and is recorded as applied | Live privilege, constraint, index, and data reconciliation evidence |
 | Privileged RPCs | Least-privilege migration and verification SQL are implemented locally; target application is pending | Explicit least-privilege migration and live role tests |
 | Payments | Provider re-verification, exact intent matching, durable evidence, and atomic subscription activation are implemented locally | Green mismatch, retry, duplicate, callback, and webhook tests against the migrated E2E database |
-| Dependencies | Production audit reports zero vulnerabilities after the 21 July dependency refresh | Keep the audit green on the committed release lockfile |
-| CI | Required quality, database, workspace, provider, admin, and browser jobs are defined locally | Green required checks on the release SHA with all E2E secrets configured |
+| Dependencies | The 21 July audit was clean; on 22 July a new high-severity `sharp`/libvips advisory entered the Next 16.2.11 optional dependency chain | Upgrade to a supported patched Next/sharp resolution that passes audit and production build |
+| Release verification | Operator-run quality, database, workspace, provider, admin, and browser gates are defined locally | Secret-free evidence records show every required gate passed on the exact release SHA |
 | Release tree | Implementation worktree contains the reviewed release changes and is intentionally uncommitted | Clean signed-off release SHA and immutable artifact |
 | Full role domains | Workspace membership, invitations, profiles/settings, and core team access are persistent; several specialist product lanes remain static or partial | Persistent, authorized, audited end-to-end journeys or an explicit hidden/excluded scope |
 
@@ -368,7 +368,7 @@ authority, and reversal policy are implemented and tested.
 - offline, timeout, retry, partial-success, and forbidden states for critical
   journeys.
 
-## 11. Workstream G — dependency, CI, and release engineering
+## 11. Workstream G — dependency, verification, and release engineering
 
 ### G1. Dependency policy — P0
 
@@ -379,9 +379,9 @@ authority, and reversal policy are implemented and tested.
 - Next.js and React remain on patched stable versions supported by the repository;
 - lockfile changes pass clean install, type, lint, tests, and production build.
 
-### G2. Required CI — P0
+### G2. Required operator-run verification — P0
 
-Required checks on pull requests and the release SHA:
+Required checks on the release SHA, executed from a trusted operator machine:
 
 1. clean `npm ci`;
 2. dependency audit policy;
@@ -398,9 +398,11 @@ Required checks on pull requests and the release SHA:
 13. production build;
 14. preview smoke against the produced artifact.
 
-No critical suite may use `continue-on-error` for release promotion. Provider
-sandbox tests may be manually approved but must run before production when money
-or messaging code changes.
+`npm run release:verify` runs the quality, isolated-database, and browser gates in
+fail-fast order and records a secret-free JSON evidence file under `output/`.
+GitHub Actions is not part of the Mechi release process. Provider sandbox tests
+remain manually supervised and must run before production when money or messaging
+code changes.
 
 ### G3. Artifact promotion — P0
 
@@ -502,7 +504,8 @@ Minimum viewports:
 2. Confirm all migrations are committed and preview-applied.
 3. Confirm required secrets exist without printing their values.
 4. Produce preview artifact.
-5. Run required CI and fixture suites.
+5. Run `npm run release:verify` and the required fixture suites from the trusted
+   operator machine.
 6. Obtain product and operations sign-off on the preview.
 7. Apply production-safe migrations and run verification SQL.
 8. Promote the already-tested artifact.
@@ -546,7 +549,8 @@ Mechi V5 is production complete only when:
 - zero canonical route renders a V4 presentation fallback;
 - zero critical/high production dependency advisory remains without an approved,
   proven non-reachable exception;
-- required CI is green on the exact release SHA;
+- required operator-run verification passed on the exact release SHA and its
+  evidence record is retained;
 - preview, migration, production smoke, telemetry, and rollback evidence are
   linked from the release record;
 - support and operations have queue ownership and recovery instructions;
@@ -566,7 +570,8 @@ Use this section for concise evidence, not narrative status claims.
 | 2026-07-21 | working tree | D1 free team tournament entry | implemented | not_applied | Server-authorized roster locking, immutable game-ID snapshot, active-player conflict constraint, idempotent capacity-safe entry, audited withdrawal, functional team UI, and Playwright contract |
 | 2026-07-21 | working tree | G1 dependencies | verified | not_applied | `npm audit --omit=dev --audit-level=moderate`: zero vulnerabilities; V5 cutover guard passed |
 | 2026-07-22 | working tree | G2 local code and artifact gates | verified | not_applied | Source lint and full typecheck exited 0; Next 16.2.11 production build compiled 281/281 static routes as artifact `SJT0MfVLZkmn4M5JrTNvm`; localhost redirect chain ended at sign-in with HTTP 200 |
-| 2026-07-21 | working tree | G2 isolated database and browser CI | implemented | not_applied | Workflows parse as YAML and define fail-closed migration, SQL verification, provider, workspace, admin, mobile, and cross-browser jobs; remote run pending |
+| 2026-07-22 | `4de17de` | G2 operator-run release verification | implemented | not_applied | GitHub Actions removed by operator decision; `release:quality`, `release:database`, `release:e2e`, `release:preview`, and fail-fast `release:verify` commands produce local evidence without exposing secrets |
+| 2026-07-22 | `4de17de` + working tree | G1 dependency recheck | blocked | not_applied | Operator gate detected two new high-severity `sharp`/libvips advisories inherited through stable Next 16.2.11. A forced `sharp@0.35.3` experiment cleared audit but failed to produce a production artifact within the 15-minute diagnostic ceiling and was rejected. |
 
 ## 20. Current release assessment and exact work left
 
@@ -594,9 +599,10 @@ journeys in several advertised role domains.
   atomic database operation;
 - automatic prize transfer has been removed; payout remains pending until a
   reviewed release workflow exists;
-- production dependencies have zero reported audit vulnerabilities;
-- CI now has blocking quality, isolated database, provider, workspace, admin,
-  player, mobile, and cross-browser gates;
+- dependency audit is a blocking operator gate; its latest run correctly stopped
+  promotion on the newly published Next/sharp advisory;
+- the operator release runner has blocking quality, isolated database, provider,
+  workspace, admin, player, mobile, and cross-browser gates;
 - deterministic workspace and payment mismatch fixtures are included;
 - free team tournaments have durable idempotent entry, immutable roster snapshot,
   cross-team player conflict, capacity, roster-lock, and audited withdrawal paths;
@@ -604,16 +610,17 @@ journeys in several advertised role domains.
 
 ### 20.2 P0 gates still required before any production promotion
 
-1. Configure the GitHub E2E secrets, especially `E2E_SUPABASE_DB_URL`, against a
-   dedicated non-production database that is safe to reset.
+1. Configure the trusted operator environment, especially
+   `E2E_SUPABASE_DB_URL`, against a dedicated non-production database that is safe
+   to reset. Do not store these release credentials in GitHub Actions.
 2. Apply the full migration chain to that isolated database, run Supabase lint,
    run `supabase/verification/v5_production_security.sql`, and resolve any SQL,
    privilege, advisor, or reconciliation finding. These migrations have not been
    applied to a live database from this worktree.
-3. Run every blocking CI job on the committed release SHA. The provider,
-   workspace, player, admin, mobile, and cross-browser suites have been authored
-   but were not executed locally because they deliberately reset the configured
-   E2E database.
+3. Run `npm run release:verify` on the committed release SHA and retain the JSON
+   evidence record. The provider, workspace, player, admin, mobile, and
+   cross-browser suites deliberately reset the configured E2E database and must
+   never target production.
 4. Produce a production-equivalent preview deployment, run the same suites and
    manual money/auth/accessibility smoke checks against it, and record the
    deployment ID and Git SHA.

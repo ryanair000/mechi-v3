@@ -16,9 +16,11 @@ Important values:
 - `E2E_BASE_URL`
 - `E2E_ADMIN_BASE_URL`
 - `E2E_SUPABASE_URL`
+- `E2E_SUPABASE_DB_URL`
 - `E2E_SUPABASE_SERVICE_ROLE_KEY`
 - `JWT_SECRET`
 - `E2E_ALLOW_DB_RESET=true`
+- `E2E_DATABASE_CONFIRMATION=isolated-e2e-reset-authorized`
 
 `E2E_ALLOW_DB_RESET=true` is required because the global setup clears the application tables before reseeding. Use this only against the dedicated E2E database.
 
@@ -34,30 +36,33 @@ Important values:
 - `npm run test:e2e:provider-sandbox`
 - `npm run test:e2e:cross-browser`
 
-## CI expectations
+## Operator release gates
 
-Required PR jobs:
+Mechi does not use GitHub Actions for release verification. Run the gates from a
+trusted operator machine against a dedicated, reset-safe E2E database:
 
-- `e2e-public-auth`
-- `e2e-player-desktop`
-- `e2e-player-mobile`
-- `e2e-provider-mock`
+- `npm run release:quality` — dependency audit, cutover guard, lint, typecheck,
+  and production build;
+- `npm run release:database` — apply migrations, lint the isolated database, and
+  execute the V5 security contract;
+- `npm run release:e2e` — run the complete local browser matrix;
+- `npm run release:verify` — run all three gates in fail-fast order;
+- `npm run release:preview` — run the browser matrix against an explicitly
+  authorized HTTPS preview.
 
-Non-blocking jobs:
+Every command writes a secret-free evidence record under `output/`. The database
+gate refuses to run unless both reset authorization variables are set. The
+preview gate additionally requires:
 
-- `e2e-admin`
-- `e2e-cross-browser-smoke`
-- `e2e-provider-sandbox`
+- `E2E_EXTERNAL_SERVER=true` is set automatically by the release script;
+- `E2E_PREVIEW_CONFIRMATION=isolated-preview-authorized`;
+- `E2E_BASE_URL` and `E2E_ADMIN_BASE_URL` point at the preview deployment;
+- the preview deployment uses the same isolated E2E Supabase project.
 
-GitHub Actions secrets expected by the workflow:
+Provider sandbox verification remains a separately supervised operation because
+it can contact external services. Do not use production credentials for the
+default mock release gate.
 
-- `E2E_SUPABASE_URL`
-- `E2E_SUPABASE_SERVICE_ROLE_KEY`
-- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
-- `JWT_SECRET`
-- `CRON_SECRET`
-
-Provider sandbox jobs also expect the relevant provider sandbox secrets for the adapters you want to exercise.
 
 ## Seeded personas
 

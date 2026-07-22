@@ -1,4 +1,5 @@
 import { GAMES, getCanonicalGameKey } from '@/lib/config';
+import { unstable_cache } from 'next/cache';
 import { filterVisibleTournaments } from '@/lib/e2e-fixtures';
 import { getCountryLabel, normalizeCountryKey } from '@/lib/location';
 import { createServiceClient } from '@/lib/supabase';
@@ -36,6 +37,9 @@ type TournamentRow = {
   organizer?: PublicProfileRelation;
   winner?: PublicProfileRelation;
 };
+
+const PUBLIC_TOURNAMENT_REVALIDATE_SECONDS = 30;
+const PUBLIC_TOURNAMENT_QUERY_TIMEOUT_MS = 2000;
 
 export type PublicTournament = {
   slug: string;
@@ -76,7 +80,10 @@ function safeStatus(value: string | null | undefined): TournamentStatus | 'all' 
     : 'all';
 }
 
-async function attachCounts(rows: TournamentRow[]): Promise<PublicTournament[]> {
+async function attachCounts(
+  rows: TournamentRow[],
+  signal?: AbortSignal
+): Promise<PublicTournament[]> {
   if (!rows.length) return [];
 
   const supabase = createServiceClient();
@@ -87,7 +94,8 @@ async function attachCounts(rows: TournamentRow[]): Promise<PublicTournament[]> 
       'tournament_id',
       rows.map((row) => row.id)
     )
-    .in('payment_status', ['paid', 'free']);
+    .in('payment_status', ['paid', 'free'])
+    .abortSignal(signal ?? AbortSignal.timeout(PUBLIC_TOURNAMENT_QUERY_TIMEOUT_MS));
 
   const playersByTournament = (players ?? []).reduce<
     Record<string, Array<{ payment_status: string | null | undefined }>>
@@ -145,16 +153,17 @@ async function attachCounts(rows: TournamentRow[]): Promise<PublicTournament[]> 
   });
 }
 
-export async function listPublicTournaments(params: {
-  status?: string | null;
-  game?: string | null;
-  country?: string | null;
-  limit?: number;
-}) {
+async function queryPublicTournaments(
+  statusValue: string | null,
+  gameValue: string | null,
+  countryValue: string | null,
+  limitValue: number
+) {
+  const signal = AbortSignal.timeout(PUBLIC_TOURNAMENT_QUERY_TIMEOUT_MS);
   const supabase = createServiceClient();
-  const status = safeStatus(params.status);
-  const country = normalizeCountryKey(params.country);
-  const limit = Math.min(Math.max(Number(params.limit ?? 24), 1), 50);
+  const status = safeStatus(statusValue);
+  const country = normalizeCountryKey(countryValue);
+  const limit = Math.min(Math.max(limitValue, 1), 50);
 
   let query = supabase
     .from('tournaments')
@@ -164,14 +173,15 @@ export async function listPublicTournaments(params: {
     .or('approval_status.eq.approved,entry_fee.eq.0')
     .neq('status', 'cancelled')
     .order('created_at', { ascending: false })
-    .limit(limit);
+    .limit(limit)
+    .abortSignal(signal);
 
   if (status !== 'all') {
     query = query.eq('status', status);
   }
 
-  if (params.game && GAMES[params.game as GameKey]) {
-    query = query.eq('game', getCanonicalGameKey(params.game as GameKey));
+  if (gameValue && GAMES[gameValue as GameKey]) {
+    query = query.eq('game', getCanonicalGameKey(gameValue as GameKey));
   }
 
   if (country) {
@@ -190,10 +200,34 @@ export async function listPublicTournaments(params: {
         approvalStatus: tournament.approval_status,
       })
   );
-  return attachCounts(rows);
+  return attachCounts(rows, signal);
 }
 
-export async function getPublicTournamentBySlug(slug: string) {
+const getCachedPublicTournaments = unstable_cache(
+  queryPublicTournaments,
+  ['public-tournaments-v1'],
+  {
+    revalidate: PUBLIC_TOURNAMENT_REVALIDATE_SECONDS,
+    tags: ['public-tournaments'],
+  }
+);
+
+export async function listPublicTournaments(params: {
+  status?: string | null;
+  game?: string | null;
+  country?: string | null;
+  limit?: number;
+}) {
+  return getCachedPublicTournaments(
+    params.status ?? null,
+    params.game ?? null,
+    params.country ?? null,
+    Math.min(Math.max(Number(params.limit ?? 24), 1), 50)
+  );
+}
+
+async function queryPublicTournamentBySlug(slug: string) {
+  const signal = AbortSignal.timeout(PUBLIC_TOURNAMENT_QUERY_TIMEOUT_MS);
   const supabase = createServiceClient();
   const { data, error } = await supabase
     .from('tournaments')
@@ -203,6 +237,7 @@ export async function getPublicTournamentBySlug(slug: string) {
     .eq('slug', slug)
     .or('approval_status.eq.approved,entry_fee.eq.0')
     .neq('status', 'cancelled')
+    .abortSignal(signal)
     .maybeSingle();
 
   if (error || !data) return null;
@@ -220,6 +255,19 @@ export async function getPublicTournamentBySlug(slug: string) {
     return null;
   }
 
-  const [tournament] = await attachCounts([visible]);
+  const [tournament] = await attachCounts([visible], signal);
   return tournament ?? null;
+}
+
+const getCachedPublicTournamentBySlug = unstable_cache(
+  queryPublicTournamentBySlug,
+  ['public-tournament-by-slug-v1'],
+  {
+    revalidate: PUBLIC_TOURNAMENT_REVALIDATE_SECONDS,
+    tags: ['public-tournaments'],
+  }
+);
+
+export async function getPublicTournamentBySlug(slug: string) {
+  return getCachedPublicTournamentBySlug(slug.trim().toLowerCase());
 }

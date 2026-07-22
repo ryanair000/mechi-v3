@@ -46,13 +46,20 @@ const audiences: Array<{ title: string; copy: string; href: string; icon: Icon }
   { title: 'Run local events', copy: 'Organize trusted shop tournaments.', href: '/app/shop', icon: MapPin },
 ];
 
+const roles = [
+  { title: 'Creators', copy: 'Grow your audience and bring more eyes to the game.', image: '/dashboard-promos/playmechi-upcoming-stream.jpg', href: '/app/creator' },
+  { title: 'Coaches', copy: 'Develop talent and build the next generation.', image: '/game-artwork/efootball-header-photo.png', href: '/app/coach' },
+  { title: 'Companies', copy: 'Connect with communities through competition.', image: '/dashboard-promos/playmechi-socials-community.jpg', href: '/app/sponsor' },
+  { title: 'Gaming shops', copy: 'Engage players and power your local scene.', image: '/dashboard-promos/playmechi-launch-mobile-gaming.jpg', href: '/app/shop' },
+] as const;
+
 const fallbackTournaments: PublicTournament[] = [];
 
-function Logo() {
+function Logo({ priority = false }: { priority?: boolean }) {
   return (
     <Link className={styles.brand} href="/" aria-label="PlayMechi home">
       <span className={styles.brandMark}>
-        <Image src="/mechi-logo.png" alt="" width={940} height={1117} priority />
+        <Image src="/mechi-logo.png" alt="" width={940} height={1117} sizes="42px" priority={priority} />
       </span>
       <span className={styles.brandName}>PLAY<span>MECHI</span></span>
     </Link>
@@ -67,7 +74,7 @@ export function V5Shell({ children }: { children: ReactNode }) {
       </div>
       <header className={styles.header}>
         <div className={styles.headerInner}>
-          <Logo />
+          <Logo priority />
           <nav className={styles.nav} aria-label="Main navigation">
             {navigation.map((item) => <Link key={item.label} href={item.href}>{item.label}</Link>)}
           </nav>
@@ -128,12 +135,7 @@ function V5Footer() {
 
 async function safeTournaments(limit = 6, country?: string) {
   try {
-    return await Promise.race([
-      listPublicTournaments({ status: 'all', limit, country }),
-      new Promise<PublicTournament[]>((resolve) => {
-        setTimeout(() => resolve(fallbackTournaments), 2500);
-      }),
-    ]);
+    return await listPublicTournaments({ status: 'all', limit, country });
   } catch {
     return fallbackTournaments;
   }
@@ -180,7 +182,15 @@ export async function V5HomePage({ country }: { country?: string } = {}) {
           </div>
         </div>
         <article className={styles.heroCard}>
-          <div className={styles.heroArt} />
+          <div className={styles.heroArt}>
+            <Image
+              src="/game-artwork/efootball-header-photo.png"
+              alt="Competitive eFootball match"
+              fill
+              priority
+              sizes="(max-width: 760px) calc(100vw - 32px), 42vw"
+            />
+          </div>
           <div className={styles.heroCardBody}>
             <div className={styles.live}>Live registration</div>
             <h2>{tournaments[0]?.title ?? 'PlayMechi Community Cup'}</h2>
@@ -265,8 +275,18 @@ export async function V5HomePage({ country }: { country?: string } = {}) {
       <section className={`${styles.container} ${styles.section}`}>
         <h2 className={styles.sectionTitle}>Build around competition</h2>
         <div className={styles.roleGrid}>
-          {[['Creators', 'Grow your audience and bring more eyes to the game.', styles.roleImageOne, '/app/creator'], ['Coaches', 'Develop talent and build the next generation.', styles.roleImageTwo, '/app/coach'], ['Companies', 'Connect with communities through competition.', styles.roleImageThree, '/app/sponsor'], ['Gaming shops', 'Engage players and power your local scene.', styles.roleImageFour, '/app/shop']].map(([title, copy, art, href]) => (
-            <article className={styles.roleCard} key={title}><div className={`${styles.roleImage} ${art}`} /><div className={styles.roleBody}><h3>{title}</h3><p>{copy}</p><Link className={styles.textLink} href={href}>Learn more →</Link></div></article>
+          {roles.map(({ title, copy, image, href }) => (
+            <article className={styles.roleCard} key={title}>
+              <div className={styles.roleImage}>
+                <Image
+                  src={image}
+                  alt=""
+                  fill
+                  sizes="(max-width: 760px) calc(100vw - 32px), (max-width: 1100px) 50vw, 275px"
+                />
+              </div>
+              <div className={styles.roleBody}><h3>{title}</h3><p>{copy}</p><Link className={styles.textLink} href={href}>Learn more →</Link></div>
+            </article>
           ))}
         </div>
       </section>

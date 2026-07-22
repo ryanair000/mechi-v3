@@ -15,6 +15,10 @@ export const POSTHOG_SERVER_HOST =
   (POSTHOG_REGION === 'eu' ? 'https://eu.i.posthog.com' : 'https://us.i.posthog.com');
 export const POSTHOG_ENABLED = Boolean(POSTHOG_TOKEN);
 
+type PostHogBrowserClient = typeof import('posthog-js').default;
+
+let postHogBrowserClientPromise: Promise<PostHogBrowserClient | null> | null = null;
+
 const SENSITIVE_QUERY_PARAMS = new Set([
   'access_token',
   'auth_token',
@@ -77,4 +81,33 @@ export function getPostHogPersonProperties(user: AuthUser) {
     level: user.level ?? null,
     is_banned: Boolean(user.is_banned),
   };
+}
+
+export function getPostHogBrowserClient(): Promise<PostHogBrowserClient | null> {
+  if (!POSTHOG_ENABLED || typeof window === 'undefined') {
+    return Promise.resolve(null);
+  }
+
+  if (!postHogBrowserClientPromise) {
+    postHogBrowserClientPromise = import('posthog-js').then(({ default: posthog }) => {
+      posthog.init(POSTHOG_TOKEN, {
+        api_host: POSTHOG_API_HOST,
+        ui_host: POSTHOG_UI_HOST,
+        defaults: '2026-01-30',
+        capture_pageview: false,
+        person_profiles: 'identified_only',
+        loaded: (client) => {
+          const captureInDevelopment =
+            process.env.NEXT_PUBLIC_POSTHOG_CAPTURE_IN_DEV === 'true';
+          if (process.env.NODE_ENV !== 'production' && !captureInDevelopment) {
+            client.opt_out_capturing();
+          }
+        },
+      });
+
+      return posthog;
+    });
+  }
+
+  return postHogBrowserClientPromise;
 }

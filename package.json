@@ -86,6 +86,7 @@
       "brace-expansion": "^5.0.7"
     },
     "postcss": "^8.5.13",
+    "sharp": "^0.35.3",
     "ws": "^8.21.1"
   },
   "devDependencies": {

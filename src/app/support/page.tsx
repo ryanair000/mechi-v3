@@ -17,11 +17,11 @@ import {
   getCustomerWhatsAppSupportUrl,
   PLAYMECHI_WHATSAPP_GROUP_URL,
 } from '@/lib/social-links';
-import {
-  WEEKEND_CUP_REGISTRATION_PATH,
-  WEEKEND_CUP_SUPPORT_URL,
-  WEEKEND_CUP_TITLE,
-} from '@/lib/weekend-cup';
+
+const PLAYMECHI_REGISTRATION_PATH = '/playmechi/register';
+const PAYMENT_SUPPORT_URL = getCustomerWhatsAppSupportUrl(
+  'Hi PlayMechi, I need help with a tournament payment or refund.'
+);
 
 export const metadata: Metadata = {
   title: 'Support | PlayMechi',
@@ -33,16 +33,16 @@ const supportCards = [
   {
     title: 'Registration help',
     description:
-      'Use this if you are trying to enter Weekend Cup, your slot looks unclear, or you need the direct register route again.',
-    href: WEEKEND_CUP_REGISTRATION_PATH,
-    label: 'Register for Weekend Cup',
+      'Use this if you want to join PlayMechi, your slot is unclear, or you need the direct registration route.',
+    href: PLAYMECHI_REGISTRATION_PATH,
+    label: 'Register for PlayMechi',
     icon: UserRoundCheck,
   },
   {
     title: 'Need help with payment?',
     description:
       'If you paid and the slot still looks pending, start here first. We can check the payment trail and tell you the next move.',
-    href: WEEKEND_CUP_SUPPORT_URL,
+    href: PAYMENT_SUPPORT_URL,
     label: 'Open payment help',
     icon: CreditCard,
     external: true,
@@ -87,9 +87,9 @@ export default function SupportPage() {
               Clear next steps when PlayMechi feels unclear.
             </h1>
             <p className="mt-4 text-sm leading-7 text-[var(--text-secondary)] sm:text-base">
-              This page is the fastest recovery lane for {WEEKEND_CUP_TITLE}, sign-in trouble,
-              payment questions, and broken screens. If you are stuck, start here instead of
-              guessing.
+              This is the recovery lane for tournament registration, sign-in trouble, team
+              invitations, payments, match results, and broken screens. Start here instead of
+              guessing or paying twice.
             </p>
 
             <div className="mt-5 flex flex-wrap gap-2">
@@ -158,9 +158,9 @@ export default function SupportPage() {
           <div className="card p-5 sm:p-6">
             <p className="section-title">Fast channels</p>
             <div className="mt-4 grid gap-3">
-              <a href={WEEKEND_CUP_SUPPORT_URL} className="btn-primary justify-center">
+              <a href={PAYMENT_SUPPORT_URL} className="btn-primary justify-center">
                 <MessageCircle size={15} />
-                Weekend Cup help
+                Payment help
               </a>
               <a
                 href={getCustomerWhatsAppSupportUrl('Hi PlayMechi, I need general help.')}

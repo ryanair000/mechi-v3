@@ -119,6 +119,8 @@ export type NotificationType =
   | 'match_chat_message'
   | 'community_chat_message'
   | 'community_announcement'
+  | 'team_invitation'
+  | 'support_case_created'
   | 'match_reported'
   | 'match_completed'
   | 'match_disputed';

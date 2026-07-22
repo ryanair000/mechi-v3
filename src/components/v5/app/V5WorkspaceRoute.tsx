@@ -11,7 +11,6 @@ import {
   Clock3,
   Gamepad2,
   Plus,
-  Radio,
   ShieldCheck,
   Sparkles,
   Swords,
@@ -24,8 +23,10 @@ import { V5AdminWorkspace } from '@/components/v5/app/V5AdminWorkspace';
 import { V51v1Challenges } from '@/components/v5/app/V51v1Challenges';
 import { V5AppShell } from '@/components/v5/app/V5AppShell';
 import { V5MatchRoom } from '@/components/v5/app/V5MatchRoom';
+import { V5OrganizerRecords } from '@/components/v5/app/V5OrganizerRecords';
 import { V5PlayerTournamentFlow } from '@/components/v5/app/V5PlayerTournamentFlow';
 import { V5RoleSection } from '@/components/v5/app/V5RoleSection';
+import { V5TeamJourney } from '@/components/v5/app/V5TeamJourney';
 import { V5TournamentWizard } from '@/components/v5/app/V5TournamentWizard';
 import { V5_WORKSPACES, type V5WorkspaceKind } from '@/components/v5/app/v5-workspaces';
 import styles from './V5WorkspaceRoute.module.css';
@@ -222,11 +223,9 @@ function WorkspaceOverview({ workspace, data }: { workspace: V5WorkspaceKind; da
     return (
       <div className={styles.page}>
         <PageHeading
-          eyebrow="Player workspace"
+          eyebrow="Player dashboard"
           title={`Welcome back, ${firstName}`}
-          description="Your next competition action, verified progress and reputation—together."
-          actionHref="/tournaments"
-          actionLabel="Find a tournament"
+          description="Start with the one action below. Everything else can wait."
         />
         {data.error ? <InlineNotice /> : null}
         <div className={styles.playerHeroGrid}>
@@ -252,51 +251,26 @@ function WorkspaceOverview({ workspace, data }: { workspace: V5WorkspaceKind; da
           </section>
 
           <section className={styles.reputationCard}>
-            <div className={styles.cardTopline}><span><ShieldCheck size={16} /> Competition identity</span><StatusChip tone="success">Active</StatusChip></div>
+            <div className={styles.cardTopline}><span><ShieldCheck size={16} /> Your player record</span><StatusChip tone="success">Active</StatusChip></div>
             <div className={styles.ratingRow}>
               <div><strong>{user?.mp ?? 0}</strong><span>Mechi rating</span></div>
               <div className={styles.rankBadge}><Trophy size={23} /><span>Level {user?.level ?? 1}</span></div>
             </div>
             <div className={styles.progressTrack}><span style={{ width: `${Math.min(100, Math.max(6, (user?.xp ?? 0) % 100))}%` }} /></div>
             <p>{user?.xp ?? 0} XP · {user?.win_streak ?? 0} current win streak</p>
-            <Link className={styles.textLink} href="/app/player/profile">View reputation record <ArrowRight size={15} /></Link>
+            <Link className={styles.textLink} href="/app/player/profile">View player profile <ArrowRight size={15} /></Link>
           </section>
         </div>
 
-        <div className={styles.metricGrid}>
-          <MetricCard icon={<Trophy />} label="Rating" value={formatNumber(user?.mp)} note="Verified matches only" />
-          <MetricCard icon={<Swords />} label="Win streak" value={formatNumber(user?.win_streak)} note={`Best: ${user?.max_win_streak ?? 0}`} />
-          <MetricCard icon={<WalletCards />} label="Available points" value={formatNumber(data.rewards?.available ?? user?.reward_points_available)} note={`${formatNumber(data.rewards?.pending ?? user?.reward_points_pending)} pending`} />
-          <MetricCard icon={<Gamepad2 />} label="Games connected" value={String(user?.selected_games?.length ?? 0)} note="Complete IDs to enter" />
-        </div>
-
-        <div className={styles.twoColumn}>
-          <section className={styles.panel}>
-            <PanelHeading title="Recommended tournaments" href="/tournaments" link="View all" />
-            <TournamentRows tournaments={data.tournaments.slice(0, 4)} loading={data.loading} />
-          </section>
-          <section className={styles.panel}>
-            <PanelHeading title="Build your competition record" />
-            <Checklist
-              items={[
-                { label: 'Create your Mechi identity', complete: true },
-                { label: 'Connect a game account', complete: Boolean(user?.selected_games?.length) },
-                { label: 'Enter your first tournament', complete: false },
-                { label: 'Complete a verified result', complete: false },
-              ]}
-            />
-            <div className={styles.creatorPrompt}>
-              <Radio size={19} />
-              <div><strong>Also create tournament content?</strong><span>Activate Creator Studio from the workspace switcher.</span></div>
-              <Link href="/app/creator">Explore</Link>
-            </div>
-            <div className={styles.creatorPrompt}>
-              <Swords size={19} />
-              <div><strong>Want a direct matchup?</strong><span>Find a compatible player and send a verified 1v1 challenge.</span></div>
-              <Link href="/app/player/challenges">Challenge</Link>
-            </div>
-          </section>
-        </div>
+        <section className={styles.quickPanel} aria-labelledby="quick-actions-title">
+          <div><p className={styles.kicker}>Other actions</p><h2 id="quick-actions-title">Choose only when you need one</h2></div>
+          <nav aria-label="Player actions">
+            <Link href="/app/player/challenges"><Swords size={17}/><span><strong>Play a 1v1</strong><small>Find a compatible opponent</small></span><ArrowRight size={15}/></Link>
+            <Link href="/app/player/teams"><UsersRound size={17}/><span><strong>Join or create a team</strong><small>Invitations and roster setup</small></span><ArrowRight size={15}/></Link>
+            <Link href="/app/player/wallet"><WalletCards size={17}/><span><strong>Payments and rewards</strong><small>Receipts, prizes and withdrawals</small></span><ArrowRight size={15}/></Link>
+            <Link href="/support"><CircleAlert size={17}/><span><strong>Get help</strong><small>Recover from a problem</small></span><ArrowRight size={15}/></Link>
+          </nav>
+        </section>
       </div>
     );
   }
@@ -338,6 +312,7 @@ function WorkspaceOverview({ workspace, data }: { workspace: V5WorkspaceKind; da
     );
   }
 
+  if (workspace === 'team') return <V5TeamJourney tournaments={data.tournaments} />;
   return <RoleOverview workspace={workspace} />;
 }
 
@@ -440,11 +415,18 @@ function WorkspaceSection({ workspace, section, data }: { workspace: V5Workspace
     return <TournamentControl tournament={data.tournaments.find((item) => item.slug === slug)} loading={data.loading} />;
   }
   const baseSection = section.split('/')[0];
+  if (workspace === 'organizer' && baseSection === 'communications') return <V5OrganizerRecords type="announcements" />;
+  if (workspace === 'organizer' && baseSection === 'finance') return <V5OrganizerRecords type="finance" />;
+  if (workspace === 'organizer' && baseSection === 'organization') return <V5OrganizerRecords type="verification" />;
   if (workspace === 'player' && ['tournaments', 'challenges', 'matches', 'wallet', 'inbox', 'profile', 'rankings'].includes(baseSection)) {
     return <PlayerSection section={section} data={data} />;
   }
-  if (['team', 'creator', 'coach', 'sponsor', 'shop'].includes(workspace)) {
-    return <V5RoleSection workspace={workspace as 'team' | 'creator' | 'coach' | 'sponsor' | 'shop'} section={baseSection} tournaments={data.tournaments} loading={data.loading} />;
+  if (workspace === 'player' && ['teams', 'invitations'].includes(baseSection)) {
+    return <V5TeamJourney playerView tournaments={data.tournaments} />;
+  }
+  if (workspace === 'team') return <V5TeamJourney tournaments={data.tournaments} />;
+  if (['creator', 'coach', 'sponsor', 'shop'].includes(workspace)) {
+    return <V5RoleSection workspace={workspace as 'creator' | 'coach' | 'sponsor' | 'shop'} section={baseSection} tournaments={data.tournaments} loading={data.loading} />;
   }
   const copy = SECTION_COPY[baseSection] ?? {
     title: baseSection.replace(/-/g, ' ').replace(/^./, (value) => value.toUpperCase()),
@@ -480,14 +462,14 @@ function PlayerSection({ section, data }: { section: string; data: LiveWorkspace
   if (baseSection === 'matches' && detailId) return <V5MatchRoom matchId={detailId} />;
   const copy = SECTION_COPY[baseSection];
   if (section === 'matches') {
-    return <div className={styles.page}><PageHeading eyebrow="Player workspace" title={copy.title} description={copy.description} />
+    return <div className={styles.page}><PageHeading eyebrow="Player dashboard" title={copy.title} description={copy.description} />
       {data.currentMatch ? <div className={styles.controlBlocker}><Swords size={20}/><div><strong>You have an active match.</strong><span>Open the match room to review the deadline, communicate and submit a result.</span></div><Link className={styles.textLink} href={`/app/player/matches/${data.currentMatch.id}`}>Open match <ArrowRight size={14}/></Link></div> : null}
       <section className={styles.panel}><PanelHeading title="Recent verified results" />
         {data.loading ? <div className={styles.rowSkeleton}><span/><span/><span/></div> : data.matchHistory.length ? <div className={styles.resultRows}>{data.matchHistory.map((match)=><Link href={`/app/player/matches/${match.id}`} key={match.id}><span className={match.result==='win'?styles.resultWin:match.result==='loss'?styles.resultLoss:styles.resultNeutral}>{match.result}</span><span><strong>vs {match.opponent_username}</strong><small>{formatGame(match.game)} · {new Intl.DateTimeFormat('en-KE',{day:'numeric',month:'short',year:'numeric'}).format(new Date(match.completed_at))}</small></span><em>{match.rating_change > 0 ? '+' : ''}{match.rating_change} rating</em><ArrowRight size={16}/></Link>)}</div> : <EmptyInline title="No completed matches yet" body="Enter a tournament or find a match to begin building a verified record." href="/tournaments" action="Find competition" />}
       </section></div>;
   }
   if (section === 'wallet') {
-    return <div className={styles.page}><PageHeading eyebrow="Player workspace" title={copy.title} description={copy.description} />
+    return <div className={styles.page}><PageHeading eyebrow="Player dashboard" title={copy.title} description={copy.description} />
       <div className={styles.metricGrid}><MetricCard icon={<WalletCards/>} label="Available points" value={formatNumber(data.rewards?.available ?? user?.reward_points_available)} note="Available to use"/><MetricCard icon={<Clock3/>} label="Pending points" value={formatNumber(data.rewards?.pending ?? user?.reward_points_pending)} note="Not available yet"/><MetricCard icon={<Trophy/>} label="Lifetime points" value={formatNumber(data.rewards?.lifetime ?? user?.reward_points_lifetime)} note="Historical earnings"/><MetricCard icon={<ShieldCheck/>} label="Cash payouts" value="—" note="Shown only when eligible"/></div>
       <section className={styles.panel}><div className={styles.emptyState}><span><WalletCards size={25}/></span><h2>No payment or payout needs attention</h2><p>Entry receipts, refunds, protected amounts, prizes and payout references appear here with their exact status.</p></div></section></div>;
   }
@@ -497,10 +479,10 @@ function PlayerSection({ section, data }: { section: string; data: LiveWorkspace
   }
   if (section === 'profile') {
     const gameCount=user?.selected_games?.length??0;
-    return <div className={styles.page}><PageHeading eyebrow="Player workspace" title={copy.title} description={copy.description} />
-      <div className={styles.profileGrid}><section className={styles.panel}><p className={styles.kicker}>Competition identity</p><div className={styles.identityHero}><span>{user?.username?.slice(0,2).toUpperCase()}</span><div><h2>{user?.username}</h2><p>{user?.region} · {user?.country || 'Kenya'}</p></div><StatusChip tone="success">Active</StatusChip></div><Checklist items={[{label:'Account created',complete:true},{label:'Game account connected',complete:gameCount>0},{label:'Contact verified',complete:Boolean(user?.phone||user?.email)},{label:'Public record started',complete:data.matchHistory.length>0}]}/></section><section className={styles.panel}><PanelHeading title="Connected games"/><div className={styles.tagList}>{user?.selected_games?.map(game=><span key={game}><Gamepad2 size={15}/>{formatGame(game)}</span>)}</div>{!gameCount?<EmptyInline title="No game account connected" body="Connect an in-game identity before tournament eligibility checks." href="/app/player/profile?setup=games" action="Connect game"/>:null}</section></div></div>;
+    return <div className={styles.page}><PageHeading eyebrow="Player dashboard" title={copy.title} description={copy.description} />
+      <div className={styles.profileGrid}><section className={styles.panel}><p className={styles.kicker}>Your player profile</p><div className={styles.identityHero}><span>{user?.username?.slice(0,2).toUpperCase()}</span><div><h2>{user?.username}</h2><p>{user?.region} · {user?.country || 'Kenya'}</p></div><StatusChip tone="success">Active</StatusChip></div><Checklist items={[{label:'Account created',complete:true},{label:'Game account connected',complete:gameCount>0},{label:'Contact verified',complete:Boolean(user?.phone||user?.email)},{label:'First verified result',complete:data.matchHistory.length>0}]}/></section><section className={styles.panel}><PanelHeading title="Connected games"/><div className={styles.tagList}>{user?.selected_games?.map(game=><span key={game}><Gamepad2 size={15}/>{formatGame(game)}</span>)}</div>{!gameCount?<EmptyInline title="No game account connected" body="Connect an in-game identity before tournament eligibility checks." href="/app/player/profile?setup=games" action="Connect game"/>:null}</section></div></div>;
   }
-  return <div className={styles.page}><PageHeading eyebrow="Player workspace" title={copy.title} description={copy.description}/><section className={styles.panel}><div className={styles.emptyState}><span><BarChart3 size={25}/></span><h2>Rankings are built from verified results</h2><p>Your game, region and season position will appear after eligible matches are finalized.</p><Link className={styles.secondaryButton} href="/rankings">View public rankings <ArrowRight size={16}/></Link></div></section></div>;
+  return <div className={styles.page}><PageHeading eyebrow="Player dashboard" title={copy.title} description={copy.description}/><section className={styles.panel}><div className={styles.emptyState}><span><BarChart3 size={25}/></span><h2>Rankings are built from verified results</h2><p>Your game, region and season position will appear after eligible matches are finalized.</p><Link className={styles.secondaryButton} href="/rankings">View public rankings <ArrowRight size={16}/></Link></div></section></div>;
 }
 
 function TournamentControl({ tournament, loading }: { tournament?: TournamentRecord; loading: boolean }) {

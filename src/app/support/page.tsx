@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import FooterSection from '@/components/footer';
 import { PlayMechiHomeHeader } from '@/app/home/playmechi-home-header';
+import { InAppSupport } from '@/components/support/InAppSupport';
 import {
   CUSTOMER_WHATSAPP_SUPPORT_NUMBER_LABEL,
   getCustomerWhatsAppSupportUrl,
@@ -100,6 +101,8 @@ export default function SupportPage() {
             </div>
           </div>
         </section>
+
+        <InAppSupport />
 
         <section className="grid gap-4 md:grid-cols-2">
           {supportCards.map((card) => {

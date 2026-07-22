@@ -235,7 +235,7 @@ export function V51v1Challenges({ currentMatch, recentMatches }: V51v1Challenges
     <div className={styles.page}>
       <header className={styles.heading}>
         <div>
-          <p>Player workspace</p>
+          <p>Player dashboard</p>
           <h1>1v1 Challenges</h1>
           <span>Find a compatible opponent, send the callout and move into one verified match room.</span>
         </div>
@@ -244,13 +244,6 @@ export function V51v1Challenges({ currentMatch, recentMatches }: V51v1Challenges
           {refreshing ? 'Refreshing' : 'Refresh'}
         </button>
       </header>
-
-      <div className={styles.metrics}>
-        <Metric icon={<Swords />} label="Incoming" value={String(inbound.length)} note={inbound.length ? 'Your answer is needed' : 'No unanswered callouts'} tone={inbound.length ? 'coral' : 'teal'} />
-        <Metric icon={<Send />} label="Sent" value={String(outbound.length)} note={outbound.length ? 'Waiting for opponents' : 'No challenge waiting'} />
-        <Metric icon={<Gamepad2 />} label="Active match" value={currentMatch ? '1' : '0'} note={currentMatch ? gameLabel(currentMatch.game) : 'Ready for a matchup'} tone={currentMatch ? 'coral' : 'teal'} />
-        <Metric icon={<Trophy />} label="1v1 games" value={String(eligibleGames.length)} note={eligibleGames.length ? 'Connected to profile' : 'Setup required'} />
-      </div>
 
       {currentMatch ? (
         <div className={styles.activeMatch}>
@@ -367,10 +360,6 @@ export function V51v1Challenges({ currentMatch, recentMatches }: V51v1Challenges
       </section>
     </div>
   );
-}
-
-function Metric({ icon, label, value, note, tone = 'teal' }: { icon: React.ReactNode; label: string; value: string; note: string; tone?: 'teal' | 'coral' }) {
-  return <section className={styles.metric}><span className={tone === 'coral' ? styles.metricCoral : styles.metricTeal}>{icon}</span><div><p>{label}</p><strong>{value}</strong><small>{note}</small></div></section>;
 }
 
 function PanelHeading({ icon, title, badge }: { icon: React.ReactNode; title: string; badge?: string }) {

@@ -52,19 +52,24 @@ export async function POST(
         status: 'cancelled',
         responded_at: new Date().toISOString(),
       })
-      .eq('id', challenge.id);
+      .eq('id', challenge.id)
+      .eq('status', 'pending');
+
+    const participantIds = [challenge.challenger_id, challenge.opponent_id].filter(
+      (profileId): profileId is string => Boolean(profileId)
+    );
 
     const { data: profilesRaw } = await supabase
       .from('profiles')
       .select('id, username')
-      .in('id', [challenge.challenger_id, challenge.opponent_id]);
+      .in('id', participantIds);
 
     const profiles = (profilesRaw ?? []) as ProfileRow[];
     const challenger = profiles.find((profile) => profile.id === challenge.challenger_id);
     const opponent = profiles.find((profile) => profile.id === challenge.opponent_id);
 
     await createNotifications(
-      [
+      challenge.opponent_id ? [
         {
           user_id: challenge.opponent_id,
           type: 'challenge_cancelled',
@@ -89,7 +94,19 @@ export async function POST(
             platform: challenge.platform,
           },
         },
-      ],
+      ] : [{
+        user_id: challenge.challenger_id,
+        type: 'challenge_cancelled',
+        title: 'Open challenge cancelled',
+        body: 'Your public callout is no longer visible to other players.',
+        href: '/app/player/challenges',
+        metadata: {
+          challenge_id: challenge.id,
+          game: challenge.game,
+          platform: challenge.platform,
+          visibility: 'open',
+        },
+      }],
       supabase
     );
 

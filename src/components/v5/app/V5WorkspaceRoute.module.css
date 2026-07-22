@@ -34,6 +34,8 @@
 .progressTrack span { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg,#32e0c4,#0eaa9c); }
 .reputationCard > p { margin: 8px 0 14px; color: var(--v5-text-muted); font-size: 10px; }
 .textLink, .panelHeading a { display: inline-flex; align-items: center; gap: 5px; color: #078c7e; font-size: 11px; font-weight: 800; text-decoration: none; }
+.quickPanel{display:flex;align-items:center;justify-content:space-between;gap:20px;border:1px solid var(--v5-border);border-radius:18px;background:var(--v5-surface);padding:18px;box-shadow:0 8px 24px rgba(11,17,33,.035)}
+.quickPanel h2{margin:5px 0 0;font:850 15px/1.2 var(--font-montserrat),Montserrat,sans-serif}.quickPanel nav{display:grid;grid-template-columns:repeat(4,minmax(150px,1fr));gap:8px;flex:1;max-width:860px}.quickPanel nav a{display:grid;grid-template-columns:22px 1fr 15px;align-items:center;gap:8px;min-height:58px;border-radius:12px;background:var(--v5-surface-subtle);color:#078c7e;padding:9px 11px;text-decoration:none}.quickPanel nav a span{display:flex;min-width:0;flex-direction:column}.quickPanel nav strong{color:var(--v5-text);font-size:10.5px}.quickPanel nav small{overflow:hidden;color:var(--v5-text-muted);font-size:8.5px;text-overflow:ellipsis;white-space:nowrap}
 
 .metricGrid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; }
 .metricCard { display: flex; min-height: 112px; align-items: center; gap: 13px; padding: 15px; }
@@ -169,6 +171,7 @@
   .controlGrid { grid-template-columns:1fr; }
   .profileGrid { grid-template-columns:1fr; }
   .reputationCard { min-height: 220px; }
+  .quickPanel{align-items:flex-start;flex-direction:column}.quickPanel nav{width:100%;grid-template-columns:repeat(2,1fr);max-width:none}
 }
 
 @media (max-width: 760px) {
@@ -190,6 +193,7 @@
   .emptyInline > a { grid-column: 2; }
   .wizardLayout > .panel { padding: 18px; }
   .choiceCard { min-height: 180px; }
+  .quickPanel nav{grid-template-columns:1fr}
 }
 
 @media (forced-colors: active) {

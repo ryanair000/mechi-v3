@@ -1,6 +1,7 @@
 import 'server-only';
 
 import { cache } from 'react';
+import { unstable_cache } from 'next/cache';
 import { cookies, headers } from 'next/headers';
 import type { NextRequest } from 'next/server';
 import { verifyToken } from '@/lib/auth';
@@ -26,6 +27,25 @@ type ResolveRegionalSettingsInput = {
   headerReader: HeaderReader;
 };
 
+const PLAYER_COUNTRY_QUERY_TIMEOUT_MS = 1500;
+
+const getCachedPlayerCountry = unstable_cache(
+  async (playerId: string): Promise<CountryKey | null> => {
+    const supabase = createServiceClient();
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('country, region')
+      .eq('id', playerId)
+      .abortSignal(AbortSignal.timeout(PLAYER_COUNTRY_QUERY_TIMEOUT_MS))
+      .maybeSingle();
+
+    if (error || !data) return null;
+    return resolveProfileLocation(data as Record<string, unknown>).country;
+  },
+  ['player-regional-country-v1'],
+  { revalidate: 300, tags: ['player-regional-country'] }
+);
+
 async function getPlayerCountryFromAuthToken(
   authToken: string | null | undefined
 ): Promise<CountryKey | null> {
@@ -39,18 +59,7 @@ async function getPlayerCountryFromAuthToken(
   }
 
   try {
-    const supabase = createServiceClient();
-    const { data, error } = await supabase
-      .from('profiles')
-      .select('country, region')
-      .eq('id', payload.sub)
-      .maybeSingle();
-
-    if (error || !data) {
-      return null;
-    }
-
-    return resolveProfileLocation(data as Record<string, unknown>).country;
+    return await getCachedPlayerCountry(payload.sub);
   } catch {
     return null;
   }

@@ -96,22 +96,10 @@ const themeScript = `
       root.classList.toggle('dark', theme === 'dark');
       root.dataset.theme = theme;
       root.style.colorScheme = theme;
-      const themeMetaTags = Array.from(document.querySelectorAll('meta[name="theme-color"]'));
-      const primaryThemeMeta = themeMetaTags[0] || document.createElement('meta');
-      if (themeMetaTags.length === 0) {
-        primaryThemeMeta.name = 'theme-color';
-        document.head.appendChild(primaryThemeMeta);
-      }
-      primaryThemeMeta.setAttribute('content', themeColor);
-      primaryThemeMeta.removeAttribute('media');
-      themeMetaTags.slice(1).forEach((meta) => meta.remove());
-      let colorSchemeMeta = document.querySelector('meta[name="color-scheme"]');
-      if (!colorSchemeMeta) {
-        colorSchemeMeta = document.createElement('meta');
-        colorSchemeMeta.name = 'color-scheme';
-        document.head.appendChild(colorSchemeMeta);
-      }
-      colorSchemeMeta.setAttribute('content', theme);
+      const themeMeta = document.querySelector('meta[name="theme-color"]');
+      if (themeMeta) themeMeta.setAttribute('content', themeColor);
+      const colorSchemeMeta = document.querySelector('meta[name="color-scheme"]');
+      if (colorSchemeMeta) colorSchemeMeta.setAttribute('content', theme);
     } catch {}
   })();
 `;

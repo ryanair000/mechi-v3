@@ -786,8 +786,15 @@ export async function proxy(request: NextRequest) {
 
   const { payload } = await getAuthState(request);
   const isAuthEntry = isAuthEntryRoute(effectivePathname);
+  // JWT verification is local and enough to admit ordinary player GET requests.
+  // A Supabase profile lookup here used to block every protected page transition
+  // before the route could start. Keep the live role/ban lookup on APIs,
+  // privileged routes, auth-entry routes, and state-changing page requests.
   const needsProtectedAccess =
-    isAdminRoute(effectivePathname) || isProtectedRoute(effectivePathname) || (isAuthEntry && Boolean(payload));
+    isAdminRoute(effectivePathname) ||
+    (isAuthEntry && Boolean(payload)) ||
+    (isProtectedRoute(effectivePathname) &&
+      (effectivePathname.startsWith('/api/') || request.method !== 'GET'));
   const access =
     payload && needsProtectedAccess ? await getCurrentAccess(payload) : null;
 
@@ -841,15 +848,15 @@ export async function proxy(request: NextRequest) {
   }
 
   if (isProtectedRoute(effectivePathname)) {
-    if (!payload || !access) {
+    if (!payload) {
       return unauthorizedResponse(effectivePathname, request);
     }
 
-    if (isV5AdminRoute(effectivePathname) && !hasPrimaryAdminAccess(access)) {
+    if (isV5AdminRoute(effectivePathname) && (!access || !hasPrimaryAdminAccess(access))) {
       return forbiddenResponse(effectivePathname, request);
     }
 
-    if (access.is_banned) {
+    if (access?.is_banned) {
       return forbiddenResponse(effectivePathname, request, 'Your account has been suspended.');
     }
   }

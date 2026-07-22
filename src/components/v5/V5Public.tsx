@@ -30,11 +30,11 @@ import styles from './V5Public.module.css';
 type Icon = ComponentType<{ size?: number; strokeWidth?: number }>;
 
 const navigation = [
-  { label: 'Play', href: '/tournaments' },
+  { label: 'Play', href: '/app/player' },
   { label: 'Tournaments', href: '/tournaments' },
-  { label: 'Watch', href: '/watch' },
-  { label: 'Community', href: '/players' },
-  { label: 'Rankings', href: '/rankings' },
+  { label: 'Watch', href: '/streams' },
+  { label: 'Community', href: '/community' },
+  { label: 'Rankings', href: '/leaderboard' },
 ];
 
 const audiences: Array<{ title: string; copy: string; href: string; icon: Icon }> = [
@@ -46,13 +46,20 @@ const audiences: Array<{ title: string; copy: string; href: string; icon: Icon }
   { title: 'Run local events', copy: 'Organize trusted shop tournaments.', href: '/app/shop', icon: MapPin },
 ];
 
+const roles = [
+  { title: 'Creators', copy: 'Grow your audience and bring more eyes to the game.', image: '/dashboard-promos/playmechi-upcoming-stream.jpg', href: '/app/creator' },
+  { title: 'Coaches', copy: 'Develop talent and build the next generation.', image: '/game-artwork/efootball-header-photo.png', href: '/app/coach' },
+  { title: 'Companies', copy: 'Connect with communities through competition.', image: '/dashboard-promos/playmechi-socials-community.jpg', href: '/app/sponsor' },
+  { title: 'Gaming shops', copy: 'Engage players and power your local scene.', image: '/dashboard-promos/playmechi-launch-mobile-gaming.jpg', href: '/app/shop' },
+] as const;
+
 const fallbackTournaments: PublicTournament[] = [];
 
-function Logo() {
+function Logo({ priority = false }: { priority?: boolean }) {
   return (
     <Link className={styles.brand} href="/" aria-label="PlayMechi home">
       <span className={styles.brandMark}>
-        <Image src="/mechi-logo.png" alt="" width={940} height={1117} priority />
+        <Image src="/mechi-logo.png" alt="" width={940} height={1117} sizes="42px" priority={priority} />
       </span>
       <span className={styles.brandName}>PLAY<span>MECHI</span></span>
     </Link>
@@ -67,7 +74,7 @@ export function V5Shell({ children }: { children: ReactNode }) {
       </div>
       <header className={styles.header}>
         <div className={styles.headerInner}>
-          <Logo />
+          <Logo priority />
           <nav className={styles.nav} aria-label="Main navigation">
             {navigation.map((item) => <Link key={item.label} href={item.href}>{item.label}</Link>)}
           </nav>
@@ -98,10 +105,10 @@ export function V5Shell({ children }: { children: ReactNode }) {
 
 function V5Footer() {
   const columns = [
-    { title: 'Play', links: [['Find tournaments', '/tournaments'], ['How it works', '/how-mechi-works'], ['Rankings', '/rankings'], ['Player guide', '/support']] },
+    { title: 'Play', links: [['Find tournaments', '/tournaments'], ['How it works', '/how-mechi-works'], ['Rankings', '/leaderboard'], ['Player guide', '/support']] },
     { title: 'Tournaments', links: [['All tournaments', '/tournaments'], ['Host a tournament', '/app/organizer/tournaments/new'], ['Tournament rules', '/support'], ['Organizer workspace', '/app/organizer']] },
     { title: 'Community', links: [['Teams', '/app/team'], ['Creators', '/app/creator'], ['Coaches', '/app/coach'], ['Gaming shops', '/app/shop']] },
-    { title: 'Support', links: [['Help center', '/support'], ['Safety', '/legal/community-rules'], ['Terms of service', '/terms-of-service'], ['Privacy policy', '/privacy-policy']] },
+    { title: 'Support', links: [['Help center', '/support'], ['Safety', '/support'], ['Terms of service', '/terms-of-service'], ['Privacy policy', '/privacy-policy']] },
   ];
   return (
     <footer className={styles.footer}>
@@ -128,12 +135,7 @@ function V5Footer() {
 
 async function safeTournaments(limit = 6, country?: string) {
   try {
-    return await Promise.race([
-      listPublicTournaments({ status: 'all', limit, country }),
-      new Promise<PublicTournament[]>((resolve) => {
-        setTimeout(() => resolve(fallbackTournaments), 2500);
-      }),
-    ]);
+    return await listPublicTournaments({ status: 'all', limit, country });
   } catch {
     return fallbackTournaments;
   }
@@ -180,7 +182,15 @@ export async function V5HomePage({ country }: { country?: string } = {}) {
           </div>
         </div>
         <article className={styles.heroCard}>
-          <div className={styles.heroArt} />
+          <div className={styles.heroArt}>
+            <Image
+              src="/game-artwork/efootball-header-photo.png"
+              alt="Competitive eFootball match"
+              fill
+              priority
+              sizes="(max-width: 760px) calc(100vw - 32px), 42vw"
+            />
+          </div>
           <div className={styles.heroCardBody}>
             <div className={styles.live}>Live registration</div>
             <h2>{tournaments[0]?.title ?? 'PlayMechi Community Cup'}</h2>
@@ -265,8 +275,18 @@ export async function V5HomePage({ country }: { country?: string } = {}) {
       <section className={`${styles.container} ${styles.section}`}>
         <h2 className={styles.sectionTitle}>Build around competition</h2>
         <div className={styles.roleGrid}>
-          {[['Creators', 'Grow your audience and bring more eyes to the game.', styles.roleImageOne, '/app/creator'], ['Coaches', 'Develop talent and build the next generation.', styles.roleImageTwo, '/app/coach'], ['Companies', 'Connect with communities through competition.', styles.roleImageThree, '/app/sponsor'], ['Gaming shops', 'Engage players and power your local scene.', styles.roleImageFour, '/app/shop']].map(([title, copy, art, href]) => (
-            <article className={styles.roleCard} key={title}><div className={`${styles.roleImage} ${art}`} /><div className={styles.roleBody}><h3>{title}</h3><p>{copy}</p><Link className={styles.textLink} href={href}>Learn more →</Link></div></article>
+          {roles.map(({ title, copy, image, href }) => (
+            <article className={styles.roleCard} key={title}>
+              <div className={styles.roleImage}>
+                <Image
+                  src={image}
+                  alt=""
+                  fill
+                  sizes="(max-width: 760px) calc(100vw - 32px), (max-width: 1100px) 50vw, 275px"
+                />
+              </div>
+              <div className={styles.roleBody}><h3>{title}</h3><p>{copy}</p><Link className={styles.textLink} href={href}>Learn more →</Link></div>
+            </article>
           ))}
         </div>
       </section>
@@ -350,4 +370,4 @@ export async function V5TournamentsPage() {
 export function V5LeaderboardPage() { return <V5ScreenPage definition={{ ...page('explore'), eyebrow: 'Rankings', title: 'Performance earns reputation.', mainTitle: 'Top competitors' }} />; }
 export function V5PricingPage() { return <V5ScreenPage definition={{ ...page('workspaces'), eyebrow: 'Plans', title: 'Start free. Pay when competition needs more.', mainTitle: 'Simple plans by role' }} />; }
 export function V5BlogPage() { return <V5ScreenPage definition={{ ...page('explore'), eyebrow: 'Stories', title: 'African gaming, told through competition.', mainTitle: 'Latest from PlayMechi' }} />; }
-export function V5SupportPage() { return <V5ScreenPage definition={{ ...page('search'), eyebrow: 'Help center', title: 'Get back to playing quickly.', primaryLabel: 'Contact support', primaryHref: '/contact', mainTitle: 'Popular help topics' }} />; }
+export function V5SupportPage() { return <V5ScreenPage definition={{ ...page('search'), eyebrow: 'Help center', title: 'Get back to playing quickly.', primaryLabel: 'Contact support', primaryHref: '/support', mainTitle: 'Popular help topics' }} />; }

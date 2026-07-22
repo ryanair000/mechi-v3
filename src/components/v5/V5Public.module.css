@@ -163,7 +163,9 @@
 .screenDescription { max-width: 650px; margin: 21px 0 0; color: var(--muted); font-size: 18px; line-height: 1.62; }
 .heroActions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 29px; }
 .heroCard { overflow: hidden; border: 1px solid var(--line); border-radius: 22px; background: var(--surface-raised); box-shadow: var(--shadow-lg); }
-.heroArt { min-height: 205px; background: linear-gradient(135deg, rgba(7,23,53,.08), transparent), url('/game-artwork/efootball-header-photo.png') center/cover; }
+.heroArt { position: relative; min-height: 205px; overflow: hidden; background: var(--surface-soft); }
+.heroArt img { object-fit: cover; }
+.heroArt::after { position: absolute; inset: 0; background: linear-gradient(135deg, rgba(7,23,53,.08), transparent); content: ''; pointer-events: none; }
 .heroCardBody { padding: 23px; }
 .live { display: flex; align-items: center; gap: 7px; color: var(--muted); font-size: 11px; font-weight: 900; letter-spacing: .05em; text-transform: uppercase; }
 .live::before { width: 8px; height: 8px; border-radius: 50%; background: var(--coral); content: ''; box-shadow: 0 0 0 4px var(--coral-soft); }
@@ -233,11 +235,8 @@
 
 .roleGrid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
 .roleCard { overflow: hidden; border: 1px solid var(--line); border-radius: 15px; background: var(--surface); text-align: center; }
-.roleImage { min-height: 120px; background-position: center; background-size: cover; }
-.roleImageOne { background-image: url('/dashboard-promos/playmechi-upcoming-stream.jpg'); }
-.roleImageTwo { background-image: url('/game-artwork/efootball-header-photo.png'); }
-.roleImageThree { background-image: url('/dashboard-promos/playmechi-socials-community.jpg'); }
-.roleImageFour { background-image: url('/dashboard-promos/playmechi-launch-mobile-gaming.jpg'); }
+.roleImage { position: relative; min-height: 120px; overflow: hidden; background: var(--surface-soft); }
+.roleImage img { object-fit: cover; }
 .roleBody { padding: 17px; }
 .roleBody h3 { margin: 0 0 6px; }
 .roleBody p { min-height: 38px; margin: 0 0 10px; color: var(--muted); font-size: 12px; line-height: 1.45; }

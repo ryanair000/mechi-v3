@@ -5,6 +5,7 @@ import { Toaster } from 'react-hot-toast';
 import { AuthFlashToastBridge } from '@/components/AuthFlashToastBridge';
 import { AuthProvider } from '@/components/AuthProvider';
 import { NotificationToastBridge } from '@/components/NotificationToastBridge';
+import { NavigationFeedback } from '@/components/NavigationFeedback';
 import { RegionalSettingsProvider } from '@/components/RegionalSettingsProvider';
 import { ThemeProvider, useTheme } from '@/components/ThemeProvider';
 import type { RegionalSettings } from '@/lib/regional-settings';
@@ -57,6 +58,9 @@ export function AppProviders({
         initialSettings={initialRegionalSettings}
       >
         <AuthProvider>
+          <Suspense fallback={null}>
+            <NavigationFeedback />
+          </Suspense>
           <Suspense fallback={null}>
             <AuthFlashToastBridge />
           </Suspense>

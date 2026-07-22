@@ -24,8 +24,10 @@ import { V5AdminWorkspace } from '@/components/v5/app/V5AdminWorkspace';
 import { V51v1Challenges } from '@/components/v5/app/V51v1Challenges';
 import { V5AppShell } from '@/components/v5/app/V5AppShell';
 import { V5MatchRoom } from '@/components/v5/app/V5MatchRoom';
+import { V5OrganizerRecords } from '@/components/v5/app/V5OrganizerRecords';
 import { V5PlayerTournamentFlow } from '@/components/v5/app/V5PlayerTournamentFlow';
 import { V5RoleSection } from '@/components/v5/app/V5RoleSection';
+import { V5TeamJourney } from '@/components/v5/app/V5TeamJourney';
 import { V5TournamentWizard } from '@/components/v5/app/V5TournamentWizard';
 import { V5IncomingInvitations, V5WorkspacePeople } from '@/components/v5/app/V5WorkspacePeople';
 import { V5WorkspaceSettings } from '@/components/v5/app/V5WorkspaceSettings';
@@ -495,6 +497,9 @@ function WorkspaceSection({ workspace, section, data }: { workspace: V5Workspace
     return <TournamentControl tournament={data.tournaments.find((item) => item.slug === slug)} loading={data.loading} />;
   }
   const baseSection = section.split('/')[0];
+  if (workspace === 'organizer' && baseSection === 'communications') return <V5OrganizerRecords type="announcements" />;
+  if (workspace === 'organizer' && baseSection === 'finance') return <V5OrganizerRecords type="finance" />;
+  if (workspace === 'organizer' && baseSection === 'organization') return <V5OrganizerRecords type="verification" />;
   if (workspace === 'team' && baseSection === 'roster') {
     return <div className={styles.page}><PageHeading eyebrow="Team workspace" title="Team roster" description="Active members, roster roles, and competition access in one permission-scoped record." /><V5WorkspacePeople workspace="team" mode="members" /></div>;
   }
@@ -509,7 +514,6 @@ function WorkspaceSection({ workspace, section, data }: { workspace: V5Workspace
   }
   if (
     (workspace === 'team' && baseSection === 'settings') ||
-    (workspace === 'organizer' && baseSection === 'organization') ||
     (workspace === 'creator' && baseSection === 'profile') ||
     (workspace === 'coach' && baseSection === 'profile') ||
     (workspace === 'sponsor' && baseSection === 'company') ||
@@ -521,6 +525,10 @@ function WorkspaceSection({ workspace, section, data }: { workspace: V5Workspace
   if (workspace === 'player' && ['tournaments', 'challenges', 'matches', 'wallet', 'inbox', 'profile', 'rankings'].includes(baseSection)) {
     return <PlayerSection section={section} data={data} />;
   }
+  if (workspace === 'player' && ['teams', 'invitations'].includes(baseSection)) {
+    return <V5TeamJourney playerView tournaments={data.tournaments} />;
+  }
+  if (workspace === 'team') return <V5TeamJourney tournaments={data.tournaments} />;
   if (['team', 'creator', 'coach', 'sponsor', 'shop'].includes(workspace)) {
     return <V5RoleSection workspace={workspace as 'team' | 'creator' | 'coach' | 'sponsor' | 'shop'} section={baseSection} tournaments={data.tournaments} loading={data.loading} />;
   }

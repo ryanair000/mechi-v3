@@ -22,6 +22,10 @@ const forbidden = [
   { label: 'legacy moderator presentation route', pattern: /["'`]\/moderators(?:\/|["'`?])/ },
   { label: 'Figma/gallery route used as product route', pattern: /["'`]\/v5(?:\/|["'`?])/ },
   { label: 'legacy app shell import', pattern: /from\s+["']@\/components\/(?:AppShell|DashboardShell|AdminShell)/ },
+  { label: 'missing public watch route', pattern: /href=["'{`]\/watch(?:["'}`?/]|$)/ },
+  { label: 'missing public players route', pattern: /href=["'{`]\/players(?:["'}`?/]|$)/ },
+  { label: 'missing public contact route', pattern: /href=["'{`]\/contact(?:["'}`?/]|$)/ },
+  { label: 'missing public legal route', pattern: /href=["'{`]\/legal(?:["'}`?/]|$)/ },
 ];
 
 async function collect(target) {

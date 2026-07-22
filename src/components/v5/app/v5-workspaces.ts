@@ -50,7 +50,7 @@ export interface V5WorkspaceDefinition {
 export const V5_WORKSPACES: Record<V5WorkspaceKind, V5WorkspaceDefinition> = {
   player: {
     kind: 'player',
-    label: 'Player workspace',
+    label: 'Player dashboard',
     shortLabel: 'Player',
     description: 'Compete, verify results and build your reputation.',
     accent: 'teal',
@@ -68,7 +68,7 @@ export const V5_WORKSPACES: Record<V5WorkspaceKind, V5WorkspaceDefinition> = {
   },
   team: {
     kind: 'team',
-    label: 'Team workspace',
+    label: 'Team dashboard',
     shortLabel: 'Team',
     description: 'Ready your roster and compete together.',
     accent: 'navy',
@@ -83,7 +83,7 @@ export const V5_WORKSPACES: Record<V5WorkspaceKind, V5WorkspaceDefinition> = {
   },
   organizer: {
     kind: 'organizer',
-    label: 'Organizer workspace',
+    label: 'Organizer dashboard',
     shortLabel: 'Organizer',
     description: 'Create and operate credible tournaments.',
     accent: 'coral',
@@ -118,7 +118,7 @@ export const V5_WORKSPACES: Record<V5WorkspaceKind, V5WorkspaceDefinition> = {
   },
   coach: {
     kind: 'coach',
-    label: 'Coach workspace',
+    label: 'Coach dashboard',
     shortLabel: 'Coach',
     description: 'Publish expertise and prepare competitors.',
     accent: 'gold',
@@ -134,7 +134,7 @@ export const V5_WORKSPACES: Record<V5WorkspaceKind, V5WorkspaceDefinition> = {
   },
   sponsor: {
     kind: 'sponsor',
-    label: 'Company workspace',
+    label: 'Company dashboard',
     shortLabel: 'Sponsor',
     description: 'Reach credible gaming communities and measure delivery.',
     accent: 'navy',
@@ -151,7 +151,7 @@ export const V5_WORKSPACES: Record<V5WorkspaceKind, V5WorkspaceDefinition> = {
   },
   shop: {
     kind: 'shop',
-    label: 'Gaming shop workspace',
+    label: 'Gaming shop dashboard',
     shortLabel: 'Gaming shop',
     description: 'Host local tournaments and build a venue record.',
     accent: 'teal',

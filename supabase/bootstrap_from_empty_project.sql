@@ -87,9 +87,10 @@ CREATE TABLE IF NOT EXISTS matches (
 CREATE TABLE IF NOT EXISTS match_challenges (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   challenger_id uuid NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
-  opponent_id uuid NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+  opponent_id uuid REFERENCES profiles(id) ON DELETE CASCADE,
   game text NOT NULL,
   platform text NOT NULL,
+  visibility text NOT NULL DEFAULT 'direct' CHECK (visibility IN ('direct', 'open')),
   status text NOT NULL DEFAULT 'pending' CHECK (
     status IN ('pending', 'accepted', 'declined', 'cancelled', 'expired')
   ),
@@ -97,7 +98,8 @@ CREATE TABLE IF NOT EXISTS match_challenges (
   match_id uuid REFERENCES matches(id) ON DELETE SET NULL,
   expires_at timestamptz NOT NULL DEFAULT (timezone('utc', now()) + interval '24 hours'),
   responded_at timestamptz,
-  created_at timestamptz NOT NULL DEFAULT timezone('utc', now())
+  created_at timestamptz NOT NULL DEFAULT timezone('utc', now()),
+  CONSTRAINT match_challenges_direct_opponent_check CHECK (visibility = 'open' OR opponent_id IS NOT NULL)
 );
 
 CREATE TABLE IF NOT EXISTS notifications (
@@ -256,6 +258,9 @@ CREATE INDEX IF NOT EXISTS idx_match_challenges_expires_at
   ON match_challenges(expires_at);
 CREATE INDEX IF NOT EXISTS idx_match_challenges_match_id
   ON match_challenges(match_id);
+CREATE INDEX IF NOT EXISTS idx_match_challenges_open_pending
+  ON match_challenges(created_at DESC)
+  WHERE visibility = 'open' AND status = 'pending';
 CREATE INDEX IF NOT EXISTS idx_notifications_user_created_at
   ON notifications(user_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_notifications_user_read_at

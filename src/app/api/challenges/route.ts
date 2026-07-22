@@ -8,7 +8,7 @@ import {
   MATCH_CHALLENGE_EXPIRY_HOURS,
   resolveChallengePlatform,
 } from '@/lib/challenges';
-import { sendChallengeReceivedEmail } from '@/lib/email';
+import { sendChallengeReceivedEmail, sendOpenChallengePublishedEmail } from '@/lib/email';
 import { createNotifications } from '@/lib/notifications';
 import { expireWaitingQueueEntries } from '@/lib/queue';
 import { checkPersistentRateLimit, getClientIp, rateLimitResponse } from '@/lib/rateLimit';
@@ -77,7 +77,7 @@ export async function GET(request: NextRequest) {
     const supabase = createServiceClient();
     await expirePendingChallenges(supabase);
 
-    const [inboundResult, outboundResult] = await Promise.all([
+    const [inboundResult, outboundResult, openResult] = await Promise.all([
       supabase
         .from('match_challenges')
         .select(CHALLENGE_SELECT)
@@ -90,15 +90,25 @@ export async function GET(request: NextRequest) {
         .eq('challenger_id', authUser.id)
         .eq('status', 'pending')
         .order('created_at', { ascending: false }),
+      supabase
+        .from('match_challenges')
+        .select(CHALLENGE_SELECT)
+        .eq('visibility', 'open')
+        .eq('status', 'pending')
+        .is('opponent_id', null)
+        .neq('challenger_id', authUser.id)
+        .order('created_at', { ascending: false })
+        .limit(30),
     ]);
 
-    if (inboundResult.error || outboundResult.error) {
-      throw inboundResult.error ?? outboundResult.error;
+    if (inboundResult.error || outboundResult.error || openResult.error) {
+      throw inboundResult.error ?? outboundResult.error ?? openResult.error;
     }
 
     return NextResponse.json({
       inbound: ((inboundResult.data ?? []) as Record<string, unknown>[]).map(mapChallengeRelations),
       outbound: ((outboundResult.data ?? []) as Record<string, unknown>[]).map(mapChallengeRelations),
+      open: ((openResult.data ?? []) as Record<string, unknown>[]).map(mapChallengeRelations),
     });
   } catch (error) {
     console.error('[Challenges GET] Error:', error);
@@ -116,12 +126,13 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = (await request.json()) as Record<string, unknown>;
+    const isOpenChallenge = body.visibility === 'open' || body.open === true;
     const opponentId = String(body.opponent_id ?? '').trim();
     const requestedGame = String(body.game ?? '').trim() as GameKey;
     const platform = String(body.platform ?? '').trim() as PlatformKey;
     const message = String(body.message ?? '').trim();
 
-    if (!opponentId || opponentId === authUser.id) {
+    if (!isOpenChallenge && (!opponentId || opponentId === authUser.id)) {
       return NextResponse.json({ error: 'Pick a valid opponent' }, { status: 400 });
     }
 
@@ -131,7 +142,7 @@ export async function POST(request: NextRequest) {
 
     const game = getCanonicalGameKey(requestedGame);
     const challengeRateLimit = await checkPersistentRateLimit(
-      `challenge-create:${authUser.id}:${opponentId}:${game}:${getClientIp(request)}`,
+      `challenge-create:${authUser.id}:${isOpenChallenge ? 'open' : opponentId}:${game}:${getClientIp(request)}`,
       4,
       30 * 60 * 1000
     );
@@ -147,14 +158,14 @@ export async function POST(request: NextRequest) {
       .select(
         'id, username, avatar_url, plan, plan_expires_at, region, email, whatsapp_number, whatsapp_notifications, selected_games, platforms, game_ids'
       )
-      .in('id', [authUser.id, opponentId]);
+      .in('id', isOpenChallenge ? [authUser.id] : [authUser.id, opponentId]);
 
     const profiles = (profileRows ?? []) as ChallengeProfile[];
     const challenger = profiles.find((profile) => profile.id === authUser.id);
     const opponent = profiles.find((profile) => profile.id === opponentId);
 
-    if (profilesError || !challenger || !opponent) {
-      return NextResponse.json({ error: 'Could not load both player profiles' }, { status: 404 });
+    if (profilesError || !challenger || (!isOpenChallenge && !opponent)) {
+      return NextResponse.json({ error: 'Could not load the required player profiles' }, { status: 404 });
     }
 
     if (!canUserChallengeGame(game, challenger)) {
@@ -164,24 +175,32 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (!canUserChallengeGame(game, opponent)) {
+    if (opponent && !canUserChallengeGame(game, opponent)) {
       return NextResponse.json(
         { error: `${opponent.username} is not set up for ${GAMES[game].label} right now` },
         { status: 400 }
       );
     }
 
-    const resolvedPlatform = resolveChallengePlatform(game, platform, challenger, opponent);
+    const resolvedPlatform = resolveChallengePlatform(
+      game,
+      platform,
+      challenger,
+      opponent ?? challenger
+    );
     if (!resolvedPlatform) {
       return NextResponse.json(
         {
-          error: `${challenger.username} and ${opponent.username} are not aligned on ${GAMES[game].label} ${platform}`,
+          error: isOpenChallenge
+            ? `Your ${GAMES[game].label} profile is not configured for ${platform}`
+            : `${challenger.username} and ${opponent?.username} are not aligned on ${GAMES[game].label} ${platform}`,
         },
         { status: 400 }
       );
     }
 
-    const { waitingQueue, activeMatches } = await hasBlockingState([authUser.id, opponentId], supabase);
+    const participantIds = isOpenChallenge ? [authUser.id] : [authUser.id, opponentId];
+    const { waitingQueue, activeMatches } = await hasBlockingState(participantIds, supabase);
     if (waitingQueue.length > 0) {
       return NextResponse.json(
         { error: 'Leave the ranked queue before sending a direct challenge' },
@@ -196,19 +215,26 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { data: duplicates } = await supabase
+    const duplicateQuery = supabase
       .from('match_challenges')
-      .select('id, challenger_id, opponent_id')
+      .select('id, challenger_id, opponent_id, visibility')
       .eq('status', 'pending')
       .eq('game', game)
-      .eq('platform', resolvedPlatform)
-      .in('challenger_id', [authUser.id, opponentId])
-      .in('opponent_id', [authUser.id, opponentId]);
+      .eq('platform', resolvedPlatform);
+
+    const { data: duplicates } = isOpenChallenge
+      ? await duplicateQuery.eq('visibility', 'open').eq('challenger_id', authUser.id)
+      : await duplicateQuery
+          .eq('visibility', 'direct')
+          .in('challenger_id', [authUser.id, opponentId])
+          .in('opponent_id', [authUser.id, opponentId]);
 
     const hasDuplicate = (duplicates ?? []).some((challenge) => {
       const challengerId = challenge.challenger_id as string;
       const targetId = challenge.opponent_id as string;
-      return (
+      return isOpenChallenge
+        ? challengerId === authUser.id && challenge.visibility === 'open'
+        : (
         (challengerId === authUser.id && targetId === opponentId) ||
         (challengerId === opponentId && targetId === authUser.id)
       );
@@ -216,7 +242,7 @@ export async function POST(request: NextRequest) {
 
     if (hasDuplicate) {
       return NextResponse.json(
-        { error: 'There is already a live challenge between you and this player' },
+        { error: isOpenChallenge ? 'You already have an open challenge for this game and platform' : 'There is already a live challenge between you and this player' },
         { status: 409 }
       );
     }
@@ -229,7 +255,8 @@ export async function POST(request: NextRequest) {
       .from('match_challenges')
       .insert({
         challenger_id: authUser.id,
-        opponent_id: opponentId,
+        opponent_id: isOpenChallenge ? null : opponentId,
+        visibility: isOpenChallenge ? 'open' : 'direct',
         game,
         platform: resolvedPlatform,
         message: message || null,
@@ -246,7 +273,16 @@ export async function POST(request: NextRequest) {
     const challengeHref = '/app/player/challenges';
     const challengeUrl = `${APP_URL}${challengeHref}`;
     await createNotifications(
-      [
+      isOpenChallenge
+        ? [{
+          user_id: authUser.id,
+          type: 'challenge_sent',
+          title: 'Your open challenge is live',
+          body: `${GAMES[game].label} on ${resolvedPlatform.toUpperCase()} is waiting for a player.`,
+          href: challengeHref,
+          metadata: { challenge_id: challenge.id, game, platform: resolvedPlatform, visibility: 'open' },
+        }]
+        : [
         {
           user_id: opponentId,
           type: 'challenge_received',
@@ -263,7 +299,7 @@ export async function POST(request: NextRequest) {
         {
           user_id: authUser.id,
           type: 'challenge_sent',
-          title: `Challenge sent to ${opponent.username}`,
+          title: `Challenge sent to ${opponent?.username}`,
           body: `${GAMES[game].label} on ${resolvedPlatform.toUpperCase()} is waiting for a reply.`,
           href: challengeHref,
           metadata: {
@@ -279,12 +315,22 @@ export async function POST(request: NextRequest) {
 
     const platformLabel = PLATFORMS[resolvedPlatform]?.label ?? resolvedPlatform;
     const deliveryTasks: Promise<void>[] = [];
-    const opponentWhatsAppEnabled =
+    const opponentWhatsAppEnabled = opponent &&
       ('whatsapp_notifications' in opponent
         ? Boolean(opponent.whatsapp_notifications)
         : Boolean(opponent.whatsapp_number)) && Boolean(opponent.whatsapp_number);
 
-    if (opponent.email) {
+    if (isOpenChallenge && challenger.email) {
+      deliveryTasks.push(
+        sendOpenChallengePublishedEmail({
+          to: challenger.email,
+          username: challenger.username,
+          game: GAMES[game].label,
+          platform: platformLabel,
+          challengeUrl,
+        })
+      );
+    } else if (opponent?.email) {
       deliveryTasks.push(
         sendChallengeReceivedEmail({
           to: opponent.email,
@@ -298,7 +344,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (opponentWhatsAppEnabled && opponent.whatsapp_number) {
+    if (opponentWhatsAppEnabled && opponent?.whatsapp_number) {
       deliveryTasks.push(
         notifyChallengeReceived({
           whatsappNumber: opponent.whatsapp_number,

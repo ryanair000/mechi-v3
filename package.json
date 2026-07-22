@@ -9,6 +9,7 @@
     "android:typecheck": "npm --prefix apps/android run typecheck",
     "build": "next build --webpack",
     "check:v5-cutover": "node ./scripts/check-v5-cutover.mjs",
+    "check:v5-player-data": "node ./scripts/check-v5-player-data.mjs",
     "start": "next start",
     "import:registrations": "node ./scripts/import-registration-feed.mjs",
     "ops:instagram:check": "node ./scripts/openclaw-instagram-check.mjs",

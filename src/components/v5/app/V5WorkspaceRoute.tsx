@@ -64,9 +64,56 @@ interface MatchRecord {
 }
 
 interface RewardSummary {
-  available?: number;
-  pending?: number;
-  lifetime?: number;
+  balances?: {
+    available?: number;
+    pending?: number;
+    lifetime?: number;
+  };
+  recent_activity?: RewardActivity[];
+  active_codes?: Array<{ id: string; title: string; status: string; created_at: string }>;
+}
+
+interface RewardActivity {
+  id: string;
+  event_type: string;
+  title: string;
+  available_delta: number;
+  pending_delta: number;
+  created_at: string;
+}
+
+export interface PlayerRegistration {
+  id: string;
+  source: 'tournament' | 'playmechi' | 'weka_mawe';
+  title: string;
+  game: string | null;
+  status: string;
+  payment_status: string | null;
+  registered_at: string;
+  href: string;
+  detail: string | null;
+}
+
+interface TournamentLeaderboardEntry {
+  id: string;
+  rank: number;
+  name: string;
+  username: string | null;
+  scoreText: string;
+  verifiedText: string;
+}
+
+interface TournamentLeaderboardGame {
+  game: string;
+  label: string;
+  leaderboard: TournamentLeaderboardEntry[];
+  players: number;
+  verifiedResults: number;
+}
+
+interface TournamentLeaderboardPayload {
+  leaderboards: TournamentLeaderboardGame[];
+  summary: { games?: number; players?: number; verifiedResults?: number };
 }
 
 interface MatchHistoryItem {
@@ -93,6 +140,8 @@ interface LiveWorkspaceData {
   currentMatch: MatchRecord | null;
   rewards: RewardSummary | null;
   matchHistory: MatchHistoryItem[];
+  registrations: PlayerRegistration[];
+  leaderboard: TournamentLeaderboardPayload | null;
   notifications: NotificationItem[];
   unreadCount: number;
   loading: boolean;
@@ -104,6 +153,8 @@ const EMPTY_DATA: LiveWorkspaceData = {
   currentMatch: null,
   rewards: null,
   matchHistory: [],
+  registrations: [],
+  leaderboard: null,
   notifications: [],
   unreadCount: 0,
   loading: true,
@@ -159,28 +210,34 @@ export function V5WorkspaceRoute({ workspace, section }: { workspace: V5Workspac
     async function load() {
       setData((current) => ({ ...current, loading: true, error: false }));
       try {
-        const [tournamentResponse, matchResponse, rewardResponse, historyResponse, notificationResponse] = await Promise.all([
+        const [tournamentResponse, matchResponse, rewardResponse, historyResponse, notificationResponse, registrationResponse, leaderboardResponse] = await Promise.all([
           fetch('/api/tournaments?status=all&limit=24', { credentials: 'include' }),
           authFetch('/api/matches/current'),
           authFetch('/api/rewards/summary'),
           authFetch('/api/matches/history?limit=20'),
           authFetch('/api/notifications?limit=30'),
+          authFetch('/api/v5/player-history'),
+          fetch('/api/users/leaderboard/tournaments', { credentials: 'include' }),
         ]);
         const tournamentPayload = tournamentResponse.ok ? await tournamentResponse.json() : { tournaments: [] };
         const matchPayload = matchResponse.ok ? await matchResponse.json() : { match: null };
         const rewardPayload = rewardResponse.ok ? await rewardResponse.json() : { summary: null };
         const historyPayload = historyResponse.ok ? await historyResponse.json() : { matches: [] };
         const notificationPayload = notificationResponse.ok ? await notificationResponse.json() : { notifications: [], unreadCount: 0 };
+        const registrationPayload = registrationResponse.ok ? await registrationResponse.json() : { registrations: [] };
+        const leaderboardPayload = leaderboardResponse.ok ? await leaderboardResponse.json() : null;
         if (active) {
           setData({
             tournaments: Array.isArray(tournamentPayload.tournaments) ? tournamentPayload.tournaments : [],
             currentMatch: matchPayload.match ?? null,
             rewards: rewardPayload.summary ?? null,
             matchHistory: Array.isArray(historyPayload.matches) ? historyPayload.matches : [],
+            registrations: Array.isArray(registrationPayload.registrations) ? registrationPayload.registrations : [],
+            leaderboard: leaderboardPayload?.leaderboards ? leaderboardPayload : null,
             notifications: Array.isArray(notificationPayload.notifications) ? notificationPayload.notifications : [],
             unreadCount: Number(notificationPayload.unreadCount ?? 0),
             loading: false,
-            error: !tournamentResponse.ok,
+            error: !tournamentResponse.ok || !historyResponse.ok || !registrationResponse.ok,
           });
         }
       } catch {
@@ -306,7 +363,7 @@ function WorkspaceOverview({ workspace, data }: { workspace: V5WorkspaceKind; da
         <div className={styles.metricGrid}>
           <MetricCard icon={<Trophy />} label="Rating" value={formatNumber(user?.mp)} note="Verified matches only" />
           <MetricCard icon={<Swords />} label="Win streak" value={formatNumber(user?.win_streak)} note={`Best: ${user?.max_win_streak ?? 0}`} />
-          <MetricCard icon={<WalletCards />} label="Available points" value={formatNumber(data.rewards?.available ?? user?.reward_points_available)} note={`${formatNumber(data.rewards?.pending ?? user?.reward_points_pending)} pending`} />
+          <MetricCard icon={<WalletCards />} label="Available points" value={formatNumber(data.rewards?.balances?.available ?? user?.reward_points_available)} note={`${formatNumber(data.rewards?.balances?.pending ?? user?.reward_points_pending)} pending`} />
           <MetricCard icon={<Gamepad2 />} label="Games connected" value={String(user?.selected_games?.length ?? 0)} note="Complete IDs to enter" />
         </div>
 
@@ -321,8 +378,8 @@ function WorkspaceOverview({ workspace, data }: { workspace: V5WorkspaceKind; da
               items={[
                 { label: 'Create your Mechi identity', complete: true },
                 { label: 'Connect a game account', complete: Boolean(user?.selected_games?.length) },
-                { label: 'Enter your first tournament', complete: false },
-                { label: 'Complete a verified result', complete: false },
+                { label: 'Enter your first tournament', complete: data.registrations.length > 0 },
+                { label: 'Complete a verified result', complete: data.matchHistory.some((match) => match.status === 'completed') },
               ]}
             />
             <div className={styles.creatorPrompt}>
@@ -561,7 +618,7 @@ function WorkspaceSection({ workspace, section, data }: { workspace: V5Workspace
 function PlayerSection({ section, data }: { section: string; data: LiveWorkspaceData }) {
   const { user } = useAuth();
   const [baseSection, detailId] = section.split('/');
-  if (baseSection === 'tournaments') return <V5PlayerTournamentFlow tournaments={data.tournaments} loading={data.loading} />;
+  if (baseSection === 'tournaments') return <PlayerTournaments data={data} />;
   if (baseSection === 'challenges') return <V51v1Challenges currentMatch={data.currentMatch} recentMatches={data.matchHistory} />;
   if (baseSection === 'matches' && detailId) return <V5MatchRoom matchId={detailId} />;
   const copy = SECTION_COPY[baseSection];
@@ -573,9 +630,11 @@ function PlayerSection({ section, data }: { section: string; data: LiveWorkspace
       </section></div>;
   }
   if (section === 'wallet') {
+    const balances = data.rewards?.balances;
+    const activity = data.rewards?.recent_activity ?? [];
     return <div className={styles.page}><PageHeading eyebrow="Player workspace" title={copy.title} description={copy.description} />
-      <div className={styles.metricGrid}><MetricCard icon={<WalletCards/>} label="Available points" value={formatNumber(data.rewards?.available ?? user?.reward_points_available)} note="Available to use"/><MetricCard icon={<Clock3/>} label="Pending points" value={formatNumber(data.rewards?.pending ?? user?.reward_points_pending)} note="Not available yet"/><MetricCard icon={<Trophy/>} label="Lifetime points" value={formatNumber(data.rewards?.lifetime ?? user?.reward_points_lifetime)} note="Historical earnings"/><MetricCard icon={<ShieldCheck/>} label="Cash payouts" value="—" note="Shown only when eligible"/></div>
-      <section className={styles.panel}><div className={styles.emptyState}><span><WalletCards size={25}/></span><h2>No payment or payout needs attention</h2><p>Entry receipts, refunds, protected amounts, prizes and payout references appear here with their exact status.</p></div></section></div>;
+      <div className={styles.metricGrid}><MetricCard icon={<WalletCards/>} label="Available points" value={formatNumber(balances?.available ?? user?.reward_points_available)} note="Available to use"/><MetricCard icon={<Clock3/>} label="Pending points" value={formatNumber(balances?.pending ?? user?.reward_points_pending)} note="Not available yet"/><MetricCard icon={<Trophy/>} label="Lifetime points" value={formatNumber(balances?.lifetime ?? user?.reward_points_lifetime)} note="Historical earnings"/><MetricCard icon={<ShieldCheck/>} label="Active rewards" value={formatNumber(data.rewards?.active_codes?.length)} note="Issued or claimed codes"/></div>
+      <section className={styles.panel}><PanelHeading title="Recent reward activity" />{data.loading?<div className={styles.rowSkeleton}><span/><span/><span/></div>:activity.length?<div className={styles.activityRows}>{activity.map((item)=><div key={item.id}><span className={item.available_delta + item.pending_delta >= 0 ? styles.deltaPositive : styles.deltaNegative}>{formatDelta(item.available_delta, item.pending_delta)}</span><span><strong>{item.title}</strong><small>{formatGame(item.event_type)} · {formatDate(item.created_at)}</small></span></div>)}</div>:<EmptyInline title="No reward activity yet" body="Points earned, pending changes and redemptions will appear here." href="/rewards" action="Explore rewards"/>}</section></div>;
   }
   if (section === 'inbox') {
     return <div className={styles.page}><PageHeading eyebrow="All workspaces" title={copy.title} description={`${data.unreadCount} unread · Every item names the workspace that owns the next action.`} />
@@ -584,10 +643,63 @@ function PlayerSection({ section, data }: { section: string; data: LiveWorkspace
   }
   if (section === 'profile') {
     const gameCount=user?.selected_games?.length??0;
+    const gameIds = Object.entries(user?.game_ids ?? {}).filter(([key, value]) => value && !key.endsWith('_platform'));
     return <div className={styles.page}><PageHeading eyebrow="Player workspace" title={copy.title} description={copy.description} />
-      <div className={styles.profileGrid}><section className={styles.panel}><p className={styles.kicker}>Competition identity</p><div className={styles.identityHero}><span>{user?.username?.slice(0,2).toUpperCase()}</span><div><h2>{user?.username}</h2><p>{user?.region} · {user?.country || 'Kenya'}</p></div><StatusChip tone="success">Active</StatusChip></div><Checklist items={[{label:'Account created',complete:true},{label:'Game account connected',complete:gameCount>0},{label:'Contact verified',complete:Boolean(user?.phone||user?.email)},{label:'Public record started',complete:data.matchHistory.length>0}]}/></section><section className={styles.panel}><PanelHeading title="Connected games"/><div className={styles.tagList}>{user?.selected_games?.map(game=><span key={game}><Gamepad2 size={15}/>{formatGame(game)}</span>)}</div>{!gameCount?<EmptyInline title="No game account connected" body="Connect an in-game identity before tournament eligibility checks." href="/app/player/profile?setup=games" action="Connect game"/>:null}</section></div></div>;
+      <div className={styles.profileGrid}><section className={styles.panel}><p className={styles.kicker}>Competition identity</p><div className={styles.identityHero}><span>{user?.username?.slice(0,2).toUpperCase()}</span><div><h2>{user?.username}</h2><p>{user?.region} · {user?.country || 'Kenya'}</p></div><StatusChip tone="success">Active</StatusChip></div><Checklist items={[{label:'Account created',complete:true},{label:'Game account connected',complete:gameCount>0},{label:'Contact verified',complete:Boolean(user?.phone||user?.email)},{label:'Public record started',complete:data.matchHistory.length>0}]}/><Link className={styles.secondaryButton} href="/profile/settings">Edit account details <ArrowRight size={16}/></Link></section><section className={styles.panel}><PanelHeading title="Connected games & IDs"/>{gameIds.length?<div className={styles.gameIdRows}>{gameIds.map(([key,value])=><div key={key}><span><Gamepad2 size={16}/></span><div><strong>{formatGame(key)}</strong><small>{value}</small></div></div>)}</div>:<div className={styles.tagList}>{user?.selected_games?.map(game=><span key={game}><Gamepad2 size={15}/>{formatGame(game)}</span>)}</div>}{!gameCount?<EmptyInline title="No game account connected" body="Connect an in-game identity before tournament eligibility checks." href="/profile/settings" action="Connect game"/>:null}</section></div></div>;
   }
-  return <div className={styles.page}><PageHeading eyebrow="Player workspace" title={copy.title} description={copy.description}/><section className={styles.panel}><div className={styles.emptyState}><span><BarChart3 size={25}/></span><h2>Rankings are built from verified results</h2><p>Your game, region and season position will appear after eligible matches are finalized.</p><Link className={styles.secondaryButton} href="/rankings">View public rankings <ArrowRight size={16}/></Link></div></section></div>;
+  return <PlayerRankings data={data} username={user?.username ?? ''} />;
+}
+
+function PlayerTournaments({ data }: { data: LiveWorkspaceData }) {
+  return (
+    <div className={styles.page}>
+      <section className={styles.panel}>
+        <PanelHeading title="Your entry history" />
+        {data.loading ? (
+          <div className={styles.rowSkeleton}><span/><span/><span/></div>
+        ) : data.registrations.length ? (
+          <div className={styles.historyRows}>
+            {data.registrations.map((item) => (
+              <Link href={item.href} key={item.id}>
+                <Gamepad2 size={18}/>
+                <span><strong>{item.title}</strong><small>{formatGame(item.game)} · Registered {formatDate(item.registered_at)}{item.detail ? ` · ${item.detail}` : ''}</small></span>
+                <StatusChip tone={['paid', 'free', 'checked_in'].includes(item.payment_status || item.status) ? 'success' : 'pending'}>{formatGame(item.payment_status || item.status)}</StatusChip>
+                <ArrowRight size={16}/>
+              </Link>
+            ))}
+          </div>
+        ) : (
+          <EmptyInline title="No tournament registration yet" body="Your future entries and payment status will remain visible here." href="/tournaments" action="Browse tournaments" />
+        )}
+      </section>
+      <V5PlayerTournamentFlow tournaments={data.tournaments} loading={data.loading} />
+    </div>
+  );
+}
+
+function PlayerRankings({ data, username }: { data: LiveWorkspaceData; username: string }) {
+  const boards = data.leaderboard?.leaderboards ?? [];
+  const summary = data.leaderboard?.summary;
+  return (
+    <div className={styles.page}>
+      <PageHeading eyebrow="Player workspace" title="Rankings" description="Verified PlayMechi standings by game, with your position highlighted when you qualify." actionHref="/leaderboard" actionLabel="Open full leaderboard" />
+      <div className={styles.metricGrid}>
+        <MetricCard icon={<UsersRound/>} label="Verified players" value={formatNumber(summary?.players)} note="Across tournament boards" />
+        <MetricCard icon={<Gamepad2/>} label="Ranked games" value={formatNumber(summary?.games)} note="Current PlayMechi season" />
+        <MetricCard icon={<CheckCircle2/>} label="Verified results" value={formatNumber(summary?.verifiedResults)} note="Admin-confirmed outcomes" />
+        <MetricCard icon={<Swords/>} label="Your match results" value={formatNumber(data.matchHistory.filter((match) => match.status === 'completed').length)} note="Saved in your record" />
+      </div>
+      {data.loading ? <section className={styles.panel}><div className={styles.rowSkeleton}><span/><span/><span/></div></section> : boards.length ? (
+        <div className={styles.rankingGrid}>
+          {boards.map((board) => {
+            const current = board.leaderboard.find((entry) => entry.username?.toLowerCase() === username.toLowerCase());
+            const visible = current && current.rank > 5 ? [...board.leaderboard.slice(0, 5), current] : board.leaderboard.slice(0, 6);
+            return <section className={styles.panel} key={board.game}><PanelHeading title={board.label} /><p className={styles.boardMeta}>{board.players} players · {board.verifiedResults} verified results</p>{visible.length?<div className={styles.leaderboardRows}>{visible.map((entry)=><Link className={entry.username?.toLowerCase()===username.toLowerCase()?styles.currentRank:undefined} href={entry.username?`/profile/${encodeURIComponent(entry.username)}`:'/leaderboard'} key={entry.id}><strong>#{entry.rank}</strong><span><b>{entry.name}</b><small>{entry.scoreText} · {entry.verifiedText}</small></span><ArrowRight size={15}/></Link>)}</div>:<p className={styles.boardEmpty}>Verified standings have not been published for this game yet.</p>}{!current?<small className={styles.rankNote}>Your saved results remain in Matches. You will appear here after meeting this board&apos;s verified tournament criteria.</small>:null}</section>;
+          })}
+        </div>
+      ) : <section className={styles.panel}><EmptyInline title="Rankings are temporarily unavailable" body="Your matches and registrations remain saved. Retry or open the public leaderboard." href="/leaderboard" action="View leaderboard"/></section>}
+    </div>
+  );
 }
 
 function TournamentControl({ tournament, loading }: { tournament?: TournamentRecord; loading: boolean }) {
@@ -715,6 +827,8 @@ function InlineNotice() { return <div className={styles.inlineNotice}><CircleAle
 function PolicyNotice() { return <div className={styles.policyNotice}><ShieldCheck size={20} /><div><strong>Free means no entry fee and no valuable reward.</strong><span>Those tournaments can publish after readiness checks. Paid or rewarded events require Mechi approval.</span></div><Link href="/app/organizer/tournaments/new">Start safely <ArrowRight size={14} /></Link></div>; }
 
 function formatNumber(value: number | null | undefined) { return new Intl.NumberFormat('en-KE').format(Number(value ?? 0)); }
+function formatDate(value: string) { return new Intl.DateTimeFormat('en-KE', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'Africa/Nairobi' }).format(new Date(value)); }
+function formatDelta(available: number, pending: number) { const total = Number(available || 0) + Number(pending || 0); return `${total > 0 ? '+' : ''}${formatNumber(total)} RP`; }
 function formatGame(value: string | null | undefined) { return value ? value.replace(/_/g, ' ').replace(/\b\w/g, (letter) => letter.toUpperCase()) : 'Gaming'; }
 function formatTournamentMeta(tournament: TournamentRecord) {
   const fee = Number(tournament.entry_fee ?? 0) === 0 ? 'Free entry' : `KES ${formatNumber(tournament.entry_fee)}`;

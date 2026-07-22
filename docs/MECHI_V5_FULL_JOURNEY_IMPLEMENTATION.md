@@ -124,6 +124,34 @@ The implementation also uses the existing V5 tables and functions:
 - Browser checks: public page, sign-in recovery, support, and protected dashboard navigation.
 - Responsive checks: desktop and mobile layout; controls retain native keyboard semantics.
 
+## White-screen navigation incident closure
+
+The repeated blank or stale screen during client navigation was caused by two
+systems owning the same document nodes. Next.js 16 renders `theme-color` and
+`color-scheme` through its viewport metadata API, while the client theme code
+was also creating, removing, and deduplicating those `<meta>` elements. React
+could then try to remove a node that the theme code had already removed,
+raising `Cannot read properties of null (reading 'removeChild')` and aborting
+the route commit.
+
+The theme bootstrap and provider now leave node ownership with Next.js. They
+only update existing metadata attributes and continue to switch the root theme
+class, data attribute, and CSS color scheme. The navigation feedback layer also
+stays mounted throughout route transitions so its own lifecycle cannot race a
+navigation commit.
+
+Production verification on 22 July 2026 covered:
+
+- Support to PlayMechi registration: new URL, title, and page content rendered;
+  the old support DOM was absent; zero console or page errors.
+- PlayMechi registration to Weekend Cup: destination rendered with zero console
+  errors or warnings.
+- Direct `/app/player/matches` access while signed out: clean redirect to
+  `/login?next=%2Fapp%2Fplayer%2Fmatches` with the return path preserved and zero
+  console errors or warnings.
+- Vercel production build: compilation, TypeScript, and all 282 generated pages
+  completed successfully before the deployment was aliased to `mechi.club`.
+
 ## Operator note
 
 The Supabase personal access token used for this deployment was pasted into a chat. Revoke it after release and create a replacement only if another CLI session is needed.

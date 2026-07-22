@@ -5,13 +5,10 @@ import {
   getAuthActionSafeNextPath,
   getAuthActionToken,
   getAuthActionTokenState,
-  getProfileForUsernameContact,
-  normalizeAuthUsername,
   normalizeEmailAddress,
 } from '@/lib/auth-actions';
 import { applyAuthCookie, createSessionForProfile, hashPassword } from '@/lib/auth';
 import { getPostLoginRedirectPath } from '@/lib/navigation';
-import { parseRecoveryContact } from '@/lib/recovery-contact';
 import { checkPersistentRateLimit, getClientIp, rateLimitResponse } from '@/lib/rateLimit';
 import { createServiceClient } from '@/lib/supabase';
 
@@ -68,7 +65,6 @@ export async function POST(request: NextRequest) {
     const password = typeof body.password === 'string' ? body.password : '';
     const submittedRedirect = typeof body.redirect_to === 'string' ? body.redirect_to : '/dashboard';
     const redirectFallback = getAuthActionSafeNextPath(submittedRedirect);
-    const redirectTo = redirectFallback;
 
     if (password.length < MIN_PASSWORD_LENGTH) {
       return NextResponse.json(
@@ -78,56 +74,10 @@ export async function POST(request: NextRequest) {
     }
 
     if (!resetToken) {
-      const rawContact =
-        typeof body.contact === 'string'
-          ? body.contact
-          : typeof body.email === 'string'
-            ? body.email
-            : typeof body.phone === 'string'
-              ? body.phone
-              : null;
-      const parsedContact = parseRecoveryContact(rawContact);
-      const username = normalizeAuthUsername(typeof body.username === 'string' ? body.username : null);
-
-      if (!parsedContact || !username) {
-        return NextResponse.json(
-          { error: 'Enter the matching username and email or phone first.' },
-          { status: 400 }
-        );
-      }
-
-      const identityRateLimit = await checkPersistentRateLimit(
-        `password-reset-identity:${username}:${parsedContact.rateLimitKey}`,
-        3,
-        60 * 60 * 1000
+      return NextResponse.json(
+        { error: 'Request a fresh password-reset email before choosing a new password.' },
+        { status: 400 }
       );
-      if (!identityRateLimit.allowed) {
-        return rateLimitResponse(identityRateLimit.retryAfterSeconds);
-      }
-
-      const profile = await getProfileForUsernameContact({
-        username,
-        contact: parsedContact.normalized,
-      });
-      if (!profile) {
-        return NextResponse.json(
-          { error: 'Those details did not match.' },
-          { status: 404 }
-        );
-      }
-
-      if (profile.is_banned) {
-        return NextResponse.json(
-          { error: `Account suspended: ${profile.ban_reason ?? 'Contact support.'}` },
-          { status: 403 }
-        );
-      }
-
-      return completePasswordReset({
-        profile,
-        password,
-        redirectTo,
-      });
     }
 
     const tokenRow = await getAuthActionToken(resetToken);

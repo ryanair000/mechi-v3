@@ -20,11 +20,6 @@ interface PasswordResetFlowProps {
   token?: string | null;
 }
 
-interface VerifiedIdentity {
-  username: string;
-  contact: string;
-}
-
 export function PasswordResetFlow({ loginHref, nextPath, token }: PasswordResetFlowProps) {
   const { login } = useAuth();
   const [resetToken] = useState(token ?? '');
@@ -36,10 +31,9 @@ export function PasswordResetFlow({ loginHref, nextPath, token }: PasswordResetF
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [verifyingAccount, setVerifyingAccount] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [verifiedIdentity, setVerifiedIdentity] = useState<VerifiedIdentity | null>(null);
   const [feedback, setFeedback] = useState<ActionFeedbackState | null>(null);
   const hasToken = Boolean(resetToken);
-  const canSetPassword = hasToken || Boolean(verifiedIdentity);
+  const canSetPassword = hasToken;
 
   const handleVerifyIdentity = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -96,17 +90,14 @@ export function PasswordResetFlow({ loginHref, nextPath, token }: PasswordResetF
         return;
       }
 
-      setVerifiedIdentity({ username: submittedUsername, contact: submittedContact });
       setUsername(submittedUsername);
       setContact(submittedContact);
-      setPassword('');
-      setConfirmPassword('');
       setFeedback({
         tone: 'success',
-        title: 'Account matched.',
-        detail: data.message ?? 'Choose a new password to secure your PlayMechi account.',
+        title: 'Check your recovery email.',
+        detail: data.message ?? 'Open the secure reset link we sent to finish changing your password.',
       });
-      toast.success('Account matched. Choose a new password.');
+      toast.success('Password-reset email sent.');
     } catch {
       setFeedback({
         tone: 'error',
@@ -167,9 +158,6 @@ export function PasswordResetFlow({ loginHref, nextPath, token }: PasswordResetF
 
       if (hasToken) {
         payload.token = resetToken;
-      } else if (verifiedIdentity) {
-        payload.username = verifiedIdentity.username;
-        payload.contact = verifiedIdentity.contact;
       }
 
       const res = await fetch('/api/auth/password/reset', {
@@ -223,9 +211,7 @@ export function PasswordResetFlow({ loginHref, nextPath, token }: PasswordResetF
         <p className="mt-1 text-sm text-[var(--text-primary)]">
           {hasToken
             ? 'Set a new password and PlayMechi will sign you in right away.'
-            : canSetPassword
-              ? 'Account matched. Choose a new password and PlayMechi will sign you in right away.'
-              : 'Enter your username and email or phone. If they match, you can set a new password.'}
+            : 'Enter your username and email or phone. If they match, we will send a secure link to the recovery email saved on the account.'}
         </p>
       </div>
 

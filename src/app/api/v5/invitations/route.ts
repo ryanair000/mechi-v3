@@ -16,15 +16,17 @@ export async function GET(request: NextRequest) {
   const [userInvites, emailInvites] = await Promise.all([
     supabase
       .from('workspace_invitations')
-      .select('id,role,status,expires_at,created_at,workspace:workspaces(id,type,name,slug,status)')
+      .select('id,workspace_id,role,status,expires_at,created_at,workspace:workspaces(id,type,name,slug,status),invited_by_profile:profiles!workspace_invitations_invited_by_fkey(id,username)')
       .eq('invited_user_id', session.profile.id)
-      .eq('status', 'pending'),
+      .eq('status', 'pending')
+      .order('created_at', { ascending: false }),
     email
       ? supabase
           .from('workspace_invitations')
-          .select('id,role,status,expires_at,created_at,workspace:workspaces(id,type,name,slug,status)')
+          .select('id,workspace_id,role,status,expires_at,created_at,workspace:workspaces(id,type,name,slug,status),invited_by_profile:profiles!workspace_invitations_invited_by_fkey(id,username)')
           .ilike('invited_email', email)
           .eq('status', 'pending')
+          .order('created_at', { ascending: false })
       : Promise.resolve({ data: [], error: null }),
   ]);
 
@@ -35,5 +37,5 @@ export async function GET(request: NextRequest) {
   for (const invite of [...(userInvites.data ?? []), ...(emailInvites.data ?? [])]) {
     byId.set(String(invite.id), invite);
   }
-  return NextResponse.json({ invitations: Array.from(byId.values()) });
+  return NextResponse.json({ invitations: Array.from(byId.values()).sort((left, right) => String((right as { created_at?: string }).created_at ?? '').localeCompare(String((left as { created_at?: string }).created_at ?? ''))) });
 }

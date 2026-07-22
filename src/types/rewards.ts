@@ -88,3 +88,17 @@ export interface RewardWayToEarn {
   category: string;
   frequency: string;
 }
+
+export interface ChezaCreditRedemption {
+  id: string;
+  rp_amount: number;
+  credit_kes: number;
+  status: 'reserved' | 'review' | 'issued' | 'redeemed' | 'completed' | 'expired' | 'voided' | 'restored' | 'rejected' | 'reconciliation_required';
+  external_voucher_id: string | null;
+  external_wallet_transaction_id: string | null;
+  expires_at: string | null;
+  redeemed_at: string | null;
+  completed_at: string | null;
+  restored_at: string | null;
+  created_at: string;
+}

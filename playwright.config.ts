@@ -4,6 +4,8 @@ import { getStorageStatePath } from './e2e/helpers/storage-state';
 
 const environment = resolveE2EEnvironment();
 const isCI = process.env.CI === 'true';
+const useExternalServer = process.env.E2E_EXTERNAL_SERVER === 'true';
+const skipBuild = process.env.E2E_SKIP_BUILD === 'true';
 
 export default defineConfig({
   testDir: './e2e/specs',
@@ -26,8 +28,8 @@ export default defineConfig({
     video: 'retain-on-failure',
   },
   globalSetup: './e2e/global.setup.ts',
-  webServer: {
-    command: 'npm run start:e2e',
+  webServer: useExternalServer ? undefined : {
+    command: skipBuild ? 'npm run start' : 'npm run start:e2e',
     url: environment.baseURL,
     reuseExistingServer: false,
     timeout: 600_000,
@@ -44,6 +46,8 @@ export default defineConfig({
         process.env.NEXT_PUBLIC_SUPABASE_URL ?? environment.supabaseUrl,
       SUPABASE_SERVICE_ROLE_KEY:
         process.env.SUPABASE_SERVICE_ROLE_KEY ?? environment.supabaseServiceRoleKey,
+      MECHI_PAYSTACK_WEBHOOK_SECRET:
+        process.env.MECHI_PAYSTACK_WEBHOOK_SECRET ?? 'e2e-paystack-forward-secret',
     },
   },
   projects: [
@@ -71,6 +75,13 @@ export default defineConfig({
     {
       name: 'providers-mock',
       grep: /@providers/,
+      use: {
+        ...devices['Desktop Chrome'],
+      },
+    },
+    {
+      name: 'workspaces',
+      grep: /@workspaces/,
       use: {
         ...devices['Desktop Chrome'],
       },

@@ -220,11 +220,13 @@ export async function PATCH(request: NextRequest) {
     if (!isPrizeStatus(body.prize_status)) {
       return NextResponse.json({ error: 'Invalid prize status' }, { status: 400 });
     }
-    updates.prize_status = body.prize_status;
     if (body.prize_status === 'paid') {
-      updates.paid_at = new Date().toISOString();
-      updates.paid_by = scope.profile?.id ?? null;
+      return NextResponse.json(
+        { error: 'Prize release is disabled until recipient and eligibility verification are implemented.' },
+        { status: 409 }
+      );
     }
+    updates.prize_status = body.prize_status;
   }
 
   if (Object.prototype.hasOwnProperty.call(body, 'payout_reference')) {

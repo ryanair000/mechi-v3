@@ -3,8 +3,12 @@ import { createServiceClient } from '@/lib/supabase';
 import {
   initializePaystackTransaction,
   isPaystackConfigured,
-  verifyPaystackTransaction,
 } from '@/lib/paystack';
+import {
+  getPaymentVerificationEvidence,
+  verifyMechiPaymentByReference,
+  type PaymentVerificationEvidence,
+} from '@/lib/payment-verification';
 import { makePaymentReference } from '@/lib/slug';
 import {
   type BillingCycle,
@@ -37,6 +41,9 @@ type SubscriptionRow = {
   started_at?: string | null;
   expires_at?: string | null;
   cancelled_at?: string | null;
+  payment_provider_transaction_id?: number | null;
+  payment_verified_at?: string | null;
+  payment_currency?: string | null;
   created_at: string;
 };
 
@@ -245,7 +252,8 @@ export async function initiateSubscription(params: {
 
 export async function activateSubscription(
   subscriptionId: string,
-  client?: SupabaseClient
+  client?: SupabaseClient,
+  evidence?: PaymentVerificationEvidence | null
 ): Promise<SubscriptionRow | null> {
   const supabase = getSupabaseClient(client);
   const { data: subscriptionRaw } = await supabase
@@ -262,33 +270,24 @@ export async function activateSubscription(
   const nowIso = now.toISOString();
   const expiresIso = expiresAt.toISOString();
 
-  await supabase
-    .from('subscriptions')
-    .update({
-      status: 'active',
-      started_at: nowIso,
-      expires_at: expiresIso,
-    })
-    .eq('id', subscription.id);
+  const { data: activatedRaw, error: activationError } = await supabase.rpc(
+    'activate_verified_subscription',
+    {
+      p_subscription_id: subscription.id,
+      p_started_at: nowIso,
+      p_expires_at: expiresIso,
+      p_provider_transaction_id: evidence?.transactionId ?? null,
+      p_verified_at: evidence?.verifiedAt ?? null,
+      p_currency: evidence?.currency ?? null,
+    }
+  );
 
-  await supabase
-    .from('profiles')
-    .update({
-      plan: subscription.plan,
-      plan_since: nowIso,
-      plan_expires_at: expiresIso,
-    })
-    .eq('id', subscription.user_id);
+  if (activationError || !activatedRaw) {
+    console.error('Atomic subscription activation failed', activationError);
+    return null;
+  }
 
-  await supabase
-    .from('subscriptions')
-    .update({
-      status: 'cancelled',
-      cancelled_at: nowIso,
-    })
-    .eq('user_id', subscription.user_id)
-    .neq('id', subscription.id)
-    .eq('status', 'active');
+  const activated = activatedRaw as SubscriptionRow;
 
   const { data: profileRaw } = await supabase
     .from('profiles')
@@ -300,22 +299,18 @@ export async function activateSubscription(
     sendSubscriptionConfirmEmail({
       to: profileRaw.email as string,
       username: profileRaw.username as string,
-      plan: subscription.plan,
-      expiresAt: expiresIso,
+      plan: activated.plan,
+      expiresAt: activated.expires_at ?? expiresIso,
     }).catch(console.error);
   }
 
-  return {
-    ...subscription,
-    status: 'active',
-    started_at: nowIso,
-    expires_at: expiresIso,
-  };
+  return activated;
 }
 
 export async function activateSubscriptionByReference(
   reference: string,
-  client?: SupabaseClient
+  client?: SupabaseClient,
+  evidence?: PaymentVerificationEvidence | null
 ): Promise<{ success: boolean; subscription?: SubscriptionRow; error?: string }> {
   const supabase = getSupabaseClient(client);
   const { data: subscriptionRaw } = await supabase
@@ -330,10 +325,24 @@ export async function activateSubscriptionByReference(
   }
 
   if (subscription.status === 'active') {
+    if (evidence && !subscription.payment_provider_transaction_id) {
+      const { data: updated } = await supabase
+        .from('subscriptions')
+        .update({
+          payment_provider_transaction_id: evidence.transactionId,
+          payment_verified_at: evidence.verifiedAt,
+          payment_currency: evidence.currency,
+        })
+        .eq('id', subscription.id)
+        .is('payment_provider_transaction_id', null)
+        .select('*')
+        .maybeSingle();
+      return { success: true, subscription: (updated as SubscriptionRow | null) ?? subscription };
+    }
     return { success: true, subscription };
   }
 
-  const activated = await activateSubscription(subscription.id, supabase);
+  const activated = await activateSubscription(subscription.id, supabase, evidence);
   if (!activated) {
     return { success: false, error: 'Could not activate subscription' };
   }
@@ -393,22 +402,34 @@ export async function verifyAndActivateSubscriptionByReference(reference: string
     return { success: true, subscription };
   }
 
-  const verified = await verifyPaystackTransaction({
+  const verified = await verifyMechiPaymentByReference({
+    supabase,
+    kind: 'subscription',
     reference,
-    expectedAmountKes: subscription.amount_kes,
   });
 
   if (!verified.success) {
-    await supabase
-      .from('subscriptions')
-      .update({ status: 'failed' })
-      .eq('id', subscription.id)
-      .eq('status', 'pending');
+    if (
+      verified.errorCode &&
+      ['reference_mismatch', 'amount_mismatch', 'currency_mismatch', 'metadata_mismatch'].includes(
+        verified.errorCode
+      )
+    ) {
+      await supabase
+        .from('subscriptions')
+        .update({ status: 'failed' })
+        .eq('id', subscription.id)
+        .eq('status', 'pending');
+    }
 
     return { success: false, error: verified.error ?? 'Payment not complete' };
   }
 
-  return activateSubscriptionByReference(reference, supabase);
+  return activateSubscriptionByReference(
+    reference,
+    supabase,
+    getPaymentVerificationEvidence(verified)
+  );
 }
 
 export async function cancelActiveSubscription(userId: string, client?: SupabaseClient) {

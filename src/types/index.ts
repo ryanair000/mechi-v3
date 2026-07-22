@@ -549,6 +549,15 @@ export interface Tournament {
   bracket: unknown | null;
   winner_id: string | null;
   organizer_id: string;
+  organizer_workspace_id?: string | null;
+  participant_type?: 'solo' | 'team';
+  team_size?: number | null;
+  valuable_reward_exists?: boolean;
+  reward_description?: string | null;
+  sponsor_funded_reward_exists?: boolean;
+  manual_risk_flag_exists?: boolean;
+  approval_required?: boolean;
+  approval_reason_codes?: string[];
   rules: string | null;
   approval_status: TournamentApprovalStatus;
   approved_at?: string | null;

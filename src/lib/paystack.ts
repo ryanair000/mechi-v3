@@ -28,6 +28,84 @@ type VerifyData = {
   metadata?: Record<string, unknown>;
 };
 
+export type PaystackVerificationErrorCode =
+  | 'not_configured'
+  | 'provider_error'
+  | 'not_successful'
+  | 'reference_mismatch'
+  | 'amount_mismatch'
+  | 'currency_mismatch'
+  | 'metadata_mismatch';
+
+type ExpectedMetadata = Record<string, string | number | boolean | null>;
+
+type PaystackVerificationParams = {
+  reference: string;
+  expectedAmountKes?: number;
+  expectedCurrency?: string;
+  expectedMetadata?: ExpectedMetadata;
+};
+
+export type PaystackVerificationResult = {
+  success: boolean;
+  transactionId?: number;
+  reference?: string;
+  amountKes?: number;
+  currency?: string;
+  email?: string;
+  metadata?: Record<string, unknown>;
+  error?: string;
+  errorCode?: PaystackVerificationErrorCode;
+};
+
+function validatePaystackVerificationData(
+  params: PaystackVerificationParams,
+  data: VerifyData
+): PaystackVerificationResult {
+  const expectedCurrency = (params.expectedCurrency ?? DEFAULT_CURRENCY).trim().toUpperCase();
+  if (data.status !== 'success') {
+    return { success: false, error: 'Payment is not complete yet', errorCode: 'not_successful' };
+  }
+  if (data.reference !== params.reference) {
+    return { success: false, error: 'Payment reference does not match', errorCode: 'reference_mismatch' };
+  }
+  if (
+    params.expectedAmountKes !== undefined &&
+    data.amount !== toPaystackAmount(params.expectedAmountKes)
+  ) {
+    return { success: false, error: 'Payment amount does not match', errorCode: 'amount_mismatch' };
+  }
+  if (data.currency.trim().toUpperCase() !== expectedCurrency) {
+    return { success: false, error: 'Payment currency does not match', errorCode: 'currency_mismatch' };
+  }
+
+  const receivedMetadata = data.metadata ?? {};
+  const metadataMatches = Object.entries(params.expectedMetadata ?? {}).every(
+    ([key, expectedValue]) => receivedMetadata[key] === expectedValue
+  );
+  if (!metadataMatches) {
+    return { success: false, error: 'Payment metadata does not match', errorCode: 'metadata_mismatch' };
+  }
+
+  return {
+    success: true,
+    transactionId: data.id,
+    reference: data.reference,
+    amountKes: data.amount / 100,
+    currency: data.currency,
+    email: data.customer.email,
+    metadata: receivedMetadata,
+  };
+}
+
+function mockTransactionId(reference: string) {
+  let value = 17;
+  for (const character of reference) {
+    value = (value * 31 + character.charCodeAt(0)) % 2_000_000_000;
+  }
+  return value || 1;
+}
+
 type RecipientData = {
   recipient_code: string;
 };
@@ -167,34 +245,58 @@ export async function initializePaystackTransaction(params: {
   return successResult;
 }
 
-export async function verifyPaystackTransaction(params: {
-  reference: string;
-  expectedAmountKes?: number;
-}): Promise<{
-  success: boolean;
-  amountKes?: number;
-  email?: string;
-  metadata?: Record<string, unknown>;
-  error?: string;
-}> {
-  if (allowMockPaymentFallback()) {
-    const mockResult = {
-      success: true,
-      amountKes: params.expectedAmountKes ?? 0,
-      email: 'mock-paystack@mechi.test',
-      metadata: {},
-    };
+export async function verifyPaystackTransaction(
+  params: PaystackVerificationParams
+): Promise<PaystackVerificationResult> {
+  const expectedCurrency = (params.expectedCurrency ?? DEFAULT_CURRENCY).trim().toUpperCase();
 
-    await capturePaystackTranscript('verify-transaction', params, mockResult);
+  if (allowMockPaymentFallback()) {
+    if (params.reference.includes('e2e_provider_error')) {
+      const providerError: PaystackVerificationResult = {
+        success: false,
+        error: 'Mock provider timeout',
+        errorCode: 'provider_error',
+      };
+      await capturePaystackTranscript('verify-transaction', params, providerError, providerError.error);
+      return providerError;
+    }
+    const mockMetadata: Record<string, unknown> = { ...(params.expectedMetadata ?? {}) };
+    if (params.reference.includes('e2e_metadata_mismatch')) {
+      delete mockMetadata.app;
+    }
+    const mockData: VerifyData = {
+      id: mockTransactionId(params.reference),
+      status: params.reference.includes('e2e_not_successful') ? 'pending' : 'success',
+      reference: params.reference,
+      amount: toPaystackAmount(params.expectedAmountKes ?? 0) +
+        (params.reference.includes('e2e_amount_mismatch') ? 100 : 0),
+      currency: params.reference.includes('e2e_currency_mismatch') ? 'USD' : expectedCurrency,
+      customer: { email: 'mock-paystack@mechi.test' },
+      metadata: mockMetadata,
+    };
+    if (params.reference.includes('e2e_reference_mismatch')) {
+      mockData.reference = `${params.reference}_other`;
+    }
+    const mockResult = validatePaystackVerificationData(params, mockData);
+
+    await capturePaystackTranscript(
+      'verify-transaction',
+      params,
+      mockResult,
+      mockResult.success ? undefined : mockResult.error
+    );
     return mockResult;
   }
 
   if (allowDevPaymentFallback()) {
     const fallbackResult = {
       success: true,
+      transactionId: 1,
+      reference: params.reference,
       amountKes: params.expectedAmountKes ?? 0,
+      currency: expectedCurrency,
       email: '',
-      metadata: {},
+      metadata: params.expectedMetadata ?? {},
     };
 
     await capturePaystackTranscript('verify-transaction', params, fallbackResult);
@@ -202,7 +304,11 @@ export async function verifyPaystackTransaction(params: {
   }
 
   if (!isPaystackConfigured()) {
-    const errorResult = { success: false, error: 'Payment provider is not configured' };
+    const errorResult: PaystackVerificationResult = {
+      success: false,
+      error: 'Payment provider is not configured',
+      errorCode: 'not_configured',
+    };
     await capturePaystackTranscript('verify-transaction', params, errorResult, errorResult.error);
     return errorResult;
   }
@@ -213,33 +319,24 @@ export async function verifyPaystackTransaction(params: {
   );
 
   if (!response.status || !response.data) {
-    const errorResult = {
+    const errorResult: PaystackVerificationResult = {
       success: false,
       error: response.message || 'Payment could not be verified',
+      errorCode: 'provider_error',
     };
 
     await capturePaystackTranscript('verify-transaction', params, errorResult, errorResult.error);
     return errorResult;
   }
 
-  const paidEnough =
-    params.expectedAmountKes === undefined ||
-    response.data.amount >= toPaystackAmount(params.expectedAmountKes);
+  const successResult = validatePaystackVerificationData(params, response.data);
 
-  if (response.data.status !== 'success' || !paidEnough) {
-    const errorResult = { success: false, error: 'Payment is not complete yet' };
-    await capturePaystackTranscript('verify-transaction', params, errorResult, errorResult.error);
-    return errorResult;
-  }
-
-  const successResult = {
-    success: true,
-    amountKes: response.data.amount / 100,
-    email: response.data.customer.email,
-    metadata: response.data.metadata ?? {},
-  };
-
-  await capturePaystackTranscript('verify-transaction', params, successResult);
+  await capturePaystackTranscript(
+    'verify-transaction',
+    params,
+    successResult,
+    successResult.success ? undefined : successResult.error
+  );
   return successResult;
 }
 
@@ -262,6 +359,8 @@ export async function initializeTournamentPayment(params: {
 export async function verifyTournamentPayment(params: {
   reference: string;
   expectedAmountKes: number;
+  expectedCurrency?: string;
+  expectedMetadata?: ExpectedMetadata;
 }): Promise<{ success: boolean; error?: string }> {
   const verified = await verifyPaystackTransaction(params);
   return verified.success ? { success: true } : { success: false, error: verified.error };

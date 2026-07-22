@@ -3,7 +3,10 @@ import { makePaymentReference } from '@/lib/slug';
 import { sendOnlineTournamentRegistrationTelegramNotification } from '@/lib/telegram';
 import { APP_URL } from '@/lib/urls';
 import {
-  WEKA_MAWE_ENTRY_FEE_KES,
+  getPaymentVerificationEvidence,
+  type PaymentVerificationEvidence,
+} from '@/lib/payment-verification';
+import {
   WEKA_MAWE_MAX_PLAYERS,
   WEKA_MAWE_REGISTER_PATH,
   WEKA_MAWE_RECORDING_ROUNDS,
@@ -280,7 +283,11 @@ export async function startWekaMaweRegistration(params: {
   };
 }
 
-export async function markWekaMawePaymentPaidByReference(supabase: Db, reference: string) {
+export async function markWekaMawePaymentPaidByReference(
+  supabase: Db,
+  reference: string,
+  evidence?: PaymentVerificationEvidence | null
+) {
   const { data: registrationRaw, error: registrationError } = await supabase
     .from('weka_mawe_registrations')
     .select('*')
@@ -294,6 +301,17 @@ export async function markWekaMawePaymentPaidByReference(supabase: Db, reference
   }
 
   if (registration.payment_status === 'paid') {
+    if (evidence) {
+      await supabase
+        .from('weka_mawe_registrations')
+        .update({
+          payment_provider_transaction_id: evidence.transactionId,
+          payment_verified_at: evidence.verifiedAt,
+          payment_currency: evidence.currency,
+        })
+        .eq('id', registration.id)
+        .is('payment_provider_transaction_id', null);
+    }
     return { success: true };
   }
 
@@ -303,6 +321,13 @@ export async function markWekaMawePaymentPaidByReference(supabase: Db, reference
       payment_status: 'paid',
       eligibility_status: 'verified',
       payment_confirmed_at: new Date().toISOString(),
+      ...(evidence
+        ? {
+            payment_provider_transaction_id: evidence.transactionId,
+            payment_verified_at: evidence.verifiedAt,
+            payment_currency: evidence.currency,
+          }
+        : {}),
       updated_at: new Date().toISOString(),
     })
     .eq('id', registration.id)
@@ -407,17 +432,22 @@ export async function verifyAndMarkWekaMawePayment(params: {
     return { success: true };
   }
 
-  const { verifyTournamentPayment } = await import('@/lib/paystack');
-  const verified = await verifyTournamentPayment({
+  const { verifyMechiPaymentByReference } = await import('@/lib/payment-verification');
+  const verified = await verifyMechiPaymentByReference({
+    supabase: params.supabase,
+    kind: 'weka_mawe',
     reference: params.reference,
-    expectedAmountKes: Number(data.amount_kes ?? WEKA_MAWE_ENTRY_FEE_KES),
   });
 
   if (!verified.success) {
     return { success: false, error: verified.error ?? 'Payment is not complete yet.' };
   }
 
-  return markWekaMawePaymentPaidByReference(params.supabase, params.reference);
+  return markWekaMawePaymentPaidByReference(
+    params.supabase,
+    params.reference,
+    getPaymentVerificationEvidence(verified)
+  );
 }
 
 export async function checkInWekaMawePlayer(params: { supabase: Db; userId: string }) {

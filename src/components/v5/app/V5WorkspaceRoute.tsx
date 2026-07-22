@@ -27,6 +27,8 @@ import { V5MatchRoom } from '@/components/v5/app/V5MatchRoom';
 import { V5PlayerTournamentFlow } from '@/components/v5/app/V5PlayerTournamentFlow';
 import { V5RoleSection } from '@/components/v5/app/V5RoleSection';
 import { V5TournamentWizard } from '@/components/v5/app/V5TournamentWizard';
+import { V5IncomingInvitations, V5WorkspacePeople } from '@/components/v5/app/V5WorkspacePeople';
+import { V5WorkspaceSettings } from '@/components/v5/app/V5WorkspaceSettings';
 import { V5_WORKSPACES, type V5WorkspaceKind } from '@/components/v5/app/v5-workspaces';
 import styles from './V5WorkspaceRoute.module.css';
 
@@ -202,11 +204,47 @@ export function V5WorkspaceRoute({ workspace, section }: { workspace: V5Workspac
 
 function WorkspaceOverview({ workspace, data }: { workspace: V5WorkspaceKind; data: LiveWorkspaceData }) {
   const { user } = useAuth();
+  const authFetch = useAuthFetch();
+  const [organizerActivation, setOrganizerActivation] = useState<'checking' | 'inactive' | 'active' | 'saving' | 'error'>('checking');
   const [renderedAt] = useState(() => Date.now());
   const organizerTournaments = useMemo(
     () => data.tournaments.filter((tournament) => tournament.organizer_id === user?.id),
     [data.tournaments, user?.id]
   );
+
+  useEffect(() => {
+    let active = true;
+    async function checkOrganizerWorkspace() {
+      if (workspace !== 'organizer') return;
+      try {
+        const response = await authFetch('/api/v5/workspaces');
+        const payload = response.ok
+          ? ((await response.json()) as { workspaces?: Array<{ type: string; persisted?: boolean }> })
+          : null;
+        const exists = payload?.workspaces?.some(
+          (item) => item.type === 'organizer' && item.persisted !== false
+        );
+        if (active) setOrganizerActivation(exists ? 'active' : 'inactive');
+      } catch {
+        if (active) setOrganizerActivation('error');
+      }
+    }
+    void checkOrganizerWorkspace();
+    return () => { active = false; };
+  }, [authFetch, workspace]);
+
+  async function activateOrganizerWorkspace() {
+    setOrganizerActivation('saving');
+    try {
+      const response = await authFetch('/api/v5/workspaces', {
+        method: 'POST',
+        body: JSON.stringify({ type: 'organizer', name: `${user?.username || 'Mechi'} tournaments` }),
+      });
+      setOrganizerActivation(response.ok ? 'active' : 'error');
+    } catch {
+      setOrganizerActivation('error');
+    }
+  }
 
   const firstName = user?.username?.split(/[ _-]/)[0] || 'player';
   const nextTournament = data.tournaments
@@ -312,6 +350,23 @@ function WorkspaceOverview({ workspace, data }: { workspace: V5WorkspaceKind; da
           actionHref="/app/organizer/tournaments/new"
           actionLabel="Create tournament"
         />
+        {organizerActivation !== 'active' ? (
+          <div className={styles.controlBlocker}>
+            <ShieldCheck size={20} />
+            <div>
+              <strong>Activate the organizer workspace before operating tournaments.</strong>
+              <span>This creates the permission and audit boundary for staff, approvals, and finance visibility.</span>
+            </div>
+            <button
+              className={styles.secondaryButton}
+              type="button"
+              onClick={() => void activateOrganizerWorkspace()}
+              disabled={organizerActivation === 'checking' || organizerActivation === 'saving'}
+            >
+              {organizerActivation === 'saving' ? 'Activating…' : organizerActivation === 'checking' ? 'Checking…' : 'Activate organizer'}
+            </button>
+          </div>
+        ) : null}
         <PolicyNotice />
         <div className={styles.metricGrid}>
           <MetricCard icon={<Trophy />} label="Tournaments" value={String(organizerTournaments.length)} note="Owned by this account" />
@@ -440,6 +495,29 @@ function WorkspaceSection({ workspace, section, data }: { workspace: V5Workspace
     return <TournamentControl tournament={data.tournaments.find((item) => item.slug === slug)} loading={data.loading} />;
   }
   const baseSection = section.split('/')[0];
+  if (workspace === 'team' && baseSection === 'roster') {
+    return <div className={styles.page}><PageHeading eyebrow="Team workspace" title="Team roster" description="Active members, roster roles, and competition access in one permission-scoped record." /><V5WorkspacePeople workspace="team" mode="members" /></div>;
+  }
+  if (workspace === 'team' && baseSection === 'invitations') {
+    return <div className={styles.page}><PageHeading eyebrow="Team workspace" title="Team invitations" description="Invite players into a named role and track every response and expiry." /><V5WorkspacePeople workspace="team" mode="invitations" /></div>;
+  }
+  if (workspace === 'organizer' && baseSection === 'staff') {
+    return <div className={styles.page}><PageHeading eyebrow="Organizer workspace" title="Staff and access" description="Operations, communications, and finance visibility stay separated by role." /><V5WorkspacePeople workspace="organizer" mode="members" /></div>;
+  }
+  if (workspace === 'shop' && baseSection === 'staff') {
+    return <div className={styles.page}><PageHeading eyebrow="Gaming shop workspace" title="Venue and tournament staff" description="Grant only the access each staff member needs, with a durable audit trail." /><V5WorkspacePeople workspace="shop" mode="members" /></div>;
+  }
+  if (
+    (workspace === 'team' && baseSection === 'settings') ||
+    (workspace === 'organizer' && baseSection === 'organization') ||
+    (workspace === 'creator' && baseSection === 'profile') ||
+    (workspace === 'coach' && baseSection === 'profile') ||
+    (workspace === 'sponsor' && baseSection === 'company') ||
+    (workspace === 'shop' && baseSection === 'profile')
+  ) {
+    const copy = SECTION_COPY[baseSection] ?? SECTION_COPY.profile;
+    return <div className={styles.page}><PageHeading eyebrow={V5_WORKSPACES[workspace].label} title={copy.title} description={copy.description} /><V5WorkspaceSettings workspace={workspace} /></div>;
+  }
   if (workspace === 'player' && ['tournaments', 'challenges', 'matches', 'wallet', 'inbox', 'profile', 'rankings'].includes(baseSection)) {
     return <PlayerSection section={section} data={data} />;
   }
@@ -493,6 +571,7 @@ function PlayerSection({ section, data }: { section: string; data: LiveWorkspace
   }
   if (section === 'inbox') {
     return <div className={styles.page}><PageHeading eyebrow="All workspaces" title={copy.title} description={`${data.unreadCount} unread · Every item names the workspace that owns the next action.`} />
+      <V5IncomingInvitations />
       <section className={styles.panel}><PanelHeading title="Latest notifications" />{data.loading?<div className={styles.rowSkeleton}><span/><span/><span/></div>:data.notifications.length?<div className={styles.notificationRows}>{data.notifications.map((item)=><Link href={item.href || '/app/player'} key={item.id} className={item.read_at?styles.notificationRead:styles.notificationUnread}><span/><div><strong>{item.title}</strong><small>{item.body || 'Open for details and next action.'}</small></div><time>{new Intl.DateTimeFormat('en-KE',{day:'numeric',month:'short'}).format(new Date(item.created_at))}</time></Link>)}</div>:<EmptyInline title="Your inbox is clear" body="Tournament updates, match actions and workspace invitations will appear here." href="/app/player" action="Back to overview"/>}</section></div>;
   }
   if (section === 'profile') {

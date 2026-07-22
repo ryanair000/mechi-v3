@@ -3,12 +3,6 @@ import { tryClaimBounty } from '@/lib/bounties';
 import { generateBracket, getNextBracketPosition, type TournamentSize } from '@/lib/bracket';
 import { GAMES } from '@/lib/config';
 import {
-  createMobileMoneyRecipient,
-  disbursePrize,
-  isPaystackConfigured,
-  normaliseKenyanPhone,
-} from '@/lib/paystack';
-import {
   CONFIRMED_PAYMENT_STATUSES,
   getTournamentPaymentMetrics,
   getTournamentPrizeSnapshot,
@@ -21,6 +15,7 @@ import {
 } from '@/lib/email';
 import { createNotifications } from '@/lib/notifications';
 import { sendTournamentRegistrationTelegramNotification } from '@/lib/telegram';
+import type { PaymentVerificationEvidence } from '@/lib/payment-verification';
 import type {
   GameKey,
   Match,
@@ -161,7 +156,8 @@ export async function maybeMarkTournamentFull(
 
 export async function markTournamentPaymentPaidByReference(
   supabase: SupabaseClient,
-  reference: string
+  reference: string,
+  evidence?: PaymentVerificationEvidence | null
 ): Promise<{ success: boolean; tournamentId?: string; error?: string }> {
   const { data: playerRaw, error: playerError } = await supabase
     .from('tournament_players')
@@ -178,13 +174,33 @@ export async function markTournamentPaymentPaidByReference(
   }
 
   if (player.payment_status === 'paid' || player.payment_status === 'free') {
+    if (player.payment_status === 'paid' && evidence) {
+      await supabase
+        .from('tournament_players')
+        .update({
+          payment_provider_transaction_id: evidence.transactionId,
+          payment_verified_at: evidence.verifiedAt,
+          payment_currency: evidence.currency,
+        })
+        .eq('id', player.id)
+        .is('payment_provider_transaction_id', null);
+    }
     await maybeMarkTournamentFull(supabase, player.tournament_id);
     return { success: true, tournamentId: player.tournament_id };
   }
 
   const { error: updateError } = await supabase
     .from('tournament_players')
-    .update({ payment_status: 'paid' })
+    .update({
+      payment_status: 'paid',
+      ...(evidence
+        ? {
+            payment_provider_transaction_id: evidence.transactionId,
+            payment_verified_at: evidence.verifiedAt,
+            payment_currency: evidence.currency,
+          }
+        : {}),
+    })
     .eq('id', player.id)
     .in('payment_status', ['pending', 'failed']);
 
@@ -320,6 +336,13 @@ export async function startTournament(params: {
 
   if (tournament.organizer_id !== requesterId) {
     return { success: false, error: 'Only the organizer can start this tournament' };
+  }
+
+  if (tournament.participant_type === 'team') {
+    return {
+      success: false,
+      error: 'Team bracket operation is not enabled yet; entries remain safely locked.',
+    };
   }
 
   if (tournament.status !== 'full') {
@@ -569,22 +592,10 @@ async function completeTournament(params: {
     .single();
 
   const winner = winnerRaw as ProfileLite | null;
-  let payoutStatus: 'none' | 'pending' | 'paid' | 'failed' =
-    tournament.prize_pool > 0 ? 'pending' : 'none';
-  let payoutRef: string | null = null;
-  let payoutError: string | null = null;
-
-  if (winner && tournament.prize_pool > 0) {
-    const payout = await attemptPrizePayout({
-      winner,
-      amountKes: tournament.prize_pool,
-      title: tournament.title,
-    });
-
-    payoutStatus = payout.status;
-    payoutRef = payout.reference ?? null;
-    payoutError = payout.error ?? null;
-  }
+  // Tournament completion records eligibility; it never moves money. Prize
+  // release requires a separate Mechi operations decision with recipient,
+  // dispute, duplicate, and funding checks visible together.
+  const payoutStatus: 'none' | 'pending' = tournament.prize_pool > 0 ? 'pending' : 'none';
 
   await supabase
     .from('tournaments')
@@ -592,8 +603,8 @@ async function completeTournament(params: {
       status: 'completed',
       winner_id: winnerId,
       payout_status: payoutStatus,
-      payout_ref: payoutRef,
-      payout_error: payoutError,
+      payout_ref: null,
+      payout_error: tournament.prize_pool > 0 ? 'Awaiting Mechi payout eligibility review' : null,
       ended_at: new Date().toISOString(),
     })
     .eq('id', tournament.id);
@@ -607,45 +618,6 @@ async function completeTournament(params: {
       tournamentUrl: getTournamentUrl(tournament.slug),
     }).catch(console.error);
   }
-}
-
-async function attemptPrizePayout(params: {
-  winner: ProfileLite;
-  amountKes: number;
-  title: string;
-}): Promise<{ status: 'pending' | 'paid' | 'failed'; reference?: string; error?: string }> {
-  if (!isPaystackConfigured()) {
-    if (process.env.NODE_ENV === 'production') {
-      return { status: 'pending', error: 'Payment provider is not configured' };
-    }
-
-    return { status: 'paid', reference: `dev_transfer_${Date.now()}` };
-  }
-
-  if (!params.winner.phone) {
-    return { status: 'pending', error: 'Winner has no phone number for payout' };
-  }
-
-  const recipient = await createMobileMoneyRecipient({
-    name: params.winner.username,
-    phone: normaliseKenyanPhone(params.winner.phone),
-  });
-
-  if (!recipient.success || !recipient.recipientCode) {
-    return { status: 'pending', error: recipient.error ?? 'Payout recipient unavailable' };
-  }
-
-  const transfer = await disbursePrize({
-    recipientCode: recipient.recipientCode,
-    amountKes: params.amountKes,
-    reason: `Mechi prize: ${params.title}`,
-  });
-
-  if (!transfer.success) {
-    return { status: 'failed', error: transfer.error ?? 'Payout failed' };
-  }
-
-  return { status: 'paid', reference: transfer.reference };
 }
 
 async function notifyTournamentMatchReady(params: {

@@ -6,7 +6,10 @@ import { sendTournamentRegistrationConfirmedEmail } from '@/lib/email';
 import { createNotifications } from '@/lib/notifications';
 import { createServiceClient } from '@/lib/supabase';
 import { getAppUrl, markTournamentPaymentPaidByReference } from '@/lib/tournaments';
-import { verifyTournamentPayment } from '@/lib/paystack';
+import {
+  getPaymentVerificationEvidence,
+  verifyMechiPaymentByReference,
+} from '@/lib/payment-verification';
 import type { NotificationType, Tournament } from '@/types';
 
 export async function POST(
@@ -57,9 +60,10 @@ export async function POST(
       return NextResponse.json({ status: 'paid' });
     }
 
-    const verified = await verifyTournamentPayment({
+    const verified = await verifyMechiPaymentByReference({
+      supabase,
+      kind: 'tournament',
       reference,
-      expectedAmountKes: tournament.entry_fee,
     });
 
     if (!verified.success) {
@@ -69,7 +73,11 @@ export async function POST(
       );
     }
 
-    const confirmed = await markTournamentPaymentPaidByReference(supabase, reference);
+    const confirmed = await markTournamentPaymentPaidByReference(
+      supabase,
+      reference,
+      getPaymentVerificationEvidence(verified)
+    );
     if (!confirmed.success) {
       return NextResponse.json(
         { error: confirmed.error ?? 'Could not confirm tournament payment' },

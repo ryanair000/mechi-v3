@@ -35,8 +35,6 @@ function getCountdownSnapshot(closesAt: string, nowMs = Date.now()): CountdownSn
 export function LandingCountdownSection({
   closesAt,
   closesLabel,
-  playerCap,
-  registeredPlayers,
   initialSnapshot,
 }: LandingCountdownSectionProps) {
   const [snapshot, setSnapshot] = useState<CountdownSnapshot>(initialSnapshot);

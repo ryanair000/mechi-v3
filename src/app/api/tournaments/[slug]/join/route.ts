@@ -328,6 +328,7 @@ export async function POST(
       metadata: {
         app: 'mechi',
         source: 'mechi',
+        type: 'tournament_registration',
         tournament_id: tournament.id,
         tournament_slug: tournament.slug,
         user_id: authUser.id,

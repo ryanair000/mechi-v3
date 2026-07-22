@@ -44,9 +44,9 @@ export default async function ModeratorSignupPage() {
     >
       <main className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
         <div className="mb-5 flex items-center justify-between gap-3">
-          <a href="/dashboard" className="flex items-center">
+          <Link href="/dashboard" className="flex items-center">
             <BrandLogo size="sm" variant="reversed" />
-          </a>
+          </Link>
           <div className="flex flex-wrap gap-2">
             {access.signedIn ? (
               <Link href="/moderators" className="btn-ghost">

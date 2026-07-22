@@ -57,6 +57,13 @@ export async function GET(request: NextRequest) {
 
   if (ownedError || membershipError) {
     const migrationPending = ownedError?.code === '42P01' || membershipError?.code === '42P01';
+    if (!migrationPending) {
+      console.error('[V5 Workspaces] Could not load workspaces', {
+        ownedCode: ownedError?.code,
+        membershipCode: membershipError?.code,
+      });
+      return NextResponse.json({ error: 'Workspaces could not be loaded.' }, { status: 500 });
+    }
     return NextResponse.json({
       workspaces: fallbackWorkspaces(user),
       available_types: Array.from(ACTIVATABLE_TYPES),
@@ -125,52 +132,23 @@ export async function POST(request: NextRequest) {
 
   const slugBase = makeSlug(name) || type;
   const slug = `${slugBase}-${crypto.randomUUID().slice(0, 6)}`;
-  const verificationStatus = ['sponsor', 'shop'].includes(type) ? 'unverified' : 'unverified';
-  const { data: workspace, error: workspaceError } = await supabase
-    .from('workspaces')
-    .insert({
-      type,
-      owner_id: user.id,
-      name,
-      slug,
-      status: 'active',
-      verification_status: verificationStatus,
-      is_public: false,
-    })
-    .select('id,type,name,slug,status,verification_status,is_public')
-    .single();
+  const { data: workspace, error: workspaceError } = await supabase.rpc(
+    'create_v5_workspace',
+    {
+      p_owner_id: user.id,
+      p_type: type,
+      p_name: name,
+      p_slug: slug,
+    }
+  );
 
   if (workspaceError || !workspace) {
-    const migrationPending = workspaceError?.code === '42P01';
+    const migrationPending = workspaceError?.code === '42P01' || workspaceError?.code === '42883';
     return NextResponse.json(
       { error: migrationPending ? 'V5 workspace storage is not ready yet.' : 'Workspace could not be created.', code: workspaceError?.code },
       { status: migrationPending ? 503 : 409 }
     );
   }
 
-  const { error: membershipError } = await supabase.from('workspace_members').insert({
-    workspace_id: workspace.id,
-    user_id: user.id,
-    role: 'owner',
-    status: 'active',
-    permissions: ['workspace:*'],
-    joined_at: new Date().toISOString(),
-  });
-
-  if (membershipError) {
-    await supabase.from('workspaces').delete().eq('id', workspace.id).eq('owner_id', user.id);
-    return NextResponse.json({ error: 'Workspace membership could not be created.' }, { status: 500 });
-  }
-
-  await supabase.from('workspace_audit_events').insert({
-    workspace_id: workspace.id,
-    actor_user_id: user.id,
-    action: 'workspace.created',
-    subject_type: 'workspace',
-    subject_id: workspace.id,
-    reason: `Activated ${type} workspace`,
-    after_summary: { type, name, status: 'active' },
-  });
-
-  return NextResponse.json({ workspace: { ...workspace, role: 'owner', persisted: true } }, { status: 201 });
+  return NextResponse.json({ workspace }, { status: 201 });
 }

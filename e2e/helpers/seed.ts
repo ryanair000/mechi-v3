@@ -94,6 +94,10 @@ export type TournamentInput = {
   status?: 'open' | 'full' | 'active' | 'completed' | 'cancelled';
   scheduledFor?: string | null;
   joinedUserIds?: string[];
+  participantType?: 'solo' | 'team';
+  teamSize?: number | null;
+  organizerWorkspaceId?: string | null;
+  seedOrganizerAsPlayer?: boolean;
 };
 
 export type LiveStreamInput = {
@@ -182,6 +186,16 @@ export type SuggestionInput = {
 };
 
 const RESET_TABLES = [
+  'workspace_audit_events',
+  'tournament_entry_members',
+  'tournament_entries',
+  'team_roster_snapshots',
+  'team_members',
+  'teams',
+  'workspace_preferences',
+  'workspace_invitations',
+  'workspace_members',
+  'workspaces',
   'admin_audit_logs',
   'bounty_claim_attempts',
   'bounties',
@@ -393,6 +407,155 @@ async function seedProfiles(client: SeedClient) {
   }
 }
 
+async function seedV5Workspaces(client: SeedClient) {
+  const workspaces = [
+    {
+      id: SCENARIO_IDS.organizerWorkspace,
+      type: 'organizer',
+      owner_id: SEEDED_PERSONAS.playerElite.id,
+      name: 'E2E Tournament Operations',
+      slug: 'e2e-tournament-operations',
+      status: 'active',
+      verification_status: 'verified',
+      is_public: true,
+      description: 'Deterministic organizer workspace for V5 browser coverage.',
+      country: 'kenya',
+      region: 'Mombasa',
+    },
+    {
+      id: SCENARIO_IDS.teamWorkspace,
+      type: 'team',
+      owner_id: SEEDED_PERSONAS.playerPro.id,
+      name: 'E2E Rift Squad',
+      slug: 'e2e-rift-squad',
+      status: 'active',
+      verification_status: 'unverified',
+      is_public: false,
+      description: 'Deterministic V5 team workspace.',
+      country: 'kenya',
+      region: 'Nakuru',
+    },
+    {
+      id: SCENARIO_IDS.creatorWorkspace,
+      type: 'creator',
+      owner_id: SEEDED_PERSONAS.playerFree.id,
+      name: 'E2E Creator Studio',
+      slug: 'e2e-creator-studio',
+      status: 'active',
+      verification_status: 'unverified',
+      is_public: false,
+    },
+    {
+      id: SCENARIO_IDS.coachWorkspace,
+      type: 'coach',
+      owner_id: SEEDED_PERSONAS.playerOpponentA.id,
+      name: 'E2E Coach Authority',
+      slug: 'e2e-coach-authority',
+      status: 'active',
+      verification_status: 'unverified',
+      is_public: false,
+    },
+    {
+      id: SCENARIO_IDS.sponsorWorkspace,
+      type: 'sponsor',
+      owner_id: SEEDED_PERSONAS.rewardLinkedUser.id,
+      name: 'E2E Sponsor Company',
+      slug: 'e2e-sponsor-company',
+      status: 'active',
+      verification_status: 'pending',
+      is_public: false,
+    },
+    {
+      id: SCENARIO_IDS.shopWorkspace,
+      type: 'shop',
+      owner_id: SEEDED_PERSONAS.supportContact.id,
+      name: 'E2E Gaming Shop',
+      slug: 'e2e-gaming-shop',
+      status: 'active',
+      verification_status: 'pending',
+      is_public: false,
+      country: 'kenya',
+      region: 'Nairobi',
+    },
+  ];
+  const { error: workspaceError } = await client.from('workspaces').insert(workspaces);
+  assertNoError(workspaceError, 'Failed to seed V5 workspaces');
+
+  const ownerByWorkspace = [
+    [SCENARIO_IDS.organizerWorkspace, SEEDED_PERSONAS.playerElite.id, 'owner', ['workspace:*']],
+    [SCENARIO_IDS.teamWorkspace, SEEDED_PERSONAS.playerPro.id, 'captain', ['workspace:read', 'workspace:update', 'workspace:members:*', 'workspace:invitations:*', 'team:*']],
+    [SCENARIO_IDS.creatorWorkspace, SEEDED_PERSONAS.playerFree.id, 'owner', ['workspace:*']],
+    [SCENARIO_IDS.coachWorkspace, SEEDED_PERSONAS.playerOpponentA.id, 'owner', ['workspace:*']],
+    [SCENARIO_IDS.sponsorWorkspace, SEEDED_PERSONAS.rewardLinkedUser.id, 'owner', ['workspace:*']],
+    [SCENARIO_IDS.shopWorkspace, SEEDED_PERSONAS.supportContact.id, 'owner', ['workspace:*']],
+  ] as const;
+  const { error: membershipError } = await client.from('workspace_members').insert(
+    ownerByWorkspace.map(([workspaceId, userId, role, permissions]) => ({
+      workspace_id: workspaceId,
+      user_id: userId,
+      role,
+      status: 'active',
+      permissions: [...permissions],
+      joined_at: nowMinusDays(5),
+    }))
+  );
+  assertNoError(membershipError, 'Failed to seed V5 workspace owners');
+
+  const { error: teamError } = await client.from('teams').insert({
+    id: SCENARIO_IDS.team,
+    workspace_id: SCENARIO_IDS.teamWorkspace,
+    game: 'efootball',
+    platform: 'ps',
+    tag: 'E2E',
+    roster_status: 'building',
+    captain_user_id: SEEDED_PERSONAS.playerPro.id,
+  });
+  assertNoError(teamError, 'Failed to seed V5 team');
+
+  const { error: teamMemberError } = await client.from('team_members').insert([
+    {
+      team_id: SCENARIO_IDS.team,
+      user_id: SEEDED_PERSONAS.playerPro.id,
+      roster_role: 'captain',
+      status: 'active',
+      joined_at: nowMinusDays(5),
+    },
+    {
+      team_id: SCENARIO_IDS.team,
+      user_id: SEEDED_PERSONAS.playerOpponentA.id,
+      roster_role: 'starter',
+      status: 'active',
+      joined_at: nowMinusDays(2),
+    },
+  ]);
+  assertNoError(teamMemberError, 'Failed to seed V5 team members');
+
+  const { error: invitedMemberError } = await client.from('workspace_members').insert({
+    workspace_id: SCENARIO_IDS.teamWorkspace,
+    user_id: SEEDED_PERSONAS.playerOpponentA.id,
+    role: 'starter',
+    status: 'active',
+    permissions: ['workspace:read', 'team:read'],
+    invited_by: SEEDED_PERSONAS.playerPro.id,
+    joined_at: nowMinusDays(2),
+  });
+  assertNoError(invitedMemberError, 'Failed to seed V5 team workspace member');
+
+  const { error: invitationError } = await client.from('workspace_invitations').insert({
+    id: SCENARIO_IDS.workspaceInvitation,
+    workspace_id: SCENARIO_IDS.teamWorkspace,
+    invited_by: SEEDED_PERSONAS.playerPro.id,
+    invited_user_id: SEEDED_PERSONAS.playerOpponentB.id,
+    invited_email: SEEDED_PERSONAS.playerOpponentB.email,
+    role: 'substitute',
+    permissions: ['workspace:read', 'team:read'],
+    token_hash: 'e2e'.padEnd(64, '0'),
+    status: 'pending',
+    expires_at: nowPlusDays(5),
+  });
+  assertNoError(invitationError, 'Failed to seed V5 workspace invitation');
+}
+
 export async function createQueueEntry(client: SeedClient, input: QueueEntryInput) {
   const { error } = await client.from('queue').insert({
     id: input.id ?? randomUUID(),
@@ -479,6 +642,9 @@ export async function createLobby(client: SeedClient, input: LobbyInput): Promis
     max_players: input.maxPlayers ?? 4,
     status: input.status ?? 'open',
     scheduled_for: input.scheduledFor ?? null,
+    participant_type: input.participantType ?? 'solo',
+    team_size: input.participantType === 'team' ? input.teamSize ?? 2 : null,
+    organizer_workspace_id: input.organizerWorkspaceId ?? null,
   });
   assertNoError(lobbyError, 'Failed to create lobby');
 
@@ -522,9 +688,10 @@ export async function createTournament(
   });
   assertNoError(tournamentError, 'Failed to create tournament');
 
-  const joinedUsers = Array.from(
-    new Set([input.organizerId, ...(input.joinedUserIds ?? [])])
-  );
+  const joinedUsers = Array.from(new Set([
+    ...(input.seedOrganizerAsPlayer === false ? [] : [input.organizerId]),
+    ...(input.joinedUserIds ?? []),
+  ]));
 
   if (joinedUsers.length > 0) {
     const { error: playerError } = await client.from('tournament_players').insert(
@@ -771,6 +938,23 @@ async function seedBaselineFixtures(client: SeedClient, environment: E2EEnvironm
     ],
   });
 
+  await createTournament(client, {
+    id: SCENARIO_IDS.teamTournament,
+    organizerId: SEEDED_PERSONAS.playerElite.id,
+    organizerWorkspaceId: SCENARIO_IDS.organizerWorkspace,
+    slug: 'e2e-team-cup',
+    title: `E2E Team Cup ${environment.runId}`,
+    game: 'efootball',
+    platform: 'ps',
+    region: 'Nairobi',
+    size: 4,
+    entryFee: 0,
+    prizePool: 0,
+    participantType: 'team',
+    teamSize: 2,
+    seedOrganizerAsPlayer: false,
+  });
+
   const liveTournamentId = await createTournament(client, {
     id: SCENARIO_IDS.liveTournament,
     organizerId: SEEDED_PERSONAS.playerElite.id,
@@ -950,6 +1134,7 @@ export async function seedBaseline(environment: E2EEnvironment): Promise<void> {
   const client = createE2ESupabaseClient(environment);
   await resetE2EDatabase(client);
   await seedProfiles(client);
+  await seedV5Workspaces(client);
   await seedBaselineFixtures(client, environment);
   await seedAuthStates(environment);
 }

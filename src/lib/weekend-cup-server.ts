@@ -3,6 +3,7 @@ import {
   sendWeekendCupPaymentConfirmedEmail,
 } from '@/lib/email';
 import { createNotification } from '@/lib/notifications';
+import type { PaymentVerificationEvidence } from '@/lib/payment-verification';
 import { getPhoneLookupVariants } from '@/lib/phone';
 import { createServiceClient } from '@/lib/supabase';
 import { sendOnlineTournamentRegistrationTelegramNotification } from '@/lib/telegram';
@@ -675,7 +676,8 @@ export async function getWeekendCupRegistrationStatusForSupport(params: {
 
 export async function markWeekendCupPaymentPaidByReference(
   supabase: SupabaseClient,
-  reference: string
+  reference: string,
+  evidence?: PaymentVerificationEvidence | null
 ): Promise<{ success: boolean; registrationId?: string; error?: string }> {
   const { data: registrationRaw, error: registrationError } = await supabase
     .from('online_tournament_registrations')
@@ -710,6 +712,17 @@ export async function markWeekendCupPaymentPaidByReference(
   }
 
   if (registration.payment_status === 'paid') {
+    if (evidence) {
+      await supabase
+        .from('online_tournament_registrations')
+        .update({
+          payment_provider_transaction_id: evidence.transactionId,
+          payment_verified_at: evidence.verifiedAt,
+          payment_currency: evidence.currency,
+        })
+        .eq('id', registration.id)
+        .is('payment_provider_transaction_id', null);
+    }
     return { success: true, registrationId: registration.id };
   }
 
@@ -719,6 +732,13 @@ export async function markWeekendCupPaymentPaidByReference(
       payment_status: 'paid',
       payment_confirmed_at: new Date().toISOString(),
       payment_note: 'Paystack payment confirmed. Confirmed slot assigned.',
+      ...(evidence
+        ? {
+            payment_provider_transaction_id: evidence.transactionId,
+            payment_verified_at: evidence.verifiedAt,
+            payment_currency: evidence.currency,
+          }
+        : {}),
       updated_at: new Date().toISOString(),
     })
     .eq('id', registration.id)

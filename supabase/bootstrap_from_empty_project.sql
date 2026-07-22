@@ -1370,3 +1370,81 @@ CREATE INDEX IF NOT EXISTS idx_auth_action_tokens_expires_at
 
 REVOKE ALL ON TABLE auth_action_tokens FROM anon, authenticated;
 GRANT ALL ON auth_action_tokens TO service_role;
+
+-- Final least-privilege pass. PostgreSQL grants EXECUTE on functions to PUBLIC
+-- by default, so browser/Data API roles must be removed through PUBLIC as well
+-- as through their named role grants.
+ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public
+  REVOKE EXECUTE ON FUNCTIONS FROM PUBLIC, anon, authenticated;
+
+ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public
+  REVOKE ALL ON TABLES FROM anon, authenticated;
+
+ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public
+  REVOKE ALL ON SEQUENCES FROM anon, authenticated;
+
+REVOKE EXECUTE ON ALL FUNCTIONS IN SCHEMA public FROM PUBLIC, anon, authenticated;
+REVOKE ALL PRIVILEGES ON ALL TABLES IN SCHEMA public FROM anon, authenticated;
+REVOKE ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public FROM anon, authenticated;
+
+ALTER FUNCTION public.finalize_match_with_gamification(
+  uuid,
+  uuid,
+  integer,
+  integer,
+  integer,
+  integer,
+  text,
+  text,
+  text,
+  integer,
+  integer,
+  integer,
+  integer,
+  integer,
+  integer,
+  integer,
+  integer,
+  integer,
+  integer,
+  date,
+  text[],
+  text[],
+  jsonb,
+  jsonb
+) SECURITY INVOKER;
+
+ALTER FUNCTION public.increment_match_usage(uuid, date) SECURITY INVOKER;
+ALTER FUNCTION public.increment_match_usage(uuid, date) SET search_path = public;
+ALTER FUNCTION public.check_rate_limit_attempt(text, integer, integer) SECURITY INVOKER;
+ALTER FUNCTION public.check_rate_limit_attempt(text, integer, integer) SET search_path = public;
+
+GRANT EXECUTE ON FUNCTION public.finalize_match_with_gamification(
+  uuid,
+  uuid,
+  integer,
+  integer,
+  integer,
+  integer,
+  text,
+  text,
+  text,
+  integer,
+  integer,
+  integer,
+  integer,
+  integer,
+  integer,
+  integer,
+  integer,
+  integer,
+  integer,
+  date,
+  text[],
+  text[],
+  jsonb,
+  jsonb
+) TO service_role;
+
+GRANT EXECUTE ON FUNCTION public.increment_match_usage(uuid, date) TO service_role;
+GRANT EXECUTE ON FUNCTION public.check_rate_limit_attempt(text, integer, integer) TO service_role;

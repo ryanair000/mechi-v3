@@ -53,12 +53,13 @@ export function NavigationFeedback() {
     };
   }, []);
 
-  if (!destinationLocation || destinationLocation === currentLocation) return null;
+  const visible = Boolean(destinationLocation && destinationLocation !== currentLocation);
 
   return (
     <div
       aria-live="polite"
       aria-label="Opening the next PlayMechi screen"
+      aria-hidden={!visible}
       role="status"
       style={{
         position: 'fixed',
@@ -69,6 +70,9 @@ export function NavigationFeedback() {
         background: 'rgba(244, 247, 251, 0.96)',
         color: '#0b1121',
         pointerEvents: 'none',
+        opacity: visible ? 1 : 0,
+        visibility: visible ? 'visible' : 'hidden',
+        transition: 'opacity 120ms ease',
       }}
     >
       <div

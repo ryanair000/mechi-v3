@@ -39,7 +39,8 @@ type TournamentRow = {
 };
 
 const PUBLIC_TOURNAMENT_REVALIDATE_SECONDS = 30;
-const PUBLIC_TOURNAMENT_QUERY_TIMEOUT_MS = 2000;
+// Keep public navigation responsive without aborting normal cross-region Supabase reads.
+const PUBLIC_TOURNAMENT_QUERY_TIMEOUT_MS = 5000;
 
 export type PublicTournament = {
   slug: string;

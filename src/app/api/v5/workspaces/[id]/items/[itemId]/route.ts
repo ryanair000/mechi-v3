@@ -4,9 +4,9 @@ import { createServiceClient } from '@/lib/supabase';
 import { cleanText, getWorkspaceAccess } from '@/lib/v5-workspace-access';
 
 const STATUSES = new Set(['draft','ready','in_progress','submitted','approved','changes_requested','completed','cancelled','archived']);
-export async function PATCH(request: NextRequest, context: { params: Promise<{ workspaceId: string; itemId: string }> }) {
+export async function PATCH(request: NextRequest, context: { params: Promise<{ id: string; itemId: string }> }) {
   const access = await requireActiveAccessProfile(request); if (access.response) return access.response;
-  const { workspaceId, itemId } = await context.params; const supabase = createServiceClient();
+  const { id: workspaceId, itemId } = await context.params; const supabase = createServiceClient();
   const workspace = await getWorkspaceAccess(supabase, access.profile, workspaceId);
   if (!workspace) return NextResponse.json({ error: 'This dashboard is unavailable.' }, { status: 404 });
   const body = await request.json().catch(() => null) as Record<string, unknown> | null;

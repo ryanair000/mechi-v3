@@ -5,18 +5,18 @@ import { cleanText, getWorkspaceAccess } from '@/lib/v5-workspace-access';
 
 const KINDS = new Set(['task','content','guide','analysis','brief','campaign','venue_fact','staff_note','document']);
 
-export async function GET(request: NextRequest, context: { params: Promise<{ workspaceId: string }> }) {
+export async function GET(request: NextRequest, context: { params: Promise<{ id: string }> }) {
   const access = await requireActiveAccessProfile(request); if (access.response) return access.response;
-  const { workspaceId } = await context.params; const supabase = createServiceClient();
+  const { id: workspaceId } = await context.params; const supabase = createServiceClient();
   const workspace = await getWorkspaceAccess(supabase, access.profile, workspaceId);
   if (!workspace) return NextResponse.json({ error: 'This dashboard is unavailable.' }, { status: 404 });
   const { data, error } = await supabase.from('workspace_items').select('id,kind,title,body,status,due_at,metadata,created_at,updated_at,assigned_to').eq('workspace_id', workspaceId).is('archived_at', null).order('created_at', { ascending: false }).limit(100);
   return NextResponse.json({ items: error ? [] : data ?? [], migration_pending: error?.code === '42P01' });
 }
 
-export async function POST(request: NextRequest, context: { params: Promise<{ workspaceId: string }> }) {
+export async function POST(request: NextRequest, context: { params: Promise<{ id: string }> }) {
   const access = await requireActiveAccessProfile(request); if (access.response) return access.response;
-  const { workspaceId } = await context.params; const supabase = createServiceClient();
+  const { id: workspaceId } = await context.params; const supabase = createServiceClient();
   const workspace = await getWorkspaceAccess(supabase, access.profile, workspaceId);
   if (!workspace) return NextResponse.json({ error: 'This dashboard is unavailable.' }, { status: 404 });
   const body = await request.json().catch(() => null) as Record<string, unknown> | null;

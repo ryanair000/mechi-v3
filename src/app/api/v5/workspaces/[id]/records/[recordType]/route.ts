@@ -6,9 +6,9 @@ import { cleanText, getWorkspaceAccess } from '@/lib/v5-workspace-access';
 const TABLES = { announcements: 'workspace_announcements', finance: 'workspace_finance_records', verification: 'workspace_verification_requests' } as const;
 type RecordType = keyof typeof TABLES;
 
-export async function GET(request: NextRequest, context: { params: Promise<{ workspaceId: string; recordType: string }> }) {
+export async function GET(request: NextRequest, context: { params: Promise<{ id: string; recordType: string }> }) {
   const access = await requireActiveAccessProfile(request); if (access.response) return access.response;
-  const { workspaceId, recordType: rawType } = await context.params; const recordType = rawType as RecordType;
+  const { id: workspaceId, recordType: rawType } = await context.params; const recordType = rawType as RecordType;
   if (!(recordType in TABLES)) return NextResponse.json({ error: 'Record type not found.' }, { status: 404 });
   const supabase = createServiceClient(); const workspace = await getWorkspaceAccess(supabase, access.profile, workspaceId);
   if (!workspace) return NextResponse.json({ error: 'This dashboard is unavailable.' }, { status: 404 });
@@ -16,9 +16,9 @@ export async function GET(request: NextRequest, context: { params: Promise<{ wor
   return NextResponse.json({ records: error ? [] : data ?? [], migration_pending: error?.code === '42P01' });
 }
 
-export async function POST(request: NextRequest, context: { params: Promise<{ workspaceId: string; recordType: string }> }) {
+export async function POST(request: NextRequest, context: { params: Promise<{ id: string; recordType: string }> }) {
   const access = await requireActiveAccessProfile(request); if (access.response) return access.response;
-  const { workspaceId, recordType: rawType } = await context.params; const recordType = rawType as RecordType;
+  const { id: workspaceId, recordType: rawType } = await context.params; const recordType = rawType as RecordType;
   if (!(recordType in TABLES)) return NextResponse.json({ error: 'Record type not found.' }, { status: 404 });
   const supabase = createServiceClient(); const workspace = await getWorkspaceAccess(supabase, access.profile, workspaceId);
   if (!workspace) return NextResponse.json({ error: 'This dashboard is unavailable.' }, { status: 404 });

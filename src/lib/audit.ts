@@ -13,6 +13,7 @@ export type AuditAction =
   | 'feature_tournament'
   | 'unfeature_tournament'
   | 'update_tournament_details'
+  | 'approve_tournament_payout'
   | 'cancel_queue_entry'
   | 'rerun_matchmaking'
   | 'close_lobby'

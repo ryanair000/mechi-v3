@@ -19,6 +19,7 @@ import {
 } from '@/lib/instagram';
 import { formatWhatsAppDeliveryError, sendSupportWhatsAppMessage } from '@/lib/whatsapp';
 import { writeAuditLog } from '@/lib/audit';
+import { createNotification } from '@/lib/notifications';
 import type {
   GameKey,
   PlatformKey,
@@ -58,6 +59,12 @@ type SupportThreadRow = {
   priority: SupportThreadPriority;
   assigned_to?: string | null;
   escalation_reason?: string | null;
+  subject?: string | null;
+  issue_category?: string | null;
+  context_type?: string | null;
+  context_id?: string | null;
+  case_reference?: string | null;
+  resolution_summary?: string | null;
   last_message_at: string;
   last_ai_reply_at?: string | null;
   created_at: string;
@@ -327,6 +334,12 @@ function mapSupportThread(
     priority: row.priority,
     assigned_to: row.assigned_to ?? null,
     escalation_reason: row.escalation_reason ?? null,
+    subject: row.subject ?? null,
+    issue_category: row.issue_category ?? null,
+    context_type: row.context_type ?? null,
+    context_id: row.context_id ?? null,
+    case_reference: row.case_reference ?? null,
+    resolution_summary: row.resolution_summary ?? null,
     last_message_at: row.last_message_at,
     last_ai_reply_at: row.last_ai_reply_at ?? null,
     created_at: row.created_at,
@@ -1017,6 +1030,7 @@ async function handleInboundSupportMessage(message: NormalizedSupportMessage) {
   }
 
   const conversation = await getConversationWindow(thread.id);
+  const bridgeChannel = message.channel === 'instagram' ? 'instagram' : 'whatsapp';
 
   try {
     const bridgeResult = await requestSupportReply({
@@ -1024,8 +1038,8 @@ async function handleInboundSupportMessage(message: NormalizedSupportMessage) {
       phone: thread.phone ?? `${thread.channel}:${thread.wa_id}`,
       user_summary: userSummary,
       conversation,
-      mechi_context: buildMechiSupportContext(userSummary, message.channel),
-      system_prompt: buildSupportSystemPrompt(message.channel),
+      mechi_context: buildMechiSupportContext(userSummary, bridgeChannel),
+      system_prompt: buildSupportSystemPrompt(bridgeChannel),
       allowed_topics: SUPPORT_ALLOWED_TOPICS,
       blocked_topics: SUPPORT_BLOCKED_TOPICS,
     });
@@ -1490,6 +1504,51 @@ export async function sendManualSupportReply(params: {
   const threadDetail = await getSupportThreadDetail(params.threadId);
   if (!threadDetail) {
     throw new Error('Thread not found');
+  }
+
+  if (threadDetail.thread.channel === 'in_app') {
+    const supabase = getSupabase();
+    const now = new Date().toISOString();
+    const { error } = await supabase.from('support_messages').insert({
+      thread_id: threadDetail.thread.id,
+      direction: 'outbound',
+      sender_type: 'admin',
+      body: trimmedMessage,
+      message_type: 'text',
+      meta: { source: 'admin_manual', actor_id: params.actorId },
+    });
+    if (error) throw new Error('Could not save the in-app reply');
+
+    await updateThread(params.threadId, {
+      status: 'open',
+      last_message_at: now,
+      updated_at: now,
+    });
+
+    if (threadDetail.thread.user_id) {
+      await createNotification(
+        {
+          user_id: threadDetail.thread.user_id,
+          type: 'support_case_replied',
+          title: `Support replied to ${threadDetail.thread.case_reference ?? 'your case'}`,
+          body: trimmedMessage.slice(0, 140),
+          href: `/support?case=${threadDetail.thread.id}`,
+          metadata: { support_thread_id: threadDetail.thread.id },
+        },
+        supabase
+      );
+    }
+
+    await writeAuditLog({
+      adminId: params.actorId,
+      action: 'reply_support_thread',
+      targetType: 'support',
+      targetId: params.threadId,
+      details: { delivery_ok: true, delivery_status: 'in_app' },
+      ipAddress: params.ipAddress ?? null,
+    });
+
+    return getSupportThreadDetail(params.threadId);
   }
 
   const result = await sendOutboundSupportMessage({

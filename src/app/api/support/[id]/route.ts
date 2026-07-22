@@ -1,0 +1,22 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { requireActiveAccessProfile } from '@/lib/access';
+import { createServiceClient } from '@/lib/supabase';
+
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const access = await requireActiveAccessProfile(request);
+  if (access.response) return access.response;
+  const { id } = await params;
+  const supabase = createServiceClient();
+  const { data: thread } = await supabase
+    .from('support_threads')
+    .select('id, subject, issue_category, context_type, context_id, case_reference, resolution_summary, status, priority, last_message_at, created_at, updated_at')
+    .eq('id', id).eq('channel', 'in_app').eq('user_id', access.profile.id).maybeSingle();
+  if (!thread) return NextResponse.json({ error: 'Support case not found.' }, { status: 404 });
+  const { data: messages, error } = await supabase
+    .from('support_messages')
+    .select('id, direction, sender_type, body, message_type, meta, created_at')
+    .eq('thread_id', id).order('created_at', { ascending: true });
+  if (error) return NextResponse.json({ error: 'Could not load the case conversation.' }, { status: 500 });
+  return NextResponse.json({ case: thread, messages: messages ?? [] });
+}
+

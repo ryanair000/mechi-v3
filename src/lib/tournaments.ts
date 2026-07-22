@@ -252,6 +252,17 @@ export async function startTournament(params: {
     return { success: false, error: 'Only the organizer can start this tournament' };
   }
 
+  if (tournament.entry_fee > 0 && tournament.approval_status !== 'approved') {
+    return { success: false, error: 'Paid tournaments must be approved by Mechi before starting' };
+  }
+
+  if (
+    tournament.entry_fee === 0 &&
+    (tournament.prize_pool_mode === 'specified' || tournament.prize_pool > 0)
+  ) {
+    return { success: false, error: 'Free tournaments cannot include a cash prize or reward' };
+  }
+
   if (tournament.status !== 'full') {
     return { success: false, error: 'Tournament must be full before it starts' };
   }
@@ -277,7 +288,17 @@ export async function startTournament(params: {
     .in('payment_status', [...CONFIRMED_PAYMENT_STATUSES])
     .order('joined_at', { ascending: true });
 
-  const players = ((playersRaw ?? []) as TournamentPlayerRow[]).slice(0, tournament.size);
+  const players = ((playersRaw ?? []) as TournamentPlayerRow[])
+    .sort((left, right) => {
+      const leftCheckedIn = left.check_in_status === 'checked_in' ? 0 : 1;
+      const rightCheckedIn = right.check_in_status === 'checked_in' ? 0 : 1;
+      if (leftCheckedIn !== rightCheckedIn) {
+        return leftCheckedIn - rightCheckedIn;
+      }
+
+      return new Date(left.joined_at).getTime() - new Date(right.joined_at).getTime();
+    })
+    .slice(0, tournament.size);
   if (playersError || players.length !== tournament.size) {
     return { success: false, error: 'Not enough confirmed players' };
   }
@@ -499,22 +520,9 @@ async function completeTournament(params: {
     .single();
 
   const winner = winnerRaw as ProfileLite | null;
-  let payoutStatus: 'none' | 'pending' | 'paid' | 'failed' =
-    tournament.prize_pool > 0 ? 'pending' : 'none';
-  let payoutRef: string | null = null;
-  let payoutError: string | null = null;
-
-  if (winner && tournament.prize_pool > 0) {
-    const payout = await attemptPrizePayout({
-      winner,
-      amountKes: tournament.prize_pool,
-      title: tournament.title,
-    });
-
-    payoutStatus = payout.status;
-    payoutRef = payout.reference ?? null;
-    payoutError = payout.error ?? null;
-  }
+  // Prize transfers are never initiated automatically. Completion creates a
+  // pending payout for explicit Mechi review in the admin workflow.
+  const payoutStatus: 'none' | 'pending' = tournament.prize_pool > 0 ? 'pending' : 'none';
 
   await supabase
     .from('tournaments')
@@ -522,8 +530,8 @@ async function completeTournament(params: {
       status: 'completed',
       winner_id: winnerId,
       payout_status: payoutStatus,
-      payout_ref: payoutRef,
-      payout_error: payoutError,
+      payout_ref: null,
+      payout_error: null,
       ended_at: new Date().toISOString(),
     })
     .eq('id', tournament.id);
@@ -539,7 +547,7 @@ async function completeTournament(params: {
   }
 }
 
-async function attemptPrizePayout(params: {
+export async function attemptPrizePayout(params: {
   winner: ProfileLite;
   amountKes: number;
   title: string;

@@ -1,13 +1,12 @@
 import type { Metadata } from 'next';
-import { OnlineTournamentClient } from '@/app/online-gaming-tournament/online-tournament-client';
-import { ONLINE_TOURNAMENT_TITLE } from '@/lib/online-tournament';
+import { PlayMechiHome } from '@/components/home/PlayMechiHome';
 
 export const metadata: Metadata = {
-  title: `${ONLINE_TOURNAMENT_TITLE} | Mechi.club`,
+  title: 'PlayMechi | The Home of African Competition',
   description:
-    'Register for Playmechi Launch featuring PUBG Mobile, Call of Duty Mobile, and eFootball.',
+    'Find tournaments, host credible competition, build your rank, and grow gaming communities across Africa.',
 };
 
 export default function HomePage() {
-  return <OnlineTournamentClient />;
+  return <PlayMechiHome />;
 }

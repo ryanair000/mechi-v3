@@ -26,7 +26,6 @@ import {
   formatEatDateTime,
   getOnlineTournamentDisplayStatus,
   getOnlineTournamentWindowState,
-  isOnlineTournamentRegistrationClosed,
   type OnlineTournamentGameKey,
 } from '@/lib/online-tournament';
 import { createServiceClient } from '@/lib/supabase';
@@ -104,7 +103,7 @@ function buildGameRows(registrations: RegistrationRow[]): GameDeskRow[] {
     const checkedIn = rows.filter(
       (registration) => registration.check_in_status === 'checked_in'
     ).length;
-    const registrationClosed = isOnlineTournamentRegistrationClosed(game);
+    const registrationOpen = getOnlineTournamentWindowState(game).isRegistrationOpen;
 
     return {
       key: game.game,
@@ -115,7 +114,7 @@ function buildGameRows(registrations: RegistrationRow[]): GameDeskRow[] {
       pending,
       checkedIn,
       slots: game.slots,
-      spotsLeft: registrationClosed ? 0 : Math.max(0, game.slots - rows.length),
+      spotsLeft: registrationOpen ? Math.max(0, game.slots - rows.length) : 0,
     };
   });
 }

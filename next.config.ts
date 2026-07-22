@@ -121,6 +121,40 @@ const nextConfig: NextConfig = {
           { key: "Cache-Control", value: "public, max-age=86400, stale-while-revalidate=3600" },
         ],
       },
+      {
+        source: "/playmechi/dashboard-preview",
+        headers: [
+          {
+            key: "Content-Security-Policy",
+            value: [
+              "default-src 'self'",
+              "script-src 'self' 'unsafe-eval' 'unsafe-inline' https://www.googletagmanager.com https://mcp.figma.com",
+              "style-src 'self' 'unsafe-inline'",
+              "img-src 'self' data: blob: https://mcp.figma.com",
+              "font-src 'self' data:",
+              "connect-src 'self' https://mcp.figma.com",
+              "frame-ancestors 'none'",
+            ].join("; "),
+          },
+        ],
+      },
+      {
+        source: "/playmechi/creator-preview",
+        headers: [
+          {
+            key: "Content-Security-Policy",
+            value: [
+              "default-src 'self'",
+              "script-src 'self' 'unsafe-eval' 'unsafe-inline' https://www.googletagmanager.com https://mcp.figma.com",
+              "style-src 'self' 'unsafe-inline'",
+              "img-src 'self' data: blob: https://mcp.figma.com",
+              "font-src 'self' data:",
+              "connect-src 'self' https://mcp.figma.com",
+              "frame-ancestors 'none'",
+            ].join("; "),
+          },
+        ],
+      },
     ];
   },
 };

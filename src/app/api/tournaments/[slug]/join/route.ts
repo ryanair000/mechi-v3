@@ -1,4 +1,5 @@
 import { after, NextRequest, NextResponse } from 'next/server';
+import type { SupabaseClient } from '@supabase/supabase-js';
 import { requireActiveAccessProfile } from '@/lib/access';
 import { tryClaimBounty } from '@/lib/bounties';
 import { GAMES, getCanonicalGameKey, normalizeSelectedGameKeys } from '@/lib/config';
@@ -19,6 +20,96 @@ import {
 } from '@/lib/paystack';
 import { makePaymentReference } from '@/lib/slug';
 import type { NotificationType, Tournament } from '@/types';
+
+type SlotClaimRow = {
+  player_id: string;
+  player_payment_status: string;
+  player_joined_at: string;
+  player_inserted: boolean;
+  tournament_status: string;
+};
+
+function slotClaimErrorResponse(error: { message?: string; code?: string } | null | undefined) {
+  const message = String(error?.message ?? '').toUpperCase();
+
+  if (message.includes('ALREADY_JOINED')) {
+    return NextResponse.json({ error: 'You already joined this tournament' }, { status: 409 });
+  }
+
+  if (message.includes('PAYMENT_PENDING')) {
+    return NextResponse.json(
+      { error: 'Finish your current payment before trying again' },
+      { status: 409 }
+    );
+  }
+
+  if (message.includes('TOURNAMENT_FULL')) {
+    return NextResponse.json({ error: 'This bracket is full' }, { status: 400 });
+  }
+
+  if (message.includes('TOURNAMENT_NOT_OPEN')) {
+    return NextResponse.json({ error: 'This tournament is not open' }, { status: 400 });
+  }
+
+  if (message.includes('TOURNAMENT_NOT_FOUND')) {
+    return NextResponse.json({ error: 'Tournament not found' }, { status: 404 });
+  }
+
+  if (error?.code === '42883') {
+    return NextResponse.json(
+      { error: 'Tournament slot locking is not ready. Apply the latest Supabase migration.' },
+      { status: 503 }
+    );
+  }
+
+  return NextResponse.json({ error: 'Could not reserve your slot' }, { status: 500 });
+}
+
+async function claimTournamentSlot(params: {
+  supabase: SupabaseClient;
+  tournament: Tournament;
+  userId: string;
+  paymentStatus: 'free' | 'pending';
+  paymentRef?: string | null;
+  paymentAccessCode?: string | null;
+}) {
+  const { data, error } = await params.supabase
+    .rpc('claim_tournament_slot', {
+      p_tournament_id: params.tournament.id,
+      p_user_id: params.userId,
+      p_payment_status: params.paymentStatus,
+      p_payment_ref: params.paymentRef ?? null,
+      p_payment_access_code: params.paymentAccessCode ?? null,
+    })
+    .single();
+
+  if (error) {
+    return { response: slotClaimErrorResponse(error), player: null };
+  }
+
+  const claim = data as SlotClaimRow | null;
+  if (!claim?.player_id) {
+    return {
+      response: NextResponse.json({ error: 'Could not reserve your slot' }, { status: 500 }),
+      player: null,
+    };
+  }
+
+  return {
+    response: null,
+    player: {
+      id: claim.player_id,
+      tournament_id: params.tournament.id,
+      user_id: params.userId,
+      payment_status: claim.player_payment_status,
+      payment_ref: params.paymentRef ?? null,
+      payment_access_code: params.paymentAccessCode ?? null,
+      check_in_status: 'registered',
+      checked_in_at: null,
+      joined_at: claim.player_joined_at,
+    },
+  };
+}
 
 export async function POST(
   request: NextRequest,
@@ -59,6 +150,13 @@ export async function POST(
       return NextResponse.json({ error: 'This tournament is not open' }, { status: 400 });
     }
 
+    if (tournament.entry_fee > 0 && tournament.approval_status !== 'approved') {
+      return NextResponse.json(
+        { error: 'This paid tournament is awaiting Mechi approval' },
+        { status: 403 }
+      );
+    }
+
     const { data: existing } = await supabase
       .from('tournament_players')
       .select('id, payment_status')
@@ -67,11 +165,6 @@ export async function POST(
       .maybeSingle();
 
     const existingPlayer = existing as { id: string; payment_status: string } | null;
-    const canRetryExistingPlayer =
-      existingPlayer &&
-      !ACTIVE_TOURNAMENT_PLAYER_STATUSES.includes(
-        existingPlayer.payment_status as (typeof ACTIVE_TOURNAMENT_PLAYER_STATUSES)[number]
-      );
 
     if (
       existingPlayer &&
@@ -144,30 +237,21 @@ export async function POST(
       tournament.entry_fee <= 0 ||
       (!isPaystackConfigured() && process.env.NODE_ENV !== 'production')
     ) {
-      const playerOperation = canRetryExistingPlayer
-        ? supabase
-            .from('tournament_players')
-            .update({
-              payment_status: 'free',
-              payment_ref: null,
-              payment_access_code: null,
-              joined_at: new Date().toISOString(),
-            })
-            .eq('id', existingPlayer.id)
-        : supabase
-            .from('tournament_players')
-            .insert({
-              tournament_id: tournament.id,
-              user_id: authUser.id,
-              payment_status: 'free',
-            });
+      const claimed = await claimTournamentSlot({
+        supabase,
+        tournament,
+        userId: authUser.id,
+        paymentStatus: 'free',
+      });
 
-      const { data: player, error } = await playerOperation.select('*').single();
-
-      if (error || !player) {
+      if (claimed.response) {
+        return claimed.response;
+      }
+      if (!claimed.player) {
         return NextResponse.json({ error: 'Could not join tournament' }, { status: 500 });
       }
 
+      const player = claimed.player;
       const notifications: Array<{
         user_id: string;
         type: NotificationType;
@@ -230,33 +314,22 @@ export async function POST(
     const email = profile.email || `${profile.username}@mechi.club`;
     const callbackUrl = `${getAppUrl()}/t/${tournament.slug}?reference=${encodeURIComponent(reference)}`;
 
-    const pendingOperation = canRetryExistingPlayer
-      ? supabase
-          .from('tournament_players')
-          .update({
-            payment_status: 'pending',
-            payment_ref: reference,
-            payment_access_code: null,
-            joined_at: new Date().toISOString(),
-          })
-          .eq('id', existingPlayer.id)
-      : supabase
-          .from('tournament_players')
-          .insert({
-            tournament_id: tournament.id,
-            user_id: authUser.id,
-            payment_status: 'pending',
-            payment_ref: reference,
-          });
+    const pendingClaim = await claimTournamentSlot({
+      supabase,
+      tournament,
+      userId: authUser.id,
+      paymentStatus: 'pending',
+      paymentRef: reference,
+    });
 
-    const { data: pendingPlayer, error: insertError } = await pendingOperation
-      .select('*')
-      .single();
-
-    if (insertError || !pendingPlayer) {
+    if (pendingClaim.response) {
+      return pendingClaim.response;
+    }
+    if (!pendingClaim.player) {
       return NextResponse.json({ error: 'Could not reserve your slot' }, { status: 500 });
     }
 
+    const pendingPlayer = pendingClaim.player;
     const initialized = await initializeTournamentPayment({
       amountKes: tournament.entry_fee,
       email,

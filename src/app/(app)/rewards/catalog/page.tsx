@@ -6,6 +6,7 @@ import { useCallback, useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
 import { ArrowLeft, CheckCircle2, ChevronDown, Copy, RefreshCw } from 'lucide-react';
 import { useAuthFetch } from '@/components/AuthProvider';
+import { ChezaCreditPanel } from '@/components/rewards/ChezaCreditPanel';
 import type { RewardActiveCode, RewardCatalogItem, RewardSummary } from '@/types/rewards';
 
 function SectionLabel({ label, count }: { label: string; count: number }) {
@@ -437,6 +438,8 @@ export default function RewardCatalogPage() {
       ) : (
         <>
           {summary && <WalletStatus ready={summary.linked} available={available} />}
+
+          <ChezaCreditPanel availableRp={available} onBalanceChange={() => void load({ silent: true })} />
 
           <RecentRedemptions
             redemptions={summary?.active_codes ?? []}

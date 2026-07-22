@@ -50,7 +50,7 @@ export function getTournamentHostingAccess(
   if (plan === 'free') {
     return {
       plan,
-      canHost: false,
+      canHost: true,
       platformFeePercent: STANDARD_TOURNAMENT_PLATFORM_FEE_PERCENT,
       eliteFeeFreeLimit: ELITE_FEE_FREE_TOURNAMENT_LIMIT,
       eliteFeeFreeUsed: feeFreeUsed,

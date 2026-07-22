@@ -14,6 +14,13 @@ import {
   getTournamentHostingMonthWindow,
 } from '@/lib/tournament-hosting';
 import {
+  buildTournamentRules,
+  getTournamentTemplate,
+  normalizeTournamentCheckInPolicy,
+  normalizeTournamentProofType,
+  normalizeTournamentRequirements,
+} from '@/lib/tournament-templates';
+import {
   getPlatformForTournament,
   getTournamentPaymentMetrics,
   getTournamentPrizeSnapshot,
@@ -33,6 +40,7 @@ export async function GET(request: NextRequest) {
     let query = supabase
       .from('tournaments')
       .select('*, organizer:organizer_id(id, username), winner:winner_id(id, username)')
+      .eq('approval_status', 'approved')
       .order('is_featured', { ascending: false })
       .order('created_at', { ascending: false })
       .range(offset, offset + limit - 1);
@@ -148,11 +156,23 @@ export async function POST(request: NextRequest) {
     const requestedCountry = body.country;
     const requestedRegion = body.region;
     const normalizedSchedule = String(body.scheduled_for ?? '').trim();
-    const rules = String(body.rules ?? '').trim();
+    const customRules = String(body.rules ?? '').trim().slice(0, 800);
+    const template = getTournamentTemplate(body.template_key);
+    const checkInPolicy = normalizeTournamentCheckInPolicy(body.check_in_policy);
+    const proofType = normalizeTournamentProofType(body.proof_type);
+    const disputeWindowMinutes = Math.min(
+      240,
+      Math.max(5, Math.round(Number(body.dispute_window_minutes ?? 20)))
+    );
+    const prizeTerms = String(body.prize_terms ?? '').trim().slice(0, 300);
+    const registrationRequirements = normalizeTournamentRequirements(
+      body.registration_requirements
+    );
     const prizePoolModeInput =
       typeof body.prize_pool_mode === 'string' ? body.prize_pool_mode.trim() : 'auto';
     const prizePoolMode = resolveTournamentPrizePoolMode(prizePoolModeInput);
     const requestedPrizePool = Math.max(0, Math.round(Number(body.prize_pool ?? 0)));
+    const isFreeTournament = entryFee === 0;
 
     if (title.length < 3) {
       return NextResponse.json({ error: 'Tournament title is too short' }, { status: 400 });
@@ -162,6 +182,13 @@ export async function POST(request: NextRequest) {
     const gameConfig = GAMES[game];
     if (!gameConfig || gameConfig.mode !== '1v1') {
       return NextResponse.json({ error: 'Pick a supported 1v1 game' }, { status: 400 });
+    }
+
+    if (!template.enabled || !template.supportedGameModes.includes(gameConfig.mode)) {
+      return NextResponse.json(
+        { error: `${template.title} is not available for self-serve tournaments yet.` },
+        { status: 400 }
+      );
     }
 
     if (!isTournamentSize(size)) {
@@ -251,17 +278,6 @@ export async function POST(request: NextRequest) {
 
     const hostingAccess = getTournamentHostingAccess(organizerPlan, hostedThisMonth);
 
-    if (!hostingAccess.canHost) {
-      return NextResponse.json(
-        {
-          error: 'Tournament hosting requires Pro or Elite.',
-          upgrade_url: '/pricing',
-          required_plan: 'pro',
-        },
-        { status: 403 }
-      );
-    }
-
     const createRateLimit = await checkPersistentRateLimit(
       `tournament-create:${authUser.id}:${game}:${getClientIp(request)}`,
       2,
@@ -271,14 +287,14 @@ export async function POST(request: NextRequest) {
       return rateLimitResponse(createRateLimit.retryAfterSeconds);
     }
 
-    if (!['auto', 'specified'].includes(prizePoolModeInput)) {
+    if (!isFreeTournament && !['auto', 'specified'].includes(prizePoolModeInput)) {
       return NextResponse.json(
         { error: 'Choose whether the prize pool is auto or specified.' },
         { status: 400 }
       );
     }
 
-    if (prizePoolMode === 'specified' && requestedPrizePool <= 0) {
+    if (!isFreeTournament && prizePoolMode === 'specified' && requestedPrizePool <= 0) {
       return NextResponse.json(
         { error: 'Enter a specified prize pool amount above KES 0.' },
         { status: 400 }
@@ -295,13 +311,23 @@ export async function POST(request: NextRequest) {
         region: location.label,
         size,
         entry_fee: entryFee,
-        prize_pool_mode: prizePoolMode,
-        prize_pool: prizePoolMode === 'specified' ? requestedPrizePool : 0,
+        prize_pool_mode: isFreeTournament ? 'auto' : prizePoolMode,
+        prize_pool: !isFreeTournament && prizePoolMode === 'specified' ? requestedPrizePool : 0,
         platform_fee: 0,
-        platform_fee_rate: hostingAccess.platformFeePercent,
-        rules: rules || null,
+        platform_fee_rate: isFreeTournament ? 0 : hostingAccess.platformFeePercent,
+        rules: buildTournamentRules({
+          template,
+          customRules,
+          checkInPolicy,
+          proofType,
+          disputeWindowMinutes,
+          prizeTerms: isFreeTournament ? '' : prizeTerms,
+          requirements: registrationRequirements,
+        }),
         scheduled_for: scheduledAt.toISOString(),
-        approval_status: 'pending',
+        approval_status: isFreeTournament ? 'approved' : 'pending',
+        approved_at: isFreeTournament ? new Date().toISOString() : null,
+        approved_by: null,
         is_featured: false,
         organizer_id: authUser.id,
       })

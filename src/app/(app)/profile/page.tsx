@@ -1,9 +1,10 @@
 'use client';
 
 import Image from 'next/image';
+import Link from 'next/link';
 import { useCallback, useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
-import { Bell, Camera, Gamepad2, Loader2, MapPin, Save } from 'lucide-react';
+import { ArrowRight, Bell, Camera, Check, Gamepad2, Loader2, MapPin, Save, ShieldCheck } from 'lucide-react';
 import { useAuth, useAuthFetch } from '@/components/AuthProvider';
 import {
   GAMES,
@@ -96,6 +97,14 @@ export default function ProfilePage() {
   const avatarUrl = profile?.avatar_url ?? user?.avatar_url ?? null;
   const coverUrl = profile?.cover_url ?? user?.cover_url ?? null;
   const regions = getRegionsForCountry(country || null);
+  const hasCompleteGame = selectedGames.some((game) => {
+    const setupPlatforms = getPlatformsForGameSetup(selectedGames, gameIds, platforms);
+    const platform = getConfiguredPlatformForGame(game, gameIds, setupPlatforms);
+    return Boolean(platform && getGameIdValue(gameIds, game, platform).trim());
+  });
+  const profileChecks = [Boolean(country && region), hasCompleteGame, Boolean(avatarUrl)];
+  const profileCompleteCount = profileChecks.filter(Boolean).length;
+  const profileProgress = Math.round((profileCompleteCount / profileChecks.length) * 100);
 
   const setGameSelected = (game: GameKey, selected: boolean) => {
     setSelectedGames((current) => {
@@ -284,20 +293,69 @@ export default function ProfilePage() {
                 onChange={(event) => void uploadMedia('avatar', event.target.files?.[0] ?? null)}
               />
             </label>
+            <div className="mb-1 hidden min-w-0 sm:block">
+              <p className="truncate text-xl font-black text-[var(--text-primary)]">
+                {profile?.username ?? user?.username}
+              </p>
+              <p className="mt-1 text-xs text-[var(--text-soft)]">
+                {country && region ? `${region}, ${COUNTRY_OPTIONS.find((item) => item.key === country)?.label ?? country}` : 'Add your player location'}
+              </p>
+            </div>
           </div>
 
-          <button type="button" onClick={saveProfile} disabled={saving} className="btn-primary text-sm">
-            {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
-            Save changes
-          </button>
+          <div className="flex flex-col gap-2 sm:flex-row">
+            {profile?.username ?? user?.username ? (
+              <Link href={`/s/${encodeURIComponent(profile?.username ?? user?.username ?? '')}`} className="btn-outline justify-center text-sm">
+                Public profile <ArrowRight size={14} />
+              </Link>
+            ) : null}
+            <button type="button" onClick={saveProfile} disabled={saving} className="btn-primary justify-center text-sm">
+              {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
+              Save changes
+            </button>
+          </div>
         </div>
+      </section>
+
+      <section className="card grid gap-5 p-5 sm:p-6 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
+        <div>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <p className="section-title">Player readiness</p>
+              <h2 className="mt-2 text-xl font-black text-[var(--text-primary)]">
+                {profileProgress === 100 ? 'Your player card is match-ready' : 'Finish the details players rely on'}
+              </h2>
+            </div>
+            <span className="brand-chip px-3 py-1">{profileProgress}% complete</span>
+          </div>
+          <div className="mt-4 h-2 overflow-hidden rounded-full bg-[var(--surface-strong)]">
+            <span className="block h-full rounded-full bg-[var(--brand-teal)] transition-[width]" style={{ width: `${profileProgress}%` }} />
+          </div>
+          <div className="mt-4 flex flex-wrap gap-2">
+            {[
+              { complete: Boolean(country && region), label: 'Location' },
+              { complete: hasCompleteGame, label: 'Game ID' },
+              { complete: Boolean(avatarUrl), label: 'Player photo' },
+            ].map((item) => (
+              <span key={item.label} className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold ${item.complete ? 'border-[rgba(50,224,196,0.24)] bg-[rgba(50,224,196,0.1)] text-[var(--accent-secondary-text)]' : 'border-[var(--border-color)] bg-[var(--surface-elevated)] text-[var(--text-soft)]'}`}>
+                {item.complete ? <Check size={12} /> : null}{item.label}
+              </span>
+            ))}
+          </div>
+        </div>
+        <Link href="/get-started" className="btn-ghost justify-center">
+          <ShieldCheck size={14} /> Open setup guide <ArrowRight size={14} />
+        </Link>
       </section>
 
       <section className="grid gap-4 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
         <div className="card space-y-5 p-5 sm:p-6">
           <div>
-            <p className="section-title">Account</p>
-            <h1 className="mt-2 text-2xl font-black text-[var(--text-primary)]">Profile</h1>
+              <p className="section-title">Player identity</p>
+              <h1 className="mt-2 text-2xl font-black text-[var(--text-primary)]">Account & location</h1>
+              <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">
+                Your account details are protected. Location helps Mechi match you with relevant players and events.
+              </p>
           </div>
 
           <div className="grid gap-3">
@@ -310,7 +368,7 @@ export default function ProfilePage() {
               <input className="input-field" value={profile?.phone ?? user?.phone ?? ''} readOnly />
             </label>
             <label className="space-y-2">
-              <span className="label">Mail address</span>
+              <span className="label">Email address</span>
               <input className="input-field" value={profile?.email ?? user?.email ?? ''} readOnly />
             </label>
           </div>
@@ -397,6 +455,9 @@ export default function ProfilePage() {
             <div>
               <p className="section-title">Games</p>
               <h2 className="mt-2 text-xl font-black text-[var(--text-primary)]">Player IDs</h2>
+              <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">
+                These are the exact IDs opponents use to find you. Keep them current to avoid match delays.
+              </p>
             </div>
             <p className="text-xs text-[var(--text-soft)]">
               {selectedGames.length}/{currentPlan.maxGames} saved

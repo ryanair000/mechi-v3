@@ -173,7 +173,7 @@ export default function SidebarWithSubmenu({ collapsed, onToggle }: SidebarWithS
   const pathname = usePathname();
   const { user, logout } = useAuth();
   const currentPlan = getPlan(user?.plan ?? 'free');
-  const profileActive = pathname === '/profile';
+  const profileActive = pathname === '/profile' || pathname.startsWith('/profile/');
   const [sectionOverrides, setSectionOverrides] = useState<Partial<Record<SidebarSectionKey, boolean>>>({});
 
   function toggleSection(sectionKey: SidebarSectionKey) {

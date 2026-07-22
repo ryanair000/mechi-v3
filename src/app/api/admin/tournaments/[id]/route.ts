@@ -8,6 +8,7 @@ import { getClientIp } from '@/lib/rateLimit';
 import { createServiceClient } from '@/lib/supabase';
 import {
   ACTIVE_TOURNAMENT_PLAYER_STATUSES,
+  attemptPrizePayout,
   getTournamentPaymentMetrics,
   getTournamentPrizeSnapshot,
   mapTournamentMatchRelations,
@@ -141,7 +142,7 @@ export async function PATCH(
     let tournamentQuery = supabase
       .from('tournaments')
       .select(
-        'id, title, slug, game, platform, region, size, entry_fee, prize_pool_mode, prize_pool, platform_fee, platform_fee_rate, status, winner_id, rules, approval_status, approved_at, approved_by, is_featured'
+        'id, title, slug, game, platform, region, size, entry_fee, prize_pool_mode, prize_pool, platform_fee, platform_fee_rate, status, winner_id, rules, approval_status, approved_at, approved_by, is_featured, payout_status, payout_ref, payout_error'
       )
       .eq('id', id);
 
@@ -262,6 +263,104 @@ export async function PATCH(
       return NextResponse.json({ success: true });
     }
 
+    if (body.action === 'approve_payout') {
+      if (!hasAdminAccess(admin)) {
+        return NextResponse.json({ error: 'Only admins can approve prize payouts' }, { status: 403 });
+      }
+
+      if (tournament.status !== 'completed' || !tournament.winner_id) {
+        return NextResponse.json(
+          { error: 'Complete the tournament and verify its winner before approving payout' },
+          { status: 400 }
+        );
+      }
+
+      if (Number(tournament.prize_pool ?? 0) <= 0) {
+        return NextResponse.json({ error: 'This tournament has no cash prize' }, { status: 400 });
+      }
+
+      if (tournament.approval_status !== 'approved') {
+        return NextResponse.json(
+          { error: 'The tournament must be approved before prize payout' },
+          { status: 400 }
+        );
+      }
+
+      if (tournament.payout_status === 'paid') {
+        return NextResponse.json({ error: 'This prize has already been paid' }, { status: 409 });
+      }
+
+      const { data: winner, error: winnerError } = await supabase
+        .from('profiles')
+        .select('id, username, email, phone')
+        .eq('id', tournament.winner_id)
+        .single();
+
+      if (winnerError || !winner) {
+        return NextResponse.json({ error: 'Winner profile was not found' }, { status: 404 });
+      }
+
+      const payoutLockReference = `review_${crypto.randomUUID()}`;
+      const { data: payoutLock, error: payoutLockError } = await supabase
+        .from('tournaments')
+        .update({ payout_ref: payoutLockReference, payout_error: null })
+        .eq('id', id)
+        .neq('payout_status', 'paid')
+        .is('payout_ref', null)
+        .select('id')
+        .maybeSingle();
+
+      if (payoutLockError) {
+        return NextResponse.json({ error: 'Could not reserve this payout for review' }, { status: 500 });
+      }
+
+      if (!payoutLock) {
+        return NextResponse.json(
+          { error: 'This payout is already being processed or has already been reviewed' },
+          { status: 409 }
+        );
+      }
+
+      const payout = await attemptPrizePayout({
+        winner,
+        amountKes: Number(tournament.prize_pool),
+        title: tournament.title,
+      });
+
+      const { error: payoutUpdateError } = await supabase
+        .from('tournaments')
+        .update({
+          payout_status: payout.status,
+          payout_ref: payout.reference ?? null,
+          payout_error: payout.error ?? null,
+        })
+        .eq('id', id)
+        .eq('payout_ref', payoutLockReference);
+
+      if (payoutUpdateError) {
+        return NextResponse.json({ error: 'Could not record the payout result' }, { status: 500 });
+      }
+
+      await writeAuditLog({
+        adminId: admin.id,
+        action: 'approve_tournament_payout',
+        targetType: 'tournament',
+        targetId: id,
+        details: {
+          title: tournament.title,
+          winnerId: tournament.winner_id,
+          amountKes: Number(tournament.prize_pool),
+          previousPayoutStatus: tournament.payout_status,
+          nextPayoutStatus: payout.status,
+          reference: payout.reference ?? null,
+          reason: body.reason ?? null,
+        },
+        ipAddress: getClientIp(request),
+      });
+
+      return NextResponse.json({ success: payout.status === 'paid', payout });
+    }
+
     if (body.action === 'update_details') {
       if (!hasAdminAccess(admin)) {
         return NextResponse.json({ error: 'Only admins can edit tournaments' }, { status: 403 });
@@ -357,9 +456,19 @@ export async function PATCH(
         updatePayload.platform = platform;
         updatePayload.size = size;
         updatePayload.entry_fee = entryFee;
-        if (entryFee <= 0 && tournament.prize_pool_mode !== 'specified') {
+        if (entryFee <= 0) {
+          updatePayload.prize_pool_mode = 'auto';
           updatePayload.prize_pool = 0;
           updatePayload.platform_fee = 0;
+          updatePayload.platform_fee_rate = 0;
+          updatePayload.approval_status = 'approved';
+          updatePayload.approved_at = new Date().toISOString();
+          updatePayload.approved_by = null;
+        } else if (Number(tournament.entry_fee ?? 0) <= 0) {
+          updatePayload.approval_status = 'pending';
+          updatePayload.approved_at = null;
+          updatePayload.approved_by = null;
+          updatePayload.is_featured = false;
         }
       }
 

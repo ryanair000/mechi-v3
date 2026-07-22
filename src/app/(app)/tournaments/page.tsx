@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useCallback, useEffect, useState } from 'react';
 import { Plus, Trophy } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { useAuth, useAuthFetch } from '@/components/AuthProvider';
+import { useAuthFetch } from '@/components/AuthProvider';
 import { EventCountdownCard } from '@/components/ui/event-countdown-card';
 import {
   TournamentMemberList,
@@ -27,7 +27,6 @@ import {
   type OnlineTournamentRegistrationSummary,
 } from '@/lib/online-tournament';
 import { getOnlineTournamentArenaHref } from '@/lib/online-tournament-ops';
-import { resolvePlan } from '@/lib/plans';
 import { getTournamentPrizePoolLabel } from '@/lib/tournament-metrics';
 import { formatTournamentDateTime } from '@/lib/tournament-schedule';
 import type { GameKey, Tournament } from '@/types';
@@ -123,7 +122,6 @@ function formatTournamentDate(tournament: TournamentListItem) {
 }
 
 export default function TournamentsPage() {
-  const { user } = useAuth();
   const authFetch = useAuthFetch();
   const [tournaments, setTournaments] = useState<TournamentListItem[]>([]);
   const [onlineTournament, setOnlineTournament] = useState<OnlineTournamentRegistrationSummary>(
@@ -131,9 +129,8 @@ export default function TournamentsPage() {
   );
   const [status, setStatus] = useState<(typeof STATUS_FILTERS)[number]>('all');
   const [loading, setLoading] = useState(true);
-  const canHostTournaments = resolvePlan(user?.plan, user?.plan_expires_at) !== 'free';
-  const hostHref = canHostTournaments ? '/tournaments/create' : '/pricing';
-  const hostLabel = canHostTournaments ? 'Host tournament' : 'Upgrade to host';
+  const hostHref = '/tournaments/create';
+  const hostLabel = 'Host tournament';
 
   const fetchTournaments = useCallback(async () => {
     setLoading(true);
@@ -334,7 +331,7 @@ export default function TournamentsPage() {
           <p className="mt-2 text-sm text-[var(--text-soft)]">Start one and bring your scene in.</p>
           <Link href={hostHref} className="btn-primary mt-5 inline-flex">
             <Plus size={14} />
-            {canHostTournaments ? 'Create tournament' : 'Upgrade to host'}
+            Create tournament
           </Link>
         </div>
       ) : (

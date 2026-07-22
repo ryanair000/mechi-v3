@@ -1269,6 +1269,92 @@ html[data-theme='dark'] {
     border: 1px solid var(--border-color);
     background: var(--surface-strong);
   }
+
+  .v5-public-shell {
+    --font-display: var(--font-montserrat), "Montserrat", "Segoe UI Semibold", sans-serif;
+    --font-body: var(--font-open-sans), "Open Sans", "Segoe UI", sans-serif;
+    --background: #ffffff;
+    --foreground: #0b1121;
+    --card: #ffffff;
+    --card-foreground: #0b1121;
+    --popover: #ffffff;
+    --popover-foreground: #0b1121;
+    --primary: #32e0c4;
+    --primary-foreground: #0b1121;
+    --secondary: #f1f5f9;
+    --secondary-foreground: #0b1121;
+    --muted: #f8fafc;
+    --muted-foreground: #64748b;
+    --accent: #f1f5f9;
+    --accent-foreground: #0b1121;
+    --border: #e2e8f0;
+    --input: #e2e8f0;
+    --ring: #32e0c4;
+    --radius: 0.5rem;
+    color: #0b1121;
+    background: #ffffff;
+    font-family: var(--font-body), "Open Sans", sans-serif;
+  }
+
+  .v5-public-shell h1,
+  .v5-public-shell h2,
+  .v5-public-shell h3,
+  .v5-public-shell h4,
+  .v5-public-shell h5,
+  .v5-public-shell h6,
+  .v5-public-shell button,
+  .v5-public-shell .v5-btn {
+    font-family: var(--font-display), "Montserrat", sans-serif;
+    letter-spacing: 0;
+  }
+
+  .v5-public-shell p {
+    color: inherit;
+  }
+
+  .v5-public-shell .v5-btn {
+    display: inline-flex;
+    min-height: 2.25rem;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+    border-radius: 0.4rem;
+    padding: 0.52rem 0.9rem;
+    font-size: 0.8rem;
+    font-weight: 800;
+    line-height: 1.1;
+    text-decoration: none;
+    white-space: nowrap;
+  }
+
+  .v5-public-shell .v5-btn-lg {
+    min-height: 2.75rem;
+    padding: 0.72rem 1rem;
+    font-size: 0.875rem;
+  }
+
+  .v5-public-shell .v5-btn-primary {
+    border: 1px solid #32e0c4;
+    background: #32e0c4;
+    color: #0b1121;
+    box-shadow: 0 10px 22px rgba(50, 224, 196, 0.16);
+  }
+
+  .v5-public-shell .v5-btn-primary:hover {
+    background: #28cfb4;
+    border-color: #28cfb4;
+  }
+
+  .v5-public-shell .v5-btn-outline {
+    border: 1px solid #cbd5e1;
+    background: #ffffff;
+    color: #0b1121;
+  }
+
+  .v5-public-shell .v5-btn-outline:hover {
+    border-color: #94a3b8;
+    background: #f8fafc;
+  }
 }
 
 .dark {

@@ -266,6 +266,7 @@ export function buildBattleRoyaleStandings(params: {
     }));
 
   const rowByRegistrationId = new Map(rows.map((row) => [row.registration.id, row]));
+  const verifiedMatchesByRegistrationId = new Map<string, Set<1 | 2 | 3>>();
   const verifiedSubmissions = params.submissions
     .filter(
       (submission) =>
@@ -291,6 +292,10 @@ export function buildBattleRoyaleStandings(params: {
     if (!row) continue;
 
     row.matchKills[matchNumber] = Number(submission.kills ?? 0);
+    const verifiedMatches =
+      verifiedMatchesByRegistrationId.get(registrationId) ?? new Set<1 | 2 | 3>();
+    verifiedMatches.add(matchNumber);
+    verifiedMatchesByRegistrationId.set(registrationId, verifiedMatches);
     if (matchNumber === 3) {
       row.finalMatchPlacement = submission.placement ?? null;
     }
@@ -304,9 +309,8 @@ export function buildBattleRoyaleStandings(params: {
       row.matchKills[2],
       row.matchKills[3]
     );
-    row.verifiedSubmissionCount = ONLINE_TOURNAMENT_BR_MATCH_NUMBERS.filter(
-      (matchNumber) => row.matchKills[matchNumber] > 0 || row.finalMatchPlacement !== null
-    ).length;
+    row.verifiedSubmissionCount =
+      verifiedMatchesByRegistrationId.get(row.registration.id)?.size ?? 0;
   }
 
   return rows

@@ -1,16 +1,18 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { AppMobileUtilityHeader } from '@/components/AppMobileUtilityHeader';
 import { useAuth } from '@/components/AuthProvider';
 import { BottomNav } from '@/components/BottomNav';
 import { Sidebar } from '@/components/Sidebar';
 import { BrandLogo } from '@/components/BrandLogo';
+import { PlayMechiWorkspaceShell } from '@/components/dashboard/PlayMechiWorkspaceShell';
 
 export function AppLayoutClient({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
   const router = useRouter();
+  const pathname = usePathname();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   useEffect(() => {
@@ -32,6 +34,15 @@ export function AppLayoutClient({ children }: { children: React.ReactNode }) {
 
   if (!user) {
     return null;
+  }
+
+  if (
+    pathname === '/dashboard' ||
+    pathname === '/teams' || pathname.startsWith('/teams/') ||
+    pathname === '/challenges' || pathname.startsWith('/challenges/') ||
+    pathname === '/creator' || pathname.startsWith('/creator/')
+  ) {
+    return <PlayMechiWorkspaceShell>{children}</PlayMechiWorkspaceShell>;
   }
 
   return (

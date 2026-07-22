@@ -23,7 +23,6 @@ import {
   ONLINE_TOURNAMENT_YOUTUBE_URL,
   formatEatDateTime,
   getOnlineTournamentWindowState,
-  isOnlineTournamentRegistrationClosed,
   type OnlineTournamentGameKey,
 } from '@/lib/online-tournament';
 import {
@@ -69,12 +68,12 @@ function getFallbackSummary(): RegistrationSummary {
   return {
     games: ONLINE_TOURNAMENT_GAMES.reduce(
       (counts, game) => {
-        const registrationClosed = isOnlineTournamentRegistrationClosed(game);
+        const registrationOpen = getOnlineTournamentWindowState(game).isRegistrationOpen;
         counts[game.game] = {
           registered: 0,
           slots: game.slots,
-          spotsLeft: registrationClosed ? 0 : game.slots,
-          full: registrationClosed,
+          spotsLeft: registrationOpen ? game.slots : 0,
+          full: !registrationOpen,
         };
         return counts;
       },
@@ -119,9 +118,9 @@ export function OnlineTournamentRegistrationClient() {
     isGameKey(requestedGame) ? requestedGame : 'pubgm'
   );
   const [inGameUsername, setInGameUsername] = useState('');
-  const [followedInstagram, setFollowedInstagram] = useState(true);
+  const [followedInstagram, setFollowedInstagram] = useState(false);
   const [instagramUsername, setInstagramUsername] = useState('');
-  const [subscribedYoutube, setSubscribedYoutube] = useState(true);
+  const [subscribedYoutube, setSubscribedYoutube] = useState(false);
   const [youtubeName, setYoutubeName] = useState('');
   const [availableAt8pm, setAvailableAt8pm] = useState(true);
   const [acceptedRules, setAcceptedRules] = useState(false);
@@ -201,9 +200,9 @@ export function OnlineTournamentRegistrationClient() {
           })
         : ''
     );
-    setFollowedInstagram(true);
+    setFollowedInstagram(false);
     setInstagramUsername('');
-    setSubscribedYoutube(true);
+    setSubscribedYoutube(false);
     setYoutubeName('');
     setAvailableAt8pm(true);
     setAcceptedRules(false);
@@ -468,7 +467,7 @@ export function OnlineTournamentRegistrationClient() {
                       </div>
                     </label>
                     <label className="block">
-                      <span className="label">Youtube Mail/Channel Name</span>
+                      <span className="label">YouTube email/channel name</span>
                       <input
                         value={youtubeName}
                         onChange={(event) => setYoutubeName(event.target.value)}

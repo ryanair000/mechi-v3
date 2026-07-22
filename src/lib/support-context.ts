@@ -10,7 +10,7 @@ import {
   ONLINE_TOURNAMENT_TITLE,
   ONLINE_TOURNAMENT_TOTAL_SLOTS,
   ONLINE_TOURNAMENT_YOUTUBE_URL,
-  isOnlineTournamentRegistrationClosed,
+  getOnlineTournamentWindowState,
 } from '@/lib/online-tournament';
 import { PLANS } from '@/lib/plans';
 import { APP_URL } from '@/lib/urls';
@@ -279,7 +279,7 @@ function summarizePlayMechiTournament() {
   const schedule = ONLINE_TOURNAMENT_GAMES.map(
     (game) =>
       `${game.label}: ${game.dateLabel} at ${game.timeLabel}, ${game.slots} slots${
-        isOnlineTournamentRegistrationClosed(game) ? ' (registration full)' : ''
+        getOnlineTournamentWindowState(game).isRegistrationOpen ? '' : ' (registration closed)'
       }, ${game.format}, ${game.matchCount}, prizes ${game.firstPrize}, ${game.secondPrize}, ${game.thirdPrize}.`
   ).join('\n');
 
@@ -347,7 +347,7 @@ export function buildMechiSupportContext(
     'Core rules:',
     '- New players can get a 1-month Pro trial.',
     '- Direct 1-on-1 challenges are supported for one-on-one games when both players are compatible on game and platform, not already in a live match, and not sitting in queue.',
-    '- Tournament hosting requires Pro or Elite. Pro organizers can host with the standard platform fee, while Elite gets the first three tournaments each month without platform cost.',
+    '- Any active Mechi user can host a free tournament with no cash prize or reward. Paid tournaments require Mechi approval before players can join; plan-based platform fees still apply.',
     '- Pro and Elite organizers can run auto prize pools from paid entries or set a specified prize pool up front.',
     '- FC26 and eFootball score reporting use scorelines. Matching score reports can confirm either a win or a draw. Mismatched reports go to dispute review.',
     '- WhatsApp alerts are optional backup notifications when a player has them enabled in profile.',

@@ -1,9 +1,8 @@
 'use client';
 
-import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, Trophy } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, ShieldCheck, Sparkles, Trophy } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { ActionFeedback, type ActionFeedbackState } from '@/components/ActionFeedback';
 import { useAuth, useAuthFetch } from '@/components/AuthProvider';
@@ -17,6 +16,17 @@ import {
   getTournamentCheckInDate,
   toDateTimeLocalValue,
 } from '@/lib/tournament-schedule';
+import {
+  TOURNAMENT_CHECK_IN_POLICIES,
+  TOURNAMENT_PROOF_TYPES,
+  TOURNAMENT_REQUIREMENTS,
+  TOURNAMENT_TEMPLATES,
+  type TournamentCheckInPolicy,
+  type TournamentProofType,
+  type TournamentRegistrationRequirement,
+  type TournamentTemplate,
+  type TournamentTemplateKey,
+} from '@/lib/tournament-templates';
 import type { CountryKey, GameKey, Plan, PlatformKey, TournamentPrizePoolMode } from '@/types';
 
 const TOURNAMENT_SIZES = [4, 8, 16] as const;
@@ -45,16 +55,22 @@ export default function CreateTournamentPage() {
   });
   const [form, setForm] = useState({
     title: '',
+    template_key: 'one_v_one_knockout' as TournamentTemplateKey,
     game: tournamentGames[0] ?? 'fc26',
     platform: GAMES[tournamentGames[0] ?? 'fc26']?.platforms[0] ?? 'ps',
     country: '' as CountryKey | '',
     region: '',
     size: 4,
     scheduled_for: getDefaultTournamentScheduleValue(),
-    entry_type: 'paid' as 'paid' | 'free',
+    entry_type: 'free' as 'paid' | 'free',
     entry_fee: 0,
     prize_pool_mode: 'auto' as TournamentPrizePoolMode,
     prize_pool: 0,
+    check_in_policy: 'one_hour' as TournamentCheckInPolicy,
+    proof_type: 'score_report' as TournamentProofType,
+    dispute_window_minutes: 20,
+    prize_terms: '',
+    registration_requirements: ['account', 'game_id', 'country_region'] as TournamentRegistrationRequirement[],
     rules: '',
   });
   const [creating, setCreating] = useState(false);
@@ -65,7 +81,6 @@ export default function CreateTournamentPage() {
   const platforms = GAMES[form.game]?.platforms ?? [];
   const availableRegions = getRegionsForCountry(form.country || null);
   const currentPlan = getPlan(resolvePlan(user?.plan, user?.plan_expires_at));
-  const canHostTournaments = hostAccess?.can_host ?? currentPlan.id !== 'free';
   const effectivePlatformFeePercent =
     hostAccess?.platform_fee_percent ?? currentPlan.tournamentFeePercent;
   const effectiveEntryFee = form.entry_type === 'free' ? 0 : form.entry_fee;
@@ -74,7 +89,51 @@ export default function CreateTournamentPage() {
     [effectiveEntryFee, effectivePlatformFeePercent, form.size]
   );
   const displayedPrizePool =
-    form.prize_pool_mode === 'specified' ? form.prize_pool : autoPrizeAtCapacity.prizePool;
+    form.entry_type === 'free'
+      ? 0
+      : form.prize_pool_mode === 'specified'
+        ? form.prize_pool
+        : autoPrizeAtCapacity.prizePool;
+  const selectedTemplate =
+    TOURNAMENT_TEMPLATES.find((template) => template.key === form.template_key) ??
+    TOURNAMENT_TEMPLATES[0];
+
+  const applyTemplate = (template: TournamentTemplate) => {
+    if (!template.enabled) {
+      toast.error(`${template.title} is on the roadmap but not self-serve yet`);
+      return;
+    }
+
+    setForm((current) => ({
+      ...current,
+      template_key: template.key,
+      size: template.defaultSize,
+      entry_type: template.defaultEntryType,
+      entry_fee: template.defaultEntryType === 'free' ? 0 : current.entry_fee,
+      prize_pool_mode: template.defaultPrizePoolMode,
+      check_in_policy: template.defaultCheckInPolicy,
+      proof_type: template.defaultProofType,
+      dispute_window_minutes: template.defaultDisputeWindowMinutes,
+      registration_requirements: template.defaultRequirements,
+      rules: current.rules.trim() ? current.rules : template.defaultRules,
+    }));
+  };
+
+  const toggleRequirement = (requirement: TournamentRegistrationRequirement) => {
+    setForm((current) => {
+      const hasRequirement = current.registration_requirements.includes(requirement);
+      const nextRequirements = hasRequirement
+        ? current.registration_requirements.filter((item) => item !== requirement)
+        : [...current.registration_requirements, requirement];
+
+      return {
+        ...current,
+        registration_requirements: nextRequirements.length
+          ? nextRequirements
+          : ['account', 'game_id'],
+      };
+    });
+  };
 
   useEffect(() => {
     if (!userLocation.country && !userLocation.region) {
@@ -137,16 +196,6 @@ export default function CreateTournamentPage() {
   }, [authFetch, authLoading, user?.id, user?.plan, user?.plan_expires_at]);
 
   const handleCreate = async () => {
-    if (!canHostTournaments) {
-      setCreateFeedback({
-        tone: 'error',
-        title: 'Pro or Elite is required to host tournaments.',
-        detail: 'Upgrade from Free to start hosting. Free players can still join tournaments.',
-      });
-      toast.error('Upgrade to Pro or Elite to host tournaments');
-      return;
-    }
-
     if (!form.title.trim()) {
       setCreateFeedback({
         tone: 'error',
@@ -198,7 +247,11 @@ export default function CreateTournamentPage() {
       return;
     }
 
-    if (form.prize_pool_mode === 'specified' && form.prize_pool <= 0) {
+    if (
+      form.entry_type === 'paid' &&
+      form.prize_pool_mode === 'specified' &&
+      form.prize_pool <= 0
+    ) {
       setCreateFeedback({
         tone: 'error',
         title: 'Add the specified prize pool amount.',
@@ -222,7 +275,16 @@ export default function CreateTournamentPage() {
           ...form,
           scheduled_for: scheduledAt.toISOString(),
           entry_fee: effectiveEntryFee,
-          prize_pool: form.prize_pool_mode === 'specified' ? form.prize_pool : 0,
+          prize_pool:
+            form.entry_type === 'paid' && form.prize_pool_mode === 'specified'
+              ? form.prize_pool
+              : 0,
+          template_key: form.template_key,
+          check_in_policy: form.check_in_policy,
+          proof_type: form.proof_type,
+          dispute_window_minutes: form.dispute_window_minutes,
+          prize_terms: form.prize_terms,
+          registration_requirements: form.registration_requirements,
         }),
       });
       const data = await res.json();
@@ -276,67 +338,6 @@ export default function CreateTournamentPage() {
     );
   }
 
-  if (!canHostTournaments) {
-    return (
-      <div className="page-container">
-        <div className="mx-auto max-w-2xl">
-          <button
-            onClick={() => router.back()}
-            className="brand-link mb-5 inline-flex items-center gap-2 text-sm font-semibold"
-          >
-            <ArrowLeft size={14} /> Back
-          </button>
-
-          <div className="card circuit-panel p-6">
-            <p className="brand-kicker">Tournament Hosting</p>
-            <h1 className="mt-3 text-3xl font-black tracking-normal text-[var(--text-primary)]">
-              Pro and Elite members host tournaments
-            </h1>
-            <p className="mt-3 text-sm leading-6 text-[var(--text-secondary)]">
-              Free players can still join brackets, but hosting now starts on Pro. Elite adds
-              three fee-free tournaments each month plus streaming-ready tools when you want the
-              full event lane.
-            </p>
-
-            <div className="mt-5 grid gap-3 sm:grid-cols-3">
-              <div className="rounded-2xl border border-[var(--border-color)] bg-[var(--surface-elevated)] p-4">
-                <p className="text-sm font-black text-[var(--text-primary)]">
-                  Pro hosting
-                </p>
-                <p className="mt-2 text-xs leading-5 text-[var(--text-secondary)]">
-                  Create brackets, set the game rules, and choose auto or specified prize pools.
-                </p>
-              </div>
-              <div className="rounded-2xl border border-[var(--border-color)] bg-[var(--surface-elevated)] p-4">
-                <p className="text-sm font-black text-[var(--text-primary)]">
-                  Elite allowance
-                </p>
-                <p className="mt-2 text-xs leading-5 text-[var(--text-secondary)]">
-                  Elite covers your first three tournaments each month without platform cost.
-                </p>
-              </div>
-              <div className="rounded-2xl border border-[var(--border-color)] bg-[var(--surface-elevated)] p-4">
-                <p className="text-sm font-black text-[var(--text-primary)]">Free plan</p>
-                <p className="mt-2 text-xs leading-5 text-[var(--text-secondary)]">
-                  Stay in the mix by joining open brackets even before you start hosting.
-                </p>
-              </div>
-            </div>
-
-            <div className="mt-6 flex flex-col gap-3 sm:flex-row">
-              <Link href="/pricing" className="btn-primary justify-center">
-                Upgrade to Pro
-              </Link>
-              <Link href="/tournaments" className="btn-ghost justify-center">
-                Browse tournaments
-              </Link>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="page-container">
       <div className="mx-auto max-w-2xl">
@@ -376,6 +377,51 @@ export default function CreateTournamentPage() {
               maxLength={80}
               placeholder="e.g. Friday FC Climb"
             />
+          </div>
+
+          <div>
+            <div className="mb-3 flex items-center justify-between gap-3">
+              <label className="label !mb-0">Template</label>
+              <span className="inline-flex items-center gap-1.5 text-xs font-bold text-[var(--accent-secondary-text)]">
+                <Sparkles size={13} />
+                {selectedTemplate.title}
+              </span>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2">
+              {TOURNAMENT_TEMPLATES.map((template) => {
+                const isSelected = form.template_key === template.key;
+                return (
+                  <button
+                    key={template.key}
+                    type="button"
+                    onClick={() => applyTemplate(template)}
+                    className={`min-h-32 rounded-2xl border p-4 text-left transition-all ${
+                      isSelected
+                        ? 'border-[rgba(50,224,196,0.28)] bg-[rgba(50,224,196,0.1)]'
+                        : template.enabled
+                          ? 'border-[var(--border-color)] bg-[var(--surface-elevated)] hover:border-[rgba(50,224,196,0.22)] hover:bg-[var(--surface)]'
+                          : 'cursor-not-allowed border-[var(--border-color)] bg-[var(--surface-strong)] opacity-70'
+                    }`}
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <p className="text-sm font-black text-[var(--text-primary)]">
+                        {template.title}
+                      </p>
+                      {isSelected ? (
+                        <CheckCircle2 className="h-4 w-4 text-[var(--brand-teal)]" />
+                      ) : (
+                        <span className="rounded-md border border-[var(--border-color)] px-2 py-0.5 text-[10px] font-black uppercase tracking-[0.12em] text-[var(--text-soft)]">
+                          {template.enabled ? 'Ready' : 'Roadmap'}
+                        </span>
+                      )}
+                    </div>
+                    <p className="mt-2 text-xs leading-5 text-[var(--text-secondary)]">
+                      {template.summary}
+                    </p>
+                  </button>
+                );
+              })}
+            </div>
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2">
@@ -526,7 +572,7 @@ export default function CreateTournamentPage() {
                 {
                   key: 'free' as const,
                   title: 'Free entry',
-                  copy: 'Open the bracket without charging players and use specified prize mode if you still want a cash payout.',
+                  copy: 'Open a community bracket with no entry charge, cash prize, or reward. It publishes immediately.',
                 },
               ].map((entryType) => {
                 const isSelected = form.entry_type === entryType.key;
@@ -540,6 +586,10 @@ export default function CreateTournamentPage() {
                         entry_type: entryType.key,
                         entry_fee:
                           entryType.key === 'free' ? 0 : Math.max(0, current.entry_fee || 0),
+                        prize_pool_mode:
+                          entryType.key === 'free' ? 'auto' : current.prize_pool_mode,
+                        prize_pool: entryType.key === 'free' ? 0 : current.prize_pool,
+                        prize_terms: entryType.key === 'free' ? '' : current.prize_terms,
                       }))
                     }
                     className={`rounded-2xl border p-4 text-left transition-all ${
@@ -591,7 +641,7 @@ export default function CreateTournamentPage() {
                   copy:
                     form.entry_type === 'paid'
                       ? 'Calculate the pool from paid entries as players check out.'
-                      : 'Free entry keeps auto mode at KES 0, so switch to specified if you want a guaranteed payout.',
+                      : 'Free tournaments always have a KES 0 prize pool.',
                 },
                 {
                   key: 'specified' as const,
@@ -605,6 +655,7 @@ export default function CreateTournamentPage() {
                   <button
                     key={mode.key}
                     type="button"
+                    disabled={form.entry_type === 'free' && mode.key === 'specified'}
                     onClick={() =>
                       setForm((current) => ({
                         ...current,
@@ -612,6 +663,9 @@ export default function CreateTournamentPage() {
                       }))
                     }
                     className={`rounded-2xl border p-4 text-left transition-all ${
+                      form.entry_type === 'free' && mode.key === 'specified'
+                        ? 'cursor-not-allowed border-[var(--border-color)] bg-[var(--surface-strong)] opacity-50'
+                        :
                       isSelected
                         ? 'border-[rgba(50,224,196,0.26)] bg-[rgba(50,224,196,0.1)]'
                         : 'border-[var(--border-color)] bg-[var(--surface-elevated)] hover:border-[rgba(255,107,107,0.22)] hover:bg-[var(--surface)]'
@@ -634,7 +688,7 @@ export default function CreateTournamentPage() {
                   ? 'Specified prize pool'
                   : 'Auto prize preview at full slots'}
               </label>
-              {form.prize_pool_mode === 'specified' ? (
+              {form.entry_type === 'paid' && form.prize_pool_mode === 'specified' ? (
                 <input
                   type="number"
                   min={0}
@@ -672,6 +726,116 @@ export default function CreateTournamentPage() {
             </div>
           </div>
 
+          <div className="rounded-2xl border border-[var(--border-color)] bg-[var(--surface-strong)] p-4">
+            <div className="mb-4 flex items-center gap-2">
+              <ShieldCheck size={15} className="text-[var(--brand-teal)]" />
+              <p className="text-sm font-black text-[var(--text-primary)]">
+                Organizer policy
+              </p>
+            </div>
+
+            <div className="grid gap-4 sm:grid-cols-2">
+              <label className="block">
+                <span className="label">Check-in policy</span>
+                <select
+                  value={form.check_in_policy}
+                  onChange={(event) =>
+                    setForm((current) => ({
+                      ...current,
+                      check_in_policy: event.target.value as TournamentCheckInPolicy,
+                    }))
+                  }
+                  className="input"
+                >
+                  {TOURNAMENT_CHECK_IN_POLICIES.map((policy) => (
+                    <option key={policy.key} value={policy.key}>
+                      {policy.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <label className="block">
+                <span className="label">Result proof</span>
+                <select
+                  value={form.proof_type}
+                  onChange={(event) =>
+                    setForm((current) => ({
+                      ...current,
+                      proof_type: event.target.value as TournamentProofType,
+                    }))
+                  }
+                  className="input"
+                >
+                  {TOURNAMENT_PROOF_TYPES.map((proofType) => (
+                    <option key={proofType.key} value={proofType.key}>
+                      {proofType.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
+
+            <div className="mt-4 grid gap-4 sm:grid-cols-[180px_1fr]">
+              <label className="block">
+                <span className="label">Dispute window</span>
+                <input
+                  type="number"
+                  min={5}
+                  max={240}
+                  value={form.dispute_window_minutes}
+                  onChange={(event) =>
+                    setForm((current) => ({
+                      ...current,
+                      dispute_window_minutes: Math.max(
+                        5,
+                        Math.min(240, Number(event.target.value) || 20)
+                      ),
+                    }))
+                  }
+                  className="input"
+                />
+              </label>
+
+              <label className="block">
+                <span className="label">Prize terms</span>
+                <input
+                  value={form.prize_terms}
+                  onChange={(event) =>
+                    setForm((current) => ({
+                      ...current,
+                      prize_terms: event.target.value.slice(0, 300),
+                    }))
+                  }
+                  className="input"
+                  placeholder="Example: rewards paid after result verification"
+                />
+              </label>
+            </div>
+
+            <div className="mt-4">
+              <p className="label">Registration requirements</p>
+              <div className="grid gap-2 sm:grid-cols-2">
+                {TOURNAMENT_REQUIREMENTS.map((requirement) => {
+                  const isChecked = form.registration_requirements.includes(requirement.key);
+                  return (
+                    <label
+                      key={requirement.key}
+                      className="flex items-center gap-3 rounded-xl border border-[var(--border-color)] bg-[var(--surface-elevated)] px-3 py-2 text-sm text-[var(--text-secondary)]"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={isChecked}
+                        onChange={() => toggleRequirement(requirement.key)}
+                      />
+                      <span>{requirement.label}</span>
+                    </label>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+
           <div>
             <label className="label">Rules</label>
             <textarea
@@ -690,11 +854,11 @@ export default function CreateTournamentPage() {
               <Trophy size={15} className="text-[var(--brand-coral)]" />
               Prize setup
             </div>
-            {form.prize_pool_mode === 'specified'
+            {form.entry_type === 'free'
+              ? 'Free tournaments have no cash prize or reward and publish without approval.'
+              : form.prize_pool_mode === 'specified'
               ? `Specified mode keeps the prize pool fixed at KES ${form.prize_pool.toLocaleString()} from the moment you publish the bracket.`
-              : form.entry_type === 'free'
-                ? 'Auto mode with free entry stays at KES 0. Switch to specified mode if you want to guarantee a cash payout.'
-                : `Auto mode grows only from paid slots. At full capacity this bracket would reach up to KES ${autoPrizeAtCapacity.prizePool.toLocaleString()}.`}
+              : `Auto mode grows only from paid slots. At full capacity this bracket would reach up to KES ${autoPrizeAtCapacity.prizePool.toLocaleString()}. Paid tournaments are reviewed by Mechi before players can join.`}
           </div>
 
           {createFeedback ? (

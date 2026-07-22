@@ -38,7 +38,7 @@ export type MatchChallengeStatus =
   | 'declined'
   | 'cancelled'
   | 'expired';
-export type SupportThreadChannel = 'whatsapp' | 'instagram';
+export type SupportThreadChannel = 'whatsapp' | 'instagram' | 'in_app';
 export type SupportThreadStatus =
   | 'open'
   | 'waiting_on_ai'
@@ -48,12 +48,22 @@ export type SupportThreadStatus =
 export type SupportThreadPriority = 'low' | 'normal' | 'high' | 'urgent';
 export type SupportMessageDirection = 'inbound' | 'outbound';
 export type SupportMessageSenderType = 'user' | 'ai' | 'admin' | 'system';
+export type TeamMemberRole = 'captain' | 'starter' | 'substitute' | 'member';
+export type TeamMemberStatus = 'active' | 'left' | 'removed';
+export type TeamInvitationStatus = 'pending' | 'accepted' | 'declined' | 'cancelled' | 'expired';
 export type NotificationType =
   | 'challenge_received'
   | 'challenge_sent'
   | 'challenge_accepted'
   | 'challenge_declined'
   | 'challenge_cancelled'
+  | 'team_invitation_received'
+  | 'team_invitation_accepted'
+  | 'team_invitation_declined'
+  | 'team_role_changed'
+  | 'support_case_created'
+  | 'support_case_replied'
+  | 'support_case_resolved'
   | 'bounty_won'
   | 'tournament_joined'
   | 'tournament_player_joined'
@@ -202,6 +212,8 @@ export interface QueueEntry {
   user_id: string;
   game: GameKey;
   platform?: PlatformKey | null;
+  participant_mode?: 'solo' | 'team';
+  team_size?: number | null;
   region: string;
   rating: number;
   status: 'waiting' | 'matched' | 'cancelled';
@@ -361,6 +373,12 @@ export interface SupportThread {
   last_ai_reply_at?: string | null;
   created_at: string;
   updated_at: string;
+  subject?: string | null;
+  issue_category?: string | null;
+  context_type?: string | null;
+  context_id?: string | null;
+  case_reference?: string | null;
+  resolution_summary?: string | null;
   user?: Pick<
     Profile,
     'id' | 'username' | 'phone' | 'whatsapp_number' | 'plan' | 'region' | 'selected_games' | 'platforms'
@@ -451,8 +469,48 @@ export interface TournamentPlayer {
   payment_status: TournamentPaymentStatus;
   payment_ref: string | null;
   payment_access_code: string | null;
+  check_in_status?: 'registered' | 'checked_in' | 'no_show';
+  checked_in_at?: string | null;
   joined_at: string;
   user?: Pick<Profile, 'id' | 'username' | 'email' | 'phone'>;
+}
+
+export interface Team {
+  id: string;
+  name: string;
+  slug: string;
+  description?: string | null;
+  region: string;
+  avatar_url?: string | null;
+  visibility: 'public' | 'private';
+  recruiting: boolean;
+  owner_id: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface TeamMember {
+  id: string;
+  team_id: string;
+  user_id: string;
+  role: TeamMemberRole;
+  status: TeamMemberStatus;
+  joined_at: string;
+  left_at?: string | null;
+  profile?: Pick<Profile, 'id' | 'username' | 'avatar_url' | 'selected_games'> | null;
+}
+
+export interface TeamInvitation {
+  id: string;
+  team_id: string;
+  invitee_id: string;
+  inviter_id: string;
+  status: TeamInvitationStatus;
+  expires_at: string;
+  responded_at?: string | null;
+  created_at: string;
+  team?: Pick<Team, 'id' | 'name' | 'slug' | 'avatar_url'> | null;
+  inviter?: Pick<Profile, 'id' | 'username' | 'avatar_url'> | null;
 }
 
 export interface TournamentMatch {

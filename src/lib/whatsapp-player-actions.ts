@@ -12,8 +12,8 @@ import {
   ONLINE_TOURNAMENT_TITLE,
   ONLINE_TOURNAMENT_TOTAL_SLOTS,
   ONLINE_TOURNAMENT_YOUTUBE_URL,
+  getOnlineTournamentWindowState,
   isOnlineTournamentGame,
-  isOnlineTournamentRegistrationClosed,
 } from '@/lib/online-tournament';
 import {
   getPlayerDashboardSnapshot,
@@ -295,18 +295,19 @@ function requireLinkedAccountMessage() {
 function formatPlayMechiRegistrationMessage(game: GameKey | null) {
   const tournamentGame = game && isOnlineTournamentGame(game) ? ONLINE_TOURNAMENT_GAME_BY_KEY[game] : null;
   const openGames = ONLINE_TOURNAMENT_GAMES.filter(
-    (config) => !isOnlineTournamentRegistrationClosed(config)
+    (config) => getOnlineTournamentWindowState(config).isRegistrationOpen
   );
 
-  if (tournamentGame && isOnlineTournamentRegistrationClosed(tournamentGame)) {
+  if (tournamentGame && !getOnlineTournamentWindowState(tournamentGame).isRegistrationOpen) {
     const openGameLabel = openGames.map((config) => config.label).join(', ');
 
     return [
-      `${tournamentGame.label} registration is full now.`,
+      `${tournamentGame.label} registration is closed now.`,
       openGameLabel
         ? `You can still register for ${openGameLabel} here:`
         : 'Registration page:',
       `${APP_URL}${ONLINE_TOURNAMENT_REGISTRATION_PATH}`,
+      openGameLabel ? '' : `Browse current tournaments: ${APP_URL}/playmechi/tournaments`,
     ].join('\n');
   }
 
@@ -334,7 +335,7 @@ function formatPlayMechiInfoMessage(game: GameKey | null) {
     .map(
       (config) =>
         `${config.label}: ${config.dateLabel}, ${config.timeLabel}, ${config.slots} slots${
-          isOnlineTournamentRegistrationClosed(config) ? ' (full)' : ''
+          getOnlineTournamentWindowState(config).isRegistrationOpen ? '' : ' (registration closed)'
         }`
     )
     .join('\n');

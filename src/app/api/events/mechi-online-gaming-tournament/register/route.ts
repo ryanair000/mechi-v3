@@ -49,12 +49,12 @@ type EventRegistrationRow = {
 function emptyGameCounts() {
   return ONLINE_TOURNAMENT_GAMES.reduce(
     (counts, game) => {
-      const registrationClosed = isOnlineTournamentRegistrationClosed(game);
+      const registrationOpen = getOnlineTournamentWindowState(game).isRegistrationOpen;
       counts[game.game] = {
         registered: 0,
         slots: game.slots,
-        spotsLeft: registrationClosed ? 0 : game.slots,
-        full: registrationClosed,
+        spotsLeft: registrationOpen ? game.slots : 0,
+        full: !registrationOpen,
       };
       return counts;
     },
@@ -106,11 +106,11 @@ async function getRegistrationSummary(userId?: string | null) {
 
   for (const game of ONLINE_TOURNAMENT_GAMES) {
     const registered = gameCounts[game.game].registered;
-    const registrationClosed = isOnlineTournamentRegistrationClosed(game);
-    gameCounts[game.game].spotsLeft = registrationClosed
-      ? 0
-      : Math.max(0, game.slots - registered);
-    gameCounts[game.game].full = registrationClosed || registered >= game.slots;
+    const registrationOpen = getOnlineTournamentWindowState(game).isRegistrationOpen;
+    gameCounts[game.game].spotsLeft = registrationOpen
+      ? Math.max(0, game.slots - registered)
+      : 0;
+    gameCounts[game.game].full = !registrationOpen || registered >= game.slots;
   }
 
   return {
@@ -270,7 +270,7 @@ export async function POST(request: NextRequest) {
 
     if (subscribedYoutube && youtubeName.length < 2) {
       return NextResponse.json(
-        { error: 'Add the Youtube mail or channel name used to subscribe' },
+        { error: 'Add the YouTube email or channel name used to subscribe' },
         { status: 400 }
       );
     }

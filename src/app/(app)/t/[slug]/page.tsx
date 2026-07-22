@@ -9,6 +9,7 @@ import {
   CheckCircle2,
   Clock,
   Copy,
+  ShieldCheck,
   Swords,
   Trophy,
   Users,
@@ -45,6 +46,8 @@ type ViewerState = {
   joined: boolean;
   isOrganizer: boolean;
   paymentStatus: string | null;
+  checkInStatus: 'registered' | 'checked_in' | 'no_show' | null;
+  checkedInAt: string | null;
   plan: string;
   isPrimaryAdmin: boolean;
   canCreateStream: boolean;
@@ -90,6 +93,54 @@ function formatTournamentStatusLabel(status: string) {
   }
 }
 
+function formatPayoutStatusLabel(status: string | null | undefined, prizePool: number) {
+  if (prizePool <= 0) return 'No cash payout';
+
+  switch (status) {
+    case 'pending':
+      return 'Payout pending';
+    case 'paid':
+      return 'Payout paid';
+    case 'failed':
+      return 'Payout needs review';
+    case 'none':
+    default:
+      return 'Payout not started';
+  }
+}
+
+function getPayoutStatusDetail(status: string | null | undefined, prizePool: number) {
+  if (prizePool <= 0) {
+    return 'This tournament does not currently carry a cash payout.';
+  }
+
+  switch (status) {
+    case 'pending':
+      return 'The winner is set and payout is queued for operator review or provider completion.';
+    case 'paid':
+      return 'The tournament payout has been marked complete.';
+    case 'failed':
+      return 'The payout could not complete automatically and needs operator review.';
+    default:
+      return 'Payout state appears after the tournament is completed and a winner is confirmed.';
+  }
+}
+
+function getResultStatusDetail(status: string) {
+  switch (status) {
+    case 'active':
+      return 'Matches are live. Players report results from their match rooms.';
+    case 'completed':
+      return 'The bracket is complete and final results are locked.';
+    case 'full':
+      return 'The bracket is filled. Organizer can start once schedule rules allow it.';
+    case 'open':
+      return 'Registration is open. Results appear after the bracket starts.';
+    default:
+      return 'Tournament state is tracked by Mechi and organizer actions.';
+  }
+}
+
 export default function TournamentDetailPage() {
   return (
     <Suspense fallback={<div className="page-container py-8">Loading tournament...</div>}>
@@ -108,6 +159,7 @@ function TournamentDetailContent() {
   const [data, setData] = useState<DetailResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [joining, setJoining] = useState(false);
+  const [checkingIn, setCheckingIn] = useState(false);
   const [starting, setStarting] = useState(false);
   const [creatingStream, setCreatingStream] = useState(false);
   const [stoppingStream, setStoppingStream] = useState(false);
@@ -244,6 +296,46 @@ function TournamentDetailContent() {
     }
   };
 
+  const handleCheckIn = async () => {
+    setCheckingIn(true);
+    setActionFeedback({
+      tone: 'loading',
+      title: 'Checking you in...',
+      detail: "We're marking your confirmed slot as ready for tournament seeding.",
+    });
+
+    try {
+      const res = await authFetch(`/api/tournaments/${slug}/check-in`, { method: 'POST' });
+      const payload = await res.json();
+      if (!res.ok) {
+        setActionFeedback({
+          tone: 'error',
+          title: 'Could not check in.',
+          detail: payload.error ?? 'Please try again when check-in opens.',
+        });
+        toast.error(payload.error ?? 'Could not check in');
+        return;
+      }
+
+      setActionFeedback({
+        tone: 'success',
+        title: 'You are checked in.',
+        detail: 'Your slot is marked ready. Stay close for the bracket start.',
+      });
+      toast.success('Checked in');
+      await fetchTournament();
+    } catch {
+      setActionFeedback({
+        tone: 'error',
+        title: 'Could not check in.',
+        detail: 'We could not reach the server. Please try again.',
+      });
+      toast.error('Could not check in');
+    } finally {
+      setCheckingIn(false);
+    }
+  };
+
   const handleStart = async () => {
     setStarting(true);
     setActionFeedback({
@@ -359,11 +451,17 @@ function TournamentDetailContent() {
   const hasActiveStream = Boolean(data.stream && data.stream.status !== 'ended');
   const scheduledKickoff = tournament.scheduled_for ?? tournament.started_at;
   const scheduledKickoffDate = parseTournamentSchedule(tournament.scheduled_for);
+  const checkInOpensAt = getTournamentCheckInDate(scheduledKickoff);
+  const checkInOpen = !checkInOpensAt || Date.now() >= checkInOpensAt.getTime();
+  const canCheckIn =
+    viewer.joined &&
+    viewer.checkInStatus !== 'checked_in' &&
+    ['open', 'full', 'active'].includes(tournament.status);
   const canStartTournament =
     !scheduledKickoffDate || scheduledKickoffDate.getTime() <= Date.now();
   const scheduleLabel = formatTournamentDateTime(scheduledKickoff, 'To be confirmed');
   const checkInLabel = formatTournamentDateTime(
-    getTournamentCheckInDate(scheduledKickoff),
+    checkInOpensAt,
     '1 hour before kickoff'
   );
   const shareText = tournamentShareText(
@@ -372,6 +470,18 @@ function TournamentDetailContent() {
     tournament.entry_fee,
     tournament.slots_left,
     tournament.prize_pool
+  );
+  const checkedInCount = players.filter((player) => player.check_in_status === 'checked_in').length;
+  const fillRate = Math.round((tournament.confirmed_count / Math.max(1, tournament.size)) * 100);
+  const checkInRate = Math.round((checkedInCount / Math.max(1, tournament.confirmed_count)) * 100);
+  const completedMatchCount = data.matches.filter(
+    (match) => match.status === 'completed' || match.match?.status === 'completed'
+  ).length;
+  const disputedMatchCount = data.matches.filter(
+    (match) => match.match?.status === 'disputed'
+  ).length;
+  const matchCompletionRate = Math.round(
+    (completedMatchCount / Math.max(1, data.matches.length)) * 100
   );
 
   return (
@@ -475,8 +585,19 @@ function TournamentDetailContent() {
         {viewer.joined && (
           <div className="surface-live flex flex-1 items-center gap-2 rounded-2xl p-4 text-sm font-bold text-[var(--accent-secondary-text)]">
             <CheckCircle2 size={16} />
-            You are in this bracket{viewer.paymentStatus ? ` / ${viewer.paymentStatus}` : ''}.
+            You are in this bracket{viewer.paymentStatus ? ` / ${viewer.paymentStatus}` : ''}
+            {viewer.checkInStatus ? ` / ${viewer.checkInStatus.replace('_', ' ')}` : ''}.
           </div>
+        )}
+        {canCheckIn && (
+          <button
+            onClick={handleCheckIn}
+            disabled={checkingIn || !checkInOpen}
+            className="btn-ghost flex-1 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            <CheckCircle2 size={15} />
+            {checkingIn ? 'Checking in...' : checkInOpen ? 'Check in' : 'Check-in locked'}
+          </button>
         )}
         {viewer.isOrganizer && tournament.status === 'full' && (
           <button
@@ -658,7 +779,10 @@ function TournamentDetailContent() {
                     <p className="truncate text-sm font-black text-[var(--text-primary)]">
                       {player.user?.username ?? 'Player'}
                     </p>
-                    <p className="text-xs text-[var(--text-soft)]">{player.payment_status}</p>
+                    <p className="text-xs text-[var(--text-soft)]">
+                      {player.payment_status}
+                      {player.check_in_status ? ` / ${player.check_in_status.replace('_', ' ')}` : ''}
+                    </p>
                   </div>
                 </div>
               ))}
@@ -667,6 +791,42 @@ function TournamentDetailContent() {
                   Open slot
                 </div>
               ))}
+            </div>
+          </section>
+
+          {(viewer.isOrganizer || viewer.isPrimaryAdmin) && (
+            <section className="card p-5">
+              <p className="section-title">Ops metrics</p>
+              <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
+                <OpsMetric label="Fill rate" value={`${fillRate}%`} detail={`${tournament.confirmed_count}/${tournament.size} slots`} />
+                <OpsMetric label="Check-ins" value={`${checkInRate}%`} detail={`${checkedInCount} ready players`} />
+                <OpsMetric label="Matches done" value={`${matchCompletionRate}%`} detail={`${completedMatchCount}/${data.matches.length || 0} matches`} />
+                <OpsMetric label="Disputes" value={String(disputedMatchCount)} detail="Open match disputes" />
+              </div>
+            </section>
+          )}
+
+          <section className="card p-5">
+            <p className="section-title">Trust desk</p>
+            <div className="mt-4 space-y-3">
+              <TrustRow
+                icon={<ShieldCheck size={14} />}
+                label="Result state"
+                value={formatTournamentStatusLabel(tournament.status)}
+                detail={getResultStatusDetail(tournament.status)}
+              />
+              <TrustRow
+                icon={<Swords size={14} />}
+                label="Disputes"
+                value="Match-room proof"
+                detail="Mismatched score reports move to dispute review, where players can upload screenshot proof."
+              />
+              <TrustRow
+                icon={<Trophy size={14} />}
+                label="Payout"
+                value={formatPayoutStatusLabel(tournament.payout_status, tournament.prize_pool)}
+                detail={getPayoutStatusDetail(tournament.payout_status, tournament.prize_pool)}
+              />
             </div>
           </section>
 
@@ -690,6 +850,43 @@ function TournamentDetailContent() {
           </button>
         </aside>
       </div>
+    </div>
+  );
+}
+
+function OpsMetric({ label, value, detail }: { label: string; value: string; detail: string }) {
+  return (
+    <div className="rounded-2xl border border-[var(--border-color)] bg-[var(--surface-strong)] p-4">
+      <p className="text-[10px] font-black uppercase tracking-[0.14em] text-[var(--text-soft)]">
+        {label}
+      </p>
+      <p className="mt-2 text-xl font-black text-[var(--text-primary)]">{value}</p>
+      <p className="mt-1 text-xs leading-5 text-[var(--text-secondary)]">{detail}</p>
+    </div>
+  );
+}
+
+function TrustRow({
+  icon,
+  label,
+  value,
+  detail,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  value: string;
+  detail: string;
+}) {
+  return (
+    <div className="rounded-2xl border border-[var(--border-color)] bg-[var(--surface-strong)] p-4">
+      <div className="flex items-center gap-2 text-[var(--brand-teal)]">
+        {icon}
+        <p className="text-[10px] font-black uppercase tracking-[0.14em] text-[var(--text-soft)]">
+          {label}
+        </p>
+      </div>
+      <p className="mt-2 text-sm font-black text-[var(--text-primary)]">{value}</p>
+      <p className="mt-1 text-xs leading-5 text-[var(--text-secondary)]">{detail}</p>
     </div>
   );
 }

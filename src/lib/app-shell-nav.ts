@@ -10,6 +10,7 @@ import {
   MonitorPlay,
   type LucideIcon,
   MessageCircle,
+  Rocket,
   Share2,
   Swords,
   Trophy,
@@ -42,6 +43,14 @@ const DASHBOARD_NAV_ITEM: AppNavItem = {
   label: 'Dashboard',
   icon: LayoutDashboard,
   matchMode: 'exact',
+};
+
+const GET_STARTED_NAV_ITEM: AppNavItem = {
+  href: '/get-started',
+  label: 'Get Started',
+  icon: Rocket,
+  matchMode: 'exact',
+  description: 'Finish your player setup and take your first competitive steps.',
 };
 
 const LEADERBOARD_NAV_ITEM: AppNavItem = {
@@ -140,6 +149,7 @@ const BOUNTIES_NAV_ITEM: AppNavItem = {
 
 export const SIDEBAR_PRIMARY_ITEMS: AppNavItem[] = [
   DASHBOARD_NAV_ITEM,
+  GET_STARTED_NAV_ITEM,
   INBOX_NAV_ITEM,
   LEADERBOARD_NAV_ITEM,
   STREAM_NAV_ITEM,

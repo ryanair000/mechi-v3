@@ -16,7 +16,7 @@ import type { LiveStream } from '@/types';
 const TOURNAMENT_DETAIL_SELECT =
   'id, slug, title, game, platform, region, size, entry_fee, prize_pool_mode, prize_pool, platform_fee, platform_fee_rate, status, winner_id, organizer_id, rules, approval_status, approved_at, approved_by, is_featured, payout_status, scheduled_for, created_at, started_at, ended_at, organizer:organizer_id(id, username), winner:winner_id(id, username)';
 const TOURNAMENT_PLAYER_SELECT =
-  'id, tournament_id, user_id, seed, payment_status, joined_at, user:user_id(id, username)';
+  'id, tournament_id, user_id, seed, payment_status, check_in_status, checked_in_at, joined_at, user:user_id(id, username)';
 const TOURNAMENT_MATCH_SELECT =
   'id, tournament_id, match_id, round, slot, player1_id, player2_id, winner_id, status, created_at, player1:player1_id(id, username), player2:player2_id(id, username), winner:winner_id(id, username), match:match_id(id, status, player1_score, player2_score)';
 const TOURNAMENT_STREAM_SELECT =
@@ -207,6 +207,8 @@ export async function GET(
         joined: Boolean(viewerPlayer),
         isOrganizer: authUser.id === tournament.organizer_id,
         paymentStatus: viewerPlayer?.payment_status ?? null,
+        checkInStatus: viewerPlayer?.check_in_status ?? null,
+        checkedInAt: viewerPlayer?.checked_in_at ?? null,
         plan: resolvedPlan,
         isPrimaryAdmin,
         canCreateStream,

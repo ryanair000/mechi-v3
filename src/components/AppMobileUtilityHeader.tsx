@@ -26,6 +26,7 @@ const HEADER_CONFIGS: Array<{
     },
   },
   { matches: (pathname) => pathname.startsWith('/dashboard'), config: { eyebrow: 'Home', title: 'Dashboard' } },
+  { matches: (pathname) => pathname.startsWith('/get-started'), config: { eyebrow: 'Welcome', title: 'Get Started' } },
   { matches: (pathname) => pathname.startsWith('/leaderboard'), config: { eyebrow: 'Compete', title: 'Leaderboard' } },
   { matches: (pathname) => pathname.startsWith('/tournaments'), config: { eyebrow: 'Compete', title: 'Tournaments' } },
   { matches: (pathname) => pathname.startsWith('/lobbies'), config: { eyebrow: 'Compete', title: 'Lobbies' } },

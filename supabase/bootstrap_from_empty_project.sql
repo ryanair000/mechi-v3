@@ -53,6 +53,8 @@ CREATE TABLE IF NOT EXISTS queue (
   user_id uuid NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
   game text NOT NULL,
   platform text,
+  participant_mode text NOT NULL DEFAULT 'solo' CHECK (participant_mode IN ('solo', 'team')),
+  team_size integer CHECK (team_size IS NULL OR team_size BETWEEN 2 AND 12),
   region text NOT NULL DEFAULT 'Unspecified',
   rating integer NOT NULL DEFAULT 1000,
   status text NOT NULL DEFAULT 'waiting' CHECK (status IN ('waiting', 'matched', 'cancelled')),
@@ -125,7 +127,7 @@ CREATE TABLE IF NOT EXISTS email_delivery_events (
 CREATE TABLE IF NOT EXISTS support_threads (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   channel text NOT NULL DEFAULT 'whatsapp'
-    CHECK (channel IN ('whatsapp', 'instagram')),
+    CHECK (channel IN ('whatsapp', 'instagram', 'in_app')),
   phone text,
   wa_id text NOT NULL,
   contact_name text,
@@ -136,6 +138,12 @@ CREATE TABLE IF NOT EXISTS support_threads (
     CHECK (priority IN ('low', 'normal', 'high', 'urgent')),
   assigned_to uuid REFERENCES profiles(id) ON DELETE SET NULL,
   escalation_reason text,
+  subject text,
+  issue_category text,
+  context_type text,
+  context_id text,
+  case_reference text,
+  resolution_summary text,
   last_message_at timestamptz NOT NULL DEFAULT timezone('utc', now()),
   last_ai_reply_at timestamptz,
   created_at timestamptz NOT NULL DEFAULT timezone('utc', now()),
@@ -356,6 +364,11 @@ CREATE TABLE IF NOT EXISTS tournaments (
   winner_id uuid REFERENCES profiles(id) ON DELETE SET NULL,
   organizer_id uuid NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
   rules text,
+  approval_status text NOT NULL DEFAULT 'approved'
+    CHECK (approval_status IN ('pending', 'approved', 'rejected')),
+  approved_at timestamptz,
+  approved_by uuid REFERENCES profiles(id) ON DELETE SET NULL,
+  is_featured boolean NOT NULL DEFAULT false,
   payout_status text NOT NULL DEFAULT 'none' CHECK (payout_status IN ('none', 'pending', 'paid', 'failed')),
   payout_ref text,
   payout_error text,
@@ -374,7 +387,86 @@ CREATE TABLE IF NOT EXISTS tournament_players (
   payment_ref text,
   payment_access_code text,
   joined_at timestamptz NOT NULL DEFAULT timezone('utc', now()),
+  check_in_status text NOT NULL DEFAULT 'registered'
+    CHECK (check_in_status IN ('registered', 'checked_in', 'no_show')),
+  checked_in_at timestamptz,
   UNIQUE (tournament_id, user_id)
+);
+
+CREATE TABLE IF NOT EXISTS teams (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  name text NOT NULL CHECK (char_length(name) BETWEEN 2 AND 60),
+  slug text NOT NULL UNIQUE,
+  description text CHECK (description IS NULL OR char_length(description) <= 500),
+  region text NOT NULL DEFAULT 'Kenya',
+  avatar_url text,
+  visibility text NOT NULL DEFAULT 'public' CHECK (visibility IN ('public', 'private')),
+  recruiting boolean NOT NULL DEFAULT false,
+  owner_id uuid NOT NULL REFERENCES profiles(id) ON DELETE RESTRICT,
+  created_at timestamptz NOT NULL DEFAULT timezone('utc', now()),
+  updated_at timestamptz NOT NULL DEFAULT timezone('utc', now())
+);
+
+CREATE TABLE IF NOT EXISTS team_members (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  team_id uuid NOT NULL REFERENCES teams(id) ON DELETE CASCADE,
+  user_id uuid NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+  role text NOT NULL DEFAULT 'member' CHECK (role IN ('captain', 'starter', 'substitute', 'member')),
+  status text NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'left', 'removed')),
+  joined_at timestamptz NOT NULL DEFAULT timezone('utc', now()),
+  left_at timestamptz,
+  UNIQUE (team_id, user_id)
+);
+
+CREATE TABLE IF NOT EXISTS team_invitations (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  team_id uuid NOT NULL REFERENCES teams(id) ON DELETE CASCADE,
+  invitee_id uuid NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+  inviter_id uuid NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+  status text NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'accepted', 'declined', 'cancelled', 'expired')),
+  expires_at timestamptz NOT NULL DEFAULT (timezone('utc', now()) + interval '7 days'),
+  responded_at timestamptz,
+  created_at timestamptz NOT NULL DEFAULT timezone('utc', now()),
+  CHECK (invitee_id <> inviter_id)
+);
+
+CREATE TABLE IF NOT EXISTS team_roster_entries (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  team_id uuid NOT NULL REFERENCES teams(id) ON DELETE CASCADE,
+  game text NOT NULL,
+  member_id uuid NOT NULL REFERENCES team_members(id) ON DELETE CASCADE,
+  roster_role text NOT NULL DEFAULT 'starter' CHECK (roster_role IN ('starter', 'substitute')),
+  game_account_snapshot jsonb NOT NULL DEFAULT '{}'::jsonb,
+  eligibility_status text NOT NULL DEFAULT 'pending' CHECK (eligibility_status IN ('pending', 'eligible', 'blocked')),
+  eligibility_reason text,
+  created_at timestamptz NOT NULL DEFAULT timezone('utc', now()),
+  updated_at timestamptz NOT NULL DEFAULT timezone('utc', now()),
+  UNIQUE (team_id, game, member_id)
+);
+
+CREATE TABLE IF NOT EXISTS team_audit_logs (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  team_id uuid NOT NULL REFERENCES teams(id) ON DELETE CASCADE,
+  actor_id uuid REFERENCES profiles(id) ON DELETE SET NULL,
+  action text NOT NULL,
+  subject_user_id uuid REFERENCES profiles(id) ON DELETE SET NULL,
+  details jsonb NOT NULL DEFAULT '{}'::jsonb,
+  created_at timestamptz NOT NULL DEFAULT timezone('utc', now())
+);
+
+CREATE TABLE IF NOT EXISTS tournament_team_entries (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  tournament_id uuid NOT NULL REFERENCES tournaments(id) ON DELETE CASCADE,
+  team_id uuid NOT NULL REFERENCES teams(id) ON DELETE RESTRICT,
+  registered_by uuid NOT NULL REFERENCES profiles(id) ON DELETE RESTRICT,
+  roster_snapshot jsonb NOT NULL,
+  roster_locked_at timestamptz NOT NULL DEFAULT timezone('utc', now()),
+  payment_status text NOT NULL DEFAULT 'free' CHECK (payment_status IN ('pending', 'paid', 'free', 'failed', 'refunded')),
+  payment_ref text,
+  check_in_status text NOT NULL DEFAULT 'registered' CHECK (check_in_status IN ('registered', 'checked_in', 'no_show')),
+  checked_in_at timestamptz,
+  joined_at timestamptz NOT NULL DEFAULT timezone('utc', now()),
+  UNIQUE (tournament_id, team_id)
 );
 
 CREATE TABLE IF NOT EXISTS tournament_matches (
@@ -398,14 +490,232 @@ CREATE INDEX IF NOT EXISTS idx_tournaments_status_created_at ON tournaments(stat
 CREATE INDEX IF NOT EXISTS idx_tournaments_status_scheduled_for ON tournaments(status, scheduled_for ASC);
 CREATE INDEX IF NOT EXISTS idx_tournaments_game_status ON tournaments(game, status);
 CREATE INDEX IF NOT EXISTS idx_tournaments_organizer_id ON tournaments(organizer_id);
+CREATE INDEX IF NOT EXISTS idx_tournaments_approval_status ON tournaments(approval_status);
+CREATE INDEX IF NOT EXISTS idx_tournaments_is_featured_created_at ON tournaments(is_featured DESC, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_tournament_players_tournament_id ON tournament_players(tournament_id);
 CREATE INDEX IF NOT EXISTS idx_tournament_players_user_id ON tournament_players(user_id);
 CREATE INDEX IF NOT EXISTS idx_tournament_players_payment_status ON tournament_players(payment_status);
+CREATE INDEX IF NOT EXISTS idx_tournament_players_check_in_status ON tournament_players(tournament_id, check_in_status);
+CREATE INDEX IF NOT EXISTS idx_team_members_user_status ON team_members(user_id, status);
+CREATE INDEX IF NOT EXISTS idx_team_members_team_status ON team_members(team_id, status);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_team_invitations_one_pending ON team_invitations(team_id, invitee_id) WHERE status = 'pending';
+CREATE INDEX IF NOT EXISTS idx_team_invitations_invitee_status ON team_invitations(invitee_id, status, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_team_roster_team_game ON team_roster_entries(team_id, game);
+CREATE INDEX IF NOT EXISTS idx_team_audit_team_created ON team_audit_logs(team_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_tournament_team_entries_tournament_status ON tournament_team_entries(tournament_id, payment_status);
 CREATE INDEX IF NOT EXISTS idx_tournament_matches_tournament_round_slot ON tournament_matches(tournament_id, round, slot);
 CREATE INDEX IF NOT EXISTS idx_tournament_matches_match_id ON tournament_matches(match_id);
 CREATE INDEX IF NOT EXISTS idx_matches_tournament_id ON matches(tournament_id);
 
-GRANT ALL ON tournaments, tournament_players, tournament_matches TO service_role;
+ALTER TABLE teams ENABLE ROW LEVEL SECURITY;
+ALTER TABLE team_members ENABLE ROW LEVEL SECURITY;
+ALTER TABLE team_invitations ENABLE ROW LEVEL SECURITY;
+ALTER TABLE team_roster_entries ENABLE ROW LEVEL SECURITY;
+ALTER TABLE team_audit_logs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE tournament_team_entries ENABLE ROW LEVEL SECURITY;
+
+REVOKE ALL ON TABLE teams, team_members, team_invitations, team_roster_entries, team_audit_logs, tournament_team_entries FROM anon, authenticated;
+GRANT ALL ON tournaments, tournament_players, tournament_matches, teams, team_members, team_invitations, team_roster_entries, team_audit_logs, tournament_team_entries TO service_role;
+
+CREATE OR REPLACE FUNCTION public.enforce_tournament_policy()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = public
+AS $$
+BEGIN
+  IF NEW.entry_fee = 0 THEN
+    IF NEW.prize_pool_mode = 'specified' OR NEW.prize_pool > 0 THEN
+      RAISE EXCEPTION 'FREE_TOURNAMENT_CANNOT_HAVE_REWARD';
+    END IF;
+    NEW.prize_pool_mode := 'auto';
+    NEW.prize_pool := 0;
+    NEW.platform_fee := 0;
+    NEW.platform_fee_rate := 0;
+    NEW.approval_status := 'approved';
+    NEW.approved_at := COALESCE(NEW.approved_at, timezone('utc', now()));
+    NEW.approved_by := NULL;
+  ELSIF TG_OP = 'INSERT' THEN
+    NEW.approval_status := 'pending';
+    NEW.approved_at := NULL;
+    NEW.approved_by := NULL;
+    NEW.is_featured := false;
+  END IF;
+  RETURN NEW;
+END;
+$$;
+
+CREATE TRIGGER enforce_tournament_policy_trigger
+  BEFORE INSERT OR UPDATE OF entry_fee, prize_pool_mode, prize_pool, approval_status
+  ON public.tournaments
+  FOR EACH ROW
+  EXECUTE FUNCTION public.enforce_tournament_policy();
+
+CREATE OR REPLACE FUNCTION public.enforce_paid_tournament_approval()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = public
+AS $$
+DECLARE
+  v_entry_fee integer;
+  v_approval_status text;
+BEGIN
+  IF NEW.payment_status NOT IN ('pending', 'paid') THEN
+    RETURN NEW;
+  END IF;
+  SELECT entry_fee, approval_status
+    INTO v_entry_fee, v_approval_status
+    FROM public.tournaments
+   WHERE id = NEW.tournament_id;
+  IF v_entry_fee > 0 AND v_approval_status <> 'approved' THEN
+    RAISE EXCEPTION 'PAID_TOURNAMENT_NOT_APPROVED';
+  END IF;
+  RETURN NEW;
+END;
+$$;
+
+CREATE TRIGGER enforce_paid_tournament_approval_trigger
+  BEFORE INSERT OR UPDATE OF payment_status, tournament_id
+  ON public.tournament_players
+  FOR EACH ROW
+  EXECUTE FUNCTION public.enforce_paid_tournament_approval();
+
+CREATE OR REPLACE FUNCTION public.claim_tournament_slot(
+  p_tournament_id uuid,
+  p_user_id uuid,
+  p_payment_status text,
+  p_payment_ref text DEFAULT NULL,
+  p_payment_access_code text DEFAULT NULL
+)
+RETURNS TABLE (
+  player_id uuid,
+  player_payment_status text,
+  player_joined_at timestamptz,
+  player_inserted boolean,
+  tournament_status text
+)
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_tournament public.tournaments%ROWTYPE;
+  v_existing public.tournament_players%ROWTYPE;
+  v_player public.tournament_players%ROWTYPE;
+  v_reserved_count integer;
+  v_joined_at timestamptz := timezone('utc', now());
+BEGIN
+  IF p_payment_status NOT IN ('pending', 'free') THEN
+    RAISE EXCEPTION 'INVALID_PAYMENT_STATUS';
+  END IF;
+
+  SELECT *
+    INTO v_tournament
+    FROM public.tournaments
+   WHERE id = p_tournament_id
+   FOR UPDATE;
+
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'TOURNAMENT_NOT_FOUND';
+  END IF;
+
+  IF v_tournament.status <> 'open' THEN
+    RAISE EXCEPTION 'TOURNAMENT_NOT_OPEN';
+  END IF;
+
+  SELECT *
+    INTO v_existing
+    FROM public.tournament_players
+   WHERE tournament_id = p_tournament_id
+     AND user_id = p_user_id
+   FOR UPDATE;
+
+  IF FOUND AND v_existing.payment_status IN ('paid', 'free') THEN
+    RAISE EXCEPTION 'ALREADY_JOINED';
+  END IF;
+
+  IF FOUND AND v_existing.payment_status = 'pending' THEN
+    RAISE EXCEPTION 'PAYMENT_PENDING';
+  END IF;
+
+  SELECT count(*)
+    INTO v_reserved_count
+    FROM public.tournament_players
+   WHERE tournament_id = p_tournament_id
+     AND payment_status IN ('pending', 'paid', 'free');
+
+  IF v_reserved_count >= v_tournament.size THEN
+    UPDATE public.tournaments
+       SET status = 'full'
+     WHERE id = p_tournament_id
+       AND status = 'open';
+
+    RAISE EXCEPTION 'TOURNAMENT_FULL';
+  END IF;
+
+  IF FOUND THEN
+    UPDATE public.tournament_players
+       SET payment_status = p_payment_status,
+           payment_ref = p_payment_ref,
+           payment_access_code = p_payment_access_code,
+           check_in_status = 'registered',
+           checked_in_at = NULL,
+           joined_at = v_joined_at
+     WHERE id = v_existing.id
+     RETURNING *
+      INTO v_player;
+
+    player_inserted := false;
+  ELSE
+    INSERT INTO public.tournament_players (
+      tournament_id,
+      user_id,
+      payment_status,
+      payment_ref,
+      payment_access_code,
+      check_in_status,
+      joined_at
+    )
+    VALUES (
+      p_tournament_id,
+      p_user_id,
+      p_payment_status,
+      p_payment_ref,
+      p_payment_access_code,
+      'registered',
+      v_joined_at
+    )
+    RETURNING *
+      INTO v_player;
+
+    player_inserted := true;
+  END IF;
+
+  SELECT count(*)
+    INTO v_reserved_count
+    FROM public.tournament_players
+   WHERE tournament_id = p_tournament_id
+     AND payment_status IN ('pending', 'paid', 'free');
+
+  IF v_reserved_count >= v_tournament.size THEN
+    UPDATE public.tournaments
+       SET status = 'full'
+     WHERE id = p_tournament_id
+       AND status = 'open';
+    tournament_status := 'full';
+  ELSE
+    tournament_status := 'open';
+  END IF;
+
+  player_id := v_player.id;
+  player_payment_status := v_player.payment_status;
+  player_joined_at := v_player.joined_at;
+
+  RETURN NEXT;
+END;
+$$;
+
+GRANT EXECUTE ON FUNCTION public.claim_tournament_slot(uuid, uuid, text, text, text)
+  TO service_role;
 
 -- Mechi-owned online event registrations for large lobby tournaments.
 CREATE TABLE IF NOT EXISTS online_tournament_registrations (
@@ -1094,3 +1404,80 @@ CREATE INDEX IF NOT EXISTS idx_auth_action_tokens_expires_at
 
 REVOKE ALL ON TABLE auth_action_tokens FROM anon, authenticated;
 GRANT ALL ON auth_action_tokens TO service_role;
+-- Creator Studio is an opt-in product capability. It intentionally remains
+-- separate from the profiles.role security role (user/moderator/admin).
+CREATE TABLE IF NOT EXISTS creator_profiles (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL UNIQUE REFERENCES profiles(id) ON DELETE CASCADE,
+  slug text NOT NULL UNIQUE CHECK (slug ~ '^[a-z0-9]+(?:-[a-z0-9]+)*$'),
+  display_name text NOT NULL CHECK (char_length(display_name) BETWEEN 2 AND 60),
+  bio text NOT NULL DEFAULT '' CHECK (char_length(bio) <= 400),
+  creator_types text[] NOT NULL DEFAULT ARRAY['streamer']::text[],
+  games text[] NOT NULL DEFAULT '{}'::text[],
+  platform_links jsonb NOT NULL DEFAULT '{}'::jsonb,
+  status text NOT NULL DEFAULT 'active'
+    CHECK (status IN ('draft', 'active', 'pending_verification', 'verified', 'rejected', 'suspended')),
+  availability text NOT NULL DEFAULT 'available'
+    CHECK (availability IN ('available', 'limited', 'unavailable')),
+  verification_note text,
+  created_at timestamptz NOT NULL DEFAULT timezone('utc', now()),
+  updated_at timestamptz NOT NULL DEFAULT timezone('utc', now()),
+  CONSTRAINT creator_profiles_types_check CHECK (
+    cardinality(creator_types) > 0
+    AND creator_types <@ ARRAY['streamer', 'commentator', 'video_creator', 'coach']::text[]
+  ),
+  CONSTRAINT creator_profiles_links_object_check CHECK (jsonb_typeof(platform_links) = 'object')
+);
+
+CREATE TABLE IF NOT EXISTS creator_content (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  creator_id uuid NOT NULL REFERENCES creator_profiles(id) ON DELETE CASCADE,
+  title text NOT NULL CHECK (char_length(title) BETWEEN 2 AND 120),
+  content_type text NOT NULL CHECK (content_type IN ('clip', 'video', 'stream', 'post')),
+  platform text NOT NULL DEFAULT 'other'
+    CHECK (platform IN ('youtube', 'twitch', 'tiktok', 'instagram', 'facebook', 'x', 'other')),
+  external_url text NOT NULL CHECK (external_url ~ '^https?://'),
+  thumbnail_url text,
+  status text NOT NULL DEFAULT 'published' CHECK (status IN ('draft', 'published', 'archived')),
+  views integer NOT NULL DEFAULT 0 CHECK (views >= 0),
+  engagement integer NOT NULL DEFAULT 0 CHECK (engagement >= 0),
+  published_at timestamptz,
+  created_at timestamptz NOT NULL DEFAULT timezone('utc', now()),
+  updated_at timestamptz NOT NULL DEFAULT timezone('utc', now())
+);
+
+CREATE TABLE IF NOT EXISTS creator_coverage_assignments (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  creator_id uuid NOT NULL REFERENCES creator_profiles(id) ON DELETE CASCADE,
+  tournament_id uuid REFERENCES tournaments(id) ON DELETE CASCADE,
+  match_id uuid REFERENCES matches(id) ON DELETE CASCADE,
+  title text NOT NULL CHECK (char_length(title) BETWEEN 2 AND 120),
+  assignment_type text NOT NULL DEFAULT 'stream'
+    CHECK (assignment_type IN ('stream', 'commentary', 'highlights', 'interview', 'social')),
+  status text NOT NULL DEFAULT 'invited'
+    CHECK (status IN ('invited', 'accepted', 'declined', 'live', 'completed', 'cancelled')),
+  scheduled_for timestamptz,
+  sponsor_name text,
+  brief text CHECK (char_length(brief) <= 1200),
+  created_at timestamptz NOT NULL DEFAULT timezone('utc', now()),
+  updated_at timestamptz NOT NULL DEFAULT timezone('utc', now()),
+  CONSTRAINT creator_coverage_target_check CHECK (tournament_id IS NOT NULL OR match_id IS NOT NULL)
+);
+
+CREATE INDEX IF NOT EXISTS idx_creator_profiles_status ON creator_profiles(status);
+CREATE INDEX IF NOT EXISTS idx_creator_content_creator_created
+  ON creator_content(creator_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_creator_content_status_published
+  ON creator_content(status, published_at DESC);
+CREATE INDEX IF NOT EXISTS idx_creator_coverage_creator_schedule
+  ON creator_coverage_assignments(creator_id, scheduled_for ASC);
+CREATE INDEX IF NOT EXISTS idx_creator_coverage_status
+  ON creator_coverage_assignments(status, scheduled_for ASC);
+
+ALTER TABLE creator_profiles ENABLE ROW LEVEL SECURITY;
+ALTER TABLE creator_content ENABLE ROW LEVEL SECURITY;
+ALTER TABLE creator_coverage_assignments ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON TABLE creator_profiles FROM anon, authenticated;
+REVOKE ALL ON TABLE creator_content FROM anon, authenticated;
+REVOKE ALL ON TABLE creator_coverage_assignments FROM anon, authenticated;
+GRANT ALL ON creator_profiles, creator_content, creator_coverage_assignments TO service_role;

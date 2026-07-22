@@ -73,6 +73,7 @@ supabase/.temp/
 
 # vercel
 .vercel
+/vercel-recovered-source*/
 
 # typescript
 *.tsbuildinfo

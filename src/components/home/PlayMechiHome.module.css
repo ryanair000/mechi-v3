@@ -6,6 +6,8 @@
   --muted: #586176;
   --line: #dfe4ec;
   --surface: #f4f7fb;
+  --text-primary: #0b1121;
+  --text-secondary: #586176;
   min-height: 100vh;
   overflow-x: clip;
   background: #fff;
@@ -102,7 +104,7 @@
 .featureLabel { position: absolute; top: 22px; left: 22px; padding: 7px 10px; border: 1px solid rgb(255 255 255 / 45%); border-radius: 999px; background: rgb(11 17 33 / 70%); color: #fff; font-size: 11px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; backdrop-filter: blur(8px); }
 .featuredTitle { position: absolute; right: 24px; bottom: 24px; left: 24px; color: #fff; }
 .featuredTitle p { color: var(--teal); font-size: 13px; font-weight: 800; text-transform: uppercase; }
-.featuredTitle h2 { max-width: 410px; margin-top: 6px !important; font-size: clamp(26px, 3vw, 36px); font-weight: 900; letter-spacing: -.04em; line-height: 1.08; }
+.featuredTitle h2 { max-width: 410px; margin-top: 6px !important; color: #fff; font-size: clamp(26px, 3vw, 36px); font-weight: 900; letter-spacing: -.04em; line-height: 1.08; }
 .featuredBody { padding: 22px 24px 24px; }
 .policyTags { display: flex; flex-wrap: wrap; gap: 7px; }
 .policyTags span { min-height: 28px; display: inline-flex; align-items: center; padding: 0 10px; border-radius: 999px; background: #e5fbf7; color: #096f66; font-size: 11px; font-weight: 900; letter-spacing: .04em; text-transform: uppercase; }
@@ -220,7 +222,7 @@
 .trustGrid h3 { margin-top: 14px !important; font-size: 16px; font-weight: 900; }
 .trustGrid p { margin-top: 7px !important; font-size: 13px; }
 .finalCta { display: flex; align-items: center; justify-content: space-between; gap: 40px; margin-top: 70px; padding: 52px 56px; border-radius: 22px 22px 0 0; background: var(--navy); color: #fff; }
-.finalCta h2 { max-width: 620px; font-size: clamp(28px, 3vw, 40px); font-weight: 900; letter-spacing: -.04em; line-height: 1.12; }
+.finalCta h2 { max-width: 620px; color: #fff; font-size: clamp(28px, 3vw, 40px); font-weight: 900; letter-spacing: -.04em; line-height: 1.12; }
 .finalCta p { max-width: 600px; margin-top: 9px !important; color: #c9d0de; font-size: 14px; }
 .finalCta > div:last-child { display: flex; flex: 0 0 auto; gap: 10px; }
 

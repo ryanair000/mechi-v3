@@ -14,6 +14,7 @@ import {
   XCircle,
 } from 'lucide-react';
 import { useAuthFetch } from '@/components/AuthProvider';
+import { ChezaCreditOpsPanel } from '@/components/rewards/ChezaCreditOpsPanel';
 import type { AdminRewardReviewItem, RewardReviewStatus } from '@/types';
 
 type ReviewCounts = Record<RewardReviewStatus, number>;
@@ -267,6 +268,8 @@ export default function AdminRewardsPage() {
           </div>
         </div>
       </div>
+
+      <ChezaCreditOpsPanel />
 
       <div className="card p-5">
         <div className="grid gap-3 xl:grid-cols-[minmax(0,1.4fr)_220px_220px_auto]">

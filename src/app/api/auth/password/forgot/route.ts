@@ -1,8 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import {
+  AUTH_ACTION_TTLS,
+  buildResetPasswordUrl,
+  createAuthActionToken,
   getProfileForUsernameContact,
   normalizeAuthUsername,
 } from '@/lib/auth-actions';
+import { sendPasswordResetEmail } from '@/lib/email';
 import { parseRecoveryContact } from '@/lib/recovery-contact';
 import { checkPersistentRateLimit, getClientIp, rateLimitResponse } from '@/lib/rateLimit';
 
@@ -65,10 +69,35 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const profileEmail = String(profile.email ?? '').trim().toLowerCase();
+    if (!profileEmail) {
+      return NextResponse.json(
+        { error: 'This account has no recovery email. Contact PlayMechi support for help.' },
+        { status: 409 }
+      );
+    }
+
+    const redirectTo =
+      typeof body.redirect_to === 'string' ? body.redirect_to : '/dashboard';
+    const { token } = await createAuthActionToken({
+      userId: profile.id,
+      purpose: 'password_reset',
+      email: profileEmail,
+      nextPath: redirectTo,
+    });
+    const expiresInMinutes = Math.round(AUTH_ACTION_TTLS.password_reset / 60_000);
+
+    await sendPasswordResetEmail({
+      to: profileEmail,
+      username: String(profile.username ?? username),
+      resetLink: buildResetPasswordUrl(token),
+      expiresInMinutes,
+    });
+
     return NextResponse.json({
       success: true,
-      verified: true,
-      message: 'Account matched. Choose a new password to finish resetting it.',
+      email_sent: true,
+      message: 'Check your recovery email for a secure password-reset link.',
     });
   } catch (error) {
     console.error('[Password Forgot] Error:', error);

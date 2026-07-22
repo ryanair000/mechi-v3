@@ -420,7 +420,8 @@ export interface MatchEscalation {
 export interface MatchChallenge {
   id: string;
   challenger_id: string;
-  opponent_id: string;
+  opponent_id: string | null;
+  visibility?: 'direct' | 'open';
   game: GameKey;
   platform: PlatformKey;
   status: MatchChallengeStatus;

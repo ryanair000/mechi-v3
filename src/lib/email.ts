@@ -1297,6 +1297,68 @@ export async function sendChallengeReceivedEmail(params: {
   }
 }
 
+export async function sendOpenChallengePublishedEmail(params: {
+  to: string;
+  username: string;
+  game: string;
+  platform: string;
+  challengeUrl: string;
+}): Promise<void> {
+  const content = `
+    <h2>Your open challenge is live</h2>
+    <p>Hey ${escapeHtml(params.username)}, your callout is now visible to compatible PlayMechi players.</p>
+    <div class="info-box">
+      <div class="info-row"><span class="info-label">Game</span><span class="info-value">${escapeHtml(params.game)}</span></div>
+      <div class="info-row"><span class="info-label">Platform</span><span class="info-value">${escapeHtml(params.platform)}</span></div>
+      <div class="info-row"><span class="info-label">Status</span><span class="info-value">Waiting for a player</span></div>
+    </div>
+    <p>We will email you again when another player accepts and the match room is ready.</p>
+    <a href="${escapeUrl(params.challengeUrl)}" class="btn">View Open Challenge</a>
+  `;
+
+  try {
+    await sendEmail({
+      from: FROM,
+      to: params.to,
+      subject: `Your ${params.game} open challenge is live`,
+      html: baseLayout('Open Challenge Published', content),
+    });
+  } catch (err) {
+    console.error('[Email] Open challenge published send error:', err);
+  }
+}
+
+export async function sendChallengeAcceptedEmail(params: {
+  to: string;
+  username: string;
+  opponentUsername: string;
+  game: string;
+  platform: string;
+  matchUrl: string;
+}): Promise<void> {
+  const content = `
+    <h2>Your challenge was accepted</h2>
+    <p>Hey ${escapeHtml(params.username)}, ${escapeHtml(params.opponentUsername)} accepted your PlayMechi challenge.</p>
+    <div class="info-box">
+      <div class="info-row"><span class="info-label">Game</span><span class="info-value">${escapeHtml(params.game)}</span></div>
+      <div class="info-row"><span class="info-label">Platform</span><span class="info-value">${escapeHtml(params.platform)}</span></div>
+      <div class="info-row"><span class="info-label">Next action</span><span class="info-value">Open the match room</span></div>
+    </div>
+    <a href="${escapeUrl(params.matchUrl)}" class="btn">Open Match Room</a>
+  `;
+
+  try {
+    await sendEmail({
+      from: FROM,
+      to: params.to,
+      subject: `${params.opponentUsername} accepted your PlayMechi challenge`,
+      html: baseLayout('Challenge Accepted', content),
+    });
+  } catch (err) {
+    console.error('[Email] Challenge accepted send error:', err);
+  }
+}
+
 export async function sendQueueBroadcastEmail(params: {
   bcc: string[];
   username: string;

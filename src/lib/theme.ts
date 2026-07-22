@@ -1,7 +1,9 @@
 export type Theme = 'light' | 'dark';
 
-export const STORAGE_KEY = 'mechi-theme';
-export const DEFAULT_THEME: Theme = 'light';
+// V2 intentionally gives every browser one clean dark-first default. Users can
+// still choose light mode and that choice remains persistent afterwards.
+export const STORAGE_KEY = 'mechi-theme-v2';
+export const DEFAULT_THEME: Theme = 'dark';
 export const LIGHT_THEME_COLOR = '#F8FBFD';
 export const DARK_THEME_COLOR = '#0B1121';
 

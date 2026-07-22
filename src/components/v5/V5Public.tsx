@@ -30,11 +30,11 @@ import styles from './V5Public.module.css';
 type Icon = ComponentType<{ size?: number; strokeWidth?: number }>;
 
 const navigation = [
-  { label: 'Play', href: '/tournaments' },
+  { label: 'Play', href: '/app/player' },
   { label: 'Tournaments', href: '/tournaments' },
-  { label: 'Watch', href: '/watch' },
-  { label: 'Community', href: '/players' },
-  { label: 'Rankings', href: '/rankings' },
+  { label: 'Watch', href: '/streams' },
+  { label: 'Community', href: '/community' },
+  { label: 'Rankings', href: '/leaderboard' },
 ];
 
 const audiences: Array<{ title: string; copy: string; href: string; icon: Icon }> = [
@@ -105,10 +105,10 @@ export function V5Shell({ children }: { children: ReactNode }) {
 
 function V5Footer() {
   const columns = [
-    { title: 'Play', links: [['Find tournaments', '/tournaments'], ['How it works', '/how-mechi-works'], ['Rankings', '/rankings'], ['Player guide', '/support']] },
+    { title: 'Play', links: [['Find tournaments', '/tournaments'], ['How it works', '/how-mechi-works'], ['Rankings', '/leaderboard'], ['Player guide', '/support']] },
     { title: 'Tournaments', links: [['All tournaments', '/tournaments'], ['Host a tournament', '/app/organizer/tournaments/new'], ['Tournament rules', '/support'], ['Organizer workspace', '/app/organizer']] },
     { title: 'Community', links: [['Teams', '/app/team'], ['Creators', '/app/creator'], ['Coaches', '/app/coach'], ['Gaming shops', '/app/shop']] },
-    { title: 'Support', links: [['Help center', '/support'], ['Safety', '/legal/community-rules'], ['Terms of service', '/terms-of-service'], ['Privacy policy', '/privacy-policy']] },
+    { title: 'Support', links: [['Help center', '/support'], ['Safety', '/support'], ['Terms of service', '/terms-of-service'], ['Privacy policy', '/privacy-policy']] },
   ];
   return (
     <footer className={styles.footer}>
@@ -370,4 +370,4 @@ export async function V5TournamentsPage() {
 export function V5LeaderboardPage() { return <V5ScreenPage definition={{ ...page('explore'), eyebrow: 'Rankings', title: 'Performance earns reputation.', mainTitle: 'Top competitors' }} />; }
 export function V5PricingPage() { return <V5ScreenPage definition={{ ...page('workspaces'), eyebrow: 'Plans', title: 'Start free. Pay when competition needs more.', mainTitle: 'Simple plans by role' }} />; }
 export function V5BlogPage() { return <V5ScreenPage definition={{ ...page('explore'), eyebrow: 'Stories', title: 'African gaming, told through competition.', mainTitle: 'Latest from PlayMechi' }} />; }
-export function V5SupportPage() { return <V5ScreenPage definition={{ ...page('search'), eyebrow: 'Help center', title: 'Get back to playing quickly.', primaryLabel: 'Contact support', primaryHref: '/contact', mainTitle: 'Popular help topics' }} />; }
+export function V5SupportPage() { return <V5ScreenPage definition={{ ...page('search'), eyebrow: 'Help center', title: 'Get back to playing quickly.', primaryLabel: 'Contact support', primaryHref: '/support', mainTitle: 'Popular help topics' }} />; }

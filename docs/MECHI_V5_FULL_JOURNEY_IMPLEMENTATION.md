@@ -1,7 +1,7 @@
 # Mechi V5 Journey Implementation
 
 Status: implemented in `codex/v5-performance`  
-Database: production migration `20260722160638_playmechi_v5_complete_journeys.sql` applied  
+Database: production migrations `20260722160638_playmechi_v5_complete_journeys.sql` and `20260722191740_open_match_challenges.sql` applied
 Primary outcome: every player screen leads with a clear next action, and team/support/role actions create durable backend records.
 
 ## Product language
@@ -21,6 +21,7 @@ Primary outcome: every player screen leads with a clear next action, and team/su
 3. Secondary actions are grouped into one small panel: 1v1, teams, payments, and support.
 4. Tournaments retain the complete entry, eligibility, payment, and recovery flow.
 5. 1v1 removes the repeated four-card summary and starts with active-match or challenge-inbox context.
+6. “Find a match” publishes an open challenge for the selected game and platform. Any other eligible player can accept it; the first valid acceptance claims the challenge atomically and creates the match.
 6. Profile copy explains concrete setup requirements and verified-result progress.
 
 ## Team journey
@@ -123,6 +124,23 @@ The implementation also uses the existing V5 tables and functions:
 - V5 cutover guard: no legacy route regression.
 - Browser checks: public page, sign-in recovery, support, and protected dashboard navigation.
 - Responsive checks: desktop and mobile layout; controls retain native keyboard semantics.
+
+## Routing, theme, and recovery
+
+- Public navigation uses canonical live routes: Play `/app/player`, Tournaments `/tournaments`, Watch `/streams`, Community `/community`, and Rankings `/leaderboard`.
+- Footer support and safety actions use `/support`; dead `/watch`, `/players`, `/rankings`, `/contact`, and `/legal/community-rules` links are rejected by the V5 cutover guard.
+- Dark mode is the first-visit default on public and dashboard surfaces. A saved user choice still wins after the user toggles the theme.
+- The route-transition layer is dark, so the browser no longer flashes a white takeover screen between pages.
+- Password recovery now sends a single-use, 30-minute link to the saved account email. Knowledge of a username and contact value alone can no longer reset a password.
+
+## Open-challenge and email contracts
+
+- `match_challenges.visibility` distinguishes `direct` and `open` challenges; open challenges intentionally have no opponent until claimed.
+- Database constraints preserve the existing direct-challenge invariant, and a partial index serves the public pending list.
+- Acceptance uses a guarded pending-row claim so two players cannot win the same open challenge.
+- Publishing an open challenge emails the creator a confirmation. Acceptance emails the creator the opponent and match-room link. Existing direct challenges continue to email the challenged player.
+- AWS SES domain identity and DKIM for `mechi.club` are verified, and production Vercel has a dedicated least-privilege SES identity plus sender, feedback, unsubscribe, and smoke-test configuration.
+- AWS SES production access request `178474839400943` was denied on first review. Until AWS approves a reconsideration, SES remains sandboxed and arbitrary-recipient delivery is externally blocked; verified recipients and the AWS mailbox simulator remain available for transport checks.
 
 ## White-screen navigation incident closure
 

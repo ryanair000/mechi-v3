@@ -67,8 +67,8 @@ export function NavigationFeedback() {
         zIndex: 2147483646,
         display: 'grid',
         placeItems: 'center',
-        background: 'rgba(244, 247, 251, 0.96)',
-        color: '#0b1121',
+        background: 'rgba(7, 14, 27, 0.97)',
+        color: '#f5f8fc',
         pointerEvents: 'none',
         opacity: visible ? 1 : 0,
         visibility: visible ? 'visible' : 'hidden',
@@ -81,11 +81,11 @@ export function NavigationFeedback() {
           minWidth: 240,
           gap: 12,
           justifyItems: 'center',
-          border: '1px solid rgba(11, 17, 33, 0.09)',
+          border: '1px solid rgba(50, 224, 196, 0.18)',
           borderRadius: 18,
-          background: '#ffffff',
+          background: '#111c2e',
           padding: '24px 28px',
-          boxShadow: '0 20px 55px rgba(15, 23, 42, 0.10)',
+          boxShadow: '0 20px 55px rgba(0, 0, 0, 0.34)',
           textAlign: 'center',
         }}
       >
@@ -93,7 +93,7 @@ export function NavigationFeedback() {
         <strong style={{ fontSize: 13, letterSpacing: '0.14em', textTransform: 'uppercase' }}>
           Opening PlayMechi
         </strong>
-        <span style={{ maxWidth: 280, color: '#607086', fontSize: 13, lineHeight: 1.5 }}>
+        <span style={{ maxWidth: 280, color: '#aab7c9', fontSize: 13, lineHeight: 1.5 }}>
           Taking you to the next screen…
         </span>
       </div>

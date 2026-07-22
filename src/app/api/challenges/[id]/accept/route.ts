@@ -6,13 +6,15 @@ import {
   MATCH_CHALLENGE_EXPIRY_HOURS,
   resolveChallengePlatform,
 } from '@/lib/challenges';
-import { GAMES, getCanonicalGameKey } from '@/lib/config';
+import { GAMES, PLATFORMS, getCanonicalGameKey } from '@/lib/config';
 import { isMissingColumnError } from '@/lib/db-compat';
+import { sendChallengeAcceptedEmail } from '@/lib/email';
 import { resolveProfileLocation, UNSPECIFIED_LOCATION_LABEL } from '@/lib/location';
 import { createNotifications } from '@/lib/notifications';
 import { expireWaitingQueueEntries } from '@/lib/queue';
 import { incrementMatchUsage } from '@/lib/subscription';
 import { createServiceClient } from '@/lib/supabase';
+import { APP_URL } from '@/lib/urls';
 import type { GameKey, MatchChallenge, PlatformKey } from '@/types';
 
 type ChallengeProfile = {
@@ -24,6 +26,7 @@ type ChallengeProfile = {
   selected_games?: string[] | null;
   platforms?: PlatformKey[] | null;
   game_ids?: Record<string, string> | null;
+  email?: string | null;
 };
 
 async function hasBlockingState(
@@ -84,7 +87,12 @@ export async function POST(
       return NextResponse.json({ error: 'Challenge not found' }, { status: 404 });
     }
 
-    if (challenge.opponent_id !== authUser.id) {
+    const isOpenChallenge = challenge.visibility === 'open' && !challenge.opponent_id;
+    if (challenge.challenger_id === authUser.id) {
+      return NextResponse.json({ error: 'You cannot accept your own challenge' }, { status: 403 });
+    }
+
+    if (!isOpenChallenge && challenge.opponent_id !== authUser.id) {
       return NextResponse.json({ error: 'Only the challenged player can accept' }, { status: 403 });
     }
 
@@ -106,11 +114,11 @@ export async function POST(
     const { data: profileRows, error: profilesError } = await supabase
       .from('profiles')
       .select('*')
-      .in('id', [challenge.challenger_id, challenge.opponent_id]);
+      .in('id', [challenge.challenger_id, authUser.id]);
 
     const profiles = (profileRows ?? []) as ChallengeProfile[];
     const challenger = profiles.find((profile) => profile.id === challenge.challenger_id);
-    const opponent = profiles.find((profile) => profile.id === challenge.opponent_id);
+    const opponent = profiles.find((profile) => profile.id === authUser.id);
 
     if (profilesError || !challenger || !opponent) {
       return NextResponse.json({ error: 'Could not load both player profiles' }, { status: 404 });
@@ -134,7 +142,7 @@ export async function POST(
     }
 
     const { waitingQueue, activeMatches } = await hasBlockingState(
-      [challenge.challenger_id, challenge.opponent_id],
+      [challenge.challenger_id, authUser.id],
       supabase
     );
 
@@ -161,12 +169,33 @@ export async function POST(
 
     const matchPayload = {
       player1_id: challenge.challenger_id,
-      player2_id: challenge.opponent_id,
+      player2_id: authUser.id,
       game,
       platform,
       region: matchLocationLabel,
       status: 'pending',
     };
+
+    const claimedAt = new Date().toISOString();
+    let claimQuery = supabase
+      .from('match_challenges')
+      .update({ opponent_id: authUser.id, responded_at: claimedAt })
+      .eq('id', challenge.id)
+      .eq('status', 'pending')
+      .is('responded_at', null);
+    claimQuery = isOpenChallenge
+      ? claimQuery.is('opponent_id', null)
+      : claimQuery.eq('opponent_id', authUser.id);
+    const { data: claimedChallenge, error: claimError } = await claimQuery
+      .select('id')
+      .maybeSingle();
+
+    if (claimError || !claimedChallenge) {
+      return NextResponse.json(
+        { error: 'Another player already accepted this challenge' },
+        { status: 409 }
+      );
+    }
 
     let matchResult = await supabase
       .from('matches')
@@ -179,7 +208,7 @@ export async function POST(
         .from('matches')
         .insert({
           player1_id: challenge.challenger_id,
-          player2_id: challenge.opponent_id,
+          player2_id: authUser.id,
           game,
           region: matchLocationLabel,
           status: 'pending',
@@ -190,6 +219,12 @@ export async function POST(
 
     const match = matchResult.data as { id: string } | null;
     if (matchResult.error || !match) {
+      await supabase
+        .from('match_challenges')
+        .update({ opponent_id: isOpenChallenge ? null : authUser.id, responded_at: null })
+        .eq('id', challenge.id)
+        .eq('status', 'pending')
+        .eq('responded_at', claimedAt);
       return NextResponse.json({ error: 'Could not create match' }, { status: 500 });
     }
 
@@ -198,13 +233,16 @@ export async function POST(
       .update({
         status: 'accepted',
         match_id: match.id,
-        responded_at: new Date().toISOString(),
+        responded_at: claimedAt,
       })
-      .eq('id', challenge.id);
+      .eq('id', challenge.id)
+      .eq('status', 'pending')
+      .eq('opponent_id', authUser.id)
+      .eq('responded_at', claimedAt);
 
     await Promise.allSettled([
       incrementMatchUsage(challenge.challenger_id, supabase),
-      incrementMatchUsage(challenge.opponent_id, supabase),
+      incrementMatchUsage(authUser.id, supabase),
     ]);
 
     await createNotifications(
@@ -223,7 +261,7 @@ export async function POST(
           },
         },
         {
-          user_id: challenge.opponent_id,
+          user_id: authUser.id,
           type: 'challenge_accepted',
           title: `Challenge accepted`,
           body: `${challenger.username} is ready. Your ${GAMES[game].label} match is live now.`,
@@ -238,6 +276,17 @@ export async function POST(
       ],
       supabase
     );
+
+    if (challenger.email) {
+      await sendChallengeAcceptedEmail({
+        to: challenger.email,
+        username: challenger.username,
+        opponentUsername: opponent.username,
+        game: GAMES[game].label,
+        platform: PLATFORMS[platform]?.label ?? platform,
+        matchUrl: `${APP_URL}/app/player/matches/${match.id}`,
+      });
+    }
 
     return NextResponse.json({
       success: true,

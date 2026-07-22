@@ -94,6 +94,7 @@ export function V51v1Challenges({ currentMatch, recentMatches }: V51v1Challenges
   const [preferredGame, setPreferredGame] = useState<GameKey | null>(null);
   const [inbound, setInbound] = useState<MatchChallenge[]>([]);
   const [outbound, setOutbound] = useState<MatchChallenge[]>([]);
+  const [openChallenges, setOpenChallenges] = useState<MatchChallenge[]>([]);
   const [players, setPlayers] = useState<ChallengeDiscoveryPlayer[]>([]);
   const [platform, setPlatform] = useState<PlatformKey | null>(null);
   const [query, setQuery] = useState('');
@@ -121,11 +122,13 @@ export function V51v1Challenges({ currentMatch, recentMatches }: V51v1Challenges
       const payload = await response.json() as {
         inbound?: MatchChallenge[];
         outbound?: MatchChallenge[];
+        open?: MatchChallenge[];
         error?: string;
       };
       if (!response.ok) throw new Error(payload.error || 'Challenges could not be loaded.');
       setInbound(Array.isArray(payload.inbound) ? payload.inbound : []);
       setOutbound(Array.isArray(payload.outbound) ? payload.outbound : []);
+      setOpenChallenges(Array.isArray(payload.open) ? payload.open : []);
     } catch (error) {
       setChallengeError(error instanceof Error ? error.message : 'Challenges could not be loaded.');
     } finally {
@@ -208,6 +211,29 @@ export function V51v1Challenges({ currentMatch, recentMatches }: V51v1Challenges
     }
   }
 
+  async function findMatch() {
+    if (!selectedGame || !platform) {
+      toast.error('Connect a supported game and platform first.');
+      return;
+    }
+
+    setActionKey('publish-open');
+    try {
+      const response = await authFetch('/api/challenges', {
+        method: 'POST',
+        body: JSON.stringify({ visibility: 'open', game: selectedGame, platform }),
+      });
+      const payload = await response.json() as { error?: string };
+      if (!response.ok) throw new Error(payload.error || 'Open challenge could not be published.');
+      toast.success('Open challenge published. We will email you when a player accepts.');
+      await loadChallenges(true);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Open challenge could not be published.');
+    } finally {
+      setActionKey(null);
+    }
+  }
+
   async function updateChallenge(challenge: MatchChallenge, action: ChallengeAction) {
     setActionKey(`${action}:${challenge.id}`);
     try {
@@ -239,10 +265,16 @@ export function V51v1Challenges({ currentMatch, recentMatches }: V51v1Challenges
           <h1>1v1 Challenges</h1>
           <span>Find a compatible opponent, send the callout and move into one verified match room.</span>
         </div>
-        <button type="button" onClick={() => void loadChallenges(true)} disabled={refreshing}>
-          <RefreshCw size={16} className={refreshing ? styles.spinning : undefined} />
-          {refreshing ? 'Refreshing' : 'Refresh'}
-        </button>
+        <div className={styles.headingActions}>
+          <button type="button" className={styles.findMatchButton} onClick={() => void findMatch()} disabled={Boolean(currentMatch) || !selectedGame || !platform || Boolean(actionKey)}>
+            <UserRoundSearch size={16} />
+            {actionKey === 'publish-open' ? 'Publishing…' : 'Find a match'}
+          </button>
+          <button type="button" onClick={() => void loadChallenges(true)} disabled={refreshing}>
+            <RefreshCw size={16} className={refreshing ? styles.spinning : undefined} />
+            {refreshing ? 'Refreshing' : 'Refresh'}
+          </button>
+        </div>
       </header>
 
       {currentMatch ? (
@@ -295,6 +327,20 @@ export function V51v1Challenges({ currentMatch, recentMatches }: V51v1Challenges
           {!eligibleGames.length ? <Link className={styles.setupLink} href="/app/player/profile?setup=games">Connect a 1v1 game <ArrowRight size={14} /></Link> : null}
         </aside>
       </div>
+
+      <section className={styles.panel} aria-labelledby="open-challenges-heading">
+        <PanelHeading icon={<UserRoundSearch />} title="Open challenges" badge={`${openChallenges.length} available`} />
+        <p className={styles.openChallengeIntro} id="open-challenges-heading">Any compatible player can accept one of these callouts. The first valid acceptance creates the match room.</p>
+        <ChallengeList
+          title="Ready to accept"
+          empty="No open challenge is waiting right now. Use Find a match to publish yours."
+          challenges={openChallenges}
+          role="open"
+          actionKey={actionKey}
+          acceptDisabled={Boolean(currentMatch)}
+          onAction={updateChallenge}
+        />
+      </section>
 
       <section className={styles.panel} aria-labelledby="opponent-finder-heading">
         <div className={styles.finderHeading}>
@@ -366,10 +412,13 @@ function PanelHeading({ icon, title, badge }: { icon: React.ReactNode; title: st
   return <div className={styles.panelHeading}><div>{icon}<h2>{title}</h2></div>{badge ? <span>{badge}</span> : null}</div>;
 }
 
-function ChallengeList({ title, empty, challenges, role, actionKey, acceptDisabled, onAction }: { title: string; empty: string; challenges: MatchChallenge[]; role: 'inbound' | 'outbound'; actionKey: string | null; acceptDisabled: boolean; onAction: (challenge: MatchChallenge, action: ChallengeAction) => Promise<void> }) {
+function ChallengeList({ title, empty, challenges, role, actionKey, acceptDisabled, onAction }: { title: string; empty: string; challenges: MatchChallenge[]; role: 'inbound' | 'outbound' | 'open'; actionKey: string | null; acceptDisabled: boolean; onAction: (challenge: MatchChallenge, action: ChallengeAction) => Promise<void> }) {
   return <div className={styles.challengeList}><h3>{title}<span>{challenges.length}</span></h3>{challenges.length ? challenges.map((challenge) => {
-    const opponent = role === 'inbound' ? challenge.challenger : challenge.opponent;
-    return <article key={challenge.id} className={styles.challengeCard}><div className={styles.challengeIdentity}><span>{opponent?.username?.slice(0, 2).toUpperCase() || '1V'}</span><div><strong>{opponent?.username || 'Mechi player'}</strong><small>{gameLabel(challenge.game)} · {platformLabel(challenge.platform)}</small></div></div>{challenge.message ? <p><MessageSquareText size={13} /> “{challenge.message}”</p> : null}<div className={styles.challengeMeta}><span><Clock3 size={12} /> Expires {formatDate(challenge.expires_at)}</span></div><div className={styles.challengeActions}>{role === 'inbound' ? <><button type="button" className={styles.declineButton} disabled={Boolean(actionKey)} onClick={() => void onAction(challenge, 'decline')}>Decline</button><button type="button" className={styles.acceptButton} disabled={Boolean(actionKey) || acceptDisabled} title={acceptDisabled ? 'Finish your active match first' : undefined} onClick={() => void onAction(challenge, 'accept')}><Check size={14} /> {actionKey === `accept:${challenge.id}` ? 'Accepting…' : acceptDisabled ? 'Match active' : 'Accept'}</button></> : <button type="button" className={styles.declineButton} disabled={Boolean(actionKey)} onClick={() => void onAction(challenge, 'cancel')}>{actionKey === `cancel:${challenge.id}` ? 'Cancelling…' : 'Cancel challenge'}</button>}</div></article>;
+    const opponent = role === 'outbound' ? challenge.opponent : challenge.challenger;
+    const displayName = role === 'outbound' && challenge.visibility === 'open'
+      ? 'Waiting for any player'
+      : opponent?.username || 'Mechi player';
+    return <article key={challenge.id} className={styles.challengeCard}><div className={styles.challengeIdentity}><span>{displayName.slice(0, 2).toUpperCase() || '1V'}</span><div><strong>{displayName}</strong><small>{gameLabel(challenge.game)} · {platformLabel(challenge.platform)}</small></div></div>{challenge.message ? <p><MessageSquareText size={13} /> “{challenge.message}”</p> : null}<div className={styles.challengeMeta}><span><Clock3 size={12} /> Expires {formatDate(challenge.expires_at)}</span></div><div className={styles.challengeActions}>{role === 'inbound' ? <><button type="button" className={styles.declineButton} disabled={Boolean(actionKey)} onClick={() => void onAction(challenge, 'decline')}>Decline</button><button type="button" className={styles.acceptButton} disabled={Boolean(actionKey) || acceptDisabled} title={acceptDisabled ? 'Finish your active match first' : undefined} onClick={() => void onAction(challenge, 'accept')}><Check size={14} /> {actionKey === `accept:${challenge.id}` ? 'Accepting…' : acceptDisabled ? 'Match active' : 'Accept'}</button></> : role === 'open' ? <button type="button" className={styles.acceptButton} disabled={Boolean(actionKey) || acceptDisabled} title={acceptDisabled ? 'Finish your active match first' : undefined} onClick={() => void onAction(challenge, 'accept')}><Check size={14} /> {actionKey === `accept:${challenge.id}` ? 'Accepting…' : acceptDisabled ? 'Match active' : 'Accept challenge'}</button> : <button type="button" className={styles.declineButton} disabled={Boolean(actionKey)} onClick={() => void onAction(challenge, 'cancel')}>{actionKey === `cancel:${challenge.id}` ? 'Cancelling…' : 'Cancel challenge'}</button>}</div></article>;
   }) : <p className={styles.challengeEmpty}>{empty}</p>}</div>;
 }
 

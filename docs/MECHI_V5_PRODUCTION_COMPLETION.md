@@ -572,14 +572,18 @@ Use this section for concise evidence, not narrative status claims.
 | 2026-07-22 | working tree | G2 local code and artifact gates | verified | not_applied | Source lint and full typecheck exited 0; Next 16.2.11 production build compiled 281/281 static routes as artifact `SJT0MfVLZkmn4M5JrTNvm`; localhost redirect chain ended at sign-in with HTTP 200 |
 | 2026-07-22 | `4de17de` | G2 operator-run release verification | implemented | not_applied | GitHub Actions removed by operator decision; `release:quality`, `release:database`, `release:e2e`, `release:preview`, and fail-fast `release:verify` commands produce local evidence without exposing secrets |
 | 2026-07-22 | `4de17de` + working tree | G1 dependency recheck | blocked | not_applied | Operator gate detected two new high-severity `sharp`/libvips advisories inherited through stable Next 16.2.11. A forced `sharp@0.35.3` experiment cleared audit but failed to produce a production artifact within the 15-minute diagnostic ceiling and was rejected. |
+| 2026-07-22 | `87a09e7` | G1/G2 dependency and preview artifact | verified | preview_ready | `sharp@0.35.3` cleared the production audit; clean install, typecheck, and the Vercel Linux preview build passed for the exact revision. |
+| 2026-07-22 | release worktree | Production database migration rehearsal | verified | rolled_back | All unapplied forward migrations were dry-run first and rehearsed against `zcpgarqumzxuwicjihxp` inside rollback transactions with a five-second lock timeout. |
+| 2026-07-22 | release worktree | Production database application | verified | applied | Six additive migrations applied through Supabase migration history. The security contract found `teams(owner_id)` unindexed; `20260722183000_index_team_owner_fk.sql` corrected it and the complete verification passed at `2026-07-22 14:53:22 UTC`. |
+| 2026-07-22 | `87a09e7` + database-alignment worktree | Operator quality gate | verified | release_ready | Production audit reported zero vulnerabilities; cutover guard, ESLint, TypeScript, and a fresh 281-route Next.js production build all passed. Evidence: `output/v5-release-quality-2026-07-22T14-55-47-198Z.json` (local operator record). |
 
 ## 20. Current release assessment and exact work left
 
-Decision as of 21 July 2026: **Mechi V5 is materially hardened but is not yet
-production complete and must not be deployed as the complete V5 product.** The
-local artifact gate is healthy. Production promotion is blocked by unapplied
-migrations, unexecuted isolated-database/browser gates, and incomplete persistent
-journeys in several advertised role domains.
+Decision as of 22 July 2026: **the hardened V5 player/team release candidate has
+passed its production schema and security gates, but the complete multi-role V5
+product remains broader than the implemented scope.** The live database is at
+the release schema. Application promotion, live smoke verification, and the
+post-release observation check remain before this release is closed.
 
 ### 20.1 Implemented in this revision
 
@@ -608,31 +612,22 @@ journeys in several advertised role domains.
   cross-team player conflict, capacity, roster-lock, and audited withdrawal paths;
 - the current production artifact builds and boots locally.
 
-### 20.2 P0 gates still required before any production promotion
+### 20.2 P0 gates still required to close this production release
 
-1. Configure the trusted operator environment, especially
-   `E2E_SUPABASE_DB_URL`, against a dedicated non-production database that is safe
-   to reset. Do not store these release credentials in GitHub Actions.
-2. Apply the full migration chain to that isolated database, run Supabase lint,
-   run `supabase/verification/v5_production_security.sql`, and resolve any SQL,
-   privilege, advisor, or reconciliation finding. These migrations have not been
-   applied to a live database from this worktree.
-3. Run `npm run release:verify` on the committed release SHA and retain the JSON
-   evidence record. The provider, workspace, player, admin, mobile, and
-   cross-browser suites deliberately reset the configured E2E database and must
-   never target production.
-4. Produce a production-equivalent preview deployment, run the same suites and
-   manual money/auth/accessibility smoke checks against it, and record the
-   deployment ID and Git SHA.
-5. Verify production environment variables, Paystack webhook configuration,
-   Sentry release/source maps, PostHog events, alerts, owners, and rollback
-   artifact without printing secrets.
-6. Apply the additive migrations to production, execute the read-only production
-   verification and reconciliation checks, promote the already-tested artifact,
-   and complete the observation-window smoke run.
+1. Commit and publish the migration-history alignment and follow-up team-owner
+   index so repository truth matches the verified production database.
+2. Promote the verified Vercel artifact for revision `87a09e7` (or verify that
+   the merge deployment resolves to the same source revision) and confirm the
+   `mechi.club` aliases.
+3. Run non-mutating public, authentication-redirect, health, and key-route smoke
+   checks against `mechi.club`, then inspect the production error stream.
+4. Confirm production integration configuration and alert ownership without
+   displaying or persisting secrets.
 
-Steps 4–6 are externally visible or change live state and require explicit
-approval from the Boss immediately before execution.
+The reset-capable seeded browser suite was deliberately not pointed at
+production. A separate reset-safe database would be required to execute it; no
+paid Supabase preview branch was created under the Boss's no-cost constraint.
+
 
 ### 20.3 Product work still required for the complete V5 scope
 

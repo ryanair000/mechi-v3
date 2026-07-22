@@ -5,9 +5,10 @@ import Link from 'next/link';
 import { ArrowRight, BarChart3, CheckCircle2, CircleAlert, Clock3, FileText, Gamepad2, Radio, ShieldCheck, Sparkles, Trophy } from 'lucide-react';
 import { useAuthFetch } from '@/components/AuthProvider';
 import { V5_WORKSPACES, type V5WorkspaceKind } from './v5-workspaces';
+import { V5TeamTournaments } from './V5TeamTournaments';
 import styles from './V5RoleSection.module.css';
 
-export type V5RoleTournament = { id:string;slug:string;title:string;game?:string|null;scheduled_for?:string|null;entry_fee?:number|null;prize_pool?:number|null;player_count?:number|null;size?:number|null };
+export type V5RoleTournament = { id:string;slug:string;title:string;game?:string|null;platform?:string|null;status?:string|null;approval_status?:string|null;participant_type?:'solo'|'team'|null;team_size?:number|null;scheduled_for?:string|null;entry_fee?:number|null;prize_pool?:number|null;player_count?:number|null;size?:number|null };
 type RoleKind = Exclude<V5WorkspaceKind,'player'|'organizer'|'admin'>;
 type SectionConfig = { title:string;description:string;primary:string;primaryHref:string;metrics:Array<[string,string,string]>;lanes:Array<[string,string,string]>;context?:'tournaments'|'none' };
 
@@ -60,6 +61,9 @@ export function V5RoleSection({ workspace,section,tournaments,loading }: { works
   useEffect(()=>{let mounted=true;void authFetch(workspace==='team'?'/api/v5/teams':'/api/v5/workspaces').then(async(response)=>response.ok?response.json():null).then((payload)=>{if(!mounted)return;setActive(workspace==='team'?Boolean(payload?.teams?.length):Boolean(payload?.workspaces?.some((item:{type:string;persisted?:boolean})=>item.type===workspace&&item.persisted!==false)));}).catch(()=>{if(mounted)setActive(false)});return()=>{mounted=false};},[authFetch,workspace]);
   const config=CONFIG[workspace][section]||CONFIG[workspace][Object.keys(CONFIG[workspace])[0]];
   const relevant=useMemo(()=>tournaments.slice(0,4),[tournaments]);
+  if (workspace === 'team' && section === 'tournaments') {
+    return <V5TeamTournaments tournaments={tournaments} loading={loading} />;
+  }
   return <div className={styles.page}><header className={styles.heading}><div><p>{V5_WORKSPACES[workspace].label}</p><h1>{config.title}</h1><span>{config.description}</span></div><Link href={config.primaryHref}>{config.primary}<ArrowRight size={16}/></Link></header>
     {active===false?<div className={styles.activation}><CircleAlert/><div><strong>Activate {V5_WORKSPACES[workspace].shortLabel} before saving work here.</strong><span>You can review the workflow now. Activation creates the permission-scoped workspace.</span></div><Link href={`/app/${workspace}`}>Activate workspace</Link></div>:null}
     <div className={styles.metrics}>{config.metrics.map(([label,value,note],index)=><section key={label}><span>{index===0?<Sparkles/>:index===1?<CheckCircle2/>:index===2?<BarChart3/>:<ShieldCheck/>}</span><div><p>{label}</p><strong>{value}</strong><small>{note}</small></div></section>)}</div>

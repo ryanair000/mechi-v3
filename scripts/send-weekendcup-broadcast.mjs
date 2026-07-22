@@ -34,8 +34,6 @@ const FROM_ADDRESS =
 const FROM = `Mechi <${FROM_ADDRESS}>`;
 
 const SUBJECT = 'Weekend Cup is in 5 days. Early Bird ends soon.';
-const PREVIEW = 'Only 20% of Early Bird slots remain. Lock yours in now.';
-
 function normalizeEmail(value) {
   return String(value || '').trim().toLowerCase();
 }

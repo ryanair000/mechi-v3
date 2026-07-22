@@ -17,6 +17,10 @@ import {
   markWekaMawePaymentFailedByReference,
   markWekaMawePaymentPaidByReference,
 } from '@/lib/weka-mawe';
+import {
+  getPaymentVerificationEvidence,
+  verifyMechiPaymentByReference,
+} from '@/lib/payment-verification';
 
 export const runtime = 'nodejs';
 
@@ -120,14 +124,37 @@ export async function POST(request: NextRequest) {
     const supabase = createServiceClient();
 
     if (eventName === 'charge.success') {
+      const verified = await verifyMechiPaymentByReference({
+        supabase,
+        kind: payment.kind,
+        reference: payment.reference,
+      });
+
+      if (!verified.success) {
+        console.error('[Paystack Webhook] Payment verification rejected', {
+          reference: payment.reference,
+          kind: payment.kind,
+          errorCode: verified.errorCode,
+        });
+        return NextResponse.json(
+          { error: verified.error ?? 'Payment could not be verified' },
+          { status: verified.retryable ? 503 : 422 }
+        );
+      }
+
+      const evidence = getPaymentVerificationEvidence(verified);
+      if (!evidence) {
+        return NextResponse.json({ error: 'Payment evidence is incomplete' }, { status: 503 });
+      }
+
       const result =
         payment.kind === 'subscription'
-          ? await activateSubscriptionByReference(payment.reference, supabase)
+          ? await activateSubscriptionByReference(payment.reference, supabase, evidence)
           : payment.kind === 'weekend_cup'
-            ? await markWeekendCupPaymentPaidByReference(supabase, payment.reference)
+            ? await markWeekendCupPaymentPaidByReference(supabase, payment.reference, evidence)
             : payment.kind === 'weka_mawe'
-              ? await markWekaMawePaymentPaidByReference(supabase, payment.reference)
-              : await markTournamentPaymentPaidByReference(supabase, payment.reference);
+              ? await markWekaMawePaymentPaidByReference(supabase, payment.reference, evidence)
+              : await markTournamentPaymentPaidByReference(supabase, payment.reference, evidence);
 
       if (!result.success) {
         console.error('[Paystack Webhook] Could not process successful payment', {

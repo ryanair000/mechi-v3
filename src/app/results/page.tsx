@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { revalidatePath } from 'next/cache';
 import { cookies } from 'next/headers';
 import Image from 'next/image';
+import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { after } from 'next/server';
 import {
@@ -247,9 +248,9 @@ function RestrictedResults() {
                   for PlayMechi admin accounts.
                 </p>
               </div>
-              <a href="/manual-tests" className="btn-ghost w-fit">
+              <Link href="/manual-tests" className="btn-ghost w-fit">
                 Back to checklist
-              </a>
+              </Link>
             </div>
           </div>
         </div>

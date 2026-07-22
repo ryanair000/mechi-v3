@@ -260,4 +260,13 @@ export const SCENARIO_IDS = {
   activeBounty: 'cccccccc-1111-4111-8111-111111111111',
   claimedBounty: 'cccccccc-2222-4222-8222-222222222222',
   claimedBountyAttempt: 'cccccccc-3333-4333-8333-333333333333',
+  organizerWorkspace: 'dddddddd-1111-4111-8111-111111111111',
+  teamWorkspace: 'dddddddd-2222-4222-8222-222222222222',
+  team: 'dddddddd-3333-4333-8333-333333333333',
+  creatorWorkspace: 'dddddddd-4444-4444-8444-444444444444',
+  coachWorkspace: 'dddddddd-5555-4555-8555-555555555555',
+  sponsorWorkspace: 'dddddddd-6666-4666-8666-666666666666',
+  shopWorkspace: 'dddddddd-7777-4777-8777-777777777777',
+  workspaceInvitation: 'dddddddd-8888-4888-8888-888888888888',
+  teamTournament: 'dddddddd-9999-4999-8999-999999999999',
 } as const;

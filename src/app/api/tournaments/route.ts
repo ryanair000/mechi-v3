@@ -84,13 +84,20 @@ export async function GET(request: NextRequest) {
       .in('tournament_id', tournamentIds)
       .in('payment_status', ['paid', 'free']);
 
+    const { data: teamEntries, error: teamEntriesError } = await supabase
+      .from('tournament_entries')
+      .select('tournament_id,status')
+      .in('tournament_id', tournamentIds)
+      .eq('entry_type', 'team')
+      .in('status', ['confirmed', 'checked_in']);
+
     const { data: activeStreams, error: activeStreamsError } = await supabase
       .from('live_streams')
       .select('id, tournament_id, viewer_count')
       .in('tournament_id', tournamentIds)
       .eq('status', 'active');
 
-    if (playersError || activeStreamsError) {
+    if (playersError || teamEntriesError || activeStreamsError) {
       return NextResponse.json({ error: 'Failed to fetch tournaments' }, { status: 500 });
     }
 
@@ -121,13 +128,25 @@ export async function GET(request: NextRequest) {
       return grouped;
     }, {});
 
+    const teamEntryCountByTournament = (teamEntries ?? []).reduce<Record<string, number>>(
+      (grouped, entry) => {
+        const tournamentId = entry.tournament_id as string | undefined;
+        if (tournamentId) grouped[tournamentId] = (grouped[tournamentId] ?? 0) + 1;
+        return grouped;
+      },
+      {}
+    );
+
     return NextResponse.json({
       tournaments: tournaments.map((tournament) => {
         const paymentMetrics = getTournamentPaymentMetrics(playersByTournament[tournament.id] ?? []);
 
         return {
           ...tournament,
-          player_count: paymentMetrics.confirmedCount,
+          player_count:
+            tournament.participant_type === 'team'
+              ? teamEntryCountByTournament[tournament.id] ?? 0
+              : paymentMetrics.confirmedCount,
           prize_pool: getTournamentPrizeSnapshot({
             entryFee: Number(tournament.entry_fee ?? 0),
             paidPlayerCount: paymentMetrics.paidCount,
@@ -227,6 +246,25 @@ export async function POST(request: NextRequest) {
 
     const supabase = createServiceClient();
     const slug = makeSlug(title);
+    const requestedOrganizerWorkspaceId = String(body.organizer_workspace_id ?? '').trim();
+    let organizerWorkspaceQuery = supabase
+      .from('workspaces')
+      .select('id,status,verification_status')
+      .eq('type', 'organizer')
+      .eq('owner_id', authUser.id)
+      .eq('status', 'active')
+      .is('archived_at', null);
+    if (requestedOrganizerWorkspaceId) {
+      organizerWorkspaceQuery = organizerWorkspaceQuery.eq('id', requestedOrganizerWorkspaceId);
+    }
+    const { data: organizerWorkspace, error: organizerWorkspaceError } =
+      await organizerWorkspaceQuery.order('created_at', { ascending: true }).limit(1).maybeSingle();
+    if (organizerWorkspaceError || !organizerWorkspace) {
+      return NextResponse.json(
+        { error: 'Activate an organizer workspace before creating a tournament.' },
+        { status: 409 }
+      );
+    }
     const { data: organizerProfileRaw, error: organizerProfileError } = await supabase
       .from('profiles')
       .select('*')
@@ -357,6 +395,7 @@ export async function POST(request: NextRequest) {
         approved_by: null,
         is_featured: false,
         organizer_id: authUser.id,
+        organizer_workspace_id: organizerWorkspace.id,
         participant_type: participantType,
         team_size: teamSize,
         valuable_reward_exists: valuableRewardExists,
@@ -373,11 +412,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to create tournament' }, { status: 500 });
     }
 
-    await supabase.from('tournament_players').insert({
-      tournament_id: tournament.id,
-      user_id: authUser.id,
-      payment_status: 'free',
-    });
+    if (participantType === 'solo') {
+      await supabase.from('tournament_players').insert({
+        tournament_id: tournament.id,
+        user_id: authUser.id,
+        payment_status: 'free',
+      });
+    }
 
     if (approvalStatus === 'approved') {
       try {

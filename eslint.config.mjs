@@ -17,6 +17,7 @@ const eslintConfig = defineConfig([
     ".next-build-admin/**",
     ".next-build-tournament/**",
     "apps/**",
+    "playmechi-24-screens-react-vite/**",
     "e2e/**",
     "tmp/**",
     "out/**",

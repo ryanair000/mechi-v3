@@ -13,8 +13,11 @@ import {
   getNormalisedKenyanMobilePhone,
   initializeTournamentPayment,
   isPaystackConfigured,
-  verifyTournamentPayment,
 } from '@/lib/paystack';
+import {
+  getPaymentVerificationEvidence,
+  verifyMechiPaymentByReference,
+} from '@/lib/payment-verification';
 import { checkPersistentRateLimit, getClientIp, rateLimitResponse } from '@/lib/rateLimit';
 import { makePaymentReference } from '@/lib/slug';
 import { createServiceClient } from '@/lib/supabase';
@@ -127,9 +130,10 @@ export async function POST(request: NextRequest) {
       }
 
       if (paymentRegistration.payment_status !== 'paid') {
-        const verified = await verifyTournamentPayment({
+        const verified = await verifyMechiPaymentByReference({
+          supabase,
+          kind: 'weekend_cup',
           reference,
-          expectedAmountKes: paymentRegistration.entry_fee_kes ?? 0,
         });
 
         if (!verified.success) {
@@ -139,7 +143,11 @@ export async function POST(request: NextRequest) {
           );
         }
 
-        const confirmed = await markWeekendCupPaymentPaidByReference(supabase, reference);
+        const confirmed = await markWeekendCupPaymentPaidByReference(
+          supabase,
+          reference,
+          getPaymentVerificationEvidence(verified)
+        );
         if (!confirmed.success) {
           return NextResponse.json(
             { error: confirmed.error ?? 'Could not confirm Weekend Cup payment' },

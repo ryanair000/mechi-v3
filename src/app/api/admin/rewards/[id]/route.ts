@@ -50,6 +50,14 @@ export async function PATCH(
       return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
     }
 
+    const decisionNote = String(body.note ?? '').trim();
+    if (decisionNote.length < 8) {
+      return NextResponse.json(
+        { error: 'A review reason of at least 8 characters is required' },
+        { status: 400 }
+      );
+    }
+
     const supabase = createServiceClient();
     const { data: reviewItem, error: reviewError } = await supabase
       .from('reward_review_queue')
@@ -62,7 +70,7 @@ export async function PATCH(
     }
 
     const now = new Date().toISOString();
-    const note = typeof body.note === 'string' && body.note.trim().length > 0 ? body.note.trim() : null;
+    const note = decisionNote;
     const nextStatus = getNextStatus(body.action);
 
     const updatePayload: {

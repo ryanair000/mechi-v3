@@ -142,6 +142,7 @@ export async function PATCH(
       rules?: string | null;
     };
     const supabase = createServiceClient();
+    const auditReason = String(body.reason ?? '').trim();
 
     let tournamentQuery = supabase
       .from('tournaments')
@@ -164,6 +165,9 @@ export async function PATCH(
       if (!hasAdminAccess(admin)) {
         return NextResponse.json({ error: 'Only admins can cancel tournaments' }, { status: 403 });
       }
+      if (auditReason.length < 8) {
+        return NextResponse.json({ error: 'A cancellation reason of at least 8 characters is required' }, { status: 400 });
+      }
 
       const { error } = await supabase
         .from('tournaments')
@@ -177,7 +181,7 @@ export async function PATCH(
         action: 'cancel_tournament',
         targetType: 'tournament',
         targetId: id,
-        details: { title: tournament.title, previousStatus: tournament.status, reason: body.reason ?? null },
+        details: { title: tournament.title, previousStatus: tournament.status, reason: auditReason },
         ipAddress: getClientIp(request),
       });
 
@@ -190,8 +194,15 @@ export async function PATCH(
       }
 
       const approvalStatus = body.approval_status;
+      const decisionReason = String(body.reason ?? '').trim();
       if (!approvalStatus || !['pending', 'approved', 'rejected'].includes(approvalStatus)) {
         return NextResponse.json({ error: 'approval_status is required' }, { status: 400 });
+      }
+      if (decisionReason.length < 8) {
+        return NextResponse.json(
+          { error: 'A decision reason of at least 8 characters is required' },
+          { status: 400 }
+        );
       }
 
       const freeTournamentPolicyError = getFreeTournamentConfigurationError({
@@ -210,36 +221,15 @@ export async function PATCH(
         );
       }
 
-      const approvedAt = approvalStatus === 'approved' ? new Date().toISOString() : null;
-      const approvedBy = approvalStatus === 'approved' ? admin.id : null;
-      const shouldKeepFeatured = approvalStatus === 'approved' ? tournament.is_featured : false;
-
-      const { error } = await supabase
-        .from('tournaments')
-        .update({
-          approval_status: approvalStatus,
-          approved_at: approvedAt,
-          approved_by: approvedBy,
-          is_featured: shouldKeepFeatured,
-        })
-        .eq('id', id);
+      const { error } = await supabase.rpc('set_v5_tournament_approval', {
+        p_tournament_id: id,
+        p_actor_id: admin.id,
+        p_approval_status: approvalStatus,
+        p_reason: decisionReason,
+        p_ip_address: getClientIp(request) ?? '',
+      });
 
       if (error) return NextResponse.json({ error: 'Failed to update tournament review' }, { status: 500 });
-
-      await writeAuditLog({
-        adminId: admin.id,
-        action: 'review_tournament',
-        targetType: 'tournament',
-        targetId: id,
-        details: {
-          title: tournament.title,
-          previousApprovalStatus: tournament.approval_status,
-          nextApprovalStatus: approvalStatus,
-          featuredRemoved: tournament.is_featured && !shouldKeepFeatured,
-          reason: body.reason ?? null,
-        },
-        ipAddress: getClientIp(request),
-      });
 
       return NextResponse.json({ success: true });
     }
@@ -247,6 +237,9 @@ export async function PATCH(
     if (body.action === 'set_featured') {
       if (!hasAdminAccess(admin)) {
         return NextResponse.json({ error: 'Only admins can feature tournaments' }, { status: 403 });
+      }
+      if (auditReason.length < 8) {
+        return NextResponse.json({ error: 'A decision reason of at least 8 characters is required' }, { status: 400 });
       }
 
       const isFeatured = Boolean(body.is_featured);
@@ -275,7 +268,7 @@ export async function PATCH(
           title: tournament.title,
           previousFeatured: tournament.is_featured,
           nextFeatured: isFeatured,
-          reason: body.reason ?? null,
+          reason: auditReason,
         },
         ipAddress: getClientIp(request),
       });

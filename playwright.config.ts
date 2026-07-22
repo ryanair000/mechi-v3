@@ -44,6 +44,8 @@ export default defineConfig({
         process.env.NEXT_PUBLIC_SUPABASE_URL ?? environment.supabaseUrl,
       SUPABASE_SERVICE_ROLE_KEY:
         process.env.SUPABASE_SERVICE_ROLE_KEY ?? environment.supabaseServiceRoleKey,
+      MECHI_PAYSTACK_WEBHOOK_SECRET:
+        process.env.MECHI_PAYSTACK_WEBHOOK_SECRET ?? 'e2e-paystack-forward-secret',
     },
   },
   projects: [
@@ -71,6 +73,13 @@ export default defineConfig({
     {
       name: 'providers-mock',
       grep: /@providers/,
+      use: {
+        ...devices['Desktop Chrome'],
+      },
+    },
+    {
+      name: 'workspaces',
+      grep: /@workspaces/,
       use: {
         ...devices['Desktop Chrome'],
       },

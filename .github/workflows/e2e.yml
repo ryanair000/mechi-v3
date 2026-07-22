@@ -2,6 +2,10 @@ name: E2E
 
 on:
   pull_request:
+  push:
+    branches:
+      - main
+      - master
   workflow_dispatch:
   schedule:
     - cron: '0 2 * * *'
@@ -22,6 +26,7 @@ env:
   NEXT_PUBLIC_APP_URL: http://127.0.0.1:3000
   NEXT_PUBLIC_ADMIN_URL: http://admin.localhost:3000
   E2E_SUPABASE_URL: ${{ secrets.E2E_SUPABASE_URL }}
+  E2E_SUPABASE_DB_URL: ${{ secrets.E2E_SUPABASE_DB_URL }}
   NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.E2E_SUPABASE_URL }}
   E2E_SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.E2E_SUPABASE_SERVICE_ROLE_KEY }}
   SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.E2E_SUPABASE_SERVICE_ROLE_KEY }}
@@ -30,8 +35,32 @@ env:
   CRON_SECRET: ${{ secrets.CRON_SECRET }}
 
 jobs:
+  database-verify:
+    name: database-verify
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: supabase/setup-cli@v1
+        with:
+          version: 2.109.1
+      - name: Validate database environment
+        shell: bash
+        run: |
+          if [ -z "$E2E_SUPABASE_DB_URL" ]; then
+            echo "Missing required secret: E2E_SUPABASE_DB_URL"
+            exit 1
+          fi
+      - name: Apply migrations to isolated E2E database
+        run: supabase db push --db-url "$E2E_SUPABASE_DB_URL" --include-all --yes
+      - name: Lint E2E database
+        run: supabase db lint --db-url "$E2E_SUPABASE_DB_URL" --level warning --fail-on error
+      - name: Verify production security contract
+        run: psql "$E2E_SUPABASE_DB_URL" -v ON_ERROR_STOP=1 -f supabase/verification/v5_production_security.sql
+
   e2e-public-auth:
     name: e2e-public-auth
+    needs: database-verify
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -69,6 +98,7 @@ jobs:
 
   e2e-player-desktop:
     name: e2e-player-desktop
+    needs: e2e-public-auth
     runs-on: ubuntu-latest
     timeout-minutes: 35
     steps:
@@ -106,6 +136,7 @@ jobs:
 
   e2e-player-mobile:
     name: e2e-player-mobile
+    needs: e2e-player-desktop
     runs-on: ubuntu-latest
     timeout-minutes: 35
     steps:
@@ -143,6 +174,7 @@ jobs:
 
   e2e-provider-mock:
     name: e2e-provider-mock
+    needs: e2e-player-mobile
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -178,11 +210,49 @@ jobs:
             .e2e/auth
           if-no-files-found: ignore
 
+  e2e-workspaces:
+    name: e2e-workspaces
+    needs: e2e-provider-mock
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - name: Validate E2E environment
+        shell: bash
+        run: |
+          missing=()
+          for key in E2E_SUPABASE_URL E2E_SUPABASE_SERVICE_ROLE_KEY NEXT_PUBLIC_SUPABASE_ANON_KEY JWT_SECRET CRON_SECRET; do
+            if [ -z "${!key}" ]; then
+              missing+=("$key")
+            fi
+          done
+          if [ "${#missing[@]}" -gt 0 ]; then
+            echo "Missing required secrets: ${missing[*]}"
+            exit 1
+          fi
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:e2e:workspaces
+      - name: Upload artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-workspaces-artifacts
+          path: |
+            playwright-report
+            test-results
+            .e2e/auth
+          if-no-files-found: ignore
+
   e2e-admin:
     name: e2e-admin
+    needs: e2e-workspaces
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    continue-on-error: ${{ github.event_name == 'pull_request' }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -218,9 +288,9 @@ jobs:
 
   e2e-cross-browser-smoke:
     name: e2e-cross-browser-smoke
+    needs: e2e-admin
     runs-on: ubuntu-latest
     timeout-minutes: 35
-    continue-on-error: ${{ github.event_name == 'pull_request' }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -256,6 +326,7 @@ jobs:
 
   e2e-provider-sandbox:
     name: e2e-provider-sandbox
+    needs: e2e-cross-browser-smoke
     if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     timeout-minutes: 35

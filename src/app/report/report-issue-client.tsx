@@ -1,6 +1,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Image from 'next/image';
+import Link from 'next/link';
 import { CheckCircle2, ImagePlus, Loader2, Send, ShieldCheck, X } from 'lucide-react';
 import { useAuth } from '@/components/AuthProvider';
 import { ActionFeedback, type ActionFeedbackState } from '@/components/ActionFeedback';
@@ -200,9 +202,9 @@ export default function ReportIssueClient() {
                     <button type="button" onClick={resetForm} className="btn-primary">
                       Submit another issue
                     </button>
-                    <a href="/manual-tests" className="btn-ghost">
+                    <Link href="/manual-tests" className="btn-ghost">
                       Back to checklist
-                    </a>
+                    </Link>
                   </div>
                 </div>
               ) : (
@@ -257,10 +259,12 @@ export default function ReportIssueClient() {
                     {previewUrl ? (
                       <div className="space-y-3">
                         <div className="relative aspect-[16/10] overflow-hidden rounded-[1.2rem] border border-[var(--border-color)] bg-[var(--surface-elevated)]">
-                          <img
+                          <Image
                             src={previewUrl}
                             alt="Issue screenshot preview"
-                            className="h-full w-full object-cover"
+                            fill
+                            unoptimized
+                            className="object-cover"
                           />
                         </div>
 
@@ -332,9 +336,9 @@ export default function ReportIssueClient() {
                       {submitting ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
                       Submit issue
                     </button>
-                    <a href="/manual-tests" className="btn-ghost">
+                    <Link href="/manual-tests" className="btn-ghost">
                       Back to checklist
-                    </a>
+                    </Link>
                   </div>
                 </form>
               )}

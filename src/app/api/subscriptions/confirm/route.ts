@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getRequestAccessProfile, hasAdminAccess } from '@/lib/access';
-import { activateSubscription } from '@/lib/subscription';
+import { createServiceClient } from '@/lib/supabase';
+import { verifyAndActivateSubscriptionByReference } from '@/lib/subscription';
 
 export async function POST(request: NextRequest) {
   const user = await getRequestAccessProfile(request);
@@ -16,12 +17,26 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'subscription_id required' }, { status: 400 });
     }
 
-    const subscription = await activateSubscription(subscriptionId);
-    if (!subscription) {
+    const supabase = createServiceClient();
+    const { data: subscription } = await supabase
+      .from('subscriptions')
+      .select('paystack_ref')
+      .eq('id', subscriptionId)
+      .maybeSingle();
+
+    if (!subscription?.paystack_ref) {
       return NextResponse.json({ error: 'Subscription not found' }, { status: 404 });
     }
 
-    return NextResponse.json({ success: true, subscription });
+    const result = await verifyAndActivateSubscriptionByReference(subscription.paystack_ref);
+    if (!result.success) {
+      return NextResponse.json(
+        { error: result.error ?? 'Payment could not be verified' },
+        { status: 422 }
+      );
+    }
+
+    return NextResponse.json({ success: true, subscription: result.subscription });
   } catch (error) {
     console.error('[Subscription Confirm] Error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });

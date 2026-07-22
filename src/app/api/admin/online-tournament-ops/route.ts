@@ -1188,6 +1188,13 @@ export async function PATCH(request: NextRequest) {
         return NextResponse.json({ error: 'Game, placement, and payout status are required' }, { status: 400 });
       }
 
+      if (payoutStatus === 'paid') {
+        return NextResponse.json(
+          { error: 'Payout release is disabled until recipient and eligibility verification are implemented.' },
+          { status: 409 }
+        );
+      }
+
       const { error } = await supabase.from('online_tournament_payouts').upsert(
         {
           event_slug: ONLINE_TOURNAMENT_SLUG,

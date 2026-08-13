@@ -1,0 +1,4 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { getRequestAccessProfile } from '@/lib/access';
+import { getTeamPassport } from '@/lib/passport-community';
+export async function GET(request: NextRequest, { params }: { params: Promise<{ left: string; right: string }> }) { const viewer = await getRequestAccessProfile(request); const { left, right } = await params; if (left === right) return NextResponse.json({ error: 'Choose two teams' }, { status: 400 }); const [leftTeam, rightTeam] = await Promise.all([getTeamPassport(left, viewer?.id), getTeamPassport(right, viewer?.id)]); if (!leftTeam || !rightTeam) return NextResponse.json({ error: 'Team Passport unavailable' }, { status: 404 }); const sharedGames = leftTeam.supported_games.filter((game) => rightTeam.supported_games.includes(game)); return NextResponse.json({ comparison: { left: leftTeam, right: rightTeam, shared_games: sharedGames, generated_at: new Date().toISOString() } }); }

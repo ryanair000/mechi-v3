@@ -13,6 +13,14 @@
     {
       "path": "/api/cron/email-reminders",
       "schedule": "0 16 8-10 5 *"
+    },
+    {
+      "path": "/api/cron/passport-webhooks",
+      "schedule": "*/5 * * * *"
+    },
+    {
+      "path": "/api/cron/passport-retention",
+      "schedule": "35 2 * * *"
     }
   ],
   "headers": [

@@ -1,0 +1,5 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { requireActiveAccessProfile } from '@/lib/access';
+import { createGamingCircle, getGamingCircles } from '@/lib/passport-community';
+export async function GET(request: NextRequest) { const access = await requireActiveAccessProfile(request); if (access.response) return access.response; return NextResponse.json({ circles: await getGamingCircles(access.profile.id) }); }
+export async function POST(request: NextRequest) { const access = await requireActiveAccessProfile(request); if (access.response) return access.response; const body = await request.json().catch(() => ({})) as Record<string, unknown>; const memberIds = Array.isArray(body.member_ids) ? body.member_ids.map(String) : []; const result = await createGamingCircle(access.profile.id, String(body.name ?? ''), String(body.description ?? ''), memberIds); return NextResponse.json(result.circleId ? { circle_id: result.circleId } : { error: result.error }, { status: result.circleId ? 201 : 400 }); }

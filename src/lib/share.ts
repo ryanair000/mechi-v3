@@ -29,7 +29,7 @@ export function getMatchSharePath(matchId: string) {
 }
 
 export function getProfileSharePath(username: string) {
-  return `/s/${encodeURIComponent(username)}`;
+  return `/@${encodeURIComponent(username)}`;
 }
 
 export function getInvitePath(inviteCode: string) {

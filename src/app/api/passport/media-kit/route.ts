@@ -1,0 +1,6 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { requireActiveAccessProfile } from '@/lib/access';
+import { getPassportMediaKitSettings, updatePassportMediaKitSettings } from '@/lib/passport-progression';
+
+export async function GET(request: NextRequest) { const access = await requireActiveAccessProfile(request); if (access.response) return access.response; return NextResponse.json({ settings: await getPassportMediaKitSettings(access.profile.id) }); }
+export async function PATCH(request: NextRequest) { const access = await requireActiveAccessProfile(request); if (access.response) return access.response; const body = await request.json().catch(() => ({})) as Record<string, unknown>; const result = await updatePassportMediaKitSettings(access.profile.id, { enabled: body.enabled === true, headline: String(body.headline ?? ''), creatorRoles: Array.isArray(body.creator_roles) ? body.creator_roles.map(String) : [], inquiryUrl: typeof body.inquiry_url === 'string' && body.inquiry_url ? body.inquiry_url : null, includeDimensions: body.include_dimensions !== false, includeEvents: body.include_events !== false, includeTeams: body.include_teams !== false }); return NextResponse.json(result.ok ? { success: true } : { error: result.error }, { status: result.ok ? 200 : 400 }); }

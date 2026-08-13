@@ -1,0 +1,5 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { hasAdminAccess, requireActiveAccessProfile } from '@/lib/access';
+import { reviewPassportPartnerIssuance } from '@/lib/passport-partners';
+
+export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) { const access = await requireActiveAccessProfile(request); if (access.response) return access.response; if (!hasAdminAccess(access.profile)) return NextResponse.json({ error: 'Admin access required' }, { status: 403 }); const body = await request.json().catch(() => ({})) as Record<string, unknown>; const decision = String(body.decision ?? ''); if (decision !== 'approve' && decision !== 'reject') return NextResponse.json({ error: 'Decision must be approve or reject' }, { status: 400 }); const result = await reviewPassportPartnerIssuance(access.profile.id, (await params).id, decision, typeof body.reason === 'string' ? body.reason : undefined); return NextResponse.json(result.ok ? result : { error: result.error }, { status: result.ok ? 200 : 400 }); }

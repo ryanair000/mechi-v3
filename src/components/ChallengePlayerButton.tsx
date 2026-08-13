@@ -8,6 +8,13 @@ import { useAuth, useAuthFetch } from '@/components/AuthProvider';
 import { emitNotificationRefresh } from '@/components/NotificationNavButton';
 import type { GameKey, PlatformKey } from '@/types';
 
+export type ChallengePlayerError = {
+  message: string;
+  status: number;
+  code?: string;
+  recoverHref?: string;
+};
+
 interface ChallengePlayerButtonProps {
   opponentId: string;
   opponentUsername: string;
@@ -17,6 +24,7 @@ interface ChallengePlayerButtonProps {
   className?: string;
   disabled?: boolean;
   onSuccess?: () => void | Promise<void>;
+  onError?: (error: ChallengePlayerError) => void;
 }
 
 export function ChallengePlayerButton({
@@ -28,6 +36,7 @@ export function ChallengePlayerButton({
   className = 'btn-outline',
   disabled = false,
   onSuccess,
+  onError,
 }: ChallengePlayerButtonProps) {
   const router = useRouter();
   const pathname = usePathname();
@@ -57,10 +66,21 @@ export function ChallengePlayerButton({
           platform,
         }),
       });
-      const data = (await res.json()) as { error?: string };
+      const data = (await res.json()) as {
+        error?: string;
+        code?: string;
+        recover_href?: string;
+      };
 
       if (!res.ok) {
-        toast.error(data.error ?? 'Could not send challenge');
+        const message = data.error ?? 'Could not send challenge';
+        toast.error(message);
+        onError?.({
+          message,
+          status: res.status,
+          code: data.code,
+          recoverHref: data.recover_href,
+        });
         return;
       }
 
@@ -72,7 +92,10 @@ export function ChallengePlayerButton({
         console.error('[ChallengePlayerButton] Post-success callback failed:', error);
       }
     } catch {
-      toast.error('Network error');
+      const message =
+        'The network dropped before Mechi confirmed the invite. Refresh before sending it again.';
+      toast.error(message);
+      onError?.({ message, status: 0 });
     } finally {
       setLoading(false);
     }

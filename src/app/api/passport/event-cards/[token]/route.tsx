@@ -1,0 +1,12 @@
+import { ImageResponse } from 'next/og';
+import { NextRequest } from 'next/server';
+import { getPassportCredentialByToken } from '@/lib/passport-resume';
+
+export const runtime = 'nodejs';
+export async function GET(request: NextRequest, { params }: { params: Promise<{ token: string }> }) {
+  const credential = await getPassportCredentialByToken((await params).token);
+  if (!credential) return new ImageResponse(<div style={{ display: 'flex', width: '100%', height: '100%', alignItems: 'center', justifyContent: 'center', background: '#071018', color: 'white', fontSize: 40 }}>Credential not found</div>, { width: 1200, height: 630, status: 404 });
+  const active = credential.credential_state === 'active';
+  const sponsorSafe = request.nextUrl.searchParams.get('sponsor') === '1';
+  return new ImageResponse(<div style={{ display: 'flex', width: '100%', height: '100%', flexDirection: 'column', justifyContent: 'space-between', background: `linear-gradient(145deg,#071018,#102438 65%,${active ? '#32E0C433' : '#fb718533'})`, color: 'white', padding: 58, fontFamily: 'sans-serif' }}><div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 900, letterSpacing: 3 }}><span style={{ color: active ? '#32E0C4' : '#fb7185' }}>PLAYMECHI</span><span>{sponsorSafe ? 'SPONSOR-SAFE EVENT CREDENTIAL' : 'VERIFIED EVENT PASSPORT'}</span></div><div style={{ display: 'flex', flexDirection: 'column' }}><span style={{ color: active ? '#32E0C4' : '#fb7185', fontSize: 24, fontWeight: 900 }}>{active ? 'ACTIVE CREDENTIAL' : 'REVOKED CREDENTIAL'}</span><span style={{ marginTop: 15, fontSize: 64, fontWeight: 950 }}>{credential.event_title}</span><span style={{ marginTop: 16, fontSize: 31, color: '#ffffffaa', textTransform: 'uppercase' }}>{credential.stamp_type.replace('_', ' ')}{credential.placement ? ` · #${credential.placement}` : ''}</span></div><div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', borderTop: '1px solid #ffffff22', paddingTop: 26 }}><div style={{ display: 'flex', flexDirection: 'column' }}><span style={{ fontSize: 26, fontWeight: 900 }}>{credential.display_name}{sponsorSafe ? '' : ` · @${credential.username}`}</span><span style={{ marginTop: 7, color: '#ffffff77' }}>{credential.occurred_at.slice(0, 10)} · Source: {credential.source_type.replaceAll('_', ' ')}</span></div><span style={{ fontSize: 16, fontWeight: 800 }}>mechi.club/verify/passport/{credential.verification_token}</span></div></div>, { width: 1200, height: 630 });
+}

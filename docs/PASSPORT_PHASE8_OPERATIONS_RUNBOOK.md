@@ -27,7 +27,7 @@ Never paste or commit their values. Confirm presence and rotation through the ap
 1. Run Phase 7 and Phase 8 contract suites.
 2. Run repository TypeScript and targeted ESLint.
 3. Run a full Next.js production build.
-4. Confirm the deployment plan supports five configured cron jobs and a five-minute schedule.
+4. Confirm the deployment plan supports the configured cron jobs. The current production plan runs a daily webhook safety sweep at 02:15 UTC; upgrade the plan and restore the five-minute schedule before enabling external webhook delivery.
 5. Start local Supabase and run database lint/advisors.
 6. Rebuild a fresh local database from migrations and separately from `bootstrap_from_empty_project.sql`.
 7. Verify both schemas contain the same Phase 8 tables, columns, functions, indexes, triggers, RLS, revokes, and grants.

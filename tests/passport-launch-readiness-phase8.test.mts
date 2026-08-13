@@ -85,7 +85,7 @@ test('cron jobs require CRON_SECRET and run on explicit schedules', () => {
     assert.match(route, /status: 401/);
   }
   const config = JSON.parse(vercel);
-  assert.ok(config.crons.some((job: { path: string; schedule: string }) => job.path === '/api/cron/passport-webhooks' && job.schedule === '*/5 * * * *'));
+  assert.ok(config.crons.some((job: { path: string; schedule: string }) => job.path === '/api/cron/passport-webhooks' && job.schedule === '15 2 * * *'));
   assert.ok(config.crons.some((job: { path: string; schedule: string }) => job.path === '/api/cron/passport-retention' && job.schedule === '30 2 * * *'));
 });
 

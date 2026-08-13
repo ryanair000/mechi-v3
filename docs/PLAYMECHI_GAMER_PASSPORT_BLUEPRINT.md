@@ -1972,7 +1972,7 @@ Receiver verification must reject stale timestamps, compute the HMAC over the ra
 
 | Route | Schedule | Function |
 |---|---|---|
-| `/api/cron/passport-webhooks` | Every five minutes | Claims and processes one bounded delivery batch. |
+| `/api/cron/passport-webhooks` | Daily at 02:15 UTC while delivery is launch-gated; every five minutes after the production plan upgrade | Claims and processes one bounded delivery batch. |
 | `/api/cron/passport-retention` | Daily at 02:30 UTC | Removes expired operational data according to the retention contract. |
 
 Both routes require `Authorization: Bearer <CRON_SECRET>`; the existing `X-Cron-Secret` compatibility path is also accepted for controlled internal invocation. A missing secret fails closed. Vercel schedules run only in production, and the webhook job returns without claiming anything while its rollout gate is closed.

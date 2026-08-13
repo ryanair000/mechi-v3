@@ -16,7 +16,7 @@
     },
     {
       "path": "/api/cron/passport-webhooks",
-      "schedule": "*/5 * * * *"
+      "schedule": "15 2 * * *"
     },
     {
       "path": "/api/cron/passport-retention",

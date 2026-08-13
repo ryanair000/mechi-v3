@@ -11,6 +11,7 @@ import { isMissingColumnError } from '@/lib/db-compat';
 import { sendChallengeAcceptedEmail } from '@/lib/email';
 import { resolveProfileLocation, UNSPECIFIED_LOCATION_LABEL } from '@/lib/location';
 import { createNotifications } from '@/lib/notifications';
+import { hasPassportBlockBetween } from '@/lib/passport-social';
 import { expireWaitingQueueEntries } from '@/lib/queue';
 import { incrementMatchUsage } from '@/lib/subscription';
 import { createServiceClient } from '@/lib/supabase';
@@ -94,6 +95,13 @@ export async function POST(
 
     if (!isOpenChallenge && challenge.opponent_id !== authUser.id) {
       return NextResponse.json({ error: 'Only the challenged player can accept' }, { status: 403 });
+    }
+
+    if (
+      (challenge.opponent_id && await hasPassportBlockBetween(challenge.challenger_id, challenge.opponent_id))
+      || (isOpenChallenge && await hasPassportBlockBetween(challenge.challenger_id, authUser.id))
+    ) {
+      return NextResponse.json({ error: 'This player is unavailable' }, { status: 403 });
     }
 
     if (challenge.status !== 'pending') {

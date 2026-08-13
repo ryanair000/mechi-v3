@@ -366,6 +366,9 @@ export default function AdminTournamentsPage() {
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
+            <Link href="/admin/passport/events" className="btn-outline text-xs">
+              Event Passport operations
+            </Link>
             {STATUS_TABS.map((status) => (
               <button
                 key={status}

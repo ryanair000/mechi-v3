@@ -92,6 +92,7 @@ const CROSS_ORIGIN_API_EXEMPT_PREFIXES = [
   '/api/paystack/webhook',
   '/api/streams/webhook',
   '/api/integrations/chezahub/order-event',
+  '/api/v1/partner/',
 ];
 const API_RATE_LIMIT_POLICIES = [
   { prefix: '/api/auth/login', limit: 30, windowMs: 15 * 60 * 1000 },
@@ -106,6 +107,7 @@ const API_RATE_LIMIT_POLICIES = [
   { prefix: '/api/subscriptions', limit: 45, windowMs: 15 * 60 * 1000 },
   { prefix: '/api/rewards/redeem', limit: 30, windowMs: 15 * 60 * 1000 },
   { prefix: '/api/streams', limit: 90, windowMs: 5 * 60 * 1000 },
+  { prefix: '/api/v1', limit: 180, windowMs: 5 * 60 * 1000 },
 ];
 const DEFAULT_UNSAFE_API_RATE_LIMIT = { limit: 240, windowMs: 5 * 60 * 1000 };
 
@@ -698,6 +700,12 @@ export async function proxy(request: NextRequest) {
     const africaUrl = request.nextUrl.clone();
     africaUrl.pathname = '/africa';
     return NextResponse.redirect(africaUrl, 308);
+  }
+
+  if (!adminHost && /^\/@[^/]+(?:\/(?:games|resume|cv))?\/?$/.test(pathname)) {
+    const passportUrl = request.nextUrl.clone();
+    passportUrl.pathname = `/p/${pathname.slice(1)}`;
+    return NextResponse.rewrite(passportUrl);
   }
 
   if (pathname.startsWith('/s/') && !pathname.startsWith('/s/match/') && !pathname.startsWith('/s/t/')) {

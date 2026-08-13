@@ -10,6 +10,7 @@ import {
 } from '@/lib/challenges';
 import { sendChallengeReceivedEmail, sendOpenChallengePublishedEmail } from '@/lib/email';
 import { createNotifications } from '@/lib/notifications';
+import { hasPassportBlockBetween } from '@/lib/passport-social';
 import { expireWaitingQueueEntries } from '@/lib/queue';
 import { checkPersistentRateLimit, getClientIp, rateLimitResponse } from '@/lib/rateLimit';
 import { createServiceClient } from '@/lib/supabase';
@@ -152,6 +153,10 @@ export async function POST(request: NextRequest) {
 
     const supabase = createServiceClient();
     await expirePendingChallenges(supabase);
+
+    if (!isOpenChallenge && await hasPassportBlockBetween(authUser.id, opponentId)) {
+      return NextResponse.json({ error: 'This player is unavailable' }, { status: 403 });
+    }
 
     const { data: profileRows, error: profilesError } = await supabase
       .from('profiles')

@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
-import { redirect } from 'next/navigation';
+import { permanentRedirect } from 'next/navigation';
 import { getPublicProfileData } from '@/lib/public-profile';
+import { getPassportPath } from '@/lib/passport';
 
 type ShareProfilePageProps = {
   params: Promise<{ username: string }>;
@@ -18,5 +19,5 @@ export async function generateMetadata({
 
 export default async function ShareProfilePage({ params }: ShareProfilePageProps) {
   const { username } = await params;
-  redirect(`/profile/${encodeURIComponent(username)}`);
+  permanentRedirect(getPassportPath(username));
 }

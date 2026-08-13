@@ -20,7 +20,7 @@
     },
     {
       "path": "/api/cron/passport-retention",
-      "schedule": "35 2 * * *"
+      "schedule": "30 2 * * *"
     }
   ],
   "headers": [

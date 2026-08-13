@@ -5,6 +5,16 @@
 -- therefore intentionally unavailable to anon/authenticated Data API roles.
 -- Privacy-filtered public and owner reads are served by the Mechi application.
 
+-- The current V5 application already reads these participant lifecycle fields,
+-- but older production projects may predate the migration that introduced them.
+ALTER TABLE public.tournament_players
+  ADD COLUMN IF NOT EXISTS check_in_status text NOT NULL DEFAULT 'registered'
+    CHECK (check_in_status IN ('registered', 'checked_in', 'no_show')),
+  ADD COLUMN IF NOT EXISTS checked_in_at timestamptz;
+
+CREATE INDEX IF NOT EXISTS idx_tournament_players_check_in_status
+  ON public.tournament_players(tournament_id, check_in_status);
+
 CREATE TABLE IF NOT EXISTS public.passport_profiles (
   user_id uuid PRIMARY KEY REFERENCES public.profiles(id) ON DELETE CASCADE,
   display_name text,

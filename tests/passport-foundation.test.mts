@@ -50,6 +50,7 @@ test('Phase 1 migration defaults to server-only access with RLS defense in depth
 
   assert.match(sql, /REVOKE ALL ON TABLE[\s\S]+FROM anon, authenticated/i);
   assert.match(sql, /GRANT ALL ON TABLE[\s\S]+TO service_role/i);
+  assert.match(sql, /ALTER TABLE public\.tournament_players[\s\S]+ADD COLUMN IF NOT EXISTS check_in_status/i);
   assert.match(sql, /"game_ids":"private"/i);
 });
 

@@ -1,12 +1,16 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { GAMES, getCanonicalGameKey, normalizeSelectedGameKeys } from '@/lib/config';
+import { GAMES, getCanonicalGameKey } from '@/lib/config';
+import {
+  buildTeamRosterCandidate,
+} from '@/lib/team-roster';
+import { assessTeamRoster } from '@/lib/team-roster-assessment';
 import type { GameKey, TeamMemberRole } from '@/types';
 
 export const TEAM_SELECT =
   'id, name, slug, description, region, avatar_url, visibility, recruiting, owner_id, created_at, updated_at';
 
 export const TEAM_MEMBER_SELECT =
-  'id, team_id, user_id, role, status, joined_at, left_at, profile:user_id(id, username, avatar_url, selected_games, game_ids)';
+  'id, team_id, user_id, role, status, joined_at, left_at, profile:user_id(id, username, avatar_url, selected_games, platforms, game_ids)';
 
 export type TeamAccess = {
   team: Record<string, unknown>;
@@ -62,7 +66,7 @@ export async function getTeamDetail(
   const isPublic = access.team.visibility === 'public';
   if (!isPublic && !access.membership) return null;
 
-  const [{ data: members }, { data: invitations }] = await Promise.all([
+  const [{ data: members }, { data: invitations }, { data: rosterEntries }] = await Promise.all([
     supabase
       .from('team_members')
       .select(TEAM_MEMBER_SELECT)
@@ -77,70 +81,92 @@ export async function getTeamDetail(
           .eq('status', 'pending')
           .order('created_at', { ascending: false })
       : Promise.resolve({ data: [] }),
+    supabase
+      .from('team_roster_entries')
+      .select(
+        'id, game, member_id, roster_role, eligibility_status, eligibility_reason, game_account_snapshot, updated_at'
+      )
+      .eq('team_id', teamId)
+      .order('game', { ascending: true }),
   ]);
 
   return {
     team: access.team,
+    viewer_id: userId,
     membership: access.membership,
     can_manage: access.canManage,
     members: members ?? [],
     invitations: invitations ?? [],
+    roster_entries: rosterEntries ?? [],
   };
 }
 
 export async function getTeamReadiness(
   supabase: SupabaseClient,
   teamId: string,
-  gameValue: string
+  gameValue: string,
+  requiredStarters = 2,
+  requiredPlatform?: string | null
 ) {
   const canonicalGame = getCanonicalGameKey(gameValue as GameKey);
   if (!GAMES[canonicalGame]) return null;
 
-  const { data } = await supabase
-    .from('team_members')
-    .select(TEAM_MEMBER_SELECT)
-    .eq('team_id', teamId)
-    .eq('status', 'active')
-    .order('joined_at', { ascending: true });
+  const [{ data: memberRows }, { data: rosterRows }] = await Promise.all([
+    supabase
+      .from('team_members')
+      .select(TEAM_MEMBER_SELECT)
+      .eq('team_id', teamId)
+      .eq('status', 'active')
+      .order('joined_at', { ascending: true }),
+    supabase
+      .from('team_roster_entries')
+      .select(
+        'id, member_id, roster_role, eligibility_status, eligibility_reason, game_account_snapshot'
+      )
+      .eq('team_id', teamId)
+      .eq('game', canonicalGame),
+  ]);
 
-  const members = ((data ?? []) as Array<Record<string, unknown>>).map((member) => {
-    const profile = (member.profile ?? {}) as Record<string, unknown>;
-    const selectedGames = normalizeSelectedGameKeys((profile.selected_games as string[]) ?? []);
-    const gameIds = (profile.game_ids as Record<string, string> | null) ?? {};
-    const selected = selectedGames.includes(canonicalGame);
-    const gameId = String(gameIds[canonicalGame] ?? '').trim();
-    const eligible = selected && Boolean(gameId);
+  const rosterByMember = new Map(
+    ((rosterRows ?? []) as Array<Record<string, unknown>>).map((row) => [
+      String(row.member_id),
+      row,
+    ])
+  );
+  const hasSavedRoster = rosterByMember.size > 0;
+  const members = ((memberRows ?? []) as Array<Record<string, unknown>>).map((member) => {
+    const existing = rosterByMember.get(String(member.id));
+    const candidate = buildTeamRosterCandidate(member, canonicalGame, existing);
+    const platformMismatch =
+      candidate.selected &&
+      Boolean(requiredPlatform) &&
+      candidate.platform !== requiredPlatform;
     return {
-      id: member.id,
-      user_id: member.user_id,
-      username: profile.username ?? 'Player',
-      role: member.role,
-      eligible,
-      blocker: !selected
-        ? `Add ${GAMES[canonicalGame].label} to the player profile.`
-        : !gameId
-          ? `Add the ${GAMES[canonicalGame].label} player name or ID.`
-          : null,
+      ...candidate,
+      selected: hasSavedRoster ? Boolean(existing) : candidate.selected,
+      eligible: candidate.eligible && !platformMismatch,
+      blocker: platformMismatch
+        ? `Set this player's game account to ${requiredPlatform}.`
+        : candidate.blocker,
+      roster_entry_id: existing?.id ?? null,
     };
   });
-
-  const activePlayers = members.filter((member) =>
-    ['captain', 'starter'].includes(String(member.role))
-  );
-  const blockers = activePlayers.filter((member) => !member.eligible);
+  const assessment = assessTeamRoster(members, requiredStarters);
+  const blockers = members.filter((member) => member.selected && !member.eligible);
 
   return {
     game: canonicalGame,
     game_label: GAMES[canonicalGame].label,
-    ready: activePlayers.length >= 2 && blockers.length === 0,
+    platform: requiredPlatform ?? members.find((member) => member.platform)?.platform ?? null,
+    required_starters: requiredStarters,
+    ready: assessment.ready,
     members,
     blockers,
-    summary:
-      activePlayers.length < 2
-        ? 'Assign at least two active players before entering a team tournament.'
-        : blockers.length
-          ? `${blockers.length} player${blockers.length === 1 ? '' : 's'} need to finish game setup.`
-          : 'Your active players are ready for this game.',
+    starter_count: assessment.starter_count,
+    substitute_count: assessment.substitute_count,
+    summary: assessment.summary,
+    blocker_messages: assessment.blockers,
+    saved: hasSavedRoster,
   };
 }
 
@@ -163,4 +189,3 @@ export async function recordTeamAudit(
   });
   if (error) console.error('[Teams] Audit insert failed', error);
 }
-

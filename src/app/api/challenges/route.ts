@@ -10,6 +10,7 @@ import {
 } from '@/lib/challenges';
 import { sendChallengeReceivedEmail } from '@/lib/email';
 import { createNotifications } from '@/lib/notifications';
+import { hasPassportBlockBetween } from '@/lib/passport-social';
 import { expireWaitingQueueEntries } from '@/lib/queue';
 import { checkPersistentRateLimit, getClientIp, rateLimitResponse } from '@/lib/rateLimit';
 import { createServiceClient } from '@/lib/supabase';
@@ -77,24 +78,43 @@ export async function GET(request: NextRequest) {
     const supabase = createServiceClient();
     await expirePendingChallenges(supabase);
 
-    const [inboundResult, outboundResult] = await Promise.all([
+    const [inboundResult, outboundResult, historyResult] = await Promise.all([
       supabase
         .from('match_challenges')
         .select(CHALLENGE_SELECT)
         .eq('opponent_id', authUser.id)
         .eq('status', 'pending')
-        .order('created_at', { ascending: false }),
+        .order('expires_at', { ascending: true }),
       supabase
         .from('match_challenges')
         .select(CHALLENGE_SELECT)
         .eq('challenger_id', authUser.id)
         .eq('status', 'pending')
         .order('created_at', { ascending: false }),
+      supabase
+        .from('match_challenges')
+        .select(CHALLENGE_SELECT)
+        .or(`challenger_id.eq.${authUser.id},opponent_id.eq.${authUser.id}`)
+        .neq('status', 'pending')
+        .order('responded_at', { ascending: false, nullsFirst: false })
+        .order('created_at', { ascending: false })
+        .limit(20),
     ]);
+
+    if (inboundResult.error || outboundResult.error || historyResult.error) {
+      console.error('[Challenges GET] Query failed', {
+        inbound: inboundResult.error,
+        outbound: outboundResult.error,
+        history: historyResult.error,
+      });
+      return NextResponse.json({ error: 'Could not load your 1v1 activity' }, { status: 500 });
+    }
 
     return NextResponse.json({
       inbound: ((inboundResult.data ?? []) as Record<string, unknown>[]).map(mapChallengeRelations),
       outbound: ((outboundResult.data ?? []) as Record<string, unknown>[]).map(mapChallengeRelations),
+      history: ((historyResult.data ?? []) as Record<string, unknown>[]).map(mapChallengeRelations),
+      generated_at: new Date().toISOString(),
     });
   } catch (error) {
     console.error('[Challenges GET] Error:', error);
@@ -137,6 +157,10 @@ export async function POST(request: NextRequest) {
 
     const supabase = createServiceClient();
     await expirePendingChallenges(supabase);
+
+    if (await hasPassportBlockBetween(authUser.id, opponentId)) {
+      return NextResponse.json({ error: 'This player is unavailable for challenges' }, { status: 403 });
+    }
 
     const { data: profileRows, error: profilesError } = await supabase
       .from('profiles')
@@ -234,12 +258,24 @@ export async function POST(request: NextRequest) {
       .select(CHALLENGE_SELECT)
       .single();
 
+    if (insertError?.code === '23505') {
+      return NextResponse.json(
+        {
+          error: 'There is already a live 1v1 invite between you and this player.',
+          code: 'challenge_conflict',
+          recover_href: '/challenges',
+        },
+        { status: 409 }
+      );
+    }
+
     if (insertError || !challengeRow) {
+      console.error('[Challenges POST] Insert failed:', insertError);
       return NextResponse.json({ error: 'Could not send challenge' }, { status: 500 });
     }
 
     const challenge = mapChallengeRelations(challengeRow as Record<string, unknown>);
-    const challengeHref = '/challenges';
+    const challengeHref = `/challenges#challenge-${challenge.id}`;
     const challengeUrl = `${APP_URL}${challengeHref}`;
     await createNotifications(
       [
@@ -312,7 +348,17 @@ export async function POST(request: NextRequest) {
       await Promise.allSettled(deliveryTasks);
     }
 
-    return NextResponse.json({ challenge }, { status: 201 });
+    return NextResponse.json(
+      {
+        challenge,
+        next_action: {
+          label: 'View sent invite',
+          href: challengeHref,
+          owner: opponent.username,
+        },
+      },
+      { status: 201 }
+    );
   } catch (error) {
     console.error('[Challenges POST] Error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });

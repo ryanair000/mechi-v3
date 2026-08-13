@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireActiveAccessProfile } from '@/lib/access';
 import { createNotification } from '@/lib/notifications';
 import { createServiceClient } from '@/lib/supabase';
-import { getTeamAccess, recordTeamAudit } from '@/lib/teams';
+import { getTeamOperationErrorMessage } from '@/lib/team-roster';
+import { getTeamAccess } from '@/lib/teams';
 
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const access = await requireActiveAccessProfile(request);
@@ -25,27 +26,36 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   if (!invitee) return NextResponse.json({ error: 'No player uses that username.' }, { status: 404 });
   if (invitee.id === access.profile.id) return NextResponse.json({ error: 'You are already on this team.' }, { status: 400 });
 
-  const { data: existingMember } = await supabase
-    .from('team_members')
-    .select('id')
-    .eq('team_id', id)
-    .eq('user_id', invitee.id)
-    .eq('status', 'active')
-    .maybeSingle();
-  if (existingMember) return NextResponse.json({ error: 'That player is already on the team.' }, { status: 409 });
-
-  const { data: invitation, error } = await supabase
-    .from('team_invitations')
-    .insert({ team_id: id, invitee_id: invitee.id, inviter_id: access.profile.id })
-    .select('id, team_id, invitee_id, inviter_id, status, expires_at, created_at')
+  const { data: invitationResult, error } = await supabase
+    .rpc('create_team_invitation', {
+      p_team_id: id,
+      p_actor_id: access.profile.id,
+      p_invitee_id: invitee.id,
+    })
     .single();
-  if (error || !invitation) {
-    const duplicate = error?.code === '23505';
+  if (error || !invitationResult) {
+    const message = getTeamOperationErrorMessage(error);
+    const conflict =
+      error?.code === '23505' ||
+      ['already', 'pending'].some((word) => message.toLowerCase().includes(word));
     return NextResponse.json(
-      { error: duplicate ? 'That player already has a pending invitation.' : 'Could not send the invitation.' },
-      { status: duplicate ? 409 : 500 }
+      { error: message },
+      { status: conflict ? 409 : 500 }
     );
   }
+  const result = invitationResult as {
+    invitation_id: string;
+    invitation_status: string;
+    invitation_expires_at: string;
+  };
+  const invitation = {
+    id: result.invitation_id,
+    team_id: id,
+    invitee_id: invitee.id,
+    inviter_id: access.profile.id,
+    status: result.invitation_status,
+    expires_at: result.invitation_expires_at,
+  };
 
   await Promise.all([
     createNotification(
@@ -59,14 +69,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       },
       supabase
     ),
-    recordTeamAudit(supabase, {
-      teamId: id,
-      actorId: access.profile.id,
-      action: 'invitation_sent',
-      subjectUserId: invitee.id,
-    }),
   ]);
 
   return NextResponse.json({ invitation: { ...invitation, invitee } }, { status: 201 });
 }
-

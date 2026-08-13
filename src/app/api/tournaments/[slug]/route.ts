@@ -14,7 +14,7 @@ import {
 import type { LiveStream } from '@/types';
 
 const TOURNAMENT_DETAIL_SELECT =
-  'id, slug, title, game, platform, region, size, entry_fee, prize_pool_mode, prize_pool, platform_fee, platform_fee_rate, status, winner_id, organizer_id, rules, approval_status, approved_at, approved_by, is_featured, payout_status, scheduled_for, created_at, started_at, ended_at, organizer:organizer_id(id, username), winner:winner_id(id, username)';
+  'id, slug, title, game, platform, participant_mode, team_size, region, size, entry_fee, prize_pool_mode, prize_pool, platform_fee, platform_fee_rate, status, winner_id, organizer_id, rules, approval_status, approved_at, approved_by, is_featured, payout_status, scheduled_for, created_at, started_at, ended_at, organizer:organizer_id(id, username), winner:winner_id(id, username)';
 const TOURNAMENT_PLAYER_SELECT =
   'id, tournament_id, user_id, seed, payment_status, check_in_status, checked_in_at, joined_at, user:user_id(id, username)';
 const TOURNAMENT_MATCH_SELECT =
@@ -104,11 +104,33 @@ export async function GET(
 
     const tournament = (refreshedTournament ?? tournamentBySlug) as typeof tournamentBySlug;
 
-    const { data: players } = await supabase
-      .from('tournament_players')
-      .select(TOURNAMENT_PLAYER_SELECT)
-      .eq('tournament_id', tournament.id)
-      .order('joined_at', { ascending: true });
+    const isTeamTournament = tournament.participant_mode === 'team';
+    const [{ data: players }, { data: teamEntries }, { data: viewerMemberships }] =
+      await Promise.all([
+        isTeamTournament
+          ? Promise.resolve({ data: [] })
+          : supabase
+              .from('tournament_players')
+              .select(TOURNAMENT_PLAYER_SELECT)
+              .eq('tournament_id', tournament.id)
+              .order('joined_at', { ascending: true }),
+        isTeamTournament
+          ? supabase
+              .from('tournament_team_entries')
+              .select(
+                'id, tournament_id, team_id, registered_by, roster_snapshot, roster_locked_at, payment_status, check_in_status, checked_in_at, joined_at, team:team_id(id, name, slug, avatar_url)'
+              )
+              .eq('tournament_id', tournament.id)
+              .order('joined_at', { ascending: true })
+          : Promise.resolve({ data: [] }),
+        isTeamTournament
+          ? supabase
+              .from('team_members')
+              .select('team_id, role')
+              .eq('user_id', authUser.id)
+              .eq('status', 'active')
+          : Promise.resolve({ data: [] }),
+      ]);
 
     const { data: matches } = await supabase
       .from('tournament_matches')
@@ -119,6 +141,9 @@ export async function GET(
 
     const playerRows = (players ?? []).filter((player) =>
       isActiveTournamentPlayerStatus(player.payment_status as string | null | undefined)
+    );
+    const teamEntryRows = (teamEntries ?? []).filter((entry) =>
+      isActiveTournamentPlayerStatus(entry.payment_status as string | null | undefined)
     );
     const { data: viewerProfileRaw } = await supabase
       .from('profiles')
@@ -158,7 +183,8 @@ export async function GET(
           streamer?: TournamentStreamRelation;
         })
       | null;
-    const { activeCount, confirmedCount, paidCount } = getTournamentPaymentMetrics(playerRows);
+    const competitionRows = isTeamTournament ? teamEntryRows : playerRows;
+    const { activeCount, confirmedCount, paidCount } = getTournamentPaymentMetrics(competitionRows);
     const prize = getTournamentPrizeSnapshot({
       entryFee: tournament.entry_fee,
       paidPlayerCount: paidCount,
@@ -168,6 +194,17 @@ export async function GET(
       storedPlatformFee: tournament.platform_fee,
     });
     const viewerPlayer = playerRows.find((player) => player.user_id === authUser.id) ?? null;
+    const viewerMembershipByTeam = new Map(
+      (viewerMemberships ?? []).map((membership) => [
+        String(membership.team_id),
+        String(membership.role),
+      ])
+    );
+    const viewerTeamEntry =
+      teamEntryRows.find((entry) => viewerMembershipByTeam.has(String(entry.team_id))) ?? null;
+    const viewerTeamRole = viewerTeamEntry
+      ? viewerMembershipByTeam.get(String(viewerTeamEntry.team_id)) ?? null
+      : null;
     const resolvedPlan = resolvePlan(viewerProfile?.plan, viewerProfile?.plan_expires_at);
     const isPrimaryAdmin = hasPrimaryAdminAccess({
       phone: viewerProfile?.phone ?? authUser.phone,
@@ -182,7 +219,10 @@ export async function GET(
     const canCreateStream =
       tournament.status === 'active' &&
       (isPrimaryAdmin ||
-        (resolvedPlan === 'elite' && (authUser.id === tournament.organizer_id || Boolean(viewerPlayer))));
+        (resolvedPlan === 'elite' &&
+          (authUser.id === tournament.organizer_id ||
+            Boolean(viewerPlayer) ||
+            Boolean(viewerTeamEntry))));
     const canManageStream =
       Boolean(normalizedStream) &&
       (isPrimaryAdmin || normalizedStream?.streamer_id === authUser.id);
@@ -196,6 +236,21 @@ export async function GET(
         slots_left: Math.max(0, tournament.size - activeCount),
       },
       players: playerRows,
+      teams: teamEntryRows.map((entry) => ({
+        ...entry,
+        roster_snapshot: {
+          ...(entry.roster_snapshot as Record<string, unknown>),
+          players: Array.isArray((entry.roster_snapshot as Record<string, unknown>)?.players)
+            ? ((entry.roster_snapshot as { players: Array<Record<string, unknown>> }).players).map(
+                (player) => ({
+                  user_id: player.user_id,
+                  username: player.username,
+                  roster_role: player.roster_role,
+                })
+              )
+            : [],
+        },
+      })),
       matches: ((matches ?? []) as Array<Record<string, unknown>>).map((match) => ({
         ...match,
         player1: firstRelation(match.player1 as TournamentMatchProfileRelation),
@@ -204,11 +259,23 @@ export async function GET(
         match: firstRelation(match.match as TournamentMatchGameRelation),
       })),
       viewer: {
-        joined: Boolean(viewerPlayer),
+        joined: Boolean(isTeamTournament ? viewerTeamEntry : viewerPlayer),
+        teamId: viewerTeamEntry?.team_id ?? null,
+        teamRole: viewerTeamRole,
+        canManageTeamEntry:
+          Boolean(viewerTeamEntry) &&
+          (viewerTeamEntry?.registered_by === authUser.id ||
+            viewerTeamRole === 'captain'),
         isOrganizer: authUser.id === tournament.organizer_id,
-        paymentStatus: viewerPlayer?.payment_status ?? null,
-        checkInStatus: viewerPlayer?.check_in_status ?? null,
-        checkedInAt: viewerPlayer?.checked_in_at ?? null,
+        paymentStatus:
+          (isTeamTournament ? viewerTeamEntry?.payment_status : viewerPlayer?.payment_status) ??
+          null,
+        checkInStatus:
+          (isTeamTournament ? viewerTeamEntry?.check_in_status : viewerPlayer?.check_in_status) ??
+          null,
+        checkedInAt:
+          (isTeamTournament ? viewerTeamEntry?.checked_in_at : viewerPlayer?.checked_in_at) ??
+          null,
         plan: resolvedPlan,
         isPrimaryAdmin,
         canCreateStream,

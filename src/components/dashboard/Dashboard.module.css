@@ -15,24 +15,48 @@
 .quickActions { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 12px; }
 .quickActions a { display: flex; min-height: 74px; align-items: center; gap: 13px; border: 1px solid #dfe6ed; border-radius: 14px; background: #fff; padding: 15px 17px; color: #0a1221; box-shadow: 0 7px 18px rgba(15,23,42,.03); }
 .quickActions a:hover { border-color: #8edbd2; background: #f7fffd; transform: translateY(-1px); }
-.quickActions a > span { display: grid; width: 39px; height: 39px; flex: 0 0 auto; place-items: center; border-radius: 11px; background: #e5faf7; color: #007e72; }
+.quickActions .quickIcon { display: grid; width: 39px; height: 39px; flex: 0 0 auto; place-items: center; border-radius: 11px; background: #e5faf7; color: #007e72; }
+.quickCopy { min-width: 0; flex: 1; }
 .quickActions strong,.quickActions small { display: block; }
 .quickActions strong { font-size: 12px; font-weight: 850; }
-.quickActions small { margin-top: 4px; color: #718096; font-size: 10px; }
+.quickActions small { overflow: hidden; margin-top: 4px; color: #718096; font-size: 10px; text-overflow: ellipsis; white-space: nowrap; }
 .compactProgress { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 14px; }
-.compactProgress > div { border: 1px solid #dfe6ed; border-radius: 13px; background: #fff; padding: 16px; }
-.compactProgress span,.compactProgress strong { display: block; }
-.compactProgress span { color: #718096; font-size: 10px; font-weight: 750; }
-.compactProgress strong { margin-top: 5px; color: #0a1221; font-family: var(--font-montserrat),Arial,sans-serif; font-size: 21px; }
+.compactProgress > div,.compactProgress > a { display: grid; min-width: 0; min-height: 86px; grid-template-columns: 24px minmax(0,1fr) auto; align-items: center; gap: 12px; border: 1px solid #dfe6ed; border-radius: 13px; background: #fff; padding: 16px; }
+.compactProgress > div { grid-template-columns: 24px minmax(0,1fr); }
+.compactProgress > a:hover { border-color: #8edbd2; background: #f7fffd; }
+.compactProgress span,.compactProgress strong,.compactProgress small { display: block; min-width: 0; }
+.compactProgress > div > svg,.compactProgress > a > svg:first-child { color: #007e72; }
+.compactProgress strong { overflow: hidden; color: #0a1221; font-size: 12px; font-weight: 850; text-overflow: ellipsis; white-space: nowrap; }
+.compactProgress small { overflow: hidden; margin-top: 5px; color: #718096; font-size: 10px; text-overflow: ellipsis; white-space: nowrap; }
 
 .actionHero { position: relative; display: flex; min-height: 150px; align-items: center; justify-content: space-between; gap: 28px; overflow: hidden; border: 1px solid #d5e3e5; border-radius: 18px; background: linear-gradient(115deg,#fff 0%,#effcf9 62%,#e4faf6 100%); padding: 26px 28px; box-shadow: 0 14px 32px rgba(15,23,42,.05); }
 .actionHero::after { position: absolute; right: -35px; bottom: -68px; width: 190px; height: 190px; border: 28px solid rgba(24,210,189,.1); border-radius: 50%; content: ''; pointer-events: none; }
 .actionCopy { position: relative; z-index: 1; display: flex; min-width: 0; align-items: center; gap: 18px; }
 .actionIcon { display: grid; width: 50px; height: 50px; flex: 0 0 auto; place-items: center; border-radius: 14px; background: #e5faf7; color: #007e72; }
 .actionCopy h2 { margin-top: 6px; font-size: clamp(21px,2vw,28px); font-weight: 780; letter-spacing: -.035em; }
-.actionCopy > div > p:last-child { margin-top: 8px; color: #607086; font-size: 13px; }
+.actionCopy > div > h2 + p { margin-top: 8px; color: #607086; font-size: 13px; line-height: 1.5; }
+.actionMeta { display: flex; flex-wrap: wrap; gap: 8px 16px; margin-top: 12px; }
+.actionMeta span { display: inline-flex; align-items: center; gap: 6px; color: #526277; font-size: 10px; font-weight: 750; }
 .actionButtons { position: relative; z-index: 2; }
 .statusPill { display: inline-flex; min-height: 34px; align-items: center; gap: 7px; border-radius: 999px; background: #fff; padding: 0 12px; color: #007e72; font-size: 11px; font-weight: 800; text-transform: capitalize; }
+
+.today { display: grid; grid-template-columns: minmax(190px,.34fr) minmax(0,1fr); gap: 20px; border: 1px solid #dfe6ed; border-radius: 17px; background: #fff; padding: 20px; box-shadow: 0 10px 26px rgba(15,23,42,.035); }
+.todayHeader { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; border-right: 1px solid #edf1f5; padding-right: 20px; }
+.todayHeader h2 { margin-top: 6px !important; font-size: 17px; line-height: 1.35; }
+.todayHeader > svg { color: #007e72; }
+.todayItems { display: grid; gap: 2px; }
+.todayItems a { display: grid; min-height: 52px; grid-template-columns: 8px minmax(0,1fr) auto 18px; align-items: center; gap: 11px; border-radius: 10px; padding: 6px 9px; }
+.todayItems a:hover { background: #f7fafc; }
+.todayStatus { width: 7px; height: 7px; border-radius: 50%; background: #18d2bd; box-shadow: 0 0 0 4px #e5faf7; }
+.todayCopy { min-width: 0; }
+.todayCopy strong,.todayCopy small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.todayCopy strong { font-size: 11px; font-weight: 800; }
+.todayCopy small { margin-top: 4px; color: #718096; font-size: 9px; }
+.todayAction { border-radius: 999px; background: #e5faf7; padding: 5px 9px; color: #007e72; font-size: 9px; font-weight: 850; }
+.todayEmpty { display: flex; min-height: 78px; align-items: center; gap: 12px; color: #007e72; }
+.todayEmpty span,.todayEmpty strong,.todayEmpty small { display: block; }
+.todayEmpty strong { color: #0a1221; font-size: 12px; }
+.todayEmpty small { margin-top: 4px; color: #718096; font-size: 10px; }
 
 .metrics { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 14px; }
 .metric { display: flex; min-height: 124px; align-items: flex-start; gap: 14px; border: 1px solid #dfe6ed; border-radius: 15px; background: #fff; padding: 19px; box-shadow: 0 8px 22px rgba(15,23,42,.035); }
@@ -109,12 +133,17 @@
 .skeleton::after { position: absolute; inset: 0; transform: translateX(-100%); background: linear-gradient(90deg,transparent,rgba(255,255,255,.7),transparent); content: ''; animation: shimmer 1.2s infinite; }
 .skeletonHeader { width: 55%; height: 76px; }
 .skeletonHero { height: 150px; }
+.skeletonToday { height: 138px; }
 .skeletonMetric { height: 124px; }
 .skeletonPanel { height: 390px; }
 @keyframes shimmer { to { transform: translateX(100%); } }
 
 @media (max-width: 1180px) { .metrics { grid-template-columns: repeat(2,minmax(0,1fr)); } .cardGrid { grid-template-columns: repeat(2,minmax(0,1fr)); } .tournamentCard:last-child { display: none; } }
-@media (max-width: 960px) { .contentGrid,.bottomGrid { grid-template-columns: 1fr; } }
+@media (max-width: 960px) {
+  .contentGrid,.bottomGrid { grid-template-columns: 1fr; }
+  .today { grid-template-columns: 1fr; }
+  .todayHeader { border-right: 0; border-bottom: 1px solid #edf1f5; padding: 0 0 14px; }
+}
 @media (max-width: 680px) {
   .dashboard { gap: 20px; }
   .pageHeader { display: grid; align-items: start; }
@@ -125,12 +154,17 @@
   .actionCopy { align-items: flex-start; }
   .actionButtons { justify-content: stretch; }
   .actionButtons .primaryButton { flex: 1; }
+  .actionMeta { display: grid; gap: 7px; }
   .statusPill { display: none; }
+  .today { gap: 10px; padding: 17px; }
+  .todayItems a { grid-template-columns: 8px minmax(0,1fr) 17px; padding-inline: 5px; }
+  .todayAction { display: none; }
   .quickActions { grid-template-columns: 1fr; }
   .quickActions a { min-height: 66px; }
   .compactProgress { grid-template-columns: repeat(3,minmax(0,1fr)); gap: 8px; }
-  .compactProgress > div { padding: 12px; }
-  .compactProgress strong { font-size: 17px; }
+  .compactProgress > div,.compactProgress > a { min-height: 100px; grid-template-columns: 1fr; align-content: start; gap: 8px; padding: 12px; }
+  .compactProgress > a > svg:last-child { display: none; }
+  .compactProgress strong,.compactProgress small { white-space: normal; }
   .metrics { grid-template-columns: repeat(2,minmax(0,1fr)); gap: 10px; }
   .metric { min-height: 115px; display: grid; gap: 9px; padding: 14px; }
   .metric > span { width: 34px; height: 34px; }

@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireActiveAccessProfile } from '@/lib/access';
+import { createNotification } from '@/lib/notifications';
 import { createServiceClient } from '@/lib/supabase';
-import { getTeamAccess, recordTeamAudit } from '@/lib/teams';
+import { getTeamOperationErrorMessage } from '@/lib/team-roster';
+import { getTeamAccess } from '@/lib/teams';
 
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const access = await requireActiveAccessProfile(request);
@@ -14,11 +16,30 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   if (!teamAccess) return NextResponse.json({ error: 'Team not found.' }, { status: 404 });
   if (String(teamAccess.team.owner_id) !== access.profile.id) return NextResponse.json({ error: 'Only the team owner can transfer ownership.' }, { status: 403 });
   if (!targetUserId || targetUserId === access.profile.id) return NextResponse.json({ error: 'Choose another active team member.' }, { status: 400 });
-  const { data: target } = await supabase.from('team_members').select('id').eq('team_id', id).eq('user_id', targetUserId).eq('status', 'active').maybeSingle();
-  if (!target) return NextResponse.json({ error: 'Choose an active team member.' }, { status: 404 });
-  const { error } = await supabase.from('teams').update({ owner_id: targetUserId, updated_at: new Date().toISOString() }).eq('id', id).eq('owner_id', access.profile.id);
-  if (error) return NextResponse.json({ error: 'Could not transfer team ownership.' }, { status: 500 });
-  await supabase.from('team_members').update({ role: 'captain' }).eq('id', target.id);
-  await recordTeamAudit(supabase, { teamId: id, actorId: access.profile.id, action: 'ownership_transferred', subjectUserId: targetUserId });
+  const { data, error } = await supabase
+    .rpc('transfer_team_ownership', {
+      p_team_id: id,
+      p_actor_id: access.profile.id,
+      p_target_user_id: targetUserId,
+    })
+    .single();
+  if (error || !data) {
+    const message = getTeamOperationErrorMessage(error);
+    return NextResponse.json(
+      { error: message },
+      { status: message.includes('Only') ? 403 : message.includes('not found') ? 404 : 409 }
+    );
+  }
+  await createNotification(
+    {
+      user_id: targetUserId,
+      type: 'team_role_changed',
+      title: `You now own ${String(teamAccess.team.name)}`,
+      body: 'You are the team owner and a captain.',
+      href: `/teams?team=${id}`,
+      metadata: { team_id: id, role: 'captain', ownership_transferred: true },
+    },
+    supabase
+  );
   return NextResponse.json({ status: 'transferred', owner_id: targetUserId });
 }

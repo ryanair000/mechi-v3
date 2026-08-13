@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireActiveAccessProfile } from '@/lib/access';
 import { expirePendingChallenges } from '@/lib/challenges';
+import { challengeItemHref } from '@/lib/challenge-lifecycle';
 import { createNotifications } from '@/lib/notifications';
 import { createServiceClient } from '@/lib/supabase';
 import type { MatchChallenge } from '@/types';
@@ -43,16 +44,46 @@ export async function POST(
     }
 
     if (challenge.status !== 'pending') {
-      return NextResponse.json({ error: 'This challenge is no longer active' }, { status: 400 });
+      return NextResponse.json(
+        {
+          error:
+            challenge.status === 'expired'
+              ? 'This 1v1 invite already expired.'
+              : `This 1v1 invite was already ${challenge.status}.`,
+          code: `challenge_${challenge.status}`,
+          recover_href: '/challenges',
+        },
+        { status: challenge.status === 'expired' ? 410 : 409 }
+      );
     }
 
-    await supabase
+    const respondedAt = new Date().toISOString();
+    const { data: updatedChallenge, error: updateError } = await supabase
       .from('match_challenges')
       .update({
         status: 'cancelled',
-        responded_at: new Date().toISOString(),
+        responded_at: respondedAt,
       })
-      .eq('id', challenge.id);
+      .eq('id', challenge.id)
+      .eq('status', 'pending')
+      .select('id')
+      .maybeSingle();
+
+    if (updateError) {
+      console.error('[Challenge Cancel] Update failed:', updateError);
+      return NextResponse.json({ error: 'Could not cancel this invite.' }, { status: 500 });
+    }
+
+    if (!updatedChallenge) {
+      return NextResponse.json(
+        {
+          error: 'This invite changed while you were viewing it. Refresh to see its current state.',
+          code: 'challenge_conflict',
+          recover_href: '/challenges',
+        },
+        { status: 409 }
+      );
+    }
 
     const { data: profilesRaw } = await supabase
       .from('profiles')
@@ -70,7 +101,7 @@ export async function POST(
           type: 'challenge_cancelled',
           title: `${challenger?.username ?? 'The challenger'} pulled back the invite`,
           body: 'That direct 1-on-1 is no longer live.',
-          href: '/notifications',
+          href: challengeItemHref(challenge.id),
           metadata: {
             challenge_id: challenge.id,
             game: challenge.game,
@@ -82,7 +113,7 @@ export async function POST(
           type: 'challenge_cancelled',
           title: `Challenge cancelled`,
           body: `Your invite to ${opponent?.username ?? 'that player'} is closed.`,
-          href: '/notifications',
+          href: challengeItemHref(challenge.id),
           metadata: {
             challenge_id: challenge.id,
             game: challenge.game,
@@ -93,7 +124,19 @@ export async function POST(
       supabase
     );
 
-    return NextResponse.json({ success: true });
+    return NextResponse.json({
+      success: true,
+      challenge: {
+        ...challenge,
+        status: 'cancelled',
+        responded_at: respondedAt,
+      },
+      next_action: {
+        label: 'Choose another opponent',
+        href: '/challenges',
+        owner: 'You',
+      },
+    });
   } catch (error) {
     console.error('[Challenge Cancel] Error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });

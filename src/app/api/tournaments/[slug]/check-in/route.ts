@@ -13,6 +13,7 @@ type TournamentCheckInRow = {
   title: string;
   status: string;
   scheduled_for: string | null;
+  participant_mode?: 'solo' | 'team';
 };
 
 export async function POST(
@@ -30,7 +31,7 @@ export async function POST(
   try {
     const { data: tournamentRaw, error: tournamentError } = await supabase
       .from('tournaments')
-      .select('id, title, status, scheduled_for')
+      .select('id, title, status, scheduled_for, participant_mode')
       .eq('slug', slug)
       .single();
 
@@ -42,6 +43,12 @@ export async function POST(
     if (!['open', 'full', 'active'].includes(tournament.status)) {
       return NextResponse.json(
         { error: 'Check-in is not available for this tournament' },
+        { status: 400 }
+      );
+    }
+    if (tournament.participant_mode === 'team') {
+      return NextResponse.json(
+        { error: 'A captain must check in the registered team roster.' },
         { status: 400 }
       );
     }

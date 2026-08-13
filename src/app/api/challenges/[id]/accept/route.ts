@@ -3,13 +3,13 @@ import { requireActiveAccessProfile } from '@/lib/access';
 import {
   canUserChallengeGame,
   expirePendingChallenges,
-  MATCH_CHALLENGE_EXPIRY_HOURS,
   resolveChallengePlatform,
 } from '@/lib/challenges';
+import { challengeOperationError } from '@/lib/challenge-lifecycle';
 import { GAMES, getCanonicalGameKey } from '@/lib/config';
-import { isMissingColumnError } from '@/lib/db-compat';
 import { resolveProfileLocation, UNSPECIFIED_LOCATION_LABEL } from '@/lib/location';
 import { createNotifications } from '@/lib/notifications';
+import { hasPassportBlockBetween } from '@/lib/passport-social';
 import { expireWaitingQueueEntries } from '@/lib/queue';
 import { incrementMatchUsage } from '@/lib/subscription';
 import { createServiceClient } from '@/lib/supabase';
@@ -26,35 +26,12 @@ type ChallengeProfile = {
   game_ids?: Record<string, string> | null;
 };
 
-async function hasBlockingState(
-  userIds: string[],
-  supabase: ReturnType<typeof createServiceClient>
-) {
-  await Promise.all(userIds.map((userId) => expireWaitingQueueEntries(supabase, userId)));
-
-  const [queueResult, matchResult] = await Promise.all([
-    supabase
-      .from('queue')
-      .select('id, user_id')
-      .in('user_id', userIds)
-      .eq('status', 'waiting')
-      .limit(4),
-    supabase
-      .from('matches')
-      .select('id, player1_id, player2_id')
-      .eq('status', 'pending')
-      .or(userIds.map((userId) => `player1_id.eq.${userId},player2_id.eq.${userId}`).join(',')),
-  ]);
-
-  return {
-    waitingQueue: (queueResult.data ?? []) as Array<{ id: string; user_id: string }>,
-    activeMatches: (matchResult.data ?? []) as Array<{
-      id: string;
-      player1_id: string;
-      player2_id: string;
-    }>,
-  };
-}
+type ChallengeAcceptanceRow = {
+  challenge_id: string;
+  challenge_status: string;
+  match_id: string | null;
+  replayed: boolean;
+};
 
 export async function POST(
   request: NextRequest,
@@ -88,8 +65,40 @@ export async function POST(
       return NextResponse.json({ error: 'Only the challenged player can accept' }, { status: 403 });
     }
 
+    if (await hasPassportBlockBetween(challenge.challenger_id, challenge.opponent_id)) {
+      return NextResponse.json({ error: 'This player is unavailable for challenges' }, { status: 403 });
+    }
+
+    if (challenge.status === 'accepted' && challenge.match_id) {
+      return NextResponse.json({
+        success: true,
+        challenge: {
+          ...challenge,
+          status: 'accepted',
+        },
+        match_id: challenge.match_id,
+        match_href: `/match/${challenge.match_id}`,
+        replayed: true,
+        next_action: {
+          label: 'Open match',
+          href: `/match/${challenge.match_id}`,
+          owner: 'Both players',
+        },
+      });
+    }
+
     if (challenge.status !== 'pending') {
-      return NextResponse.json({ error: 'This challenge is no longer active' }, { status: 400 });
+      return NextResponse.json(
+        {
+          error:
+            challenge.status === 'expired'
+              ? 'This 1v1 invite expired. Ask the player to send a new one.'
+              : `This 1v1 invite was already ${challenge.status}.`,
+          code: `challenge_${challenge.status}`,
+          recover_href: '/challenges',
+        },
+        { status: challenge.status === 'expired' ? 410 : 409 }
+      );
     }
 
     if (new Date(challenge.expires_at).getTime() <= Date.now()) {
@@ -100,7 +109,14 @@ export async function POST(
           responded_at: new Date().toISOString(),
         })
         .eq('id', challenge.id);
-      return NextResponse.json({ error: 'This challenge has expired' }, { status: 400 });
+      return NextResponse.json(
+        {
+          error: 'This 1v1 invite expired. Ask the player to send a new one.',
+          code: 'challenge_expired',
+          recover_href: '/challenges',
+        },
+        { status: 410 }
+      );
     }
 
     const { data: profileRows, error: profilesError } = await supabase
@@ -133,24 +149,11 @@ export async function POST(
       );
     }
 
-    const { waitingQueue, activeMatches } = await hasBlockingState(
-      [challenge.challenger_id, challenge.opponent_id],
-      supabase
+    await Promise.all(
+      [challenge.challenger_id, challenge.opponent_id].map((userId) =>
+        expireWaitingQueueEntries(supabase, userId)
+      )
     );
-
-    if (waitingQueue.length > 0) {
-      return NextResponse.json(
-        { error: 'Leave the ranked queue before accepting this direct challenge' },
-        { status: 409 }
-      );
-    }
-
-    if (activeMatches.length > 0) {
-      return NextResponse.json(
-        { error: 'One of these players already has a live match' },
-        { status: 409 }
-      );
-    }
 
     const challengerLocation = resolveProfileLocation(challenger);
     const opponentLocation = resolveProfileLocation(opponent);
@@ -159,65 +162,66 @@ export async function POST(
       opponentLocation.label ||
       UNSPECIFIED_LOCATION_LABEL;
 
-    const matchPayload = {
-      player1_id: challenge.challenger_id,
-      player2_id: challenge.opponent_id,
-      game,
-      platform,
-      region: matchLocationLabel,
-      status: 'pending',
-    };
+    const { data: acceptanceData, error: acceptanceError } = await supabase.rpc(
+      'accept_match_challenge',
+      {
+        p_challenge_id: challenge.id,
+        p_actor_id: authUser.id,
+        p_region: matchLocationLabel,
+      }
+    );
 
-    let matchResult = await supabase
-      .from('matches')
-      .insert(matchPayload)
-      .select('id')
-      .single();
-
-    if (matchResult.error && isMissingColumnError(matchResult.error, 'matches.platform')) {
-      matchResult = await supabase
-        .from('matches')
-        .insert({
-          player1_id: challenge.challenger_id,
-          player2_id: challenge.opponent_id,
-          game,
-          region: matchLocationLabel,
-          status: 'pending',
-        })
-        .select('id')
-        .single();
+    if (acceptanceError) {
+      const mapped = challengeOperationError(acceptanceError.message ?? '');
+      return NextResponse.json(
+        {
+          error: mapped.error,
+          code: 'challenge_accept_conflict',
+          recover_href: '/challenges',
+        },
+        { status: mapped.status }
+      );
     }
 
-    const match = matchResult.data as { id: string } | null;
-    if (matchResult.error || !match) {
-      return NextResponse.json({ error: 'Could not create match' }, { status: 500 });
+    const acceptance = (
+      Array.isArray(acceptanceData) ? acceptanceData[0] : acceptanceData
+    ) as ChallengeAcceptanceRow | null;
+    if (acceptance?.challenge_status === 'expired') {
+      return NextResponse.json(
+        {
+          error: 'This 1v1 invite expired. Ask the player to send a new one.',
+          code: 'challenge_expired',
+          recover_href: '/challenges',
+        },
+        { status: 410 }
+      );
     }
 
-    await supabase
-      .from('match_challenges')
-      .update({
-        status: 'accepted',
-        match_id: match.id,
-        responded_at: new Date().toISOString(),
-      })
-      .eq('id', challenge.id);
+    if (!acceptance?.match_id) {
+      return NextResponse.json({ error: 'Could not create the match room.' }, { status: 500 });
+    }
 
-    await Promise.allSettled([
-      incrementMatchUsage(challenge.challenger_id, supabase),
-      incrementMatchUsage(challenge.opponent_id, supabase),
-    ]);
+    const matchId = acceptance.match_id;
 
-    await createNotifications(
+    if (!acceptance.replayed) {
+      await Promise.allSettled([
+        incrementMatchUsage(challenge.challenger_id, supabase),
+        incrementMatchUsage(challenge.opponent_id, supabase),
+      ]);
+    }
+
+    if (!acceptance.replayed) {
+      await createNotifications(
       [
         {
           user_id: challenge.challenger_id,
           type: 'challenge_accepted',
           title: `${opponent.username} accepted your challenge`,
           body: `${GAMES[game].label} is live. Tap in and run it.`,
-          href: `/match/${match.id}`,
+          href: `/match/${matchId}`,
           metadata: {
             challenge_id: challenge.id,
-            match_id: match.id,
+            match_id: matchId,
             game,
             platform,
           },
@@ -227,22 +231,35 @@ export async function POST(
           type: 'challenge_accepted',
           title: `Challenge accepted`,
           body: `${challenger.username} is ready. Your ${GAMES[game].label} match is live now.`,
-          href: `/match/${match.id}`,
+          href: `/match/${matchId}`,
           metadata: {
             challenge_id: challenge.id,
-            match_id: match.id,
+            match_id: matchId,
             game,
             platform,
           },
         },
       ],
       supabase
-    );
+      );
+    }
 
     return NextResponse.json({
       success: true,
-      match_id: match.id,
-      expires_in_hours: MATCH_CHALLENGE_EXPIRY_HOURS,
+      challenge: {
+        ...challenge,
+        status: 'accepted',
+        match_id: matchId,
+        responded_at: new Date().toISOString(),
+      },
+      match_id: matchId,
+      match_href: `/match/${matchId}`,
+      replayed: acceptance.replayed,
+      next_action: {
+        label: 'Open match',
+        href: `/match/${matchId}`,
+        owner: 'Both players',
+      },
     });
   } catch (error) {
     console.error('[Challenge Accept] Error:', error);

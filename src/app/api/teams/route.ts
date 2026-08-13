@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireActiveAccessProfile } from '@/lib/access';
 import { createServiceClient } from '@/lib/supabase';
 import { makeSlug } from '@/lib/slug';
+import { getTeamOperationErrorMessage } from '@/lib/team-roster';
 import { cleanTeamDescription, cleanTeamName, TEAM_SELECT } from '@/lib/teams';
 
 export async function GET(request: NextRequest) {
@@ -46,44 +47,34 @@ export async function POST(request: NextRequest) {
   }
 
   const supabase = createServiceClient();
-  const { data: team, error: teamError } = await supabase
-    .from('teams')
-    .insert({
-      name,
-      slug: makeSlug(name),
-      description,
-      region,
-      visibility: body.visibility === 'private' ? 'private' : 'public',
-      recruiting: Boolean(body.recruiting),
-      owner_id: access.profile.id,
+  const { data: created, error: createError } = await supabase
+    .rpc('create_player_team', {
+      p_owner_id: access.profile.id,
+      p_name: name,
+      p_slug: makeSlug(name),
+      p_description: description,
+      p_region: region,
+      p_visibility: body.visibility === 'private' ? 'private' : 'public',
+      p_recruiting: Boolean(body.recruiting),
     })
-    .select(TEAM_SELECT)
     .single();
 
+  if (createError || !created) {
+    return NextResponse.json(
+      { error: getTeamOperationErrorMessage(createError) },
+      { status: createError?.code === '23505' ? 409 : 500 }
+    );
+  }
+
+  const createdRow = created as { team_id: string };
+  const { data: team, error: teamError } = await supabase
+    .from('teams')
+    .select(TEAM_SELECT)
+    .eq('id', createdRow.team_id)
+    .single();
   if (teamError || !team) {
-    return NextResponse.json({ error: 'Could not create the team.' }, { status: 500 });
+    return NextResponse.json({ error: 'The team was created but could not be reloaded.' }, { status: 500 });
   }
-
-  const { error: memberError } = await supabase.from('team_members').insert({
-    team_id: team.id,
-    user_id: access.profile.id,
-    role: 'captain',
-    status: 'active',
-  });
-
-  if (memberError) {
-    await supabase.from('teams').delete().eq('id', team.id).eq('owner_id', access.profile.id);
-    return NextResponse.json({ error: 'Could not create the captain membership.' }, { status: 500 });
-  }
-
-  await supabase.from('team_audit_logs').insert({
-    team_id: team.id,
-    actor_id: access.profile.id,
-    action: 'team_created',
-    subject_user_id: access.profile.id,
-    details: { name },
-  });
 
   return NextResponse.json({ team, role: 'captain' }, { status: 201 });
 }
-

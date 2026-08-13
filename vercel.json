@@ -16,6 +16,14 @@
     {
       "path": "/api/cron/rewards/cheza-credit",
       "schedule": "0 1 * * *"
+    },
+    {
+      "path": "/api/cron/passport-webhooks",
+      "schedule": "*/5 * * * *"
+    },
+    {
+      "path": "/api/cron/passport-retention",
+      "schedule": "30 2 * * *"
     }
   ],
   "headers": [

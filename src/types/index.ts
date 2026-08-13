@@ -52,15 +52,24 @@ export type TeamMemberRole = 'captain' | 'starter' | 'substitute' | 'member';
 export type TeamMemberStatus = 'active' | 'left' | 'removed';
 export type TeamInvitationStatus = 'pending' | 'accepted' | 'declined' | 'cancelled' | 'expired';
 export type NotificationType =
+  | 'passport_activity_reaction'
+  | 'passport_circle_added'
+  | 'friend_request_received'
+  | 'friend_request_accepted'
+  | 'game_recommendation_received'
+  | 'passport_followed'
   | 'challenge_received'
   | 'challenge_sent'
   | 'challenge_accepted'
   | 'challenge_declined'
   | 'challenge_cancelled'
+  | 'challenge_expired'
   | 'team_invitation_received'
   | 'team_invitation_accepted'
   | 'team_invitation_declined'
   | 'team_role_changed'
+  | 'team_tournament_registered'
+  | 'team_tournament_checked_in'
   | 'support_case_created'
   | 'support_case_replied'
   | 'support_case_resolved'
@@ -433,6 +442,8 @@ export interface Tournament {
   title: string;
   game: GameKey;
   platform?: PlatformKey | null;
+  participant_mode?: 'solo' | 'team';
+  team_size?: number | null;
   region: string;
   size: 4 | 8 | 16;
   entry_fee: number;

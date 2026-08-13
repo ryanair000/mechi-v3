@@ -61,6 +61,8 @@ export default function CreateTournamentPage() {
     country: '' as CountryKey | '',
     region: '',
     size: 4,
+    participant_mode: 'solo' as 'solo' | 'team',
+    team_size: 2,
     scheduled_for: getDefaultTournamentScheduleValue(),
     entry_type: 'free' as 'paid' | 'free',
     entry_fee: 0,
@@ -511,9 +513,52 @@ export default function CreateTournamentPage() {
             </div>
           </div>
 
+          <div>
+            <label className="label">Who competes?</label>
+            <div className="grid gap-3 sm:grid-cols-2">
+              {[
+                {
+                  key: 'solo' as const,
+                  title: 'Solo players',
+                  copy: 'Each bracket slot belongs to one player.',
+                },
+                {
+                  key: 'team' as const,
+                  title: 'Teams',
+                  copy: 'Captains lock an eligible roster into each bracket slot.',
+                },
+              ].map((mode) => {
+                const selected = form.participant_mode === mode.key;
+                return (
+                  <button
+                    key={mode.key}
+                    type="button"
+                    onClick={() =>
+                      setForm((current) => ({ ...current, participant_mode: mode.key }))
+                    }
+                    className={`rounded-2xl border p-4 text-left transition-all ${
+                      selected
+                        ? 'border-[rgba(50,224,196,0.28)] bg-[rgba(50,224,196,0.08)]'
+                        : 'border-[var(--border-color)] bg-[var(--surface-elevated)]'
+                    }`}
+                  >
+                    <p className="text-sm font-black text-[var(--text-primary)]">
+                      {mode.title}
+                    </p>
+                    <p className="mt-2 text-xs leading-5 text-[var(--text-secondary)]">
+                      {mode.copy}
+                    </p>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
-              <label className="label">Slots</label>
+              <label className="label">
+                {form.participant_mode === 'team' ? 'Team slots' : 'Player slots'}
+              </label>
               <select
                 value={form.size}
                 onChange={(event) =>
@@ -523,11 +568,29 @@ export default function CreateTournamentPage() {
               >
                 {TOURNAMENT_SIZES.map((size) => (
                   <option key={size} value={size}>
-                    {size} players
+                    {size} {form.participant_mode === 'team' ? 'teams' : 'players'}
                   </option>
                 ))}
               </select>
             </div>
+            {form.participant_mode === 'team' ? (
+              <div>
+                <label className="label">Starters per team</label>
+                <input
+                  type="number"
+                  min={2}
+                  max={12}
+                  value={form.team_size}
+                  onChange={(event) =>
+                    setForm((current) => ({
+                      ...current,
+                      team_size: Math.min(12, Math.max(2, Number(event.target.value) || 2)),
+                    }))
+                  }
+                  className="input"
+                />
+              </div>
+            ) : null}
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2">
@@ -555,7 +618,7 @@ export default function CreateTournamentPage() {
                 )}
               </p>
               <p className="mt-2 text-xs leading-5 text-[var(--text-secondary)]">
-                Players can check in 1 hour before the scheduled kickoff.
+                {form.participant_mode === 'team' ? 'Captains' : 'Players'} can check in 1 hour before the scheduled kickoff.
               </p>
             </div>
           </div>
@@ -567,7 +630,7 @@ export default function CreateTournamentPage() {
                 {
                   key: 'paid' as const,
                   title: 'Paid entry',
-                  copy: 'Players pay to join. Use auto prize mode to grow the pool from successful paid checkouts.',
+                  copy: `${form.participant_mode === 'team' ? 'Teams' : 'Players'} pay to join. Use auto prize mode to grow the pool from successful paid checkouts.`,
                 },
                 {
                   key: 'free' as const,

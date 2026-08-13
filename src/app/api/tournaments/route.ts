@@ -70,19 +70,29 @@ export async function GET(request: NextRequest) {
     }
 
     const tournamentIds = tournaments.map((tournament) => tournament.id);
-    const { data: players, error: playersError } = await supabase
-      .from('tournament_players')
-      .select('tournament_id, payment_status')
-      .in('tournament_id', tournamentIds)
-      .in('payment_status', ['paid', 'free']);
+    const [
+      { data: players, error: playersError },
+      { data: teamEntries, error: teamEntriesError },
+      { data: activeStreams, error: activeStreamsError },
+    ] = await Promise.all([
+      supabase
+        .from('tournament_players')
+        .select('tournament_id, payment_status')
+        .in('tournament_id', tournamentIds)
+        .in('payment_status', ['paid', 'free']),
+      supabase
+        .from('tournament_team_entries')
+        .select('tournament_id, payment_status')
+        .in('tournament_id', tournamentIds)
+        .in('payment_status', ['paid', 'free']),
+      supabase
+        .from('live_streams')
+        .select('id, tournament_id, viewer_count')
+        .in('tournament_id', tournamentIds)
+        .eq('status', 'active'),
+    ]);
 
-    const { data: activeStreams, error: activeStreamsError } = await supabase
-      .from('live_streams')
-      .select('id, tournament_id, viewer_count')
-      .in('tournament_id', tournamentIds)
-      .eq('status', 'active');
-
-    if (playersError || activeStreamsError) {
+    if (playersError || teamEntriesError || activeStreamsError) {
       return NextResponse.json({ error: 'Failed to fetch tournaments' }, { status: 500 });
     }
 
@@ -112,10 +122,25 @@ export async function GET(request: NextRequest) {
       };
       return grouped;
     }, {});
+    const teamsByTournament = (teamEntries ?? []).reduce<
+      Record<string, Array<{ payment_status: string | null | undefined }>>
+    >((grouped, entry) => {
+      const tournamentId = entry.tournament_id as string | undefined;
+      if (!tournamentId) return grouped;
+      grouped[tournamentId] = [
+        ...(grouped[tournamentId] ?? []),
+        { payment_status: (entry.payment_status as string | null | undefined) ?? null },
+      ];
+      return grouped;
+    }, {});
 
     return NextResponse.json({
       tournaments: tournaments.map((tournament) => {
-        const paymentMetrics = getTournamentPaymentMetrics(playersByTournament[tournament.id] ?? []);
+        const paymentMetrics = getTournamentPaymentMetrics(
+          tournament.participant_mode === 'team'
+            ? teamsByTournament[tournament.id] ?? []
+            : playersByTournament[tournament.id] ?? []
+        );
 
         return {
           ...tournament,
@@ -152,6 +177,9 @@ export async function POST(request: NextRequest) {
     const requestedGame = String(body.game ?? '') as GameKey;
     const requestedPlatform = (body.platform ? String(body.platform) : null) as PlatformKey | null;
     const size = Number(body.size);
+    const participantMode = body.participant_mode === 'team' ? 'team' : 'solo';
+    const teamSize =
+      participantMode === 'team' ? Math.round(Number(body.team_size ?? 2)) : null;
     const entryFee = Math.max(0, Math.round(Number(body.entry_fee ?? 0)));
     const requestedCountry = body.country;
     const requestedRegion = body.region;
@@ -193,6 +221,12 @@ export async function POST(request: NextRequest) {
 
     if (!isTournamentSize(size)) {
       return NextResponse.json({ error: 'Tournament size must be 4, 8, or 16' }, { status: 400 });
+    }
+    if (participantMode === 'team' && (!teamSize || teamSize < 2 || teamSize > 12)) {
+      return NextResponse.json(
+        { error: 'Team tournaments require 2 to 12 starters per team.' },
+        { status: 400 }
+      );
     }
 
     if (!normalizedSchedule) {
@@ -308,6 +342,8 @@ export async function POST(request: NextRequest) {
         title,
         game,
         platform,
+        participant_mode: participantMode,
+        team_size: teamSize,
         region: location.label,
         size,
         entry_fee: entryFee,
@@ -338,11 +374,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to create tournament' }, { status: 500 });
     }
 
-    await supabase.from('tournament_players').insert({
-      tournament_id: tournament.id,
-      user_id: authUser.id,
-      payment_status: 'free',
-    });
+    if (participantMode === 'solo') {
+      await supabase.from('tournament_players').insert({
+        tournament_id: tournament.id,
+        user_id: authUser.id,
+        payment_status: 'free',
+      });
+    }
 
     try {
       await notifyGameAudienceAboutTournament({

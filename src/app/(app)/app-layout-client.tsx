@@ -38,6 +38,7 @@ export function AppLayoutClient({ children }: { children: React.ReactNode }) {
 
   if (
     pathname === '/dashboard' ||
+    pathname === '/passport' || pathname.startsWith('/passport/') ||
     pathname === '/teams' || pathname.startsWith('/teams/') ||
     pathname === '/challenges' || pathname.startsWith('/challenges/') ||
     pathname === '/creator' || pathname.startsWith('/creator/')

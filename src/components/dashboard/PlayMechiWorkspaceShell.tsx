@@ -16,7 +16,7 @@ import {
   Medal,
   Menu,
   Radio,
-  Search,
+  ShieldCheck,
   Sparkles,
   Trophy,
   UserRound,
@@ -40,6 +40,7 @@ const playerNavigation: NavItem[] = [
   { label: 'Matches', href: '/matches', icon: Gamepad2 },
   { label: 'Rankings', href: '/leaderboard', icon: Medal },
   { label: 'Rewards', href: '/rewards', icon: Sparkles },
+  { label: 'Gamer Passport', href: '/passport', icon: ShieldCheck },
   { label: 'Profile', href: '/profile', icon: UserRound },
   { label: 'Support', href: '/support', icon: LifeBuoy },
 ];
@@ -135,7 +136,7 @@ export function PlayMechiWorkspaceShell({ children, workspaceOverride }: { child
 
         <div className={styles.sidebarFooter}>
           <Link href="/notifications"><Bell size={18} /> Notifications</Link>
-          <Link href="/messages"><Inbox size={18} /> Messages</Link>
+          <Link href="/inbox"><Inbox size={18} /> Messages</Link>
           <button onClick={logout}><LogOut size={18} /> Sign out</button>
         </div>
       </aside>
@@ -148,12 +149,14 @@ export function PlayMechiWorkspaceShell({ children, workspaceOverride }: { child
             <Menu size={22} />
           </button>
           <div className={styles.mobileBrand}>PLAY<span>MECHI</span></div>
-          <label className={styles.search}>
-            <Search size={18} />
-            <span className={styles.visuallyHidden}>Search PlayMechi</span>
-            <input placeholder="Search tournaments, players, creators..." />
-            <kbd>⌘ K</kbd>
-          </label>
+          <div className={styles.contextLabel}>
+            <span>{creatorMode ? 'Creator Studio' : 'Player home'}</span>
+            <strong>
+              {creatorMode
+                ? 'Publish, cover events, and grow your audience'
+                : 'Your next match, tournament, team, and 1v1 action'}
+            </strong>
+          </div>
           <div className={styles.topActions}>
             <Link className={styles.iconButton} href="/notifications" aria-label="Notifications"><Bell size={20} /></Link>
             <Link className={styles.userMenu} href="/profile">

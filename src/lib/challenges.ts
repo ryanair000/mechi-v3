@@ -1,10 +1,13 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import {
+  GAMES,
   getCanonicalGameKey,
   getConfiguredPlatformForGame,
   isValidGamePlatform,
   normalizeSelectedGameKeys,
 } from '@/lib/config';
+import { challengeItemHref } from '@/lib/challenge-lifecycle';
+import { createNotifications } from '@/lib/notifications';
 import type { GameKey, MatchChallenge, PlatformKey } from '@/types';
 
 type ChallengeProfile = {
@@ -20,15 +23,98 @@ type ChallengeProfile = {
 
 export const MATCH_CHALLENGE_EXPIRY_HOURS = 24;
 
-export async function expirePendingChallenges(supabase: SupabaseClient): Promise<void> {
-  await supabase
+type ExpiredChallengeRow = Pick<
+  MatchChallenge,
+  'id' | 'challenger_id' | 'opponent_id' | 'game' | 'platform'
+>;
+
+export async function expirePendingChallenges(
+  supabase: SupabaseClient
+): Promise<ExpiredChallengeRow[]> {
+  const { data: candidates, error: candidateError } = await supabase
+    .from('match_challenges')
+    .select('id')
+    .eq('status', 'pending')
+    .lt('expires_at', new Date().toISOString())
+    .order('expires_at', { ascending: true })
+    .limit(100);
+
+  if (candidateError) {
+    console.error('[Challenges] Expiry lookup failed:', candidateError);
+    return [];
+  }
+
+  const candidateIds = (candidates ?? []).map((challenge) => String(challenge.id));
+  if (candidateIds.length === 0) {
+    return [];
+  }
+
+  const { data, error } = await supabase
     .from('match_challenges')
     .update({
       status: 'expired',
       responded_at: new Date().toISOString(),
     })
     .eq('status', 'pending')
-    .lt('expires_at', new Date().toISOString());
+    .in('id', candidateIds)
+    .select('id, challenger_id, opponent_id, game, platform');
+
+  if (error) {
+    console.error('[Challenges] Expiry update failed:', error);
+    return [];
+  }
+
+  const expired = (data ?? []) as ExpiredChallengeRow[];
+  if (expired.length === 0) {
+    return expired;
+  }
+
+  const profileIds = [
+    ...new Set(expired.flatMap((challenge) => [challenge.challenger_id, challenge.opponent_id])),
+  ];
+  const { data: profileRows } = await supabase
+    .from('profiles')
+    .select('id, username')
+    .in('id', profileIds);
+  const usernames = new Map(
+    (profileRows ?? []).map((profile) => [String(profile.id), String(profile.username)])
+  );
+
+  await createNotifications(
+    expired.flatMap((challenge) => {
+      const gameLabel = GAMES[challenge.game]?.label ?? challenge.game;
+      const href = challengeItemHref(challenge.id);
+      return [
+        {
+          user_id: challenge.challenger_id,
+          type: 'challenge_expired' as const,
+          title: `Your 1v1 invite expired`,
+          body: `${usernames.get(challenge.opponent_id) ?? 'The other player'} did not answer the ${gameLabel} invite in time.`,
+          href,
+          metadata: {
+            challenge_id: challenge.id,
+            game: challenge.game,
+            platform: challenge.platform,
+          },
+        },
+        {
+          user_id: challenge.opponent_id,
+          type: 'challenge_expired' as const,
+          title: `A 1v1 invite expired`,
+          body: `The ${gameLabel} invite from ${usernames.get(challenge.challenger_id) ?? 'another player'} is now closed.`,
+          href,
+          metadata: {
+            challenge_id: challenge.id,
+            game: challenge.game,
+            platform: challenge.platform,
+          },
+        },
+      ];
+    }),
+    supabase
+  );
+
+  return expired;
 }
 
 export function resolveChallengePlatform(

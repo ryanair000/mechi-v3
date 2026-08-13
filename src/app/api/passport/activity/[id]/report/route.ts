@@ -1,0 +1,5 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { requireActiveAccessProfile } from '@/lib/access';
+import { reportPassportActivity } from '@/lib/passport-community';
+const REASONS = ['privacy', 'harassment', 'spam', 'misleading', 'other'];
+export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) { const access = await requireActiveAccessProfile(request); if (access.response) return access.response; const body = await request.json().catch(() => ({})) as Record<string, unknown>; const reason = String(body.reason ?? ''); if (!REASONS.includes(reason)) return NextResponse.json({ error: 'Invalid report reason' }, { status: 400 }); const result = await reportPassportActivity((await params).id, access.profile.id, reason, String(body.details ?? '')); const status = result.ok ? 201 : result.error === 'Already reported' ? 409 : result.error === 'Activity unavailable' ? 404 : 500; return NextResponse.json(result.ok ? { success: true } : { error: result.error }, { status }); }

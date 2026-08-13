@@ -429,6 +429,142 @@ Each notification links directly to the item and names the action required.
 - end-to-end player stories;
 - no V4 fallback inside the V5 journey.
 
+### 14.1 Detailed delivery gates
+
+#### Phase 1 - Player home
+
+Status: complete on 30 July 2026.
+
+Deliverables:
+
+- a player-safe `GET /api/dashboard/player` DTO with no private game IDs;
+- one deterministic next-action engine using the priority order in section 4.1;
+- a maximum four-item `Today` list with durable links and absolute EAT deadlines;
+- profile setup completeness based on selected game, platform, and player ID;
+- incoming and sent 1v1 counts, team memberships, and team invitation counts;
+- live tournament registrations, recent confirmed results, and recommendations only when no urgent action outranks discovery;
+- responsive loading, partial-data, empty, and retry states;
+- focused priority-order contract tests.
+
+Dependencies: existing match, challenge, tournament, notification, profile, and team tables only. No Phase 1 schema change.
+
+Acceptance gate: focused tests, build TypeScript contract, targeted lint, and production build pass. The dashboard exposes one dominant action, the exact owner of the next step, and no sample data on the authenticated route.
+
+Completion evidence:
+
+- priority-order contract tests pass;
+- `tsconfig.build.json` type checking passes;
+- targeted dashboard/API lint passes;
+- Next.js 16.2.4 production compilation, type checking, and all 199 static pages pass;
+- the finalized production artifact serves the dashboard preview with HTTP 200;
+- desktop 1440x1000 and mobile 390x844 browser checks pass.
+
+#### Phase 2 - Teams
+
+Status: implementation complete on 30 July 2026. Environment rollout is gated on applying `20260730174238_team_lifecycle_and_tournament_registration.sql`; this implementation pass did not mutate the live Supabase project.
+
+Deliverables:
+
+- close remaining team schema compatibility gaps and apply the migration in every environment;
+- make create, invite, accept, decline, role, transfer, leave, and readiness flows transactional;
+- add team tournament registration with immutable roster snapshots and roster locking;
+- surface captain/member permissions and explicit readiness blockers in the UI;
+- connect team registration, check-in, and notifications back to player home.
+
+Dependencies: Phase 1 DTO contract, the existing team migration, tournament participant-mode policy, and a defined minimum roster per supported game.
+
+Acceptance gate: the team automated stories in section 15 pass, including duplicate membership, ownership transfer, unauthorized role change, and missing-game-setup cases.
+
+Completion evidence:
+
+- service-only transactional RPCs now cover team creation, invitation creation/response, role changes, ownership transfer, leave, roster replacement, tournament entry, team payment confirmation, and team check-in;
+- tournament roster snapshots are immutable after insertion and record the actor, timestamp, version, required starters, platform, and selected players;
+- a tournament-row lock serializes slot claims and prevents one player from being locked to two active teams in the same tournament;
+- the Teams workspace exposes owner/captain permissions, transfer/leave recovery, player setup blockers, saved starter/substitute rosters, open team tournaments, payment continuation, and roster-lock state;
+- tournament create/detail, listing counts, payment verification, notifications, and Player Home now understand solo versus team entry;
+- four roster/migration contract tests and the three existing Player Home priority tests pass;
+- `tsconfig.build.json` type checking and targeted Phase 2 lint pass.
+
+Operational rollout gate:
+
+- apply the Phase 2 migration to each Supabase environment;
+- run the database-backed stories for concurrent invitation acceptance, unauthorized role mutation, owner leave, duplicate cross-team tournament players, payment retry, and check-in;
+- run the production build and responsive authenticated browser stories against a migrated test environment before cutover.
+
+#### Phase 3 - Play 1v1
+
+Status: implementation complete on 30 July 2026. Environment rollout is gated on applying `20260730190954_challenge_acceptance_idempotency.sql`; this implementation pass did not mutate the live Supabase project.
+
+Deliverables:
+
+- preserve the proven challenge APIs while making incoming invites the first page section;
+- give sent, cancelled, declined, expired, accepted, conflicting, and offline states explicit UI;
+- route acceptance to exactly one created match and its match room;
+- align notifications and player-home summaries with the challenge state.
+
+Dependencies: Phase 1 priority engine and the existing challenge idempotency/conflict rules.
+
+Acceptance gate: send, cancel, receive, decline, expire, and accept stories pass; concurrent acceptance cannot create duplicate matches.
+
+Completion evidence:
+
+- incoming invites are always the first task section, including a useful caught-up state;
+- pending sent invites and accepted, declined, cancelled, and expired history remain visible with explicit ownership and recovery language;
+- the challenge list returns player-safe pending and recent-history DTOs, while mutations return the updated item and a user-facing next action;
+- the database function locks the challenge and both player rows in stable order, returns the existing match on acceptance replay, and creates the match plus accepted state in one transaction;
+- a partial unique index prevents concurrent duplicate pending invites for the same player pair, game, and platform;
+- decline and cancel use conditional pending-state updates so they cannot overwrite a concurrent acceptance;
+- expired invites generate direct-linked notifications, accepted notifications open the exact match, and Player Home links to the exact incoming invite;
+- offline mode preserves last-known challenge activity and disables mutations until reconnection;
+- five focused lifecycle, conflict, migration, and API contract stories pass alongside the existing Player Home and team suites;
+- `tsconfig.build.json` type checking and targeted Phase 3 lint pass.
+
+Operational rollout gate:
+
+- apply the Phase 3 migration after the Phase 2 migration in each Supabase environment;
+- run database-backed concurrent send and concurrent accept stories against a migrated non-production environment;
+- verify queue conflict, existing-match conflict, acceptance replay, expiry notification, and match-room routing with authenticated test players;
+- run the production build and responsive authenticated browser stories before cutover.
+
+#### Phase 4 - Support
+
+Deliverables:
+
+- finish the in-app support schema rollout and authenticated player-safe DTOs;
+- implement contextual case creation, owned case list/detail, replies, resolve, reopen, and appeal policy;
+- attach only safe tournament, payment, match, team, or account references;
+- preserve the operator inbox as the source of truth and notify players of replies.
+
+Dependencies: support ownership policy, attachment limits, and the existing operator inbox.
+
+Acceptance gate: cross-user access is denied, duplicate submissions are idempotent, and the player can follow one contextual case through resolution.
+
+#### Phase 5 - Tournament and V5 integration
+
+Deliverables:
+
+- move all live player routes into the canonical V5 shell;
+- connect solo and team registration, payment recovery, check-in, match room, result, dispute, prize, and refund states;
+- remove sample metrics, dead actions, decorative tabs, prototype references, and V4 fallbacks;
+- normalize player-facing language and contextual support links.
+
+Dependencies: Phases 1-4 plus final tournament, payment, refund, and dispute policies.
+
+Acceptance gate: the full tournament journey works on desktop and mobile, interrupted flows resume without duplicates, and every visible primary action performs a real operation.
+
+#### Phase 6 - Verification and cutover
+
+Deliverables:
+
+- schema and API contract verification in the target environment;
+- authorization, idempotency, concurrency, accessibility, responsive, and recovery testing;
+- production build plus desktop and mobile end-to-end suites;
+- release checklist, rollback point, support handoff, and post-release monitoring.
+
+Dependencies: all implementation phases complete and production migrations confirmed.
+
+Acceptance gate: all section 15 stories pass, no V4 fallback remains in the V5 journey, and release owners approve cutover.
+
 ## 15. Required automated stories
 
 1. New player completes game setup and reaches a useful home action.

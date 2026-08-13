@@ -44,6 +44,9 @@ type TournamentDetail = Tournament & {
 
 type ViewerState = {
   joined: boolean;
+  teamId: string | null;
+  teamRole: string | null;
+  canManageTeamEntry: boolean;
   isOrganizer: boolean;
   paymentStatus: string | null;
   checkInStatus: 'registered' | 'checked_in' | 'no_show' | null;
@@ -52,6 +55,28 @@ type ViewerState = {
   isPrimaryAdmin: boolean;
   canCreateStream: boolean;
   canManageStream: boolean;
+};
+
+type TournamentTeamEntry = {
+  id: string;
+  team_id: string;
+  payment_status: string;
+  check_in_status: 'registered' | 'checked_in' | 'no_show';
+  roster_locked_at: string;
+  roster_snapshot: {
+    team_name?: string;
+    players?: Array<{
+      user_id?: string;
+      username?: string;
+      roster_role?: string;
+    }>;
+  };
+  team?: {
+    id: string;
+    name: string;
+    slug: string;
+    avatar_url?: string | null;
+  } | null;
 };
 
 type TournamentStream = LiveStream & {
@@ -64,6 +89,7 @@ type TournamentStream = LiveStream & {
 type DetailResponse = {
   tournament: TournamentDetail;
   players: TournamentPlayer[];
+  teams: TournamentTeamEntry[];
   matches: TournamentMatch[];
   viewer: ViewerState;
   stream: TournamentStream | null;
@@ -305,7 +331,18 @@ function TournamentDetailContent() {
     });
 
     try {
-      const res = await authFetch(`/api/tournaments/${slug}/check-in`, { method: 'POST' });
+      const isTeamTournament = data?.tournament.participant_mode === 'team';
+      const res = await authFetch(
+        `/api/tournaments/${slug}/${isTeamTournament ? 'check-in-team' : 'check-in'}`,
+        {
+          method: 'POST',
+          ...(isTeamTournament
+            ? {
+                body: JSON.stringify({ team_id: data?.viewer.teamId }),
+              }
+            : {}),
+        }
+      );
       const payload = await res.json();
       if (!res.ok) {
         setActionFeedback({
@@ -446,6 +483,7 @@ function TournamentDetailContent() {
   if (!data) return null;
 
   const { tournament, viewer, players } = data;
+  const isTeamTournament = tournament.participant_mode === 'team';
   const game = GAMES[tournament.game as GameKey];
   const totalRounds = Math.log2(tournament.size);
   const hasActiveStream = Boolean(data.stream && data.stream.status !== 'ended');
@@ -455,6 +493,7 @@ function TournamentDetailContent() {
   const checkInOpen = !checkInOpensAt || Date.now() >= checkInOpensAt.getTime();
   const canCheckIn =
     viewer.joined &&
+    (!isTeamTournament || viewer.canManageTeamEntry) &&
     viewer.checkInStatus !== 'checked_in' &&
     ['open', 'full', 'active'].includes(tournament.status);
   const canStartTournament =
@@ -471,7 +510,9 @@ function TournamentDetailContent() {
     tournament.slots_left,
     tournament.prize_pool
   );
-  const checkedInCount = players.filter((player) => player.check_in_status === 'checked_in').length;
+  const checkedInCount = isTeamTournament
+    ? data.teams.filter((team) => team.check_in_status === 'checked_in').length
+    : players.filter((player) => player.check_in_status === 'checked_in').length;
   const fillRate = Math.round((tournament.confirmed_count / Math.max(1, tournament.size)) * 100);
   const checkInRate = Math.round((checkedInCount / Math.max(1, tournament.confirmed_count)) * 100);
   const completedMatchCount = data.matches.filter(
@@ -522,7 +563,9 @@ function TournamentDetailContent() {
             <div>
               <p className="section-title">Bracket Overview</p>
               <p className="mt-3 max-w-3xl text-sm leading-6 text-[var(--text-secondary)] sm:text-base">
-                Join the bracket, check the slot pressure, and share the tournament with one clean hero image up top.
+                {isTeamTournament
+                  ? `Register a ${tournament.team_size}-player roster, lock it for competition, and check in as a team.`
+                  : 'Join the bracket, check the slot pressure, and share the tournament with one clean hero image up top.'}
               </p>
               <div className="mt-4 flex flex-wrap gap-2 text-xs font-bold text-[var(--text-secondary)]">
                 <span className="brand-chip px-3 py-1">
@@ -533,6 +576,11 @@ function TournamentDetailContent() {
                 </span>
                 <span className="rounded-full border border-[var(--border-color)] px-3 py-1">
                   {tournament.region}
+                </span>
+                <span className="rounded-full border border-[var(--border-color)] px-3 py-1">
+                  {isTeamTournament
+                    ? `${tournament.team_size ?? 2}v${tournament.team_size ?? 2} teams`
+                    : 'Solo players'}
                 </span>
               </div>
             </div>
@@ -560,7 +608,11 @@ function TournamentDetailContent() {
               prizePoolMode: tournament.prize_pool_mode,
             })}
           />
-          <StatCard icon={<Clock size={15} />} label="Slots left" value={String(tournament.slots_left)} />
+          <StatCard
+            icon={<Clock size={15} />}
+            label={isTeamTournament ? 'Team slots left' : 'Slots left'}
+            value={String(tournament.slots_left)}
+          />
         </div>
       </div>
 
@@ -573,7 +625,7 @@ function TournamentDetailContent() {
         />
       ) : null}
       <div className="mb-5 flex flex-col gap-3 sm:flex-row">
-        {!viewer.joined && tournament.status === 'open' && (
+        {!viewer.joined && tournament.status === 'open' && !isTeamTournament && (
           <button onClick={handleJoin} disabled={joining} className="btn-primary flex-1">
             {joining
               ? 'Joining...'
@@ -582,10 +634,19 @@ function TournamentDetailContent() {
                 : 'Join Free'}
           </button>
         )}
+        {!viewer.joined && tournament.status === 'open' && isTeamTournament && (
+          <Link
+            href={`/teams?tournament=${encodeURIComponent(tournament.slug)}`}
+            className="btn-primary flex-1 justify-center"
+          >
+            Prepare and register a team
+          </Link>
+        )}
         {viewer.joined && (
           <div className="surface-live flex flex-1 items-center gap-2 rounded-2xl p-4 text-sm font-bold text-[var(--accent-secondary-text)]">
             <CheckCircle2 size={16} />
-            You are in this bracket{viewer.paymentStatus ? ` / ${viewer.paymentStatus}` : ''}
+            {isTeamTournament ? 'Your team is' : 'You are'} in this bracket
+            {viewer.paymentStatus ? ` / ${viewer.paymentStatus}` : ''}
             {viewer.checkInStatus ? ` / ${viewer.checkInStatus.replace('_', ' ')}` : ''}.
           </div>
         )}
@@ -599,7 +660,7 @@ function TournamentDetailContent() {
             {checkingIn ? 'Checking in...' : checkInOpen ? 'Check in' : 'Check-in locked'}
           </button>
         )}
-        {viewer.isOrganizer && tournament.status === 'full' && (
+        {viewer.isOrganizer && tournament.status === 'full' && !isTeamTournament && (
           <button
             onClick={handleStart}
             disabled={starting || !canStartTournament}
@@ -636,7 +697,7 @@ function TournamentDetailContent() {
           </button>
         )}
       </div>
-      {viewer.isOrganizer && tournament.status === 'full' && !canStartTournament ? (
+      {viewer.isOrganizer && tournament.status === 'full' && !isTeamTournament && !canStartTournament ? (
         <p className="mb-5 text-xs leading-6 text-[var(--text-soft)]">
           Kickoff is set for {scheduleLabel}. Check-in opens {checkInLabel}.
         </p>
@@ -768,9 +829,36 @@ function TournamentDetailContent() {
           </section>
 
           <section className="card p-5">
-            <p className="section-title">Players</p>
+            <p className="section-title">{isTeamTournament ? 'Teams' : 'Players'}</p>
             <div className="mt-4 space-y-2">
-              {players.map((player, index) => (
+              {isTeamTournament
+                ? data.teams.map((entry, index) => (
+                    <div
+                      key={entry.id}
+                      className="rounded-2xl bg-[var(--surface-strong)] p-3"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-[rgba(50,224,196,0.12)] text-xs font-black text-[var(--brand-teal)]">
+                          {index + 1}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-sm font-black text-[var(--text-primary)]">
+                            {entry.team?.name ?? entry.roster_snapshot.team_name ?? 'Team'}
+                          </p>
+                          <p className="text-xs text-[var(--text-soft)]">
+                            {entry.payment_status} / {entry.check_in_status.replace('_', ' ')}
+                          </p>
+                        </div>
+                      </div>
+                      <p className="mt-2 text-xs leading-5 text-[var(--text-secondary)]">
+                        {(entry.roster_snapshot.players ?? [])
+                          .filter((player) => player.roster_role === 'starter')
+                          .map((player) => player.username ?? 'Player')
+                          .join(', ')}
+                      </p>
+                    </div>
+                  ))
+                : players.map((player, index) => (
                 <div key={player.id} className="flex items-center gap-3 rounded-2xl bg-[var(--surface-strong)] p-3">
                   <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-[rgba(50,224,196,0.12)] text-xs font-black text-[var(--brand-teal)]">
                     {player.seed ?? index + 1}
@@ -786,9 +874,11 @@ function TournamentDetailContent() {
                   </div>
                 </div>
               ))}
-              {Array.from({ length: tournament.size - players.length }).map((_, index) => (
+              {Array.from({
+                length: tournament.size - (isTeamTournament ? data.teams.length : players.length),
+              }).map((_, index) => (
                 <div key={`empty-${index}`} className="rounded-2xl border border-dashed border-[var(--border-color)] p-3 text-sm text-[var(--text-soft)]">
-                  Open slot
+                  Open {isTeamTournament ? 'team ' : ''}slot
                 </div>
               ))}
             </div>
@@ -798,8 +888,8 @@ function TournamentDetailContent() {
             <section className="card p-5">
               <p className="section-title">Ops metrics</p>
               <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
-                <OpsMetric label="Fill rate" value={`${fillRate}%`} detail={`${tournament.confirmed_count}/${tournament.size} slots`} />
-                <OpsMetric label="Check-ins" value={`${checkInRate}%`} detail={`${checkedInCount} ready players`} />
+                <OpsMetric label="Fill rate" value={`${fillRate}%`} detail={`${tournament.confirmed_count}/${tournament.size} ${isTeamTournament ? 'teams' : 'slots'}`} />
+                <OpsMetric label="Check-ins" value={`${checkInRate}%`} detail={`${checkedInCount} ready ${isTeamTournament ? 'teams' : 'players'}`} />
                 <OpsMetric label="Matches done" value={`${matchCompletionRate}%`} detail={`${completedMatchCount}/${data.matches.length || 0} matches`} />
                 <OpsMetric label="Disputes" value={String(disputedMatchCount)} detail="Open match disputes" />
               </div>

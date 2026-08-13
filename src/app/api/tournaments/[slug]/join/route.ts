@@ -149,6 +149,12 @@ export async function POST(
     if (tournament.status !== 'open') {
       return NextResponse.json({ error: 'This tournament is not open' }, { status: 400 });
     }
+    if (tournament.participant_mode === 'team') {
+      return NextResponse.json(
+        { error: 'Register an eligible team roster from the Teams workspace.' },
+        { status: 400 }
+      );
+    }
 
     if (tournament.entry_fee > 0 && tournament.approval_status !== 'approved') {
       return NextResponse.json(

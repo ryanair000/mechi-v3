@@ -13,6 +13,7 @@ import {
   Mail,
   MessageCircle,
   ScrollText,
+  RadioTower,
   Shield,
   Swords,
   Trophy,
@@ -56,6 +57,7 @@ const TOOL_ADMIN_NAV: AdminNavItem[] = [
   { href: '/admin/email', label: 'Email', icon: Mail, adminOnly: true },
   { href: '/admin/whatsapp', label: 'WhatsApp', icon: MessageCircle, adminOnly: true },
   { href: '/admin/instagram', label: 'Instagram', icon: AtSign, adminOnly: true },
+  { href: '/admin/passport/operations', label: 'Passport Ops', icon: RadioTower, adminOnly: true },
   { href: '/admin/logs', label: 'Audit Log', icon: ScrollText, adminOnly: true },
 ];
 

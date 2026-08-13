@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireActiveAccessProfile } from '@/lib/access';
 import { createNotification } from '@/lib/notifications';
 import { createServiceClient } from '@/lib/supabase';
-import { getTeamAccess, recordTeamAudit } from '@/lib/teams';
+import { getTeamOperationErrorMessage } from '@/lib/team-roster';
+import { getTeamAccess } from '@/lib/teams';
 import type { TeamMemberRole } from '@/types';
 
 const ROLES: TeamMemberRole[] = ['captain', 'starter', 'substitute', 'member'];
@@ -22,22 +23,25 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     return NextResponse.json({ error: 'Transfer team ownership before changing the owner role.' }, { status: 409 });
   }
 
-  const { data: member, error } = await supabase
-    .from('team_members')
-    .update({ role })
-    .eq('team_id', id)
-    .eq('user_id', userId)
-    .eq('status', 'active')
-    .select('id, user_id, role')
-    .maybeSingle();
-  if (error || !member) return NextResponse.json({ error: 'Active team member not found.' }, { status: 404 });
-  await Promise.all([
-    createNotification(
-      { user_id: userId, type: 'team_role_changed', title: `Your role in ${String(teamAccess.team.name)} changed`, body: `You are now ${role}.`, href: `/teams?team=${id}`, metadata: { team_id: id, role } },
-      supabase
-    ),
-    recordTeamAudit(supabase, { teamId: id, actorId: access.profile.id, action: 'member_role_changed', subjectUserId: userId, details: { role } }),
-  ]);
-  return NextResponse.json({ member });
+  const { data, error } = await supabase
+    .rpc('set_team_member_role', {
+      p_team_id: id,
+      p_actor_id: access.profile.id,
+      p_user_id: userId,
+      p_role: role,
+    })
+    .single();
+  if (error || !data) {
+    const message = getTeamOperationErrorMessage(error);
+    return NextResponse.json(
+      { error: message },
+      { status: message.includes('Only') ? 403 : message.includes('not found') ? 404 : 409 }
+    );
+  }
+  const member = data as { member_id: string; user_id: string; member_role: string };
+  await createNotification(
+    { user_id: userId, type: 'team_role_changed', title: `Your role in ${String(teamAccess.team.name)} changed`, body: `You are now ${role}.`, href: `/teams?team=${id}`, metadata: { team_id: id, role } },
+    supabase
+  );
+  return NextResponse.json({ member: { id: member.member_id, user_id: member.user_id, role: member.member_role } });
 }
-

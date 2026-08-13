@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireActiveAccessProfile } from '@/lib/access';
 import { expirePendingChallenges } from '@/lib/challenges';
+import { challengeItemHref } from '@/lib/challenge-lifecycle';
 import { createNotifications } from '@/lib/notifications';
 import { createServiceClient } from '@/lib/supabase';
 import type { MatchChallenge } from '@/types';
@@ -43,16 +44,46 @@ export async function POST(
     }
 
     if (challenge.status !== 'pending') {
-      return NextResponse.json({ error: 'This challenge is no longer active' }, { status: 400 });
+      return NextResponse.json(
+        {
+          error:
+            challenge.status === 'expired'
+              ? 'This 1v1 invite already expired.'
+              : `This 1v1 invite was already ${challenge.status}.`,
+          code: `challenge_${challenge.status}`,
+          recover_href: '/challenges',
+        },
+        { status: challenge.status === 'expired' ? 410 : 409 }
+      );
     }
 
-    await supabase
+    const respondedAt = new Date().toISOString();
+    const { data: updatedChallenge, error: updateError } = await supabase
       .from('match_challenges')
       .update({
         status: 'declined',
-        responded_at: new Date().toISOString(),
+        responded_at: respondedAt,
       })
-      .eq('id', challenge.id);
+      .eq('id', challenge.id)
+      .eq('status', 'pending')
+      .select('id')
+      .maybeSingle();
+
+    if (updateError) {
+      console.error('[Challenge Decline] Update failed:', updateError);
+      return NextResponse.json({ error: 'Could not decline this invite.' }, { status: 500 });
+    }
+
+    if (!updatedChallenge) {
+      return NextResponse.json(
+        {
+          error: 'This invite changed while you were viewing it. Refresh to see its current state.',
+          code: 'challenge_conflict',
+          recover_href: '/challenges',
+        },
+        { status: 409 }
+      );
+    }
 
     const { data: profilesRaw } = await supabase
       .from('profiles')
@@ -70,7 +101,7 @@ export async function POST(
           type: 'challenge_declined',
           title: `${opponent?.username ?? 'Your opponent'} declined the challenge`,
           body: 'That direct 1-on-1 is closed. Send another when both sides are ready.',
-          href: '/notifications',
+          href: challengeItemHref(challenge.id),
           metadata: {
             challenge_id: challenge.id,
             game: challenge.game,
@@ -82,7 +113,7 @@ export async function POST(
           type: 'challenge_declined',
           title: `Challenge declined`,
           body: `You passed on ${challenger?.username ?? 'that player'}'s challenge.`,
-          href: '/notifications',
+          href: challengeItemHref(challenge.id),
           metadata: {
             challenge_id: challenge.id,
             game: challenge.game,
@@ -93,7 +124,19 @@ export async function POST(
       supabase
     );
 
-    return NextResponse.json({ success: true });
+    return NextResponse.json({
+      success: true,
+      challenge: {
+        ...challenge,
+        status: 'declined',
+        responded_at: respondedAt,
+      },
+      next_action: {
+        label: 'Find another opponent',
+        href: '/challenges',
+        owner: 'You',
+      },
+    });
   } catch (error) {
     console.error('[Challenge Decline] Error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });

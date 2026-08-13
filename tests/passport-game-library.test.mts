@@ -11,7 +11,7 @@ const manager = await readFile(
   'utf8'
 );
 const publicLibrary = await readFile(
-  new URL('../src/app/[handle]/games/page.tsx', import.meta.url),
+  new URL('../src/app/p/[handle]/games/page.tsx', import.meta.url),
   'utf8'
 );
 const cardRoute = await readFile(

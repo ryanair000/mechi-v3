@@ -8,7 +8,7 @@ const secretBox = await readFile(new URL('../src/lib/passport-secret-box.ts', im
 const ecosystem = await readFile(new URL('../src/lib/passport-ecosystem.ts', import.meta.url), 'utf8');
 const partners = await readFile(new URL('../src/lib/passport-partners.ts', import.meta.url), 'utf8');
 const passportCore = await readFile(new URL('../src/lib/passport.ts', import.meta.url), 'utf8');
-const publicLibrary = await readFile(new URL('../src/app/[handle]/games/page.tsx', import.meta.url), 'utf8');
+const publicLibrary = await readFile(new URL('../src/app/p/[handle]/games/page.tsx', import.meta.url), 'utf8');
 const proxy = await readFile(new URL('../src/proxy.ts', import.meta.url), 'utf8');
 
 test('Phase 7 tables are RLS protected and service mediated', () => {

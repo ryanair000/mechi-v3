@@ -702,6 +702,12 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(africaUrl, 308);
   }
 
+  if (!adminHost && /^\/@[^/]+(?:\/(?:games|resume|cv))?\/?$/.test(pathname)) {
+    const passportUrl = request.nextUrl.clone();
+    passportUrl.pathname = `/p/${pathname.slice(1)}`;
+    return NextResponse.rewrite(passportUrl);
+  }
+
   if (pathname.startsWith('/s/') && !pathname.startsWith('/s/match/') && !pathname.startsWith('/s/t/')) {
     const profileUsername = pathname.slice('/s/'.length);
     if (profileUsername && !profileUsername.includes('/')) {

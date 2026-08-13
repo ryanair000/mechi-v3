@@ -4,7 +4,7 @@ import test from 'node:test';
 
 const migration = await readFile(new URL('../supabase/migrations/20260813101621_passport_progression_customization_replay.sql', import.meta.url), 'utf8');
 const service = await readFile(new URL('../src/lib/passport-progression.ts', import.meta.url), 'utf8');
-const publicPassport = await readFile(new URL('../src/app/[handle]/page.tsx', import.meta.url), 'utf8');
+const publicPassport = await readFile(new URL('../src/app/p/[handle]/page.tsx', import.meta.url), 'utf8');
 const replayPage = await readFile(new URL('../src/app/replay/[token]/page.tsx', import.meta.url), 'utf8');
 const eventCard = await readFile(new URL('../src/app/api/passport/event-cards/[token]/route.tsx', import.meta.url), 'utf8');
 

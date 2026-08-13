@@ -59,7 +59,7 @@ test('Phase 1 preserves legacy share URLs and establishes the Mechi V5 Passport 
     'utf8'
   );
   const canonicalRoute = await readFile(
-    new URL('../src/app/[handle]/page.tsx', import.meta.url),
+    new URL('../src/app/p/[handle]/page.tsx', import.meta.url),
     'utf8'
   );
   const ownerRoute = await readFile(

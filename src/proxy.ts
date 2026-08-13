@@ -712,7 +712,7 @@ export async function proxy(request: NextRequest) {
     const profileUsername = pathname.slice('/s/'.length);
     if (profileUsername && !profileUsername.includes('/')) {
       const profileUrl = request.nextUrl.clone();
-      profileUrl.pathname = `/profile/${profileUsername}`;
+      profileUrl.pathname = `/@${profileUsername}`;
       return NextResponse.redirect(profileUrl, 308);
     }
   }

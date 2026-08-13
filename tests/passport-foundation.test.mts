@@ -67,8 +67,10 @@ test('Phase 1 preserves legacy share URLs and establishes the Mechi V5 Passport 
     new URL('../src/app/(app)/passport/page.tsx', import.meta.url),
     'utf8'
   );
+  const proxy = await readFile(new URL('../src/proxy.ts', import.meta.url), 'utf8');
 
   assert.match(legacyRoute, /permanentRedirect\(getPassportPath\(username\)\)/);
+  assert.match(proxy, /profileUrl\.pathname = `\/@\$\{profileUsername\}`/);
   assert.match(canonicalRoute, /Mechi V5 Passport/);
   assert.match(canonicalRoute, /resolveHandle/);
   assert.match(ownerRoute, /Mechi V5/);

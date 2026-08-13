@@ -29,25 +29,22 @@ export type PublicProfileData = Record<string, unknown> & {
   username: string;
 };
 
-export async function getPublicProfileData(username: string): Promise<PublicProfileData | null> {
-  const normalizedUsername = username.trim();
-
-  if (!normalizedUsername) {
-    return null;
-  }
-
+async function getPublicProfileDataBy(
+  column: 'id' | 'username',
+  value: string
+): Promise<PublicProfileData | null> {
   const supabase = createServiceClient();
   let result = await supabase
     .from('profiles')
     .select(PUBLIC_PROFILE_SHARE_SELECT_WITH_COUNTRY)
-    .ilike('username', normalizedUsername)
+    [column === 'username' ? 'ilike' : 'eq'](column, value)
     .single();
 
   if (result.error && isMissingColumnError(result.error, 'profiles.country')) {
     result = await supabase
       .from('profiles')
       .select(PUBLIC_PROFILE_SHARE_SELECT)
-      .ilike('username', normalizedUsername)
+      [column === 'username' ? 'ilike' : 'eq'](column, value)
       .single();
   }
 
@@ -82,4 +79,14 @@ export async function getPublicProfileData(username: string): Promise<PublicProf
     totalLosses,
     totalWins,
   };
+}
+
+export async function getPublicProfileData(username: string): Promise<PublicProfileData | null> {
+  const normalizedUsername = username.trim();
+  return normalizedUsername ? getPublicProfileDataBy('username', normalizedUsername) : null;
+}
+
+export async function getPublicProfileDataByUserId(userId: string): Promise<PublicProfileData | null> {
+  const normalizedUserId = userId.trim();
+  return normalizedUserId ? getPublicProfileDataBy('id', normalizedUserId) : null;
 }

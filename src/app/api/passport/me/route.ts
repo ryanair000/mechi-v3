@@ -17,6 +17,7 @@ import {
 } from '@/lib/passport-types';
 
 const UPDATE_KEYS = new Set([
+  'public_handle',
   'display_name',
   'bio',
   'gamer_since',
@@ -43,6 +44,16 @@ function parseUpdate(body: unknown): { input: PassportUpdateInput | null; error:
   }
 
   const input: PassportUpdateInput = {};
+
+  if ('public_handle' in candidate) {
+    if (candidate.public_handle === null || candidate.public_handle === '') {
+      input.public_handle = null;
+    } else if (typeof candidate.public_handle !== 'string') {
+      return { input: null, error: 'Public handle must be text' };
+    } else {
+      input.public_handle = candidate.public_handle;
+    }
+  }
 
   if ('display_name' in candidate) {
     if (candidate.display_name === null || candidate.display_name === '') {
@@ -209,7 +220,11 @@ export async function PATCH(request: NextRequest) {
     );
   }
   if (result.error || !result.data) {
-    return NextResponse.json({ error: result.error ?? 'Could not update Gamer Passport' }, { status: 500 });
+    const message = result.error ?? 'Could not update Gamer Passport';
+    const status = message === 'That public handle is already taken' ? 409
+      : 'public_handle' in parsed.input ? 400
+        : 500;
+    return NextResponse.json({ error: message }, { status });
   }
 
   return NextResponse.json({ passport: result.data });

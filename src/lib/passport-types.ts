@@ -1,5 +1,6 @@
 import type { CountryKey, GameKey, PlatformKey } from '@/types';
 import type { PassportGameLibrary } from '@/lib/passport-game-types';
+import type { PassportPublicationStatus } from '@/lib/passport-handle';
 
 export const PASSPORT_ARCHETYPES = [
   'competitive',
@@ -54,19 +55,19 @@ export type PassportField = (typeof PASSPORT_FIELDS)[number];
 export type PassportFieldVisibility = Record<PassportField, PassportVisibility>;
 
 export const DEFAULT_PASSPORT_FIELD_VISIBILITY: PassportFieldVisibility = {
-  bio: 'public',
-  gamer_since: 'public',
-  archetypes: 'public',
-  current_status: 'public',
-  location: 'public',
-  platforms: 'public',
-  games: 'public',
+  bio: 'private',
+  gamer_since: 'private',
+  archetypes: 'private',
+  current_status: 'private',
+  location: 'private',
+  platforms: 'private',
+  games: 'private',
   game_ids: 'private',
-  competitive: 'public',
-  events: 'public',
-  achievements: 'public',
-  teams: 'public',
-  social: 'public',
+  competitive: 'private',
+  events: 'private',
+  achievements: 'private',
+  teams: 'private',
+  social: 'private',
 };
 
 export const PASSPORT_ARCHETYPE_LABELS: Record<PassportArchetype, string> = {
@@ -99,6 +100,11 @@ export const PASSPORT_STATUS_LABELS: Record<PassportStatus, string> = {
 export type PassportIdentity = {
   user_id: string;
   username: string;
+  public_handle: string | null;
+  publication_status: PassportPublicationStatus;
+  published_at: string | null;
+  publication_consent_version: string | null;
+  publication_consent_at: string | null;
   display_name: string;
   bio: string;
   gamer_since: number | null;

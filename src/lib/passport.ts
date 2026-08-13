@@ -1,8 +1,19 @@
 import 'server-only';
 
 import { isMissingTableError } from '@/lib/db-compat';
-import { getPublicProfileData } from '@/lib/public-profile';
+import {
+  getPublicProfileData,
+  getPublicProfileDataByUserId,
+} from '@/lib/public-profile';
 import { getPassportGameLibraryByUserId } from '@/lib/passport-games';
+import {
+  getPassportPathFromHandle,
+  isSafePassportDisplayName,
+  normalizePassportHandle,
+  PASSPORT_PUBLICATION_CONSENT_VERSION,
+  validatePassportHandle,
+  type PassportPublicationStatus,
+} from '@/lib/passport-handle';
 import { createServiceClient } from '@/lib/supabase';
 import {
   DEFAULT_PASSPORT_FIELD_VISIBILITY,
@@ -26,10 +37,15 @@ import {
 import type { GameKey, PlatformKey } from '@/types';
 
 const PASSPORT_PROFILE_SELECT =
-  'user_id, display_name, bio, gamer_since, archetypes, current_status, default_visibility, field_visibility, is_discoverable, card_accent, created_at, updated_at';
+  'user_id, public_handle, publication_status, published_at, publication_consent_version, publication_consent_at, display_name, bio, gamer_since, archetypes, current_status, default_visibility, field_visibility, is_discoverable, card_accent, created_at, updated_at';
 
 type PassportProfileRow = {
   user_id: string;
+  public_handle: string | null;
+  publication_status: PassportPublicationStatus;
+  published_at: string | null;
+  publication_consent_version: string | null;
+  publication_consent_at: string | null;
   display_name: string | null;
   bio: string;
   gamer_since: number | null;
@@ -105,6 +121,7 @@ type PassportEventCounts = {
 };
 
 export type PassportUpdateInput = {
+  public_handle?: string | null;
   display_name?: string | null;
   bio?: string;
   gamer_since?: number | null;
@@ -130,12 +147,27 @@ export function normalizePassportUsername(value: string): string {
 }
 
 export function getPassportPath(username: string): string {
-  return `/@${encodeURIComponent(normalizePassportUsername(username))}`;
+  return getPassportPathFromHandle(username);
+}
+
+export async function resolvePublicPassportHandleForAccountUsername(
+  accountUsername: string
+): Promise<string | null> {
+  const profile = await getPublicProfileData(normalizePassportUsername(accountUsername));
+  if (!profile) return null;
+  const result = await createServiceClient()
+    .from('passport_profiles')
+    .select('public_handle')
+    .eq('user_id', profile.id)
+    .eq('publication_status', 'published')
+    .maybeSingle();
+  const handle = typeof result.data?.public_handle === 'string' ? result.data.public_handle : '';
+  return !result.error && validatePassportHandle(handle).valid ? normalizePassportHandle(handle) : null;
 }
 
 export function normalizePassportVisibility(
   value: unknown,
-  fallback: PassportVisibility = 'public'
+  fallback: PassportVisibility = 'private'
 ): PassportVisibility {
   return typeof value === 'string' && PASSPORT_VISIBILITIES.includes(value as PassportVisibility)
     ? (value as PassportVisibility)
@@ -187,15 +219,22 @@ function defaultPassportIdentity(
 
   return {
     user_id: profile.id,
-    username: profile.username,
-    display_name: row?.display_name?.trim() || profile.username,
+    username: row?.public_handle ?? '',
+    public_handle: row?.public_handle ?? null,
+    publication_status: row?.publication_status === 'published' ? 'published' : 'draft',
+    published_at: row?.published_at ?? null,
+    publication_consent_version: row?.publication_consent_version ?? null,
+    publication_consent_at: row?.publication_consent_at ?? null,
+    display_name: isSafePassportDisplayName(row?.display_name ?? '')
+      ? (row?.display_name?.trim() as string)
+      : row?.public_handle ?? 'Player',
     bio: row?.bio ?? '',
     gamer_since: row?.gamer_since ?? null,
     archetypes,
     current_status: currentStatus,
     default_visibility: normalizePassportVisibility(row?.default_visibility),
     field_visibility: normalizePassportFieldVisibility(row?.field_visibility),
-    is_discoverable: row?.is_discoverable ?? true,
+    is_discoverable: row?.is_discoverable ?? false,
     card_accent: /^#[0-9a-f]{6}$/i.test(row?.card_accent ?? '')
       ? (row?.card_accent as string)
       : '#32E0C4',
@@ -550,10 +589,23 @@ export async function getPassportData(
   username: string,
   options: { ownerView?: boolean; friendView?: boolean } = {}
 ): Promise<PublicPassportData | null> {
-  const normalizedUsername = normalizePassportUsername(username);
-  if (!normalizedUsername) return null;
-
-  const profile = await getPublicProfileData(normalizedUsername);
+  let profile: Awaited<ReturnType<typeof getPublicProfileData>>;
+  if (options.ownerView) {
+    const normalizedUsername = normalizePassportUsername(username);
+    if (!normalizedUsername) return null;
+    profile = await getPublicProfileData(normalizedUsername);
+  } else {
+    const validation = validatePassportHandle(username);
+    if (!validation.valid) return null;
+    const resolution = await createServiceClient()
+      .from('passport_profiles')
+      .select('user_id')
+      .eq('public_handle', validation.handle)
+      .eq('publication_status', 'published')
+      .maybeSingle();
+    if (resolution.error || !resolution.data?.user_id) return null;
+    profile = await getPublicProfileDataByUserId(resolution.data.user_id as string);
+  }
   if (!profile) return null;
 
   const [passportResult, tournamentRows, onlineRows, eventCounts, achievementsCount, badgesCount, teams, verifications, library] =
@@ -710,6 +762,30 @@ export async function upsertPassportProfile(
 ): Promise<{ data: PassportOwnerData | null; error: string | null; storageReady: boolean }> {
   const supabase = createServiceClient();
   const updateData: Record<string, unknown> = { user_id: userId };
+  const current = await loadPassportProfile(userId);
+
+  if (!current.storageReady) {
+    return { data: null, error: 'Passport storage is not ready', storageReady: false };
+  }
+
+  if ('public_handle' in input) {
+    if (input.public_handle === null) {
+      if (current.row?.publication_status === 'published') {
+        return {
+          data: null,
+          error: 'Unpublish the Gamer Passport before removing its public handle',
+          storageReady: true,
+        };
+      }
+      updateData.public_handle = null;
+    } else {
+      const validation = validatePassportHandle(input.public_handle ?? '');
+      if (!validation.valid) {
+        return { data: null, error: validation.error, storageReady: true };
+      }
+      updateData.public_handle = validation.handle;
+    }
+  }
 
   if ('display_name' in input) updateData.display_name = input.display_name;
   if ('bio' in input) updateData.bio = input.bio;
@@ -720,11 +796,35 @@ export async function upsertPassportProfile(
   if ('is_discoverable' in input) updateData.is_discoverable = input.is_discoverable;
   if ('card_accent' in input) updateData.card_accent = input.card_accent;
 
+  const resultingVisibility = (updateData.default_visibility as string | undefined)
+    ?? current.row?.default_visibility
+    ?? 'private';
+  const resultingDiscoverability = (updateData.is_discoverable as boolean | undefined)
+    ?? current.row?.is_discoverable
+    ?? false;
+  if (current.row?.publication_status === 'published' && resultingVisibility === 'private') {
+    return {
+      data: null,
+      error: 'Unpublish the Gamer Passport before making it private',
+      storageReady: true,
+    };
+  }
+  if (resultingDiscoverability && resultingVisibility !== 'public') {
+    return {
+      data: null,
+      error: 'Discovery requires Public visibility',
+      storageReady: true,
+    };
+  }
+  if (resultingDiscoverability && current.row?.publication_status !== 'published') {
+    return {
+      data: null,
+      error: 'Publish the Gamer Passport before enabling discovery',
+      storageReady: true,
+    };
+  }
+
   if ('field_visibility' in input) {
-    const current = await loadPassportProfile(userId);
-    if (!current.storageReady) {
-      return { data: null, error: 'Passport storage is not ready', storageReady: false };
-    }
     updateData.field_visibility = {
       ...normalizePassportFieldVisibility(current.row?.field_visibility),
       ...input.field_visibility,
@@ -742,8 +842,24 @@ export async function upsertPassportProfile(
     if (isMissingTableError(result.error, 'passport_profiles')) {
       return { data: null, error: 'Passport storage is not ready', storageReady: false };
     }
+    if (result.error.code === '23505' && 'public_handle' in input) {
+      return { data: null, error: 'That public handle is already taken', storageReady: true };
+    }
     console.error('[Passport] Could not update identity:', result.error);
     return { data: null, error: 'Could not update Gamer Passport', storageReady: true };
+  }
+
+  const previousHandle = current.row?.public_handle;
+  const nextHandle = typeof updateData.public_handle === 'string' ? updateData.public_handle : null;
+  if ('public_handle' in input && previousHandle && previousHandle !== nextHandle) {
+    const historyResult = await supabase.from('passport_handle_history').insert({
+      user_id: userId,
+      public_handle: normalizePassportHandle(previousHandle),
+      redirect_allowed: false,
+    });
+    if (historyResult.error && !isMissingTableError(historyResult.error, 'passport_handle_history')) {
+      console.error('[Passport] Could not preserve retired handle:', historyResult.error);
+    }
   }
 
   if (changedFields.length > 0) {
@@ -758,6 +874,91 @@ export async function upsertPassportProfile(
     if (auditResult.error && !isMissingTableError(auditResult.error, 'passport_audit_logs')) {
       console.error('[Passport] Could not write audit log:', auditResult.error);
     }
+  }
+
+  return {
+    data: await getPassportOwnerDataByUserId(userId),
+    error: null,
+    storageReady: true,
+  };
+}
+
+export async function setPassportPublication(
+  userId: string,
+  action: 'publish' | 'unpublish',
+  options: { confirmed?: boolean; requestId?: string | null } = {}
+): Promise<{ data: PassportOwnerData | null; error: string | null; storageReady: boolean }> {
+  const supabase = createServiceClient();
+  const current = await loadPassportProfile(userId);
+  if (!current.storageReady || !current.row) {
+    return { data: null, error: 'Passport storage is not ready', storageReady: false };
+  }
+
+  const now = new Date().toISOString();
+  let update: Record<string, unknown>;
+  if (action === 'publish') {
+    if (!options.confirmed) {
+      return { data: null, error: 'Confirm that you want to publish this Gamer Passport', storageReady: true };
+    }
+    const handle = validatePassportHandle(current.row.public_handle ?? '');
+    if (!handle.valid) {
+      return { data: null, error: handle.error, storageReady: true };
+    }
+    if (!isSafePassportDisplayName(current.row.display_name ?? '')) {
+      return {
+        data: null,
+        error: 'Choose a public display name that is not an email address, phone number, or URL',
+        storageReady: true,
+      };
+    }
+    if (!['public', 'friends'].includes(current.row.default_visibility)) {
+      return {
+        data: null,
+        error: 'Choose Public or Friends visibility before publishing',
+        storageReady: true,
+      };
+    }
+    update = {
+      publication_status: 'published',
+      published_at: now,
+      publication_consent_version: PASSPORT_PUBLICATION_CONSENT_VERSION,
+      publication_consent_at: now,
+      is_discoverable:
+        current.row.default_visibility === 'public' && current.row.is_discoverable,
+    };
+  } else {
+    update = {
+      publication_status: 'draft',
+      published_at: null,
+      default_visibility: 'private',
+      is_discoverable: false,
+    };
+  }
+
+  const result = await supabase
+    .from('passport_profiles')
+    .update(update)
+    .eq('user_id', userId);
+  if (result.error) {
+    if (isMissingTableError(result.error, 'passport_profiles')) {
+      return { data: null, error: 'Passport storage is not ready', storageReady: false };
+    }
+    console.error('[Passport] Could not change publication state:', result.error);
+    return { data: null, error: 'Could not change Gamer Passport publication', storageReady: true };
+  }
+
+  const auditResult = await supabase.from('passport_audit_logs').insert({
+    user_id: userId,
+    actor_id: userId,
+    action: action === 'publish' ? 'passport_published' : 'passport_unpublished',
+    changed_fields: Object.keys(update),
+    details: action === 'publish'
+      ? { consent_version: PASSPORT_PUBLICATION_CONSENT_VERSION }
+      : { reason: 'owner_request' },
+    request_id: options.requestId ?? null,
+  });
+  if (auditResult.error && !isMissingTableError(auditResult.error, 'passport_audit_logs')) {
+    console.error('[Passport] Could not write publication audit log:', auditResult.error);
   }
 
   return {

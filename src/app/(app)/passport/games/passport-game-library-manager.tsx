@@ -8,7 +8,7 @@ import {
   ArrowLeft, BookOpen, Check, Clock3, Eye, EyeOff, Gamepad2, Heart,
   ImagePlus, Loader2, Pencil, Plus, Search, Sparkles, Star, Trash2, X,
 } from 'lucide-react';
-import { useAuth, useAuthFetch } from '@/components/AuthProvider';
+import { useAuthFetch } from '@/components/AuthProvider';
 import {
   PASSPORT_GAME_PLATFORMS, PASSPORT_GAME_PLATFORM_LABELS, PASSPORT_GAME_STATUSES,
   PASSPORT_GAME_STATUS_LABELS, type PassportCatalogGame, type PassportGameEntry,
@@ -16,6 +16,7 @@ import {
   type PassportGameStatus,
 } from '@/lib/passport-game-types';
 import { PASSPORT_VISIBILITIES, type PassportVisibility } from '@/lib/passport-types';
+import type { PassportOwnerData } from '@/lib/passport-types';
 
 type EntryDraft = {
   platform: PassportGamePlatform;
@@ -70,8 +71,8 @@ function toPayload(draft: EntryDraft): Omit<PassportGameEntryInput, 'catalog_gam
 }
 
 export function PassportGameLibraryManager() {
-  const { user } = useAuth();
   const authFetch = useAuthFetch();
+  const [publicHandle, setPublicHandle] = useState('');
   const [library, setLibrary] = useState<PassportGameLibrary | null>(null);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -116,6 +117,14 @@ export function PassportGameLibraryManager() {
         if (active) setLoading(false);
       });
     return () => { active = false; };
+  }, [authFetch]);
+
+  useEffect(() => {
+    void authFetch('/api/passport/me').then(async (response) => {
+      const body = await response.json() as { passport?: PassportOwnerData };
+      const identity = body.passport?.identity;
+      setPublicHandle(identity?.publication_status === 'published' ? identity.public_handle ?? '' : '');
+    });
   }, [authFetch]);
 
   useEffect(() => {
@@ -248,7 +257,7 @@ export function PassportGameLibraryManager() {
               <h1 className="mt-3 text-3xl font-black text-[var(--text-primary)] sm:text-4xl">Your gaming life, in one library</h1>
               <p className="mt-3 max-w-2xl text-sm leading-6 text-[var(--text-secondary)]">Add competitive, story, casual, retro, and mobile games—including titles you played before joining Mechi.</p>
             </div>
-            {user?.username ? <Link href={`/@${encodeURIComponent(user.username)}/games`} className="btn-outline"><Eye size={15} /> Public library</Link> : null}
+            {publicHandle ? <Link href={`/@${encodeURIComponent(publicHandle)}/games`} className="btn-outline"><Eye size={15} /> Public library</Link> : null}
           </div>
         </div>
       </section>

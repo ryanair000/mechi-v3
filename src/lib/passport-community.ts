@@ -12,7 +12,7 @@ type ActivitySeed = { actor_id: string; activity_type: string; source_type: stri
 
 function relation<T>(value: T | T[] | null | undefined): T | null { return Array.isArray(value) ? value[0] ?? null : value ?? null; }
 
-function normalizeVisibility(value: unknown, fallback: PassportVisibility = 'public'): PassportVisibility {
+function normalizeVisibility(value: unknown, fallback: PassportVisibility = 'private'): PassportVisibility {
   return value === 'friends' || value === 'private' || value === 'public' ? value : fallback;
 }
 
@@ -36,9 +36,14 @@ export async function projectPassportActivity(userId: string) {
   const supabase = createServiceClient();
   const [preferences, profileResult] = await Promise.all([
     getPassportActivityPreferences(userId),
-    supabase.from('passport_profiles').select('default_visibility, field_visibility, is_discoverable').eq('user_id', userId).maybeSingle(),
+    supabase.from('passport_profiles').select('publication_status, default_visibility, field_visibility, is_discoverable').eq('user_id', userId).maybeSingle(),
   ]);
   const profile = profileResult.data;
+  if (profile?.publication_status !== 'published') {
+    await supabase.from('passport_activity_objects').update({ retracted_at: new Date().toISOString() })
+      .eq('actor_id', userId).is('retracted_at', null);
+    return 0;
+  }
   const defaultVisibility = profile?.is_discoverable === false
     ? 'private'
     : normalizeVisibility(profile?.default_visibility);
@@ -215,13 +220,16 @@ export async function getTeamPassport(slug: string, viewerId?: string | null): P
   if (team.visibility === 'private' && !viewerMembership) return null;
   const [{ data: settings }, { data: members }, { data: tournaments }, { data: achievements }] = await Promise.all([
     supabase.from('team_passport_settings').select('*').eq('team_id', team.id).maybeSingle(),
-    supabase.from('team_members').select('user_id, role, status, joined_at, left_at, profile:profiles(username, avatar_url)').eq('team_id', team.id).order('joined_at'),
+    supabase.from('team_members').select('user_id, role, status, joined_at, left_at, profile:profiles(avatar_url)').eq('team_id', team.id).order('joined_at'),
     supabase.from('tournament_team_entries').select('joined_at, check_in_status, tournament:tournaments(id, slug, title, game, status)').eq('team_id', team.id).in('payment_status', ['paid', 'free']).order('joined_at', { ascending: false }),
     supabase.from('team_passport_achievements').select('id, verification_token, title, description, game, source_type, occurred_at').eq('team_id', team.id).eq('state', 'active').order('occurred_at', { ascending: false }),
   ]);
   const tournamentRows = (tournaments ?? []).flatMap((row) => { const tournament = relation(row.tournament as { id: string; slug: string; title: string; game: string; status: string } | Array<{ id: string; slug: string; title: string; game: string; status: string }> | null); return tournament ? [{ ...tournament, joined_at: String(row.joined_at), check_in_status: String(row.check_in_status) }] : []; });
   const memberIds = (members ?? []).filter((member) => member.status === 'active').map((member) => String(member.user_id)); let completed = 0; let wins = 0; if (memberIds.length) { const { data: matchRows } = await supabase.from('matches').select('winner_id, player1_id, player2_id').eq('status', 'completed').or(memberIds.flatMap((id) => [`player1_id.eq.${id}`, `player2_id.eq.${id}`]).join(',')); completed = matchRows?.length ?? 0; wins = (matchRows ?? []).filter((match) => memberIds.includes(String(match.winner_id))).length; }
-  return { id: String(team.id), slug: String(team.slug), name: String(team.name), description: team.description, region: String(team.region), avatar_url: team.avatar_url, recruiting: Boolean(team.recruiting), recruitment_status: settings?.recruitment_status ?? (team.recruiting ? 'open' : 'closed'), recruitment_headline: settings?.recruitment_headline ?? '', contact_url: settings?.contact_url ?? null, card_accent: settings?.card_accent ?? '#32E0C4', supported_games: settings?.supported_games ?? [], members: (members ?? []).map((member) => { const profile = relation(member.profile as { username: string; avatar_url: string | null } | Array<{ username: string; avatar_url: string | null }> | null); return { user_id: String(member.user_id), username: profile?.username ?? 'player', avatar_url: profile?.avatar_url ?? null, role: String(member.role), status: String(member.status), joined_at: String(member.joined_at), left_at: member.left_at ? String(member.left_at) : null }; }), tournaments: tournamentRows, achievements: (achievements ?? []).map((row) => ({ ...row, id: String(row.id), verification_token: String(row.verification_token), title: String(row.title), description: String(row.description), game: row.game ? String(row.game) : null, source_type: String(row.source_type), occurred_at: String(row.occurred_at) })), match_summary: { completed, wins }, can_manage: Boolean(viewerId && (team.owner_id === viewerId || ['captain'].includes(String(viewerMembership?.role)))), generated_at: new Date().toISOString() };
+  const allMemberIds = (members ?? []).map((member) => String(member.user_id));
+  const { data: publishedMembers } = allMemberIds.length ? await supabase.from('passport_profiles').select('user_id, public_handle').in('user_id', allMemberIds).eq('publication_status', 'published') : { data: [] };
+  const publicHandleById = new Map((publishedMembers ?? []).map((row) => [String(row.user_id), String(row.public_handle)]));
+  return { id: String(team.id), slug: String(team.slug), name: String(team.name), description: team.description, region: String(team.region), avatar_url: team.avatar_url, recruiting: Boolean(team.recruiting), recruitment_status: settings?.recruitment_status ?? (team.recruiting ? 'open' : 'closed'), recruitment_headline: settings?.recruitment_headline ?? '', contact_url: settings?.contact_url ?? null, card_accent: settings?.card_accent ?? '#32E0C4', supported_games: settings?.supported_games ?? [], members: (members ?? []).flatMap((member) => { const publicHandle = publicHandleById.get(String(member.user_id)); if (!publicHandle) return []; const profile = relation(member.profile as { avatar_url: string | null } | Array<{ avatar_url: string | null }> | null); return [{ user_id: String(member.user_id), username: publicHandle, avatar_url: profile?.avatar_url ?? null, role: String(member.role), status: String(member.status), joined_at: String(member.joined_at), left_at: member.left_at ? String(member.left_at) : null }]; }), tournaments: tournamentRows, achievements: (achievements ?? []).map((row) => ({ ...row, id: String(row.id), verification_token: String(row.verification_token), title: String(row.title), description: String(row.description), game: row.game ? String(row.game) : null, source_type: String(row.source_type), occurred_at: String(row.occurred_at) })), match_summary: { completed, wins }, can_manage: Boolean(viewerId && (team.owner_id === viewerId || ['captain'].includes(String(viewerMembership?.role)))), generated_at: new Date().toISOString() };
 }
 
 export async function getTeamPassportAchievementByToken(token: string): Promise<TeamPassportAchievementVerification | null> {

@@ -142,23 +142,23 @@ async function loadTeamHistory(userId: string): Promise<PassportTeamHistoryEntry
 }
 
 function normalizeCredential(row: Record<string, unknown>): PassportEventCredential {
-  const profile = firstRelation(row.profile as { username?: string; passport_profiles?: { display_name?: string } | Array<{ display_name?: string }> } | Array<{ username?: string; passport_profiles?: { display_name?: string } | Array<{ display_name?: string }> }> | null);
-  const issuer = firstRelation(row.issuer as { username?: string } | Array<{ username?: string }> | null);
+  const profile = firstRelation(row.profile as { passport_profiles?: { public_handle?: string; publication_status?: string; display_name?: string } | Array<{ public_handle?: string; publication_status?: string; display_name?: string }> } | Array<{ passport_profiles?: { public_handle?: string; publication_status?: string; display_name?: string } | Array<{ public_handle?: string; publication_status?: string; display_name?: string }> }> | null);
   const passport = firstRelation(profile?.passport_profiles);
+  const publicHandle = passport?.publication_status === 'published' ? passport.public_handle : null;
   return {
     id: String(row.id), verification_token: String(row.verification_token), user_id: String(row.user_id),
-    username: profile?.username ?? 'player', display_name: passport?.display_name ?? profile?.username ?? 'Player',
+    username: publicHandle ?? 'player', display_name: passport?.display_name ?? publicHandle ?? 'Player',
     event_key: String(row.event_key), event_title: String(row.event_title), stamp_type: row.stamp_type as PassportEventStampType,
     credential_state: row.credential_state as 'active' | 'revoked', game: row.game ? String(row.game) : null,
     role_label: row.role_label ? String(row.role_label) : null, placement: row.placement === null ? null : Number(row.placement),
     source_type: String(row.source_type), source_key: String(row.source_key), issued_by: row.issued_by ? String(row.issued_by) : null,
-    issuer_username: issuer?.username ?? null, issued_at: String(row.issued_at), occurred_at: String(row.occurred_at),
+    issuer_username: null, issued_at: String(row.issued_at), occurred_at: String(row.occurred_at),
     public_details: (row.public_details ?? {}) as Record<string, unknown>, media_url: row.media_url ? String(row.media_url) : null,
     media_consent: Boolean(row.media_consent), revoked_at: row.revoked_at ? String(row.revoked_at) : null,
   };
 }
 
-const CREDENTIAL_SELECT = '*, profile:profiles!passport_event_credentials_user_id_fkey(username, passport_profiles(display_name)), issuer:profiles!passport_event_credentials_issued_by_fkey(username)';
+const CREDENTIAL_SELECT = '*, profile:profiles!passport_event_credentials_user_id_fkey(passport_profiles(public_handle, publication_status, display_name))';
 
 export async function loadPassportEventCredentials(userId: string, includeRevoked = false) {
   let query = createServiceClient().from('passport_event_credentials').select(CREDENTIAL_SELECT).eq('user_id', userId).order('occurred_at', { ascending: false });
@@ -173,7 +173,9 @@ export async function loadPassportEventCredentials(userId: string, includeRevoke
 
 export async function getPassportCredentialByToken(token: string) {
   const { data } = await createServiceClient().from('passport_event_credentials').select(CREDENTIAL_SELECT).eq('verification_token', token).maybeSingle();
-  return data ? normalizeCredential(data as Record<string, unknown>) : null;
+  if (!data) return null;
+  const credential = normalizeCredential(data as Record<string, unknown>);
+  return credential.username === 'player' ? null : credential;
 }
 
 async function loadCvSettings(userId: string): Promise<PassportCvSettings> {

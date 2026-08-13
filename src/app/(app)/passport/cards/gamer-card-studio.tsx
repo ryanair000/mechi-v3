@@ -2,10 +2,11 @@
 
 import Image from 'next/image';
 import Link from 'next/link';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
 import { ArrowLeft, Copy, Download, ExternalLink, Loader2, MessageCircle, Sparkles } from 'lucide-react';
-import { useAuth } from '@/components/AuthProvider';
+import { useAuthFetch } from '@/components/AuthProvider';
+import type { PassportOwnerData } from '@/lib/passport-types';
 
 type CardFormat = 'square' | 'story' | 'horizontal';
 
@@ -16,20 +17,29 @@ const FORMAT_INFO: Record<CardFormat, { label: string; dimensions: string; ratio
 };
 
 export function GamerCardStudio() {
-  const { user } = useAuth();
+  const authFetch = useAuthFetch();
   const [format, setFormat] = useState<CardFormat>('horizontal');
   const [imageLoading, setImageLoading] = useState(true);
-  const username = user?.username ?? '';
+  const [username, setUsername] = useState('');
+  useEffect(() => {
+    void authFetch('/api/passport/me').then(async (response) => {
+      const body = await response.json() as { passport?: PassportOwnerData };
+      const identity = body.passport?.identity;
+      setUsername(identity?.publication_status === 'published' ? identity.public_handle ?? '' : '');
+    });
+  }, [authFetch]);
   const imageUrl = username ? `/api/passport/cards/${encodeURIComponent(username)}?format=${format}` : '';
   const passportPath = username ? `/@${encodeURIComponent(username)}` : '/passport';
 
   const copyPassport = async () => {
+    if (!username) return toast.error('Publish your Passport before sharing it');
     const url = `${window.location.origin}${passportPath}`;
     try { await navigator.clipboard.writeText(url); toast.success('Passport link copied'); }
     catch { toast.error('Could not copy link'); }
   };
 
   const shareWhatsApp = () => {
+    if (!username) return toast.error('Publish your Passport before sharing it');
     const url = `${window.location.origin}${passportPath}`;
     const text = `My PlayMechi Gamer Passport: ${url}`;
     window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank', 'noopener,noreferrer');

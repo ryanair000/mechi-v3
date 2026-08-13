@@ -5,6 +5,7 @@ import { getGameRatingKey } from '@/lib/config';
 import { ACHIEVEMENTS, getLevelFromXp, getRankDivision } from '@/lib/gamification';
 import { resolveProfileLocation } from '@/lib/location';
 import { getProfileShareStats } from '@/lib/share';
+import { validatePassportHandle } from '@/lib/passport-handle';
 
 export const runtime = 'edge';
 
@@ -35,20 +36,32 @@ export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const username = searchParams.get('username');
 
-  if (!username) {
+  const handle = validatePassportHandle(username ?? '');
+  if (!handle.valid) {
     return notFoundCard('Mechi / Player not found');
   }
 
   const supabase = createServiceClient();
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('*')
-    .ilike('username', username)
-    .single();
-
-  if (!profile) {
+  const { data: publication } = await supabase
+    .from('passport_profiles')
+    .select('user_id')
+    .eq('public_handle', handle.handle)
+    .eq('publication_status', 'published')
+    .maybeSingle();
+  if (!publication?.user_id) {
     return notFoundCard('Mechi / Player not found');
   }
+
+  const { data: storedProfile } = await supabase
+    .from('profiles')
+    .select('*')
+    .eq('id', publication.user_id)
+    .single();
+
+  if (!storedProfile) {
+    return notFoundCard('Mechi / Player not found');
+  }
+  const profile = { ...storedProfile, username: handle.handle };
 
   const { games, bestRating, totalWins, totalLosses } = getProfileShareStats(
     profile as Record<string, unknown>

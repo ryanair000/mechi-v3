@@ -3,6 +3,7 @@ import { cookies } from 'next/headers';
 import Image from 'next/image';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
+import { cache } from 'react';
 import {
   CalendarDays,
   Gamepad2,
@@ -21,6 +22,7 @@ import { GAMES } from '@/lib/config';
 import { verifyToken } from '@/lib/auth';
 import { PASSPORT_GAME_STATUS_LABELS } from '@/lib/passport-game-types';
 import { getPassportData, getPassportPath, normalizePassportUsername } from '@/lib/passport';
+import { buildPassportMetadata } from '@/lib/passport-metadata';
 import { arePassportFriends, hasPassportBlockBetween } from '@/lib/passport-social';
 import { getPassportHighlights } from '@/lib/passport-community';
 import { getPassportShelves, getVisiblePassportProgression } from '@/lib/passport-progression';
@@ -30,7 +32,6 @@ import {
   type PassportField,
   type PublicPassportData,
 } from '@/lib/passport-types';
-import { APP_URL } from '@/lib/urls';
 import type { GameKey, PlatformKey } from '@/types';
 
 export const dynamic = 'force-dynamic';
@@ -38,6 +39,8 @@ export const dynamic = 'force-dynamic';
 type Props = {
   params: Promise<{ handle: string }>;
 };
+
+const getCachedPublicPassport = cache((username: string) => getPassportData(username));
 
 function resolveHandle(value: string): string {
   let decoded = value;
@@ -77,42 +80,7 @@ function primaryChallengeSetup(passport: PublicPassportData): {
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { handle } = await params;
   const username = resolveHandle(handle);
-  if (!username) return { title: 'Gamer Passport Not Found | Mechi V5' };
-
-  const passport = await getPassportData(username);
-  if (!passport) return { title: 'Gamer Passport Not Found | Mechi V5' };
-
-  const identity = passport.identity;
-  const title = `${identity.display_name} (@${identity.username}) | PlayMechi Gamer Passport`;
-  const description = passport.access === 'restricted'
-    ? `@${identity.username}'s PlayMechi Gamer Passport is private.`
-    : `${identity.display_name}'s Mechi V5 Gamer Passport: ${identity.games.length} games, ${passport.summary?.total_matches ?? 0} competitive matches, and ${passport.summary?.events_attended ?? 0} verified event check-ins.`;
-  const url = `${APP_URL}${getPassportPath(identity.username)}`;
-
-  return {
-    title,
-    description,
-    alternates: { canonical: url },
-    openGraph: {
-      title,
-      description,
-      type: 'profile',
-      url,
-      siteName: 'PlayMechi',
-      images: [{
-        url: `${APP_URL}/api/og/profile?username=${encodeURIComponent(identity.username)}`,
-        width: 1200,
-        height: 630,
-        alt: `${identity.display_name}'s Gamer Passport`,
-      }],
-    },
-    twitter: {
-      card: 'summary_large_image',
-      title,
-      description,
-      images: [`${APP_URL}/api/og/profile?username=${encodeURIComponent(identity.username)}`],
-    },
-  };
+  return buildPassportMetadata(username ? await getCachedPublicPassport(username) : null);
 }
 
 export default async function GamerPassportPage({ params }: Props) {
@@ -120,7 +88,7 @@ export default async function GamerPassportPage({ params }: Props) {
   const username = resolveHandle(handle);
   if (!username) notFound();
 
-  let passport = await getPassportData(username);
+  let passport = await getCachedPublicPassport(username);
   if (!passport) notFound();
 
   const token = (await cookies()).get('auth_token')?.value;

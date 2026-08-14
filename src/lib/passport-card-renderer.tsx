@@ -70,6 +70,35 @@ export async function renderPassportCardPng(model: PassportCardModel): Promise<U
   return png;
 }
 
+export async function renderPrivatePassportCardPng(): Promise<Uint8Array> {
+  const size = { width: 1200, height: 630 };
+  const response = new ImageResponse(
+    <div style={{ display: 'flex', position: 'relative', width: '100%', height: '100%', overflow: 'hidden', flexDirection: 'column', justifyContent: 'space-between', backgroundImage: 'linear-gradient(145deg, #071018 0%, #102438 68%, #123A42 100%)', color: '#FFFFFF', padding: 56 }}>
+      <div style={{ display: 'flex', position: 'absolute', width: 520, height: 520, borderRadius: 9999, right: -180, top: -220, backgroundColor: '#32E0C4', opacity: 0.12 }} />
+      <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+        <div style={{ display: 'flex', width: 18, height: 18, borderRadius: 999, backgroundColor: '#32E0C4' }} />
+        <span style={{ fontSize: 21, fontWeight: 900, letterSpacing: 3 }}>PLAYMECHI</span>
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column', maxWidth: 830 }}>
+        <span style={{ fontSize: 22, color: '#32E0C4', fontWeight: 900, letterSpacing: 2 }}>GAMER PASSPORT</span>
+        <span style={{ marginTop: 14, fontSize: 68, lineHeight: 1, fontWeight: 900, letterSpacing: -3 }}>Private profile</span>
+        <span style={{ marginTop: 24, fontSize: 24, lineHeight: 1.4, color: '#FFFFFF99' }}>This player controls who can view their gaming identity.</span>
+      </div>
+      <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between' }}>
+        <span style={{ fontSize: 18, color: '#FFFFFF77' }}>Privacy is part of the profile.</span>
+        <span style={{ fontSize: 18, fontWeight: 900 }}>mechi.club</span>
+      </div>
+    </div>,
+    { ...size, emoji: 'twemoji' }
+  );
+  const png = new Uint8Array(await response.arrayBuffer());
+  const dimensions = readPassportCardPngDimensions(png);
+  if (!dimensions || dimensions.width !== size.width || dimensions.height !== size.height) {
+    throw new Error('PASSPORT_PRIVATE_CARD_INVALID_PNG');
+  }
+  return png;
+}
+
 function CardMetric({ value, label, large }: { value: number; label: string; large: boolean }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column' }}>

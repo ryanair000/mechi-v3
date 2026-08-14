@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getAuthUser } from '@/lib/auth';
 import { getPassportData, normalizePassportUsername } from '@/lib/passport';
-import { arePassportFriends, hasPassportBlockBetween } from '@/lib/passport-social';
+import { resolvePassportRequestViewerAccess } from '@/lib/passport-viewer-access';
 
 export async function GET(
   request: NextRequest,
@@ -17,10 +16,15 @@ export async function GET(
   if (!passport) {
     return NextResponse.json({ error: 'Gamer Passport not found' }, { status: 404 });
   }
-  const viewer = getAuthUser(request);
-  if (viewer && viewer.sub !== passport.identity.user_id) {
-    if (await hasPassportBlockBetween(viewer.sub, passport.identity.user_id)) return NextResponse.json({ error: 'Gamer Passport not found' }, { status: 404 });
-    if (await arePassportFriends(viewer.sub, passport.identity.user_id)) passport = await getPassportData(normalizedUsername, { friendView: true });
+  const viewerAccess = await resolvePassportRequestViewerAccess(
+    request,
+    passport.identity.user_id
+  );
+  if (viewerAccess.blocked) {
+    return NextResponse.json({ error: 'Gamer Passport not found' }, { status: 404 });
+  }
+  if (viewerAccess.friend_view) {
+    passport = await getPassportData(normalizedUsername, { friendView: true });
   }
   if (!passport) return NextResponse.json({ error: 'Gamer Passport not found' }, { status: 404 });
 
@@ -28,7 +32,9 @@ export async function GET(
     { passport },
     {
       headers: {
-        'Cache-Control': viewer ? 'private, no-store' : 'public, max-age=30, stale-while-revalidate=120',
+        'Cache-Control': viewerAccess.credential_presented
+          ? 'private, no-store'
+          : 'public, max-age=30, stale-while-revalidate=120',
       },
     }
   );

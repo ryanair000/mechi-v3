@@ -676,6 +676,7 @@ export interface JWTPayload {
   username: string;
   role?: UserRole;
   is_banned?: boolean;
+  auth_session_version?: number;
   iat?: number;
   exp?: number;
 }

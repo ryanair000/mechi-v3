@@ -10,6 +10,7 @@ import {
   shouldHideE2EFixtures,
 } from '@/lib/e2e-fixtures';
 import { getClientIp } from '@/lib/rateLimit';
+import { nextAuthSessionVersion } from '@/lib/auth-session-policy';
 import { createServiceClient } from '@/lib/supabase';
 import { firstRelation } from '@/lib/tournaments';
 import type { UserRole } from '@/types';
@@ -231,7 +232,7 @@ export async function PATCH(
 
     const { data: target, error: targetError } = await supabase
       .from('profiles')
-      .select('id, username, phone, role, is_banned')
+      .select('id, username, phone, role, is_banned, auth_session_version')
       .eq('id', id)
       .single();
 
@@ -239,7 +240,12 @@ export async function PATCH(
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
-    if ((body.action === 'set_role' || target.role !== 'user') && !hasAdminAccess(admin)) {
+    if (
+      (body.action === 'set_role'
+        || body.action === 'revoke_sessions'
+        || target.role !== 'user')
+      && !hasAdminAccess(admin)
+    ) {
       return NextResponse.json(
         { error: 'Only admins can change roles or act on moderators/admins' },
         { status: 403 }
@@ -255,6 +261,7 @@ export async function PATCH(
         ban_reason: body.reason?.trim() || null,
         banned_at: new Date().toISOString(),
         banned_by: admin.id,
+        auth_session_version: nextAuthSessionVersion(target.auth_session_version),
       };
       auditAction = 'ban_user';
     } else if (body.action === 'unban') {
@@ -281,8 +288,16 @@ export async function PATCH(
         );
       }
 
-      updateData = { role: body.role };
+      updateData = {
+        role: body.role,
+        auth_session_version: nextAuthSessionVersion(target.auth_session_version),
+      };
       auditAction = 'change_role';
+    } else if (body.action === 'revoke_sessions') {
+      updateData = {
+        auth_session_version: nextAuthSessionVersion(target.auth_session_version),
+      };
+      auditAction = 'revoke_user_sessions';
     } else {
       return NextResponse.json({ error: 'Unknown action' }, { status: 400 });
     }

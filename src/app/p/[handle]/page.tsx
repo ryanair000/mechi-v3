@@ -19,11 +19,10 @@ import { BrandLogo } from '@/components/BrandLogo';
 import { ChallengePlayerButton } from '@/components/ChallengePlayerButton';
 import { PassportSocialActions } from '@/components/PassportSocialActions';
 import { GAMES } from '@/lib/config';
-import { verifyToken } from '@/lib/auth';
 import { PASSPORT_GAME_STATUS_LABELS } from '@/lib/passport-game-types';
 import { getPassportData, getPassportPath, normalizePassportUsername } from '@/lib/passport';
 import { buildPassportMetadata } from '@/lib/passport-metadata';
-import { arePassportFriends, hasPassportBlockBetween } from '@/lib/passport-social';
+import { resolvePassportTokenViewerAccess } from '@/lib/passport-viewer-access';
 import { getPassportHighlights } from '@/lib/passport-community';
 import { getPassportShelves, getVisiblePassportProgression } from '@/lib/passport-progression';
 import {
@@ -92,13 +91,14 @@ export default async function GamerPassportPage({ params }: Props) {
   if (!passport) notFound();
 
   const token = (await cookies()).get('auth_token')?.value;
-  const viewer = token ? verifyToken(token) : null;
-  if (viewer && viewer.sub !== passport.identity.user_id) {
-    if (await hasPassportBlockBetween(viewer.sub, passport.identity.user_id)) notFound();
-    if (await arePassportFriends(viewer.sub, passport.identity.user_id)) {
-      passport = await getPassportData(username, { friendView: true });
-      if (!passport) notFound();
-    }
+  const viewerAccess = await resolvePassportTokenViewerAccess(
+    token,
+    passport.identity.user_id
+  );
+  if (viewerAccess.blocked) notFound();
+  if (viewerAccess.friend_view) {
+    passport = await getPassportData(username, { friendView: true });
+    if (!passport) notFound();
   }
 
   const { identity, summary } = passport;
@@ -109,10 +109,10 @@ export default async function GamerPassportPage({ params }: Props) {
   const showTeams = isVisible(passport, 'teams');
   const showGames = isVisible(passport, 'games');
   const showVerifiedRecords = typeof summary?.verified_records_count === 'number';
-  const highlights = passport.access === 'public' ? await getPassportHighlights(identity.user_id, viewer?.sub ?? null) : [];
+  const highlights = passport.access === 'public' ? await getPassportHighlights(identity.user_id, viewerAccess.viewer_id) : [];
   const [progression, shelves] = passport.access === 'public' ? await Promise.all([
-    getVisiblePassportProgression(identity.user_id, viewer?.sub ?? null, showAchievements),
-    showGames ? getPassportShelves(identity.user_id, viewer?.sub ?? null) : Promise.resolve([]),
+    getVisiblePassportProgression(identity.user_id, viewerAccess.viewer_id, showAchievements),
+    showGames ? getPassportShelves(identity.user_id, viewerAccess.viewer_id) : Promise.resolve([]),
   ]) : [null, []];
   const frame = progression?.cosmetics.find((cosmetic) => cosmetic.type === 'avatar_frame');
   const theme = progression?.cosmetics.find((cosmetic) => cosmetic.type === 'theme');

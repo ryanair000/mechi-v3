@@ -4,6 +4,7 @@ export type AuditAction =
   | 'ban_user'
   | 'unban_user'
   | 'change_role'
+  | 'revoke_user_sessions'
   | 'override_match'
   | 'cancel_match'
   | 'resolve_dispute'

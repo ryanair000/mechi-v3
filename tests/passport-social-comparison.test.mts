@@ -23,13 +23,13 @@ test('block state gates discovery, comparisons, recommendations, and challenges'
   assert.match(social, /hasPassportBlockBetween/);
   assert.match(social, /discoverPassportProfiles[\s\S]+passport_blocks/);
   assert.match(social, /recommendPassportGame[\s\S]+hasPassportBlockBetween/);
-  assert.match(comparison, /hasPassportBlockBetween\(leftProfile\.id, rightProfile\.id\)/);
+  assert.match(comparison, /hasPassportBlockBetween\(leftProfile\.user_id, rightProfile\.user_id\)/);
   assert.match(challengeCreate, /hasPassportBlockBetween\(authUser\.id, opponentId\)/);
   assert.match(challengeAccept, /hasPassportBlockBetween\(challenge\.challenger_id, challenge\.opponent_id\)/);
 });
 
 test('Taste Match uses visible libraries and treats zero overlap as discovery', () => {
-  assert.match(comparison, /getPassportData\(String\(leftProfile\.username\), \{ friendView \}\)/);
+  assert.match(comparison, /getPassportData\(String\(leftProfile\.public_handle\), \{ friendView \}\)/);
   assert.match(comparison, /score: null/);
   assert.match(comparison, /No visible games overlap yet/);
   for (const factor of ['shared_games', 'favorites', 'play_style', 'platforms', 'genres']) assert.match(comparison, new RegExp(`key: '${factor}'`));

@@ -11,8 +11,10 @@ import {
 } from '@/lib/e2e-fixtures';
 import { getClientIp } from '@/lib/rateLimit';
 import { nextAuthSessionVersion } from '@/lib/auth-session-policy';
+import { setAdminAgePolicy } from '@/lib/passport-age-policy';
 import { createServiceClient } from '@/lib/supabase';
 import { firstRelation } from '@/lib/tournaments';
+import type { AgePolicyStatus } from '@/lib/passport-types';
 import type { UserRole } from '@/types';
 
 function readRelationCount(value: unknown): number {
@@ -50,7 +52,7 @@ export async function GET(
     const { data: userProfile, error: userError } = await supabase
       .from('profiles')
       .select(
-        'id, username, phone, email, region, role, is_banned, ban_reason, banned_at, selected_games, platforms, game_ids, created_at, xp, level, mp, win_streak, max_win_streak, plan, plan_since, plan_expires_at'
+        'id, username, phone, email, region, role, is_banned, ban_reason, banned_at, selected_games, platforms, game_ids, created_at, xp, level, mp, win_streak, max_win_streak, plan, plan_since, plan_expires_at, age_policy_status, age_policy_source, age_policy_updated_at'
       )
       .eq('id', id)
       .single();
@@ -227,12 +229,13 @@ export async function PATCH(
       action?: string;
       reason?: string;
       role?: UserRole;
+      age_policy_status?: AgePolicyStatus;
     };
     const supabase = createServiceClient();
 
     const { data: target, error: targetError } = await supabase
       .from('profiles')
-      .select('id, username, phone, role, is_banned, auth_session_version')
+      .select('id, username, phone, role, is_banned, auth_session_version, age_policy_status, age_policy_source, age_policy_updated_at')
       .eq('id', id)
       .single();
 
@@ -243,6 +246,7 @@ export async function PATCH(
     if (
       (body.action === 'set_role'
         || body.action === 'revoke_sessions'
+        || body.action === 'set_age_policy'
         || target.role !== 'user')
       && !hasAdminAccess(admin)
     ) {
@@ -254,6 +258,54 @@ export async function PATCH(
 
     let updateData: Record<string, unknown>;
     let auditAction: AuditAction;
+
+    if (body.action === 'set_age_policy') {
+      if (!body.age_policy_status || !['unknown', 'minor', 'adult'].includes(body.age_policy_status)) {
+        return NextResponse.json({ error: 'Invalid age policy status' }, { status: 400 });
+      }
+      const reason = body.reason?.trim() ?? '';
+      if (reason.length < 5 || reason.length > 500) {
+        return NextResponse.json(
+          { error: 'Provide a 5-500 character reason for the age-policy change' },
+          { status: 400 }
+        );
+      }
+
+      const ageResult = await setAdminAgePolicy({
+        userId: id,
+        actorId: admin.id,
+        status: body.age_policy_status,
+        reason,
+      });
+      if (!ageResult.storageReady) {
+        return NextResponse.json(
+          { error: ageResult.error, storage_ready: false },
+          { status: 503 }
+        );
+      }
+      if (ageResult.error || !ageResult.policy) {
+        return NextResponse.json(
+          { error: ageResult.error ?? 'Failed to update age policy' },
+          { status: 400 }
+        );
+      }
+
+      await writeAuditLog({
+        adminId: admin.id,
+        action: 'change_user_age_policy',
+        targetType: 'user',
+        targetId: id,
+        details: {
+          username: target.username,
+          previousStatus: target.age_policy_status ?? 'unknown',
+          newStatus: body.age_policy_status,
+          reason,
+        },
+        ipAddress: getClientIp(request),
+      });
+
+      return NextResponse.json({ success: true, age_policy: ageResult.policy });
+    }
 
     if (body.action === 'ban') {
       updateData = {

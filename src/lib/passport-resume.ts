@@ -3,6 +3,10 @@ import 'server-only';
 import { createHash, randomUUID } from 'node:crypto';
 import { GAMES } from '@/lib/config';
 import { isMissingTableError } from '@/lib/db-compat';
+import {
+  isMinorAccount,
+  MINOR_PASSPORT_PRIVACY_ERROR,
+} from '@/lib/passport-age-policy';
 import { getPassportData } from '@/lib/passport';
 import { isPassportFieldVisible } from '@/lib/passport-public-summary';
 import { buildPublicPassportCompetitiveResume } from '@/lib/passport-resume-public';
@@ -241,6 +245,9 @@ export async function getPassportCompetitiveResume(
 }
 
 export async function updatePassportCvSettings(userId: string, settings: PassportCvSettings) {
+  if (settings.inquiry_enabled && await isMinorAccount(userId)) {
+    return { ok: false, error: MINOR_PASSPORT_PRIVACY_ERROR };
+  }
   const { error } = await createServiceClient().from('passport_cv_settings').upsert({ user_id: userId, ...settings }, { onConflict: 'user_id' });
   return error ? { ok: false, error: 'Could not update Gamer CV settings' } : { ok: true, error: null };
 }

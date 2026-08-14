@@ -31,6 +31,9 @@ export const PASSPORT_STATUSES = [
 
 export const PASSPORT_VISIBILITIES = ['public', 'friends', 'private'] as const;
 
+export const AGE_POLICY_STATUSES = ['unknown', 'minor', 'adult'] as const;
+export const AGE_POLICY_SOURCES = ['self_declared', 'admin'] as const;
+
 export const PASSPORT_FIELDS = [
   'bio',
   'gamer_since',
@@ -51,6 +54,15 @@ export type PassportArchetype = (typeof PASSPORT_ARCHETYPES)[number];
 export type PassportStatus = (typeof PASSPORT_STATUSES)[number];
 export type PassportVisibility = (typeof PASSPORT_VISIBILITIES)[number];
 export type PassportField = (typeof PASSPORT_FIELDS)[number];
+export type AgePolicyStatus = (typeof AGE_POLICY_STATUSES)[number];
+export type AgePolicySource = (typeof AGE_POLICY_SOURCES)[number];
+
+export type PrivateAgePolicy = {
+  status: AgePolicyStatus;
+  source: AgePolicySource | null;
+  updated_at: string | null;
+  storage_ready: boolean;
+};
 
 export type PassportFieldVisibility = Record<PassportField, PassportVisibility>;
 
@@ -224,6 +236,7 @@ export type PublicPassportData = {
 export type PassportOwnerData = Omit<PublicPassportData, 'summary' | 'verifications'> & {
   access: 'public';
   identity: PassportIdentity;
+  age_policy: PrivateAgePolicy;
   summary: PassportSummary | null;
   verifications: PassportVerificationRecordPreview[];
 };

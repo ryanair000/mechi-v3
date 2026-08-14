@@ -57,3 +57,18 @@ export function isMissingTableError(error: unknown, table?: string): boolean {
     (table ? message.includes(`'public.${table}'`) || message.includes(table) : true)
   );
 }
+
+export function isMissingFunctionError(error: unknown, functionName?: string): boolean {
+  const dbError = (error ?? {}) as DatabaseErrorLike;
+  const message = (dbError.message ?? '').toLowerCase();
+  const normalizedFunction = functionName?.toLowerCase();
+  const missingFunction = dbError.code === 'PGRST202'
+    || dbError.code === '42883'
+    || message.includes('function') && (
+      message.includes('does not exist')
+      || message.includes('could not find')
+      || message.includes('schema cache')
+    );
+
+  return missingFunction && (!normalizedFunction || message.includes(normalizedFunction));
+}

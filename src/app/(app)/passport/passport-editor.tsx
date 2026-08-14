@@ -63,6 +63,7 @@ export function PassportEditor() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [publishing, setPublishing] = useState(false);
+  const [ageSaving, setAgeSaving] = useState(false);
   const [publicHandle, setPublicHandle] = useState('');
   const [displayName, setDisplayName] = useState('');
   const [bio, setBio] = useState('');
@@ -195,6 +196,10 @@ export function PassportEditor() {
   };
 
   const changePublication = async (action: 'publish' | 'unpublish') => {
+    if (action === 'publish' && passport?.age_policy.status === 'minor') {
+      toast.error('Minor-account privacy protections keep this Gamer Passport private');
+      return;
+    }
     if (action === 'publish' && defaultVisibility === 'private') {
       toast.error('Choose Public or Friends visibility before publishing');
       return;
@@ -221,6 +226,36 @@ export function PassportEditor() {
     }
   };
 
+  const declareAgePolicy = async (status: 'minor' | 'adult') => {
+    const confirmed = window.confirm(
+      status === 'minor'
+        ? 'Activate under-18 privacy protections? Your Passport, discovery, public game items, activity, Replay, media kit, and inquiry links will become private immediately. An administrator must review any future removal.'
+        : 'Confirm that you are 18 or older? This records only an age group, not your date of birth.'
+    );
+    if (!confirmed) return;
+
+    setAgeSaving(true);
+    try {
+      const response = await authFetch('/api/passport/me/age-policy', {
+        method: 'POST',
+        body: JSON.stringify({ status, confirmed: true }),
+      });
+      const body = await response.json() as { error?: string };
+      if (!response.ok) {
+        toast.error(body.error ?? 'Could not update age-group privacy');
+        return;
+      }
+      toast.success(status === 'minor'
+        ? 'Minor privacy protections are active'
+        : 'Age-group policy saved');
+      await loadPassport();
+    } catch {
+      toast.error('Could not update age-group privacy');
+    } finally {
+      setAgeSaving(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="mx-auto w-full max-w-6xl space-y-4 px-4 py-6 sm:px-6 lg:px-8">
@@ -243,6 +278,7 @@ export function PassportEditor() {
   }
 
   const isPublished = passport.identity.publication_status === 'published';
+  const isMinorProtected = passport.age_policy.status === 'minor';
   const publicPath = passport.identity.public_handle
     ? `/@${encodeURIComponent(passport.identity.public_handle)}`
     : null;
@@ -320,6 +356,55 @@ export function PassportEditor() {
         </section>
       ) : null}
 
+      <section className={`rounded-[var(--radius-card)] border p-5 sm:p-6 ${isMinorProtected ? 'border-amber-300/25 bg-amber-300/[0.07]' : 'border-[var(--border-color)] bg-[var(--surface)]'}`}>
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+          <div className="max-w-2xl">
+            <p className="section-title">Age-group privacy</p>
+            <h2 className="mt-2 text-xl font-black text-[var(--text-primary)]">
+              {isMinorProtected
+                ? 'Under-18 protections are active'
+                : passport.age_policy.status === 'adult'
+                  ? '18-or-older status recorded'
+                  : 'Choose the privacy policy for your age group'}
+            </h2>
+            <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">
+              {isMinorProtected
+                ? 'Your public Passport and connected sharing surfaces are locked private. Mechi stores only this age-policy group—not your birthday. Contact support for an administrator review when this needs to change.'
+                : 'Players under 18 receive stricter privacy automatically. This selection is private and never appears on your Gamer Passport.'}
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {passport.age_policy.status !== 'minor' ? (
+              <button
+                type="button"
+                className="btn-outline"
+                disabled={ageSaving || !passport.age_policy.storage_ready}
+                onClick={() => void declareAgePolicy('minor')}
+              >
+                {ageSaving ? <Loader2 size={15} className="animate-spin" /> : <LockKeyhole size={15} />}
+                I am under 18
+              </button>
+            ) : null}
+            {passport.age_policy.status === 'unknown' ? (
+              <button
+                type="button"
+                className="btn-primary"
+                disabled={ageSaving || !passport.age_policy.storage_ready}
+                onClick={() => void declareAgePolicy('adult')}
+              >
+                {ageSaving ? <Loader2 size={15} className="animate-spin" /> : <ShieldCheck size={15} />}
+                I am 18 or older
+              </button>
+            ) : null}
+          </div>
+        </div>
+        {!passport.age_policy.storage_ready ? (
+          <p className="mt-3 text-xs leading-5 text-amber-200/80">
+            The minor-account privacy migration is not ready in this environment.
+          </p>
+        ) : null}
+      </section>
+
       <section className={`rounded-[var(--radius-card)] border p-5 sm:p-6 ${isPublished ? 'border-emerald-300/25 bg-emerald-300/[0.06]' : 'border-amber-300/20 bg-amber-300/[0.05]'}`}>
         <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div className="max-w-2xl">
@@ -328,12 +413,14 @@ export function PassportEditor() {
             <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">
               {isPublished
                 ? `Players can visit @${passport.identity.public_handle}. Unpublish at any time to remove it from public pages and discovery.`
-                : 'Editing does not publish anything. Choose a separate gamer handle and explicitly publish when you are ready.'}
+                : isMinorProtected
+                  ? 'Minor-account protections prevent publication and discovery. Your private Gamer Passport remains available to you.'
+                  : 'Editing does not publish anything. Choose a separate gamer handle and explicitly publish when you are ready.'}
             </p>
           </div>
           <button
             type="button"
-            disabled={publishing || saving || !passport.identity.storage_ready}
+            disabled={publishing || saving || !passport.identity.storage_ready || (!isPublished && isMinorProtected)}
             onClick={() => void changePublication(isPublished ? 'unpublish' : 'publish')}
             className={isPublished ? 'btn-outline' : 'btn-primary'}
           >
@@ -451,7 +538,7 @@ export function PassportEditor() {
 
             <label className="mt-5 block space-y-2">
               <span className="label">Default Passport visibility</span>
-              <select value={defaultVisibility} onChange={(event) => { const value = event.target.value as PassportVisibility; setDefaultVisibility(value); if (value !== 'public') setIsDiscoverable(false); }} className="input-field">
+              <select disabled={isMinorProtected} value={defaultVisibility} onChange={(event) => { const value = event.target.value as PassportVisibility; setDefaultVisibility(value); if (value !== 'public') setIsDiscoverable(false); }} className="input-field">
                 {PASSPORT_VISIBILITIES.map((visibility) => <option key={visibility} value={visibility} disabled={isPublished && visibility === 'private'}>{visibilityLabel(visibility)}</option>)}
               </select>
               <span className="block text-xs leading-5 text-[var(--text-soft)]">Friends-only sections stay hidden from strangers until the Phase 3 friend graph launches.</span>
@@ -462,6 +549,7 @@ export function PassportEditor() {
                 <label key={field} className="flex items-center justify-between gap-4 py-3">
                   <span className="text-sm font-bold text-[var(--text-secondary)]">{FIELD_LABELS[field]}</span>
                   <select
+                    disabled={isMinorProtected}
                     value={fieldVisibility[field]}
                     onChange={(event) => setFieldVisibility((current) => ({ ...current, [field]: event.target.value as PassportVisibility }))}
                     className="rounded-lg border border-[var(--border-color)] bg-[var(--surface-strong)] px-2.5 py-1.5 text-xs font-bold text-[var(--text-primary)]"
@@ -472,7 +560,7 @@ export function PassportEditor() {
               ))}
             </div>
 
-            <button type="button" disabled={!isPublished || defaultVisibility !== 'public'} onClick={() => setIsDiscoverable((current) => !current)} className="mt-5 flex w-full items-center justify-between rounded-2xl border border-[var(--border-color)] bg-[var(--surface-elevated)] p-4 text-left disabled:cursor-not-allowed disabled:opacity-50">
+            <button type="button" disabled={isMinorProtected || !isPublished || defaultVisibility !== 'public'} onClick={() => setIsDiscoverable((current) => !current)} className="mt-5 flex w-full items-center justify-between rounded-2xl border border-[var(--border-color)] bg-[var(--surface-elevated)] p-4 text-left disabled:cursor-not-allowed disabled:opacity-50">
               <span>
                 <span className="block text-sm font-black text-[var(--text-primary)]">Profile discovery</span>
                 <span className="mt-1 block text-xs leading-5 text-[var(--text-soft)]">Available after publishing with Public visibility. Publication never enables discovery automatically.</span>

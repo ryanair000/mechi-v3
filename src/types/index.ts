@@ -704,6 +704,9 @@ export interface AdminUser {
   ban_reason: string | null;
   banned_at: string | null;
   selected_games: string[];
+  age_policy_status?: 'unknown' | 'minor' | 'adult';
+  age_policy_source?: 'self_declared' | 'admin' | null;
+  age_policy_updated_at?: string | null;
   created_at: string;
 }
 

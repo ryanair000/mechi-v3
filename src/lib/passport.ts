@@ -16,6 +16,11 @@ import {
 } from '@/lib/passport-handle';
 import { createServiceClient } from '@/lib/supabase';
 import {
+  getProfileAgePolicy,
+  isMinorAccount,
+  MINOR_PASSPORT_PRIVACY_ERROR,
+} from '@/lib/passport-age-policy';
+import {
   DEFAULT_PASSPORT_FIELD_VISIBILITY,
   PASSPORT_ARCHETYPES,
   PASSPORT_FIELDS,
@@ -159,6 +164,7 @@ export async function resolvePublicPassportHandleForAccountUsername(
 ): Promise<string | null> {
   const profile = await getPublicProfileData(normalizePassportUsername(accountUsername));
   if (!profile) return null;
+  if (await isMinorAccount(profile.id)) return null;
   const result = await createServiceClient()
     .from('passport_profiles')
     .select('public_handle')
@@ -586,6 +592,7 @@ export async function getPassportData(
       .eq('publication_status', 'published')
       .maybeSingle();
     if (resolution.error || !resolution.data?.user_id) return null;
+    if (await isMinorAccount(resolution.data.user_id as string)) return null;
     profile = await getPublicProfileDataByUserId(resolution.data.user_id as string);
   }
   if (!profile) return null;
@@ -651,6 +658,7 @@ export async function getPassportData(
     return {
       access: 'public',
       identity,
+      age_policy: await getProfileAgePolicy(profile.id),
       summary,
       events,
       teams,
@@ -757,9 +765,24 @@ export async function upsertPassportProfile(
   const supabase = createServiceClient();
   const updateData: Record<string, unknown> = { user_id: userId };
   const current = await loadPassportProfile(userId);
+  const agePolicy = await getProfileAgePolicy(userId);
 
   if (!current.storageReady) {
     return { data: null, error: 'Passport storage is not ready', storageReady: false };
+  }
+
+  if (agePolicy.status === 'minor') {
+    const widensDefault = input.default_visibility !== undefined
+      && input.default_visibility !== 'private';
+    const widensFields = input.field_visibility
+      && Object.values(input.field_visibility).some((value) => value !== 'private');
+    if (widensDefault || widensFields || input.is_discoverable === true) {
+      return {
+        data: null,
+        error: MINOR_PASSPORT_PRIVACY_ERROR,
+        storageReady: true,
+      };
+    }
   }
 
   if ('public_handle' in input) {
@@ -891,6 +914,13 @@ export async function setPassportPublication(
   const now = new Date().toISOString();
   let update: Record<string, unknown>;
   if (action === 'publish') {
+    if (await isMinorAccount(userId)) {
+      return {
+        data: null,
+        error: MINOR_PASSPORT_PRIVACY_ERROR,
+        storageReady: true,
+      };
+    }
     if (!options.confirmed) {
       return { data: null, error: 'Confirm that you want to publish this Gamer Passport', storageReady: true };
     }

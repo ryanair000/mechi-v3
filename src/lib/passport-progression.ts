@@ -38,7 +38,7 @@ async function loadProjectionSources(userId: string): Promise<ProjectionSources>
   const supabase = createServiceClient();
   const [profileResult, gamesResult, matchesResult, eventsResult, friendshipsResult, teamsResult, activityResult, replayResult] = await Promise.all([
     supabase.from('profiles').select('plan, plan_expires_at').eq('id', userId).maybeSingle(),
-    supabase.from('passport_game_entries').select('id, play_status, hours_played, created_at, completed_on, game:passport_game_catalog(title, slug, genres)').eq('user_id', userId),
+    supabase.from('passport_game_entries').select('id, play_status, hours_played, created_at, updated_at, completed_on, game:passport_game_catalog(title, slug, genres)').eq('user_id', userId),
     supabase.from('matches').select('id, game, winner_id, player1_id, player2_id, completed_at').eq('status', 'completed').or(`player1_id.eq.${userId},player2_id.eq.${userId}`),
     supabase.from('passport_event_credentials').select('id, event_key, event_title, stamp_type, game, occurred_at').eq('user_id', userId).eq('credential_state', 'active').in('stamp_type', PRESENCE_STAMPS),
     supabase.from('passport_friendships').select('id, user_a_id, user_b_id, updated_at').eq('status', 'accepted').or(`user_a_id.eq.${userId},user_b_id.eq.${userId}`),
@@ -69,6 +69,40 @@ function calculateDimensions(sources: ProjectionSources) {
   const totalPoints = dimensions.reduce((total, dimension) => total + dimension.score, 0);
   const passportLevel = Math.min(100, 1 + Math.floor((totalPoints * 99) / 600));
   return { dimensions, totalPoints, passportLevel, completed, distinctEvents };
+}
+
+function latestSourceValue(rows: Array<Record<string, unknown>>, keys: string[]): string | null {
+  let latest: string | null = null;
+  for (const row of rows) {
+    for (const key of keys) {
+      const value = typeof row[key] === 'string' ? row[key] as string : null;
+      if (value && (!latest || value > latest)) latest = value;
+    }
+  }
+  return latest;
+}
+
+function buildProjectionSourceCursor(sources: ProjectionSources) {
+  return {
+    formula_version: FORMULA_VERSION,
+    counts: {
+      games: sources.games.length,
+      matches: sources.matches.length,
+      events: sources.events.length,
+      friendships: sources.friendships.length,
+      teams: sources.teams.length,
+      reactions: sources.reactions,
+      replay_years: sources.replayYears.length,
+    },
+    latest: {
+      games: latestSourceValue(sources.games, ['updated_at', 'completed_on', 'created_at']),
+      matches: latestSourceValue(sources.matches, ['completed_at']),
+      events: latestSourceValue(sources.events, ['occurred_at']),
+      friendships: latestSourceValue(sources.friendships, ['updated_at']),
+      teams: latestSourceValue(sources.teams, ['joined_at']),
+      replay_year: sources.replayYears.length ? Math.max(...sources.replayYears) : null,
+    },
+  };
 }
 
 async function projectPassportAchievements(userId: string, sources: ProjectionSources, completed: number, distinctEvents: number) {
@@ -118,19 +152,100 @@ async function loadCustomization(userId: string, plan: Plan) {
   return { customization, cosmetics, showcase, storageReady: !customResult.error && !catalogResult.error && !showcaseResult.error };
 }
 
-export async function getPassportProgression(userId: string): Promise<PassportProgression> {
+export async function getPassportProgression(
+  userId: string,
+  options: { force?: boolean } = {}
+): Promise<PassportProgression> {
   const sources = await loadProjectionSources(userId);
   const calculated = calculateDimensions(sources);
-  await projectPassportAchievements(userId, sources, calculated.completed, calculated.distinctEvents);
+  const sourceCursor = buildProjectionSourceCursor(sources);
+  const existingResult = await createServiceClient()
+    .from('passport_dimension_snapshots')
+    .select('formula_version, source_cursor, projected_at')
+    .eq('user_id', userId)
+    .maybeSingle();
+  const existing = existingResult.data;
+  const sourcesChanged = options.force
+    || existing?.formula_version !== FORMULA_VERSION
+    || JSON.stringify(existing?.source_cursor ?? null) !== JSON.stringify(sourceCursor);
+  if (sourcesChanged) {
+    await projectPassportAchievements(userId, sources, calculated.completed, calculated.distinctEvents);
+  }
   const plan = publicPlan(sources.profile?.plan, sources.profile?.plan_expires_at);
   const [achievements, presentation] = await Promise.all([loadAchievements(userId), loadCustomization(userId, plan)]);
-  const projectedAt = new Date().toISOString();
-  const snapshot = await createServiceClient().from('passport_dimension_snapshots').upsert({ user_id: userId, formula_version: FORMULA_VERSION, passport_level: calculated.passportLevel, total_points: calculated.totalPoints, dimensions: Object.fromEntries(calculated.dimensions.map((dimension) => [dimension.key, dimension])), source_counts: { games: sources.games.length, matches: sources.matches.length, events: sources.events.length, friends: sources.friendships.length, teams: sources.teams.length, reactions: sources.reactions }, projected_at: projectedAt }, { onConflict: 'user_id' });
+  const projectedAt = sourcesChanged ? new Date().toISOString() : String(existing?.projected_at);
+  const snapshot = sourcesChanged
+    ? await createServiceClient().from('passport_dimension_snapshots').upsert({ user_id: userId, formula_version: FORMULA_VERSION, passport_level: calculated.passportLevel, total_points: calculated.totalPoints, dimensions: Object.fromEntries(calculated.dimensions.map((dimension) => [dimension.key, dimension])), source_counts: sourceCursor.counts, source_cursor: sourceCursor, projected_at: projectedAt }, { onConflict: 'user_id' })
+    : { error: existingResult.error };
   return { passport_level: calculated.passportLevel, total_points: calculated.totalPoints, formula_version: FORMULA_VERSION, level_explanation: 'Passport Level maps the sum of six independent 0–100 Gamer Dimensions onto levels 1–100. It is progress, not a universal skill ranking.', dimensions: calculated.dimensions, achievements, customization: presentation.customization, cosmetics: presentation.cosmetics, showcase: presentation.showcase, projected_at: projectedAt, storage_ready: presentation.storageReady && !snapshot.error };
 }
 
+function normalizeStoredDimensions(value: unknown): GamerDimension[] {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return [];
+  const rows = value as Record<string, unknown>;
+  return (Object.keys(DIMENSION_LABELS) as GamerDimensionKey[]).flatMap((key) => {
+    const raw = rows[key];
+    if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return [];
+    const row = raw as Record<string, unknown>;
+    const score = clamp(Number(row.score ?? 0));
+    const inputs = Array.isArray(row.inputs)
+      ? row.inputs.flatMap((input) => {
+          if (!input || typeof input !== 'object' || Array.isArray(input)) return [];
+          const candidate = input as Record<string, unknown>;
+          const label = typeof candidate.label === 'string' ? candidate.label : '';
+          const numericValue = Number(candidate.value);
+          return label && Number.isFinite(numericValue) ? [{ label, value: numericValue }] : [];
+        })
+      : [];
+    return [{
+      key,
+      label: DIMENSION_LABELS[key],
+      score,
+      level: dimensionLevel(score),
+      explanation: typeof row.explanation === 'string' ? row.explanation : '',
+      inputs,
+    }];
+  });
+}
+
+async function getStoredPassportProgression(
+  userId: string,
+  includeAchievements: boolean
+): Promise<PassportProgression | null> {
+  const supabase = createServiceClient();
+  const [profileResult, snapshotResult] = await Promise.all([
+    supabase.from('profiles').select('plan, plan_expires_at').eq('id', userId).maybeSingle(),
+    supabase.from('passport_dimension_snapshots')
+      .select('formula_version, passport_level, total_points, dimensions, projected_at')
+      .eq('user_id', userId)
+      .maybeSingle(),
+  ]);
+  const snapshot = snapshotResult.data;
+  if (snapshotResult.error || !snapshot) return null;
+
+  const plan = publicPlan(profileResult.data?.plan, profileResult.data?.plan_expires_at);
+  const [achievements, presentation] = await Promise.all([
+    includeAchievements ? loadAchievements(userId) : Promise.resolve([]),
+    loadCustomization(userId, plan),
+  ]);
+  return {
+    passport_level: Number(snapshot.passport_level ?? 1),
+    total_points: Number(snapshot.total_points ?? 0),
+    formula_version: String(snapshot.formula_version ?? FORMULA_VERSION),
+    level_explanation: 'Passport Level maps the sum of six independent 0–100 Gamer Dimensions onto levels 1–100. It is progress, not a universal skill ranking.',
+    dimensions: normalizeStoredDimensions(snapshot.dimensions),
+    achievements,
+    customization: presentation.customization,
+    cosmetics: presentation.cosmetics,
+    showcase: presentation.showcase,
+    projected_at: String(snapshot.projected_at),
+    storage_ready: presentation.storageReady,
+  };
+}
+
 export async function getVisiblePassportProgression(userId: string, viewerId?: string | null, includeAchievements = true) {
-  const progression = await getPassportProgression(userId);
+  const progression = await getStoredPassportProgression(userId, includeAchievements);
+  if (!progression) return null;
   const friend = Boolean(viewerId && viewerId !== userId && await arePassportFriends(viewerId, userId));
   const selected = new Set([progression.customization.theme_key, progression.customization.avatar_frame_key, progression.customization.card_style_key]);
   let showcase = progression.showcase.filter((item) => item.visibility === 'public' || viewerId === userId || (friend && item.visibility === 'friends'));
@@ -146,7 +261,7 @@ export async function getVisiblePassportProgression(userId: string, viewerId?: s
     const allowedGames = new Set((gameResult.data ?? []).filter((row) => row.visibility === 'public' || (friend && row.visibility === 'friends')).map((row) => String(row.id)));
     showcase = showcase.filter((item) => item.source_type === 'highlight' ? allowedHighlights.has(item.source_id) : item.source_type === 'game_entry' ? allowedGames.has(item.source_id) : true);
   }
-  return { ...progression, achievements: includeAchievements ? progression.achievements.filter((award) => award.is_active) : [], cosmetics: progression.cosmetics.filter((cosmetic) => selected.has(cosmetic.key)), showcase };
+  return { ...progression, achievements: progression.achievements.filter((award) => award.is_active), cosmetics: progression.cosmetics.filter((cosmetic) => selected.has(cosmetic.key)), showcase };
 }
 
 export async function updatePassportCustomization(userId: string, input: { themeKey: string; avatarFrameKey: string; cardStyleKey: string; showDimensions: boolean; showLevel: boolean }) {

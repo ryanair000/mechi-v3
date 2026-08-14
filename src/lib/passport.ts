@@ -1,6 +1,7 @@
 import 'server-only';
 
-import { isMissingTableError } from '@/lib/db-compat';
+import { unstable_cache } from 'next/cache';
+import { isMissingColumnError, isMissingTableError } from '@/lib/db-compat';
 import {
   getPublicProfileData,
   getPublicProfileDataByUserId,
@@ -125,10 +126,17 @@ type VerificationRow = PassportVerificationRecordPreview & {
   revoked_at?: string | null;
 };
 
-type PassportEventCounts = {
-  registered: number;
-  attended: number;
-  completed: number;
+type PassportSummaryProjection = {
+  tournaments_registered: number;
+  events_attended: number;
+  completed_events: number;
+  achievements_count: number;
+  badges_count: number;
+  teams_count: number;
+  friends_count: number;
+  followers_count: number;
+  following_count: number;
+  computed_at: string | null;
 };
 
 export type PassportUpdateInput = {
@@ -301,23 +309,6 @@ async function loadPassportProfile(
   };
 }
 
-async function countRows(table: string, userId: string): Promise<number> {
-  const supabase = createServiceClient();
-  const result = await supabase
-    .from(table)
-    .select('id', { count: 'exact', head: true })
-    .eq('user_id', userId);
-
-  if (result.error) {
-    if (!isMissingTableError(result.error, table)) {
-      console.error(`[Passport] Could not count ${table}:`, result.error);
-    }
-    return 0;
-  }
-
-  return result.count ?? 0;
-}
-
 async function loadTournamentHistory(userId: string): Promise<TournamentPlayerRow[]> {
   const supabase = createServiceClient();
   const result = await supabase
@@ -359,53 +350,29 @@ async function loadOnlineTournamentHistory(
   return (result.data ?? []) as OnlineTournamentRegistrationRow[];
 }
 
-async function loadEventCounts(userId: string): Promise<PassportEventCounts> {
-  const supabase = createServiceClient();
-  const [genericRegistered, genericAttended, genericCompleted, onlineRegistered, onlineAttended] =
-    await Promise.all([
-      supabase
-        .from('tournament_players')
-        .select('id', { count: 'exact', head: true })
-        .eq('user_id', userId)
-        .in('payment_status', ['paid', 'free']),
-      supabase
-        .from('tournament_players')
-        .select('id', { count: 'exact', head: true })
-        .eq('user_id', userId)
-        .eq('check_in_status', 'checked_in'),
-      supabase
-        .from('tournament_players')
-        .select('id, tournament:tournaments!inner(status)', { count: 'exact', head: true })
-        .eq('user_id', userId)
-        .eq('check_in_status', 'checked_in')
-        .eq('tournaments.status', 'completed'),
-      supabase
-        .from('online_tournament_registrations')
-        .select('id', { count: 'exact', head: true })
-        .eq('user_id', userId),
-      supabase
-        .from('online_tournament_registrations')
-        .select('id', { count: 'exact', head: true })
-        .eq('user_id', userId)
-        .eq('check_in_status', 'checked_in'),
-    ]);
+async function loadPassportSummaryProjection(userId: string): Promise<PassportSummaryProjection> {
+  const result = await createServiceClient()
+    .from('passport_profile_summaries')
+    .select('tournaments_registered, events_attended, completed_events, achievements_count, badges_count, teams_count, friends_count, followers_count, following_count, computed_at')
+    .eq('user_id', userId)
+    .maybeSingle();
 
-  for (const [label, result, table] of [
-    ['generic registrations', genericRegistered, 'tournament_players'],
-    ['generic check-ins', genericAttended, 'tournament_players'],
-    ['completed events', genericCompleted, 'tournament_players'],
-    ['PlayMechi registrations', onlineRegistered, 'online_tournament_registrations'],
-    ['PlayMechi check-ins', onlineAttended, 'online_tournament_registrations'],
-  ] as const) {
-    if (result.error && !isMissingTableError(result.error, table)) {
-      console.error(`[Passport] Could not count ${label}:`, result.error);
-    }
+  if (result.error && !isMissingTableError(result.error, 'passport_profile_summaries')) {
+    console.error('[Passport] Could not load maintained summary projection:', result.error);
   }
 
+  const row = result.data;
   return {
-    registered: (genericRegistered.count ?? 0) + (onlineRegistered.count ?? 0),
-    attended: (genericAttended.count ?? 0) + (onlineAttended.count ?? 0),
-    completed: genericCompleted.count ?? 0,
+    tournaments_registered: Number(row?.tournaments_registered ?? 0),
+    events_attended: Number(row?.events_attended ?? 0),
+    completed_events: Number(row?.completed_events ?? 0),
+    achievements_count: Number(row?.achievements_count ?? 0),
+    badges_count: Number(row?.badges_count ?? 0),
+    teams_count: Number(row?.teams_count ?? 0),
+    friends_count: Number(row?.friends_count ?? 0),
+    followers_count: Number(row?.followers_count ?? 0),
+    following_count: Number(row?.following_count ?? 0),
+    computed_at: typeof row?.computed_at === 'string' ? row.computed_at : null,
   };
 }
 
@@ -549,26 +516,43 @@ async function persistSummary(userId: string, summary: PassportSummary): Promise
   }
 }
 
-async function loadSocialCounts(userId: string) {
-  const { data, error } = await createServiceClient()
-    .from('passport_profile_summaries')
-    .select('friends_count, followers_count, following_count')
-    .eq('user_id', userId)
-    .maybeSingle();
-  if (error && !isMissingTableError(error, 'passport_profile_summaries')) {
-    console.error('[Passport] Could not load social counts:', error);
-  }
-  return {
-    friends: Number(data?.friends_count ?? 0),
-    followers: Number(data?.followers_count ?? 0),
-    following: Number(data?.following_count ?? 0),
-  };
-}
-
 type PassportDataOptions = {
   ownerView?: boolean;
   friendView?: boolean;
+  _skipPublicCache?: boolean;
 };
+
+async function resolvePublicPassportCacheGate(username: string): Promise<{
+  handle: string;
+  userId: string;
+  version: string;
+} | null> {
+  const validation = validatePassportHandle(username);
+  if (!validation.valid) return null;
+  const supabase = createServiceClient();
+  let resolution = await supabase
+    .from('passport_profiles')
+    .select('user_id, public_version, updated_at')
+    .eq('public_handle', validation.handle)
+    .eq('publication_status', 'published')
+    .maybeSingle();
+  if (resolution.error && isMissingColumnError(resolution.error, 'passport_profiles.public_version')) {
+    resolution = await supabase
+      .from('passport_profiles')
+      .select('user_id, updated_at')
+      .eq('public_handle', validation.handle)
+      .eq('publication_status', 'published')
+      .maybeSingle() as typeof resolution;
+  }
+  if (resolution.error || !resolution.data?.user_id) return null;
+  const userId = String(resolution.data.user_id);
+  if (await isMinorAccount(userId)) return null;
+  return {
+    handle: validation.handle,
+    userId,
+    version: String(resolution.data.public_version ?? resolution.data.updated_at ?? 'legacy'),
+  };
+}
 
 export function getPassportData(username: string): Promise<PublicPassportData | null>;
 export function getPassportData(
@@ -587,6 +571,16 @@ export async function getPassportData(
   username: string,
   options: PassportDataOptions = {}
 ): Promise<PublicPassportData | PassportOwnerData | null> {
+  if (!options.ownerView && !options.friendView && !options._skipPublicCache) {
+    const gate = await resolvePublicPassportCacheGate(username);
+    if (!gate) return null;
+    return unstable_cache(
+      () => getPassportData(username, { _skipPublicCache: true }),
+      ['passport-public-dto-v1', gate.userId, gate.handle, gate.version],
+      { revalidate: 300, tags: [`passport-public:${gate.userId}`] }
+    )();
+  }
+
   let profile: Awaited<ReturnType<typeof getPublicProfileData>>;
   if (options.ownerView) {
     const normalizedUsername = normalizePassportUsername(username);
@@ -607,14 +601,12 @@ export async function getPassportData(
   }
   if (!profile) return null;
 
-  const [passportResult, tournamentRows, onlineRows, eventCounts, achievementsCount, badgesCount, teams, verifications, library] =
+  const [passportResult, tournamentRows, onlineRows, summaryProjection, teams, verifications, library] =
     await Promise.all([
       loadPassportProfile(profile.id),
       loadTournamentHistory(profile.id),
       loadOnlineTournamentHistory(profile.id),
-      loadEventCounts(profile.id),
-      countRows('achievements', profile.id),
-      countRows('profile_badges', profile.id),
+      loadPassportSummaryProjection(profile.id),
       loadTeams(profile.id),
       loadVerifications(profile.id),
       getPassportGameLibraryByUserId(
@@ -634,30 +626,29 @@ export async function getPassportData(
     .sort((left, right) => right.joined_at.localeCompare(left.joined_at))
     .slice(0, 12);
   const totalMatches = profile.totalWins + profile.totalLosses;
-  const socialCounts = await loadSocialCounts(profile.id);
   const summary: PassportSummary = {
     games_count: Math.max(profile.games.length, library.stats.total),
     playing_games_count: library.stats.playing,
     completed_games_count: library.stats.completed,
     favorite_games_count: library.stats.favorites,
     total_library_hours: library.stats.total_hours,
-    friends_count: socialCounts.friends,
-    followers_count: socialCounts.followers,
-    following_count: socialCounts.following,
+    friends_count: summaryProjection.friends_count,
+    followers_count: summaryProjection.followers_count,
+    following_count: summaryProjection.following_count,
     total_matches: totalMatches,
     total_wins: profile.totalWins,
     total_losses: profile.totalLosses,
     win_rate: totalMatches > 0 ? Math.round((profile.totalWins / totalMatches) * 100) : 0,
     best_rating: profile.bestRating,
-    tournaments_registered: eventCounts.registered,
-    events_attended: eventCounts.attended,
-    completed_events: eventCounts.completed,
-    achievements_count: achievementsCount,
-    badges_count: badgesCount,
-    teams_count: teams.length,
-    verified_records_count: totalMatches + eventCounts.attended + verifications.length,
+    tournaments_registered: summaryProjection.tournaments_registered,
+    events_attended: summaryProjection.events_attended,
+    completed_events: summaryProjection.completed_events,
+    achievements_count: summaryProjection.achievements_count,
+    badges_count: summaryProjection.badges_count,
+    teams_count: summaryProjection.teams_count,
+    verified_records_count: totalMatches + summaryProjection.events_attended + verifications.length,
     last_activity_at: profile.last_match_date ?? events[0]?.joined_at ?? null,
-    computed_at: new Date().toISOString(),
+    computed_at: summaryProjection.computed_at ?? new Date().toISOString(),
   };
 
   if (passportResult.storageReady && options.ownerView) {

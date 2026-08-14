@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { unstable_cache } from 'next/cache';
 import { cookies } from 'next/headers';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -33,13 +34,44 @@ import {
 } from '@/lib/passport-types';
 import type { GameKey, PlatformKey } from '@/types';
 
-export const dynamic = 'force-dynamic';
-
 type Props = {
   params: Promise<{ handle: string }>;
 };
 
 const getCachedPublicPassport = cache((username: string) => getPassportData(username));
+
+async function loadPassportPageFeatures(
+  userId: string,
+  viewerId: string | null,
+  includeAchievements: boolean,
+  includeShelves: boolean
+) {
+  const [highlights, progression, shelves] = await Promise.all([
+    getPassportHighlights(userId, viewerId),
+    getVisiblePassportProgression(userId, viewerId, includeAchievements),
+    includeShelves ? getPassportShelves(userId, viewerId) : Promise.resolve([]),
+  ]);
+  return { highlights, progression, shelves };
+}
+
+function loadCachedAnonymousPassportPageFeatures(
+  userId: string,
+  publicVersion: string,
+  includeAchievements: boolean,
+  includeShelves: boolean
+) {
+  return unstable_cache(
+    () => loadPassportPageFeatures(userId, null, includeAchievements, includeShelves),
+    [
+      'passport-public-page-features-v1',
+      userId,
+      publicVersion,
+      includeAchievements ? 'achievements' : 'no-achievements',
+      includeShelves ? 'shelves' : 'no-shelves',
+    ],
+    { revalidate: 300, tags: [`passport-public:${userId}`] }
+  )();
+}
 
 function resolveHandle(value: string): string {
   let decoded = value;
@@ -109,11 +141,17 @@ export default async function GamerPassportPage({ params }: Props) {
   const showTeams = isVisible(passport, 'teams');
   const showGames = isVisible(passport, 'games');
   const showVerifiedRecords = typeof summary?.verified_records_count === 'number';
-  const highlights = passport.access === 'public' ? await getPassportHighlights(identity.user_id, viewerAccess.viewer_id) : [];
-  const [progression, shelves] = passport.access === 'public' ? await Promise.all([
-    getVisiblePassportProgression(identity.user_id, viewerAccess.viewer_id, showAchievements),
-    showGames ? getPassportShelves(identity.user_id, viewerAccess.viewer_id) : Promise.resolve([]),
-  ]) : [null, []];
+  const features = passport.access !== 'public'
+    ? { highlights: [], progression: null, shelves: [] }
+    : viewerAccess.viewer_id
+      ? await loadPassportPageFeatures(identity.user_id, viewerAccess.viewer_id, showAchievements, showGames)
+      : await loadCachedAnonymousPassportPageFeatures(
+          identity.user_id,
+          identity.updated_at ?? 'legacy',
+          showAchievements,
+          showGames
+        );
+  const { highlights, progression, shelves } = features;
   const frame = progression?.cosmetics.find((cosmetic) => cosmetic.type === 'avatar_frame');
   const theme = progression?.cosmetics.find((cosmetic) => cosmetic.type === 'theme');
   const visibleHighlightIds = new Set(highlights.map((highlight) => highlight.id));

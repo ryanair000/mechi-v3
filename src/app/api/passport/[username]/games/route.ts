@@ -24,7 +24,7 @@ export async function GET(
     headers: {
       'Cache-Control': viewerAccess.credential_presented
         ? 'private, no-store'
-        : 'public, max-age=30, stale-while-revalidate=120',
+        : 'public, max-age=0, must-revalidate',
     },
   });
 }

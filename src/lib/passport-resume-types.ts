@@ -110,8 +110,56 @@ export type PassportCvSettings = {
   headline: string;
 };
 
-export type PassportCompetitiveResume = {
-  access: 'owner' | 'public';
+export type PassportPublicResumeIdentity = Pick<
+  PassportIdentity,
+  'username' | 'display_name'
+>;
+
+export type PassportPublicCompetitiveGame = Pick<
+  PassportCompetitiveGame,
+  | 'game'
+  | 'label'
+  | 'current_rating'
+  | 'peak_rating'
+  | 'matches'
+  | 'wins'
+  | 'win_rate'
+  | 'tournament_entries'
+  | 'tournament_wins'
+>;
+
+export type PassportPublicVerifiedMatch = Pick<
+  PassportVerifiedMatch,
+  'id' | 'game' | 'opponent_username' | 'result' | 'score' | 'completed_at'
+>;
+
+export type PassportPublicCompetitiveSeasonEntry = Pick<
+  PassportCompetitiveSeasonEntry,
+  'id' | 'title' | 'game' | 'matches' | 'peak_rating' | 'tournament_wins'
+>;
+
+export type PassportPublicTournamentResumeEntry = Pick<
+  PassportTournamentResumeEntry,
+  'title' | 'game' | 'registration_state' | 'highest_round' | 'champion'
+>;
+
+export type PassportPublicTeamHistoryEntry = Pick<
+  PassportTeamHistoryEntry,
+  'name' | 'role' | 'membership_status' | 'joined_at'
+>;
+
+export type PassportPublicEventCredential = Pick<
+  PassportEventCredential,
+  'verification_token' | 'event_title' | 'stamp_type' | 'game' | 'placement' | 'occurred_at'
+>;
+
+export type PassportPublicCvPresentation = {
+  headline: string;
+  inquiry_url?: string;
+};
+
+export type PassportOwnerCompetitiveResume = {
+  access: 'owner';
   storage_ready: boolean;
   identity: PassportIdentity;
   games: PassportCompetitiveGame[];
@@ -123,6 +171,23 @@ export type PassportCompetitiveResume = {
   cv_settings: PassportCvSettings;
   generated_at: string;
 };
+
+export type PassportPublicCompetitiveResume = {
+  access: 'public';
+  identity: PassportPublicResumeIdentity;
+  games: PassportPublicCompetitiveGame[];
+  seasons: PassportPublicCompetitiveSeasonEntry[];
+  matches: PassportPublicVerifiedMatch[];
+  tournaments: PassportPublicTournamentResumeEntry[];
+  teams: PassportPublicTeamHistoryEntry[];
+  events: PassportPublicEventCredential[];
+  presentation: PassportPublicCvPresentation;
+  generated_at: string;
+};
+
+export type PassportCompetitiveResume =
+  | PassportOwnerCompetitiveResume
+  | PassportPublicCompetitiveResume;
 
 export type PassportCheckinPass = {
   id: string;

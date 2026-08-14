@@ -4,11 +4,14 @@ import { Save, ShieldCheck } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
 import { useAuthFetch } from '@/components/AuthProvider';
-import type { PassportCompetitiveResume, PassportCvSettings } from '@/lib/passport-resume-types';
+import type {
+  PassportCvSettings,
+  PassportOwnerCompetitiveResume,
+} from '@/lib/passport-resume-types';
 
 export function GamerCvSettings() {
   const authFetch = useAuthFetch();
-  const [resume, setResume] = useState<PassportCompetitiveResume | null>(null);
+  const [resume, setResume] = useState<PassportOwnerCompetitiveResume | null>(null);
   const [settings, setSettings] = useState<PassportCvSettings | null>(null);
   const [saving, setSaving] = useState(false);
   useEffect(() => { authFetch('/api/passport/resume/me').then((response) => response.json()).then((payload) => { setResume(payload.resume ?? null); setSettings(payload.resume?.cv_settings ?? null); }).catch(() => toast.error('Could not load CV settings')); }, [authFetch]);

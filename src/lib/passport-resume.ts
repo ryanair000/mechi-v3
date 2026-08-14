@@ -4,14 +4,17 @@ import { createHash, randomUUID } from 'node:crypto';
 import { GAMES } from '@/lib/config';
 import { isMissingTableError } from '@/lib/db-compat';
 import { getPassportData } from '@/lib/passport';
+import { isPassportFieldVisible } from '@/lib/passport-public-summary';
+import { buildPublicPassportCompetitiveResume } from '@/lib/passport-resume-public';
 import type {
   PassportCheckinPass,
   PassportCompetitiveGame,
   PassportCompetitiveSeasonEntry,
-  PassportCompetitiveResume,
   PassportCvSettings,
   PassportEventCredential,
   PassportEventStampType,
+  PassportOwnerCompetitiveResume,
+  PassportPublicCompetitiveResume,
   PassportTeamHistoryEntry,
   PassportTournamentResumeEntry,
   PassportVerifiedMatch,
@@ -183,8 +186,28 @@ async function loadCvSettings(userId: string): Promise<PassportCvSettings> {
   return data ? { selected_games: data.selected_games ?? [], include_events: Boolean(data.include_events), include_teams: Boolean(data.include_teams), include_achievements: Boolean(data.include_achievements), inquiry_enabled: Boolean(data.inquiry_enabled), inquiry_url: data.inquiry_url, headline: data.headline ?? '' } : DEFAULT_CV_SETTINGS;
 }
 
-export async function getPassportCompetitiveResume(username: string, ownerView = false): Promise<PassportCompetitiveResume | null> {
-  const passport = await getPassportData(username, { ownerView });
+export function getPassportCompetitiveResume(
+  username: string
+): Promise<PassportPublicCompetitiveResume | null>;
+export function getPassportCompetitiveResume(
+  username: string,
+  ownerView: true
+): Promise<PassportOwnerCompetitiveResume | null>;
+export function getPassportCompetitiveResume(
+  username: string,
+  ownerView: false
+): Promise<PassportPublicCompetitiveResume | null>;
+export function getPassportCompetitiveResume(
+  username: string,
+  ownerView: boolean
+): Promise<PassportOwnerCompetitiveResume | PassportPublicCompetitiveResume | null>;
+export async function getPassportCompetitiveResume(
+  username: string,
+  ownerView = false
+): Promise<PassportOwnerCompetitiveResume | PassportPublicCompetitiveResume | null> {
+  const passport = ownerView
+    ? await getPassportData(username, { ownerView: true })
+    : await getPassportData(username);
   if (!passport || (!ownerView && passport.access === 'restricted')) return null;
   const userId = passport.identity.user_id;
   const [competitive, seasons, tournaments, teams, events, cvSettings] = await Promise.all([
@@ -203,14 +226,18 @@ export async function getPassportCompetitiveResume(username: string, ownerView =
       podiums: game.podiums, source_cursor: game.latest_match_at, computed_at: new Date().toISOString(),
     })), { onConflict: 'user_id,game,season_id' });
   }
-  const fieldVisible = (field: 'competitive' | 'events' | 'teams') => ownerView || (
-    passport.identity.default_visibility === 'public' && passport.identity.field_visibility[field] === 'public'
-  );
-  return { access: ownerView ? 'owner' : 'public', storage_ready: events.storageReady, identity: passport.identity,
+  const fieldVisible = (field: 'competitive' | 'events' | 'teams') =>
+    ownerView || isPassportFieldVisible(passport.identity, field, false);
+  const source = {
+    storage_ready: events.storageReady,
+    identity: passport.identity,
     games: fieldVisible('competitive') ? games : [], seasons: fieldVisible('competitive') ? seasons : [], matches: fieldVisible('competitive') ? competitive.matches : [],
     tournaments: fieldVisible('events') ? tournaments : [], teams: fieldVisible('teams') ? teams : [],
     events: fieldVisible('events') ? events.credentials : [],
     cv_settings: cvSettings, generated_at: new Date().toISOString() };
+  return ownerView
+    ? { access: 'owner', ...source }
+    : buildPublicPassportCompetitiveResume(source);
 }
 
 export async function updatePassportCvSettings(userId: string, settings: PassportCvSettings) {

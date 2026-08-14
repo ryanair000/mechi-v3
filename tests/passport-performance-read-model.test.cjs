@@ -98,7 +98,7 @@ test('anonymous progression reads consume snapshots without projection writes', 
 
   assert.match(visible, /getStoredPassportProgression/);
   assert.doesNotMatch(visible, /getPassportProgression\(/);
-  assert.match(stored, /from\('passport_dimension_snapshots'\)/);
+  assert.match(stored, /from\(["']passport_dimension_snapshots["']\)/);
   assert.doesNotMatch(stored, /\.upsert\(/);
   assert.doesNotMatch(stored, /projectPassportAchievements/);
 });

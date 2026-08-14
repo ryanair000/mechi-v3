@@ -1,16 +1,16 @@
-﻿# PlayMechi Launch Tournament â€” eFootball Results
+# PlayMechi Launch Tournament — eFootball Results
 
 **Date:** Sunday 10 May 2026, 8:00 PM EAT
-**Format:** 1v1 knockout bracket â€” Round of 16 to Final
+**Format:** 1v1 knockout bracket — Round of 16 to Final
 **Scoring:** One leg per fixture. Draws go to extra time, penalties, or golden goal replay.
 
-**Prizes:** ðŸ¥‡ KSh 1,000 Â· ðŸ¥ˆ KSh 500 Â· ðŸ¥‰ 315 Coins
+**Prizes:** 🥇 KSh 1,000 · 🥈 KSh 500 · 🥉 315 Coins
 
 ---
 
 ## Champion
 
-**ðŸ† Samuuo11** â€” defeated BClout-XVII in the Final **8â€“2**
+**🏆 Samuuo11** — defeated BClout-XVII in the Final **8–2**
 
 ---
 
@@ -20,36 +20,36 @@
 
 | Slot | Player 1 | Score | Player 2 | Winner |
 |------|----------|-------|----------|--------|
-| 1 | **Samuuo11** | **4â€“1** | COBY_CR7 | Samuuo11 âœ“ |
-| 2 | TASH_KID | 0â€“3 | **ASDH-559-563-850** | ASDH-559-563-850 âœ“ |
-| 3 | **n3xphase** | â€” | *(bye)* | n3xphase âœ“ |
-| 4 | **GaddyTheGamer** | â€” | *(bye)* | GaddyTheGamer âœ“ |
-| 5 | **KID_PICKER** | â€” | *(bye)* | KID_PICKER âœ“ |
-| 6 | sammykratos | 0â€“1 | **BClout-XVII** | BClout-XVII âœ“ |
-| 7 | **Foxxy22_** | â€” | *(bye)* | Foxxy22_ âœ“ |
-| 8 | **Oloh-Messi** | â€” | *(bye)* | Oloh-Messi âœ“ |
+| 1 | **Samuuo11** | **4–1** | COBY_CR7 | Samuuo11 ✓ |
+| 2 | TASH_KID | 0–3 | **ASDH-559-563-850** | ASDH-559-563-850 ✓ |
+| 3 | **n3xphase** | — | *(bye)* | n3xphase ✓ |
+| 4 | **GaddyTheGamer** | — | *(bye)* | GaddyTheGamer ✓ |
+| 5 | **KID_PICKER** | — | *(bye)* | KID_PICKER ✓ |
+| 6 | sammykratos | 0–1 | **BClout-XVII** | BClout-XVII ✓ |
+| 7 | **Foxxy22_** | — | *(bye)* | Foxxy22_ ✓ |
+| 8 | **Oloh-Messi** | — | *(bye)* | Oloh-Messi ✓ |
 
 ### Quarterfinals
 
 | Match | Player 1 | Score | Player 2 | Winner |
 |-------|----------|-------|----------|--------|
-| QF1 | **Samuuo11** | **6â€“1** | ASDH-559-563-850 | Samuuo11 âœ“ |
-| QF2 | **n3xphase** | **7â€“2** | GaddyTheGamer | n3xphase âœ“ |
-| QF3 | KID_PICKER | 3â€“6 | **BClout-XVII** | BClout-XVII âœ“ |
-| QF4 | Foxxy22_ | 1â€“12 | **Oloh-Messi** | Oloh-Messi âœ“ |
+| QF1 | **Samuuo11** | **6–1** | ASDH-559-563-850 | Samuuo11 ✓ |
+| QF2 | **n3xphase** | **7–2** | GaddyTheGamer | n3xphase ✓ |
+| QF3 | KID_PICKER | 3–6 | **BClout-XVII** | BClout-XVII ✓ |
+| QF4 | Foxxy22_ | 1–12 | **Oloh-Messi** | Oloh-Messi ✓ |
 
 ### Semifinals
 
 | Match | Player 1 | Score | Player 2 | Winner |
 |-------|----------|-------|----------|--------|
-| SF1 | **Samuuo11** | **9â€“1** | n3xphase | Samuuo11 âœ“ |
-| SF2 | **BClout-XVII** | **4â€“1** | Oloh-Messi | BClout-XVII âœ“ |
+| SF1 | **Samuuo11** | **9–1** | n3xphase | Samuuo11 ✓ |
+| SF2 | **BClout-XVII** | **4–1** | Oloh-Messi | BClout-XVII ✓ |
 
 ### Final
 
 | Player 1 | Score | Player 2 | Winner |
 |----------|-------|----------|--------|
-| **Samuuo11** | **8â€“2** | BClout-XVII | **Samuuo11 ðŸ†** |
+| **Samuuo11** | **8–2** | BClout-XVII | **Samuuo11 🏆** |
 
 ---
 
@@ -57,10 +57,10 @@
 
 | Rank | Player | Exit Round |
 |------|--------|------------|
-| ðŸ¥‡ 1st | **Samuuo11** | Champion |
-| ðŸ¥ˆ 2nd | BClout-XVII | Final |
-| ðŸ¥‰ 3rd | n3xphase | Semifinal |
-| ðŸ¥‰ 3rd | Oloh-Messi | Semifinal |
+| 🥇 1st | **Samuuo11** | Champion |
+| 🥈 2nd | BClout-XVII | Final |
+| 🥉 3rd | n3xphase | Semifinal |
+| 🥉 3rd | Oloh-Messi | Semifinal |
 | 5th | ASDH-559-563-850 | Quarterfinal |
 | 5th | GaddyTheGamer | Quarterfinal |
 | 5th | KID_PICKER | Quarterfinal |

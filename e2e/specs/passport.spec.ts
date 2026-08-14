@@ -1,5 +1,19 @@
+import path from 'node:path';
+import type { Page } from '@playwright/test';
 import { test, expect } from '../fixtures';
 import { createE2ESupabaseClient } from '../helpers/seed';
+
+async function expectNoHighImpactAxeViolations(page: Page, context: string) {
+  await page.addScriptTag({ path: path.join(process.cwd(), 'node_modules', 'axe-core', 'axe.min.js') });
+  const violations = await page.evaluate(async () => {
+    const axe = (window as unknown as { axe: { run: (context: Document, options: unknown) => Promise<{ violations: Array<{ id: string; impact: string | null; nodes: unknown[] }> }> } }).axe;
+    const result = await axe.run(document, { runOnly: { type: 'tag', values: ['wcag2a', 'wcag2aa', 'wcag21aa', 'wcag22aa'] } });
+    return result.violations
+      .filter((violation) => violation.impact === 'critical' || violation.impact === 'serious')
+      .map((violation) => ({ id: violation.id, impact: violation.impact, nodes: violation.nodes.length }));
+  });
+  expect(violations, `${context} has serious or critical axe violations`).toEqual([]);
+}
 
 function pngDimensions(bytes: Buffer) {
   expect(bytes.subarray(1, 4).toString('ascii')).toBe('PNG');
@@ -43,6 +57,97 @@ test.describe.serial('Gamer Passport runtime release gate', () => {
     }
   });
 
+  test('@core public route diagnostics retain safe status, latency, format, and subject hashes', async ({
+    environment,
+    request,
+  }) => {
+    const client = createE2ESupabaseClient(environment);
+    expect((await request.get('/api/passport/cards/e2e-public?format=square')).status()).toBe(200);
+    await expect.poll(async () => {
+      const result = await client.from('passport_route_diagnostics')
+        .select('route_name, request_id_hash, subject_hash, operation, response_status, duration_ms, result_class, cache_state')
+        .eq('route_name', 'passport_card')
+        .eq('operation', 'square')
+        .order('occurred_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      return result.data ?? null;
+    }).toMatchObject({
+      route_name: 'passport_card',
+      operation: 'square',
+      response_status: 200,
+      result_class: 'success',
+      cache_state: 'rendered',
+    });
+    const diagnostic = await client.from('passport_route_diagnostics')
+      .select('request_id_hash, subject_hash, duration_ms')
+      .eq('route_name', 'passport_card')
+      .eq('operation', 'square')
+      .order('occurred_at', { ascending: false })
+      .limit(1)
+      .single();
+    expect(diagnostic.data?.request_id_hash).toMatch(/^[a-f0-9]{64}$/);
+    expect(diagnostic.data?.subject_hash).toMatch(/^[a-f0-9]{20}$/);
+    expect(Number(diagnostic.data?.duration_ms)).toBeGreaterThanOrEqual(0);
+  });
+
+  test('@core owner and public Passport surfaces pass the automated accessibility gate', async ({
+    page,
+    openPersonaPage,
+  }) => {
+    await page.goto('/p/@e2e-public');
+    await expect(page.getByRole('heading', { name: 'E2E Public Player' })).toBeVisible();
+    await expectNoHighImpactAxeViolations(page, 'public Passport');
+
+    const owner = await openPersonaPage('playerFree');
+    try {
+      await owner.page.goto('/passport');
+      await expect(owner.page.getByRole('heading', { name: 'PlayMechi Gamer Passport' })).toBeVisible();
+      await expectNoHighImpactAxeViolations(owner.page, 'owner Passport');
+      await owner.page.goto('/passport/cards');
+      await expect(owner.page.getByRole('heading', { name: 'Generate your Gamer Card' })).toBeVisible();
+      await expectNoHighImpactAxeViolations(owner.page, 'Gamer Card studio');
+    } finally {
+      await owner.context.close();
+    }
+  });
+
+  test('@core game editor traps keyboard focus, closes with Escape, and restores focus', async ({
+    openPersonaPage,
+  }) => {
+    const owner = await openPersonaPage('playerFree');
+    try {
+      await owner.page.goto('/passport/games');
+      const edit = owner.page.getByRole('button', { name: 'Edit' }).first();
+      await edit.focus();
+      await edit.click();
+      const dialog = owner.page.getByRole('dialog', { name: /edit eFootball/i });
+      await expect(dialog).toBeVisible();
+      const close = dialog.getByRole('button', { name: /close edit/i });
+      await expect(close).toBeFocused();
+      await owner.page.keyboard.press('Shift+Tab');
+      await expect(dialog.getByRole('button', { name: 'Save record' })).toBeFocused();
+      await owner.page.keyboard.press('Escape');
+      await expect(dialog).toHaveCount(0);
+      await expect(edit).toBeFocused();
+    } finally {
+      await owner.context.close();
+    }
+  });
+
+  test('@core public Passport fits 320px and 360px viewports with reduced motion', async ({ page }) => {
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    for (const width of [320, 360]) {
+      await page.setViewportSize({ width, height: 780 });
+      await page.goto('/p/@e2e-public');
+      await expect(page.getByRole('heading', { name: 'E2E Public Player' })).toBeVisible();
+      expect(await page.evaluate(() => ({
+        reduced: window.matchMedia('(prefers-reduced-motion: reduce)').matches,
+        overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
+      }))).toEqual({ reduced: true, overflow: 0 });
+    }
+  });
+
   test('@core friend visibility, block state, minor state, and missing profiles are enforced at runtime', async ({
     request,
     page,
@@ -56,6 +161,11 @@ test.describe.serial('Gamer Passport runtime release gate', () => {
     try {
       await friend.page.goto('/p/@e2e-friends');
       await expect(friend.page.getByText('Friends-only E2E Gamer Passport biography')).toBeVisible();
+      await expect(friend.page.getByRole('link', { name: 'My Passport' })).toHaveAttribute('href', '/passport');
+      await expect(friend.page.getByRole('link', { name: 'Dashboard' })).toHaveAttribute('href', '/dashboard');
+      await expect(friend.page.getByRole('link', { name: 'Sign in' })).toHaveCount(0);
+      await expect(friend.page.getByRole('link', { name: 'Create yours' })).toHaveCount(0);
+      await expect(friend.page.getByRole('link', { name: 'Open my Passport' })).toHaveAttribute('href', '/passport');
       const friendApi = await friend.context.request.get('/api/passport/e2e-friends');
       expect(friendApi.status()).toBe(200);
       expect(friendApi.headers()['cache-control']).toContain('private, no-store');

@@ -97,6 +97,6 @@ test('operations are observable and manual external delivery requires admin plus
   assert.match(operations, /pending_partner_reviews/);
   assert.match(adminRoute, /hasAdminAccess/);
   assert.match(adminRoute, /writeAuditLog/);
-  assert.match(adminUi, /window\.confirm\('Run one webhook delivery batch now/);
+  assert.match(adminUi, /window\.confirm\(\s*["']Run one webhook delivery batch now/);
   assert.match(adminUi, /health\.rollout\.webhook_delivery\.enabled/);
 });

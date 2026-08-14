@@ -17,7 +17,8 @@ BEGIN
     'passport_blocks',
     'passport_product_events',
     'passport_data_exports',
-    'passport_data_export_audit'
+    'passport_data_export_audit',
+    'passport_route_diagnostics'
   ]
   LOOP
     IF to_regclass(format('public.%I', table_name)) IS NULL THEN
@@ -101,5 +102,28 @@ BEGIN
       RAISE EXCEPTION 'Browser role can execute private function %', function_signature;
     END IF;
   END LOOP;
+
+  IF EXISTS (
+    SELECT 1
+    FROM pg_proc procedure
+    JOIN pg_namespace namespace ON namespace.oid = procedure.pronamespace
+    WHERE namespace.nspname = 'public'
+      AND procedure.proname = 'record_passport_comparison_invitation_visit'
+      AND procedure.prosecdef
+  ) THEN
+    RAISE EXCEPTION 'Invitation visit function must not run as SECURITY DEFINER';
+  END IF;
+
+  IF has_function_privilege(
+    'anon',
+    'public.record_passport_comparison_invitation_visit(uuid,uuid,uuid)',
+    'EXECUTE'
+  ) OR has_function_privilege(
+    'authenticated',
+    'public.record_passport_comparison_invitation_visit(uuid,uuid,uuid)',
+    'EXECUTE'
+  ) THEN
+    RAISE EXCEPTION 'Browser role can execute invitation visit function';
+  END IF;
 END
 $$;

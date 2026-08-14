@@ -39,11 +39,11 @@ Budgets are measured as application-to-database requests, not internal PostgreSQ
 
 | Path | Budget | Enforcement |
 |---|---:|---|
-| Public Passport core DTO, cold | At most 10 database requests | Source contract plus runtime query telemetry planned in P1-11 |
+| Public Passport core DTO, cold | At most 10 database requests | Enforced by source contract and runtime query telemetry |
 | Aggregate count reads within the core DTO | Exactly 1 maintained-summary request | Source contract |
 | Metadata plus page core DTO in one render | One memoized DTO invocation | React request cache contract |
 | Public feature stage | One parallel application stage | Source contract |
-| Anonymous public GET writes | 0 | Stored-progression contract and runtime test planned in P1-11 |
+| Anonymous public GET writes | 0 | Enforced by stored-progression contract and runtime tests |
 
 The migration-order compatibility fallbacks for missing legacy columns are excluded from the normal budget and must disappear after the required migrations are verified in production.
 

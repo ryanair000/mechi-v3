@@ -310,5 +310,5 @@ test('production wiring keeps full settings behind the authenticated owner route
   assert.match(ownerRoute, /requireActiveAccessProfile/);
   assert.match(ownerRoute, /getPassportCompetitiveResume\(access\.profile\.username, true\)/);
   assert.match(resumeSource, /buildPublicPassportCompetitiveResume\(source\)/);
-  assert.match(resumeSource, /\? \{ access: 'owner', \.\.\.source \}/);
+  assert.match(resumeSource, /\? \{\s*access: ["']owner["'],\s*\.\.\.source,?\s*\}/);
 });

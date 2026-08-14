@@ -257,7 +257,13 @@ DECLARE
   v_action text;
   v_at timestamptz;
 BEGIN
-  v_subject := coalesce(NEW.requested_by, OLD.requested_by);
+  IF TG_OP = 'DELETE' THEN
+    v_subject := OLD.requested_by;
+    v_at := coalesce(OLD.updated_at, timezone('utc', now()));
+  ELSE
+    v_subject := NEW.requested_by;
+    v_at := coalesce(NEW.updated_at, timezone('utc', now()));
+  END IF;
   v_action := CASE
     WHEN TG_OP = 'DELETE' THEN 'removed'
     WHEN TG_OP = 'INSERT' THEN 'requested'
@@ -265,14 +271,17 @@ BEGIN
     WHEN NEW.status = 'declined' AND OLD.status IS DISTINCT FROM NEW.status THEN 'declined'
     ELSE 'updated'
   END;
-  v_at := coalesce(NEW.updated_at, OLD.updated_at, timezone('utc', now()));
   PERFORM private.emit_passport_product_event(
     'passport_friend_action', v_subject, 'owner', 'database.passport_friendships',
     jsonb_build_object('action', v_action),
-    coalesce(NEW.id, OLD.id)::text || ':' || v_action || ':' || txid_current()::text,
+    CASE WHEN TG_OP = 'DELETE' THEN OLD.id ELSE NEW.id END::text
+      || ':' || v_action || ':' || txid_current()::text,
     v_at
   );
-  RETURN coalesce(NEW, OLD);
+  IF TG_OP = 'DELETE' THEN
+    RETURN OLD;
+  END IF;
+  RETURN NEW;
 END;
 $$;
 REVOKE ALL ON FUNCTION private.capture_passport_friend_product_event()

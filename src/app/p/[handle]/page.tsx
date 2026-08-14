@@ -25,6 +25,10 @@ import { GAMES } from '@/lib/config';
 import { PASSPORT_GAME_STATUS_LABELS } from '@/lib/passport-game-types';
 import { getPassportData, getPassportPath, normalizePassportUsername } from '@/lib/passport';
 import { capturePassportProductEvent } from '@/lib/passport-analytics';
+import {
+  capturePassportRouteDiagnostic,
+  startPassportRouteTimer,
+} from '@/lib/passport-diagnostics';
 import { buildPassportMetadata } from '@/lib/passport-metadata';
 import { resolvePassportTokenViewerAccess } from '@/lib/passport-viewer-access';
 import { getPassportHighlights } from '@/lib/passport-community';
@@ -118,6 +122,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 }
 
 export default async function GamerPassportPage({ params }: Props) {
+  const elapsedMs = startPassportRouteTimer();
   const { handle } = await params;
   const username = resolveHandle(handle);
   if (!username) notFound();
@@ -160,6 +165,16 @@ export default async function GamerPassportPage({ params }: Props) {
     },
     dedupeSeed: analyticsRequestSeed,
   }));
+  after(() => capturePassportRouteDiagnostic({
+    routeName: 'passport_public_page',
+    requestId: analyticsRequestSeed,
+    subjectId: identity.user_id,
+    operation: 'render',
+    responseStatus: 200,
+    durationMs: elapsedMs(),
+    resultClass: passport!.access === 'public' ? 'success' : 'restricted',
+    cacheState: viewerAccess.viewer_id ? 'private_view' : 'versioned_public',
+  }));
   const challengeSetup = primaryChallengeSetup(passport);
   const showCompetitive = Boolean(summary && isVisible(passport, 'competitive'));
   const showEvents = isVisible(passport, 'events');
@@ -191,8 +206,17 @@ export default async function GamerPassportPage({ params }: Props) {
             <BrandLogo size="sm" />
           </Link>
           <div className="flex items-center gap-2">
-            <Link href="/login" className="btn-ghost text-sm">Sign in</Link>
-            <Link href="/register" className="btn-primary text-sm">Create yours</Link>
+            {viewerAccess.viewer_id ? (
+              <>
+                <Link href="/dashboard" className="btn-ghost text-sm">Dashboard</Link>
+                <Link href="/passport" className="btn-primary text-sm">My Passport</Link>
+              </>
+            ) : (
+              <>
+                <Link href="/login" className="btn-ghost text-sm">Sign in</Link>
+                <Link href="/register" className="btn-primary text-sm">Create yours</Link>
+              </>
+            )}
           </div>
         </div>
       </nav>
@@ -282,7 +306,9 @@ export default async function GamerPassportPage({ params }: Props) {
                     className="btn-primary"
                   />
                 ) : null}
-                <Link href="/register" className="btn-outline">Build your Passport</Link>
+                <Link href={viewerAccess.viewer_id ? '/passport' : '/register'} className="btn-outline">
+                  {viewerAccess.viewer_id ? 'Open my Passport' : 'Build your Passport'}
+                </Link>
               </div>
             </div>
 

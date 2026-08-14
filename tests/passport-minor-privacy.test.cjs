@@ -100,12 +100,12 @@ test('public resolution and publication fail closed for minor accounts', async (
 
   assert.match(passport, /resolvePublicPassportHandleForAccountUsername[\s\S]+isMinorAccount\(profile\.id\)/);
   assert.match(passport, /setPassportPublication[\s\S]+isMinorAccount/);
-  assert.match(passport, /upsertPassportProfile[\s\S]+agePolicy\.status === 'minor'/);
+  assert.match(passport, /upsertPassportProfile[\s\S]+agePolicy\.status === ["']minor["']/);
   assert.match(progression, /updatePassportMediaKitSettings[\s\S]+isMinorAccount/);
   assert.match(progression, /setPassportReplayPublic[\s\S]+isMinorAccount/);
   assert.match(progression, /getPublicPassportReplay[\s\S]+isMinorAccount/);
   assert.match(progression, /getPublicPassportMediaKitSettings[\s\S]+isMinorAccount/);
-  assert.match(resume, /settings\.inquiry_enabled && await isMinorAccount/);
+  assert.match(resume, /settings\.inquiry_enabled && \(await isMinorAccount/);
 });
 
 test('owner and admin mutation routes require confirmation and review evidence', async () => {

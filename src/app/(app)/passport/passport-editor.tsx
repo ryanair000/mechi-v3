@@ -14,8 +14,6 @@ import {
   Save,
   ShieldCheck,
   Sparkles,
-  Swords,
-  Users,
 } from 'lucide-react';
 import { useAuth, useAuthFetch } from '@/components/AuthProvider';
 import { resolvePassportAccessMode } from '@/lib/passport-access-policy';
@@ -55,6 +53,10 @@ function visibilityLabel(value: PassportVisibility) {
   if (value === 'friends') return 'Friends';
   if (value === 'private') return 'Only me';
   return 'Public';
+}
+
+function PassportToolGroup({ title, links }: { title: string; links: Array<[string, string]> }) {
+  return <section className="rounded-2xl border border-[var(--border-color)] bg-[var(--surface-elevated)] p-4"><h3 className="text-sm font-black text-[var(--text-primary)]">{title}</h3><ul className="mt-3 space-y-1">{links.map(([href, label]) => <li key={href}><Link href={href} className="flex min-h-9 items-center justify-between rounded-lg px-2 text-sm text-[var(--text-secondary)] transition-colors hover:bg-black/5 hover:text-[var(--text-primary)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-teal)]"><span>{label}</span><ArrowRight size={13} aria-hidden="true" /></Link></li>)}</ul></section>;
 }
 
 export function PassportEditor() {
@@ -310,47 +312,8 @@ export function PassportEditor() {
               </p>
             </div>
             <div className="flex flex-wrap gap-2">
-              <Link href="/passport/friends" className="btn-outline">
-                <Users size={14} /> Friends
-              </Link>
-              <Link href="/passport/compare" className="btn-outline">
-                <Swords size={14} /> Compare
-              </Link>
-              <Link href="/passport/resume" className="btn-outline">
-                <ShieldCheck size={14} /> Competitive Resume
-              </Link>
-              <Link href="/passport/games" className="btn-outline">
-                <Gamepad2 size={14} /> Manage game library
-              </Link>
-              <Link href="/passport/cards" className="btn-outline">
-                <Sparkles size={14} /> Gamer Cards
-              </Link>
-              <Link href="/passport/highlights" className="btn-outline">
-                <Sparkles size={14} /> Highlights
-              </Link>
-              <Link href="/passport/progression" className="btn-outline">
-                <Sparkles size={14} /> Progression
-              </Link>
-              <Link href="/passport/customize" className="btn-outline">
-                <Sparkles size={14} /> Customize
-              </Link>
-              <Link href="/passport/replay" className="btn-outline">
-                <Sparkles size={14} /> Annual Replay
-              </Link>
-              <Link href="/passport/media-kit" className="btn-outline">
-                <ShieldCheck size={14} /> Media Kit
-              </Link>
-              <Link href="/passport/connections" className="btn-outline">
-                <ShieldCheck size={14} /> Platform Connections
-              </Link>
-              <Link href="/passport/developer" className="btn-outline">
-                <ShieldCheck size={14} /> Developer Access
-              </Link>
-              <Link href="/passport/export" className="btn-outline">
-                <ShieldCheck size={14} /> Export my data
-              </Link>
               {isPublished && publicPath ? <Link href={publicPath} className="btn-outline">
-                View public Passport <ArrowRight size={14} />
+                Preview Passport <ArrowRight size={14} />
               </Link> : null}
               <button type="button" onClick={() => void save()} disabled={saving || !passport.identity.storage_ready} className="btn-primary">
                 {saving ? <Loader2 size={15} className="animate-spin" /> : <Save size={15} />}
@@ -363,11 +326,60 @@ export function PassportEditor() {
 
       {!passport.identity.storage_ready ? (
         <section className="rounded-[var(--radius-card)] border border-amber-300/20 bg-amber-300/[0.07] p-4 text-sm leading-6 text-amber-100/80">
-          The Phase 1 Passport migration has not been applied to this environment. Existing Mechi history is visible, but personalization is read-only until storage is ready.
+          Passport storage is temporarily unavailable. Existing Mechi history remains visible, but identity and privacy changes are read-only until service is restored.
         </section>
       ) : null}
 
-      <section className={`rounded-[var(--radius-card)] border p-5 sm:p-6 ${isMinorProtected ? 'border-amber-300/25 bg-amber-300/[0.07]' : 'border-[var(--border-color)] bg-[var(--surface)]'}`}>
+      <section className="grid gap-5 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1.9fr)]">
+        <div className="card p-5 sm:p-6">
+          <p className="section-title">First-value journey</p>
+          <h2 className="mt-2 text-xl font-black text-[var(--text-primary)]">Build a Passport worth sharing</h2>
+          <ol className="mt-5 space-y-3">
+            {[
+              ['Choose a safe public handle', Boolean(passport.identity.public_handle)],
+              ['Choose Public or Friends privacy', passport.identity.default_visibility !== 'private'],
+              ['Add five meaningful games', Number(passport.summary?.games_count ?? 0) >= 5],
+              ['Add one game you are playing now', Number(passport.summary?.playing_games_count ?? 0) >= 1],
+              ['Publish and preview your Passport', isPublished],
+            ].map(([label, done], index) => <li key={String(label)} className="flex items-center gap-3 text-sm text-[var(--text-secondary)]"><span className={`grid h-7 w-7 shrink-0 place-items-center rounded-full text-xs font-black ${done ? 'bg-[var(--brand-teal)] text-[#071018]' : 'border border-[var(--border-color)] text-[var(--text-soft)]'}`}>{done ? <Check size={14} aria-hidden="true" /> : index + 1}</span><span className={done ? 'text-[var(--text-primary)]' : ''}>{label}</span></li>)}
+          </ol>
+          <Link href="/passport/games" className="btn-primary mt-5 w-full justify-center"><Gamepad2 size={14} /> Continue building</Link>
+        </div>
+
+        <nav className="card p-5 sm:p-6" aria-label="Gamer Passport tools">
+          <p className="section-title">Passport workspace</p>
+          <div className="mt-4 grid gap-4 sm:grid-cols-2">
+            <PassportToolGroup title="Build identity" links={[
+              ['/passport/games', 'Games and story journal'],
+              ['/passport/resume', 'Verified history and Gamer CV'],
+              ['#privacy', 'Privacy and discovery'],
+            ]} />
+            <PassportToolGroup title="Connect" links={[
+              ['/passport/friends', 'Friends'],
+              ['/passport/compare', 'Compare Passports'],
+              ['/passport/circles', 'Gaming Circles'],
+            ]} />
+            <PassportToolGroup title="Present and share" links={[
+              ...(isPublished && publicPath ? [[publicPath, 'Public preview']] as Array<[string, string]> : []),
+              ['/passport/cards', 'Gamer Cards'],
+              ['/passport/highlights', 'Highlights'],
+              ['/passport/replay', 'Annual Replay'],
+            ]} />
+            <PassportToolGroup title="Personalize" links={[
+              ['/passport/progression', 'Progression'],
+              ['/passport/customize', 'Showcase and cosmetics'],
+            ]} />
+            <PassportToolGroup title="Advanced" links={[
+              ['/passport/media-kit', 'Media Kit'],
+              ['/passport/connections', 'Platform connections'],
+              ['/passport/developer', 'Developer access'],
+              ['/passport/export', 'Export my data'],
+            ]} />
+          </div>
+        </nav>
+      </section>
+
+      <section id="privacy" className={`scroll-mt-24 rounded-[var(--radius-card)] border p-5 sm:p-6 ${isMinorProtected ? 'border-amber-300/25 bg-amber-300/[0.07]' : 'border-[var(--border-color)] bg-[var(--surface)]'}`}>
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div className="max-w-2xl">
             <p className="section-title">Age-group privacy</p>

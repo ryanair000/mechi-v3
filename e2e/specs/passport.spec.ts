@@ -106,6 +106,91 @@ test.describe.serial('Gamer Passport runtime release gate', () => {
     expect(afterAwards.count).toBe(beforeAwards.count);
   });
 
+  test('@core authenticated analytics accepts only the privacy-safe event contract', async ({
+    environment,
+    personas,
+    openPersonaPage,
+  }) => {
+    const client = createE2ESupabaseClient(environment);
+    const owner = await openPersonaPage('playerFree');
+    try {
+      const response = await owner.context.request.post('/api/passport/analytics', {
+        data: {
+          event: 'passport_card_shared',
+          properties: {
+            format: 'story',
+            channel: 'whatsapp',
+            username: 'must-not-be-stored',
+            phone: '+254700000000',
+            url: 'https://example.test/private',
+          },
+        },
+      });
+      expect(response.status()).toBe(204);
+
+      await expect.poll(async () => {
+        const result = await client.from('passport_product_events')
+          .select('properties')
+          .eq('subject_user_id', personas.playerFree.id)
+          .eq('event_name', 'passport_card_shared')
+          .order('occurred_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        expect(result.error).toBeNull();
+        return result.data?.properties ?? null;
+      }).toEqual({ format: 'story', channel: 'whatsapp' });
+    } finally {
+      await owner.context.close();
+    }
+  });
+
+  test('@core Passport data exports are complete, expiring, and owner-only', async ({
+    environment,
+    personas,
+    request,
+    openPersonaPage,
+  }) => {
+    expect((await request.post('/api/passport/me/export')).status()).toBe(401);
+    const owner = await openPersonaPage('playerFree');
+    const otherPlayer = await openPersonaPage('playerPro');
+    try {
+      const created = await owner.context.request.post('/api/passport/me/export');
+      expect(created.status()).toBe(201);
+      const createdPayload = await created.json() as { export: { download_url: string; expires_at: string } };
+      expect(new Date(createdPayload.export.expires_at).getTime()).toBeGreaterThan(Date.now());
+
+      expect((await request.get(createdPayload.export.download_url)).status()).toBe(401);
+      expect((await otherPlayer.context.request.get(createdPayload.export.download_url)).status()).toBe(404);
+
+      const downloaded = await owner.context.request.get(createdPayload.export.download_url);
+      expect(downloaded.status()).toBe(200);
+      expect(downloaded.headers()['cache-control']).toContain('private, no-store');
+      const bundle = await downloaded.json();
+      expect(bundle.export.schema_version).toBe('passport-export-v1');
+      expect(bundle.export.subject_user_id).toBe(personas.playerFree.id);
+      expect(bundle.identity_and_privacy.public_handle).toBe('e2e-public');
+      expect(bundle.game_journal).toHaveLength(1);
+      expect(bundle.verification_records).toBeDefined();
+      expect(bundle.event_credentials).toBeDefined();
+      expect(bundle.social_relationships.friendships).toHaveLength(1);
+      expect(JSON.stringify(bundle)).not.toContain('encrypted_access_token');
+      expect(JSON.stringify(bundle)).not.toContain('encrypted_refresh_token');
+      expect(JSON.stringify(bundle)).not.toContain(personas.playerPro.id);
+
+      const client = createE2ESupabaseClient(environment);
+      await expect.poll(async () => {
+        const result = await client.from('passport_data_export_audit')
+          .select('action')
+          .eq('user_id', personas.playerFree.id)
+          .eq('action', 'downloaded');
+        return result.data?.length ?? 0;
+      }).toBe(1);
+    } finally {
+      await owner.context.close();
+      await otherPlayer.context.close();
+    }
+  });
+
   test('@core unpublishing invalidates a warmed public cache immediately', async ({
     environment,
     personas,

@@ -1,6 +1,8 @@
 import type { Metadata } from 'next';
+import { randomUUID } from 'node:crypto';
 import { unstable_cache } from 'next/cache';
-import { cookies } from 'next/headers';
+import { cookies, headers } from 'next/headers';
+import { after } from 'next/server';
 import Image from 'next/image';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
@@ -22,6 +24,7 @@ import { PassportSocialActions } from '@/components/PassportSocialActions';
 import { GAMES } from '@/lib/config';
 import { PASSPORT_GAME_STATUS_LABELS } from '@/lib/passport-game-types';
 import { getPassportData, getPassportPath, normalizePassportUsername } from '@/lib/passport';
+import { capturePassportProductEvent } from '@/lib/passport-analytics';
 import { buildPassportMetadata } from '@/lib/passport-metadata';
 import { resolvePassportTokenViewerAccess } from '@/lib/passport-viewer-access';
 import { getPassportHighlights } from '@/lib/passport-community';
@@ -134,6 +137,29 @@ export default async function GamerPassportPage({ params }: Props) {
   }
 
   const { identity, summary } = passport;
+  const requestHeaders = await headers();
+  const analyticsRequestSeed = requestHeaders.get('x-request-id')
+    ?? requestHeaders.get('x-vercel-id')
+    ?? randomUUID();
+  after(() => capturePassportProductEvent({
+    event: 'passport_public_viewed',
+    subjectUserId: identity.user_id,
+    actorKind: viewerAccess.friend_view
+      ? 'friend'
+      : viewerAccess.viewer_id
+        ? 'member'
+        : 'anonymous',
+    source: 'page.passport.public',
+    properties: {
+      access: passport!.access,
+      viewer_kind: viewerAccess.friend_view
+        ? 'friend'
+        : viewerAccess.viewer_id
+          ? 'member'
+          : 'anonymous',
+    },
+    dedupeSeed: analyticsRequestSeed,
+  }));
   const challengeSetup = primaryChallengeSetup(passport);
   const showCompetitive = Boolean(summary && isVisible(passport, 'competitive'));
   const showEvents = isVisible(passport, 'events');

@@ -288,7 +288,7 @@ export function PassportEditor() {
   const isMinorProtected = passport.age_policy.status === 'minor';
   const accessMode = resolvePassportAccessMode(passport.identity);
   const publicPath = passport.identity.public_handle
-    ? `/@${encodeURIComponent(passport.identity.public_handle)}`
+    ? `/p/@${encodeURIComponent(passport.identity.public_handle)}`
     : null;
 
   return (
@@ -345,6 +345,9 @@ export function PassportEditor() {
               </Link>
               <Link href="/passport/developer" className="btn-outline">
                 <ShieldCheck size={14} /> Developer Access
+              </Link>
+              <Link href="/passport/export" className="btn-outline">
+                <ShieldCheck size={14} /> Export my data
               </Link>
               {isPublished && publicPath ? <Link href={publicPath} className="btn-outline">
                 View public Passport <ArrowRight size={14} />

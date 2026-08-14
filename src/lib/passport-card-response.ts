@@ -14,6 +14,12 @@ type PassportCardDependencies = {
   loadPassport: (handle: string) => Promise<PublicPassportData | null>;
   loadPresentation: (userId: string) => Promise<PassportCardPresentationSource>;
   renderCard?: typeof renderPassportCardPng;
+  captureGenerated?: (event: {
+    subjectUserId: string;
+    format: string;
+    delivery: 'inline' | 'download';
+    renderState: 'rendered' | 'fallback';
+  }) => void;
 };
 
 type PassportCardEvent = {
@@ -137,6 +143,12 @@ export async function createPassportCardResponse(
   try {
     const png = await (dependencies.renderCard ?? renderPassportCardPng)(model);
     const download = url.searchParams.get('download') === '1';
+    dependencies.captureGenerated?.({
+      subjectUserId: passport.identity.user_id,
+      format,
+      delivery: download ? 'download' : 'inline',
+      renderState: 'rendered',
+    });
     return pngResponse(png, {
       cacheControl: 'public, max-age=60, stale-while-revalidate=300',
       disposition: `${download ? 'attachment' : 'inline'}; filename="${model.handle}-gamer-card-${format}.png"`,
@@ -151,6 +163,12 @@ export async function createPassportCardResponse(
       duration_ms: Date.now() - startedAt,
       error_class: errorClass(error),
     }, error);
+    dependencies.captureGenerated?.({
+      subjectUserId: passport.identity.user_id,
+      format,
+      delivery: url.searchParams.get('download') === '1' ? 'download' : 'inline',
+      renderState: 'fallback',
+    });
     return pngResponse(createPassportCardFallbackPng(format), {
       cacheControl: 'private, no-store',
       state: 'render_fallback',

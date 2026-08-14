@@ -10,10 +10,26 @@ export async function runPassportRetentionCleanup(triggerSource: TriggerSource) 
   const { data: run, error: runError } = await supabase.from('passport_operation_runs').insert({ operation_type: 'retention_cleanup', trigger_source: triggerSource }).select('id').single();
   if (runError || !run) throw new Error('Could not start Passport retention operation');
   try {
+    const { data: expiredExports, error: exportExpiryError } = await supabase
+      .from('passport_data_exports')
+      .update({ status: 'expired', payload: null, download_token_hash: null })
+      .eq('status', 'ready')
+      .lt('expires_at', new Date().toISOString())
+      .select('id, user_id');
+    if (exportExpiryError) throw new Error('Passport export retention cleanup failed');
+    if (expiredExports?.length) {
+      await supabase.from('passport_data_export_audit').insert(expiredExports.map((item) => ({
+        export_id: item.id,
+        user_id: item.user_id,
+        action: 'expired',
+        details: { trigger_source: triggerSource },
+      })));
+    }
     const { data, error } = await supabase.rpc('cleanup_passport_operational_data');
     if (error) throw new Error('Passport retention cleanup failed');
-    await supabase.from('passport_operation_runs').update({ status: 'succeeded', details: data ?? {}, finished_at: new Date().toISOString() }).eq('id', run.id);
-    return { ok: true, run_id: run.id, deleted: data ?? {} };
+    const details = { ...(data && typeof data === 'object' ? data : {}), expired_exports: expiredExports?.length ?? 0 };
+    await supabase.from('passport_operation_runs').update({ status: 'succeeded', details, finished_at: new Date().toISOString() }).eq('id', run.id);
+    return { ok: true, run_id: run.id, deleted: details };
   } catch (error) {
     await supabase.from('passport_operation_runs').update({ status: 'failed', failed_count: 1, details: { error: error instanceof Error ? error.message : 'unknown' }, finished_at: new Date().toISOString() }).eq('id', run.id);
     throw error;

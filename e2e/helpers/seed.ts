@@ -189,6 +189,9 @@ export type SuggestionInput = {
 };
 
 const RESET_TABLES = [
+  'passport_data_export_audit',
+  'passport_data_exports',
+  'passport_product_events',
   'workspace_audit_events',
   'tournament_entry_members',
   'tournament_entries',

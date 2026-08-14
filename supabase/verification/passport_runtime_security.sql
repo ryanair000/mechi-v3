@@ -14,7 +14,10 @@ BEGIN
     'passport_highlights',
     'passport_dimension_snapshots',
     'passport_friendships',
-    'passport_blocks'
+    'passport_blocks',
+    'passport_product_events',
+    'passport_data_exports',
+    'passport_data_export_audit'
   ]
   LOOP
     IF to_regclass(format('public.%I', table_name)) IS NULL THEN
@@ -66,7 +69,9 @@ BEGIN
     'passport_verifications_bump_public_version',
     'passport_highlights_bump_public_version',
     'passport_dimensions_bump_public_version',
-    'passport_friendships_bump_public_version'
+    'passport_friendships_bump_public_version',
+    'passport_profiles_capture_product_events',
+    'passport_games_capture_product_events'
   ]) AS required(name)
   WHERE NOT EXISTS (
     SELECT 1
@@ -82,7 +87,8 @@ BEGIN
 
   FOREACH function_signature IN ARRAY ARRAY[
     'private.refresh_passport_profile_summary_counts(uuid)',
-    'private.bump_passport_public_version(uuid)'
+    'private.bump_passport_public_version(uuid)',
+    'private.emit_passport_product_event(text,uuid,text,text,jsonb,text,timestamp with time zone)'
   ]
   LOOP
     IF to_regprocedure(function_signature) IS NULL THEN

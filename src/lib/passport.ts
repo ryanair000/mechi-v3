@@ -23,7 +23,6 @@ import {
   PASSPORT_VISIBILITIES,
   type PassportArchetype,
   type PassportEventPreview,
-  type PassportField,
   type PassportFieldVisibility,
   type PassportIdentity,
   type PassportOwnerData,
@@ -34,6 +33,10 @@ import {
   type PassportVisibility,
   type PublicPassportData,
 } from '@/lib/passport-types';
+import {
+  buildPublicPassportSummary,
+  isPassportFieldVisible,
+} from '@/lib/passport-public-summary';
 import type { GameKey, PlatformKey } from '@/types';
 
 const PASSPORT_PROFILE_SELECT =
@@ -189,17 +192,6 @@ export function normalizePassportFieldVisibility(
   ) as PassportFieldVisibility;
 }
 
-function isVisibleField(
-  identity: PassportIdentity,
-  field: PassportField,
-  friendView = false
-): boolean {
-  if (identity.default_visibility === 'private') return false;
-  if (identity.default_visibility === 'friends' && !friendView) return false;
-  const visibility = identity.field_visibility[field];
-  return visibility === 'public' || (friendView && visibility === 'friends');
-}
-
 function firstRelation<T>(value: T | T[] | null | undefined): T | null {
   return Array.isArray(value) ? value[0] ?? null : value ?? null;
 }
@@ -255,16 +247,16 @@ function defaultPassportIdentity(
 function restrictedIdentity(identity: PassportIdentity, friendView = false): PassportIdentity {
   return {
     ...identity,
-    bio: isVisibleField(identity, 'bio', friendView) ? identity.bio : '',
-    gamer_since: isVisibleField(identity, 'gamer_since', friendView) ? identity.gamer_since : null,
-    archetypes: isVisibleField(identity, 'archetypes', friendView) ? identity.archetypes : [],
-    current_status: isVisibleField(identity, 'current_status', friendView) ? identity.current_status : 'offline',
-    country: isVisibleField(identity, 'location', friendView) ? identity.country : null,
-    region: isVisibleField(identity, 'location', friendView) ? identity.region : null,
-    location_label: isVisibleField(identity, 'location', friendView) ? identity.location_label : '',
-    platforms: isVisibleField(identity, 'platforms', friendView) ? identity.platforms : [],
-    games: isVisibleField(identity, 'games', friendView) ? identity.games : [],
-    game_ids: isVisibleField(identity, 'game_ids', friendView) ? identity.game_ids : {},
+    bio: isPassportFieldVisible(identity, 'bio', friendView) ? identity.bio : '',
+    gamer_since: isPassportFieldVisible(identity, 'gamer_since', friendView) ? identity.gamer_since : null,
+    archetypes: isPassportFieldVisible(identity, 'archetypes', friendView) ? identity.archetypes : [],
+    current_status: isPassportFieldVisible(identity, 'current_status', friendView) ? identity.current_status : 'offline',
+    country: isPassportFieldVisible(identity, 'location', friendView) ? identity.country : null,
+    region: isPassportFieldVisible(identity, 'location', friendView) ? identity.region : null,
+    location_label: isPassportFieldVisible(identity, 'location', friendView) ? identity.location_label : '',
+    platforms: isPassportFieldVisible(identity, 'platforms', friendView) ? identity.platforms : [],
+    games: isPassportFieldVisible(identity, 'games', friendView) ? identity.games : [],
+    game_ids: isPassportFieldVisible(identity, 'game_ids', friendView) ? identity.game_ids : {},
   };
 }
 
@@ -508,35 +500,6 @@ function mapOnlineEvents(rows: OnlineTournamentRegistrationRow[]): PassportEvent
   }));
 }
 
-function maskSummary(summary: PassportSummary, identity: PassportIdentity, friendView = false): PassportSummary {
-  return {
-    ...summary,
-    games_count: isVisibleField(identity, 'games', friendView) ? summary.games_count : 0,
-    playing_games_count: isVisibleField(identity, 'games', friendView) ? summary.playing_games_count : 0,
-    completed_games_count: isVisibleField(identity, 'games', friendView) ? summary.completed_games_count : 0,
-    favorite_games_count: isVisibleField(identity, 'games', friendView) ? summary.favorite_games_count : 0,
-    total_library_hours: isVisibleField(identity, 'games', friendView) ? summary.total_library_hours : 0,
-    total_matches: isVisibleField(identity, 'competitive', friendView) ? summary.total_matches : 0,
-    total_wins: isVisibleField(identity, 'competitive', friendView) ? summary.total_wins : 0,
-    total_losses: isVisibleField(identity, 'competitive', friendView) ? summary.total_losses : 0,
-    win_rate: isVisibleField(identity, 'competitive', friendView) ? summary.win_rate : 0,
-    best_rating: isVisibleField(identity, 'competitive', friendView) ? summary.best_rating : 1000,
-    tournaments_registered: isVisibleField(identity, 'events', friendView)
-      ? summary.tournaments_registered
-      : 0,
-    events_attended: isVisibleField(identity, 'events', friendView) ? summary.events_attended : 0,
-    completed_events: isVisibleField(identity, 'events', friendView) ? summary.completed_events : 0,
-    achievements_count: isVisibleField(identity, 'achievements', friendView)
-      ? summary.achievements_count
-      : 0,
-    badges_count: isVisibleField(identity, 'achievements', friendView) ? summary.badges_count : 0,
-    teams_count: isVisibleField(identity, 'teams', friendView) ? summary.teams_count : 0,
-    friends_count: isVisibleField(identity, 'social', friendView) ? summary.friends_count : 0,
-    followers_count: isVisibleField(identity, 'social', friendView) ? summary.followers_count : 0,
-    following_count: isVisibleField(identity, 'social', friendView) ? summary.following_count : 0,
-  };
-}
-
 async function persistSummary(userId: string, summary: PassportSummary): Promise<void> {
   const supabase = createServiceClient();
   const result = await supabase.from('passport_profile_summaries').upsert(
@@ -711,11 +674,11 @@ export async function getPassportData(
   return {
     access: 'public',
     identity: restrictedIdentity(identity, Boolean(options.friendView)),
-    summary: maskSummary(summary, identity, Boolean(options.friendView)),
-    events: isVisibleField(identity, 'events', Boolean(options.friendView)) ? events : [],
-    teams: isVisibleField(identity, 'teams', Boolean(options.friendView)) ? teams : [],
+    summary: buildPublicPassportSummary(summary, identity, Boolean(options.friendView)),
+    events: isPassportFieldVisible(identity, 'events', Boolean(options.friendView)) ? events : [],
+    teams: isPassportFieldVisible(identity, 'teams', Boolean(options.friendView)) ? teams : [],
     verifications,
-    library: isVisibleField(identity, 'games', Boolean(options.friendView))
+    library: isPassportFieldVisible(identity, 'games', Boolean(options.friendView))
       ? library
       : {
           access: 'restricted',

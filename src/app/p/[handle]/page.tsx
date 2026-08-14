@@ -108,6 +108,7 @@ export default async function GamerPassportPage({ params }: Props) {
   const showAchievements = isVisible(passport, 'achievements');
   const showTeams = isVisible(passport, 'teams');
   const showGames = isVisible(passport, 'games');
+  const showVerifiedRecords = typeof summary?.verified_records_count === 'number';
   const highlights = passport.access === 'public' ? await getPassportHighlights(identity.user_id, viewer?.sub ?? null) : [];
   const [progression, shelves] = passport.access === 'public' ? await Promise.all([
     getVisiblePassportProgression(identity.user_id, viewer?.sub ?? null, showAchievements),
@@ -362,7 +363,7 @@ export default async function GamerPassportPage({ params }: Props) {
               </div>
 
               <aside className="space-y-5">
-                <section className="card p-5">
+                {showVerifiedRecords ? <section className="card p-5">
                   <div className="flex items-center gap-2">
                     <ShieldCheck size={18} style={{ color: identity.card_accent }} />
                     <h2 className="font-black text-[var(--text-primary)]">Passport trust</h2>
@@ -371,13 +372,13 @@ export default async function GamerPassportPage({ params }: Props) {
                     Verified records come from Mechi matches, event check-ins, or an identified issuer. Self-reported history is labeled separately.
                   </p>
                   <div className="mt-4 rounded-2xl border border-[var(--border-color)] bg-[var(--surface-elevated)] p-4">
-                    <p className="text-2xl font-black text-[var(--text-primary)]">{summary?.verified_records_count ?? 0}</p>
+                    <p className="text-2xl font-black text-[var(--text-primary)]">{summary.verified_records_count}</p>
                     <p className="mt-1 text-xs font-bold uppercase tracking-[0.12em] text-[var(--text-soft)]">Verified activity records</p>
                   </div>
                   {!identity.storage_ready ? (
                     <p className="mt-3 text-xs leading-5 text-amber-200/70">Passport personalization is being prepared. Existing Mechi history remains available.</p>
                   ) : null}
-                </section>
+                </section> : null}
 
                 {showTeams ? (
                   <section className="card p-5">

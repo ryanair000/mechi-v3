@@ -152,6 +152,14 @@ export type PassportSummary = {
   computed_at: string;
 };
 
+export type PublicPassportSummary = Omit<
+  PassportSummary,
+  'verified_records_count' | 'last_activity_at' | 'computed_at'
+> & {
+  verified_records_count?: number;
+  last_activity_at?: string | null;
+};
+
 export type PassportEventPreview = {
   id: string;
   slug: string;
@@ -186,14 +194,15 @@ export type PassportVerificationPreview = {
 export type PublicPassportData = {
   access: 'public' | 'restricted';
   identity: PassportIdentity;
-  summary: PassportSummary | null;
+  summary: PublicPassportSummary | null;
   events: PassportEventPreview[];
   teams: PassportTeamPreview[];
   verifications: PassportVerificationPreview[];
   library: PassportGameLibrary;
 };
 
-export type PassportOwnerData = PublicPassportData & {
+export type PassportOwnerData = Omit<PublicPassportData, 'summary'> & {
   access: 'public';
   identity: PassportIdentity;
+  summary: PassportSummary | null;
 };

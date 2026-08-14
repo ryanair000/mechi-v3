@@ -72,7 +72,7 @@ function summary() {
 
 test('public summary is an explicit allowlist and excludes internal projection fields', async () => {
   const { buildPublicPassportSummary } = await summaryModulePromise;
-  const output = buildPublicPassportSummary(summary(), identity());
+  const output = buildPublicPassportSummary(summary(), identity(), false, 9);
 
   assert.equal(output.games_count, 13);
   assert.equal(output.verified_records_count, 58);
@@ -83,7 +83,7 @@ test('public summary is an explicit allowlist and excludes internal projection f
 
 test('every public summary key has an explicit source-domain mapping', async () => {
   const { PASSPORT_SUMMARY_PRIVACY_SOURCES, buildPublicPassportSummary } = await summaryModulePromise;
-  const output = buildPublicPassportSummary(summary(), identity());
+  const output = buildPublicPassportSummary(summary(), identity(), false, 9);
 
   assert.deepEqual(
     Object.keys(PASSPORT_SUMMARY_PRIVACY_SOURCES).sort(),
@@ -179,7 +179,7 @@ test('team and social privacy mask only their dependent counters', async () => {
 
   const socialHidden = buildPublicPassportSummary(summary(), identity({
     field_visibility: { ...visibility(), social: 'private' },
-  }));
+  }), false, 9);
   assert.equal(socialHidden.friends_count, 0);
   assert.equal(socialHidden.followers_count, 0);
   assert.equal(socialHidden.following_count, 0);

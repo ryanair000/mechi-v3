@@ -59,7 +59,8 @@ function sourcesVisible(
 export function buildPublicPassportSummary(
   summary: PassportSummary,
   identity: PassportIdentity,
-  friendView = false
+  friendView = false,
+  visibleVerificationCount?: number
 ): PublicPassportSummary {
   const gamesVisible = sourcesVisible(identity, PASSPORT_SUMMARY_PRIVACY_SOURCES.games_count, friendView);
   const socialVisible = sourcesVisible(identity, PASSPORT_SUMMARY_PRIVACY_SOURCES.friends_count, friendView);
@@ -98,7 +99,12 @@ export function buildPublicPassportSummary(
     achievements_count: achievementsVisible ? summary.achievements_count : 0,
     badges_count: achievementsVisible ? summary.badges_count : 0,
     teams_count: teamsVisible ? summary.teams_count : 0,
-    ...(verifiedRecordsVisible ? { verified_records_count: summary.verified_records_count } : {}),
+    ...(verifiedRecordsVisible && typeof visibleVerificationCount === 'number'
+      ? {
+          verified_records_count:
+            summary.total_matches + summary.events_attended + visibleVerificationCount,
+        }
+      : {}),
     ...(lastActivityVisible ? { last_activity_at: summary.last_activity_at } : {}),
   };
 }

@@ -29,7 +29,7 @@ import {
   type PassportStatus,
   type PassportSummary,
   type PassportTeamPreview,
-  type PassportVerificationPreview,
+  type PassportVerificationRecordPreview,
   type PassportVisibility,
   type PublicPassportData,
 } from '@/lib/passport-types';
@@ -37,6 +37,7 @@ import {
   buildPublicPassportSummary,
   isPassportFieldVisible,
 } from '@/lib/passport-public-summary';
+import { filterPublicPassportVerifications } from '@/lib/passport-verification-privacy';
 import type { GameKey, PlatformKey } from '@/types';
 
 const PASSPORT_PROFILE_SELECT =
@@ -113,7 +114,7 @@ type TeamMemberRow = {
   }> | null;
 };
 
-type VerificationRow = PassportVerificationPreview & {
+type VerificationRow = PassportVerificationRecordPreview & {
   revoked_at?: string | null;
 };
 
@@ -425,7 +426,7 @@ async function loadTeams(userId: string): Promise<PassportTeamPreview[]> {
   });
 }
 
-async function loadVerifications(userId: string): Promise<PassportVerificationPreview[]> {
+async function loadVerifications(userId: string): Promise<PassportVerificationRecordPreview[]> {
   const supabase = createServiceClient();
   const result = await supabase
     .from('passport_verification_records')
@@ -548,10 +549,28 @@ async function loadSocialCounts(userId: string) {
   };
 }
 
+type PassportDataOptions = {
+  ownerView?: boolean;
+  friendView?: boolean;
+};
+
+export function getPassportData(username: string): Promise<PublicPassportData | null>;
+export function getPassportData(
+  username: string,
+  options: { ownerView: true; friendView?: boolean }
+): Promise<PassportOwnerData | null>;
+export function getPassportData(
+  username: string,
+  options: { ownerView?: false; friendView?: boolean }
+): Promise<PublicPassportData | null>;
+export function getPassportData(
+  username: string,
+  options: PassportDataOptions
+): Promise<PublicPassportData | PassportOwnerData | null>;
 export async function getPassportData(
   username: string,
-  options: { ownerView?: boolean; friendView?: boolean } = {}
-): Promise<PublicPassportData | null> {
+  options: PassportDataOptions = {}
+): Promise<PublicPassportData | PassportOwnerData | null> {
   let profile: Awaited<ReturnType<typeof getPublicProfileData>>;
   if (options.ownerView) {
     const normalizedUsername = normalizePassportUsername(username);
@@ -671,14 +690,26 @@ export async function getPassportData(
     };
   }
 
+  const friendView = Boolean(options.friendView);
+  const publicVerifications = filterPublicPassportVerifications(
+    verifications,
+    identity,
+    friendView
+  );
+
   return {
     access: 'public',
-    identity: restrictedIdentity(identity, Boolean(options.friendView)),
-    summary: buildPublicPassportSummary(summary, identity, Boolean(options.friendView)),
-    events: isPassportFieldVisible(identity, 'events', Boolean(options.friendView)) ? events : [],
-    teams: isPassportFieldVisible(identity, 'teams', Boolean(options.friendView)) ? teams : [],
-    verifications,
-    library: isPassportFieldVisible(identity, 'games', Boolean(options.friendView))
+    identity: restrictedIdentity(identity, friendView),
+    summary: buildPublicPassportSummary(
+      summary,
+      identity,
+      friendView,
+      publicVerifications.length
+    ),
+    events: isPassportFieldVisible(identity, 'events', friendView) ? events : [],
+    teams: isPassportFieldVisible(identity, 'teams', friendView) ? teams : [],
+    verifications: publicVerifications,
+    library: isPassportFieldVisible(identity, 'games', friendView)
       ? library
       : {
           access: 'restricted',

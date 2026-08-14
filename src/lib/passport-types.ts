@@ -181,7 +181,20 @@ export type PassportTeamPreview = {
   joined_at: string;
 };
 
-export type PassportVerificationPreview = {
+export const PASSPORT_VERIFICATION_SUBJECT_TYPES = [
+  'profile',
+  'game_account',
+  'match',
+  'tournament',
+  'event',
+  'team',
+  'achievement',
+] as const;
+
+export type PassportVerificationSubjectType =
+  (typeof PASSPORT_VERIFICATION_SUBJECT_TYPES)[number];
+
+export type PassportVerificationRecordPreview = {
   id: string;
   subject_type: string;
   verification_state: string;
@@ -189,6 +202,13 @@ export type PassportVerificationPreview = {
   source_type: string;
   public_details: Record<string, unknown>;
   issued_at: string;
+};
+
+export type PassportVerificationPreview = Omit<
+  PassportVerificationRecordPreview,
+  'subject_type'
+> & {
+  subject_type: PassportVerificationSubjectType;
 };
 
 export type PublicPassportData = {
@@ -201,8 +221,9 @@ export type PublicPassportData = {
   library: PassportGameLibrary;
 };
 
-export type PassportOwnerData = Omit<PublicPassportData, 'summary'> & {
+export type PassportOwnerData = Omit<PublicPassportData, 'summary' | 'verifications'> & {
   access: 'public';
   identity: PassportIdentity;
   summary: PassportSummary | null;
+  verifications: PassportVerificationRecordPreview[];
 };

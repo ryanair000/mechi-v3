@@ -105,6 +105,9 @@ test('missing and link-only Passports fail closed for search indexing', async ()
   assert.equal(missing.openGraph, undefined);
   assert.equal(linkOnly.robots.index, false);
   assert.equal(linkOnly.robots.noimageindex, true);
+  assert.match(String(firstOpenGraphImage(linkOnly)), /\/api\/passport\/cards\/safeplayer/);
+  assert.match(String(linkOnly.title), /Safe Player/);
+  assert.doesNotMatch(String(firstOpenGraphImage(linkOnly)), /passport-private/);
 });
 
 test('visibility changes alter the card cache key without exposing the raw privacy timestamp', async () => {

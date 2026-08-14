@@ -1,5 +1,6 @@
 import 'server-only';
 
+import { passportActivityAudienceCeiling } from '@/lib/passport-access-policy';
 import { isMissingTableError } from '@/lib/db-compat';
 import { arePassportFriends, getPassportSocialProfiles, hasPassportBlockBetween } from '@/lib/passport-social';
 import type { PassportActivityItem, PassportActivityPreferences, PassportActivityReaction, PassportGamingCircle, PassportHighlight, PassportHighlightSource, PassportPlayedTogether, TeamPassport, TeamPassportAchievementVerification } from '@/lib/passport-community-types';
@@ -44,9 +45,11 @@ export async function projectPassportActivity(userId: string) {
       .eq('actor_id', userId).is('retracted_at', null);
     return 0;
   }
-  const defaultVisibility = profile?.is_discoverable === false
-    ? 'private'
-    : normalizeVisibility(profile?.default_visibility);
+  const defaultVisibility = passportActivityAudienceCeiling({
+    publication_status: profile?.publication_status === 'published' ? 'published' : 'draft',
+    default_visibility: normalizeVisibility(profile?.default_visibility),
+    is_discoverable: profile?.is_discoverable === true,
+  });
   const fieldVisibility = profile?.field_visibility && typeof profile.field_visibility === 'object'
     ? profile.field_visibility as Record<string, unknown>
     : {};

@@ -1,5 +1,6 @@
 import { createHash } from 'node:crypto';
 import type { Metadata } from 'next';
+import { isPassportDiscoveryEligible } from '@/lib/passport-access-policy';
 import { getPassportPathFromHandle } from '@/lib/passport-handle';
 import type { PublicPassportData } from '@/lib/passport-types';
 import { APP_URL } from '@/lib/urls';
@@ -87,7 +88,7 @@ export function buildPassportMetadata(passport: PublicPassportData | null): Meta
   const title = `${identity.display_name} (@${identity.username}) | PlayMechi Gamer Passport`;
   const description = `${identity.display_name}'s public PlayMechi Gamer Passport and gaming identity.`;
   const imageUrl = publicCardUrl(passport);
-  const indexable = identity.is_discoverable;
+  const indexable = isPassportDiscoveryEligible(identity);
 
   return {
     title,

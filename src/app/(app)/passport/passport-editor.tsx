@@ -18,6 +18,7 @@ import {
   Users,
 } from 'lucide-react';
 import { useAuth, useAuthFetch } from '@/components/AuthProvider';
+import { resolvePassportAccessMode } from '@/lib/passport-access-policy';
 import {
   DEFAULT_PASSPORT_FIELD_VISIBILITY,
   PASSPORT_ARCHETYPES,
@@ -204,6 +205,12 @@ export function PassportEditor() {
       toast.error('Choose Public or Friends visibility before publishing');
       return;
     }
+    if (action === 'publish') {
+      const consequence = defaultVisibility === 'friends'
+        ? 'Your @handle link will exist, but only accepted friends can view the protected Passport content.'
+        : 'Anyone with your @handle link will be able to view the public parts of your Passport. It will stay out of search and recommendations until you enable Discovery separately.';
+      if (!window.confirm(`Publish this Gamer Passport? ${consequence}`)) return;
+    }
     setPublishing(true);
     try {
       const saved = await save();
@@ -279,6 +286,7 @@ export function PassportEditor() {
 
   const isPublished = passport.identity.publication_status === 'published';
   const isMinorProtected = passport.age_policy.status === 'minor';
+  const accessMode = resolvePassportAccessMode(passport.identity);
   const publicPath = passport.identity.public_handle
     ? `/@${encodeURIComponent(passport.identity.public_handle)}`
     : null;
@@ -409,13 +417,25 @@ export function PassportEditor() {
         <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div className="max-w-2xl">
             <p className="section-title">Publication</p>
-            <h2 className="mt-2 text-xl font-black text-[var(--text-primary)]">{isPublished ? 'Your Passport is published' : 'Your Passport is private'}</h2>
+            <h2 className="mt-2 text-xl font-black text-[var(--text-primary)]">
+              {accessMode === 'discoverable'
+                ? 'Your Passport is public and discoverable'
+                : accessMode === 'link_only'
+                  ? 'Your Passport is public by direct link'
+                  : accessMode === 'friends'
+                    ? 'Your Passport is shared with friends'
+                    : 'Your Passport is private'}
+            </h2>
             <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">
-              {isPublished
-                ? `Players can visit @${passport.identity.public_handle}. Unpublish at any time to remove it from public pages and discovery.`
-                : isMinorProtected
-                  ? 'Minor-account protections prevent publication and discovery. Your private Gamer Passport remains available to you.'
-                  : 'Editing does not publish anything. Choose a separate gamer handle and explicitly publish when you are ready.'}
+              {accessMode === 'discoverable'
+                ? `Anyone can visit @${passport.identity.public_handle}, and the Passport may appear in PlayMechi search, recommendations, comparisons, community discovery, and search-engine results.`
+                : accessMode === 'link_only'
+                  ? `Anyone with @${passport.identity.public_handle} can open the public Passport. It is excluded from PlayMechi discovery and search-engine indexing, but old or shared links still work.`
+                  : accessMode === 'friends'
+                    ? `The @${passport.identity.public_handle} link exists, but protected Passport content is available only to accepted friends. It is excluded from public discovery.`
+                    : isMinorProtected
+                      ? 'Minor-account protections prevent publication and discovery. Your private Gamer Passport remains available to you.'
+                      : 'Editing does not publish anything. Choose a separate gamer handle and explicitly publish when you are ready.'}
             </p>
           </div>
           <button
@@ -541,7 +561,7 @@ export function PassportEditor() {
               <select disabled={isMinorProtected} value={defaultVisibility} onChange={(event) => { const value = event.target.value as PassportVisibility; setDefaultVisibility(value); if (value !== 'public') setIsDiscoverable(false); }} className="input-field">
                 {PASSPORT_VISIBILITIES.map((visibility) => <option key={visibility} value={visibility} disabled={isPublished && visibility === 'private'}>{visibilityLabel(visibility)}</option>)}
               </select>
-              <span className="block text-xs leading-5 text-[var(--text-soft)]">Friends-only sections stay hidden from strangers until the Phase 3 friend graph launches.</span>
+              <span className="block text-xs leading-5 text-[var(--text-soft)]">Public allows direct-link viewing by anyone. Friends limits protected content to accepted friends. Private requires the Passport to be unpublished. Discovery is controlled separately.</span>
             </label>
 
             <div className="mt-5 divide-y divide-[var(--border-color)] rounded-2xl border border-[var(--border-color)] bg-[var(--surface-elevated)] px-4">
@@ -560,10 +580,18 @@ export function PassportEditor() {
               ))}
             </div>
 
-            <button type="button" disabled={isMinorProtected || !isPublished || defaultVisibility !== 'public'} onClick={() => setIsDiscoverable((current) => !current)} className="mt-5 flex w-full items-center justify-between rounded-2xl border border-[var(--border-color)] bg-[var(--surface-elevated)] p-4 text-left disabled:cursor-not-allowed disabled:opacity-50">
+            <button type="button" aria-pressed={isDiscoverable} disabled={isMinorProtected || !isPublished || defaultVisibility !== 'public'} onClick={() => setIsDiscoverable((current) => !current)} className="mt-5 flex w-full items-center justify-between rounded-2xl border border-[var(--border-color)] bg-[var(--surface-elevated)] p-4 text-left disabled:cursor-not-allowed disabled:opacity-50">
               <span>
-                <span className="block text-sm font-black text-[var(--text-primary)]">Profile discovery</span>
-                <span className="mt-1 block text-xs leading-5 text-[var(--text-soft)]">Available after publishing with Public visibility. Publication never enables discovery automatically.</span>
+                <span className="block text-sm font-black text-[var(--text-primary)]">Discovery and search</span>
+                <span className="mt-1 block text-xs leading-5 text-[var(--text-soft)]">
+                  {defaultVisibility !== 'public'
+                    ? 'Unavailable for Friends or Private visibility. Friends can still use the direct link after publication.'
+                    : !isPublished
+                      ? 'Publish with Public visibility first. Publication starts link-only and never enables discovery automatically.'
+                      : isDiscoverable
+                        ? 'On: eligible for PlayMechi search, recommendations, comparisons, community discovery, and search-engine indexing.'
+                        : 'Off: the direct @handle link still works for anyone, but the Passport stays out of discovery and search indexing.'}
+                </span>
               </span>
               {isDiscoverable ? <Eye size={19} className="text-emerald-300" /> : <EyeOff size={19} className="text-[var(--text-soft)]" />}
             </button>

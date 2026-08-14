@@ -1,6 +1,7 @@
 import 'server-only';
 
 import { GAMES } from '@/lib/config';
+import { isPassportDiscoveryEligible } from '@/lib/passport-access-policy';
 import { getPassportData, normalizePassportUsername } from '@/lib/passport';
 import {
   arePassportFriends,
@@ -200,7 +201,7 @@ export async function getPassportComparison(
     getPassportData(String(rightProfile.public_handle), { friendView }),
   ]);
   if (!left || !right) return { data: null, error: 'Player not found', status: 404 };
-  if (left.access === 'restricted' || right.access === 'restricted' || (!friendView && (!left.identity.is_discoverable || !right.identity.is_discoverable))) {
+  if (left.access === 'restricted' || right.access === 'restricted' || (!friendView && (!isPassportDiscoveryEligible(left.identity) || !isPassportDiscoveryEligible(right.identity)))) {
     return { data: null, error: 'This comparison is private', status: 403 };
   }
   const leftMap = uniqueEntries(left.library.entries);

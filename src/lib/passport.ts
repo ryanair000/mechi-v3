@@ -20,6 +20,8 @@ import {
   isMinorAccount,
   MINOR_PASSPORT_PRIVACY_ERROR,
 } from '@/lib/passport-age-policy';
+import { resolvePassportAccessMode } from '@/lib/passport-access-policy';
+import { projectPassportActivity } from '@/lib/passport-community';
 import {
   DEFAULT_PASSPORT_FIELD_VISIBILITY,
   PASSPORT_ARCHETYPES,
@@ -197,6 +199,14 @@ export function normalizePassportFieldVisibility(
       normalizePassportVisibility(candidate[field], DEFAULT_PASSPORT_FIELD_VISIBILITY[field]),
     ])
   ) as PassportFieldVisibility;
+}
+
+async function refreshPassportActivityAfterAccessChange(userId: string) {
+  try {
+    await projectPassportActivity(userId);
+  } catch (error) {
+    console.error('[Passport] Could not refresh activity visibility:', error);
+  }
 }
 
 function firstRelation<T>(value: T | T[] | null | undefined): T | null {
@@ -667,10 +677,8 @@ export async function getPassportData(
     };
   }
 
-  if (
-    identity.default_visibility === 'private'
-    || (identity.default_visibility === 'friends' && !options.friendView)
-  ) {
+  const accessMode = resolvePassportAccessMode(identity);
+  if (accessMode === 'private' || (accessMode === 'friends' && !options.friendView)) {
     return {
       access: 'restricted',
       identity: restrictedIdentity(identity, Boolean(options.friendView)),
@@ -893,6 +901,14 @@ export async function upsertPassportProfile(
     }
   }
 
+  if (changedFields.some((field) => [
+    'default_visibility',
+    'field_visibility',
+    'is_discoverable',
+  ].includes(field))) {
+    await refreshPassportActivityAfterAccessChange(userId);
+  }
+
   return {
     data: await getPassportOwnerDataByUserId(userId),
     error: null,
@@ -984,6 +1000,8 @@ export async function setPassportPublication(
   if (auditResult.error && !isMissingTableError(auditResult.error, 'passport_audit_logs')) {
     console.error('[Passport] Could not write publication audit log:', auditResult.error);
   }
+
+  await refreshPassportActivityAfterAccessChange(userId);
 
   return {
     data: await getPassportOwnerDataByUserId(userId),

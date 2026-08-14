@@ -35,14 +35,17 @@ Important values:
 - `npm run test:e2e:provider-mock`
 - `npm run test:e2e:provider-sandbox`
 - `npm run test:e2e:cross-browser`
+- `npm run test:e2e:passport`
 
 ## Operator release gates
 
-Mechi does not use GitHub Actions for release verification. Run the gates from a
-trusted operator machine against a dedicated, reset-safe E2E database:
+GitHub Actions runs the mandatory Passport quality and isolated database/browser
+gates for every pull request and every push to `master`. The same gates remain
+available to a trusted operator machine against a dedicated, reset-safe E2E
+database:
 
-- `npm run release:quality` — dependency audit, cutover guard, lint, typecheck,
-  and production build;
+- `npm run release:quality` — dependency audit, cutover guard, Passport tests,
+  lint, typecheck, and production build;
 - `npm run release:database` — apply migrations, lint the isolated database, and
   execute the V5 security contract;
 - `npm run release:e2e` — run the complete local browser matrix;
@@ -62,6 +65,11 @@ preview gate additionally requires:
 Provider sandbox verification remains a separately supervised operation because
 it can contact external services. Do not use production credentials for the
 default mock release gate.
+
+The CI integration job starts a disposable local Supabase stack, applies every
+migration, lints the resulting database, verifies Passport RLS/grants/triggers,
+seeds synthetic personas, builds the production application, and runs the
+Passport browser suite. It never receives or resets a production database.
 
 
 ## Seeded personas

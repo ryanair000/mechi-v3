@@ -9,15 +9,15 @@ import {
   Gamepad2,
   GraduationCap,
   MapPin,
-  Menu,
   Scale,
   ShieldCheck,
   Trophy,
   Users,
   Video,
 } from 'lucide-react';
-import { ThemeToggle } from '@/components/ThemeToggle';
 import { V5TournamentDirectory } from '@/components/v5/V5TournamentDirectory';
+import { V5Logo } from '@/components/v5/V5Logo';
+import { V5PublicHeader } from '@/components/v5/V5PublicHeader';
 import { listPublicTournaments, type PublicTournament } from '@/lib/public-tournament-data';
 import {
   getV5Screen,
@@ -28,14 +28,6 @@ import {
 import styles from './V5Public.module.css';
 
 type Icon = ComponentType<{ size?: number; strokeWidth?: number }>;
-
-const navigation = [
-  { label: 'Play', href: '/app/player' },
-  { label: 'Tournaments', href: '/tournaments' },
-  { label: 'Watch', href: '/streams' },
-  { label: 'Community', href: '/community' },
-  { label: 'Rankings', href: '/leaderboard' },
-];
 
 const audiences: Array<{ title: string; copy: string; href: string; icon: Icon }> = [
   { title: 'Play', copy: 'Find tournaments and compete.', href: '/app/player', icon: Gamepad2 },
@@ -55,49 +47,11 @@ const roles = [
 
 const fallbackTournaments: PublicTournament[] = [];
 
-function Logo({ priority = false }: { priority?: boolean }) {
-  return (
-    <Link className={styles.brand} href="/" aria-label="PlayMechi home">
-      <span className={styles.brandMark}>
-        <Image src="/mechi-logo.png" alt="" width={940} height={1117} sizes="42px" priority={priority} />
-      </span>
-      <span className={styles.brandName}>PLAY<span>MECHI</span></span>
-    </Link>
-  );
-}
-
 export function V5Shell({ children }: { children: ReactNode }) {
   return (
     <div className={styles.page}>
-      <div className={styles.announcement}>
-        <Trophy size={14} /> Host a free, no-reward tournament today.
-      </div>
-      <header className={styles.header}>
-        <div className={styles.headerInner}>
-          <Logo priority />
-          <nav className={styles.nav} aria-label="Main navigation">
-            {navigation.map((item) => <Link key={item.label} href={item.href}>{item.label}</Link>)}
-          </nav>
-          <div className={styles.headerActions}>
-            <ThemeToggle className={styles.themeControl} />
-            <Link className={styles.buttonGhost} href="/login">Sign in</Link>
-            <Link className={styles.button} href="/register">Join PlayMechi</Link>
-          </div>
-          <details className={styles.mobileMenu}>
-            <summary aria-label="Open navigation"><Menu size={19} /></summary>
-            <nav className={styles.mobilePanel} aria-label="Mobile navigation">
-              {navigation.map((item) => <Link key={item.label} href={item.href}>{item.label}</Link>)}
-              <Link href="/login">Sign in</Link>
-              <Link href="/register">Join PlayMechi</Link>
-              <div className={styles.mobileThemeRow}>
-                <span>Appearance</span>
-                <ThemeToggle variant="pill" className={styles.mobileThemeControl} />
-              </div>
-            </nav>
-          </details>
-        </div>
-      </header>
-      <main>{children}</main>
+      <V5PublicHeader />
+      <main id="main-content" tabIndex={-1}>{children}</main>
       <V5Footer />
     </div>
   );
@@ -115,7 +69,7 @@ function V5Footer() {
       <div className={styles.container}>
         <div className={styles.footerGrid}>
           <div className={styles.footerBrand}>
-            <Logo />
+            <V5Logo />
             <p>Africa&apos;s competitive gaming network. Play, host, stream, coach, sponsor, and grow through credible competition.</p>
           </div>
           {columns.map((column) => (

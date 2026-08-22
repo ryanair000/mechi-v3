@@ -1,5 +1,5 @@
 import type { PassportGameEntry, PassportLibraryStats } from '@/lib/passport-game-types';
-import type { PassportIdentity, PassportSummary } from '@/lib/passport-types';
+import type { PassportIdentity, PublicPassportSummary } from '@/lib/passport-types';
 import type { GameKey, PlatformKey } from '@/types';
 
 export type PassportFriendshipStatus = 'none' | 'incoming' | 'outgoing' | 'friends' | 'declined';
@@ -111,7 +111,7 @@ export type PassportRivalry = {
 
 export type PassportComparisonPlayer = {
   identity: PassportIdentity;
-  summary: PassportSummary | null;
+  summary: PublicPassportSummary | null;
   library_stats: PassportLibraryStats;
 };
 

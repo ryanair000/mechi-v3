@@ -21,5 +21,5 @@ export async function PATCH(request: NextRequest) {
     headline: typeof body.headline === 'string' ? body.headline.trim().slice(0, 120) : '',
   };
   const result = await updatePassportCvSettings(access.profile.id, settings);
-  return NextResponse.json(result.ok ? { success: true, settings } : { error: result.error }, { status: result.ok ? 200 : 500 });
+  return NextResponse.json(result.ok ? { success: true, settings } : { error: result.error }, { status: result.ok ? 200 : 400 });
 }

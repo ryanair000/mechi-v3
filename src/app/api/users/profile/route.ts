@@ -53,6 +53,15 @@ function withProfileDefaults(profile: Record<string, unknown>) {
   };
 }
 
+function withoutPrivateProfileFields(profile: Record<string, unknown>) {
+  const safeProfile = { ...profile };
+  delete safeProfile.password_hash;
+  delete safeProfile.age_policy_status;
+  delete safeProfile.age_policy_source;
+  delete safeProfile.age_policy_updated_at;
+  return safeProfile;
+}
+
 function normalizeGameIds(value: Record<string, unknown>): Record<string, string> {
   return normalizeGameIdKeys(
     Object.fromEntries(
@@ -82,9 +91,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
     }
 
-    // Remove password hash from response
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { password_hash: _hash, ...safeProfileRaw } = profile;
+    const safeProfileRaw = withoutPrivateProfileFields(profile as Record<string, unknown>);
     const resolvedPlan = await maybeExpireProfilePlan(
       {
         id: profile.id as string,
@@ -376,8 +383,7 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to update profile' }, { status: 500 });
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { password_hash: _hash2, ...safeProfile2 } = profile;
+    const safeProfile2 = withoutPrivateProfileFields(profile as Record<string, unknown>);
 
     return NextResponse.json({ profile: withProfileDefaults(safeProfile2 as Record<string, unknown>) });
   } catch (err) {

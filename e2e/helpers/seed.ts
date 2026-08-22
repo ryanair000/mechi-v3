@@ -77,6 +77,9 @@ export type LobbyInput = {
   status?: 'open' | 'full' | 'in_progress' | 'closed';
   scheduledFor?: string | null;
   members?: string[];
+  participantType?: 'solo' | 'team';
+  teamSize?: number | null;
+  organizerWorkspaceId?: string | null;
 };
 
 export type TournamentInput = {
@@ -186,6 +189,10 @@ export type SuggestionInput = {
 };
 
 const RESET_TABLES = [
+  'passport_data_export_audit',
+  'passport_data_exports',
+  'passport_route_diagnostics',
+  'passport_product_events',
   'workspace_audit_events',
   'tournament_entry_members',
   'tournament_entries',
@@ -290,6 +297,7 @@ function buildProfileInsert(
     avatar_url: null,
     cover_url: null,
     password_hash: passwordHash,
+    auth_session_version: 1,
     country: persona.country,
     region: persona.region,
     plan: persona.plan,
@@ -405,6 +413,158 @@ async function seedProfiles(client: SeedClient) {
     const { error: subscriptionError } = await client.from('subscriptions').insert(subscriptions);
     assertNoError(subscriptionError, 'Failed to seed subscriptions');
   }
+}
+
+async function seedPassportFixtures(client: SeedClient) {
+  const publicationConsentVersion = 'passport-publication-2026-08-14';
+  const publishedAt = new Date().toISOString();
+  const { error: passportError } = await client.from('passport_profiles').upsert([
+    {
+      user_id: SEEDED_PERSONAS.playerFree.id,
+      public_handle: 'e2e-public',
+      publication_status: 'published',
+      published_at: publishedAt,
+      publication_consent_version: publicationConsentVersion,
+      publication_consent_at: publishedAt,
+      display_name: 'E2E Public Player',
+      bio: 'Public E2E Gamer Passport biography',
+      archetypes: ['competitive', 'story_explorer'],
+      default_visibility: 'public',
+      is_discoverable: true,
+    },
+    {
+      user_id: SEEDED_PERSONAS.playerPro.id,
+      public_handle: 'e2e-friends',
+      publication_status: 'published',
+      published_at: publishedAt,
+      publication_consent_version: publicationConsentVersion,
+      publication_consent_at: publishedAt,
+      display_name: 'E2E Friends Player',
+      bio: 'Friends-only E2E Gamer Passport biography',
+      archetypes: ['community_builder'],
+      default_visibility: 'friends',
+      is_discoverable: false,
+    },
+    {
+      user_id: SEEDED_PERSONAS.playerElite.id,
+      public_handle: null,
+      publication_status: 'draft',
+      display_name: 'E2E Private Player',
+      bio: 'This draft biography must never be public',
+      default_visibility: 'private',
+      is_discoverable: false,
+    },
+    {
+      user_id: SEEDED_PERSONAS.playerOpponentB.id,
+      public_handle: null,
+      publication_status: 'draft',
+      display_name: 'E2E Minor Player',
+      bio: 'This minor biography must never be public',
+      default_visibility: 'private',
+      is_discoverable: false,
+    },
+  ], { onConflict: 'user_id' });
+  assertNoError(passportError, 'Failed to seed Passport identities');
+
+  const { error: minorError } = await client.from('profiles').update({
+    age_policy_status: 'minor',
+    age_policy_source: 'admin',
+    age_policy_updated_at: publishedAt,
+  }).eq('id', SEEDED_PERSONAS.playerOpponentB.id);
+  assertNoError(minorError, 'Failed to seed minor-account privacy state');
+
+  const { error: summaryError } = await client.from('passport_profile_summaries').upsert([
+    { user_id: SEEDED_PERSONAS.playerFree.id },
+    { user_id: SEEDED_PERSONAS.playerPro.id },
+    { user_id: SEEDED_PERSONAS.playerElite.id },
+    { user_id: SEEDED_PERSONAS.playerOpponentB.id },
+  ], { onConflict: 'user_id' });
+  assertNoError(summaryError, 'Failed to seed Passport summaries');
+
+  const { data: catalogGame, error: catalogError } = await client
+    .from('passport_game_catalog')
+    .select('id')
+    .eq('slug', 'efootball')
+    .eq('resolution_status', 'approved')
+    .single();
+  assertNoError(catalogError, 'Failed to load Passport catalogue fixture');
+  if (!catalogGame) {
+    throw new Error('Failed to load Passport catalogue fixture: eFootball is missing');
+  }
+
+  const publicGameEntryId = 'eeeeeeee-1111-4111-8111-111111111111';
+  const { error: gameError } = await client.from('passport_game_entries').upsert([
+    {
+      id: publicGameEntryId,
+      user_id: SEEDED_PERSONAS.playerFree.id,
+      catalog_game_id: catalogGame.id,
+      platform: 'ps',
+      play_status: 'completed',
+      rating: 9,
+      hours_played: 48,
+      short_review: 'Public E2E game review',
+      is_favorite: true,
+      is_featured: true,
+      visibility: 'public',
+      source_type: 'manual',
+    },
+    {
+      id: 'eeeeeeee-2222-4222-8222-222222222222',
+      user_id: SEEDED_PERSONAS.playerPro.id,
+      catalog_game_id: catalogGame.id,
+      platform: 'ps',
+      play_status: 'playing',
+      hours_played: 12,
+      short_review: 'Friends-only E2E game review',
+      visibility: 'friends',
+      source_type: 'manual',
+    },
+  ], { onConflict: 'id' });
+  assertNoError(gameError, 'Failed to seed Passport game entries');
+
+  const { error: friendshipError } = await client.from('passport_friendships').upsert({
+    user_a_id: SEEDED_PERSONAS.playerFree.id,
+    user_b_id: SEEDED_PERSONAS.playerPro.id,
+    requested_by: SEEDED_PERSONAS.playerFree.id,
+    status: 'accepted',
+    responded_at: publishedAt,
+  }, { onConflict: 'user_a_id,user_b_id' });
+  assertNoError(friendshipError, 'Failed to seed Passport friendship');
+
+  const { error: blockError } = await client.from('passport_blocks').upsert({
+    blocker_id: SEEDED_PERSONAS.playerFree.id,
+    blocked_id: SEEDED_PERSONAS.playerOpponentA.id,
+    reason_category: 'privacy',
+  }, { onConflict: 'blocker_id,blocked_id' });
+  assertNoError(blockError, 'Failed to seed Passport block');
+
+  const { error: highlightError } = await client.from('passport_highlights').upsert({
+    user_id: SEEDED_PERSONAS.playerFree.id,
+    source_type: 'game_entry',
+    source_id: publicGameEntryId,
+    title: 'E2E public completion highlight',
+    caption: 'Runtime-visible Passport highlight',
+    visibility: 'public',
+    display_order: 1,
+    is_active: true,
+  }, { onConflict: 'user_id,source_type,source_id' });
+  assertNoError(highlightError, 'Failed to seed Passport highlight');
+
+  const dimensions = {
+    competitive: { key: 'competitive', label: 'Competitor', score: 20, level: 'growing', explanation: 'Seeded runtime projection.', inputs: [{ label: 'Verified matches', value: 1 }] },
+    explorer: { key: 'explorer', label: 'Explorer', score: 30, level: 'growing', explanation: 'Seeded runtime projection.', inputs: [{ label: 'Library titles', value: 1 }] },
+  };
+  const { error: dimensionError } = await client.from('passport_dimension_snapshots').upsert({
+    user_id: SEEDED_PERSONAS.playerFree.id,
+    formula_version: 'v1',
+    passport_level: 9,
+    total_points: 50,
+    dimensions,
+    source_counts: { games: 1, matches: 1 },
+    source_cursor: { fixture: 'e2e-passport-v1' },
+    projected_at: publishedAt,
+  }, { onConflict: 'user_id' });
+  assertNoError(dimensionError, 'Failed to seed Passport dimension snapshot');
 }
 
 async function seedV5Workspaces(client: SeedClient) {
@@ -1113,6 +1273,7 @@ async function seedAuthStates(environment: E2EEnvironment) {
         username: persona.username,
         role: persona.role,
         is_banned: Boolean(persona.isBanned),
+        auth_session_version: 1,
       },
       environment.jwtSecret,
       { expiresIn: '7d' }
@@ -1134,6 +1295,7 @@ export async function seedBaseline(environment: E2EEnvironment): Promise<void> {
   const client = createE2ESupabaseClient(environment);
   await resetE2EDatabase(client);
   await seedProfiles(client);
+  await seedPassportFixtures(client);
   await seedV5Workspaces(client);
   await seedBaselineFixtures(client, environment);
   await seedAuthStates(environment);

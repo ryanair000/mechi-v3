@@ -1,4 +1,4 @@
-import type { PassportCompetitiveResume } from '@/lib/passport-resume-types';
+import type { PassportPublicCompetitiveResume } from '@/lib/passport-resume-types';
 
 function ascii(value: string) {
   return value.normalize('NFKD').replace(/[^\x20-\x7E]/g, '').replace(/[\\()]/g, '\\$&');
@@ -16,29 +16,24 @@ function wrap(value: string, width = 86) {
   return lines;
 }
 
-export function buildGamerCvPdf(resume: PassportCompetitiveResume, origin = 'https://mechi.club') {
-  const selected = resume.cv_settings.selected_games.length
-    ? new Set(resume.cv_settings.selected_games)
-    : null;
-  const games = resume.games.filter((game) => !selected || selected.has(game.game));
-  const seasons = resume.seasons.filter((season) => !selected || selected.has(season.game));
+export function buildGamerCvPdf(resume: PassportPublicCompetitiveResume, origin = 'https://mechi.club') {
   const lines: string[] = [
     'PLAYMECHI GAMER CV',
     `${resume.identity.display_name} (@${resume.identity.username})`,
-    resume.cv_settings.headline || 'Verified competitive and event profile',
+    resume.presentation.headline || 'Verified competitive and event profile',
     '',
     'COMPETITIVE GAMES',
-    ...games.flatMap((game) => wrap(`${game.label}: ${game.matches} matches, ${game.wins} wins, ${game.win_rate}% win rate, rating ${game.current_rating}, peak ${game.peak_rating}, ${game.tournament_entries} tournament entries, ${game.tournament_wins} titles.`)),
-    ...(seasons.length ? ['', 'SEASON HISTORY', ...seasons.slice(0, 12).flatMap((season) => wrap(`${season.title} | ${season.game} | ${season.matches} matches | peak ${season.peak_rating} | ${season.tournament_wins} titles`))] : []),
+    ...resume.games.flatMap((game) => wrap(`${game.label}: ${game.matches} matches, ${game.wins} wins, ${game.win_rate}% win rate, rating ${game.current_rating}, peak ${game.peak_rating}, ${game.tournament_entries} tournament entries, ${game.tournament_wins} titles.`)),
+    ...(resume.seasons.length ? ['', 'SEASON HISTORY', ...resume.seasons.slice(0, 12).flatMap((season) => wrap(`${season.title} | ${season.game} | ${season.matches} matches | peak ${season.peak_rating} | ${season.tournament_wins} titles`))] : []),
     '',
     'VERIFIED MATCH SUMMARY',
     `${resume.matches.length} recent authoritative completed matches included.`,
     ...resume.matches.slice(0, 12).map((match) => `${match.completed_at.slice(0, 10)} | ${match.game} | ${match.result.toUpperCase()} vs @${match.opponent_username}${match.score ? ` | ${match.score}` : ''}`),
   ];
-  if (resume.cv_settings.include_events) lines.push('', 'EVENT PASSPORT', ...resume.events.slice(0, 16).flatMap((event) => wrap(`${event.occurred_at.slice(0, 10)} | ${event.event_title} | ${event.stamp_type.replace('_', ' ')}${event.placement ? ` #${event.placement}` : ''} | Verify: ${origin}/verify/passport/${event.verification_token}`)));
-  if (resume.cv_settings.include_teams) lines.push('', 'TEAM HISTORY', ...resume.teams.slice(0, 12).map((team) => `${team.name} | ${team.role} | ${team.membership_status} | joined ${team.joined_at.slice(0, 10)}`));
+  if (resume.events.length) lines.push('', 'EVENT PASSPORT', ...resume.events.slice(0, 16).flatMap((event) => wrap(`${event.occurred_at.slice(0, 10)} | ${event.event_title} | ${event.stamp_type.replace('_', ' ')}${event.placement ? ` #${event.placement}` : ''} | Verify: ${origin}/verify/passport/${event.verification_token}`)));
+  if (resume.teams.length) lines.push('', 'TEAM HISTORY', ...resume.teams.slice(0, 12).map((team) => `${team.name} | ${team.role} | ${team.membership_status} | joined ${team.joined_at.slice(0, 10)}`));
   lines.push('', `PUBLIC PASSPORT: ${origin}/@${resume.identity.username}`, `GENERATED: ${resume.generated_at}`, 'No private contact details are included.');
-  if (resume.cv_settings.inquiry_enabled && resume.cv_settings.inquiry_url) lines.push(`INQUIRIES: ${resume.cv_settings.inquiry_url}`);
+  if (resume.presentation.inquiry_url) lines.push(`INQUIRIES: ${resume.presentation.inquiry_url}`);
 
   const pages = Array.from({ length: Math.ceil(lines.length / 42) }, (_, index) => lines.slice(index * 42, index * 42 + 42));
   const objects: string[] = [];

@@ -58,21 +58,23 @@ async function loadSocialProfiles(userIds: string[]): Promise<Map<string, Passpo
   const supabase = createServiceClient();
   const [{ data: profiles }, { data: passports }] = await Promise.all([
     supabase.from('profiles').select('id, username, avatar_url, country, region').in('id', ids),
-    supabase.from('passport_profiles').select('user_id, display_name, card_accent, archetypes').in('user_id', ids),
+    supabase.from('passport_profiles').select('user_id, public_handle, display_name, card_accent, archetypes')
+      .in('user_id', ids).eq('publication_status', 'published'),
   ]);
   const passportById = new Map((passports ?? []).map((row) => [row.user_id as string, row]));
   return new Map(((profiles ?? []) as ProfileRow[]).map((profile) => {
     const passport = passportById.get(profile.id);
+    if (!passport?.public_handle) return null;
     return [profile.id, {
       id: profile.id,
-      username: profile.username,
+      username: String(passport.public_handle),
       display_name: String(passport?.display_name || profile.username),
       avatar_url: profile.avatar_url,
       card_accent: String(passport?.card_accent || '#32E0C4'),
       archetypes: Array.isArray(passport?.archetypes) ? passport.archetypes as string[] : [],
       location_label: locationLabel(profile),
     }];
-  }));
+  }).filter(Boolean) as Array<[string, PassportSocialProfile]>);
 }
 
 export async function getPassportSocialProfiles(userIds: string[]): Promise<PassportSocialProfile[]> {
@@ -182,14 +184,14 @@ export async function mutatePassportFriendship(
       user_a_id: userAId, user_b_id: userBId, requested_by: actorId, status: 'pending', responded_at: null,
     }, { onConflict: 'user_a_id,user_b_id' });
     if (error) return { ok: false, error: 'Could not send friend request', status: 500 };
-    const { data: actor } = await supabase.from('profiles').select('username').eq('id', actorId).single();
-    await createNotification({ user_id: targetId, type: 'friend_request_received', title: `${actor?.username ?? 'A player'} sent you a friend request`, href: '/passport/friends' }, supabase);
+    const actor = (await loadSocialProfiles([actorId])).get(actorId);
+    await createNotification({ user_id: targetId, type: 'friend_request_received', title: `${actor ? `@${actor.username}` : 'A player'} sent you a friend request`, href: '/passport/friends' }, supabase);
   } else if (action === 'accept') {
     if (!row || row.status !== 'pending' || row.requested_by === actorId) return { ok: false, error: 'No incoming friend request found', status: 409 };
     const { error } = await supabase.from('passport_friendships').update({ status: 'accepted', responded_at: new Date().toISOString() }).eq('id', row.id);
     if (error) return { ok: false, error: 'Could not accept friend request', status: 500 };
-    const { data: actor } = await supabase.from('profiles').select('username').eq('id', actorId).single();
-    await createNotification({ user_id: targetId, type: 'friend_request_accepted', title: `${actor?.username ?? 'A player'} accepted your friend request`, href: `/@${actor?.username ?? ''}` }, supabase);
+    const actor = (await loadSocialProfiles([actorId])).get(actorId);
+    await createNotification({ user_id: targetId, type: 'friend_request_accepted', title: `${actor ? `@${actor.username}` : 'A player'} accepted your friend request`, href: actor ? `/@${actor.username}` : '/passport/friends' }, supabase);
   } else if (action === 'decline') {
     if (!row || row.status !== 'pending' || row.requested_by === actorId) return { ok: false, error: 'No incoming friend request found', status: 409 };
     await supabase.from('passport_friendships').update({ status: 'declined', responded_at: new Date().toISOString() }).eq('id', row.id);
@@ -209,8 +211,8 @@ export async function mutatePassportFollow(actorId: string, targetId: string, fo
     : await supabase.from('passport_follows').delete().eq('follower_id', actorId).eq('followed_id', targetId);
   if (result.error) return { ok: false, error: 'Could not update follow', status: 500 };
   if (follow) {
-    const { data: actor } = await supabase.from('profiles').select('username').eq('id', actorId).single();
-    await createNotification({ user_id: targetId, type: 'passport_followed', title: `${actor?.username ?? 'A player'} followed your Gamer Passport`, href: `/@${actor?.username ?? ''}` }, supabase);
+    const actor = (await loadSocialProfiles([actorId])).get(actorId);
+    await createNotification({ user_id: targetId, type: 'passport_followed', title: `${actor ? `@${actor.username}` : 'A player'} followed your Gamer Passport`, href: actor ? `/@${actor.username}` : '/passport/friends' }, supabase);
   }
   await refreshSocialCounts([actorId, targetId]);
   return { ok: true, state: await getPassportRelationshipState(actorId, targetId) };
@@ -302,28 +304,25 @@ export async function respondToPassportRecommendation(userId: string, id: string
 export async function discoverPassportProfiles(viewerId: string, query: string, limit = 12): Promise<PassportSocialProfile[]> {
   const supabase = createServiceClient();
   const safe = query.trim().replace(/[%_,()]/g, '').slice(0, 40);
-  let request = supabase.from('profiles').select('id, username, avatar_url, country, region').neq('id', viewerId).eq('is_banned', false).limit(Math.min(Math.max(limit, 1), 24));
-  if (safe) request = request.ilike('username', `%${safe}%`);
+  let request = supabase.from('passport_profiles').select('user_id').neq('user_id', viewerId)
+    .eq('publication_status', 'published').eq('is_discoverable', true)
+    .eq('default_visibility', 'public').limit(Math.min(Math.max(limit, 1), 24));
+  if (safe) request = request.ilike('public_handle', `%${safe}%`);
   const { data } = await request;
-  const candidates = (data ?? []) as ProfileRow[];
-  if (!candidates.length) return [];
-  const ids = candidates.map((row) => row.id);
-  const [{ data: discoverable }, { data: blocks }] = await Promise.all([
-    supabase.from('passport_profiles').select('user_id').in('user_id', ids).eq('is_discoverable', true).neq('default_visibility', 'private'),
-    supabase.from('passport_blocks').select('blocker_id, blocked_id').or(`blocker_id.eq.${viewerId},blocked_id.eq.${viewerId}`),
-  ]);
-  const allowed = new Set((discoverable ?? []).map((row) => String(row.user_id)));
+  const ids = (data ?? []).map((row) => String(row.user_id));
+  if (!ids.length) return [];
+  const { data: blocks } = await supabase.from('passport_blocks').select('blocker_id, blocked_id').or(`blocker_id.eq.${viewerId},blocked_id.eq.${viewerId}`);
   const blocked = new Set((blocks ?? []).map((row) => row.blocker_id === viewerId ? String(row.blocked_id) : String(row.blocker_id)));
-  const profiles = await loadSocialProfiles(ids.filter((id) => allowed.has(id) && !blocked.has(id)));
+  const profiles = await loadSocialProfiles(ids.filter((id) => !blocked.has(id)));
   return ids.map((id) => profiles.get(id)).filter(Boolean) as PassportSocialProfile[];
 }
 
 export async function createComparisonInvitation(creatorId: string, targetId: string, campaign?: string) {
   if (await hasPassportBlockBetween(creatorId, targetId)) return { data: null, error: 'This player is unavailable', status: 403 } as const;
   const supabase = createServiceClient();
-  const { data: target } = await supabase.from('profiles').select('username').eq('id', targetId).single();
+  const { data: target } = await supabase.from('passport_profiles').select('public_handle').eq('user_id', targetId).eq('publication_status', 'published').single();
   if (!target) return { data: null, error: 'Player not found', status: 404 } as const;
-  const { data, error } = await supabase.from('passport_comparison_invitations').insert({ creator_id: creatorId, target_user_id: targetId, target_username: target.username, campaign: campaign?.slice(0, 100) || null }).select('token, expires_at').single();
+  const { data, error } = await supabase.from('passport_comparison_invitations').insert({ creator_id: creatorId, target_user_id: targetId, target_username: target.public_handle, campaign: campaign?.slice(0, 100) || null }).select('token, expires_at').single();
   if (error) return { data: null, error: 'Could not create share link', status: 500 } as const;
   return { data: { token: String(data.token), expires_at: String(data.expires_at) }, error: null, status: 201 } as const;
 }
@@ -331,10 +330,10 @@ export async function createComparisonInvitation(creatorId: string, targetId: st
 export async function recordComparisonInvitationVisit(token: string, leftUsername: string, rightUsername: string) {
   const supabase = createServiceClient();
   const [leftResult, rightResult] = await Promise.all([
-    supabase.from('profiles').select('id').ilike('username', leftUsername).maybeSingle(),
-    supabase.from('profiles').select('id').ilike('username', rightUsername).maybeSingle(),
+    supabase.from('passport_profiles').select('user_id').eq('public_handle', leftUsername.toLowerCase()).eq('publication_status', 'published').maybeSingle(),
+    supabase.from('passport_profiles').select('user_id').eq('public_handle', rightUsername.toLowerCase()).eq('publication_status', 'published').maybeSingle(),
   ]);
-  const ids = [leftResult.data?.id, rightResult.data?.id].filter(Boolean).map(String);
+  const ids = [leftResult.data?.user_id, rightResult.data?.user_id].filter(Boolean).map(String);
   if (ids.length !== 2) return false;
   const { comparisonKey } = canonicalPassportPair(ids[0], ids[1]);
   const { data } = await supabase.rpc('record_passport_comparison_invitation_visit', { p_token: token, p_left_user_id: ids[0], p_right_user_id: ids[1] });

@@ -109,8 +109,10 @@ function assertIsolatedDatabase() {
 function runQuality() {
   runNpm('production dependency audit', ['run', 'audit:production']);
   runNpm('V5 cutover guard', ['run', 'check:v5-cutover']);
+  runNpm('Passport contract and unit tests', ['run', 'test:passport']);
   runNpm('lint', ['run', 'lint']);
   runNpm('typecheck', ['run', 'typecheck']);
+  runNpm('E2E typecheck', ['run', 'typecheck:e2e']);
   runNpm('production build', ['run', 'build']);
 }
 
@@ -144,6 +146,13 @@ function runDatabase() {
     'ON_ERROR_STOP=1',
     '-f',
     'supabase/verification/v5_production_security.sql',
+  ]);
+  run('verify Passport runtime security contract', 'psql', [
+    databaseUrl,
+    '-v',
+    'ON_ERROR_STOP=1',
+    '-f',
+    'supabase/verification/passport_runtime_security.sql',
   ]);
 }
 

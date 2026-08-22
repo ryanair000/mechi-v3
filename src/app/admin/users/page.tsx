@@ -432,6 +432,11 @@ export default function AdminUsersPage() {
                               Suspended
                             </span>
                           ) : null}
+                          {member.age_policy_status === 'minor' ? (
+                            <span className="rounded-full bg-amber-400/14 px-2.5 py-1 text-xs font-semibold text-amber-300">
+                              Minor protections
+                            </span>
+                          ) : null}
                           {user?.id === member.id ? <span className="brand-chip">You</span> : null}
                         </div>
 
@@ -501,6 +506,11 @@ export default function AdminUsersPage() {
                         {detail.user.is_banned ? (
                           <span className="rounded-full bg-red-500/14 px-2.5 py-1 text-xs font-semibold text-red-400">
                             Suspended
+                          </span>
+                        ) : null}
+                        {detail.user.age_policy_status === 'minor' ? (
+                          <span className="rounded-full bg-amber-400/14 px-2.5 py-1 text-xs font-semibold text-amber-300">
+                            Minor protections
                           </span>
                         ) : null}
                       </div>
@@ -578,6 +588,39 @@ export default function AdminUsersPage() {
 
                           {user?.role === 'admin' ? (
                             <>
+                              <button
+                                type="button"
+                                disabled={user?.id === detail.user.id}
+                                onClick={() => {
+                                  const nextStatus = detail.user.age_policy_status === 'minor'
+                                    ? 'adult'
+                                    : 'minor';
+                                  const reason = window.prompt(
+                                    nextStatus === 'minor'
+                                      ? `Why are minor protections being activated for ${detail.user.username}?`
+                                      : `Why is ${detail.user.username} confirmed as 18 or older?`
+                                  )?.trim();
+                                  if (!reason) return;
+
+                                  void handleAction(
+                                    detail.user.id,
+                                    {
+                                      action: 'set_age_policy',
+                                      age_policy_status: nextStatus,
+                                      reason,
+                                    },
+                                    nextStatus === 'minor'
+                                      ? 'Minor privacy protections activated'
+                                      : 'Adult age policy confirmed'
+                                  );
+                                }}
+                                className="btn-ghost"
+                              >
+                                <Shield size={14} />
+                                {detail.user.age_policy_status === 'minor'
+                                  ? 'Confirm 18+'
+                                  : 'Protect as minor'}
+                              </button>
                               {detail.user.role === 'user' ? (
                                 <button
                                   type="button"
@@ -635,6 +678,12 @@ export default function AdminUsersPage() {
                     </p>
                     <p className="mt-1 text-sm text-[var(--text-secondary)]">
                       Role {detail.user.role} · Region {detail.user.region}
+                    </p>
+                    <p className="mt-1 text-sm text-[var(--text-secondary)]">
+                      Age policy {detail.user.age_policy_status ?? 'unknown'}
+                      {detail.user.age_policy_source
+                        ? ` · ${detail.user.age_policy_source.replace('_', ' ')}`
+                        : ''}
                     </p>
                   </div>
 

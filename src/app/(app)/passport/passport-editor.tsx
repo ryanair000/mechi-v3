@@ -14,10 +14,9 @@ import {
   Save,
   ShieldCheck,
   Sparkles,
-  Swords,
-  Users,
 } from 'lucide-react';
 import { useAuth, useAuthFetch } from '@/components/AuthProvider';
+import { resolvePassportAccessMode } from '@/lib/passport-access-policy';
 import {
   DEFAULT_PASSPORT_FIELD_VISIBILITY,
   PASSPORT_ARCHETYPES,
@@ -56,27 +55,35 @@ function visibilityLabel(value: PassportVisibility) {
   return 'Public';
 }
 
+function PassportToolGroup({ title, links }: { title: string; links: Array<[string, string]> }) {
+  return <section className="rounded-2xl border border-[var(--border-color)] bg-[var(--surface-elevated)] p-4"><h3 className="text-sm font-black text-[var(--text-primary)]">{title}</h3><ul className="mt-3 space-y-1">{links.map(([href, label]) => <li key={href}><Link href={href} className="flex min-h-9 items-center justify-between rounded-lg px-2 text-sm text-[var(--text-secondary)] transition-colors hover:bg-black/5 hover:text-[var(--text-primary)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-teal)]"><span>{label}</span><ArrowRight size={13} aria-hidden="true" /></Link></li>)}</ul></section>;
+}
+
 export function PassportEditor() {
   const { user } = useAuth();
   const authFetch = useAuthFetch();
   const [passport, setPassport] = useState<PassportOwnerData | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [publishing, setPublishing] = useState(false);
+  const [ageSaving, setAgeSaving] = useState(false);
+  const [publicHandle, setPublicHandle] = useState('');
   const [displayName, setDisplayName] = useState('');
   const [bio, setBio] = useState('');
   const [gamerSince, setGamerSince] = useState('');
   const [archetypes, setArchetypes] = useState<PassportArchetype[]>([]);
   const [currentStatus, setCurrentStatus] = useState<PassportStatus>('offline');
-  const [defaultVisibility, setDefaultVisibility] = useState<PassportVisibility>('public');
+  const [defaultVisibility, setDefaultVisibility] = useState<PassportVisibility>('private');
   const [fieldVisibility, setFieldVisibility] = useState<PassportFieldVisibility>(
     DEFAULT_PASSPORT_FIELD_VISIBILITY
   );
-  const [isDiscoverable, setIsDiscoverable] = useState(true);
+  const [isDiscoverable, setIsDiscoverable] = useState(false);
   const [cardAccent, setCardAccent] = useState('#32E0C4');
 
   const applyPassport = useCallback((nextPassport: PassportOwnerData) => {
     const identity = nextPassport.identity;
     setPassport(nextPassport);
+    setPublicHandle(identity.public_handle ?? '');
     setDisplayName(identity.display_name);
     setBio(identity.bio);
     setGamerSince(identity.gamer_since ? String(identity.gamer_since) : '');
@@ -151,11 +158,11 @@ export function PassportEditor() {
     });
   };
 
-  const save = async () => {
+  const save = async (): Promise<PassportOwnerData | null> => {
     const parsedYear = gamerSince.trim() ? Number(gamerSince) : null;
     if (parsedYear !== null && (!Number.isInteger(parsedYear) || parsedYear < 1970 || parsedYear > new Date().getFullYear())) {
       toast.error('Enter a valid gamer-since year');
-      return;
+      return null;
     }
 
     setSaving(true);
@@ -163,6 +170,7 @@ export function PassportEditor() {
       const response = await authFetch('/api/passport/me', {
         method: 'PATCH',
         body: JSON.stringify({
+          public_handle: publicHandle.trim() || null,
           display_name: displayName.trim() || null,
           bio: bio.trim(),
           gamer_since: parsedYear,
@@ -177,14 +185,83 @@ export function PassportEditor() {
       const body = (await response.json()) as { error?: string; passport?: PassportOwnerData };
       if (!response.ok || !body.passport) {
         toast.error(body.error ?? 'Could not save Gamer Passport');
-        return;
+        return null;
       }
       applyPassport(body.passport);
       toast.success('Gamer Passport saved');
+      return body.passport;
     } catch {
       toast.error('Could not save Gamer Passport');
+      return null;
     } finally {
       setSaving(false);
+    }
+  };
+
+  const changePublication = async (action: 'publish' | 'unpublish') => {
+    if (action === 'publish' && passport?.age_policy.status === 'minor') {
+      toast.error('Minor-account privacy protections keep this Gamer Passport private');
+      return;
+    }
+    if (action === 'publish' && defaultVisibility === 'private') {
+      toast.error('Choose Public or Friends visibility before publishing');
+      return;
+    }
+    if (action === 'publish') {
+      const consequence = defaultVisibility === 'friends'
+        ? 'Your @handle link will exist, but only accepted friends can view the protected Passport content.'
+        : 'Anyone with your @handle link will be able to view the public parts of your Passport. It will stay out of search and recommendations until you enable Discovery separately.';
+      if (!window.confirm(`Publish this Gamer Passport? ${consequence}`)) return;
+    }
+    setPublishing(true);
+    try {
+      const saved = await save();
+      if (!saved) return;
+      const response = await authFetch('/api/passport/me/publication', {
+        method: 'POST',
+        body: JSON.stringify({ action, confirmed: action === 'publish' }),
+      });
+      const body = (await response.json()) as { error?: string; passport?: PassportOwnerData };
+      if (!response.ok || !body.passport) {
+        toast.error(body.error ?? 'Could not change Passport publication');
+        return;
+      }
+      applyPassport(body.passport);
+      toast.success(action === 'publish' ? 'Gamer Passport published' : 'Gamer Passport is now private');
+    } catch {
+      toast.error('Could not change Passport publication');
+    } finally {
+      setPublishing(false);
+    }
+  };
+
+  const declareAgePolicy = async (status: 'minor' | 'adult') => {
+    const confirmed = window.confirm(
+      status === 'minor'
+        ? 'Activate under-18 privacy protections? Your Passport, discovery, public game items, activity, Replay, media kit, and inquiry links will become private immediately. An administrator must review any future removal.'
+        : 'Confirm that you are 18 or older? This records only an age group, not your date of birth.'
+    );
+    if (!confirmed) return;
+
+    setAgeSaving(true);
+    try {
+      const response = await authFetch('/api/passport/me/age-policy', {
+        method: 'POST',
+        body: JSON.stringify({ status, confirmed: true }),
+      });
+      const body = await response.json() as { error?: string };
+      if (!response.ok) {
+        toast.error(body.error ?? 'Could not update age-group privacy');
+        return;
+      }
+      toast.success(status === 'minor'
+        ? 'Minor privacy protections are active'
+        : 'Age-group policy saved');
+      await loadPassport();
+    } catch {
+      toast.error('Could not update age-group privacy');
+    } finally {
+      setAgeSaving(false);
     }
   };
 
@@ -209,7 +286,12 @@ export function PassportEditor() {
     );
   }
 
-  const publicPath = `/@${encodeURIComponent(passport.identity.username)}`;
+  const isPublished = passport.identity.publication_status === 'published';
+  const isMinorProtected = passport.age_policy.status === 'minor';
+  const accessMode = resolvePassportAccessMode(passport.identity);
+  const publicPath = passport.identity.public_handle
+    ? `/p/@${encodeURIComponent(passport.identity.public_handle)}`
+    : null;
 
   return (
     <div className="mx-auto w-full max-w-6xl space-y-5 px-4 py-6 sm:px-6 lg:px-8">
@@ -230,45 +312,9 @@ export function PassportEditor() {
               </p>
             </div>
             <div className="flex flex-wrap gap-2">
-              <Link href="/passport/friends" className="btn-outline">
-                <Users size={14} /> Friends
-              </Link>
-              <Link href="/passport/compare" className="btn-outline">
-                <Swords size={14} /> Compare
-              </Link>
-              <Link href="/passport/resume" className="btn-outline">
-                <ShieldCheck size={14} /> Competitive Resume
-              </Link>
-              <Link href="/passport/games" className="btn-outline">
-                <Gamepad2 size={14} /> Manage game library
-              </Link>
-              <Link href="/passport/cards" className="btn-outline">
-                <Sparkles size={14} /> Gamer Cards
-              </Link>
-              <Link href="/passport/highlights" className="btn-outline">
-                <Sparkles size={14} /> Highlights
-              </Link>
-              <Link href="/passport/progression" className="btn-outline">
-                <Sparkles size={14} /> Progression
-              </Link>
-              <Link href="/passport/customize" className="btn-outline">
-                <Sparkles size={14} /> Customize
-              </Link>
-              <Link href="/passport/replay" className="btn-outline">
-                <Sparkles size={14} /> Annual Replay
-              </Link>
-              <Link href="/passport/media-kit" className="btn-outline">
-                <ShieldCheck size={14} /> Media Kit
-              </Link>
-              <Link href="/passport/connections" className="btn-outline">
-                <ShieldCheck size={14} /> Platform Connections
-              </Link>
-              <Link href="/passport/developer" className="btn-outline">
-                <ShieldCheck size={14} /> Developer Access
-              </Link>
-              <Link href={publicPath} className="btn-outline">
-                Preview public Passport <ArrowRight size={14} />
-              </Link>
+              {isPublished && publicPath ? <Link href={publicPath} className="btn-outline">
+                Preview Passport <ArrowRight size={14} />
+              </Link> : null}
               <button type="button" onClick={() => void save()} disabled={saving || !passport.identity.storage_ready} className="btn-primary">
                 {saving ? <Loader2 size={15} className="animate-spin" /> : <Save size={15} />}
                 Save Passport
@@ -280,9 +326,144 @@ export function PassportEditor() {
 
       {!passport.identity.storage_ready ? (
         <section className="rounded-[var(--radius-card)] border border-amber-300/20 bg-amber-300/[0.07] p-4 text-sm leading-6 text-amber-100/80">
-          The Phase 1 Passport migration has not been applied to this environment. Existing Mechi history is visible, but personalization is read-only until storage is ready.
+          Passport storage is temporarily unavailable. Existing Mechi history remains visible, but identity and privacy changes are read-only until service is restored.
         </section>
       ) : null}
+
+      <section className="grid gap-5 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1.9fr)]">
+        <div className="card p-5 sm:p-6">
+          <p className="section-title">First-value journey</p>
+          <h2 className="mt-2 text-xl font-black text-[var(--text-primary)]">Build a Passport worth sharing</h2>
+          <ol className="mt-5 space-y-3">
+            {[
+              ['Choose a safe public handle', Boolean(passport.identity.public_handle)],
+              ['Choose Public or Friends privacy', passport.identity.default_visibility !== 'private'],
+              ['Add five meaningful games', Number(passport.summary?.games_count ?? 0) >= 5],
+              ['Add one game you are playing now', Number(passport.summary?.playing_games_count ?? 0) >= 1],
+              ['Publish and preview your Passport', isPublished],
+            ].map(([label, done], index) => <li key={String(label)} className="flex items-center gap-3 text-sm text-[var(--text-secondary)]"><span className={`grid h-7 w-7 shrink-0 place-items-center rounded-full text-xs font-black ${done ? 'bg-[var(--brand-teal)] text-[#071018]' : 'border border-[var(--border-color)] text-[var(--text-soft)]'}`}>{done ? <Check size={14} aria-hidden="true" /> : index + 1}</span><span className={done ? 'text-[var(--text-primary)]' : ''}>{label}</span></li>)}
+          </ol>
+          <Link href="/passport/games" className="btn-primary mt-5 w-full justify-center"><Gamepad2 size={14} /> Continue building</Link>
+        </div>
+
+        <nav className="card p-5 sm:p-6" aria-label="Gamer Passport tools">
+          <p className="section-title">Passport workspace</p>
+          <div className="mt-4 grid gap-4 sm:grid-cols-2">
+            <PassportToolGroup title="Build identity" links={[
+              ['/passport/games', 'Games and story journal'],
+              ['/passport/resume', 'Verified history and Gamer CV'],
+              ['#privacy', 'Privacy and discovery'],
+            ]} />
+            <PassportToolGroup title="Connect" links={[
+              ['/passport/friends', 'Friends'],
+              ['/passport/compare', 'Compare Passports'],
+              ['/passport/circles', 'Gaming Circles'],
+            ]} />
+            <PassportToolGroup title="Present and share" links={[
+              ...(isPublished && publicPath ? [[publicPath, 'Public preview']] as Array<[string, string]> : []),
+              ['/passport/cards', 'Gamer Cards'],
+              ['/passport/highlights', 'Highlights'],
+              ['/passport/replay', 'Annual Replay'],
+            ]} />
+            <PassportToolGroup title="Personalize" links={[
+              ['/passport/progression', 'Progression'],
+              ['/passport/customize', 'Showcase and cosmetics'],
+            ]} />
+            <PassportToolGroup title="Advanced" links={[
+              ['/passport/media-kit', 'Media Kit'],
+              ['/passport/connections', 'Platform connections'],
+              ['/passport/developer', 'Developer access'],
+              ['/passport/export', 'Export my data'],
+            ]} />
+          </div>
+        </nav>
+      </section>
+
+      <section id="privacy" className={`scroll-mt-24 rounded-[var(--radius-card)] border p-5 sm:p-6 ${isMinorProtected ? 'border-amber-300/25 bg-amber-300/[0.07]' : 'border-[var(--border-color)] bg-[var(--surface)]'}`}>
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+          <div className="max-w-2xl">
+            <p className="section-title">Age-group privacy</p>
+            <h2 className="mt-2 text-xl font-black text-[var(--text-primary)]">
+              {isMinorProtected
+                ? 'Under-18 protections are active'
+                : passport.age_policy.status === 'adult'
+                  ? '18-or-older status recorded'
+                  : 'Choose the privacy policy for your age group'}
+            </h2>
+            <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">
+              {isMinorProtected
+                ? 'Your public Passport and connected sharing surfaces are locked private. Mechi stores only this age-policy group—not your birthday. Contact support for an administrator review when this needs to change.'
+                : 'Players under 18 receive stricter privacy automatically. This selection is private and never appears on your Gamer Passport.'}
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {passport.age_policy.status !== 'minor' ? (
+              <button
+                type="button"
+                className="btn-outline"
+                disabled={ageSaving || !passport.age_policy.storage_ready}
+                onClick={() => void declareAgePolicy('minor')}
+              >
+                {ageSaving ? <Loader2 size={15} className="animate-spin" /> : <LockKeyhole size={15} />}
+                I am under 18
+              </button>
+            ) : null}
+            {passport.age_policy.status === 'unknown' ? (
+              <button
+                type="button"
+                className="btn-primary"
+                disabled={ageSaving || !passport.age_policy.storage_ready}
+                onClick={() => void declareAgePolicy('adult')}
+              >
+                {ageSaving ? <Loader2 size={15} className="animate-spin" /> : <ShieldCheck size={15} />}
+                I am 18 or older
+              </button>
+            ) : null}
+          </div>
+        </div>
+        {!passport.age_policy.storage_ready ? (
+          <p className="mt-3 text-xs leading-5 text-amber-200/80">
+            The minor-account privacy migration is not ready in this environment.
+          </p>
+        ) : null}
+      </section>
+
+      <section className={`rounded-[var(--radius-card)] border p-5 sm:p-6 ${isPublished ? 'border-emerald-300/25 bg-emerald-300/[0.06]' : 'border-amber-300/20 bg-amber-300/[0.05]'}`}>
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+          <div className="max-w-2xl">
+            <p className="section-title">Publication</p>
+            <h2 className="mt-2 text-xl font-black text-[var(--text-primary)]">
+              {accessMode === 'discoverable'
+                ? 'Your Passport is public and discoverable'
+                : accessMode === 'link_only'
+                  ? 'Your Passport is public by direct link'
+                  : accessMode === 'friends'
+                    ? 'Your Passport is shared with friends'
+                    : 'Your Passport is private'}
+            </h2>
+            <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">
+              {accessMode === 'discoverable'
+                ? `Anyone can visit @${passport.identity.public_handle}, and the Passport may appear in PlayMechi search, recommendations, comparisons, community discovery, and search-engine results.`
+                : accessMode === 'link_only'
+                  ? `Anyone with @${passport.identity.public_handle} can open the public Passport. It is excluded from PlayMechi discovery and search-engine indexing, but old or shared links still work.`
+                  : accessMode === 'friends'
+                    ? `The @${passport.identity.public_handle} link exists, but protected Passport content is available only to accepted friends. It is excluded from public discovery.`
+                    : isMinorProtected
+                      ? 'Minor-account protections prevent publication and discovery. Your private Gamer Passport remains available to you.'
+                      : 'Editing does not publish anything. Choose a separate gamer handle and explicitly publish when you are ready.'}
+            </p>
+          </div>
+          <button
+            type="button"
+            disabled={publishing || saving || !passport.identity.storage_ready || (!isPublished && isMinorProtected)}
+            onClick={() => void changePublication(isPublished ? 'unpublish' : 'publish')}
+            className={isPublished ? 'btn-outline' : 'btn-primary'}
+          >
+            {publishing ? <Loader2 size={15} className="animate-spin" /> : isPublished ? <EyeOff size={15} /> : <Eye size={15} />}
+            {isPublished ? 'Unpublish Passport' : 'Save and publish Passport'}
+          </button>
+        </div>
+      </section>
 
       <section className="card p-5 sm:p-6">
         <div className="flex flex-wrap items-center justify-between gap-3">
@@ -312,6 +493,14 @@ export function PassportEditor() {
             </div>
 
             <div className="grid gap-4 sm:grid-cols-2">
+              <label className="space-y-2 sm:col-span-2">
+                <span className="label">Public gamer handle</span>
+                <div className="flex items-center rounded-xl border border-[var(--border-color)] bg-[var(--surface-elevated)] px-3 focus-within:border-[var(--brand-teal)]">
+                  <span className="font-black text-[var(--text-soft)]">@</span>
+                  <input value={publicHandle} onChange={(event) => setPublicHandle(event.target.value.toLowerCase().replace(/[^a-z0-9_]/g, '').slice(0, 20))} minLength={3} maxLength={20} className="min-w-0 flex-1 bg-transparent px-1 py-3 text-sm font-bold text-[var(--text-primary)] outline-none" placeholder="your_gamer_handle" />
+                </div>
+                <span className="block text-xs leading-5 text-[var(--text-soft)]">3–20 characters. Start with a letter; use letters, numbers, or underscores. This is separate from your sign-in identity.</span>
+              </label>
               <label className="space-y-2">
                 <span className="label">Display name</span>
                 <input value={displayName} onChange={(event) => setDisplayName(event.target.value)} maxLength={40} className="input-field" placeholder={user?.username ?? 'Gamer name'} />
@@ -384,10 +573,10 @@ export function PassportEditor() {
 
             <label className="mt-5 block space-y-2">
               <span className="label">Default Passport visibility</span>
-              <select value={defaultVisibility} onChange={(event) => setDefaultVisibility(event.target.value as PassportVisibility)} className="input-field">
-                {PASSPORT_VISIBILITIES.map((visibility) => <option key={visibility} value={visibility}>{visibilityLabel(visibility)}</option>)}
+              <select disabled={isMinorProtected} value={defaultVisibility} onChange={(event) => { const value = event.target.value as PassportVisibility; setDefaultVisibility(value); if (value !== 'public') setIsDiscoverable(false); }} className="input-field">
+                {PASSPORT_VISIBILITIES.map((visibility) => <option key={visibility} value={visibility} disabled={isPublished && visibility === 'private'}>{visibilityLabel(visibility)}</option>)}
               </select>
-              <span className="block text-xs leading-5 text-[var(--text-soft)]">Friends-only sections stay hidden from strangers until the Phase 3 friend graph launches.</span>
+              <span className="block text-xs leading-5 text-[var(--text-soft)]">Public allows direct-link viewing by anyone. Friends limits protected content to accepted friends. Private requires the Passport to be unpublished. Discovery is controlled separately.</span>
             </label>
 
             <div className="mt-5 divide-y divide-[var(--border-color)] rounded-2xl border border-[var(--border-color)] bg-[var(--surface-elevated)] px-4">
@@ -395,6 +584,7 @@ export function PassportEditor() {
                 <label key={field} className="flex items-center justify-between gap-4 py-3">
                   <span className="text-sm font-bold text-[var(--text-secondary)]">{FIELD_LABELS[field]}</span>
                   <select
+                    disabled={isMinorProtected}
                     value={fieldVisibility[field]}
                     onChange={(event) => setFieldVisibility((current) => ({ ...current, [field]: event.target.value as PassportVisibility }))}
                     className="rounded-lg border border-[var(--border-color)] bg-[var(--surface-strong)] px-2.5 py-1.5 text-xs font-bold text-[var(--text-primary)]"
@@ -405,10 +595,18 @@ export function PassportEditor() {
               ))}
             </div>
 
-            <button type="button" onClick={() => setIsDiscoverable((current) => !current)} className="mt-5 flex w-full items-center justify-between rounded-2xl border border-[var(--border-color)] bg-[var(--surface-elevated)] p-4 text-left">
+            <button type="button" aria-pressed={isDiscoverable} disabled={isMinorProtected || !isPublished || defaultVisibility !== 'public'} onClick={() => setIsDiscoverable((current) => !current)} className="mt-5 flex w-full items-center justify-between rounded-2xl border border-[var(--border-color)] bg-[var(--surface-elevated)] p-4 text-left disabled:cursor-not-allowed disabled:opacity-50">
               <span>
-                <span className="block text-sm font-black text-[var(--text-primary)]">Profile discovery</span>
-                <span className="mt-1 block text-xs leading-5 text-[var(--text-soft)]">Allow your Passport to appear in future gamer search and discovery.</span>
+                <span className="block text-sm font-black text-[var(--text-primary)]">Discovery and search</span>
+                <span className="mt-1 block text-xs leading-5 text-[var(--text-soft)]">
+                  {defaultVisibility !== 'public'
+                    ? 'Unavailable for Friends or Private visibility. Friends can still use the direct link after publication.'
+                    : !isPublished
+                      ? 'Publish with Public visibility first. Publication starts link-only and never enables discovery automatically.'
+                      : isDiscoverable
+                        ? 'On: eligible for PlayMechi search, recommendations, comparisons, community discovery, and search-engine indexing.'
+                        : 'Off: the direct @handle link still works for anyone, but the Passport stays out of discovery and search indexing.'}
+                </span>
               </span>
               {isDiscoverable ? <Eye size={19} className="text-emerald-300" /> : <EyeOff size={19} className="text-[var(--text-soft)]" />}
             </button>

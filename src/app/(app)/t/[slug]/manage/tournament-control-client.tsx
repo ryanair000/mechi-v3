@@ -306,7 +306,7 @@ function ParticipantCard({ participant }: { participant: TournamentControlPartic
           </p>
         </div>
         <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-[var(--surface-elevated)] text-sm font-bold text-[var(--text-secondary)]">
-          {participant.seed ? `#${participant.seed}` : 'â€”'}
+          {participant.seed ? `#${participant.seed}` : '—'}
         </span>
       </div>
       <div className="mt-4 flex flex-wrap gap-2">
@@ -652,7 +652,7 @@ export function TournamentControlClient({ slug }: { slug: string }) {
   }, [loadControlData]);
 
   const pageDescription = data
-    ? `${formatLabel(data.tournament.game)} Â· ${formatLabel(data.tournament.platform)} Â· ${
+    ? `${formatLabel(data.tournament.game)} · ${formatLabel(data.tournament.platform)} · ${
         data.tournament.region
       }`
     : '';
@@ -778,7 +778,7 @@ export function TournamentControlClient({ slug }: { slug: string }) {
                 type="button"
               >
                 <Play aria-hidden="true" className="size-4" />
-                {starting ? 'Startingâ€¦' : 'Start tournament'}
+                {starting ? 'Starting…' : 'Start tournament'}
               </button>
             ) : null}
           </div>

@@ -1,9 +1,28 @@
 import 'server-only';
 
-import { isMissingTableError } from '@/lib/db-compat';
-import { getPublicProfileData } from '@/lib/public-profile';
+import { unstable_cache } from 'next/cache';
+import { isMissingColumnError, isMissingTableError } from '@/lib/db-compat';
+import {
+  getPublicProfileData,
+  getPublicProfileDataByUserId,
+} from '@/lib/public-profile';
 import { getPassportGameLibraryByUserId } from '@/lib/passport-games';
+import {
+  getPassportPathFromHandle,
+  isSafePassportDisplayName,
+  normalizePassportHandle,
+  PASSPORT_PUBLICATION_CONSENT_VERSION,
+  validatePassportHandle,
+  type PassportPublicationStatus,
+} from '@/lib/passport-handle';
 import { createServiceClient } from '@/lib/supabase';
+import {
+  getProfileAgePolicy,
+  isMinorAccount,
+  MINOR_PASSPORT_PRIVACY_ERROR,
+} from '@/lib/passport-age-policy';
+import { resolvePassportAccessMode } from '@/lib/passport-access-policy';
+import { projectPassportActivity } from '@/lib/passport-community';
 import {
   DEFAULT_PASSPORT_FIELD_VISIBILITY,
   PASSPORT_ARCHETYPES,
@@ -12,24 +31,33 @@ import {
   PASSPORT_VISIBILITIES,
   type PassportArchetype,
   type PassportEventPreview,
-  type PassportField,
   type PassportFieldVisibility,
   type PassportIdentity,
   type PassportOwnerData,
   type PassportStatus,
   type PassportSummary,
   type PassportTeamPreview,
-  type PassportVerificationPreview,
+  type PassportVerificationRecordPreview,
   type PassportVisibility,
   type PublicPassportData,
 } from '@/lib/passport-types';
+import {
+  buildPublicPassportSummary,
+  isPassportFieldVisible,
+} from '@/lib/passport-public-summary';
+import { filterPublicPassportVerifications } from '@/lib/passport-verification-privacy';
 import type { GameKey, PlatformKey } from '@/types';
 
 const PASSPORT_PROFILE_SELECT =
-  'user_id, display_name, bio, gamer_since, archetypes, current_status, default_visibility, field_visibility, is_discoverable, card_accent, created_at, updated_at';
+  'user_id, public_handle, publication_status, published_at, publication_consent_version, publication_consent_at, display_name, bio, gamer_since, archetypes, current_status, default_visibility, field_visibility, is_discoverable, card_accent, created_at, updated_at';
 
 type PassportProfileRow = {
   user_id: string;
+  public_handle: string | null;
+  publication_status: PassportPublicationStatus;
+  published_at: string | null;
+  publication_consent_version: string | null;
+  publication_consent_at: string | null;
   display_name: string | null;
   bio: string;
   gamer_since: number | null;
@@ -94,17 +122,25 @@ type TeamMemberRow = {
   }> | null;
 };
 
-type VerificationRow = PassportVerificationPreview & {
+type VerificationRow = PassportVerificationRecordPreview & {
   revoked_at?: string | null;
 };
 
-type PassportEventCounts = {
-  registered: number;
-  attended: number;
-  completed: number;
+type PassportSummaryProjection = {
+  tournaments_registered: number;
+  events_attended: number;
+  completed_events: number;
+  achievements_count: number;
+  badges_count: number;
+  teams_count: number;
+  friends_count: number;
+  followers_count: number;
+  following_count: number;
+  computed_at: string | null;
 };
 
 export type PassportUpdateInput = {
+  public_handle?: string | null;
   display_name?: string | null;
   bio?: string;
   gamer_since?: number | null;
@@ -130,12 +166,28 @@ export function normalizePassportUsername(value: string): string {
 }
 
 export function getPassportPath(username: string): string {
-  return `/@${encodeURIComponent(normalizePassportUsername(username))}`;
+  return getPassportPathFromHandle(username);
+}
+
+export async function resolvePublicPassportHandleForAccountUsername(
+  accountUsername: string
+): Promise<string | null> {
+  const profile = await getPublicProfileData(normalizePassportUsername(accountUsername));
+  if (!profile) return null;
+  if (await isMinorAccount(profile.id)) return null;
+  const result = await createServiceClient()
+    .from('passport_profiles')
+    .select('public_handle')
+    .eq('user_id', profile.id)
+    .eq('publication_status', 'published')
+    .maybeSingle();
+  const handle = typeof result.data?.public_handle === 'string' ? result.data.public_handle : '';
+  return !result.error && validatePassportHandle(handle).valid ? normalizePassportHandle(handle) : null;
 }
 
 export function normalizePassportVisibility(
   value: unknown,
-  fallback: PassportVisibility = 'public'
+  fallback: PassportVisibility = 'private'
 ): PassportVisibility {
   return typeof value === 'string' && PASSPORT_VISIBILITIES.includes(value as PassportVisibility)
     ? (value as PassportVisibility)
@@ -157,15 +209,12 @@ export function normalizePassportFieldVisibility(
   ) as PassportFieldVisibility;
 }
 
-function isVisibleField(
-  identity: PassportIdentity,
-  field: PassportField,
-  friendView = false
-): boolean {
-  if (identity.default_visibility === 'private') return false;
-  if (identity.default_visibility === 'friends' && !friendView) return false;
-  const visibility = identity.field_visibility[field];
-  return visibility === 'public' || (friendView && visibility === 'friends');
+async function refreshPassportActivityAfterAccessChange(userId: string) {
+  try {
+    await projectPassportActivity(userId);
+  } catch (error) {
+    console.error('[Passport] Could not refresh activity visibility:', error);
+  }
 }
 
 function firstRelation<T>(value: T | T[] | null | undefined): T | null {
@@ -187,15 +236,22 @@ function defaultPassportIdentity(
 
   return {
     user_id: profile.id,
-    username: profile.username,
-    display_name: row?.display_name?.trim() || profile.username,
+    username: row?.public_handle ?? '',
+    public_handle: row?.public_handle ?? null,
+    publication_status: row?.publication_status === 'published' ? 'published' : 'draft',
+    published_at: row?.published_at ?? null,
+    publication_consent_version: row?.publication_consent_version ?? null,
+    publication_consent_at: row?.publication_consent_at ?? null,
+    display_name: isSafePassportDisplayName(row?.display_name ?? '')
+      ? (row?.display_name?.trim() as string)
+      : row?.public_handle ?? 'Player',
     bio: row?.bio ?? '',
     gamer_since: row?.gamer_since ?? null,
     archetypes,
     current_status: currentStatus,
     default_visibility: normalizePassportVisibility(row?.default_visibility),
     field_visibility: normalizePassportFieldVisibility(row?.field_visibility),
-    is_discoverable: row?.is_discoverable ?? true,
+    is_discoverable: row?.is_discoverable ?? false,
     card_accent: /^#[0-9a-f]{6}$/i.test(row?.card_accent ?? '')
       ? (row?.card_accent as string)
       : '#32E0C4',
@@ -216,16 +272,16 @@ function defaultPassportIdentity(
 function restrictedIdentity(identity: PassportIdentity, friendView = false): PassportIdentity {
   return {
     ...identity,
-    bio: isVisibleField(identity, 'bio', friendView) ? identity.bio : '',
-    gamer_since: isVisibleField(identity, 'gamer_since', friendView) ? identity.gamer_since : null,
-    archetypes: isVisibleField(identity, 'archetypes', friendView) ? identity.archetypes : [],
-    current_status: isVisibleField(identity, 'current_status', friendView) ? identity.current_status : 'offline',
-    country: isVisibleField(identity, 'location', friendView) ? identity.country : null,
-    region: isVisibleField(identity, 'location', friendView) ? identity.region : null,
-    location_label: isVisibleField(identity, 'location', friendView) ? identity.location_label : '',
-    platforms: isVisibleField(identity, 'platforms', friendView) ? identity.platforms : [],
-    games: isVisibleField(identity, 'games', friendView) ? identity.games : [],
-    game_ids: isVisibleField(identity, 'game_ids', friendView) ? identity.game_ids : {},
+    bio: isPassportFieldVisible(identity, 'bio', friendView) ? identity.bio : '',
+    gamer_since: isPassportFieldVisible(identity, 'gamer_since', friendView) ? identity.gamer_since : null,
+    archetypes: isPassportFieldVisible(identity, 'archetypes', friendView) ? identity.archetypes : [],
+    current_status: isPassportFieldVisible(identity, 'current_status', friendView) ? identity.current_status : 'offline',
+    country: isPassportFieldVisible(identity, 'location', friendView) ? identity.country : null,
+    region: isPassportFieldVisible(identity, 'location', friendView) ? identity.region : null,
+    location_label: isPassportFieldVisible(identity, 'location', friendView) ? identity.location_label : '',
+    platforms: isPassportFieldVisible(identity, 'platforms', friendView) ? identity.platforms : [],
+    games: isPassportFieldVisible(identity, 'games', friendView) ? identity.games : [],
+    game_ids: isPassportFieldVisible(identity, 'game_ids', friendView) ? identity.game_ids : {},
   };
 }
 
@@ -251,23 +307,6 @@ async function loadPassportProfile(
     row: (result.data as PassportProfileRow | null) ?? null,
     storageReady: true,
   };
-}
-
-async function countRows(table: string, userId: string): Promise<number> {
-  const supabase = createServiceClient();
-  const result = await supabase
-    .from(table)
-    .select('id', { count: 'exact', head: true })
-    .eq('user_id', userId);
-
-  if (result.error) {
-    if (!isMissingTableError(result.error, table)) {
-      console.error(`[Passport] Could not count ${table}:`, result.error);
-    }
-    return 0;
-  }
-
-  return result.count ?? 0;
 }
 
 async function loadTournamentHistory(userId: string): Promise<TournamentPlayerRow[]> {
@@ -311,53 +350,29 @@ async function loadOnlineTournamentHistory(
   return (result.data ?? []) as OnlineTournamentRegistrationRow[];
 }
 
-async function loadEventCounts(userId: string): Promise<PassportEventCounts> {
-  const supabase = createServiceClient();
-  const [genericRegistered, genericAttended, genericCompleted, onlineRegistered, onlineAttended] =
-    await Promise.all([
-      supabase
-        .from('tournament_players')
-        .select('id', { count: 'exact', head: true })
-        .eq('user_id', userId)
-        .in('payment_status', ['paid', 'free']),
-      supabase
-        .from('tournament_players')
-        .select('id', { count: 'exact', head: true })
-        .eq('user_id', userId)
-        .eq('check_in_status', 'checked_in'),
-      supabase
-        .from('tournament_players')
-        .select('id, tournament:tournaments!inner(status)', { count: 'exact', head: true })
-        .eq('user_id', userId)
-        .eq('check_in_status', 'checked_in')
-        .eq('tournaments.status', 'completed'),
-      supabase
-        .from('online_tournament_registrations')
-        .select('id', { count: 'exact', head: true })
-        .eq('user_id', userId),
-      supabase
-        .from('online_tournament_registrations')
-        .select('id', { count: 'exact', head: true })
-        .eq('user_id', userId)
-        .eq('check_in_status', 'checked_in'),
-    ]);
+async function loadPassportSummaryProjection(userId: string): Promise<PassportSummaryProjection> {
+  const result = await createServiceClient()
+    .from('passport_profile_summaries')
+    .select('tournaments_registered, events_attended, completed_events, achievements_count, badges_count, teams_count, friends_count, followers_count, following_count, computed_at')
+    .eq('user_id', userId)
+    .maybeSingle();
 
-  for (const [label, result, table] of [
-    ['generic registrations', genericRegistered, 'tournament_players'],
-    ['generic check-ins', genericAttended, 'tournament_players'],
-    ['completed events', genericCompleted, 'tournament_players'],
-    ['PlayMechi registrations', onlineRegistered, 'online_tournament_registrations'],
-    ['PlayMechi check-ins', onlineAttended, 'online_tournament_registrations'],
-  ] as const) {
-    if (result.error && !isMissingTableError(result.error, table)) {
-      console.error(`[Passport] Could not count ${label}:`, result.error);
-    }
+  if (result.error && !isMissingTableError(result.error, 'passport_profile_summaries')) {
+    console.error('[Passport] Could not load maintained summary projection:', result.error);
   }
 
+  const row = result.data;
   return {
-    registered: (genericRegistered.count ?? 0) + (onlineRegistered.count ?? 0),
-    attended: (genericAttended.count ?? 0) + (onlineAttended.count ?? 0),
-    completed: genericCompleted.count ?? 0,
+    tournaments_registered: Number(row?.tournaments_registered ?? 0),
+    events_attended: Number(row?.events_attended ?? 0),
+    completed_events: Number(row?.completed_events ?? 0),
+    achievements_count: Number(row?.achievements_count ?? 0),
+    badges_count: Number(row?.badges_count ?? 0),
+    teams_count: Number(row?.teams_count ?? 0),
+    friends_count: Number(row?.friends_count ?? 0),
+    followers_count: Number(row?.followers_count ?? 0),
+    following_count: Number(row?.following_count ?? 0),
+    computed_at: typeof row?.computed_at === 'string' ? row.computed_at : null,
   };
 }
 
@@ -394,7 +409,7 @@ async function loadTeams(userId: string): Promise<PassportTeamPreview[]> {
   });
 }
 
-async function loadVerifications(userId: string): Promise<PassportVerificationPreview[]> {
+async function loadVerifications(userId: string): Promise<PassportVerificationRecordPreview[]> {
   const supabase = createServiceClient();
   const result = await supabase
     .from('passport_verification_records')
@@ -469,35 +484,6 @@ function mapOnlineEvents(rows: OnlineTournamentRegistrationRow[]): PassportEvent
   }));
 }
 
-function maskSummary(summary: PassportSummary, identity: PassportIdentity, friendView = false): PassportSummary {
-  return {
-    ...summary,
-    games_count: isVisibleField(identity, 'games', friendView) ? summary.games_count : 0,
-    playing_games_count: isVisibleField(identity, 'games', friendView) ? summary.playing_games_count : 0,
-    completed_games_count: isVisibleField(identity, 'games', friendView) ? summary.completed_games_count : 0,
-    favorite_games_count: isVisibleField(identity, 'games', friendView) ? summary.favorite_games_count : 0,
-    total_library_hours: isVisibleField(identity, 'games', friendView) ? summary.total_library_hours : 0,
-    total_matches: isVisibleField(identity, 'competitive', friendView) ? summary.total_matches : 0,
-    total_wins: isVisibleField(identity, 'competitive', friendView) ? summary.total_wins : 0,
-    total_losses: isVisibleField(identity, 'competitive', friendView) ? summary.total_losses : 0,
-    win_rate: isVisibleField(identity, 'competitive', friendView) ? summary.win_rate : 0,
-    best_rating: isVisibleField(identity, 'competitive', friendView) ? summary.best_rating : 1000,
-    tournaments_registered: isVisibleField(identity, 'events', friendView)
-      ? summary.tournaments_registered
-      : 0,
-    events_attended: isVisibleField(identity, 'events', friendView) ? summary.events_attended : 0,
-    completed_events: isVisibleField(identity, 'events', friendView) ? summary.completed_events : 0,
-    achievements_count: isVisibleField(identity, 'achievements', friendView)
-      ? summary.achievements_count
-      : 0,
-    badges_count: isVisibleField(identity, 'achievements', friendView) ? summary.badges_count : 0,
-    teams_count: isVisibleField(identity, 'teams', friendView) ? summary.teams_count : 0,
-    friends_count: isVisibleField(identity, 'social', friendView) ? summary.friends_count : 0,
-    followers_count: isVisibleField(identity, 'social', friendView) ? summary.followers_count : 0,
-    following_count: isVisibleField(identity, 'social', friendView) ? summary.following_count : 0,
-  };
-}
-
 async function persistSummary(userId: string, summary: PassportSummary): Promise<void> {
   const supabase = createServiceClient();
   const result = await supabase.from('passport_profile_summaries').upsert(
@@ -530,40 +516,97 @@ async function persistSummary(userId: string, summary: PassportSummary): Promise
   }
 }
 
-async function loadSocialCounts(userId: string) {
-  const { data, error } = await createServiceClient()
-    .from('passport_profile_summaries')
-    .select('friends_count, followers_count, following_count')
-    .eq('user_id', userId)
+type PassportDataOptions = {
+  ownerView?: boolean;
+  friendView?: boolean;
+  _skipPublicCache?: boolean;
+};
+
+async function resolvePublicPassportCacheGate(username: string): Promise<{
+  handle: string;
+  userId: string;
+  version: string;
+} | null> {
+  const validation = validatePassportHandle(username);
+  if (!validation.valid) return null;
+  const supabase = createServiceClient();
+  let resolution = await supabase
+    .from('passport_profiles')
+    .select('user_id, public_version, updated_at')
+    .eq('public_handle', validation.handle)
+    .eq('publication_status', 'published')
     .maybeSingle();
-  if (error && !isMissingTableError(error, 'passport_profile_summaries')) {
-    console.error('[Passport] Could not load social counts:', error);
+  if (resolution.error && isMissingColumnError(resolution.error, 'passport_profiles.public_version')) {
+    resolution = await supabase
+      .from('passport_profiles')
+      .select('user_id, updated_at')
+      .eq('public_handle', validation.handle)
+      .eq('publication_status', 'published')
+      .maybeSingle() as typeof resolution;
   }
+  if (resolution.error || !resolution.data?.user_id) return null;
+  const userId = String(resolution.data.user_id);
+  if (await isMinorAccount(userId)) return null;
   return {
-    friends: Number(data?.friends_count ?? 0),
-    followers: Number(data?.followers_count ?? 0),
-    following: Number(data?.following_count ?? 0),
+    handle: validation.handle,
+    userId,
+    version: String(resolution.data.public_version ?? resolution.data.updated_at ?? 'legacy'),
   };
 }
 
+export function getPassportData(username: string): Promise<PublicPassportData | null>;
+export function getPassportData(
+  username: string,
+  options: { ownerView: true; friendView?: boolean }
+): Promise<PassportOwnerData | null>;
+export function getPassportData(
+  username: string,
+  options: { ownerView?: false; friendView?: boolean }
+): Promise<PublicPassportData | null>;
+export function getPassportData(
+  username: string,
+  options: PassportDataOptions
+): Promise<PublicPassportData | PassportOwnerData | null>;
 export async function getPassportData(
   username: string,
-  options: { ownerView?: boolean; friendView?: boolean } = {}
-): Promise<PublicPassportData | null> {
-  const normalizedUsername = normalizePassportUsername(username);
-  if (!normalizedUsername) return null;
+  options: PassportDataOptions = {}
+): Promise<PublicPassportData | PassportOwnerData | null> {
+  if (!options.ownerView && !options.friendView && !options._skipPublicCache) {
+    const gate = await resolvePublicPassportCacheGate(username);
+    if (!gate) return null;
+    return unstable_cache(
+      () => getPassportData(username, { _skipPublicCache: true }),
+      ['passport-public-dto-v1', gate.userId, gate.handle, gate.version],
+      { revalidate: 300, tags: [`passport-public:${gate.userId}`] }
+    )();
+  }
 
-  const profile = await getPublicProfileData(normalizedUsername);
+  let profile: Awaited<ReturnType<typeof getPublicProfileData>>;
+  if (options.ownerView) {
+    const normalizedUsername = normalizePassportUsername(username);
+    if (!normalizedUsername) return null;
+    profile = await getPublicProfileData(normalizedUsername);
+  } else {
+    const validation = validatePassportHandle(username);
+    if (!validation.valid) return null;
+    const resolution = await createServiceClient()
+      .from('passport_profiles')
+      .select('user_id')
+      .eq('public_handle', validation.handle)
+      .eq('publication_status', 'published')
+      .maybeSingle();
+    if (resolution.error || !resolution.data?.user_id) return null;
+    if (await isMinorAccount(resolution.data.user_id as string)) return null;
+    profile = await getPublicProfileDataByUserId(resolution.data.user_id as string);
+  }
   if (!profile) return null;
 
-  const [passportResult, tournamentRows, onlineRows, eventCounts, achievementsCount, badgesCount, teams, verifications, library] =
+  const [passportResult, tournamentRows, onlineRows, summaryProjection, teams, verifications, library] =
     await Promise.all([
       loadPassportProfile(profile.id),
       loadTournamentHistory(profile.id),
       loadOnlineTournamentHistory(profile.id),
-      loadEventCounts(profile.id),
-      countRows('achievements', profile.id),
-      countRows('profile_badges', profile.id),
+      loadPassportSummaryProjection(profile.id),
       loadTeams(profile.id),
       loadVerifications(profile.id),
       getPassportGameLibraryByUserId(
@@ -583,30 +626,29 @@ export async function getPassportData(
     .sort((left, right) => right.joined_at.localeCompare(left.joined_at))
     .slice(0, 12);
   const totalMatches = profile.totalWins + profile.totalLosses;
-  const socialCounts = await loadSocialCounts(profile.id);
   const summary: PassportSummary = {
     games_count: Math.max(profile.games.length, library.stats.total),
     playing_games_count: library.stats.playing,
     completed_games_count: library.stats.completed,
     favorite_games_count: library.stats.favorites,
     total_library_hours: library.stats.total_hours,
-    friends_count: socialCounts.friends,
-    followers_count: socialCounts.followers,
-    following_count: socialCounts.following,
+    friends_count: summaryProjection.friends_count,
+    followers_count: summaryProjection.followers_count,
+    following_count: summaryProjection.following_count,
     total_matches: totalMatches,
     total_wins: profile.totalWins,
     total_losses: profile.totalLosses,
     win_rate: totalMatches > 0 ? Math.round((profile.totalWins / totalMatches) * 100) : 0,
     best_rating: profile.bestRating,
-    tournaments_registered: eventCounts.registered,
-    events_attended: eventCounts.attended,
-    completed_events: eventCounts.completed,
-    achievements_count: achievementsCount,
-    badges_count: badgesCount,
-    teams_count: teams.length,
-    verified_records_count: totalMatches + eventCounts.attended + verifications.length,
+    tournaments_registered: summaryProjection.tournaments_registered,
+    events_attended: summaryProjection.events_attended,
+    completed_events: summaryProjection.completed_events,
+    achievements_count: summaryProjection.achievements_count,
+    badges_count: summaryProjection.badges_count,
+    teams_count: summaryProjection.teams_count,
+    verified_records_count: totalMatches + summaryProjection.events_attended + verifications.length,
     last_activity_at: profile.last_match_date ?? events[0]?.joined_at ?? null,
-    computed_at: new Date().toISOString(),
+    computed_at: summaryProjection.computed_at ?? new Date().toISOString(),
   };
 
   if (passportResult.storageReady && options.ownerView) {
@@ -617,6 +659,7 @@ export async function getPassportData(
     return {
       access: 'public',
       identity,
+      age_policy: await getProfileAgePolicy(profile.id),
       summary,
       events,
       teams,
@@ -625,10 +668,8 @@ export async function getPassportData(
     };
   }
 
-  if (
-    identity.default_visibility === 'private'
-    || (identity.default_visibility === 'friends' && !options.friendView)
-  ) {
+  const accessMode = resolvePassportAccessMode(identity);
+  if (accessMode === 'private' || (accessMode === 'friends' && !options.friendView)) {
     return {
       access: 'restricted',
       identity: restrictedIdentity(identity, Boolean(options.friendView)),
@@ -656,14 +697,26 @@ export async function getPassportData(
     };
   }
 
+  const friendView = Boolean(options.friendView);
+  const publicVerifications = filterPublicPassportVerifications(
+    verifications,
+    identity,
+    friendView
+  );
+
   return {
     access: 'public',
-    identity: restrictedIdentity(identity, Boolean(options.friendView)),
-    summary: maskSummary(summary, identity, Boolean(options.friendView)),
-    events: isVisibleField(identity, 'events', Boolean(options.friendView)) ? events : [],
-    teams: isVisibleField(identity, 'teams', Boolean(options.friendView)) ? teams : [],
-    verifications,
-    library: isVisibleField(identity, 'games', Boolean(options.friendView))
+    identity: restrictedIdentity(identity, friendView),
+    summary: buildPublicPassportSummary(
+      summary,
+      identity,
+      friendView,
+      publicVerifications.length
+    ),
+    events: isPassportFieldVisible(identity, 'events', friendView) ? events : [],
+    teams: isPassportFieldVisible(identity, 'teams', friendView) ? teams : [],
+    verifications: publicVerifications,
+    library: isPassportFieldVisible(identity, 'games', friendView)
       ? library
       : {
           access: 'restricted',
@@ -710,6 +763,45 @@ export async function upsertPassportProfile(
 ): Promise<{ data: PassportOwnerData | null; error: string | null; storageReady: boolean }> {
   const supabase = createServiceClient();
   const updateData: Record<string, unknown> = { user_id: userId };
+  const current = await loadPassportProfile(userId);
+  const agePolicy = await getProfileAgePolicy(userId);
+
+  if (!current.storageReady) {
+    return { data: null, error: 'Passport storage is not ready', storageReady: false };
+  }
+
+  if (agePolicy.status === 'minor') {
+    const widensDefault = input.default_visibility !== undefined
+      && input.default_visibility !== 'private';
+    const widensFields = input.field_visibility
+      && Object.values(input.field_visibility).some((value) => value !== 'private');
+    if (widensDefault || widensFields || input.is_discoverable === true) {
+      return {
+        data: null,
+        error: MINOR_PASSPORT_PRIVACY_ERROR,
+        storageReady: true,
+      };
+    }
+  }
+
+  if ('public_handle' in input) {
+    if (input.public_handle === null) {
+      if (current.row?.publication_status === 'published') {
+        return {
+          data: null,
+          error: 'Unpublish the Gamer Passport before removing its public handle',
+          storageReady: true,
+        };
+      }
+      updateData.public_handle = null;
+    } else {
+      const validation = validatePassportHandle(input.public_handle ?? '');
+      if (!validation.valid) {
+        return { data: null, error: validation.error, storageReady: true };
+      }
+      updateData.public_handle = validation.handle;
+    }
+  }
 
   if ('display_name' in input) updateData.display_name = input.display_name;
   if ('bio' in input) updateData.bio = input.bio;
@@ -720,11 +812,35 @@ export async function upsertPassportProfile(
   if ('is_discoverable' in input) updateData.is_discoverable = input.is_discoverable;
   if ('card_accent' in input) updateData.card_accent = input.card_accent;
 
+  const resultingVisibility = (updateData.default_visibility as string | undefined)
+    ?? current.row?.default_visibility
+    ?? 'private';
+  const resultingDiscoverability = (updateData.is_discoverable as boolean | undefined)
+    ?? current.row?.is_discoverable
+    ?? false;
+  if (current.row?.publication_status === 'published' && resultingVisibility === 'private') {
+    return {
+      data: null,
+      error: 'Unpublish the Gamer Passport before making it private',
+      storageReady: true,
+    };
+  }
+  if (resultingDiscoverability && resultingVisibility !== 'public') {
+    return {
+      data: null,
+      error: 'Discovery requires Public visibility',
+      storageReady: true,
+    };
+  }
+  if (resultingDiscoverability && current.row?.publication_status !== 'published') {
+    return {
+      data: null,
+      error: 'Publish the Gamer Passport before enabling discovery',
+      storageReady: true,
+    };
+  }
+
   if ('field_visibility' in input) {
-    const current = await loadPassportProfile(userId);
-    if (!current.storageReady) {
-      return { data: null, error: 'Passport storage is not ready', storageReady: false };
-    }
     updateData.field_visibility = {
       ...normalizePassportFieldVisibility(current.row?.field_visibility),
       ...input.field_visibility,
@@ -742,8 +858,24 @@ export async function upsertPassportProfile(
     if (isMissingTableError(result.error, 'passport_profiles')) {
       return { data: null, error: 'Passport storage is not ready', storageReady: false };
     }
+    if (result.error.code === '23505' && 'public_handle' in input) {
+      return { data: null, error: 'That public handle is already taken', storageReady: true };
+    }
     console.error('[Passport] Could not update identity:', result.error);
     return { data: null, error: 'Could not update Gamer Passport', storageReady: true };
+  }
+
+  const previousHandle = current.row?.public_handle;
+  const nextHandle = typeof updateData.public_handle === 'string' ? updateData.public_handle : null;
+  if ('public_handle' in input && previousHandle && previousHandle !== nextHandle) {
+    const historyResult = await supabase.from('passport_handle_history').insert({
+      user_id: userId,
+      public_handle: normalizePassportHandle(previousHandle),
+      redirect_allowed: false,
+    });
+    if (historyResult.error && !isMissingTableError(historyResult.error, 'passport_handle_history')) {
+      console.error('[Passport] Could not preserve retired handle:', historyResult.error);
+    }
   }
 
   if (changedFields.length > 0) {
@@ -759,6 +891,108 @@ export async function upsertPassportProfile(
       console.error('[Passport] Could not write audit log:', auditResult.error);
     }
   }
+
+  if (changedFields.some((field) => [
+    'default_visibility',
+    'field_visibility',
+    'is_discoverable',
+  ].includes(field))) {
+    await refreshPassportActivityAfterAccessChange(userId);
+  }
+
+  return {
+    data: await getPassportOwnerDataByUserId(userId),
+    error: null,
+    storageReady: true,
+  };
+}
+
+export async function setPassportPublication(
+  userId: string,
+  action: 'publish' | 'unpublish',
+  options: { confirmed?: boolean; requestId?: string | null } = {}
+): Promise<{ data: PassportOwnerData | null; error: string | null; storageReady: boolean }> {
+  const supabase = createServiceClient();
+  const current = await loadPassportProfile(userId);
+  if (!current.storageReady || !current.row) {
+    return { data: null, error: 'Passport storage is not ready', storageReady: false };
+  }
+
+  const now = new Date().toISOString();
+  let update: Record<string, unknown>;
+  if (action === 'publish') {
+    if (await isMinorAccount(userId)) {
+      return {
+        data: null,
+        error: MINOR_PASSPORT_PRIVACY_ERROR,
+        storageReady: true,
+      };
+    }
+    if (!options.confirmed) {
+      return { data: null, error: 'Confirm that you want to publish this Gamer Passport', storageReady: true };
+    }
+    const handle = validatePassportHandle(current.row.public_handle ?? '');
+    if (!handle.valid) {
+      return { data: null, error: handle.error, storageReady: true };
+    }
+    if (!isSafePassportDisplayName(current.row.display_name ?? '')) {
+      return {
+        data: null,
+        error: 'Choose a public display name that is not an email address, phone number, or URL',
+        storageReady: true,
+      };
+    }
+    if (!['public', 'friends'].includes(current.row.default_visibility)) {
+      return {
+        data: null,
+        error: 'Choose Public or Friends visibility before publishing',
+        storageReady: true,
+      };
+    }
+    update = {
+      publication_status: 'published',
+      published_at: now,
+      publication_consent_version: PASSPORT_PUBLICATION_CONSENT_VERSION,
+      publication_consent_at: now,
+      is_discoverable:
+        current.row.default_visibility === 'public' && current.row.is_discoverable,
+    };
+  } else {
+    update = {
+      publication_status: 'draft',
+      published_at: null,
+      default_visibility: 'private',
+      is_discoverable: false,
+    };
+  }
+
+  const result = await supabase
+    .from('passport_profiles')
+    .update(update)
+    .eq('user_id', userId);
+  if (result.error) {
+    if (isMissingTableError(result.error, 'passport_profiles')) {
+      return { data: null, error: 'Passport storage is not ready', storageReady: false };
+    }
+    console.error('[Passport] Could not change publication state:', result.error);
+    return { data: null, error: 'Could not change Gamer Passport publication', storageReady: true };
+  }
+
+  const auditResult = await supabase.from('passport_audit_logs').insert({
+    user_id: userId,
+    actor_id: userId,
+    action: action === 'publish' ? 'passport_published' : 'passport_unpublished',
+    changed_fields: Object.keys(update),
+    details: action === 'publish'
+      ? { consent_version: PASSPORT_PUBLICATION_CONSENT_VERSION }
+      : { reason: 'owner_request' },
+    request_id: options.requestId ?? null,
+  });
+  if (auditResult.error && !isMissingTableError(auditResult.error, 'passport_audit_logs')) {
+    console.error('[Passport] Could not write publication audit log:', auditResult.error);
+  }
+
+  await refreshPassportActivityAfterAccessChange(userId);
 
   return {
     data: await getPassportOwnerDataByUserId(userId),

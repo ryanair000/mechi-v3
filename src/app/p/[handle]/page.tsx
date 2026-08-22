@@ -1,8 +1,12 @@
 import type { Metadata } from 'next';
-import { cookies } from 'next/headers';
+import { randomUUID } from 'node:crypto';
+import { unstable_cache } from 'next/cache';
+import { cookies, headers } from 'next/headers';
+import { after } from 'next/server';
 import Image from 'next/image';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
+import { cache } from 'react';
 import {
   CalendarDays,
   Gamepad2,
@@ -18,10 +22,15 @@ import { BrandLogo } from '@/components/BrandLogo';
 import { ChallengePlayerButton } from '@/components/ChallengePlayerButton';
 import { PassportSocialActions } from '@/components/PassportSocialActions';
 import { GAMES } from '@/lib/config';
-import { verifyToken } from '@/lib/auth';
 import { PASSPORT_GAME_STATUS_LABELS } from '@/lib/passport-game-types';
 import { getPassportData, getPassportPath, normalizePassportUsername } from '@/lib/passport';
-import { arePassportFriends, hasPassportBlockBetween } from '@/lib/passport-social';
+import { capturePassportProductEvent } from '@/lib/passport-analytics';
+import {
+  capturePassportRouteDiagnostic,
+  startPassportRouteTimer,
+} from '@/lib/passport-diagnostics';
+import { buildPassportMetadata } from '@/lib/passport-metadata';
+import { resolvePassportTokenViewerAccess } from '@/lib/passport-viewer-access';
 import { getPassportHighlights } from '@/lib/passport-community';
 import { getPassportShelves, getVisiblePassportProgression } from '@/lib/passport-progression';
 import {
@@ -30,14 +39,46 @@ import {
   type PassportField,
   type PublicPassportData,
 } from '@/lib/passport-types';
-import { APP_URL } from '@/lib/urls';
 import type { GameKey, PlatformKey } from '@/types';
-
-export const dynamic = 'force-dynamic';
 
 type Props = {
   params: Promise<{ handle: string }>;
 };
+
+const getCachedPublicPassport = cache((username: string) => getPassportData(username));
+
+async function loadPassportPageFeatures(
+  userId: string,
+  viewerId: string | null,
+  includeAchievements: boolean,
+  includeShelves: boolean
+) {
+  const [highlights, progression, shelves] = await Promise.all([
+    getPassportHighlights(userId, viewerId),
+    getVisiblePassportProgression(userId, viewerId, includeAchievements),
+    includeShelves ? getPassportShelves(userId, viewerId) : Promise.resolve([]),
+  ]);
+  return { highlights, progression, shelves };
+}
+
+function loadCachedAnonymousPassportPageFeatures(
+  userId: string,
+  publicVersion: string,
+  includeAchievements: boolean,
+  includeShelves: boolean
+) {
+  return unstable_cache(
+    () => loadPassportPageFeatures(userId, null, includeAchievements, includeShelves),
+    [
+      'passport-public-page-features-v1',
+      userId,
+      publicVersion,
+      includeAchievements ? 'achievements' : 'no-achievements',
+      includeShelves ? 'shelves' : 'no-shelves',
+    ],
+    { revalidate: 300, tags: [`passport-public:${userId}`] }
+  )();
+}
 
 function resolveHandle(value: string): string {
   let decoded = value;
@@ -77,74 +118,81 @@ function primaryChallengeSetup(passport: PublicPassportData): {
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { handle } = await params;
   const username = resolveHandle(handle);
-  if (!username) return { title: 'Gamer Passport Not Found | Mechi V5' };
-
-  const passport = await getPassportData(username);
-  if (!passport) return { title: 'Gamer Passport Not Found | Mechi V5' };
-
-  const identity = passport.identity;
-  const title = `${identity.display_name} (@${identity.username}) | PlayMechi Gamer Passport`;
-  const description = passport.access === 'restricted'
-    ? `@${identity.username}'s PlayMechi Gamer Passport is private.`
-    : `${identity.display_name}'s Mechi V5 Gamer Passport: ${identity.games.length} games, ${passport.summary?.total_matches ?? 0} competitive matches, and ${passport.summary?.events_attended ?? 0} verified event check-ins.`;
-  const url = `${APP_URL}${getPassportPath(identity.username)}`;
-
-  return {
-    title,
-    description,
-    alternates: { canonical: url },
-    openGraph: {
-      title,
-      description,
-      type: 'profile',
-      url,
-      siteName: 'PlayMechi',
-      images: [{
-        url: `${APP_URL}/api/og/profile?username=${encodeURIComponent(identity.username)}`,
-        width: 1200,
-        height: 630,
-        alt: `${identity.display_name}'s Gamer Passport`,
-      }],
-    },
-    twitter: {
-      card: 'summary_large_image',
-      title,
-      description,
-      images: [`${APP_URL}/api/og/profile?username=${encodeURIComponent(identity.username)}`],
-    },
-  };
+  return buildPassportMetadata(username ? await getCachedPublicPassport(username) : null);
 }
 
 export default async function GamerPassportPage({ params }: Props) {
+  const elapsedMs = startPassportRouteTimer();
   const { handle } = await params;
   const username = resolveHandle(handle);
   if (!username) notFound();
 
-  let passport = await getPassportData(username);
+  let passport = await getCachedPublicPassport(username);
   if (!passport) notFound();
 
   const token = (await cookies()).get('auth_token')?.value;
-  const viewer = token ? verifyToken(token) : null;
-  if (viewer && viewer.sub !== passport.identity.user_id) {
-    if (await hasPassportBlockBetween(viewer.sub, passport.identity.user_id)) notFound();
-    if (await arePassportFriends(viewer.sub, passport.identity.user_id)) {
-      passport = await getPassportData(username, { friendView: true });
-      if (!passport) notFound();
-    }
+  const viewerAccess = await resolvePassportTokenViewerAccess(
+    token,
+    passport.identity.user_id
+  );
+  if (viewerAccess.blocked) notFound();
+  if (viewerAccess.friend_view) {
+    passport = await getPassportData(username, { friendView: true });
+    if (!passport) notFound();
   }
 
   const { identity, summary } = passport;
+  const requestHeaders = await headers();
+  const analyticsRequestSeed = requestHeaders.get('x-request-id')
+    ?? requestHeaders.get('x-vercel-id')
+    ?? randomUUID();
+  after(() => capturePassportProductEvent({
+    event: 'passport_public_viewed',
+    subjectUserId: identity.user_id,
+    actorKind: viewerAccess.friend_view
+      ? 'friend'
+      : viewerAccess.viewer_id
+        ? 'member'
+        : 'anonymous',
+    source: 'page.passport.public',
+    properties: {
+      access: passport!.access,
+      viewer_kind: viewerAccess.friend_view
+        ? 'friend'
+        : viewerAccess.viewer_id
+          ? 'member'
+          : 'anonymous',
+    },
+    dedupeSeed: analyticsRequestSeed,
+  }));
+  after(() => capturePassportRouteDiagnostic({
+    routeName: 'passport_public_page',
+    requestId: analyticsRequestSeed,
+    subjectId: identity.user_id,
+    operation: 'render',
+    responseStatus: 200,
+    durationMs: elapsedMs(),
+    resultClass: passport!.access === 'public' ? 'success' : 'restricted',
+    cacheState: viewerAccess.viewer_id ? 'private_view' : 'versioned_public',
+  }));
   const challengeSetup = primaryChallengeSetup(passport);
   const showCompetitive = Boolean(summary && isVisible(passport, 'competitive'));
   const showEvents = isVisible(passport, 'events');
   const showAchievements = isVisible(passport, 'achievements');
   const showTeams = isVisible(passport, 'teams');
   const showGames = isVisible(passport, 'games');
-  const highlights = passport.access === 'public' ? await getPassportHighlights(identity.user_id, viewer?.sub ?? null) : [];
-  const [progression, shelves] = passport.access === 'public' ? await Promise.all([
-    getVisiblePassportProgression(identity.user_id, viewer?.sub ?? null, showAchievements),
-    showGames ? getPassportShelves(identity.user_id, viewer?.sub ?? null) : Promise.resolve([]),
-  ]) : [null, []];
+  const showVerifiedRecords = typeof summary?.verified_records_count === 'number';
+  const features = passport.access !== 'public'
+    ? { highlights: [], progression: null, shelves: [] }
+    : viewerAccess.viewer_id
+      ? await loadPassportPageFeatures(identity.user_id, viewerAccess.viewer_id, showAchievements, showGames)
+      : await loadCachedAnonymousPassportPageFeatures(
+          identity.user_id,
+          identity.updated_at ?? 'legacy',
+          showAchievements,
+          showGames
+        );
+  const { highlights, progression, shelves } = features;
   const frame = progression?.cosmetics.find((cosmetic) => cosmetic.type === 'avatar_frame');
   const theme = progression?.cosmetics.find((cosmetic) => cosmetic.type === 'theme');
   const visibleHighlightIds = new Set(highlights.map((highlight) => highlight.id));
@@ -158,8 +206,17 @@ export default async function GamerPassportPage({ params }: Props) {
             <BrandLogo size="sm" />
           </Link>
           <div className="flex items-center gap-2">
-            <Link href="/login" className="btn-ghost text-sm">Sign in</Link>
-            <Link href="/register" className="btn-primary text-sm">Create yours</Link>
+            {viewerAccess.viewer_id ? (
+              <>
+                <Link href="/dashboard" className="btn-ghost text-sm">Dashboard</Link>
+                <Link href="/passport" className="btn-primary text-sm">My Passport</Link>
+              </>
+            ) : (
+              <>
+                <Link href="/login" className="btn-ghost text-sm">Sign in</Link>
+                <Link href="/register" className="btn-primary text-sm">Create yours</Link>
+              </>
+            )}
           </div>
         </div>
       </nav>
@@ -249,7 +306,9 @@ export default async function GamerPassportPage({ params }: Props) {
                     className="btn-primary"
                   />
                 ) : null}
-                <Link href="/register" className="btn-outline">Build your Passport</Link>
+                <Link href={viewerAccess.viewer_id ? '/passport' : '/register'} className="btn-outline">
+                  {viewerAccess.viewer_id ? 'Open my Passport' : 'Build your Passport'}
+                </Link>
               </div>
             </div>
 
@@ -394,7 +453,7 @@ export default async function GamerPassportPage({ params }: Props) {
               </div>
 
               <aside className="space-y-5">
-                <section className="card p-5">
+                {showVerifiedRecords ? <section className="card p-5">
                   <div className="flex items-center gap-2">
                     <ShieldCheck size={18} style={{ color: identity.card_accent }} />
                     <h2 className="font-black text-[var(--text-primary)]">Passport trust</h2>
@@ -403,13 +462,13 @@ export default async function GamerPassportPage({ params }: Props) {
                     Verified records come from Mechi matches, event check-ins, or an identified issuer. Self-reported history is labeled separately.
                   </p>
                   <div className="mt-4 rounded-2xl border border-[var(--border-color)] bg-[var(--surface-elevated)] p-4">
-                    <p className="text-2xl font-black text-[var(--text-primary)]">{summary?.verified_records_count ?? 0}</p>
+                    <p className="text-2xl font-black text-[var(--text-primary)]">{summary.verified_records_count}</p>
                     <p className="mt-1 text-xs font-bold uppercase tracking-[0.12em] text-[var(--text-soft)]">Verified activity records</p>
                   </div>
                   {!identity.storage_ready ? (
                     <p className="mt-3 text-xs leading-5 text-amber-200/70">Passport personalization is being prepared. Existing Mechi history remains available.</p>
                   ) : null}
-                </section>
+                </section> : null}
 
                 {showTeams ? (
                   <section className="card p-5">

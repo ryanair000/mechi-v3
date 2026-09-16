@@ -39,8 +39,7 @@ type TournamentRow = {
 };
 
 const PUBLIC_TOURNAMENT_REVALIDATE_SECONDS = 30;
-// Keep public navigation responsive without aborting normal cross-region Supabase reads.
-const PUBLIC_TOURNAMENT_QUERY_TIMEOUT_MS = 5000;
+const PUBLIC_TOURNAMENT_QUERY_TIMEOUT_MS = 10000;
 
 export type PublicTournament = {
   slug: string;
@@ -81,14 +80,11 @@ function safeStatus(value: string | null | undefined): TournamentStatus | 'all' 
     : 'all';
 }
 
-async function attachCounts(
-  rows: TournamentRow[],
-  signal?: AbortSignal
-): Promise<PublicTournament[]> {
+async function attachCounts(rows: TournamentRow[]): Promise<PublicTournament[]> {
   if (!rows.length) return [];
 
   const supabase = createServiceClient();
-  const { data: players } = await supabase
+  const { data: players, error } = await supabase
     .from('tournament_players')
     .select('tournament_id, payment_status')
     .in(
@@ -96,7 +92,9 @@ async function attachCounts(
       rows.map((row) => row.id)
     )
     .in('payment_status', ['paid', 'free'])
-    .abortSignal(signal ?? AbortSignal.timeout(PUBLIC_TOURNAMENT_QUERY_TIMEOUT_MS));
+    .abortSignal(AbortSignal.timeout(PUBLIC_TOURNAMENT_QUERY_TIMEOUT_MS));
+
+  if (error) throw error;
 
   const playersByTournament = (players ?? []).reduce<
     Record<string, Array<{ payment_status: string | null | undefined }>>
@@ -160,7 +158,6 @@ async function queryPublicTournaments(
   countryValue: string | null,
   limitValue: number
 ) {
-  const signal = AbortSignal.timeout(PUBLIC_TOURNAMENT_QUERY_TIMEOUT_MS);
   const supabase = createServiceClient();
   const status = safeStatus(statusValue);
   const country = normalizeCountryKey(countryValue);
@@ -169,13 +166,13 @@ async function queryPublicTournaments(
   let query = supabase
     .from('tournaments')
     .select(
-      'id, slug, title, game, platform, region, size, entry_fee, prize_pool_mode, prize_pool, platform_fee, platform_fee_rate, status, approval_status, rules, scheduled_for, started_at, ended_at, created_at, organizer:organizer_id(id, username), winner:winner_id(id, username)'
+      'id, slug, title, game, platform, region, size, entry_fee, prize_pool_mode, prize_pool, platform_fee, platform_fee_rate, status, approval_status, rules, scheduled_for, started_at, ended_at, created_at, organizer:organizer_id(id, username)'
     )
     .or('approval_status.eq.approved,entry_fee.eq.0')
     .neq('status', 'cancelled')
     .order('created_at', { ascending: false })
     .limit(limit)
-    .abortSignal(signal);
+    .abortSignal(AbortSignal.timeout(PUBLIC_TOURNAMENT_QUERY_TIMEOUT_MS));
 
   if (status !== 'all') {
     query = query.eq('status', status);
@@ -201,7 +198,7 @@ async function queryPublicTournaments(
         approvalStatus: tournament.approval_status,
       })
   );
-  return attachCounts(rows, signal);
+  return attachCounts(rows);
 }
 
 const getCachedPublicTournaments = unstable_cache(
@@ -228,7 +225,6 @@ export async function listPublicTournaments(params: {
 }
 
 async function queryPublicTournamentBySlug(slug: string) {
-  const signal = AbortSignal.timeout(PUBLIC_TOURNAMENT_QUERY_TIMEOUT_MS);
   const supabase = createServiceClient();
   const { data, error } = await supabase
     .from('tournaments')
@@ -238,7 +234,7 @@ async function queryPublicTournamentBySlug(slug: string) {
     .eq('slug', slug)
     .or('approval_status.eq.approved,entry_fee.eq.0')
     .neq('status', 'cancelled')
-    .abortSignal(signal)
+    .abortSignal(AbortSignal.timeout(PUBLIC_TOURNAMENT_QUERY_TIMEOUT_MS))
     .maybeSingle();
 
   if (error || !data) return null;
@@ -256,7 +252,7 @@ async function queryPublicTournamentBySlug(slug: string) {
     return null;
   }
 
-  const [tournament] = await attachCounts([visible], signal);
+  const [tournament] = await attachCounts([visible]);
   return tournament ?? null;
 }
 

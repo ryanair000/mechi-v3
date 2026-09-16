@@ -1,14 +1,14 @@
 import type { Metadata } from 'next';
-import { V5HomePage } from '@/components/v5/V5Public';
+import { V5LeanHomePage } from '@/components/v5/V5LeanPublic';
 
 export const dynamic = 'force-dynamic';
 
 export const metadata: Metadata = {
-  title: 'PlayMechi | The Home of African Competition',
+  title: 'Mechi | Find Competition. Play. Build Your Record.',
   description:
-    'Find tournaments, host credible competition, build your rank, and grow gaming communities across Africa.',
+    'Discover real gaming tournaments, enter securely, play verified matches, and build a competitive record on Mechi.',
 };
 
 export default function HomePage() {
-  return <V5HomePage />;
+  return <V5LeanHomePage />;
 }

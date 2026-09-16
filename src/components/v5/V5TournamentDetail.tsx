@@ -1,6 +1,5 @@
 import Link from 'next/link';
 import {
-  ArrowRight,
   CalendarClock,
   Gamepad2,
   MapPin,
@@ -8,7 +7,8 @@ import {
   Trophy,
   UsersRound,
 } from 'lucide-react';
-import { V5Shell } from '@/components/v5/V5Public';
+import { V5LeanShell } from '@/components/v5/V5LeanPublic';
+import { V5TournamentJoinLink } from '@/components/v5/V5TournamentJoinLink';
 import type { PublicTournament } from '@/lib/public-tournament-data';
 import styles from './V5TournamentDetail.module.css';
 
@@ -22,18 +22,18 @@ export function V5TournamentDetail({ tournament }: { tournament: PublicTournamen
     : 'Schedule to be confirmed';
 
   return (
-    <V5Shell>
+    <V5LeanShell>
       <div className={styles.canvas}>
         <div className={styles.breadcrumbs}><Link href="/tournaments">Tournaments</Link><span>/</span><strong>{tournament.title}</strong></div>
         <section className={styles.hero}>
           <div className={styles.art}>
             <span className={styles.game}><Gamepad2 size={18} /> {tournament.game_label}</span>
-            <div><p>PlayMechi tournament</p><h1>{tournament.title}</h1><span className={styles.live}>{tournament.status === 'open' ? 'Registration open' : tournament.status}</span></div>
+            <div><p>Mechi tournament</p><h1>{tournament.title}</h1><span className={styles.live}>{tournament.status === 'open' ? 'Registration open' : tournament.status}</span></div>
           </div>
           <aside className={styles.summary}>
             <p className={styles.eyebrow}>Tournament details</p>
             <h2>{tournament.title}</h2>
-            <p className={styles.organizer}><ShieldCheck size={17} /> Hosted by <strong>{tournament.organizer?.username || 'PlayMechi organizer'}</strong></p>
+            <p className={styles.organizer}><ShieldCheck size={17} /> Hosted by <strong>{tournament.organizer?.username || 'Mechi organizer'}</strong></p>
             <div className={styles.details}>
               <Detail icon={<UsersRound />} label="Players" value={`${tournament.player_count}/${tournament.size}`} />
               <Detail icon={<Trophy />} label="Prize" value={tournament.prize_pool > 0 ? `KES ${tournament.prize_pool.toLocaleString('en-KE')}` : 'No cash prize'} />
@@ -41,9 +41,9 @@ export function V5TournamentDetail({ tournament }: { tournament: PublicTournamen
               <Detail icon={<MapPin />} label="Region" value={tournament.region} />
             </div>
             <div className={styles.schedule}><CalendarClock size={18} /><div><strong>{scheduled} EAT</strong><span>{tournament.slots_left} slots remaining</span></div></div>
-            <div className={styles.labels}><span>{tournament.entry_fee === 0 ? 'Free entry' : `KES ${tournament.entry_fee.toLocaleString('en-KE')} entry`}</span><span>{isFreeNoPrize ? 'No valuable reward' : 'Mechi approved'}</span></div>
-            <Link className={styles.primary} href={`/app/player/tournaments?join=${encodeURIComponent(tournament.slug)}`}>Enter from Player Dashboard <ArrowRight size={17} /></Link>
-            <p className={styles.contextNote}>Sign in returns you to this tournament. Registration, payment, check-in and match actions stay in your Player Dashboard.</p>
+            <div className={styles.labels}><span>{tournament.entry_fee === 0 ? 'Free entry' : `KES ${tournament.entry_fee.toLocaleString('en-KE')} entry`}</span><span>{isFreeNoPrize ? 'No cash prize' : 'Approval required for paid or rewarded play'}</span></div>
+            <V5TournamentJoinLink className={styles.primary} slug={tournament.slug} />
+            <p className={styles.contextNote}>If you need to sign in, Mechi returns you to this tournament. Registration, payment, check-in and match actions stay connected to your entry.</p>
           </aside>
         </section>
 
@@ -55,13 +55,13 @@ export function V5TournamentDetail({ tournament }: { tournament: PublicTournamen
           </article>
           <aside className={styles.trustPanel}>
             <ShieldCheck size={24} />
-            <h2>Credible competition</h2>
-            <p>Registration, payment references, bracket progress, result evidence and disputes are recorded through PlayMechi.</p>
-            <ul><li>Verified competition identity</li><li>Recorded result and evidence trail</li><li>Clear dispute and recovery path</li></ul>
+            <h2>Competition record</h2>
+            <p>Registration, payment references, bracket progress, result evidence and disputes stay attached to the tournament.</p>
+            <ul><li>Recorded competition identity</li><li>Result and evidence trail</li><li>Clear dispute and recovery path</li></ul>
           </aside>
         </section>
       </div>
-    </V5Shell>
+    </V5LeanShell>
   );
 }
 

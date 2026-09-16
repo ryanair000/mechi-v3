@@ -61,8 +61,6 @@ export const V5_WORKSPACES: Record<V5WorkspaceKind, V5WorkspaceDefinition> = {
       { label: 'Matches', section: 'matches', icon: 'swords' },
       { label: 'Teams', section: 'teams', icon: 'users' },
       { label: 'Rankings', section: 'rankings', icon: 'chart' },
-      { label: 'Wallet', section: 'wallet', icon: 'wallet' },
-      { label: 'Inbox', section: 'inbox', icon: 'inbox' },
       { label: 'Profile', section: 'profile', icon: 'profile' },
     ],
   },
@@ -93,10 +91,7 @@ export const V5_WORKSPACES: Record<V5WorkspaceKind, V5WorkspaceDefinition> = {
       { label: 'Participants', section: 'participants', icon: 'users' },
       { label: 'Match operations', section: 'matches', icon: 'swords' },
       { label: 'Communications', section: 'communications', icon: 'megaphone' },
-      { label: 'Finance', section: 'finance', icon: 'wallet' },
-      { label: 'Analytics', section: 'analytics', icon: 'chart' },
       { label: 'Organization', section: 'organization', icon: 'building' },
-      { label: 'Staff & access', section: 'staff', icon: 'shield' },
     ],
   },
   creator: {
@@ -184,14 +179,12 @@ export const V5_WORKSPACES: Record<V5WorkspaceKind, V5WorkspaceDefinition> = {
   },
 };
 
+// V5 customer-facing switcher only exposes workflows that have an end-to-end competition path.
+// Unfinished role workspaces remain available in code for continued development but are not advertised as finished products.
 export const V5_WORKSPACE_ORDER: V5WorkspaceKind[] = [
   'player',
   'team',
   'organizer',
-  'creator',
-  'coach',
-  'sponsor',
-  'shop',
 ];
 
 export function isV5WorkspaceKind(value: string | undefined): value is V5WorkspaceKind {

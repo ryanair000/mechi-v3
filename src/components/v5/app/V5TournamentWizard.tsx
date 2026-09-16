@@ -65,6 +65,11 @@ export function V5TournamentWizard() {
     if (validationError) return setError(validationError);
     setStep((current) => Math.min(STEP_LABELS.length - 1, current + 1)); setError(null);
   }
+  function exitWizard() {
+    const changed = step > 0 || JSON.stringify(draft) !== JSON.stringify(INITIAL_DRAFT);
+    if (changed && !window.confirm('Exit tournament creation? Unsaved changes will be lost.')) return;
+    router.push('/app/organizer/tournaments');
+  }
   async function submit() {
     setSubmitting(true); setError(null);
     try {
@@ -88,7 +93,7 @@ export function V5TournamentWizard() {
   }
 
   return <div className={styles.page}>
-    <header className={styles.heading}><div><p>Organizer workspace</p><h1>Create a tournament</h1><span>Configure the competition in small, reversible steps. The approval path is explained before submission.</span></div><button type="button" onClick={() => router.push('/app/organizer/tournaments')}>Save and exit</button></header>
+    <header className={styles.heading}><div><p>Organizer workspace</p><h1>Create a tournament</h1><span>Configure the competition in small, reversible steps. The approval path is explained before submission.</span></div><button type="button" onClick={exitWizard}>Exit</button></header>
     <ol className={styles.stepper} aria-label="Tournament creation progress">{STEP_LABELS.map((label, index) => <li key={label} className={index === step ? styles.currentStep : index < step ? styles.completeStep : ''}><span>{index < step ? <Check size={14}/> : index + 1}</span><strong>{label}</strong></li>)}</ol>
     <div className={styles.layout}>
       <section className={styles.formPanel}>
@@ -100,7 +105,7 @@ export function V5TournamentWizard() {
         </div> : null}
         {step === 1 ? <div className={styles.formGrid}>
           <label className={styles.fullField}><span>Tournament name</span><input autoFocus value={draft.title} maxLength={80} placeholder="Example: Nairobi eFootball Community Cup" onChange={(event) => update('title', event.target.value)}/><small>{draft.title.length}/80 characters</small></label>
-          <label><span>Game</span><select value={draft.game} onChange={(event) => selectGame(event.target.value as GameKey)}>{AVAILABLE_GAMES.map(([key, game]) => <option key={key} value={key}>{game.label}</option>)}</select></label>
+          <label><span>Game</span><select value={draft.game} onChange={(event) => selectGame(event.target.value as GameKey)}>{AVAILABLE_GAMES.map(([key, game]) => <option value={key} key={key}>{game.label}</option>)}</select></label>
           <label><span>Platform</span><select value={draft.platform} onChange={(event) => update('platform', event.target.value as PlatformKey)}>{platforms.map((platform) => <option key={platform} value={platform}>{PLATFORMS[platform].label}</option>)}</select></label>
           <fieldset className={styles.fullField}><legend>Bracket size</legend><div className={styles.segmented}>{([4,8,16] as const).map((size) => <button type="button" key={size} aria-pressed={draft.size === size} onClick={() => update('size', size)}>{size} {draft.participantType === 'team' ? 'teams' : 'players'}</button>)}</div></fieldset>
         </div> : null}

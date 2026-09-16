@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { RegionalSettingsProvider } from '@/components/RegionalSettingsProvider';
-import { V5HomePage } from '@/components/v5/V5Public';
+import { V5LeanHomePage } from '@/components/v5/V5LeanPublic';
 import {
   AFRICAN_COUNTRY_KEYS,
   getCountryBySlug,
@@ -34,8 +34,8 @@ export async function generateMetadata({
 
   const countryLabel = getCountryLabel(country);
   return {
-    title: `${countryLabel} | Mechi.club`,
-    description: `Find approved tournaments, organizers, rankings, and competitive gaming communities in ${countryLabel}.`,
+    title: `${countryLabel} Gaming Tournaments | Mechi`,
+    description: `Discover real gaming tournaments in ${countryLabel}, enter securely, and build a verified competitive record on Mechi.`,
     alternates: {
       canonical: `/${countrySlug}`,
     },
@@ -52,7 +52,7 @@ export default async function CountrySlugPage({ params }: CountrySlugPageProps) 
 
   return (
     <RegionalSettingsProvider initialSettings={buildRegionalSettings(country, 'manual')}>
-      <V5HomePage country={country} />
+      <V5LeanHomePage country={country} />
     </RegionalSettingsProvider>
   );
 }

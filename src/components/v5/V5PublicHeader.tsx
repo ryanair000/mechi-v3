@@ -10,11 +10,9 @@ import { V5Logo } from './V5Logo';
 import styles from './V5Public.module.css';
 
 const navigation = [
-  { label: 'Compete', href: '/app/player' },
   { label: 'Tournaments', href: '/tournaments' },
   { label: 'Rankings', href: '/leaderboard' },
-  { label: 'Watch', href: '/streams' },
-  { label: 'Community', href: '/community' },
+  { label: 'How it works', href: '/how-mechi-works' },
 ] as const;
 
 const focusableSelector = [
@@ -104,7 +102,7 @@ export function V5PublicHeader() {
       <a className={styles.skipLink} href="#main-content">Skip to content</a>
       <Link className={styles.announcement} href="/app/organizer/tournaments/new">
         <Trophy size={14} aria-hidden="true" />
-        <span>Host a free tournament today</span>
+        <span>Host a tournament on Mechi</span>
         <ArrowRight size={14} aria-hidden="true" />
       </Link>
       <header className={styles.header} ref={headerRef}>
@@ -127,7 +125,7 @@ export function V5PublicHeader() {
           </nav>
           <div className={styles.headerActions}>
             <Link className={styles.buttonGhost} href="/login">Sign in</Link>
-            <Link className={styles.button} href="/register">Join free</Link>
+            <Link className={styles.button} href="/register">Join Mechi</Link>
           </div>
           <button
             ref={menuButtonRef}
@@ -183,7 +181,7 @@ export function V5PublicHeader() {
             </nav>
             <div className={styles.mobileAccountActions}>
               <Link className={styles.mobileSignIn} href="/login" onClick={() => closeMenu(false)}>Sign in</Link>
-              <Link className={styles.mobileJoin} href="/register" onClick={() => closeMenu(false)}>Join free</Link>
+              <Link className={styles.mobileJoin} href="/register" onClick={() => closeMenu(false)}>Join Mechi</Link>
             </div>
             <div className={styles.mobileThemeRow}>
               <span>Appearance</span>

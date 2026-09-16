@@ -1,6 +1,5 @@
 import Link from 'next/link';
 import {
-  ArrowRight,
   CalendarClock,
   Gamepad2,
   MapPin,
@@ -9,6 +8,7 @@ import {
   UsersRound,
 } from 'lucide-react';
 import { V5LeanShell } from '@/components/v5/V5LeanPublic';
+import { V5TournamentJoinLink } from '@/components/v5/V5TournamentJoinLink';
 import type { PublicTournament } from '@/lib/public-tournament-data';
 import styles from './V5TournamentDetail.module.css';
 
@@ -42,7 +42,7 @@ export function V5TournamentDetail({ tournament }: { tournament: PublicTournamen
             </div>
             <div className={styles.schedule}><CalendarClock size={18} /><div><strong>{scheduled} EAT</strong><span>{tournament.slots_left} slots remaining</span></div></div>
             <div className={styles.labels}><span>{tournament.entry_fee === 0 ? 'Free entry' : `KES ${tournament.entry_fee.toLocaleString('en-KE')} entry`}</span><span>{isFreeNoPrize ? 'No cash prize' : 'Approval required for paid or rewarded play'}</span></div>
-            <Link className={styles.primary} href={`/app/player/tournaments?join=${encodeURIComponent(tournament.slug)}`}>Join tournament <ArrowRight size={17} /></Link>
+            <V5TournamentJoinLink className={styles.primary} slug={tournament.slug} />
             <p className={styles.contextNote}>If you need to sign in, Mechi returns you to this tournament. Registration, payment, check-in and match actions stay connected to your entry.</p>
           </aside>
         </section>

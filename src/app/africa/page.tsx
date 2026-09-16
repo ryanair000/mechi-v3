@@ -1,17 +1,17 @@
 import type { Metadata } from 'next';
-import { V5HomePage } from '@/components/v5/V5Public';
+import { V5LeanHomePage } from '@/components/v5/V5LeanPublic';
 
 export const dynamic = 'force-dynamic';
 
 export const metadata: Metadata = {
-  title: 'Africa | Mechi.club',
+  title: 'Africa Gaming Tournaments | Mechi',
   description:
-    'Find approved tournaments, organizers, rankings, and competitive gaming communities across Africa.',
+    'Discover real gaming tournaments across Africa, enter securely, and build a verified competitive record on Mechi.',
   alternates: {
     canonical: '/africa',
   },
 };
 
 export default function AfricaPage() {
-  return <V5HomePage />;
+  return <V5LeanHomePage />;
 }

@@ -38,43 +38,40 @@ export async function generateMetadata(): Promise<Metadata> {
   return {
     metadataBase: new URL('https://mechi.club'),
     manifest: '/manifest.webmanifest',
-    title: 'PlayMechi | Compete. Connect. Rise.',
+    title: 'Mechi | Find competition. Build your record.',
     description: isSwahili
-      ? 'PlayMechi inawasaidia gamers wa Afrika Mashariki kupata mechi safi za 1v1, lobbies zilizo sawa, na tournaments zenye zawadi bila vurugu za WhatsApp.'
-      : 'PlayMechi helps East African players find proper 1v1s, clean lobbies, and prize-backed tournaments without the WhatsApp chaos.',
+      ? 'Mechi ni mtandao wa mashindano ya gaming unaokusaidia kupata tournaments halisi, kucheza mechi zilizothibitishwa, na kujenga rekodi yako ya ushindani.'
+      : 'Mechi is a competitive gaming network for finding real tournaments, playing verified matches, and building a competitive record.',
     keywords: [
+      'mechi',
       'playmechi',
-      'gaming',
-      'matchmaking',
+      'gaming tournaments',
+      'competitive gaming',
+      'esports',
       'east africa',
       'kenya',
       'tanzania',
       'uganda',
-      'rwanda',
-      'ethiopia',
-      'esports',
-      '1v1',
-      'competitive gaming',
       'efootball',
       'ea fc',
       'tekken',
     ],
     openGraph: {
-      title: 'PlayMechi | Compete. Connect. Rise.',
+      title: 'Mechi | Find competition. Build your record.',
       description: isSwahili
-        ? 'Panga 1v1 safi, simamia lobbies vizuri, na endesha tournaments zenye zawadi kwa players wa Afrika Mashariki sehemu moja.'
-        : 'Queue clean 1v1s, spin up proper lobbies, and run prize-backed tournaments for players across East Africa in one place.',
+        ? 'Pata tournaments halisi, cheza mechi zilizothibitishwa, na ujenge rekodi yako ya ushindani kwenye Mechi.'
+        : 'Find real gaming tournaments, play verified matches, and build a competitive record on Mechi.',
       url: 'https://mechi.club',
-      siteName: 'PlayMechi',
+      siteName: 'Mechi',
       locale: regionalSettings.locale === 'sw-TZ' ? 'sw_TZ' : 'en_KE',
       type: 'website',
     },
     twitter: {
       card: 'summary_large_image',
-      title: 'PlayMechi | Compete. Connect. Rise.',
+      title: 'Mechi | Find competition. Build your record.',
       description: isSwahili
-        ? 'Players wa Kenya, Tanzania, Uganda, Rwanda, na Ethiopia wanatumia PlayMechi kwa 1v1 safi, lobbies bora, na tournament zenye mpangilio mzuri.'
-        : 'Players across Kenya, Tanzania, Uganda, Rwanda, and Ethiopia use PlayMechi for cleaner 1v1s, better lobbies, and smoother tournament runs.',
+        ? 'Pata tournaments halisi, cheza mechi zilizothibitishwa, na ujenge rekodi yako ya ushindani.'
+        : 'Find real gaming tournaments, play verified matches, and build your competitive record.',
     },
   };
 }
@@ -107,7 +104,8 @@ const themeScript = `
 const organizationJsonLd = {
   '@context': 'https://schema.org',
   '@type': 'Organization',
-  name: 'PlayMechi',
+  name: 'Mechi',
+  alternateName: 'PlayMechi',
   url: APP_URL,
   logo: `${APP_URL}/icon.png`,
   sameAs: [
@@ -122,11 +120,12 @@ const organizationJsonLd = {
 const websiteJsonLd = {
   '@context': 'https://schema.org',
   '@type': 'WebSite',
-  name: 'PlayMechi',
+  name: 'Mechi',
+  alternateName: 'PlayMechi',
   url: APP_URL,
   publisher: {
     '@type': 'Organization',
-    name: 'PlayMechi',
+    name: 'Mechi',
   },
 };
 

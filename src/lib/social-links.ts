@@ -12,5 +12,6 @@ export function getCustomerWhatsAppSupportUrl(message?: string) {
     return CUSTOMER_WHATSAPP_SUPPORT_URL;
   }
 
-  return `${CUSTOMER_WHATSAPP_SUPPORT_URL}?text=${encodeURIComponent(message)}`;
+  const customerFacingMessage = message.replace(/\bPlayMechi\b/g, 'Mechi');
+  return `${CUSTOMER_WHATSAPP_SUPPORT_URL}?text=${encodeURIComponent(customerFacingMessage)}`;
 }

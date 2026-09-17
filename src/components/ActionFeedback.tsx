@@ -24,6 +24,10 @@ const TONE_STYLES: Record<ActionFeedbackTone, string> = {
     'border-[var(--border-color)] bg-[var(--surface-elevated)] text-[var(--text-primary)]',
 };
 
+function normalizeBrandCopy(value?: string) {
+  return value?.replaceAll('PLAYMECHI', 'MECHI').replaceAll('PlayMechi', 'Mechi');
+}
+
 function getToneIcon(tone: ActionFeedbackTone): ReactNode {
   if (tone === 'loading') {
     return <Loader2 size={16} className="animate-spin" />;
@@ -48,6 +52,8 @@ export function ActionFeedback({
 }: ActionFeedbackProps) {
   const role = tone === 'error' ? 'alert' : 'status';
   const liveMode = tone === 'error' ? 'assertive' : 'polite';
+  const normalizedTitle = normalizeBrandCopy(title) ?? title;
+  const normalizedDetail = normalizeBrandCopy(detail);
 
   return (
     <div
@@ -58,9 +64,9 @@ export function ActionFeedback({
       <div className="flex items-start gap-3">
         <span className="mt-0.5 flex-shrink-0">{getToneIcon(tone)}</span>
         <div>
-          <p className="text-sm font-semibold">{title}</p>
-          {detail ? (
-            <p className="mt-1 text-xs leading-5 text-[var(--text-secondary)]">{detail}</p>
+          <p className="text-sm font-semibold">{normalizedTitle}</p>
+          {normalizedDetail ? (
+            <p className="mt-1 text-xs leading-5 text-[var(--text-secondary)]">{normalizedDetail}</p>
           ) : null}
         </div>
       </div>

@@ -111,7 +111,7 @@ export function BrandLogo({
         >
           <Image
             src="/mechi-logo.png"
-            alt="PlayMechi logo"
+            alt="Mechi logo"
             fill
             sizes={imageSizes[size]}
             className={imageToneClasses[variant]}
@@ -130,7 +130,7 @@ export function BrandLogo({
               labelClassName
             )}
           >
-            PlayMechi
+            Mechi
           </span>
           {showTagline ? (
             <span
@@ -140,7 +140,7 @@ export function BrandLogo({
                 variant === 'reversed' ? 'text-white/65' : 'text-[var(--text-soft)]'
               )}
             >
-              Compete. Connect. Rise.
+              Find competition. Play. Build your record.
             </span>
           ) : null}
         </span>

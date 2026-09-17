@@ -44,7 +44,6 @@ export async function generateMetadata(): Promise<Metadata> {
       : 'Mechi is a competitive gaming network for finding real tournaments, playing verified matches, and building a competitive record.',
     keywords: [
       'mechi',
-      'playmechi',
       'gaming tournaments',
       'competitive gaming',
       'esports',
@@ -105,7 +104,6 @@ const organizationJsonLd = {
   '@context': 'https://schema.org',
   '@type': 'Organization',
   name: 'Mechi',
-  alternateName: 'PlayMechi',
   url: APP_URL,
   logo: `${APP_URL}/icon.png`,
   sameAs: [
@@ -121,7 +119,6 @@ const websiteJsonLd = {
   '@context': 'https://schema.org',
   '@type': 'WebSite',
   name: 'Mechi',
-  alternateName: 'PlayMechi',
   url: APP_URL,
   publisher: {
     '@type': 'Organization',
@@ -145,7 +142,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       suppressHydrationWarning
     >
       <head>
-        <Script id="playmechi-theme-init" strategy="beforeInteractive">
+        <Script id="mechi-theme-init" strategy="beforeInteractive">
           {themeScript}
         </Script>
         <script

@@ -58,7 +58,7 @@ export function NavigationFeedback() {
   return (
     <div
       aria-live="polite"
-      aria-label="Opening the next PlayMechi screen"
+      aria-label="Opening the next Mechi screen"
       aria-hidden={!visible}
       role="status"
       style={{
@@ -91,7 +91,7 @@ export function NavigationFeedback() {
       >
         <Image src="/mechi-logo.png" alt="" width={42} height={42} priority />
         <strong style={{ fontSize: 13, letterSpacing: '0.14em', textTransform: 'uppercase' }}>
-          Opening PlayMechi
+          Opening Mechi
         </strong>
         <span style={{ maxWidth: 280, color: '#aab7c9', fontSize: 13, lineHeight: 1.5 }}>
           Taking you to the next screen…

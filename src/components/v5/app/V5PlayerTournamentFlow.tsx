@@ -39,7 +39,7 @@ export function V5PlayerTournamentFlow({ tournaments,loading }: { tournaments:Pl
 
   const tournament=listedTournament||exactTournament;
   if(slug&&exactError&&!tournament)return <div className={styles.missing}><CircleAlert/><h1>We couldn't load this tournament</h1><p>Tournament data is temporarily unavailable. Your account and any previous entry are unchanged.</p><Link href={`/tournaments/${encodeURIComponent(slug)}`}><ArrowLeft size={16}/> Back to tournament details</Link></div>;
-  if(slug) return <Registration tournament={tournament} loading={loading||exactLoading} reference={reference}/>;
+  if(slug) return <Registration tournament={tournament} loading={!tournament&&exactLoading} reference={reference}/>;
   return <Directory tournaments={tournaments} loading={loading}/>;
 }
 

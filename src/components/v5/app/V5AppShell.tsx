@@ -2,7 +2,7 @@
 
 import Image from 'next/image';
 import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
 import {
   BarChart3,
@@ -85,6 +85,7 @@ interface WorkspaceSummary {
 
 export function V5AppShell({ workspace, section, children }: V5AppShellProps) {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const router = useRouter();
   const { user, loading, logout } = useAuth();
   const authFetch = useAuthFetch();
@@ -94,13 +95,16 @@ export function V5AppShell({ workspace, section, children }: V5AppShellProps) {
   const [profileOpen, setProfileOpen] = useState(false);
   const [availableWorkspaces, setAvailableWorkspaces] = useState<WorkspaceSummary[]>([]);
   const definition = V5_WORKSPACES[workspace];
+  const search = searchParams.toString();
 
   useEffect(() => {
     if (!loading && !user) {
-      const next = encodeURIComponent(pathname || '/app/player');
+      const currentPath = pathname || '/app/player';
+      const currentLocation = `${currentPath}${search ? `?${search}` : ''}`;
+      const next = encodeURIComponent(currentLocation);
       router.replace(`/login?next=${next}`);
     }
-  }, [loading, pathname, router, user]);
+  }, [loading, pathname, router, search, user]);
 
   useEffect(() => {
     let active = true;
@@ -134,9 +138,9 @@ export function V5AppShell({ workspace, section, children }: V5AppShellProps) {
   const nav = (
     <>
       <div className={styles.brandRow}>
-        <Link className={styles.brand} href="/app/player" aria-label="PlayMechi dashboard">
+        <Link className={styles.brand} href="/app/player" aria-label="Mechi dashboard">
           <Image src="/mechi-logo-shield.png" alt="" width={35} height={35} priority />
-          <span>PLAY<span>MECHI</span></span>
+          <span>MECHI</span>
         </Link>
         <button
           className={styles.mobileClose}
@@ -219,7 +223,7 @@ export function V5AppShell({ workspace, section, children }: V5AppShellProps) {
           <ShieldCheck size={18} />
           <span>Help & safety</span>
         </Link>
-        <p>V5 · Competition you can trust</p>
+        <p>Mechi · Competition you can trust</p>
       </div>
     </>
   );
@@ -249,11 +253,11 @@ export function V5AppShell({ workspace, section, children }: V5AppShellProps) {
           >
             <Menu size={21} />
           </button>
-          <button className={styles.searchButton} type="button" aria-label="Search PlayMechi">
+          <Link className={styles.searchButton} href="/tournaments" aria-label="Find tournaments">
             <Search size={18} />
-            <span>Search tournaments, players and teams</span>
-            <kbd>⌘ K</kbd>
-          </button>
+            <span>Find tournaments</span>
+            <kbd>Browse</kbd>
+          </Link>
           <div className={styles.topActions}>
             <button
               className={styles.iconButton}
@@ -263,7 +267,7 @@ export function V5AppShell({ workspace, section, children }: V5AppShellProps) {
             >
               {resolvedTheme === 'dark' ? <Sun size={19} /> : <Moon size={19} />}
             </button>
-            <Link className={styles.iconButton} href="/app/player/inbox" aria-label="Notifications">
+            <Link className={styles.iconButton} href="/notifications" aria-label="Notifications">
               <Bell size={19} />
               <span className={styles.unreadDot} />
             </Link>
@@ -287,8 +291,8 @@ export function V5AppShell({ workspace, section, children }: V5AppShellProps) {
               </button>
               {profileOpen ? (
                 <div className={styles.profileMenu}>
-                  <Link href="/app/player/profile"><UserRound size={17} />Account profile</Link>
-                  <Link href="/app/player/profile"><Settings size={17} />Preferences</Link>
+                  <Link href="/profile"><UserRound size={17} />Account profile</Link>
+                  <Link href="/profile/settings"><Settings size={17} />Preferences</Link>
                   <button type="button" onClick={logout}><LogOut size={17} />Sign out</button>
                 </div>
               ) : null}
@@ -327,7 +331,7 @@ export function V5AppShell({ workspace, section, children }: V5AppShellProps) {
 
 function V5AppLoading() {
   return (
-    <div className={styles.loadingShell} aria-label="Loading your PlayMechi workspace" role="status">
+    <div className={styles.loadingShell} aria-label="Loading your Mechi workspace" role="status">
       <aside />
       <div>
         <header />

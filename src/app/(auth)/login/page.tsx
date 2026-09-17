@@ -31,12 +31,12 @@ export default function LoginPage({ searchParams }: { searchParams: LoginSearchP
       nextPath={nextPath}
       footerHref={registerHref}
       footerLinkLabel={isSwahili ? 'Tengeneza akaunti yako' : 'Create your account'}
-      footerPrompt={isSwahili ? 'Mgeni PlayMechi?' : 'New to PlayMechi?'}
+      footerPrompt={isSwahili ? 'Mgeni Mechi?' : 'New to Mechi?'}
       sideTitle={isSwahili ? 'Ingia tena.' : 'Sign back in.'}
       sideDescription={
         isSwahili
-          ? 'Profile yako, historia ya mechi, na mpangilio wako bado vinakusubiri.'
-          : 'Your profile, match history, and active setup are still waiting for you.'
+          ? 'Profile yako, historia ya mechi, na mashindano yako bado vinakusubiri.'
+          : 'Your profile, match history, and competitions are still waiting for you.'
       }
     />
   );

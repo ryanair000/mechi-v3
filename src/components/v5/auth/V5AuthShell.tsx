@@ -1,6 +1,6 @@
 'use client';
 
-import type { ReactNode } from 'react';
+import { cloneElement, isValidElement, type ReactElement, type ReactNode } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { ArrowLeft, BadgeCheck, ShieldCheck, Trophy } from 'lucide-react';
@@ -27,7 +27,25 @@ const defaultPoints = [
 ];
 
 function normalizeMechiCopy(value?: string) {
-  return value?.replaceAll('PlayMechi', 'Mechi');
+  return value?.replaceAll('PLAYMECHI', 'MECHI').replaceAll('PlayMechi', 'Mechi');
+}
+
+function normalizeMechiNode(node: ReactNode): ReactNode {
+  if (typeof node === 'string') {
+    return normalizeMechiCopy(node) ?? node;
+  }
+
+  if (Array.isArray(node)) {
+    return node.map((child) => normalizeMechiNode(child));
+  }
+
+  if (isValidElement(node)) {
+    const element = node as ReactElement<{ children?: ReactNode }>;
+    if (element.props.children === undefined) return node;
+    return cloneElement(element, undefined, normalizeMechiNode(element.props.children));
+  }
+
+  return node;
 }
 
 export function V5AuthShell({
@@ -50,6 +68,7 @@ export function V5AuthShell({
   const points = (sidePoints.length ? sidePoints : defaultPoints).map(
     (point) => normalizeMechiCopy(point) || point
   );
+  const normalizedChildren = normalizeMechiNode(children);
 
   return (
     <main className={styles.page}>
@@ -103,7 +122,7 @@ export function V5AuthShell({
                 {mainSubtitle ? <span>{mainSubtitle}</span> : null}
               </div>
             ) : null}
-            {children}
+            {normalizedChildren}
           </div>
         </section>
       </div>

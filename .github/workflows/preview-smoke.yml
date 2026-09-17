@@ -1,0 +1,49 @@
+name: Preview smoke
+
+on:
+  deployment_status:
+  workflow_dispatch:
+    inputs:
+      preview_url:
+        description: HTTPS preview deployment URL
+        required: true
+        type: string
+
+concurrency:
+  group: preview-smoke-${{ github.event.deployment.id || github.run_id }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  deployments: read
+
+jobs:
+  boundary-smoke:
+    if: github.event_name == 'workflow_dispatch' || github.event.deployment_status.state == 'success'
+    runs-on: ubuntu-latest
+    env:
+      PREVIEW_URL: ${{ inputs.preview_url || github.event.deployment_status.environment_url || github.event.deployment_status.target_url }}
+      VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
+    steps:
+      - name: Validate preview boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          case "$PREVIEW_URL" in
+            https://*) ;;
+            *) echo "Preview URL must use HTTPS" >&2; exit 1 ;;
+          esac
+
+          headers=()
+          if [[ -n "$VERCEL_AUTOMATION_BYPASS_SECRET" ]]; then
+            headers+=( -H "x-vercel-protection-bypass: $VERCEL_AUTOMATION_BYPASS_SECRET" )
+          fi
+
+          for path in / /robots.txt /sitemap.xml /api/passport/health; do
+            status="$(curl --silent --show-error --location --max-redirs 2 --output /dev/null --write-out '%{http_code}' "${headers[@]}" "$PREVIEW_URL$path")"
+            if [[ "$status" -ge 500 || "$status" -eq 000 ]]; then
+              echo "$path returned $status" >&2
+              exit 1
+            fi
+            echo "$path returned $status"
+          done

@@ -1,0 +1,112 @@
+name: V5 quality
+
+on:
+  pull_request:
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+concurrency:
+  group: v5-quality-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  passport-tests:
+    name: Passport contracts and units
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run test:passport
+
+  static-quality:
+    name: Lint and typecheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm run typecheck:e2e
+
+  production-build:
+    name: Production build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+
+  passport-integration:
+    name: Passport database and browser integration
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      CI: 'true'
+      PORT: '3100'
+      E2E_BASE_URL: http://127.0.0.1:3100
+      E2E_ADMIN_BASE_URL: http://127.0.0.1:3100
+      E2E_ALLOW_DB_RESET: 'true'
+      E2E_DATABASE_CONFIRMATION: isolated-e2e-reset-authorized
+      JWT_SECRET: ci-only-passport-jwt-secret-that-is-never-used-outside-the-disposable-runner
+      CRON_SECRET: ci-only-passport-cron-secret
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - name: Start disposable Supabase and apply migrations
+        run: |
+          npx --yes supabase@2.114.0 start -x studio,imgproxy,mailpit,edge-runtime,logflare,vector,supavisor,realtime,storage-api,postgres-meta
+          npx --yes supabase@2.114.0 db reset --local --no-seed
+          npx --yes supabase@2.114.0 db lint --local --level warning --fail-on error
+      - name: Export disposable Supabase connection values
+        shell: bash
+        run: |
+          npx --yes supabase@2.114.0 status -o env > "$RUNNER_TEMP/supabase.env"
+          set -a
+          source "$RUNNER_TEMP/supabase.env"
+          set +a
+          {
+            echo "E2E_SUPABASE_URL=$API_URL"
+            echo "NEXT_PUBLIC_SUPABASE_URL=$API_URL"
+            echo "E2E_SUPABASE_DB_URL=$DB_URL"
+            echo "E2E_SUPABASE_SERVICE_ROLE_KEY=$SERVICE_ROLE_KEY"
+            echo "SUPABASE_SERVICE_ROLE_KEY=$SERVICE_ROLE_KEY"
+            echo "NEXT_PUBLIC_SUPABASE_ANON_KEY=$ANON_KEY"
+          } >> "$GITHUB_ENV"
+      - name: Verify Passport database security contract
+        run: psql "$E2E_SUPABASE_DB_URL" -v ON_ERROR_STOP=1 -f supabase/verification/passport_runtime_security.sql
+      - run: npx playwright install --with-deps chromium
+      - run: npm run build
+      - name: Run Passport runtime suite
+        env:
+          E2E_SKIP_BUILD: 'true'
+        run: npm run test:e2e:passport
+      - name: Upload browser failure evidence
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: passport-playwright-evidence
+          path: |
+            playwright-report
+            test-results
+          if-no-files-found: ignore
+          retention-days: 14

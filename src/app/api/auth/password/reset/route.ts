@@ -8,6 +8,7 @@ import {
   normalizeEmailAddress,
 } from '@/lib/auth-actions';
 import { applyAuthCookie, createSessionForProfile, hashPassword } from '@/lib/auth';
+import { nextAuthSessionVersion } from '@/lib/auth-session-policy';
 import { getPostLoginRedirectPath } from '@/lib/navigation';
 import { checkPersistentRateLimit, getClientIp, rateLimitResponse } from '@/lib/rateLimit';
 import { createServiceClient } from '@/lib/supabase';
@@ -23,7 +24,10 @@ async function completePasswordReset(params: {
   const passwordHash = await hashPassword(params.password);
   const { data: updatedProfile, error: updateError } = await supabase
     .from('profiles')
-    .update({ password_hash: passwordHash })
+    .update({
+      password_hash: passwordHash,
+      auth_session_version: nextAuthSessionVersion(params.profile.auth_session_version),
+    })
     .eq('id', params.profile.id as string)
     .select('*')
     .single();

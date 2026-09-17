@@ -32,16 +32,16 @@ test('QR redemption is transactional and rejects replay, transfer, expiry, and r
 });
 
 test('competitive resume reads only completed authoritative matches', () => {
-  assert.match(resume, /from\('matches'\)[\s\S]+\.eq\('status', 'completed'\)/);
+  assert.match(resume, /from\(["']matches["']\)[\s\S]+\.eq\(["']status["'], ["']completed["']\)/);
   assert.match(resume, /winner_id === userId/);
   assert.doesNotMatch(resume, /reported_winner/);
   assert.match(resume, /loadCompetitiveSeasons/);
 });
 
 test('public resume honors Passport competitive, event, and team visibility', () => {
-  assert.match(resume, /fieldVisible\('competitive'\)/);
-  assert.match(resume, /fieldVisible\('events'\)/);
-  assert.match(resume, /fieldVisible\('teams'\)/);
+  assert.match(resume, /fieldVisible\(["']competitive["']\)/);
+  assert.match(resume, /fieldVisible\(["']events["']\)/);
+  assert.match(resume, /fieldVisible\(["']teams["']\)/);
 });
 
 test('Gamer CV excludes private contact details and links verification pages', () => {
@@ -71,7 +71,7 @@ test('tournament QR passes require an exact confirmed participant link', () => {
 
 test('organizers can idempotently project authoritative tournament credentials', () => {
   assert.match(resume, /projectPassportTournamentCredentials/);
-  assert.match(resume, /tournament\.status === 'completed'/);
+  assert.match(resume, /tournament\.status === ["']completed["']/);
   assert.match(resume, /tournament\.winner_id === player\.user_id/);
-  assert.match(resume, /if \(before\.data\) \{ existing \+= 1/);
+  assert.match(resume, /if \(before\.data\) \{\s*existing \+= 1/);
 });

@@ -13,13 +13,13 @@ const typesModule = await import(
   ).toString('base64')}`
 );
 
-test('Passport privacy defaults protect in-game IDs while keeping identity useful', () => {
+test('Passport privacy defaults fail closed until the owner publishes', () => {
   const visibility = typesModule.DEFAULT_PASSPORT_FIELD_VISIBILITY;
 
   assert.equal(visibility.game_ids, 'private');
-  assert.equal(visibility.games, 'public');
-  assert.equal(visibility.competitive, 'public');
-  assert.equal(visibility.events, 'public');
+  assert.equal(visibility.games, 'private');
+  assert.equal(visibility.competitive, 'private');
+  assert.equal(visibility.events, 'private');
   assert.deepEqual(typesModule.PASSPORT_VISIBILITIES, ['public', 'friends', 'private']);
 });
 
@@ -54,7 +54,7 @@ test('Phase 1 migration defaults to server-only access with RLS defense in depth
   assert.match(sql, /"game_ids":"private"/i);
 });
 
-test('Phase 1 preserves legacy share URLs and establishes the Mechi V5 Passport routes', async () => {
+test('Phase 1 legacy share URLs resolve only to explicitly published handles', async () => {
   const legacyRoute = await readFile(
     new URL('../src/app/s/[username]/page.tsx', import.meta.url),
     'utf8'
@@ -69,8 +69,9 @@ test('Phase 1 preserves legacy share URLs and establishes the Mechi V5 Passport 
   );
   const proxy = await readFile(new URL('../src/proxy.ts', import.meta.url), 'utf8');
 
-  assert.match(legacyRoute, /permanentRedirect\(getPassportPath\(username\)\)/);
-  assert.match(proxy, /profileUrl\.pathname = `\/@\$\{profileUsername\}`/);
+  assert.match(legacyRoute, /resolvePublicPassportHandleForAccountUsername/);
+  assert.match(legacyRoute, /if \(!handle\) notFound\(\)/);
+  assert.doesNotMatch(proxy, /profileUrl\.pathname = `\/@\$\{profileUsername\}`/);
   assert.match(canonicalRoute, /Mechi V5 Passport/);
   assert.match(canonicalRoute, /resolveHandle/);
   assert.match(ownerRoute, /Mechi V5/);

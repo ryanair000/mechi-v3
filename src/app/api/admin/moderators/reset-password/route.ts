@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { hasAdminAccess, requireActiveAccessProfile } from '@/lib/access';
 import { writeAuditLog } from '@/lib/audit';
 import { hashPassword } from '@/lib/auth';
+import { nextAuthSessionVersion } from '@/lib/auth-session-policy';
 import { getClientIp } from '@/lib/rateLimit';
 import { createServiceClient } from '@/lib/supabase';
 
@@ -53,7 +54,7 @@ export async function POST(request: NextRequest) {
 
   let query = supabase
     .from('profiles')
-    .select('id, username, phone, email, role, is_banned')
+    .select('id, username, phone, email, role, is_banned, auth_session_version')
     .order('username', { ascending: true });
 
   if (userId) {
@@ -86,6 +87,7 @@ export async function POST(request: NextRequest) {
       .from('profiles')
       .update({
         password_hash: passwordHash,
+        auth_session_version: nextAuthSessionVersion(profile.auth_session_version),
       })
       .eq('id', profile.id);
 

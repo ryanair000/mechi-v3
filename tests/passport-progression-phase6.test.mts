@@ -15,7 +15,7 @@ test('Phase 6 storage is server mediated with RLS defense in depth', () => {
 });
 
 test('Gamer progression has six independent dimensions and rejects a universal skill rank', () => {
-  for (const key of ['competitive', 'explorer', 'completionist', 'community', 'event_presence', 'team_player']) assert.match(service, new RegExp(`makeDimension\\('${key}'`));
+  for (const key of ['competitive', 'explorer', 'completionist', 'community', 'event_presence', 'team_player']) assert.match(service, new RegExp(`makeDimension\\(\\s*["']${key}["']`));
   assert.match(service, /not a universal skill ranking/i);
   assert.match(service, /Competitive facts come only from completed Mechi matches/i);
 });
@@ -38,7 +38,7 @@ test('paid cosmetics are structurally incapable of resembling verification', () 
 test('showcases and shelves cannot widen nested game or highlight visibility', () => {
   assert.match(service, /allowedHighlights/);
   assert.match(service, /allowedGames/);
-  assert.match(service, /entry\?\.visibility === 'public' \|\| \(friend && entry\?\.visibility === 'friends'\)/);
+  assert.match(service, /entry\?\.visibility === ["']public["'] \|\|\s*\(friend && entry\?\.visibility === ["']friends["']\)/);
   assert.match(publicPassport, /visibleShowcase/);
 });
 
@@ -51,7 +51,7 @@ test('free Passport progression remains complete while expansion products are ga
 });
 
 test('Annual Replay keeps exact facts separate from explicitly labeled estimates', () => {
-  assert.match(service, /exact: \{ games_added:/);
+  assert.match(service, /exact: \{\s*games_added:/);
   assert.match(service, /estimates: \[\]/);
   assert.match(service, /source_cutoff_at: cutoff/);
   assert.match(replayPage, /This Replay contains no estimated values/);

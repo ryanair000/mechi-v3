@@ -23,7 +23,7 @@ export async function GET(request: NextRequest) {
 
     let query = supabase
       .from('profiles')
-      .select('id, username, phone, email, region, role, is_banned, ban_reason, banned_at, selected_games, created_at')
+      .select('id, username, phone, email, region, role, is_banned, ban_reason, banned_at, selected_games, created_at, age_policy_status, age_policy_source, age_policy_updated_at')
       .order('created_at', { ascending: false })
       .range(offset, offset + limit - 1);
 

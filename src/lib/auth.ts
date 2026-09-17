@@ -2,6 +2,7 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { NextRequest, NextResponse } from 'next/server';
 import { normalizeGameIdKeys, normalizeSelectedGameKeys } from '@/lib/config';
+import { normalizeAuthSessionVersion } from '@/lib/auth-session-policy';
 import { resolveProfileLocation } from '@/lib/location';
 import type { JWTPayload, AuthUser, UserRole } from '@/types';
 
@@ -32,6 +33,7 @@ export function signToken(payload: {
   username: string;
   role?: UserRole;
   is_banned?: boolean;
+  auth_session_version: number;
 }): string {
   return jwt.sign(payload, JWT_SECRET, { expiresIn: TOKEN_EXPIRY });
 }
@@ -85,6 +87,7 @@ export function createSessionForProfile(profile: Record<string, unknown>) {
     username: profile.username as string,
     role: (profile.role as UserRole | undefined) ?? 'user',
     is_banned: (profile.is_banned as boolean | undefined) ?? false,
+    auth_session_version: normalizeAuthSessionVersion(profile.auth_session_version),
   });
 
   return {

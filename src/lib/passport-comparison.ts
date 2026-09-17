@@ -1,6 +1,7 @@
 import 'server-only';
 
 import { GAMES } from '@/lib/config';
+import { isPassportDiscoveryEligible } from '@/lib/passport-access-policy';
 import { getPassportData, normalizePassportUsername } from '@/lib/passport';
 import {
   arePassportFriends,
@@ -178,29 +179,29 @@ export async function getPassportComparison(
   rightUsername: string,
   options: { viewerId?: string } = {}
 ): Promise<PassportComparisonResult> {
-  const leftName = normalizePassportUsername(leftUsername);
-  const rightName = normalizePassportUsername(rightUsername);
+  const leftName = normalizePassportUsername(leftUsername).toLowerCase();
+  const rightName = normalizePassportUsername(rightUsername).toLowerCase();
   if (!leftName || !rightName) return { data: null, error: 'Choose two valid players', status: 404 };
   const supabase = createServiceClient();
   const [leftResult, rightResult] = await Promise.all([
-    supabase.from('profiles').select('id, username').ilike('username', leftName).maybeSingle(),
-    supabase.from('profiles').select('id, username').ilike('username', rightName).maybeSingle(),
+    supabase.from('passport_profiles').select('user_id, public_handle').eq('public_handle', leftName).eq('publication_status', 'published').maybeSingle(),
+    supabase.from('passport_profiles').select('user_id, public_handle').eq('public_handle', rightName).eq('publication_status', 'published').maybeSingle(),
   ]);
   const leftProfile = leftResult.data;
   const rightProfile = rightResult.data;
   if (!leftProfile || !rightProfile) return { data: null, error: 'Player not found', status: 404 };
-  if (leftProfile.id === rightProfile.id) return { data: null, error: 'Choose two different players', status: 409 };
-  if (await hasPassportBlockBetween(leftProfile.id, rightProfile.id)) return { data: null, error: 'This comparison is unavailable', status: 403 };
-  if (options.viewerId && (await hasPassportBlockBetween(options.viewerId, leftProfile.id) || await hasPassportBlockBetween(options.viewerId, rightProfile.id))) {
+  if (leftProfile.user_id === rightProfile.user_id) return { data: null, error: 'Choose two different players', status: 409 };
+  if (await hasPassportBlockBetween(leftProfile.user_id, rightProfile.user_id)) return { data: null, error: 'This comparison is unavailable', status: 403 };
+  if (options.viewerId && (await hasPassportBlockBetween(options.viewerId, leftProfile.user_id) || await hasPassportBlockBetween(options.viewerId, rightProfile.user_id))) {
     return { data: null, error: 'This comparison is unavailable', status: 403 };
   }
-  const friendView = Boolean(options.viewerId && [leftProfile.id, rightProfile.id].includes(options.viewerId) && await arePassportFriends(leftProfile.id, rightProfile.id));
+  const friendView = Boolean(options.viewerId && [leftProfile.user_id, rightProfile.user_id].includes(options.viewerId) && await arePassportFriends(leftProfile.user_id, rightProfile.user_id));
   const [left, right] = await Promise.all([
-    getPassportData(String(leftProfile.username), { friendView }),
-    getPassportData(String(rightProfile.username), { friendView }),
+    getPassportData(String(leftProfile.public_handle), { friendView }),
+    getPassportData(String(rightProfile.public_handle), { friendView }),
   ]);
   if (!left || !right) return { data: null, error: 'Player not found', status: 404 };
-  if (left.access === 'restricted' || right.access === 'restricted' || (!friendView && (!left.identity.is_discoverable || !right.identity.is_discoverable))) {
+  if (left.access === 'restricted' || right.access === 'restricted' || (!friendView && (!isPassportDiscoveryEligible(left.identity) || !isPassportDiscoveryEligible(right.identity)))) {
     return { data: null, error: 'This comparison is private', status: 403 };
   }
   const leftMap = uniqueEntries(left.library.entries);
@@ -221,16 +222,16 @@ export async function getPassportComparison(
       rating_difference: leftEntry.rating === null || rightEntry.rating === null ? null : Math.abs(leftEntry.rating - rightEntry.rating),
     }];
   });
-  const { comparisonKey } = canonicalPassportPair(leftProfile.id, rightProfile.id);
+  const { comparisonKey } = canonicalPassportPair(leftProfile.user_id, rightProfile.user_id);
   const showRivalry = comparisonFieldVisible(left.identity, 'competitive', friendView) && comparisonFieldVisible(right.identity, 'competitive', friendView);
   const showMutualFriends = comparisonFieldVisible(left.identity, 'social', friendView) && comparisonFieldVisible(right.identity, 'social', friendView);
   const showMutualTeams = comparisonFieldVisible(left.identity, 'teams', friendView) && comparisonFieldVisible(right.identity, 'teams', friendView);
   const [rivalry, mutualFriends, mutualTeams, relationship] = await Promise.all([
-    showRivalry ? loadRivalry(leftProfile.id, rightProfile.id) : Promise.resolve(EMPTY_RIVALRY),
-    showMutualFriends ? loadMutualFriends(leftProfile.id, rightProfile.id) : Promise.resolve([]),
-    showMutualTeams ? loadMutualTeams(leftProfile.id, rightProfile.id) : Promise.resolve([]),
-    options.viewerId && [leftProfile.id, rightProfile.id].includes(options.viewerId)
-      ? getPassportRelationshipState(options.viewerId, options.viewerId === leftProfile.id ? rightProfile.id : leftProfile.id)
+    showRivalry ? loadRivalry(leftProfile.user_id, rightProfile.user_id) : Promise.resolve(EMPTY_RIVALRY),
+    showMutualFriends ? loadMutualFriends(leftProfile.user_id, rightProfile.user_id) : Promise.resolve([]),
+    showMutualTeams ? loadMutualTeams(leftProfile.user_id, rightProfile.user_id) : Promise.resolve([]),
+    options.viewerId && [leftProfile.user_id, rightProfile.user_id].includes(options.viewerId)
+      ? getPassportRelationshipState(options.viewerId, options.viewerId === leftProfile.user_id ? rightProfile.user_id : leftProfile.user_id)
       : Promise.resolve(null),
   ]);
   return {

@@ -18,6 +18,14 @@ const cardRoute = await readFile(
   new URL('../src/app/api/passport/cards/[username]/route.tsx', import.meta.url),
   'utf8'
 );
+const cardModel = await readFile(
+  new URL('../src/lib/passport-card-model.ts', import.meta.url),
+  'utf8'
+);
+const cardRenderer = await readFile(
+  new URL('../src/lib/passport-card-renderer.tsx', import.meta.url),
+  'utf8'
+);
 const inputParser = await readFile(
   new URL('../src/lib/passport-game-input.ts', import.meta.url),
   'utf8'
@@ -62,10 +70,11 @@ test('Public library exposes filters while hiding spoiler text by default', () =
 });
 
 test('Gamer Cards render square, story, and horizontal social dimensions', () => {
-  assert.match(cardRoute, /square: \{ width: 1080, height: 1080 \}/);
-  assert.match(cardRoute, /story: \{ width: 1080, height: 1920 \}/);
-  assert.match(cardRoute, /horizontal: \{ width: 1200, height: 630 \}/);
-  assert.match(cardRoute, /mechi\.club\/@\{identity\.username\}/);
+  assert.match(cardModel, /square: \{ width: 1080, height: 1080 \}/);
+  assert.match(cardModel, /story: \{ width: 1080, height: 1920 \}/);
+  assert.match(cardModel, /horizontal: \{ width: 1200, height: 630 \}/);
+  assert.match(cardRenderer, /mechi\.club\/@\$\{model\.handle\}/);
+  assert.match(cardRoute, /createPassportCardResponse/);
 });
 
 test('Game-entry validation enforces rating, review, hours, and ordered dates', () => {

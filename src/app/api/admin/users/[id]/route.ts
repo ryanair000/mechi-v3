@@ -10,8 +10,11 @@ import {
   shouldHideE2EFixtures,
 } from '@/lib/e2e-fixtures';
 import { getClientIp } from '@/lib/rateLimit';
+import { nextAuthSessionVersion } from '@/lib/auth-session-policy';
+import { setAdminAgePolicy } from '@/lib/passport-age-policy';
 import { createServiceClient } from '@/lib/supabase';
 import { firstRelation } from '@/lib/tournaments';
+import type { AgePolicyStatus } from '@/lib/passport-types';
 import type { UserRole } from '@/types';
 
 function readRelationCount(value: unknown): number {
@@ -49,7 +52,7 @@ export async function GET(
     const { data: userProfile, error: userError } = await supabase
       .from('profiles')
       .select(
-        'id, username, phone, email, region, role, is_banned, ban_reason, banned_at, selected_games, platforms, game_ids, created_at, xp, level, mp, win_streak, max_win_streak, plan, plan_since, plan_expires_at'
+        'id, username, phone, email, region, role, is_banned, ban_reason, banned_at, selected_games, platforms, game_ids, created_at, xp, level, mp, win_streak, max_win_streak, plan, plan_since, plan_expires_at, age_policy_status, age_policy_source, age_policy_updated_at'
       )
       .eq('id', id)
       .single();
@@ -226,12 +229,13 @@ export async function PATCH(
       action?: string;
       reason?: string;
       role?: UserRole;
+      age_policy_status?: AgePolicyStatus;
     };
     const supabase = createServiceClient();
 
     const { data: target, error: targetError } = await supabase
       .from('profiles')
-      .select('id, username, phone, role, is_banned')
+      .select('id, username, phone, role, is_banned, auth_session_version, age_policy_status, age_policy_source, age_policy_updated_at')
       .eq('id', id)
       .single();
 
@@ -239,7 +243,13 @@ export async function PATCH(
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
-    if ((body.action === 'set_role' || target.role !== 'user') && !hasAdminAccess(admin)) {
+    if (
+      (body.action === 'set_role'
+        || body.action === 'revoke_sessions'
+        || body.action === 'set_age_policy'
+        || target.role !== 'user')
+      && !hasAdminAccess(admin)
+    ) {
       return NextResponse.json(
         { error: 'Only admins can change roles or act on moderators/admins' },
         { status: 403 }
@@ -249,12 +259,61 @@ export async function PATCH(
     let updateData: Record<string, unknown>;
     let auditAction: AuditAction;
 
+    if (body.action === 'set_age_policy') {
+      if (!body.age_policy_status || !['unknown', 'minor', 'adult'].includes(body.age_policy_status)) {
+        return NextResponse.json({ error: 'Invalid age policy status' }, { status: 400 });
+      }
+      const reason = body.reason?.trim() ?? '';
+      if (reason.length < 5 || reason.length > 500) {
+        return NextResponse.json(
+          { error: 'Provide a 5-500 character reason for the age-policy change' },
+          { status: 400 }
+        );
+      }
+
+      const ageResult = await setAdminAgePolicy({
+        userId: id,
+        actorId: admin.id,
+        status: body.age_policy_status,
+        reason,
+      });
+      if (!ageResult.storageReady) {
+        return NextResponse.json(
+          { error: ageResult.error, storage_ready: false },
+          { status: 503 }
+        );
+      }
+      if (ageResult.error || !ageResult.policy) {
+        return NextResponse.json(
+          { error: ageResult.error ?? 'Failed to update age policy' },
+          { status: 400 }
+        );
+      }
+
+      await writeAuditLog({
+        adminId: admin.id,
+        action: 'change_user_age_policy',
+        targetType: 'user',
+        targetId: id,
+        details: {
+          username: target.username,
+          previousStatus: target.age_policy_status ?? 'unknown',
+          newStatus: body.age_policy_status,
+          reason,
+        },
+        ipAddress: getClientIp(request),
+      });
+
+      return NextResponse.json({ success: true, age_policy: ageResult.policy });
+    }
+
     if (body.action === 'ban') {
       updateData = {
         is_banned: true,
         ban_reason: body.reason?.trim() || null,
         banned_at: new Date().toISOString(),
         banned_by: admin.id,
+        auth_session_version: nextAuthSessionVersion(target.auth_session_version),
       };
       auditAction = 'ban_user';
     } else if (body.action === 'unban') {
@@ -281,8 +340,16 @@ export async function PATCH(
         );
       }
 
-      updateData = { role: body.role };
+      updateData = {
+        role: body.role,
+        auth_session_version: nextAuthSessionVersion(target.auth_session_version),
+      };
       auditAction = 'change_role';
+    } else if (body.action === 'revoke_sessions') {
+      updateData = {
+        auth_session_version: nextAuthSessionVersion(target.auth_session_version),
+      };
+      auditAction = 'revoke_user_sessions';
     } else {
       return NextResponse.json({ error: 'Unknown action' }, { status: 400 });
     }

@@ -92,7 +92,7 @@ export function getMatchOgImageUrl(matchId: string) {
 }
 
 export function getProfileOgImageUrl(username: string) {
-  return getAbsoluteUrl(`/api/og/profile?username=${encodeURIComponent(username)}`);
+  return getAbsoluteUrl(`/api/passport/cards/${encodeURIComponent(username)}?format=horizontal`);
 }
 
 export function getTournamentAppUrl(slug: string) {

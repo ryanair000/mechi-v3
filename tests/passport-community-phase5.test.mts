@@ -15,16 +15,16 @@ test('Phase 5 storage is server mediated with RLS defense in depth', () => {
 
 test('activity projection inherits source and Passport field visibility', () => {
   assert.match(community, /mostRestrictiveVisibility/);
-  assert.match(community, /audienceFor\('games'/);
-  assert.match(community, /audienceFor\('competitive'/);
-  assert.match(community, /audienceFor\('events'/);
-  assert.match(community, /audienceFor\('achievements'/);
-  assert.match(community, /audienceFor\('teams'/);
+  assert.match(community, /audienceFor\(["']games["']/);
+  assert.match(community, /audienceFor\(["']competitive["']/);
+  assert.match(community, /audienceFor\(["']events["']/);
+  assert.match(community, /audienceFor\(["']achievements["']/);
+  assert.match(community, /audienceFor\(\s*["']teams["']/);
 });
 
 test('activity projection retracts stale sources and deduplicates current sources', () => {
-  assert.match(community, /update\(\{ retracted_at: new Date\(\)\.toISOString\(\) \}\)/);
-  assert.match(community, /onConflict: 'actor_id,activity_type,source_type,source_id'/);
+  assert.match(community, /update\(\{\s*retracted_at: new Date\(\)\.toISOString\(\)\s*\}\)/);
+  assert.match(community, /onConflict: ["']actor_id,activity_type,source_type,source_id["']/);
   assert.match(migration, /passport_activity_source_unique UNIQUE \(actor_id, activity_type, source_type, source_id\)/);
 });
 
@@ -46,7 +46,7 @@ test('reaction attempts are serialized and rate limited before mutation', () => 
 test('reports cannot target hidden, blocked, private, or self-authored activity', () => {
   assert.match(community, /activity\.actor_id === reporterId/);
   assert.match(community, /hasPassportBlockBetween\(reporterId/);
-  assert.match(community, /activity\.audience === 'private'/);
+  assert.match(community, /activity\.audience === ["']private["']/);
 });
 
 test('Gaming Circles enforce 3-8 distinct accepted friends transactionally', () => {

@@ -39,6 +39,7 @@ const ACTION_META: Record<string, { label: string; className: string }> = {
   ban_user: { label: 'Ban user', className: 'text-red-400' },
   unban_user: { label: 'Unban user', className: 'text-[var(--brand-teal)]' },
   change_role: { label: 'Change role', className: 'text-amber-400' },
+  change_user_age_policy: { label: 'Change age policy', className: 'text-amber-400' },
   override_match: { label: 'Override match', className: 'text-[#60A5FA]' },
   cancel_match: { label: 'Cancel match', className: 'text-orange-400' },
   resolve_dispute: { label: 'Resolve dispute', className: 'text-[var(--brand-teal)]' },

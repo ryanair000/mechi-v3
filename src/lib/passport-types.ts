@@ -1,5 +1,6 @@
 import type { CountryKey, GameKey, PlatformKey } from '@/types';
 import type { PassportGameLibrary } from '@/lib/passport-game-types';
+import type { PassportPublicationStatus } from '@/lib/passport-handle';
 
 export const PASSPORT_ARCHETYPES = [
   'competitive',
@@ -30,6 +31,9 @@ export const PASSPORT_STATUSES = [
 
 export const PASSPORT_VISIBILITIES = ['public', 'friends', 'private'] as const;
 
+export const AGE_POLICY_STATUSES = ['unknown', 'minor', 'adult'] as const;
+export const AGE_POLICY_SOURCES = ['self_declared', 'admin'] as const;
+
 export const PASSPORT_FIELDS = [
   'bio',
   'gamer_since',
@@ -50,23 +54,32 @@ export type PassportArchetype = (typeof PASSPORT_ARCHETYPES)[number];
 export type PassportStatus = (typeof PASSPORT_STATUSES)[number];
 export type PassportVisibility = (typeof PASSPORT_VISIBILITIES)[number];
 export type PassportField = (typeof PASSPORT_FIELDS)[number];
+export type AgePolicyStatus = (typeof AGE_POLICY_STATUSES)[number];
+export type AgePolicySource = (typeof AGE_POLICY_SOURCES)[number];
+
+export type PrivateAgePolicy = {
+  status: AgePolicyStatus;
+  source: AgePolicySource | null;
+  updated_at: string | null;
+  storage_ready: boolean;
+};
 
 export type PassportFieldVisibility = Record<PassportField, PassportVisibility>;
 
 export const DEFAULT_PASSPORT_FIELD_VISIBILITY: PassportFieldVisibility = {
-  bio: 'public',
-  gamer_since: 'public',
-  archetypes: 'public',
-  current_status: 'public',
-  location: 'public',
-  platforms: 'public',
-  games: 'public',
+  bio: 'private',
+  gamer_since: 'private',
+  archetypes: 'private',
+  current_status: 'private',
+  location: 'private',
+  platforms: 'private',
+  games: 'private',
   game_ids: 'private',
-  competitive: 'public',
-  events: 'public',
-  achievements: 'public',
-  teams: 'public',
-  social: 'public',
+  competitive: 'private',
+  events: 'private',
+  achievements: 'private',
+  teams: 'private',
+  social: 'private',
 };
 
 export const PASSPORT_ARCHETYPE_LABELS: Record<PassportArchetype, string> = {
@@ -99,6 +112,11 @@ export const PASSPORT_STATUS_LABELS: Record<PassportStatus, string> = {
 export type PassportIdentity = {
   user_id: string;
   username: string;
+  public_handle: string | null;
+  publication_status: PassportPublicationStatus;
+  published_at: string | null;
+  publication_consent_version: string | null;
+  publication_consent_at: string | null;
   display_name: string;
   bio: string;
   gamer_since: number | null;
@@ -146,6 +164,14 @@ export type PassportSummary = {
   computed_at: string;
 };
 
+export type PublicPassportSummary = Omit<
+  PassportSummary,
+  'verified_records_count' | 'last_activity_at' | 'computed_at'
+> & {
+  verified_records_count?: number;
+  last_activity_at?: string | null;
+};
+
 export type PassportEventPreview = {
   id: string;
   slug: string;
@@ -167,7 +193,20 @@ export type PassportTeamPreview = {
   joined_at: string;
 };
 
-export type PassportVerificationPreview = {
+export const PASSPORT_VERIFICATION_SUBJECT_TYPES = [
+  'profile',
+  'game_account',
+  'match',
+  'tournament',
+  'event',
+  'team',
+  'achievement',
+] as const;
+
+export type PassportVerificationSubjectType =
+  (typeof PASSPORT_VERIFICATION_SUBJECT_TYPES)[number];
+
+export type PassportVerificationRecordPreview = {
   id: string;
   subject_type: string;
   verification_state: string;
@@ -177,17 +216,27 @@ export type PassportVerificationPreview = {
   issued_at: string;
 };
 
+export type PassportVerificationPreview = Omit<
+  PassportVerificationRecordPreview,
+  'subject_type'
+> & {
+  subject_type: PassportVerificationSubjectType;
+};
+
 export type PublicPassportData = {
   access: 'public' | 'restricted';
   identity: PassportIdentity;
-  summary: PassportSummary | null;
+  summary: PublicPassportSummary | null;
   events: PassportEventPreview[];
   teams: PassportTeamPreview[];
   verifications: PassportVerificationPreview[];
   library: PassportGameLibrary;
 };
 
-export type PassportOwnerData = PublicPassportData & {
+export type PassportOwnerData = Omit<PublicPassportData, 'summary' | 'verifications'> & {
   access: 'public';
   identity: PassportIdentity;
+  age_policy: PrivateAgePolicy;
+  summary: PassportSummary | null;
+  verifications: PassportVerificationRecordPreview[];
 };

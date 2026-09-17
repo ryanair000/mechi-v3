@@ -1,12 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getAuthUser, profileToAuthUser } from '@/lib/auth';
+import { getRequestAccessProfile } from '@/lib/access';
+import { profileToAuthUser } from '@/lib/auth';
 import { maybeAwardDailyLogin } from '@/lib/rewards';
 import { createServiceClient } from '@/lib/supabase';
 import { maybeExpireProfilePlan } from '@/lib/subscription';
 
 export async function GET(request: NextRequest) {
-  const authUser = getAuthUser(request);
-  if (!authUser) {
+  const accessProfile = await getRequestAccessProfile(request);
+  if (!accessProfile) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
@@ -14,7 +15,7 @@ export async function GET(request: NextRequest) {
   const { data: profile, error } = await supabase
     .from('profiles')
     .select('*')
-    .eq('id', authUser.sub)
+    .eq('id', accessProfile.id)
     .single();
 
   if (error || !profile) {

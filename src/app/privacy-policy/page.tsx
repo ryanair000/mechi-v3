@@ -7,7 +7,7 @@ import {
 } from '@/lib/legal-contact';
 import { APP_URL } from '@/lib/urls';
 
-const EFFECTIVE_DATE = 'April 19, 2026';
+const EFFECTIVE_DATE = 'August 14, 2026';
 
 export const metadata: Metadata = {
   title: 'Privacy Policy | PlayMechi',
@@ -91,14 +91,21 @@ const sections = [
     ],
   },
   {
-    title: '7. Children and policy updates',
+    title: '7. Children and under-18 privacy',
     paragraphs: [
       'PlayMechi is not intended for children under 13, and we do not knowingly collect personal information from children under 13. If you believe a child has provided personal information to us, please contact us so we can investigate and take appropriate action.',
+      'When an account is identified as belonging to someone under 18, we restrict public Gamer Passport sharing, discovery, public activity, Replay sharing, media-kit sharing, and inquiry links. For this feature, we record a private age-group status rather than an exact date of birth. The status does not appear on the public Gamer Passport.',
+      'An account owner can activate under-18 protections. Removing those protections requires administrator review, and previously public settings are not restored automatically. These safety controls do not replace any parental or guardian consent, age assurance, or other requirement that may apply under local law.',
+    ],
+  },
+  {
+    title: '8. Policy updates',
+    paragraphs: [
       'We may update this Privacy Policy from time to time. When we make material changes, we may revise the date above and provide additional notice inside the product or through other reasonable channels.',
     ],
   },
   {
-    title: '8. Contact us',
+    title: '9. Contact us',
     paragraphs: [
       `Questions about this Privacy Policy or privacy requests can be sent to ${PLAYMECHI_DEVELOPER_NAME} at ${PLAYMECHI_CONTACT_EMAIL}.`,
       `Mailing address: ${PLAYMECHI_DEVELOPER_ADDRESS}.`,

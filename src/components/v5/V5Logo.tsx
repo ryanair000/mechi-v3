@@ -4,7 +4,7 @@ import styles from './V5Public.module.css';
 
 export function V5Logo({ priority = false }: { priority?: boolean }) {
   return (
-    <Link className={styles.brand} href="/" aria-label="PlayMechi home">
+    <Link className={styles.brand} href="/" aria-label="Mechi home">
       <span className={styles.brandMark}>
         <Image
           src="/mechi-logo.png"
@@ -16,7 +16,7 @@ export function V5Logo({ priority = false }: { priority?: boolean }) {
           priority={priority}
         />
       </span>
-      <span className={styles.brandName}>PLAY<span>MECHI</span></span>
+      <span className={styles.brandName}>MECHI</span>
     </Link>
   );
 }
